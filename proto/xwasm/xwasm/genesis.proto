@@ -1,0 +1,12 @@
+syntax = "proto3";
+package xwasm.xwasm;
+
+import "gogoproto/gogo.proto";
+import "xwasm/xwasm/params.proto";
+
+option go_package = "xwasm/x/xwasm/types";
+
+// GenesisState defines the xwasm module's genesis state.
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+}
