@@ -106,6 +106,7 @@ import (
 	wasmxmodule "wasmx/x/wasmx"
 	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
 	wasmxmoduletypes "wasmx/x/wasmx/types"
+
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 
 	appparams "wasmx/app/params"
@@ -500,6 +501,9 @@ func New(
 		keys[wasmxmoduletypes.StoreKey],
 		keys[wasmxmoduletypes.MemStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
+		app.AccountKeeper,
+		app.BankKeeper,
+		wasmxmoduletypes.DefaultWasmConfig(),
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 

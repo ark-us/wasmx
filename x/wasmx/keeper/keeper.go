@@ -18,6 +18,11 @@ type (
 		storeKey   storetypes.StoreKey
 		memKey     storetypes.StoreKey
 		paramstore paramtypes.Subspace
+
+		accountKeeper types.AccountKeeper
+		bank          types.BankKeeper
+		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
+		queryGasLimit uint64
 	}
 )
 
@@ -26,6 +31,9 @@ func NewKeeper(
 	storeKey,
 	memKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
+	accountKeeper types.AccountKeeper,
+	bankKeeper types.BankKeeper,
+	wasmConfig types.WasmConfig,
 
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -38,6 +46,10 @@ func NewKeeper(
 		storeKey:   storeKey,
 		memKey:     memKey,
 		paramstore: ps,
+
+		accountKeeper: accountKeeper,
+		bank:          bankKeeper,
+		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 	}
 }
 
