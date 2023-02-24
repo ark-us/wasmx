@@ -1,4 +1,4 @@
-module xwasm
+module wasmx
 
 go 1.19
 

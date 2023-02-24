@@ -103,18 +103,18 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
-	xwasmmodule "xwasm/x/xwasm"
-	xwasmmodulekeeper "xwasm/x/xwasm/keeper"
-	xwasmmoduletypes "xwasm/x/xwasm/types"
+	wasmxmodule "wasmx/x/wasmx"
+	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
+	wasmxmoduletypes "wasmx/x/wasmx/types"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 
-	appparams "xwasm/app/params"
-	"xwasm/docs"
+	appparams "wasmx/app/params"
+	"wasmx/docs"
 )
 
 const (
 	AccountAddressPrefix = "cosmos"
-	Name                 = "xwasm"
+	Name                 = "wasmx"
 )
 
 // this line is used by starport scaffolding # stargate/wasm/app/enabledProposals
@@ -164,7 +164,7 @@ var (
 		transfer.AppModuleBasic{},
 		ica.AppModuleBasic{},
 		vesting.AppModuleBasic{},
-		xwasmmodule.AppModuleBasic{},
+		wasmxmodule.AppModuleBasic{},
 		// this line is used by starport scaffolding # stargate/app/moduleBasic
 	)
 
@@ -238,7 +238,7 @@ type App struct {
 	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
 	ScopedICAHostKeeper  capabilitykeeper.ScopedKeeper
 
-	XwasmKeeper xwasmmodulekeeper.Keeper
+	WasmxKeeper wasmxmodulekeeper.Keeper
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
 
 	// mm is the module manager
@@ -283,7 +283,7 @@ func New(
 		paramstypes.StoreKey, ibchost.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey,
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
 		icacontrollertypes.StoreKey,
-		xwasmmoduletypes.StoreKey,
+		wasmxmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -495,13 +495,13 @@ func New(
 		govConfig,
 	)
 
-	app.XwasmKeeper = *xwasmmodulekeeper.NewKeeper(
+	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
 		appCodec,
-		keys[xwasmmoduletypes.StoreKey],
-		keys[xwasmmoduletypes.MemStoreKey],
-		app.GetSubspace(xwasmmoduletypes.ModuleName),
+		keys[wasmxmoduletypes.StoreKey],
+		keys[wasmxmoduletypes.MemStoreKey],
+		app.GetSubspace(wasmxmoduletypes.ModuleName),
 	)
-	xwasmModule := xwasmmodule.NewAppModule(appCodec, app.XwasmKeeper, app.AccountKeeper, app.BankKeeper)
+	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
@@ -568,7 +568,7 @@ func New(
 		params.NewAppModule(app.ParamsKeeper),
 		transferModule,
 		icaModule,
-		xwasmModule,
+		wasmxModule,
 		// this line is used by starport scaffolding # stargate/app/appModule
 	)
 
@@ -598,7 +598,7 @@ func New(
 		group.ModuleName,
 		paramstypes.ModuleName,
 		vestingtypes.ModuleName,
-		xwasmmoduletypes.ModuleName,
+		wasmxmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
 	)
 
@@ -623,7 +623,7 @@ func New(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
-		xwasmmoduletypes.ModuleName,
+		wasmxmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers
 	)
 
@@ -653,7 +653,7 @@ func New(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
-		xwasmmoduletypes.ModuleName,
+		wasmxmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/initGenesis
 	)
 
@@ -683,7 +683,7 @@ func New(
 		evidence.NewAppModule(app.EvidenceKeeper),
 		ibc.NewAppModule(app.IBCKeeper),
 		transferModule,
-		xwasmModule,
+		wasmxModule,
 		// this line is used by starport scaffolding # stargate/app/appModule
 	)
 	app.sm.RegisterStoreDecoders()
@@ -888,7 +888,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(ibchost.ModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
-	paramsKeeper.Subspace(xwasmmoduletypes.ModuleName)
+	paramsKeeper.Subspace(wasmxmoduletypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 
 	return paramsKeeper

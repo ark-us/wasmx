@@ -1,7 +1,0 @@
-syntax = "proto3";
-package xwasm.xwasm;
-
-option go_package = "xwasm/x/xwasm/types";
-
-// Msg defines the Msg service.
-service Msg {}

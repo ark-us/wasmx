@@ -43864,10 +43864,10 @@ paths:
                         }
       tags:
         - Query
-  /xwasm/xwasm/params:
+  /wasmx/wasmx/params:
     get:
       summary: Parameters queries the parameters of the module.
-      operationId: XwasmXwasmParams
+      operationId: WasmxWasmxParams
       responses:
         '200':
           description: A successful response.
@@ -71434,10 +71434,10 @@ definitions:
     description: |-
       Version defines the versioning scheme used to negotiate the IBC verison in
       the connection handshake.
-  xwasm.xwasm.Params:
+  wasmx.wasmx.Params:
     type: object
     description: Params defines the parameters for the module.
-  xwasm.xwasm.QueryParamsResponse:
+  wasmx.wasmx.QueryParamsResponse:
     type: object
     properties:
       params:
