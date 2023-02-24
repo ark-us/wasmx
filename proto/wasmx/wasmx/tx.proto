@@ -1,7 +1,164 @@
 syntax = "proto3";
 package wasmx.wasmx;
 
+import "cosmos/base/v1beta1/coin.proto";
+import "gogoproto/gogo.proto";
+
 option go_package = "wasmx/x/wasmx/types";
 
-// Msg defines the Msg service.
-service Msg {}
+// Msg defines the wasm Msg service.
+service Msg {
+    // StoreCode to submit Wasm code to the system
+    rpc StoreCode(MsgStoreCode) returns (MsgStoreCodeResponse);
+    //  InstantiateContract creates a new smart contract instance for the given
+    //  code id.
+    rpc InstantiateContract(MsgInstantiateContract)
+        returns (MsgInstantiateContractResponse);
+    //  InstantiateContract2 creates a new smart contract instance for the given
+    //  code id with a predictable address
+    rpc InstantiateContract2(MsgInstantiateContract2)
+        returns (MsgInstantiateContract2Response);
+    // Execute submits the given message data to a smart contract
+    rpc ExecuteContract(MsgExecuteContract) returns (MsgExecuteContractResponse);
+    // ExecuteWithOrigin submits the given message data to a smart contract
+    rpc ExecuteWithOriginContract(MsgExecuteWithOriginContract) returns (MsgExecuteContractResponse);
+    // ExecuteDelegate submits the given message data to a smart contract
+    rpc ExecuteDelegateContract(MsgExecuteDelegateContract) returns (MsgExecuteDelegateContractResponse);
+}
+
+// MsgStoreCode submit Wasm code to the system
+message MsgStoreCode {
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // WASMByteCode can be raw or gzip compressed
+    bytes wasm_byte_code = 2;
+}
+// MsgStoreCodeResponse returns store result data.
+message MsgStoreCodeResponse {
+    // CodeID is the reference to the stored WASM code
+    uint64 code_id = 1;
+    // Checksum is the sha256 hash of the stored code
+    bytes checksum = 2;
+}
+
+// MsgInstantiateContract create a new smart contract instance for the given
+// code id.
+message MsgInstantiateContract {
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // CodeID is the reference to the stored WASM code
+    uint64 code_id = 2;
+    // Label is optional metadata to be stored with a contract instance.
+    string label = 3;
+    // Msg json encoded message to be passed to the contract on instantiation
+    bytes msg = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
+    // Funds coins that are transferred to the contract on instantiation
+    repeated cosmos.base.v1beta1.Coin funds = 6 [
+        (gogoproto.nullable) = false,
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    ];
+}
+
+// MsgInstantiateContract2 create a new smart contract instance for the given
+// code id with a predicable address.
+message MsgInstantiateContract2 {
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // Admin is an optional address that can execute migrations
+    uint64 code_id = 2;
+    // Label is optional metadata to be stored with a contract instance.
+    string label = 3;
+    // Msg json encoded message to be passed to the contract on instantiation
+    bytes msg = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
+    // Funds coins that are transferred to the contract on instantiation
+    repeated cosmos.base.v1beta1.Coin funds = 5 [
+        (gogoproto.nullable) = false,
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    ];
+    // Salt is an arbitrary value provided by the sender. Size can be 1 to 64.
+    bytes salt = 6;
+    // FixMsg include the msg value into the hash for the predictable address.
+    // Default is false
+    bool fix_msg = 7;
+}
+
+// MsgInstantiateContractResponse return instantiation result data
+message MsgInstantiateContractResponse {
+    // Address is the bech32 address of the new contract instance.
+    string address = 1;
+    // Data contains bytes to returned from the contract
+    bytes data = 2;
+}
+
+// MsgInstantiateContract2Response return instantiation result data
+message MsgInstantiateContract2Response {
+    // Address is the bech32 address of the new contract instance.
+    string address = 1;
+    // Data contains bytes to returned from the contract
+    bytes data = 2;
+}
+
+// MsgExecuteContract submits the given message data to a smart contract
+message MsgExecuteContract {
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // Contract is the address of the smart contract
+    string contract = 2;
+    // Msg json encoded message to be passed to the contract
+    bytes msg = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
+    // Funds coins that are transferred to the contract on execution
+    repeated cosmos.base.v1beta1.Coin funds = 5 [
+        (gogoproto.nullable) = false,
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    ];
+}
+
+// MsgExecuteContractResponse returns execution result data.
+message MsgExecuteContractResponse {
+    // Data contains bytes to returned from the contract
+    bytes data = 1;
+}
+
+// MsgExecuteContract submits the given message data to a smart contract
+message MsgExecuteWithOriginContract {
+    // Origin is the actor that originally signed the message
+    string origin = 1;
+    // Sender is the that actor that signed the messages
+    string sender = 2;
+    // Contract is the address of the smart contract
+    string contract = 3;
+    // Msg json encoded message to be passed to the contract
+    bytes msg = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
+    // Funds coins that are transferred to the contract on execution
+    repeated cosmos.base.v1beta1.Coin funds = 5 [
+        (gogoproto.nullable) = false,
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    ];
+}
+
+// MsgExecuteDelegateContract submits the given message data to a smart contract
+message MsgExecuteDelegateContract {
+    // Origin is the actor that originally signed the message
+    string origin = 1;
+    // Sender is the storage contract, equivalent to the address that triggers the message (signer)
+    string sender = 2;
+    // Caller is the address that will be used as sender
+    string caller = 3;
+    // CodeContract is the address of the smart contract whose binary is used
+    string code_contract = 4;
+    // StorageContract is the address of the smart contract whose storage is used
+    string storage_contract = 5;
+    // Msg json encoded message to be passed to the contract
+    bytes msg = 6 [ (gogoproto.casttype) = "RawContractMessage" ];
+    // Funds coins that are transferred to the contract on execution
+    repeated cosmos.base.v1beta1.Coin funds = 7 [
+        (gogoproto.nullable) = false,
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    ];
+}
+
+// MsgExecuteDelegateContractResponse returns execution result data.
+message MsgExecuteDelegateContractResponse {
+    // Data contains bytes to returned from the contract
+    bytes data = 1;
+}

@@ -7,7 +7,7 @@ import (
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
 	"wasmx/app"
-	"wasmx/cmd/wasmxd/cmd"
+	"wasmx/cmd/wasmx/cmd"
 )
 
 func main() {
