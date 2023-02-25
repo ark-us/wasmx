@@ -504,6 +504,7 @@ func New(
 		app.AccountKeeper,
 		app.BankKeeper,
 		wasmxmoduletypes.DefaultWasmConfig(),
+		homePath,
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 

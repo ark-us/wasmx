@@ -23,6 +23,9 @@ var (
 	ContractKeyPrefix   = []byte{0x02}
 	ContractStorePrefix = []byte{0x03}
 	SequenceKeyPrefix   = []byte{0x04}
+
+	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
+	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
 )
 
 func KeyPrefix(p string) []byte {
@@ -38,4 +41,9 @@ func GetCodeKey(codeID uint64) []byte {
 // GetContractAddressKey returns the key for the WASM contract instance
 func GetContractAddressKey(addr sdk.AccAddress) []byte {
 	return append(ContractKeyPrefix, addr...)
+}
+
+// GetContractStorePrefix returns the store prefix for the WASM contract instance
+func GetContractStorePrefix(addr sdk.AccAddress) []byte {
+	return append(ContractStorePrefix, addr...)
 }

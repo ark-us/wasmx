@@ -81,6 +81,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		accountKeeper,
 		bankKeeper,
 		types.DefaultWasmConfig(),
+		app.DefaultNodeHome,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

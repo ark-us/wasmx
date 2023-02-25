@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -11,6 +12,10 @@ import (
 
 	"wasmx/x/wasmx/types"
 )
+
+// contractMemoryLimit is the memory limit of each contract execution (in MiB)
+// constant value so all nodes run with the same limit.
+const contractMemoryLimit = 32
 
 type (
 	Keeper struct {
@@ -23,6 +28,8 @@ type (
 		bank          types.BankKeeper
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
 		queryGasLimit uint64
+
+		wasmvm WasmxEngine
 	}
 )
 
@@ -34,8 +41,13 @@ func NewKeeper(
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
 	wasmConfig types.WasmConfig,
-
+	homeDir string,
 ) *Keeper {
+	wasmvm, err := NewVM(filepath.Join(homeDir, "wasmx"), contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	if err != nil {
+		panic(err)
+	}
+
 	// set KeyTable if it has not already been set
 	if !ps.HasKeyTable() {
 		ps = ps.WithKeyTable(types.ParamKeyTable())
@@ -50,6 +62,7 @@ func NewKeeper(
 		accountKeeper: accountKeeper,
 		bank:          bankKeeper,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
+		wasmvm:        *wasmvm,
 	}
 }
 
