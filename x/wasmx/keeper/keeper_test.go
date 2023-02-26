@@ -1,219 +1,309 @@
 package keeper_test
 
-// import (
-// 	"encoding/hex"
-// 	"encoding/json"
-// 	"fmt"
-// 	"os"
-// 	"strconv"
-// 	"testing"
-// 	"time"
+import (
+	"encoding/json"
+	"strconv"
+	"testing"
 
-// 	"github.com/stretchr/testify/require"
-// 	"github.com/stretchr/testify/suite"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/suite"
 
-// 	"github.com/golang/protobuf/proto" //nolint
+	//nolint
 
-// 	"github.com/cosmos/cosmos-sdk/client/tx"
-// 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
-// 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-// 	sdk "github.com/cosmos/cosmos-sdk/types"
-// 	"github.com/cosmos/cosmos-sdk/types/simulation"
-// 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-// 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-// 	abci "github.com/tendermint/tendermint/abci/types"
-// 	"github.com/tendermint/tendermint/libs/log"
-// 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-// 	db "github.com/tendermint/tm-db"
+	abci "github.com/tendermint/tendermint/abci/types"
 
-// 	"wasmx/app"
-// 	"wasmx/x/wasmx/keeper"
-// 	"wasmx/x/wasmx/types"
-// )
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
-// type KeeperTestSuite struct {
-// 	suite.Suite
+	icahosttypes "github.com/cosmos/ibc-go/v6/modules/apps/27-interchain-accounts/host/types"
+	icatypes "github.com/cosmos/ibc-go/v6/modules/apps/27-interchain-accounts/types"
+	channeltypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
+	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
-// 	ctx sdk.Context
+	"wasmx/app"
+	ibctesting "wasmx/testutil/ibc"
+	wasmxkeeper "wasmx/x/wasmx/keeper"
+	"wasmx/x/wasmx/types"
+)
 
-// 	app *app.App
-// 	h   *app.TestSupport
-// 	// queryClient types.QueryClient
-// 	// signer      keyring.Signer
-// 	consAddress sdk.ConsAddress
-// 	// validator   stakingtypes.Validator
-// 	denom           string
-// 	faucet          *keeper.TestFaucet
-// 	ProposerAddress []byte
-// 	deliverTx       func(tx abci.RequestDeliverTx) abci.ResponseDeliverTx
-// }
+var (
+	// TestAccAddress defines a resuable bech32 address for testing purposes
+	// TODO: update crypto.AddressHash() when sdk uses address.Module()
+	// TestAccAddress = icatypes.GenerateAddress(sdk.AccAddress(crypto.AddressHash([]byte(icatypes.ModuleName))), ibcgotesting.FirstConnectionID, TestPortID)
+	// TestOwnerAddress defines a reusable bech32 address for testing purposes
+	TestOwnerAddress = "mythos1fjx8p8uzx3h5qszqnwvelulzd659j8ua5qvaep"
+	// TestPortID defines a reusable port identifier for testing purposes
+	TestPortID, _ = icatypes.NewControllerPortID(TestOwnerAddress)
+	// TestVersion defines a reusable interchainaccounts version string for testing purposes
+	TestVersion = string(icatypes.ModuleCdc.MustMarshalJSON(&icatypes.Metadata{
+		Version:                icatypes.Version,
+		ControllerConnectionId: ibcgotesting.FirstConnectionID,
+		HostConnectionId:       ibcgotesting.FirstConnectionID,
+		Encoding:               icatypes.EncodingProtobuf,
+		TxType:                 icatypes.TxTypeSDKMultiMsg,
+	}))
+)
 
-// var s *KeeperTestSuite
+// KeeperTestSuite is a testing suite to test keeper functions
+type KeeperTestSuite struct {
+	suite.Suite
 
-// func TestKeeperTestSuite(t *testing.T) {
-// 	s = new(KeeperTestSuite)
-// 	suite.Run(t, s)
-// }
+	coordinator *ibcgotesting.Coordinator
+	chainIds    []string
 
-// func (suite *KeeperTestSuite) SetupTest() {
-// 	// suite.app = app.Setup(false)
-// 	suite.SetupApp()
-// }
+	// testing chains used for convenience and readability
+	chainA *ibcgotesting.TestChain
+	chainB *ibcgotesting.TestChain
+}
 
-// func (suite *KeeperTestSuite) SetupApp() {
-// 	t := suite.T()
+type AppContext struct {
+	s *KeeperTestSuite
 
-// 	suite.denom = "amyt"
-// 	chainId := "mythos_7000-1"
-// 	db := db.NewMemDB()
-// 	gapp := app.New(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, app.MakeEncodingConfig(), app.EmptyBaseAppOptions{})
-// 	genesisState := app.NewDefaultGenesisState()
+	app   *app.App
+	chain *ibcgotesting.TestChain
 
-// 	app.SetupWithSingleValidatorGenTX(t, genesisState, chainId)
+	// for generate test tx
+	clientCtx client.Context
 
-// 	stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
-// 	require.NoError(t, err)
-// 	// Initialize the chain
-// 	now := time.Now().UTC()
-// 	consensusParams := app.DefaultConsensusParams
-// 	consensusParams.Block.MaxGas = 500_000_000_000
-// 	gapp.InitChain(
-// 		abci.RequestInitChain{
-// 			ChainId:         chainId,
-// 			ConsensusParams: consensusParams,
-// 			Time:            now,
-// 			Validators:      []abci.ValidatorUpdate{},
-// 			AppStateBytes:   stateBytes,
-// 		},
-// 	)
-// 	gapp.Commit()
-// 	suite.app = gapp
-// 	suite.ProposerAddress = []byte{182, 108, 128, 84, 106, 186, 182, 110, 93, 95, 17, 148, 50, 158, 25, 187, 140, 206, 92, 21}
+	appCodec codec.Codec
+	signer   keyring.Signer
+	denom    string
+	faucet   *wasmxkeeper.TestFaucet
+}
 
-// 	now = time.Now().UTC()
-// 	header := tmproto.Header{
-// 		ChainID:         chainId,
-// 		Height:          2,
-// 		Time:            now,
-// 		AppHash:         []byte("myAppHash"),
-// 		ProposerAddress: suite.ProposerAddress,
-// 	}
-// 	gapp.BaseApp.BeginBlock(abci.RequestBeginBlock{Header: header})
+func (suite *KeeperTestSuite) GetApp(chain *ibcgotesting.TestChain) *app.App {
+	app, ok := chain.App.(*app.App)
+	if !ok {
+		panic("not app")
+	}
+	return app
+}
 
-// 	suite.ctx = gapp.BaseApp.NewContext(false, header)
+func (suite *KeeperTestSuite) GetAppContext(chain *ibcgotesting.TestChain) AppContext {
+	mapp, ok := chain.App.(*app.App)
+	if !ok {
+		panic("not app")
+	}
+	appContext := AppContext{
+		s:     suite,
+		app:   mapp,
+		chain: chain,
+	}
+	encodingConfig := app.MakeEncodingConfig()
+	appContext.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
+	appContext.denom = "amyt"
 
-// 	params := suite.app.EwasmKeeper.GetParams(suite.ctx)
-// 	params.EnableEwasm = true
-// 	suite.app.EwasmKeeper.SetParams(suite.ctx, params)
+	t := suite.T()
+	appContext.faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), mapp.BankKeeper, types.ModuleName, sdk.NewCoin(appContext.denom, sdk.NewInt(100_000_000_000)))
 
-// 	suite.faucet = keeper.NewTestFaucet(t, suite.ctx, suite.app.EwasmKeeper.BankKeeper, types.ModuleName, sdk.NewCoin(suite.denom, sdk.NewInt(100_000_000_000)))
-// }
+	return appContext
+}
 
-// // Commit commits and starts a new block with an updated context.
-// func (suite *KeeperTestSuite) Commit() {
-// 	suite.CommitAfter(time.Second * 0)
-// }
+var s *KeeperTestSuite
 
-// // Commit commits a block at a given time.
-// func (suite *KeeperTestSuite) CommitAfter(t time.Duration) {
-// 	header := suite.ctx.BlockHeader()
-// 	suite.app.EndBlock(abci.RequestEndBlock{Height: header.Height})
-// 	_ = suite.app.Commit()
+// TestKeeperTestSuite runs all the tests within this package.
+func TestKeeperTestSuite(t *testing.T) {
+	s = new(KeeperTestSuite)
+	suite.Run(t, s)
 
-// 	header.Height += 1
-// 	header.Time = header.Time.Add(t)
-// 	suite.app.BeginBlock(abci.RequestBeginBlock{
-// 		Header: header,
-// 	})
+	// Run Ginkgo integration tests
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Keeper Suite")
+}
 
-// 	// update ctx
-// 	meter := sdk.NewGasMeter(300_000_000_000)
-// 	suite.ctx = suite.app.BaseApp.NewContext(false, header).WithBlockGasMeter(meter)
-// }
+// SetupTest creates a coordinator with 2 test chains.
+func (suite *KeeperTestSuite) SetupTest() {
+	suite.chainIds = []string{"mythos_7001-1", "mythos_7002-1"}
+	suite.coordinator = ibctesting.NewCoordinator(suite.T(), suite.chainIds)
+	suite.chainA = suite.coordinator.GetChain(suite.chainIds[0])
+	suite.chainB = suite.coordinator.GetChain(suite.chainIds[1])
 
-// var DEFAULT_GAS_PRICE = "0.05amyt"
-// var DEFAULT_GAS_LIMIT = uint64(15_000_000)
+	// ICA setup
 
-// func (s *KeeperTestSuite) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
-// 	encodingConfig := app.MakeEncodingConfig()
-// 	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
-// 	var parsedGasPrices sdk.DecCoins
-// 	var err error
+	allowedMsgs := []string{"/cosmos.bank.v1beta1.MsgSend", "/cosmos.staking.v1beta1.MsgDelegate"}
 
-// 	if gasLimit != nil {
-// 		txBuilder.SetGasLimit(*gasLimit)
-// 	} else {
-// 		txBuilder.SetGasLimit(DEFAULT_GAS_LIMIT)
-// 	}
+	// both chains can be hosts
+	params := icahosttypes.NewParams(true, allowedMsgs)
+	suite.GetApp(suite.chainA).ICAHostKeeper.SetParams(suite.chainA.GetContext(), params)
 
-// 	if gasPrice != nil {
-// 		parsedGasPrices, err = sdk.ParseDecCoins(*gasPrice)
-// 	} else {
-// 		parsedGasPrices, err = sdk.ParseDecCoins(DEFAULT_GAS_PRICE)
-// 	}
-// 	s.Require().NoError(err)
-// 	feeAmount := parsedGasPrices.AmountOf("amyt").MulInt64(int64(DEFAULT_GAS_LIMIT)).RoundInt()
+	params = icahosttypes.NewParams(true, allowedMsgs)
+	suite.GetApp(suite.chainB).ICAHostKeeper.SetParams(suite.chainB.GetContext(), params)
+}
 
-// 	fees := &sdk.Coins{{Denom: s.denom, Amount: feeAmount}}
-// 	txBuilder.SetFeeAmount(*fees)
-// 	err = txBuilder.SetMsgs(msgs...)
-// 	s.Require().NoError(err)
+func NewICAPath(chainA, chainB *ibcgotesting.TestChain) *ibcgotesting.Path {
+	path := ibcgotesting.NewPath(chainA, chainB)
+	path.EndpointA.ChannelConfig.PortID = icatypes.HostPortID
+	path.EndpointB.ChannelConfig.PortID = icatypes.HostPortID
+	path.EndpointA.ChannelConfig.Order = channeltypes.ORDERED
+	path.EndpointB.ChannelConfig.Order = channeltypes.ORDERED
+	path.EndpointA.ChannelConfig.Version = TestVersion
+	path.EndpointB.ChannelConfig.Version = TestVersion
 
-// 	seq, err := s.app.EwasmKeeper.AccountKeeper.GetSequence(s.ctx, account.Address)
-// 	s.Require().NoError(err)
+	return path
+}
 
-// 	// First round: we gather all the signer infos. We use the "set empty
-// 	// signature" hack to do that.
-// 	sigV2 := signing.SignatureV2{
-// 		PubKey: account.PubKey,
-// 		Data: &signing.SingleSignatureData{
-// 			SignMode:  encodingConfig.TxConfig.SignModeHandler().DefaultMode(),
-// 			Signature: nil,
-// 		},
-// 		Sequence: seq,
-// 	}
+func (suite *KeeperTestSuite) Commit() {
+	suite.coordinator.CommitBlock(suite.chainA, suite.chainB)
+}
 
-// 	err = txBuilder.SetSignatures(sigV2)
-// 	s.Require().NoError(err)
+func (s *KeeperTestSuite) GetRandomAccount() simulation.Account {
+	pk := ed25519.GenPrivKey()
+	privKey := secp256k1.GenPrivKeyFromSecret(pk.GetKey().Seed())
+	pubKey := privKey.PubKey()
+	address := sdk.AccAddress(pubKey.Address())
+	account := simulation.Account{
+		PrivKey: privKey,
+		PubKey:  pubKey,
+		Address: address,
+	}
+	return account
+}
 
-// 	// Second round: all signer infos are set, so each signer can sign.
-// 	accNumber := s.app.EwasmKeeper.AccountKeeper.GetAccount(s.ctx, account.Address).GetAccountNumber()
-// 	signerData := authsigning.SignerData{
-// 		ChainID:       s.ctx.ChainID(),
-// 		AccountNumber: accNumber,
-// 		Sequence:      seq,
-// 	}
-// 	sigV2, err = tx.SignWithPrivKey(
-// 		encodingConfig.TxConfig.SignModeHandler().DefaultMode(), signerData,
-// 		txBuilder, account.PrivKey, encodingConfig.TxConfig,
-// 		seq,
-// 	)
-// 	s.Require().NoError(err)
+func (suite *KeeperTestSuite) RegisterInterchainAccount(endpoint *ibcgotesting.Endpoint, owner string, version string) error {
+	portID, err := icatypes.NewControllerPortID(owner)
+	if err != nil {
+		return err
+	}
 
-// 	err = txBuilder.SetSignatures(sigV2)
-// 	s.Require().NoError(err)
+	channelSequence := endpoint.Chain.App.GetIBCKeeper().ChannelKeeper.GetNextChannelSequence(endpoint.Chain.GetContext())
 
-// 	// bz are bytes to be broadcasted over the network
-// 	bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
-// 	s.Require().NoError(err)
-// 	return bz
-// }
+	if err := suite.GetApp(endpoint.Chain).ICAControllerKeeper.RegisterInterchainAccount(endpoint.Chain.GetContext(), endpoint.ConnectionID, owner, version); err != nil {
+		return err
+	}
 
-// func (s *KeeperTestSuite) DeliverTx(account simulation.Account, msgs ...sdk.Msg) abci.ResponseDeliverTx {
-// 	bz := s.prepareCosmosTx(account, msgs, nil, nil)
-// 	req := abci.RequestDeliverTx{Tx: bz}
-// 	res := s.app.BaseApp.DeliverTx(req)
-// 	return res
-// }
+	// commit state changes for proof verification
+	endpoint.Chain.NextBlock()
 
-// func (s *KeeperTestSuite) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result) {
+	// update port/channel ids
+	endpoint.ChannelID = channeltypes.FormatChannelIdentifier(channelSequence)
+	endpoint.ChannelConfig.PortID = portID
+	endpoint.ChannelConfig.Version = TestVersion
+
+	return nil
+}
+
+// SetupICAPath invokes the InterchainAccounts entrypoint and subsequent channel handshake handlers
+func (suite *KeeperTestSuite) SetupICAPath(path *ibcgotesting.Path, owner string, version string) error {
+	if err := suite.RegisterInterchainAccount(path.EndpointA, owner, version); err != nil {
+		return err
+	}
+
+	if err := path.EndpointB.ChanOpenTry(); err != nil {
+		return err
+	}
+
+	if err := path.EndpointA.ChanOpenAck(); err != nil {
+		return err
+	}
+
+	if err := path.EndpointB.ChanOpenConfirm(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s AppContext) Context() sdk.Context {
+	return s.chain.GetContext()
+}
+
+func (suite *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint, owner string) error {
+	// types.New
+	return nil
+}
+
+var DEFAULT_GAS_PRICE = "0.05amyt"
+var DEFAULT_GAS_LIMIT = uint64(15_000_000)
+
+func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
+	encodingConfig := app.MakeEncodingConfig()
+	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+	var parsedGasPrices sdk.DecCoins
+	var err error
+
+	if gasLimit != nil {
+		txBuilder.SetGasLimit(*gasLimit)
+	} else {
+		txBuilder.SetGasLimit(DEFAULT_GAS_LIMIT)
+	}
+
+	if gasPrice != nil {
+		parsedGasPrices, err = sdk.ParseDecCoins(*gasPrice)
+	} else {
+		parsedGasPrices, err = sdk.ParseDecCoins(DEFAULT_GAS_PRICE)
+	}
+	s.s.Require().NoError(err)
+	feeAmount := parsedGasPrices.AmountOf("amyt").MulInt64(int64(DEFAULT_GAS_LIMIT)).RoundInt()
+
+	fees := &sdk.Coins{{Denom: s.denom, Amount: feeAmount}}
+	txBuilder.SetFeeAmount(*fees)
+	err = txBuilder.SetMsgs(msgs...)
+	s.s.Require().NoError(err)
+
+	seq, err := s.app.AccountKeeper.GetSequence(s.Context(), account.Address)
+	s.s.Require().NoError(err)
+
+	// First round: we gather all the signer infos. We use the "set empty
+	// signature" hack to do that.
+	sigV2 := signing.SignatureV2{
+		PubKey: account.PubKey,
+		Data: &signing.SingleSignatureData{
+			SignMode:  encodingConfig.TxConfig.SignModeHandler().DefaultMode(),
+			Signature: nil,
+		},
+		Sequence: seq,
+	}
+
+	err = txBuilder.SetSignatures(sigV2)
+	s.s.Require().NoError(err)
+
+	// Second round: all signer infos are set, so each signer can sign.
+	accNumber := s.app.AccountKeeper.GetAccount(s.Context(), account.Address).GetAccountNumber()
+	signerData := authsigning.SignerData{
+		ChainID:       s.Context().ChainID(),
+		AccountNumber: accNumber,
+		Sequence:      seq,
+	}
+	sigV2, err = tx.SignWithPrivKey(
+		encodingConfig.TxConfig.SignModeHandler().DefaultMode(), signerData,
+		txBuilder, account.PrivKey, encodingConfig.TxConfig,
+		seq,
+	)
+	s.s.Require().NoError(err)
+
+	err = txBuilder.SetSignatures(sigV2)
+	s.s.Require().NoError(err)
+
+	// bz are bytes to be broadcasted over the network
+	bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+	s.s.Require().NoError(err)
+	return bz
+}
+
+func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) abci.ResponseDeliverTx {
+	bz := s.prepareCosmosTx(account, msgs, nil, nil)
+	req := abci.RequestDeliverTx{Tx: bz}
+	res := s.app.BaseApp.DeliverTx(req)
+	return res
+}
+
+// func (s AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result) {
 // 	bz := s.prepareCosmosTx(account, msgs, nil, nil)
 // 	gasInfo, res, err := s.app.Simulate(bz)
-// 	s.Require().NoError(err)
+// 	s.s.Require().NoError(err)
 // 	return gasInfo, res
 // }
 
-// func (s *KeeperTestSuite) Query(account simulation.Account, contract sdk.AccAddress, queryData []byte, queryPath string) abci.ResponseQuery {
+// func (s AppContext) Query(account simulation.Account, contract sdk.AccAddress, queryData []byte, queryPath string) abci.ResponseQuery {
 // 	req := abci.RequestQuery{Data: queryData, Path: queryPath}
 // 	return s.app.BaseApp.Query(req)
 // }
@@ -221,13 +311,13 @@ package keeper_test
 // // SmartQuery This will serialize the query message and submit it to the contract.
 // // The response is parsed into the provided interface.
 // // Usage: SmartQuery(addr, QueryMsg{Foo: 1}, &response)
-// func (s *KeeperTestSuite) SmartQuery(contractAddr string, queryMsg interface{}, response interface{}) error {
+// func (s AppContext) SmartQuery(contractAddr string, queryMsg interface{}, response interface{}) error {
 // 	msg, err := json.Marshal(queryMsg)
 // 	if err != nil {
 // 		return err
 // 	}
 
-// 	req := types.QuerySmartContractStateRequest{
+// 	req := wasmtypes.QuerySmartContractStateRequest{
 // 		Address:   contractAddr,
 // 		QueryData: msg,
 // 	}
@@ -247,7 +337,7 @@ package keeper_test
 // 	}
 
 // 	// unpack protobuf
-// 	var resp types.QuerySmartContractStateResponse
+// 	var resp wasmtypes.QuerySmartContractStateResponse
 // 	err = proto.Unmarshal(res.Value, &resp)
 // 	if err != nil {
 // 		return err
@@ -256,157 +346,154 @@ package keeper_test
 // 	return json.Unmarshal(resp.Data, response)
 // }
 
-// func (s *KeeperTestSuite) EwasmQuery(account simulation.Account, contract sdk.AccAddress, queryData []byte, funds sdk.Coins) string {
-// 	query := types.QuerySmartContractCallRequest{
+// func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, queryData []byte, funds sdk.Coins) string {
+// 	query := wasmtypes.QuerySmartContractCallRequest{
 // 		Sender:    account.Address.String(),
 // 		Address:   contract.String(),
 // 		QueryData: queryData,
 // 		Funds:     funds,
 // 	}
 // 	bz, err := query.Marshal()
-// 	s.Require().NoError(err)
+// 	s.s.Require().NoError(err)
 
 // 	req := abci.RequestQuery{Data: bz, Path: "/cosmwasm.wasm.v1.Query/SmartContractCall"}
 // 	abcires := s.app.BaseApp.Query(req)
-// 	var resp types.QuerySmartContractCallResponse
+// 	var resp wasmtypes.QuerySmartContractCallResponse
 // 	err = resp.Unmarshal(abcires.Value)
-// 	s.Require().NoError(err)
+// 	s.s.Require().NoError(err)
 
-// 	var data keeper.EwasmQueryResponse
+// 	var data wasmkeeper.EwasmQueryResponse
 // 	err = json.Unmarshal(resp.Data, &data)
-// 	s.Require().NoError(err)
+// 	s.s.Require().NoError(err)
 // 	return hex.EncodeToString(data.Data)
 // }
 
-// func (s *KeeperTestSuite) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
-// 	bz := s.prepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
-// 	req := abci.RequestDeliverTx{Tx: bz}
-// 	res := s.app.BaseApp.DeliverTx(req)
-// 	return res
-// }
+func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
+	bz := s.prepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
+	req := abci.RequestDeliverTx{Tx: bz}
+	res := s.app.BaseApp.DeliverTx(req)
+	return res
+}
 
-// func (s *KeeperTestSuite) GetRandomAccount() simulation.Account {
-// 	pk := ed25519.GenPrivKey()
-// 	privKey := secp256k1.GenPrivKeyFromSecret(pk.GetKey().Seed())
-// 	pubKey := privKey.PubKey()
-// 	address := sdk.AccAddress(pubKey.Address())
-// 	account := simulation.Account{
-// 		PrivKey: privKey,
-// 		PubKey:  pubKey,
-// 		Address: address,
-// 	}
-// 	return account
-// }
+func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 {
+	storeCodeMsg := &types.MsgStoreCode{
+		Sender:       sender.Address.String(),
+		WasmByteCode: wasmbin,
+	}
 
-// func (s *KeeperTestSuite) StoreCode(sender simulation.Account, wasmbin []byte) uint64 {
-// 	storeCodeMsg := &types.MsgStoreCode{
-// 		Sender:       sender.Address.String(),
-// 		WASMByteCode: wasmbin,
-// 	}
+	res := s.DeliverTx(sender, storeCodeMsg)
+	s.s.Require().True(res.IsOK(), res.GetLog())
+	s.s.Commit()
 
-// 	res := s.DeliverTx(sender, storeCodeMsg)
-// 	s.Require().True(res.IsOK(), res.GetLog())
-// 	s.Commit()
+	codeId := s.s.GetCodeIdFromLog(res.GetLog())
 
-// 	codeId := s.GetCodeIdFromLog(res.GetLog())
+	bytecode, err := s.app.WasmxKeeper.GetByteCode(s.Context(), codeId)
+	s.s.Require().NoError(err)
+	s.s.Require().Equal(bytecode, wasmbin)
+	return codeId
+}
 
-// 	bytecode, err := s.app.EwasmKeeper.TwasmKeeper.GetByteCode(s.ctx, codeId)
-// 	s.Require().NoError(err)
-// 	s.Require().Equal(bytecode, wasmbin)
-// 	return codeId
-// }
+func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsgStr string) sdk.AccAddress {
+	instantiateMsg := []byte(instantiateMsgStr)
+	instantiateCodeMsg := &types.MsgInstantiateContract{
+		Sender: sender.Address.String(),
+		CodeId: codeId,
+		Label:  "test",
+		Msg:    instantiateMsg,
+	}
+	res := s.DeliverTxWithOpts(sender, instantiateCodeMsg, 1000000, nil) // 135690
+	s.s.Require().True(res.IsOK(), res.GetLog())
+	s.s.Commit()
+	contractAddressStr := s.s.GetContractAddressFromLog(res.GetLog())
+	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
+	return contractAddress
+}
 
-// func (s *KeeperTestSuite) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsgStr string) sdk.AccAddress {
-// 	instantiateMsg := []byte(instantiateMsgStr)
-// 	instantiateCodeMsg := &types.MsgInstantiateContract{
-// 		Sender: sender.Address.String(),
-// 		CodeID: codeId,
-// 		Label:  "test",
-// 		Msg:    instantiateMsg,
-// 	}
-// 	res := s.DeliverTxWithOpts(sender, instantiateCodeMsg, 1000000, nil) // 135690
-// 	s.Require().True(res.IsOK(), res.GetLog())
-// 	s.Commit()
-// 	contractAddressStr := s.GetContractAddressFromLog(res.GetLog())
-// 	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
-// 	return contractAddress
-// }
+func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsgStr string, funds sdk.Coins) abci.ResponseDeliverTx {
+	executeMsgBz := []byte(executeMsgStr)
+	executeMsg := &types.MsgExecuteContract{
+		Sender:   sender.Address.String(),
+		Contract: contractAddress.String(),
+		Msg:      executeMsgBz,
+		Funds:    funds,
+	}
+	res := s.DeliverTxWithOpts(sender, executeMsg, 1500000, nil) // 135690
+	s.s.Require().True(res.IsOK(), res.GetLog())
+	s.s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
+	s.s.Commit()
+	return res
+}
 
-// func (s *KeeperTestSuite) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsgStr string, funds sdk.Coins) abci.ResponseDeliverTx {
-// 	return s.ExecuteContractWithOpts(sender, contractAddress, executeMsgStr, funds, 1500000, nil)
-// }
+type Attribute struct {
+	Key   string
+	Value string
+}
 
-// func (s *KeeperTestSuite) ExecuteContractWithOpts(sender simulation.Account, contractAddress sdk.AccAddress, executeMsgStr string, funds sdk.Coins, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
-// 	res := s.ExecuteContractNoCheck(sender, contractAddress, executeMsgStr, funds, gasLimit, gasPrice)
-// 	s.Require().True(res.IsOK(), res.GetLog())
-// 	s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
-// 	s.Commit()
-// 	return res
-// }
+type Event struct {
+	Type       string
+	Attributes *[]Attribute
+}
 
-// func (s *KeeperTestSuite) ExecuteContractNoCheck(sender simulation.Account, contractAddress sdk.AccAddress, executeMsgStr string, funds sdk.Coins, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
-// 	executeMsgBz := []byte(executeMsgStr)
-// 	executeMsg := &types.MsgExecuteContract{
-// 		Sender:   sender.Address.String(),
-// 		Contract: contractAddress.String(),
-// 		Msg:      executeMsgBz,
-// 		Funds:    funds,
-// 	}
-// 	return s.DeliverTxWithOpts(sender, executeMsg, gasLimit, gasPrice) // 135690
-// }
+type Log struct {
+	MsgIndex uint64
+	Events   []Event
+}
 
-// type Attribute struct {
-// 	Key   string
-// 	Value string
-// }
+func (s *KeeperTestSuite) GetFromLog(logstr string, logtype string) *[]Attribute {
+	var logs []Log
+	err := json.Unmarshal([]byte(logstr), &logs)
+	s.Require().NoError(err)
+	for _, log := range logs {
+		for _, ev := range log.Events {
+			if ev.Type == logtype {
+				return ev.Attributes
+			}
+		}
+	}
+	return nil
+}
 
-// type Event struct {
-// 	Type       string
-// 	Attributes *[]Attribute
-// }
+func (s *KeeperTestSuite) GetCodeIdFromLog(logstr string) uint64 {
+	attrs := s.GetFromLog(logstr, "store_code")
+	if attrs == nil {
+		return 0
+	}
+	for _, attr := range *attrs {
+		if attr.Key == "code_id" {
+			ui64, err := strconv.ParseUint(attr.Value, 10, 64)
+			s.Require().NoError(err)
+			return ui64
+		}
+	}
+	return 0
+}
 
-// type Log struct {
-// 	MsgIndex uint64
-// 	Events   []Event
-// }
+func (s *KeeperTestSuite) GetContractAddressFromLog(logstr string) string {
+	attrs := s.GetFromLog(logstr, "instantiate")
+	s.Require().NotNil(attrs)
+	for _, attr := range *attrs {
+		if attr.Key == "_contract_address" {
+			return attr.Value
+		}
+	}
+	s.Require().True(false, "no contract address found in log")
+	return ""
+}
 
-// func (s *KeeperTestSuite) GetFromLog(logstr string, logtype string) *[]Attribute {
-// 	var logs []Log
-// 	err := json.Unmarshal([]byte(logstr), &logs)
-// 	s.Require().NoError(err)
-// 	for _, log := range logs {
-// 		for _, ev := range log.Events {
-// 			if ev.Type == logtype {
-// 				return ev.Attributes
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
+func GetSdkEvents(events []abci.Event, evtype string) []sdk.Event {
+	sdkEvents := make([]sdk.Event, len(events))
+	for _, ev := range events {
+		if ev.GetType() != evtype {
+			continue
+		}
 
-// func (s *KeeperTestSuite) GetCodeIdFromLog(logstr string) uint64 {
-// 	attrs := s.GetFromLog(logstr, "store_code")
-// 	if attrs == nil {
-// 		return 0
-// 	}
-// 	for _, attr := range *attrs {
-// 		if attr.Key == "code_id" {
-// 			ui64, err := strconv.ParseUint(attr.Value, 10, 64)
-// 			s.Require().NoError(err)
-// 			return ui64
-// 		}
-// 	}
-// 	return 0
-// }
+		attributes := make([]sdk.Attribute, len(ev.Attributes))
+		for _, attr := range ev.Attributes {
+			attributes = append(attributes, sdk.NewAttribute(string(attr.Key), string(attr.Value)))
+		}
 
-// func (s *KeeperTestSuite) GetContractAddressFromLog(logstr string) string {
-// 	attrs := s.GetFromLog(logstr, "instantiate")
-// 	s.Require().NotNil(attrs)
-// 	for _, attr := range *attrs {
-// 		if attr.Key == "_contract_address" {
-// 			return attr.Value
-// 		}
-// 	}
-// 	s.Require().True(false, "no contract address found in log")
-// 	return ""
-// }
+		sdkev := sdk.NewEvent(ev.Type, attributes...)
+		sdkEvents = append(sdkEvents, sdkev)
+	}
+	return sdkEvents
+}
