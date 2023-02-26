@@ -40,7 +40,7 @@ var (
 	// TODO: update crypto.AddressHash() when sdk uses address.Module()
 	// TestAccAddress = icatypes.GenerateAddress(sdk.AccAddress(crypto.AddressHash([]byte(icatypes.ModuleName))), ibcgotesting.FirstConnectionID, TestPortID)
 	// TestOwnerAddress defines a reusable bech32 address for testing purposes
-	TestOwnerAddress = "mythos1fjx8p8uzx3h5qszqnwvelulzd659j8ua5qvaep"
+	TestOwnerAddress = "cosmos1fjx8p8uzx3h5qszqnwvelulzd659j8ua5qvaep"
 	// TestPortID defines a reusable port identifier for testing purposes
 	TestPortID, _ = icatypes.NewControllerPortID(TestOwnerAddress)
 	// TestVersion defines a reusable interchainaccounts version string for testing purposes
@@ -472,7 +472,7 @@ func (s *KeeperTestSuite) GetContractAddressFromLog(logstr string) string {
 	attrs := s.GetFromLog(logstr, "instantiate")
 	s.Require().NotNil(attrs)
 	for _, attr := range *attrs {
-		if attr.Key == "_contract_address" {
+		if attr.Key == "contract_address" {
 			return attr.Value
 		}
 	}

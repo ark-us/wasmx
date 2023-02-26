@@ -2,7 +2,7 @@ package keeper_test
 
 import (
 	_ "embed"
-	"fmt"
+	"encoding/hex"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -13,7 +13,7 @@ var (
 	contractcw []byte
 )
 
-func (suite *KeeperTestSuite) TestEwasmContractInstantiation() {
+func (suite *KeeperTestSuite) TestEwasmContract() {
 	wasmbin := contractcw
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
@@ -25,6 +25,6 @@ func (suite *KeeperTestSuite) TestEwasmContractInstantiation() {
 	codeId := appA.StoreCode(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, `{"readonly":false,"data":"0x"}`)
 
-	fmt.Println("contractAddressStr", contractAddress.String())
-	suite.Require().True(false)
+	res := appA.ExecuteContract(sender, contractAddress, `{"readonly":false,"data":"0x1122334455"}`, nil)
+	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", hex.EncodeToString(res.Data))
 }

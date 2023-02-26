@@ -104,14 +104,12 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	appparams "wasmx/app/params"
+	"wasmx/docs"
 	wasmxmodule "wasmx/x/wasmx"
 	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
 	wasmxmoduletypes "wasmx/x/wasmx/types"
-
 	// this line is used by starport scaffolding # stargate/app/moduleImport
-
-	appparams "wasmx/app/params"
-	"wasmx/docs"
 )
 
 // this line is used by starport scaffolding # stargate/wasm/app/enabledProposals

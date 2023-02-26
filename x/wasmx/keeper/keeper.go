@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -43,7 +44,13 @@ func NewKeeper(
 	wasmConfig types.WasmConfig,
 	homeDir string,
 ) *Keeper {
-	wasmvm, err := NewVM(filepath.Join(homeDir, "wasmx"), contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	contractsPath := filepath.Join(homeDir, types.ContractsDir)
+	err := createDirsIfNotExist(contractsPath)
+	if err != nil {
+		panic(err)
+	}
+
+	wasmvm, err := NewVM(contractsPath, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
 	if err != nil {
 		panic(err)
 	}
@@ -68,4 +75,8 @@ func NewKeeper(
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+}
+
+func createDirsIfNotExist(dirpath string) error {
+	return os.MkdirAll(dirpath, 0770)
 }

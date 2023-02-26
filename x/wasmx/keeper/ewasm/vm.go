@@ -1,18 +1,27 @@
 package ewasm
 
 import (
+	"encoding/json"
 	"fmt"
 
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
-
-	"wasmx/x/wasmx/types"
 )
+
+const coreOpcodesModule = "./ewasm/contracts/ewasm.wasm"
+
+type WasmEthMessage struct {
+	Readonly bool
+	Data     []byte
+}
+
+type Context struct {
+	Calldata   []byte
+	ReturnData []byte
+}
 
 type EwasmFunctionWrapper struct {
 	Name string
 	Vm   *wasmedge.VM
-	// Calldata []byte
 }
 
 func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -28,9 +37,9 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 
 func ewasm_getCallDataSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getCallDataSize")
-	// wrapper := context.(EwasmFunctionWrapper)
+	ctx := context.(Context)
 	returns := make([]interface{}, 1)
-	returns[0] = 25
+	returns[0] = len(ctx.Calldata)
 	return returns, wasmedge.Result_Success
 }
 
@@ -43,6 +52,7 @@ func ewasm_useGas(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 func ewasm_finish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: finish")
+	ctx := context.(Context)
 	pointer := params[0].(int32)
 	size := params[1].(int32)
 	mem := callframe.GetMemoryByIndex(0)
@@ -57,45 +67,54 @@ func ewasm_finish(context interface{}, callframe *wasmedge.CallingFrame, params 
 	// Set the returns
 	returns := make([]interface{}, 1)
 	returns[0] = result
+	ctx.ReturnData = result
 	fmt.Println("Go: finish", result)
 	return returns, wasmedge.Result_Success
 }
 
-func buildEwasmEnv() *wasmedge.Module {
+func buildEwasmEnv(context Context) *wasmedge.Module {
 	var ewasmEnv = wasmedge.NewModule("env")
 
 	getUseGas := wasmedge.NewFunction(wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I64},
 		[]wasmedge.ValType{},
-	), ewasm_useGas, nil, 0)
+	), ewasm_useGas, context, 0)
 	ewasmEnv.AddFunction("ethereum_useGas", getUseGas)
 
 	getCallDataSize := wasmedge.NewFunction(wasmedge.NewFunctionType(
 		[]wasmedge.ValType{},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
-	), ewasm_getCallDataSize, nil, 0)
+	), ewasm_getCallDataSize, context, 0)
 	ewasmEnv.AddFunction("ethereum_getCallDataSize", getCallDataSize)
 
 	getFinish := wasmedge.NewFunction(wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
-	), ewasm_finish, nil, 0)
+	), ewasm_finish, context, 0)
 	ewasmEnv.AddFunction("ethereum_finish", getFinish)
 
 	return ewasmEnv
 }
 
-func ExecuteWasm(filePath string) ([]byte, error) {
+func ExecuteWasm(filePath string, funcName string, msg []byte) ([]byte, error) {
 	var err error
+
+	var ethMsg WasmEthMessage
+	err = json.Unmarshal(msg, &ethMsg)
+	if err != nil {
+		return nil, err
+	}
+
 	wasmedge.SetLogErrorLevel()
 
 	store := wasmedge.NewStore()
-	var ewasmVm = wasmedge.NewVMWithStore(store)
-	var ewasmEnv = buildEwasmEnv()
+	ewasmVm := wasmedge.NewVMWithStore(store)
+	context := Context{Calldata: ethMsg.Data}
+	ewasmEnv := buildEwasmEnv(context)
 
 	ewasmVm.RegisterModule(ewasmEnv)
 	fmt.Println("Go: eWasm module registered")
-	ewasmVm.LoadWasmFile("./modules/ewasm.wasm")
+	ewasmVm.LoadWasmFile(coreOpcodesModule)
 	ewasmVm.Validate()
 	ewasmVm.Instantiate()
 	fmt.Println("Go: eWasm module instantiate")
@@ -127,18 +146,19 @@ func ExecuteWasm(filePath string) ([]byte, error) {
 	fmt.Println("Go: Contract instantiated")
 
 	var res []interface{}
-	res, err = contractVm.Execute("main")
-	if err == nil {
-		fmt.Println("Run main: ", res[0].(int32))
-	} else {
-		fmt.Println("Run main FAILED")
-		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, err.Error())
-	}
+	_, err = contractVm.Execute(funcName)
 
 	contractVm.Release()
 	contractEnv.Release()
 	ewasmVm.Release()
 	ewasmEnv.Release()
 
-	return res[0].([]byte), nil
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return make([]byte, 0), nil
+	}
+
+	return context.ReturnData, nil
 }

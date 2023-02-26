@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	tmcfg "github.com/tendermint/tendermint/config"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
@@ -38,6 +39,7 @@ import (
 
 	"wasmx/app"
 	appparams "wasmx/app/params"
+	wasmxtypes "wasmx/x/wasmx/types"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
@@ -134,6 +136,7 @@ func initRootCmd(
 		a.appExport,
 		addModuleInitFlags,
 	)
+	extendUnsafeResetAllCmd(rootCmd)
 
 	// add keybase, auxiliary RPC, query, and tx child commands
 	rootCmd.AddCommand(
@@ -351,4 +354,27 @@ func initAppConfig() (string, interface{}) {
 	customAppTemplate := serverconfig.DefaultConfigTemplate
 
 	return customAppTemplate, customAppConfig
+}
+
+// extendUnsafeResetAllCmd - also clear wasm dir
+func extendUnsafeResetAllCmd(rootCmd *cobra.Command) {
+	unsafeResetCmd := tmcmd.ResetAllCmd.Use
+	for _, branchCmd := range rootCmd.Commands() {
+		if branchCmd.Use != "tendermint" {
+			continue
+		}
+		for _, cmd := range branchCmd.Commands() {
+			if cmd.Use == unsafeResetCmd {
+				serverRunE := cmd.RunE
+				cmd.RunE = func(cmd *cobra.Command, args []string) error {
+					if err := serverRunE(cmd, args); err != nil {
+						return nil
+					}
+					serverCtx := server.GetServerContextFromCmd(cmd)
+					return os.RemoveAll(filepath.Join(serverCtx.Config.RootDir, wasmxtypes.ContractsDir))
+				}
+				return
+			}
+		}
+	}
 }

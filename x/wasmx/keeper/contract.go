@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"strconv"
 	"strings"
@@ -21,8 +20,8 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []b
 	return k.create(ctx, creator, wasmByteCode)
 }
 
-func (k Keeper) Instantiate(ctx sdk.Context, codeId uint64, senderAddr sdk.AccAddress, msg types.RawContractMessage, label string, funds sdk.Coins) (sdk.AccAddress, []byte, error) {
-	return nil, nil, nil
+func (k Keeper) Instantiate(ctx sdk.Context, codeId uint64, creator sdk.AccAddress, msg types.RawContractMessage, label string, funds sdk.Coins) (sdk.AccAddress, []byte, error) {
+	return k.instantiate(ctx, codeId, creator, msg, label, funds)
 }
 
 func (k Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccAddress, msg types.RawContractMessage, label string, funds sdk.Coins, salt []byte, fixMsg bool) (sdk.AccAddress, []byte, error) {
@@ -30,11 +29,11 @@ func (k Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccA
 }
 
 func (k Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
-	return nil, nil
+	return k.execute(ctx, contractAddr, senderAddr, msg, funds)
 }
 
 func (k Keeper) ExecuteWithOrigin(ctx sdk.Context, originAddr sdk.AccAddress, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
-	return nil, nil
+	return k.executeWithOrigin(ctx, originAddr, contractAddr, senderAddr, msg, funds)
 }
 
 func (k Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, codeContractAddr sdk.AccAddress, storageContractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
@@ -116,7 +115,7 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 func (k Keeper) instantiateWithAddress(
 	ctx sdk.Context,
 	codeID uint64,
-	creator, admin sdk.AccAddress,
+	creator sdk.AccAddress,
 	initMsg []byte,
 	label string,
 	deposit sdk.Coins,
@@ -129,18 +128,17 @@ func (k Keeper) instantiateWithAddress(
 	if codeInfo == nil {
 		return nil, sdkerrors.Wrap(types.ErrNotFound, "code")
 	}
-	_, data, err := k.instantiateInternal(ctx, codeID, creator, admin, initMsg, label, deposit, contractAddress, codeInfo)
+	_, data, err := k.instantiateInternal(ctx, codeID, creator, initMsg, label, deposit, contractAddress, codeInfo)
 	return data, err
 }
 
 func (k Keeper) instantiate(
 	ctx sdk.Context,
 	codeID uint64,
-	creator, admin sdk.AccAddress,
+	creator sdk.AccAddress,
 	initMsg []byte,
 	label string,
 	deposit sdk.Coins,
-	addressGenerator AddressGenerator,
 ) (sdk.AccAddress, []byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate")
 
@@ -149,15 +147,16 @@ func (k Keeper) instantiate(
 	if codeInfo == nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrNotFound, "code")
 	}
-
-	contractAddress := addressGenerator(ctx, codeID, codeInfo.CodeHash)
-	return k.instantiateInternal(ctx, codeID, creator, admin, initMsg, label, deposit, contractAddress, codeInfo)
+	// TODO if we support multiple types of address generation
+	// the type should be saved in CodeInfo
+	contractAddress := k.EwasmClassicAddressGenerator(creator)(ctx, codeID, codeInfo.CodeHash)
+	return k.instantiateInternal(ctx, codeID, creator, initMsg, label, deposit, contractAddress, codeInfo)
 }
 
 func (k Keeper) instantiateInternal(
 	ctx sdk.Context,
 	codeID uint64,
-	creator, admin sdk.AccAddress,
+	creator sdk.AccAddress,
 	initMsg []byte,
 	label string,
 	deposit sdk.Coins,
@@ -262,150 +261,134 @@ func (k Keeper) instantiateInternal(
 	return contractAddress, res.Data, nil
 }
 
-func (k Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(lastIDKey)
-	id := uint64(1)
-	if bz != nil {
-		id = binary.BigEndian.Uint64(bz)
+// Execute executes the contract instance
+func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
 	}
-	bz = sdk.Uint64ToBigEndian(id + 1)
-	store.Set(lastIDKey, bz)
-	return id
-}
 
-// PeekAutoIncrementID reads the current value without incrementing it.
-func (k Keeper) PeekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(lastIDKey)
-	id := uint64(1)
-	if bz != nil {
-		id = binary.BigEndian.Uint64(bz)
-	}
-	return id
-}
+	// executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
+	// ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
 
-func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uint64) error {
-	store := ctx.KVStore(k.storeKey)
-	if store.Has(lastIDKey) {
-		return sdkerrors.Wrapf(types.ErrDuplicate, "autoincrement id: %s", string(lastIDKey))
-	}
-	bz := sdk.Uint64ToBigEndian(val)
-	store.Set(lastIDKey, bz)
-	return nil
-}
-
-func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
-	store := ctx.KVStore(k.storeKey)
-	var contract types.ContractInfo
-	contractBz := store.Get(types.GetContractAddressKey(contractAddress))
-	if contractBz == nil {
-		return nil
-	}
-	k.cdc.MustUnmarshal(contractBz, &contract)
-	return &contract
-}
-
-func (k Keeper) HasContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
-	store := ctx.KVStore(k.storeKey)
-	return store.Has(types.GetContractAddressKey(contractAddress))
-}
-
-// storeContractInfo persists the ContractInfo. No secondary index updated here.
-func (k Keeper) storeContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
-	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
-}
-
-// Temporary function, used for testing. TODO: remove
-// StoreContractInfo persists the ContractInfo. No secondary index updated here.
-func (k Keeper) StoreContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
-	k.storeContractInfo(ctx, contractAddress, contract)
-}
-
-func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractKeyPrefix)
-	iter := prefixStore.Iterator(nil, nil)
-	defer iter.Close()
-
-	for ; iter.Valid(); iter.Next() {
-		var contract types.ContractInfo
-		k.cdc.MustUnmarshal(iter.Value(), &contract)
-		// cb returns true to stop early
-		if cb(iter.Key(), contract) {
-			break
+	// add more funds
+	if !coins.IsZero() {
+		if err := k.TransferCoins(ctx, caller, contractAddress, coins); err != nil {
+			return nil, err
 		}
 	}
+
+	env := types.NewEnv(ctx, contractAddress)
+	info := types.NewInfo(caller, coins)
+
+	// prepare querier
+	// querier := k.newQueryHandler(ctx, contractAddress)
+	// gas := k.runtimeGasForContract(ctx)
+	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+
+	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0)
+
+	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
+	if execErr != nil {
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "dispatch")
+	}
+
+	return data, nil
 }
 
-// IterateContractState iterates through all elements of the key value store for the given contract address and passes
-// them to the provided callback function. The callback method can return true to abort early.
-func (k Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAddress, cb func(key, value []byte) bool) {
-	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	iter := prefixStore.Iterator(nil, nil)
-	defer iter.Close()
+// executeWithOrigin executes the contract instance
+func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "executeWithOrigin")
 
-	for ; iter.Valid(); iter.Next() {
-		if cb(iter.Key(), iter.Value()) {
-			break
+	// fail if caller is not a contract
+	_, _, _, err := k.contractInstance(ctx, caller)
+	if err != nil {
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, "cannot executeWithOrigin from EOA")
+	}
+
+	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
+	// ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+
+	// add more funds
+	if !coins.IsZero() {
+		if err := k.TransferCoins(ctx, caller, contractAddress, coins); err != nil {
+			return nil, err
 		}
 	}
+
+	env := types.NewEnv(ctx, contractAddress)
+	info := types.NewInfo(caller, coins)
+	info.Origin = origin.String()
+
+	// prepare querier
+	// querier := k.newQueryHandler(ctx, contractAddress)
+	// gas := k.runtimeGasForContract(ctx)
+	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+
+	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0)
+
+	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
+
+	if execErr != nil {
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "dispatch")
+	}
+
+	return data, nil
 }
 
-func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.ContractStorage) error {
-	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	for _, model := range models {
-		if model.Value == nil {
-			model.Value = []byte{}
+// handleContractResponse processes the contract response data by emitting events and sending sub-/messages.
+func (k *Keeper) handleContractResponse(
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	ibcPort string,
+	// msgs []wasmvmtypes.SubMsg,
+	attrs []types.EventAttribute,
+	data []byte,
+	evts types.Events,
+) ([]byte, error) {
+	// attributeGasCost := k.gasRegister.EventCosts(attrs, evts)
+	// ctx.GasMeter().ConsumeGas(attributeGasCost, "Custom contract event attributes")
+	// emit all events from this contract itself
+	if len(attrs) != 0 {
+		wasmEvents, err := newWasmModuleEvent(attrs, contractAddr)
+		if err != nil {
+			return nil, err
 		}
-		if prefixStore.Has(model.Key) {
-			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
+		ctx.EventManager().EmitEvents(wasmEvents)
+	}
+	if len(evts) > 0 {
+		customEvents, err := newCustomEvents(evts, contractAddr)
+		if err != nil {
+			return nil, err
 		}
-		prefixStore.Set(model.Key, model.Value)
+		ctx.EventManager().EmitEvents(customEvents)
 	}
-	return nil
-}
 
-func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
-	store := ctx.KVStore(k.storeKey)
-	var codeInfo types.CodeInfo
-	codeInfoBz := store.Get(types.GetCodeKey(codeID))
-	if codeInfoBz == nil {
-		return nil
-	}
-	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
-	return &codeInfo
-}
-
-func (k Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
-	store := ctx.KVStore(k.storeKey)
-	return store.Has(types.GetCodeKey(codeID))
-}
-
-func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo) bool) {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.CodeKeyPrefix)
-	iter := prefixStore.Iterator(nil, nil)
-	defer iter.Close()
-
-	for ; iter.Valid(); iter.Next() {
-		var c types.CodeInfo
-		k.cdc.MustUnmarshal(iter.Value(), &c)
-		// cb returns true to stop early
-		if cb(binary.BigEndian.Uint64(iter.Key()), c) {
-			return
-		}
-	}
-}
-
-func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
-	store := ctx.KVStore(k.storeKey)
-	var codeInfo types.CodeInfo
-	codeInfoBz := store.Get(types.GetCodeKey(codeID))
-	if codeInfoBz == nil {
-		return nil, nil
-	}
-	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
-	return k.wasmvm.GetCode(codeInfo.CodeHash)
+	return data, nil
 }

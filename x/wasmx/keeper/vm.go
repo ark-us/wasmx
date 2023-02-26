@@ -57,8 +57,8 @@ func (k WasmxEngine) Instantiate(
 	// execute instantiate export
 
 	// TODO gas
-	filepath := path.Join(k.DataDir, hex.EncodeToString(checksum))
-	data, err := ewasm.ExecuteWasm(filepath)
+	filepath := k.build_path(k.DataDir, checksum)
+	data, err := ewasm.ExecuteWasm(filepath, "instantiate", initMsg)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -66,19 +66,24 @@ func (k WasmxEngine) Instantiate(
 }
 
 func (k WasmxEngine) Execute(
-	code types.Checksum,
+	checksum types.Checksum,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
 	store types.KVStore,
-	querier types.Querier,
-	gasMeter types.GasMeter,
+	// querier types.Querier,
+	// gasMeter types.GasMeter,
 	gasLimit uint64,
 	// deserCost types.UFraction,
 ) (types.ContractResponse, uint64, error) {
 	// load wasm
 	// execute instantiate export
-	return types.ContractResponse{}, 0, nil
+	filepath := k.build_path(k.DataDir, checksum)
+	data, err := ewasm.ExecuteWasm(filepath, "main", executeMsg)
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
+	return types.ContractResponse{Data: data}, 0, nil
 }
 
 func (k WasmxEngine) QueryExecute(
@@ -95,8 +100,8 @@ func (k WasmxEngine) QueryExecute(
 	return types.ContractResponse{}, 0, nil
 }
 
-func (k WasmxEngine) GetCode(code types.Checksum) (types.WasmCode, error) {
-	return nil, nil
+func (k WasmxEngine) GetCode(checksum types.Checksum) (types.WasmCode, error) {
+	return k.load_wasm(k.DataDir, checksum)
 }
 
 func (k WasmxEngine) Cleanup() {
@@ -117,7 +122,7 @@ func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (typ
 	h := sha256.New()
 	h.Write(wasmBytecode)
 	checksum := h.Sum(nil)
-	filepath := path.Join(dataDir, hex.EncodeToString(checksum))
+	filepath := k.build_path(k.DataDir, checksum)
 
 	// Read and write permissions for the owner and read-only permissions for everyone else
 	err := ioutil.WriteFile(filepath, wasmBytecode, 0644)
@@ -127,6 +132,11 @@ func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (typ
 	return checksum, nil
 }
 
-func (k WasmxEngine) load_wasm(code types.Checksum) (types.WasmCode, error) {
-	return nil, nil
+func (k WasmxEngine) load_wasm(dataDir string, checksum types.Checksum) (types.WasmCode, error) {
+	filepath := k.build_path(k.DataDir, checksum)
+	return ioutil.ReadFile(filepath)
+}
+
+func (k WasmxEngine) build_path(dataDir string, checksum types.Checksum) string {
+	return path.Join(dataDir, hex.EncodeToString(checksum))
 }
