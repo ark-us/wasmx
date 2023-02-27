@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"strconv"
 	"testing"
@@ -32,7 +33,6 @@ import (
 	"wasmx/app"
 	ibctesting "wasmx/testutil/ibc"
 	wasmxkeeper "wasmx/x/wasmx/keeper"
-	wasmeth "wasmx/x/wasmx/keeper/ewasm"
 	"wasmx/x/wasmx/types"
 )
 
@@ -347,28 +347,6 @@ func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) abci.
 // 	return json.Unmarshal(resp.Data, response)
 // }
 
-// func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, queryData []byte, funds sdk.Coins) string {
-// 	query := wasmtypes.QuerySmartContractCallRequest{
-// 		Sender:    account.Address.String(),
-// 		Address:   contract.String(),
-// 		QueryData: queryData,
-// 		Funds:     funds,
-// 	}
-// 	bz, err := query.Marshal()
-// 	s.s.Require().NoError(err)
-
-// 	req := abci.RequestQuery{Data: bz, Path: "/cosmwasm.wasm.v1.Query/SmartContractCall"}
-// 	abcires := s.app.BaseApp.Query(req)
-// 	var resp wasmtypes.QuerySmartContractCallResponse
-// 	err = resp.Unmarshal(abcires.Value)
-// 	s.s.Require().NoError(err)
-
-// 	var data wasmkeeper.EwasmQueryResponse
-// 	err = json.Unmarshal(resp.Data, &data)
-// 	s.s.Require().NoError(err)
-// 	return hex.EncodeToString(data.Data)
-// }
-
 func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
 	bz := s.prepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
 	req := abci.RequestDeliverTx{Tx: bz}
@@ -394,7 +372,7 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	return codeId
 }
 
-func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg wasmeth.WasmEthMessage) sdk.AccAddress {
+func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage) sdk.AccAddress {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.s.Require().NoError(err)
 	instantiateContractMsg := &types.MsgInstantiateContract{
@@ -411,7 +389,7 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 	return contractAddress
 }
 
-func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg wasmeth.WasmEthMessage, funds sdk.Coins) abci.ResponseDeliverTx {
+func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins) abci.ResponseDeliverTx {
 	msgbz, err := json.Marshal(executeMsg)
 	s.s.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{
@@ -425,6 +403,39 @@ func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress s
 	s.s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
 	s.s.Commit()
 	return res
+}
+
+func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins) string {
+	msgbz, err := json.Marshal(executeMsg)
+	s.s.Require().NoError(err)
+	query := types.QuerySmartContractCallRequest{
+		Sender:    account.Address.String(),
+		Address:   contract.String(),
+		QueryData: msgbz,
+		Funds:     funds,
+	}
+	bz, err := query.Marshal()
+	s.s.Require().NoError(err)
+
+	req := abci.RequestQuery{Data: bz, Path: "/wasmx.wasmx.Query/SmartContractCall"}
+	abcires := s.app.BaseApp.Query(req)
+	var resp types.QuerySmartContractCallResponse
+	err = resp.Unmarshal(abcires.Value)
+	s.s.Require().NoError(err)
+
+	var data types.WasmxQueryResponse
+	err = json.Unmarshal(resp.Data, &data)
+	s.s.Require().NoError(err)
+	return hex.EncodeToString(data.Data)
+}
+
+func (s *KeeperTestSuite) hex2bz(hexd string) []byte {
+	if hexd[:2] == "0x" {
+		hexd = hexd[2:]
+	}
+	bz, err := hex.DecodeString(hexd)
+	s.Require().NoError(err)
+	return bz
 }
 
 type Attribute struct {

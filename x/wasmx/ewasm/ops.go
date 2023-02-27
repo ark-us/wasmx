@@ -3,9 +3,12 @@ package ewasm
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
+
+var EMPTY_BYTES32 = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func useGas(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 1)
@@ -13,6 +16,7 @@ func useGas(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	return returns, wasmedge.Result_Success
 }
 
+// GAS -> i64
 func getGasLeft(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getGasLeft")
 	returns := make([]interface{}, 1)
@@ -20,75 +24,140 @@ func getGasLeft(context interface{}, callframe *wasmedge.CallingFrame, params []
 	return returns, wasmedge.Result_Success
 }
 
+// SLOAD key_ptr: i32, result_ptr: i32
 func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: storageLoad")
+
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[1])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// SSTORE key_ptr: i32, value_ptr: i32,
 func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: storageLoad")
+	keybz, err := readMem(callframe, params[0], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	valuebz, err := readMem(callframe, params[1], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("Go: storageLoad", keybz, valuebz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// SELFBALANCE result_ptr: i32
 func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBalance")
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// BALANCE value_ptr: i32, result_ptr: i32,
 func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getExternalBalance")
+	addressbz, err := readMem(callframe, params[0], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[1])
+	fmt.Println("Go: getExternalBalance", addressbz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// ADDRESS result_ptr: i32
 func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getAddress")
+	ctx := context.(*Context)
+	addr := Evm32AddressFromBech32(ctx.Env.Contract.Address)
+	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CALLER result_ptr: i32
 func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getCaller")
+	ctx := context.(*Context)
+	addr := Evm32AddressFromBech32(ctx.CallContext.Sender)
+	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CALLVALUE  result_ptr: i32
 func getCallValue(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getCallValue")
+	ctx := context.(*Context)
+	writeMem(callframe, ctx.Callvalue.FillBytes(make([]byte, 32)), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CALLDATASIZE -> i32
 func getCallDataSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getCallDataSize")
-	ctx := context.(Context)
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = len(ctx.Calldata)
 	return returns, wasmedge.Result_Success
 }
 
+// CALLDATACOPY result_ptr: i32, data_ptr: i32, data_len: i32,
 func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: callDataCopy")
+	ctx := context.(*Context)
+	dataStart := params[1].(int32)
+	dataLen := params[2].(int32)
+	calldLen := int32(len(ctx.Calldata))
+	var part []byte
+	if dataLen > calldLen {
+		part = make([]byte, dataLen-dataStart)
+		copy(part, ctx.Calldata[dataStart:calldLen])
+	} else {
+		part = ctx.Calldata[dataStart:dataLen]
+	}
+	writeMem(callframe, part, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// RETURNDATASIZE -> i32
 func getReturnDataSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getReturnDataSize")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = 20
+	returns[0] = len(ctx.ReturnData)
 	return returns, wasmedge.Result_Success
 }
 
+// RETURNDATACOPY result_ptr: i32, data_ptr: i32, data_len: i32
 func returnDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: returnDataCopy")
+	ctx := context.(*Context)
+	dataStart, err := readI32(callframe, params[1], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	dataLen, err := readI32(callframe, params[2], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	part := ctx.ReturnData[dataStart:dataLen]
+	writeMem(callframe, part, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CODESIZE -> i32
 func getCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getCodeSize")
 	returns := make([]interface{}, 1)
@@ -96,97 +165,146 @@ func getCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params [
 	return returns, wasmedge.Result_Success
 }
 
+// EXTCODESIZE address_ptr: i32 -> i32
 func getExternalCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getExternalCodeSize")
+	addressbz, err := readMem(callframe, params[0], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("Go: getExternalCodeSize", addressbz)
 	returns := make([]interface{}, 1)
 	returns[0] = int32(100000)
 	return returns, wasmedge.Result_Success
 }
 
+// CODECOPY result_ptr: i32, code_ptr: i32, data_len: i32
 func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: codeCopy")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// EXTCODECOPY address_ptr: i32, result_ptr: i32, code_ptr: i32, data_len: i32
 func externalCodeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: externalCodeCopy")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// EXTCODEHASH address_ptr: i32, result_ptr: i32
 func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getExternalCodeHash")
+	addressbz, err := readMem(callframe, params[0], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[1])
+	fmt.Println("Go: getExternalCodeHash", addressbz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// GASPRICE result_ptr: i32
 func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getTxGasPrice")
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// ORIGIN result_ptr: i32
 func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getTxOrigin")
+	ctx := context.(*Context)
+	addr := Evm32AddressFromBech32(ctx.CallContext.Origin)
+	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// NUMBER -> i64
 func getBlockNumber(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockNumber")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(1)
+	returns[0] = int64(ctx.Env.Block.Height)
 	return returns, wasmedge.Result_Success
 }
 
+// COINBASE result_ptr: i32
 func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockCoinbase")
+	ctx := context.(*Context)
+	addr := Evm32AddressFromBech32(ctx.Env.Block.Proposer)
+	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// BLOCKHASH block_number: i64, result_ptr: i32
 func getBlockHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("Go: getBlockCoinbase")
+	fmt.Println("Go: getBlockHash")
+	blockNumber, err := readI64(callframe, params[0], 32)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("Go: getBlockHash", blockNumber)
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[1])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// GASLIMIT -> i64
 func getBlockGasLimit(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockGasLimit")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(10000000)
+	returns[0] = int64(ctx.Env.Block.GasLimit)
 	return returns, wasmedge.Result_Success
 }
 
+// TIMESTAMP -> i64
 func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockTimestamp")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(1000000000)
+	returns[0] = int64(ctx.Env.Block.Time)
 	return returns, wasmedge.Result_Success
 }
 
+// DIFFICULTY result_ptr: i32
 func getBlockDifficulty(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockDifficulty")
-	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[0])
+	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CHAINID result_ptr: i32
 func getChainId(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getChainId")
-	returns := make([]interface{}, 1)
-	returns[0] = int32(1000)
+	ctx := context.(*Context)
+	data := ctx.Env.Chain.ChainId.FillBytes(make([]byte, 32))
+	writeMem(callframe, data, params[0])
+	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// BASEFEE result_ptr: i32
 func getBaseFee(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBaseFee")
-	returns := make([]interface{}, 1)
-	returns[0] = int32(1)
+	data := EMPTY_BYTES32
+	writeMem(callframe, data, params[0])
+	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CALL gas_limit: i64, address_ptr: i32, value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 func call(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: call")
 	returns := make([]interface{}, 1)
@@ -194,6 +312,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	return returns, wasmedge.Result_Success
 }
 
+// CALLCODE gas_limit: i64, address_ptr: i32, value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: callCode")
 	returns := make([]interface{}, 1)
@@ -201,6 +320,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	return returns, wasmedge.Result_Success
 }
 
+// CALLDELEGATE gas_limit: i64, address_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: callDelegate")
 	returns := make([]interface{}, 1)
@@ -208,6 +328,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	return returns, wasmedge.Result_Success
 }
 
+// STATICCALL gas_limit: i64, address_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: callStatic")
 	returns := make([]interface{}, 1)
@@ -215,44 +336,42 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	return returns, wasmedge.Result_Success
 }
 
+// CREATE value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32
 func create(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: create")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// CREATE2 value_ptr: i32, data_ptr: i32, data_len: i32, salt_ptr: i32, result_ptr: i32
 func create2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: create2")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// SELFDESTRUCT address_ptr: i32
 func selfDestruct(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: selfDestruct")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// LOG data_ptr: i32, data_len: i32, topic_count: i32, topic_ptr1: i32, topic_ptr2: i32, topic_ptr3: i32, topic_ptr4: i32
 func log(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: log")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// RETURN data_ptr: i32, data_len: i32
 func finish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: finish")
-	ctx := context.(Context)
-	pointer := params[0].(int32)
-	size := params[1].(int32)
-	mem := callframe.GetMemoryByIndex(0)
-	data, err := mem.GetData(uint(pointer), uint(size))
+	ctx := context.(*Context)
+	result, err := readMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-
-	result := make([]byte, size)
-	copy(result, data)
-
 	returns := make([]interface{}, 1)
 	returns[0] = result
 	ctx.ReturnData = result
@@ -260,26 +379,21 @@ func finish(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	return returns, wasmedge.Result_Success
 }
 
+// STOP data_ptr: i32, data_len: i32
 func stop(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: stop")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// REVERT data_ptr: i32, data_len: i32
 func revert(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: revert")
-	ctx := context.(Context)
-	pointer := params[0].(int32)
-	size := params[1].(int32)
-	mem := callframe.GetMemoryByIndex(0)
-	data, err := mem.GetData(uint(pointer), uint(size))
+	ctx := context.(*Context)
+	result, err := readMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-
-	result := make([]byte, size)
-	copy(result, data)
-
 	returns := make([]interface{}, 1)
 	returns[0] = result
 	ctx.ReturnData = result
@@ -287,30 +401,35 @@ func revert(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	return returns, wasmedge.Result_Fail
 }
 
+// msg_ptr: i32, _msg_len: i32
 func sendCosmosMsg(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: sendCosmosMsg")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// msg_ptr: i32, _msg_len: i32
 func sendCosmosQuery(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: sendCosmosQuery")
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// value: i32
 func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: debugPrinti32", params[0].(int32))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// value: i64
 func debugPrinti64(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: debugPrinti64", params[0].(int64))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
+// value_ptr: i32, value_len: i32
 func debugPrintMemHex(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	pointer := params[0].(int32)
 	size := params[1].(int32)
@@ -321,7 +440,7 @@ func debugPrintMemHex(context interface{}, callframe *wasmedge.CallingFrame, par
 	return returns, wasmedge.Result_Success
 }
 
-func BuildEwasmEnv(context Context) *wasmedge.Module {
+func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	ewasmEnv := wasmedge.NewModule("env")
 
 	functype__ := wasmedge.NewFunctionType(
@@ -427,4 +546,50 @@ func BuildEwasmEnv(context Context) *wasmedge.Module {
 	ewasmEnv.AddFunction("ethereum_debugPrintMemHex", wasmedge.NewFunction(functype_i32i32_, debugPrintMemHex, context, 0))
 
 	return ewasmEnv
+}
+
+func readI32(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int32, error) {
+	xi64, err := readI64(callframe, pointer, size)
+	if err != nil {
+		return 0, err
+	}
+	xi32 := int32(xi64)
+	if xi64 > int64(xi32) {
+		return 0, fmt.Errorf("readI32 overflow")
+	}
+	return xi32, nil
+}
+
+func readI64(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int64, error) {
+	data, err := readMem(callframe, pointer, size)
+	if err != nil {
+		return 0, err
+	}
+	x := new(big.Int)
+	x.SetBytes(data)
+	if !x.IsInt64() {
+		return 0, fmt.Errorf("readI32 overflow")
+	}
+	return x.Int64(), nil
+}
+
+func readMem(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) ([]byte, error) {
+	ptr := pointer.(int32)
+	length := size.(int32)
+	mem := callframe.GetMemoryByIndex(0)
+	data, err := mem.GetData(uint(ptr), uint(length))
+	if err != nil {
+		return nil, err
+	}
+	result := make([]byte, length)
+	copy(result, data)
+	return result, nil
+}
+
+func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}) error {
+	ptr := pointer.(int32)
+	length := len(data)
+	mem := callframe.GetMemoryByIndex(0)
+	err := mem.SetData(data, uint(ptr), uint(length))
+	return err
 }

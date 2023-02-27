@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"math/big"
 	"strconv"
 )
 
@@ -78,6 +79,12 @@ type Env struct {
 	Block       BlockInfo        `json:"block"`
 	Transaction *TransactionInfo `json:"transaction"`
 	Contract    EnvContractInfo  `json:"contract"`
+	Chain       ChainInfo        `json:"chain"`
+}
+
+type ChainInfo struct {
+	Denom   string  `json:"denom"`
+	ChainId big.Int `json:"chain_id"`
 }
 
 type EnvContractInfo struct {
@@ -101,9 +108,8 @@ type TransactionInfo struct {
 	//
 	// Along with BlockInfo.Height, this allows you to get a unique
 	// transaction identifier for the chain for future queries
-	Index uint32 `json:"index"`
-	// Origin   HumanAddress `json:"origin"`
-	// GasPrice string `json:"gas_price"`
+	Index    uint32 `json:"index"`
+	GasPrice string `json:"gas_price"`
 }
 
 type MessageInfo struct {
@@ -115,6 +121,7 @@ type MessageInfo struct {
 	Funds        Coins        `json:"funds"`
 	CallCacheMap CallCacheMap `json:"call_cache_map"`
 	ReadOnly     bool         `json:"readonly"`
+	IsQuery      bool         `json:"is_query"`
 }
 
 type CallCache struct {

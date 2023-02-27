@@ -8,6 +8,7 @@
     - [AbsoluteTxPosition](#wasmx.wasmx.AbsoluteTxPosition)
     - [CodeInfo](#wasmx.wasmx.CodeInfo)
     - [ContractInfo](#wasmx.wasmx.ContractInfo)
+    - [ContractStorage](#wasmx.wasmx.ContractStorage)
   
 - [wasmx/wasmx/params.proto](#wasmx/wasmx/params.proto)
     - [Params](#wasmx.wasmx.Params)
@@ -15,14 +16,30 @@
 - [wasmx/wasmx/genesis.proto](#wasmx/wasmx/genesis.proto)
     - [Code](#wasmx.wasmx.Code)
     - [Contract](#wasmx.wasmx.Contract)
-    - [ContractStorage](#wasmx.wasmx.ContractStorage)
     - [GenesisState](#wasmx.wasmx.GenesisState)
     - [Sequence](#wasmx.wasmx.Sequence)
     - [SystemContract](#wasmx.wasmx.SystemContract)
   
 - [wasmx/wasmx/query.proto](#wasmx/wasmx/query.proto)
+    - [CodeInfoResponse](#wasmx.wasmx.CodeInfoResponse)
+    - [QueryAllContractStateRequest](#wasmx.wasmx.QueryAllContractStateRequest)
+    - [QueryAllContractStateResponse](#wasmx.wasmx.QueryAllContractStateResponse)
+    - [QueryCodeRequest](#wasmx.wasmx.QueryCodeRequest)
+    - [QueryCodeResponse](#wasmx.wasmx.QueryCodeResponse)
+    - [QueryCodesRequest](#wasmx.wasmx.QueryCodesRequest)
+    - [QueryCodesResponse](#wasmx.wasmx.QueryCodesResponse)
+    - [QueryContractInfoRequest](#wasmx.wasmx.QueryContractInfoRequest)
+    - [QueryContractInfoResponse](#wasmx.wasmx.QueryContractInfoResponse)
+    - [QueryContractsByCodeRequest](#wasmx.wasmx.QueryContractsByCodeRequest)
+    - [QueryContractsByCodeResponse](#wasmx.wasmx.QueryContractsByCodeResponse)
+    - [QueryContractsByCreatorRequest](#wasmx.wasmx.QueryContractsByCreatorRequest)
+    - [QueryContractsByCreatorResponse](#wasmx.wasmx.QueryContractsByCreatorResponse)
     - [QueryParamsRequest](#wasmx.wasmx.QueryParamsRequest)
     - [QueryParamsResponse](#wasmx.wasmx.QueryParamsResponse)
+    - [QueryRawContractStateRequest](#wasmx.wasmx.QueryRawContractStateRequest)
+    - [QueryRawContractStateResponse](#wasmx.wasmx.QueryRawContractStateResponse)
+    - [QuerySmartContractCallRequest](#wasmx.wasmx.QuerySmartContractCallRequest)
+    - [QuerySmartContractCallResponse](#wasmx.wasmx.QuerySmartContractCallResponse)
   
     - [Query](#wasmx.wasmx.Query)
   
@@ -100,8 +117,23 @@ ContractInfo stores a WASM contract instance
 | `creator` | [string](#string) |  | Creator address who initially instantiated the contract |
 | `label` | [string](#string) |  | Label is optional metadata to be stored with a contract instance. |
 | `init_message` | [bytes](#bytes) |  | Initialization message |
-| `created` | [AbsoluteTxPosition](#wasmx.wasmx.AbsoluteTxPosition) |  | Created Tx position when the contract was instantiated. |
-| `ibc_port_id` | [string](#string) |  |  |
+| `ibc_port_id` | [string](#string) |  | Created Tx position when the contract was instantiated. AbsoluteTxPosition created = 5; |
+
+
+
+
+
+
+<a name="wasmx.wasmx.ContractStorage"></a>
+
+### ContractStorage
+ContractStorage
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `key` | [bytes](#bytes) |  | hex-encode key |
+| `value` | [bytes](#bytes) |  | raw value |
 
 
 
@@ -185,22 +217,6 @@ Contract struct encompasses ContractAddress, ContractInfo, and ContractState
 
 
 
-<a name="wasmx.wasmx.ContractStorage"></a>
-
-### ContractStorage
-ContractStorage
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `key` | [bytes](#bytes) |  | hex-encode key |
-| `value` | [bytes](#bytes) |  | raw value |
-
-
-
-
-
-
 <a name="wasmx.wasmx.GenesisState"></a>
 
 ### GenesisState
@@ -270,10 +286,224 @@ Sequence key and value of an id generation counter
 
 
 
+<a name="wasmx.wasmx.CodeInfoResponse"></a>
+
+### CodeInfoResponse
+CodeInfoResponse contains code meta data from CodeInfo
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code_id` | [uint64](#uint64) |  | id for legacy support |
+| `creator` | [string](#string) |  |  |
+| `data_hash` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryAllContractStateRequest"></a>
+
+### QueryAllContractStateRequest
+QueryAllContractStateRequest is the request type for the
+Query/AllContractState RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `address` | [string](#string) |  | address is the address of the contract |
+| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | pagination defines an optional pagination for the request. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryAllContractStateResponse"></a>
+
+### QueryAllContractStateResponse
+QueryAllContractStateResponse is the response type for the
+Query/AllContractState RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `items` | [ContractStorage](#wasmx.wasmx.ContractStorage) | repeated |  |
+| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryCodeRequest"></a>
+
+### QueryCodeRequest
+QueryCodeRequest is the request type for the Query/Code RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code_id` | [uint64](#uint64) |  | grpc-gateway_out does not support Go style CodID |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryCodeResponse"></a>
+
+### QueryCodeResponse
+QueryCodeResponse is the response type for the Query/Code RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code_info` | [CodeInfoResponse](#wasmx.wasmx.CodeInfoResponse) |  |  |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryCodesRequest"></a>
+
+### QueryCodesRequest
+QueryCodesRequest is the request type for the Query/Codes RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | pagination defines an optional pagination for the request. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryCodesResponse"></a>
+
+### QueryCodesResponse
+QueryCodesResponse is the response type for the Query/Codes RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code_infos` | [CodeInfoResponse](#wasmx.wasmx.CodeInfoResponse) | repeated |  |
+| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryContractInfoRequest"></a>
+
+### QueryContractInfoRequest
+QueryContractInfoRequest is the request type for the Query/ContractInfo RPC
+method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `address` | [string](#string) |  | address is the address of the contract to query |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryContractInfoResponse"></a>
+
+### QueryContractInfoResponse
+QueryContractInfoResponse is the response type for the Query/ContractInfo RPC
+method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `address` | [string](#string) |  | address is the address of the contract |
+| `contract_info` | [ContractInfo](#wasmx.wasmx.ContractInfo) |  |  |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryContractsByCodeRequest"></a>
+
+### QueryContractsByCodeRequest
+QueryContractsByCodeRequest is the request type for the Query/ContractsByCode
+RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code_id` | [uint64](#uint64) |  | grpc-gateway_out does not support Go style CodID |
+| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | pagination defines an optional pagination for the request. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryContractsByCodeResponse"></a>
+
+### QueryContractsByCodeResponse
+QueryContractsByCodeResponse is the response type for the
+Query/ContractsByCode RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `contracts` | [string](#string) | repeated | contracts are a set of contract addresses |
+| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryContractsByCreatorRequest"></a>
+
+### QueryContractsByCreatorRequest
+QueryContractsByCreatorRequest is the request type for the
+Query/ContractsByCreator RPC method.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `creator_address` | [string](#string) |  | CreatorAddress is the address of contract creator |
+| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | Pagination defines an optional pagination for the request. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryContractsByCreatorResponse"></a>
+
+### QueryContractsByCreatorResponse
+QueryContractsByCreatorResponse is the response type for the
+Query/ContractsByCreator RPC method.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `contract_addresses` | [string](#string) | repeated | ContractAddresses result set |
+| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | Pagination defines the pagination in the response. |
+
+
+
+
+
+
 <a name="wasmx.wasmx.QueryParamsRequest"></a>
 
 ### QueryParamsRequest
-QueryParamsRequest is request type for the Query/Params RPC method.
+QueryParamsRequest is the request type for the Query/Params RPC method.
 
 
 
@@ -283,12 +513,80 @@ QueryParamsRequest is request type for the Query/Params RPC method.
 <a name="wasmx.wasmx.QueryParamsResponse"></a>
 
 ### QueryParamsResponse
-QueryParamsResponse is response type for the Query/Params RPC method.
+QueryParamsResponse is the response type for the Query/Params RPC method.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `params` | [Params](#wasmx.wasmx.Params) |  | params holds all the parameters of this module. |
+| `params` | [Params](#wasmx.wasmx.Params) |  | params defines the parameters of the module. |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryRawContractStateRequest"></a>
+
+### QueryRawContractStateRequest
+QueryRawContractStateRequest is the request type for the
+Query/RawContractState RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `address` | [string](#string) |  | address is the address of the contract |
+| `query_data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QueryRawContractStateResponse"></a>
+
+### QueryRawContractStateResponse
+QueryRawContractStateResponse is the response type for the
+Query/RawContractState RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  | Data contains the raw store data |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QuerySmartContractCallRequest"></a>
+
+### QuerySmartContractCallRequest
+QuerySmartContractCallRequest is the request type for the
+Query/SmartContractCall RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | Sender is the that actor that signed the messages |
+| `address` | [string](#string) |  | Address is the address of the smart contract |
+| `query_data` | [bytes](#bytes) |  |  |
+| `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on execution |
+
+
+
+
+
+
+<a name="wasmx.wasmx.QuerySmartContractCallResponse"></a>
+
+### QuerySmartContractCallResponse
+QuerySmartContractCallResponse is the response type for the
+Query/SmartContractCall RPC method
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  | Data contains the json data returned from the smart contract |
 
 
 
@@ -304,11 +602,19 @@ QueryParamsResponse is response type for the Query/Params RPC method.
 <a name="wasmx.wasmx.Query"></a>
 
 ### Query
-Query defines the gRPC querier service.
+Query provides defines the gRPC querier service
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `Params` | [QueryParamsRequest](#wasmx.wasmx.QueryParamsRequest) | [QueryParamsResponse](#wasmx.wasmx.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/wasmx/wasmx/params|
+| `ContractInfo` | [QueryContractInfoRequest](#wasmx.wasmx.QueryContractInfoRequest) | [QueryContractInfoResponse](#wasmx.wasmx.QueryContractInfoResponse) | ContractInfo gets the contract meta data | GET|/wasmx/v1/contract/{address}|
+| `ContractsByCode` | [QueryContractsByCodeRequest](#wasmx.wasmx.QueryContractsByCodeRequest) | [QueryContractsByCodeResponse](#wasmx.wasmx.QueryContractsByCodeResponse) | ContractsByCode lists all smart contracts for a code id | GET|/wasmx/v1/code/{code_id}/contracts|
+| `AllContractState` | [QueryAllContractStateRequest](#wasmx.wasmx.QueryAllContractStateRequest) | [QueryAllContractStateResponse](#wasmx.wasmx.QueryAllContractStateResponse) | AllContractState gets all raw store data for a single contract | GET|/wasmx/v1/contract/{address}/state|
+| `RawContractState` | [QueryRawContractStateRequest](#wasmx.wasmx.QueryRawContractStateRequest) | [QueryRawContractStateResponse](#wasmx.wasmx.QueryRawContractStateResponse) | RawContractState gets single key from the raw store data of a contract | GET|/wasmx/v1/contract/{address}/raw/{query_data}|
+| `SmartContractCall` | [QuerySmartContractCallRequest](#wasmx.wasmx.QuerySmartContractCallRequest) | [QuerySmartContractCallResponse](#wasmx.wasmx.QuerySmartContractCallResponse) | SmartContractCall get query result from the contract | GET|/wasmx/v1/contract/{address}/call/{query_data}|
+| `Code` | [QueryCodeRequest](#wasmx.wasmx.QueryCodeRequest) | [QueryCodeResponse](#wasmx.wasmx.QueryCodeResponse) | Code gets the binary code and metadata for a singe wasm code | GET|/wasmx/v1/code/{code_id}|
+| `Codes` | [QueryCodesRequest](#wasmx.wasmx.QueryCodesRequest) | [QueryCodesResponse](#wasmx.wasmx.QueryCodesResponse) | Codes gets the metadata for all stored wasm codes | GET|/wasmx/v1/code|
+| `Params` | [QueryParamsRequest](#wasmx.wasmx.QueryParamsRequest) | [QueryParamsResponse](#wasmx.wasmx.QueryParamsResponse) | Params gets the module params | GET|/wasmx/v1/codes/params|
+| `ContractsByCreator` | [QueryContractsByCreatorRequest](#wasmx.wasmx.QueryContractsByCreatorRequest) | [QueryContractsByCreatorResponse](#wasmx.wasmx.QueryContractsByCreatorResponse) | ContractsByCreator gets the contracts by creator | GET|/wasmx/v1/contracts/creator/{creator_address}|
 
  <!-- end services -->
 

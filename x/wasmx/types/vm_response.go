@@ -4,6 +4,14 @@ import "encoding/json"
 
 //------- Results / Msgs -------------
 
+type WasmxQueryResponse struct {
+	Data []byte `json:"data"`
+}
+
+type WasmxExecutionMessage struct {
+	Data []byte `json:"data"`
+}
+
 // ContractResult is the raw response from the instantiate/execute/migrate calls.
 // This is mirrors Rust's ContractResult<Response>.
 type ContractResult struct {

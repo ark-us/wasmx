@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,10 @@ func (k Keeper) ExecuteWithOrigin(ctx sdk.Context, originAddr sdk.AccAddress, co
 
 func (k Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, codeContractAddr sdk.AccAddress, storageContractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
 	return nil, nil
+}
+
+func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
+	return k.query(ctx, contractAddr, senderAddr, msg, funds)
 }
 
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte) (codeID uint64, checksum []byte, err error) {
@@ -204,7 +209,7 @@ func (k Keeper) instantiateInternal(
 
 	// prepare params for contract instantiate call
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(creator, deposit)
+	info := types.NewInfo(creator, creator, deposit, false, false)
 
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
@@ -269,6 +274,9 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
+	// TODO panic if coin is not the correct denomination
+	// add denom param for ewasm
+
 	// executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
 	// ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
 
@@ -280,7 +288,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(caller, coins)
+	info := types.NewInfo(caller, caller, coins, false, false)
 
 	// prepare querier
 	// querier := k.newQueryHandler(ctx, contractAddress)
@@ -333,8 +341,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	}
 
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(caller, coins)
-	info.Origin = origin.String()
+	info := types.NewInfo(origin, caller, coins, false, false)
 
 	// prepare querier
 	// querier := k.newQueryHandler(ctx, contractAddress)
@@ -360,6 +367,54 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	}
 
 	return data, nil
+}
+
+// Execute executes the contract instance
+func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
+	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO panic if coin is not the correct denomination
+	// add denom param for ewasm
+
+	// executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
+	// ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+
+	// add more funds
+	if !coins.IsZero() {
+		if err := k.TransferCoins(ctx, caller, contractAddress, coins); err != nil {
+			return nil, err
+		}
+	}
+
+	env := types.NewEnv(ctx, contractAddress)
+	info := types.NewInfo(caller, caller, coins, true, true)
+
+	// prepare querier
+	// querier := k.newQueryHandler(ctx, contractAddress)
+	// gas := k.runtimeGasForContract(ctx)
+	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
+
+	res, _, execErr := k.wasmvm.QueryExecute(codeInfo.CodeHash, env, info, msg, prefixStore, 0)
+	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
+	if execErr != nil {
+		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	// data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
+	// if err != nil {
+	// 	return nil, sdkerrors.Wrap(err, "dispatch")
+	// }
+
+	return json.Marshal(res)
 }
 
 // handleContractResponse processes the contract response data by emitting events and sending sub-/messages.

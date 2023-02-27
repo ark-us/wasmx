@@ -55,11 +55,3 @@ message Sequence {
   uint64 value = 2;
 }
 
-// ContractStorage
-message ContractStorage {
-  // hex-encode key
-  bytes key = 1 [ (gogoproto.casttype) =
-                      "github.com/tendermint/tendermint/libs/bytes.HexBytes" ];
-  // raw value
-  bytes value = 2;
-}

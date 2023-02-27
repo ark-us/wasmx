@@ -9,7 +9,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"wasmx/x/wasmx/keeper/ewasm"
+	"wasmx/x/wasmx/ewasm"
 	"wasmx/x/wasmx/types"
 )
 
@@ -58,11 +58,11 @@ func (k WasmxEngine) Instantiate(
 
 	// TODO gas
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasm(filepath, "instantiate", initMsg)
+	data, err := ewasm.ExecuteWasmClassic(filepath, "instantiate", env, info, initMsg)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
-	return types.ContractResponse{Data: data}, 0, nil
+	return data, 0, nil
 }
 
 func (k WasmxEngine) Execute(
@@ -79,25 +79,31 @@ func (k WasmxEngine) Execute(
 	// load wasm
 	// execute instantiate export
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasm(filepath, "main", executeMsg)
+	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
-	return types.ContractResponse{Data: data}, 0, nil
+	return data, 0, nil
 }
 
 func (k WasmxEngine) QueryExecute(
-	code types.Checksum,
+	checksum types.Checksum,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
 	store types.KVStore,
-	querier types.Querier,
-	gasMeter types.GasMeter,
+	// querier types.Querier,
+	// gasMeter types.GasMeter,
 	gasLimit uint64,
 	// deserCost types.UFraction,
-) (types.ContractResponse, uint64, error) {
-	return types.ContractResponse{}, 0, nil
+) (types.WasmxQueryResponse, uint64, error) {
+	filepath := k.build_path(k.DataDir, checksum)
+	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg)
+	fmt.Println("--WasmxEngine QueryExecute", data)
+	if err != nil {
+		return types.WasmxQueryResponse{}, 0, err
+	}
+	return types.WasmxQueryResponse{Data: data.Data}, 0, nil
 }
 
 func (k WasmxEngine) GetCode(checksum types.Checksum) (types.WasmCode, error) {
