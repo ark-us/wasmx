@@ -32,6 +32,7 @@ import (
 	"wasmx/app"
 	ibctesting "wasmx/testutil/ibc"
 	wasmxkeeper "wasmx/x/wasmx/keeper"
+	wasmeth "wasmx/x/wasmx/keeper/ewasm"
 	"wasmx/x/wasmx/types"
 )
 
@@ -393,15 +394,16 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	return codeId
 }
 
-func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsgStr string) sdk.AccAddress {
-	instantiateMsg := []byte(instantiateMsgStr)
-	instantiateCodeMsg := &types.MsgInstantiateContract{
+func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg wasmeth.WasmEthMessage) sdk.AccAddress {
+	msgbz, err := json.Marshal(instantiateMsg)
+	s.s.Require().NoError(err)
+	instantiateContractMsg := &types.MsgInstantiateContract{
 		Sender: sender.Address.String(),
 		CodeId: codeId,
 		Label:  "test",
-		Msg:    instantiateMsg,
+		Msg:    msgbz,
 	}
-	res := s.DeliverTxWithOpts(sender, instantiateCodeMsg, 1000000, nil) // 135690
+	res := s.DeliverTxWithOpts(sender, instantiateContractMsg, 1000000, nil) // 135690
 	s.s.Require().True(res.IsOK(), res.GetLog())
 	s.s.Commit()
 	contractAddressStr := s.s.GetContractAddressFromLog(res.GetLog())
@@ -409,15 +411,16 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 	return contractAddress
 }
 
-func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsgStr string, funds sdk.Coins) abci.ResponseDeliverTx {
-	executeMsgBz := []byte(executeMsgStr)
-	executeMsg := &types.MsgExecuteContract{
+func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg wasmeth.WasmEthMessage, funds sdk.Coins) abci.ResponseDeliverTx {
+	msgbz, err := json.Marshal(executeMsg)
+	s.s.Require().NoError(err)
+	executeContractMsg := &types.MsgExecuteContract{
 		Sender:   sender.Address.String(),
 		Contract: contractAddress.String(),
-		Msg:      executeMsgBz,
+		Msg:      msgbz,
 		Funds:    funds,
 	}
-	res := s.DeliverTxWithOpts(sender, executeMsg, 1500000, nil) // 135690
+	res := s.DeliverTxWithOpts(sender, executeContractMsg, 1500000, nil) // 135690
 	s.s.Require().True(res.IsOK(), res.GetLog())
 	s.s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
 	s.s.Commit()
