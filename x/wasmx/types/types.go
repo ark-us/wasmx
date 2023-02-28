@@ -69,6 +69,11 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 		blockGasLimit = ctx.BlockGasMeter().Limit()
 	}
 
+	chainId, err := ParseChainID(ctx.ChainID())
+	if err != nil {
+		panic("Chain ID cannot be parsed for wasmx")
+	}
+
 	env := Env{
 		Block: BlockInfo{
 			Height:   uint64(ctx.BlockHeight()),
@@ -80,6 +85,10 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 		},
 		Contract: EnvContractInfo{
 			Address: contractAddr.String(),
+		},
+		Chain: ChainInfo{
+			ChainId: *chainId,
+			// Denom: , // TODO
 		},
 	}
 	env.Transaction = &TransactionInfo{}

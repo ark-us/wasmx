@@ -24,7 +24,11 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 	return returns, wasmedge.Result_Success
 }
 
-func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte) (types.ContractResponse, error) {
+func AnalyzeWasm() {
+
+}
+
+func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -49,22 +53,35 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	}
 
 	context := Context{
-		Env:         env,
-		CallContext: messageInfo,
-		Calldata:    ethMsg.Data,
-		Callvalue:   callvalue.BigInt(),
+		Env:           env,
+		ContractStore: kvstore,
+		CallContext:   messageInfo,
+		Calldata:      ethMsg.Data,
+		Callvalue:     callvalue.BigInt(),
 	}
 	ewasmEnv := BuildEwasmEnv(&context)
 
-	ewasmVm.RegisterModule(ewasmEnv)
-	fmt.Println("Go: eWasm module registered")
-	ewasmVm.LoadWasmFile(coreOpcodesModule)
-	ewasmVm.Validate()
-	ewasmVm.Instantiate()
-	fmt.Println("Go: eWasm module instantiate")
+	err = ewasmVm.RegisterModule(ewasmEnv)
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasm: eWasm module registered")
+	err = ewasmVm.LoadWasmFile(coreOpcodesModule)
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	err = ewasmVm.Validate()
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	err = ewasmVm.Instantiate()
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasm: eWasm module instantiate")
 
 	ewasmFnList, ewasmFnTypes := ewasmVm.GetFunctionList()
-	fmt.Println("Go: ewasmFnList", ewasmFnList, ewasmFnTypes)
+	fmt.Println("ExecuteWasm: ewasmFnList", ewasmFnList, ewasmFnTypes)
 
 	var contractVm = wasmedge.NewVM()
 	var contractEnv = wasmedge.NewModule("ewasm")
@@ -77,17 +94,27 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 		contractEnv.AddFunction(name, wrappedFn)
 	}
 
-	contractVm.RegisterModule(contractEnv)
-
-	fmt.Println("Go: Contract module registered")
+	err = contractVm.RegisterModule(contractEnv)
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasm: Contract module registered")
 
 	// Instantiate wasm
-	contractVm.LoadWasmFile(filePath)
-	fmt.Println("Go: Contract loaded")
-	contractVm.Validate()
-	contractVm.Instantiate()
-
-	fmt.Println("Go: Contract instantiated")
+	err = contractVm.LoadWasmFile(filePath)
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasm: Contract loaded")
+	err = contractVm.Validate()
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	err = contractVm.Instantiate()
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasm: Contract instantiated")
 
 	var res []interface{}
 	res, err = contractVm.Execute(funcName)
@@ -110,7 +137,7 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	return response, nil
 }
 
-func ExecuteWasmClassic(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte) (types.ContractResponse, error) {
+func ExecuteWasmClassic(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -140,24 +167,36 @@ func ExecuteWasmClassic(filePath string, funcName string, env types.Env, message
 	}
 
 	context := Context{
-		Env:         env,
-		CallContext: messageInfo,
-		Calldata:    ethMsg.Data,
-		Callvalue:   callvalue.BigInt(),
+		Env:           env,
+		ContractStore: kvstore,
+		CallContext:   messageInfo,
+		Calldata:      ethMsg.Data,
+		Callvalue:     callvalue.BigInt(),
 	}
 	ewasmEnv := BuildEwasmEnv(&context)
 
-	contractVm.RegisterModule(ewasmEnv)
+	err = contractVm.RegisterModule(ewasmEnv)
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
 
-	fmt.Println("Go: Contract module registered")
+	fmt.Println("ExecuteWasmClassic: Contract module registered")
 
 	// Instantiate wasm
-	contractVm.LoadWasmFile(filePath)
-	fmt.Println("Go: Contract loaded")
-	contractVm.Validate()
-	contractVm.Instantiate()
-
-	fmt.Println("Go: Contract instantiated")
+	err = contractVm.LoadWasmFile(filePath)
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasmClassic: Contract loaded")
+	err = contractVm.Validate()
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	err = contractVm.Instantiate()
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	fmt.Println("ExecuteWasmClassic: Contract instantiated")
 
 	var res []interface{}
 	res, err = contractVm.Execute(funcName)

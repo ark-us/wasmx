@@ -80,6 +80,8 @@ var (
 	// ErrExceedMaxQueryStackSize error if max query stack size is exceeded
 	ErrExceedMaxQueryStackSize = sdkErrors.Register(DefaultCodespace, 27, "max query stack size exceeded")
 
+	ErrInvalidChainID = sdkErrors.Register(DefaultCodespace, 28, "invalid chain ID")
+
 	// ErrInvalidCode error if an attribute/event from the contract is invalid
 	_ = sdkErrors.Register(DefaultCodespace, 45, "invalid code id")
 )

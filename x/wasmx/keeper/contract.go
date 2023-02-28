@@ -45,6 +45,17 @@ func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr s
 	return k.query(ctx, contractAddr, senderAddr, msg, funds)
 }
 
+// QueryRaw returns the contract's state for give key. Returns `nil` when key is `nil`.
+func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []byte) []byte {
+	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "query-raw")
+	if key == nil {
+		return nil
+	}
+	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	return prefixStore.Get(key)
+}
+
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")

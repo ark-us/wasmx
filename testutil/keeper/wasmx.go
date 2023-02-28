@@ -52,6 +52,8 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		sdk.NewKVStoreKey(paramstypes.StoreKey),
 		sdk.NewTransientStoreKey(paramstypes.TStoreKey),
 	)
+	paramsKeeper.Subspace(authtypes.ModuleName)
+	paramsKeeper.Subspace(banktypes.ModuleName)
 	subspace := func(m string) paramstypes.Subspace {
 		r, ok := paramsKeeper.GetSubspace(m)
 		require.True(t, ok)

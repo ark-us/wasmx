@@ -58,7 +58,7 @@ func (k WasmxEngine) Instantiate(
 
 	// TODO gas
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassic(filepath, "instantiate", env, info, initMsg)
+	data, err := ewasm.ExecuteWasmClassic(filepath, "instantiate", env, info, initMsg, store)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -79,7 +79,7 @@ func (k WasmxEngine) Execute(
 	// load wasm
 	// execute instantiate export
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg)
+	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg, store)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -98,7 +98,7 @@ func (k WasmxEngine) QueryExecute(
 	// deserCost types.UFraction,
 ) (types.WasmxQueryResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg)
+	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg, store)
 	fmt.Println("--WasmxEngine QueryExecute", data)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err

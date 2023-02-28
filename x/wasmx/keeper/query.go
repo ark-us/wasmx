@@ -97,22 +97,21 @@ func (k Keeper) AllContractState(c context.Context, req *types.QueryAllContractS
 }
 
 func (k Keeper) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
-	// if req == nil {
-	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
-	// }
-	// ctx := sdk.UnwrapSDKContext(c)
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	ctx := sdk.UnwrapSDKContext(c)
 
-	// contractAddr, err := sdk.AccAddressFromBech32(req.Address)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, err
+	}
 
-	// if !k.HasContractInfo(ctx, contractAddr) {
-	// 	return nil, types.ErrNotFound
-	// }
-	// rsp := k.QueryRaw(ctx, contractAddr, req.QueryData)
-	// return &types.QueryRawContractStateResponse{Data: rsp}, nil
-	return nil, nil
+	if !k.HasContractInfo(ctx, contractAddr) {
+		return nil, types.ErrNotFound
+	}
+	rsp := k.QueryRaw(ctx, contractAddr, req.QueryData)
+	return &types.QueryRawContractStateResponse{Data: rsp}, nil
 }
 
 // func (k Keeper) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (rsp *types.QuerySmartContractStateResponse, err error) {

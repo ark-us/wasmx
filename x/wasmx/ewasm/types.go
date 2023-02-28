@@ -10,6 +10,7 @@ import (
 
 type Context struct {
 	Env                types.Env
+	ContractStore      types.KVStore
 	CallContext        types.MessageInfo
 	Calldata           []byte
 	Callvalue          *big.Int
