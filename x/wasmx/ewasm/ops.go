@@ -4,7 +4,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"wasmx/x/wasmx/types"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
@@ -82,7 +84,7 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getAddress")
 	ctx := context.(*Context)
-	addr := Evm32AddressFromBech32(ctx.Env.Contract.Address)
+	addr := Evm32AddressFromAcc(ctx.Env.Contract.Address)
 	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -92,7 +94,7 @@ func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []
 func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getCaller")
 	ctx := context.(*Context)
-	addr := Evm32AddressFromBech32(ctx.CallContext.Sender)
+	addr := Evm32AddressFromAcc(ctx.CallContext.Sender)
 	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -230,7 +232,7 @@ func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params
 func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getTxOrigin")
 	ctx := context.(*Context)
-	addr := Evm32AddressFromBech32(ctx.CallContext.Origin)
+	addr := Evm32AddressFromAcc(ctx.CallContext.Origin)
 	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -249,7 +251,7 @@ func getBlockNumber(context interface{}, callframe *wasmedge.CallingFrame, param
 func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockCoinbase")
 	ctx := context.(*Context)
-	addr := Evm32AddressFromBech32(ctx.Env.Block.Proposer)
+	addr := Evm32AddressFromAcc(ctx.Env.Block.Proposer)
 	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -559,31 +561,6 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	return ewasmEnv
 }
 
-func readI32(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int32, error) {
-	xi64, err := readI64(callframe, pointer, size)
-	if err != nil {
-		return 0, err
-	}
-	xi32 := int32(xi64)
-	if xi64 > int64(xi32) {
-		return 0, fmt.Errorf("readI32 overflow")
-	}
-	return xi32, nil
-}
-
-func readI64(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int64, error) {
-	data, err := readMem(callframe, pointer, size)
-	if err != nil {
-		return 0, err
-	}
-	x := new(big.Int)
-	x.SetBytes(data)
-	if !x.IsInt64() {
-		return 0, fmt.Errorf("readI32 overflow")
-	}
-	return x.Int64(), nil
-}
-
 func readMem(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) ([]byte, error) {
 	ptr := pointer.(int32)
 	length := size.(int32)
@@ -603,4 +580,48 @@ func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}
 	mem := callframe.GetMemoryByIndex(0)
 	err := mem.SetData(data, uint(ptr), uint(length))
 	return err
+}
+
+func readBigInt(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (*big.Int, error) {
+	data, err := readMem(callframe, pointer, size)
+	if err != nil {
+		return nil, err
+	}
+	x := new(big.Int)
+	x.SetBytes(data)
+	return x, nil
+}
+
+func readI64(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int64, error) {
+	x, err := readBigInt(callframe, pointer, size)
+	if err != nil {
+		return 0, err
+	}
+	if !x.IsInt64() {
+		return 0, fmt.Errorf("readI32 overflow")
+	}
+	return x.Int64(), nil
+}
+
+func readI32(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int32, error) {
+	xi64, err := readI64(callframe, pointer, size)
+	if err != nil {
+		return 0, err
+	}
+	xi32 := int32(xi64)
+	if xi64 > int64(xi32) {
+		return 0, fmt.Errorf("readI32 overflow")
+	}
+	return xi32, nil
+}
+
+func isEvmAddress(addr AddressCW) bool {
+	return hex.EncodeToString(addr.Bytes()[:12]) == hex.EncodeToString(make([]byte, 12))
+}
+
+func cleanupAddress(addr []byte) []byte {
+	if isEvmAddress(BytesToAddressCW(addr)) {
+		return addr[12:]
+	}
+	return addr
 }

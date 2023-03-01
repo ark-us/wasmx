@@ -639,6 +639,7 @@ MsgExecuteContract submits the given message data to a smart contract
 | `contract` | [string](#string) |  | Contract is the address of the smart contract |
 | `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract |
 | `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on execution |
+| `dependencies` | [string](#string) | repeated | Array of either hex-encoded contract addresses or contract labels on which the execution of this message depends on |
 
 
 
@@ -699,14 +700,15 @@ MsgExecuteDelegateContractResponse returns execution result data.
 <a name="wasmx.wasmx.MsgExecuteWithOriginContract"></a>
 
 ### MsgExecuteWithOriginContract
-MsgExecuteContract submits the given message data to a smart contract
+MsgExecuteWithOriginContract forwards a message data from a smart contract
+to another smart contract
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `origin` | [string](#string) |  | Origin is the actor that originally signed the message |
-| `sender` | [string](#string) |  | Sender is the that actor that signed the messages |
-| `contract` | [string](#string) |  | Contract is the address of the smart contract |
+| `sender` | [string](#string) |  | Sender is the the smart contract that sent the messages |
+| `contract` | [string](#string) |  | Contract is the address of the smart contract that receives the message |
 | `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract |
 | `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on execution |
 

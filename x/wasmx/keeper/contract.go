@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	wasmeth "wasmx/x/wasmx/ewasm"
 	"wasmx/x/wasmx/ioutils"
 	"wasmx/x/wasmx/types"
 )
@@ -29,8 +30,8 @@ func (k Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccA
 	return nil, nil, nil
 }
 
-func (k Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
-	return k.execute(ctx, contractAddr, senderAddr, msg, funds)
+func (k Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error) {
+	return k.execute(ctx, contractAddr, senderAddr, msg, funds, dependencies)
 }
 
 func (k Keeper) ExecuteWithOrigin(ctx sdk.Context, originAddr sdk.AccAddress, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
@@ -278,13 +279,26 @@ func (k Keeper) instantiateInternal(
 }
 
 // Execute executes the contract instance
-func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
-	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
+func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
 
+	var deps []types.ContractDependency
+	for _, hexaddr := range dependencies {
+		addr := wasmeth.AccAddressFromHex(hexaddr)
+		_, codeInfo, prefixStore, err := k.contractInstance(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, types.ContractDependency{
+			Address:  addr,
+			Store:    prefixStore,
+			FilePath: k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
+		})
+	}
 	// TODO panic if coin is not the correct denomination
 	// add denom param for ewasm
 
@@ -306,7 +320,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0)
+	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, deps)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 	if execErr != nil {
@@ -359,7 +373,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0)
+	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, nil)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 

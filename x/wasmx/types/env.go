@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"math/big"
 	"strconv"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	types "github.com/cosmos/cosmos-sdk/types"
 )
-
-// HumanAddress is a printable (typically bech32 encoded) address string. Just use it as a label for developers.
-type HumanAddress = string
-
-// CanonicalAddress uses standard base64 encoding, just use it as a label for developers
-type CanonicalAddress = []byte
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
 type Coin struct {
@@ -88,18 +85,18 @@ type ChainInfo struct {
 }
 
 type EnvContractInfo struct {
-	Address string
+	Address sdk.AccAddress
 }
 
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
 	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
-	Time     uint64       `json:"time,string"`
-	ChainID  string       `json:"chain_id"`
-	GasLimit uint64       `json:"gas_limit"`
-	Hash     string       `json:"hash"`
-	Proposer HumanAddress `json:"proposer"`
+	Time     uint64         `json:"time,string"`
+	ChainID  string         `json:"chain_id"`
+	GasLimit uint64         `json:"gas_limit"`
+	Hash     string         `json:"hash"`
+	Proposer sdk.AccAddress `json:"proposer"`
 }
 
 type TransactionInfo struct {
@@ -114,11 +111,11 @@ type TransactionInfo struct {
 
 type MessageInfo struct {
 	// Bech32 encoded sdk.AccAddress from which the calls originated
-	Origin HumanAddress `json:"origin"`
+	Origin sdk.AccAddress `json:"origin"`
 	// Bech32 encoded sdk.AccAddress executing the contract
-	Sender HumanAddress `json:"sender"`
+	Sender sdk.AccAddress `json:"sender"`
 	// Amount of funds send to the contract along with this message
-	Funds        Coins        `json:"funds"`
+	Funds        *big.Int     `json:"funds"`
 	CallCacheMap CallCacheMap `json:"call_cache_map"`
 	ReadOnly     bool         `json:"readonly"`
 	IsQuery      bool         `json:"is_query"`
@@ -131,3 +128,9 @@ type CallCache struct {
 }
 
 type CallCacheMap = []CallCache
+
+type ContractDependency struct {
+	Address  sdk.AccAddress
+	Store    types.KVStore
+	FilePath string
+}

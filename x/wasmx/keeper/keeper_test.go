@@ -389,14 +389,15 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 	return contractAddress
 }
 
-func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins) abci.ResponseDeliverTx {
+func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) abci.ResponseDeliverTx {
 	msgbz, err := json.Marshal(executeMsg)
 	s.s.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
-		Msg:      msgbz,
-		Funds:    funds,
+		Sender:       sender.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        funds,
+		Dependencies: dependencies,
 	}
 	res := s.DeliverTxWithOpts(sender, executeContractMsg, 1500000, nil) // 135690
 	s.s.Require().True(res.IsOK(), res.GetLog())

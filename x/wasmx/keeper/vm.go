@@ -74,12 +74,13 @@ func (k WasmxEngine) Execute(
 	// querier types.Querier,
 	// gasMeter types.GasMeter,
 	gasLimit uint64,
+	dependencies []types.ContractDependency,
 	// deserCost types.UFraction,
 ) (types.ContractResponse, uint64, error) {
 	// load wasm
 	// execute instantiate export
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg, store)
+	data, err := ewasm.ExecuteWasmClassicWithDeps(filepath, "main", env, info, executeMsg, store, dependencies)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}

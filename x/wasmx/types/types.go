@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/hex"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -81,10 +82,10 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 			ChainID:  ctx.ChainID(),
 			GasLimit: blockGasLimit,
 			Hash:     "0x" + hex.EncodeToString(ctx.HeaderHash()),
-			Proposer: sdk.AccAddress(ctx.BlockHeader().ProposerAddress).String(),
+			Proposer: sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
 		},
 		Contract: EnvContractInfo{
-			Address: contractAddr.String(),
+			Address: contractAddr,
 		},
 		Chain: ChainInfo{
 			ChainId: *chainId,
@@ -97,10 +98,14 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 
 // NewInfo initializes the MessageInfo for a contract instance
 func NewInfo(origin sdk.AccAddress, creator sdk.AccAddress, deposit sdk.Coins, readOnly bool, isQuery bool) MessageInfo {
+	funds := big.NewInt(0)
+	if len(deposit) > 0 {
+		funds = deposit[0].Amount.BigInt()
+	}
 	return MessageInfo{
-		Sender:   creator.String(),
-		Funds:    NewWasmCoins(deposit),
-		Origin:   origin.String(),
+		Sender:   creator,
+		Funds:    funds,
+		Origin:   origin,
 		ReadOnly: readOnly,
 		IsQuery:  isQuery,
 	}

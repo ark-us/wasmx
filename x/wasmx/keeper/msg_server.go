@@ -120,13 +120,15 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 		return nil, sdkerrors.Wrap(err, "contract")
 	}
 
+	// TODO make the dependencies unique - remove duplicates
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	data, err := m.Keeper.Execute(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds)
+	data, err := m.Keeper.Execute(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds, msg.Dependencies)
 	if err != nil {
 		return nil, err
 	}

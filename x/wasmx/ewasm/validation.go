@@ -48,9 +48,13 @@ func Evm32AddressFromAcc(addr sdk.AccAddress) AddressCW {
 }
 
 // Evm32AddressFromBech32
-func Evm32AddressFromBech32(addr string) AddressCW {
-	accAddress := sdk.MustAccAddressFromBech32(addr)
-	return BytesToAddressCW(accAddress.Bytes())
+func Evm32AddressFromBech32(addr string) (*AddressCW, error) {
+	accAddress, err := sdk.AccAddressFromBech32(addr)
+	if err != nil {
+		return nil, err
+	}
+	addrcw := BytesToAddressCW(accAddress.Bytes())
+	return &addrcw, nil
 }
 
 // EvmAddressFromAcc
@@ -63,9 +67,9 @@ func AccAddressFromEvm(addr common.Address) sdk.AccAddress {
 	return sdk.AccAddress(addr.Bytes())
 }
 
-// AccAddressFromEvm
+// AccAddressFromHex - any number of bytes; 0x optional
 func AccAddressFromHex(addressStr string) sdk.AccAddress {
-	return sdk.AccAddress(common.HexToAddress(addressStr).Bytes())
+	return sdk.AccAddress(common.FromHex(addressStr))
 }
 
 // IsEmptyHash returns true if the hash corresponds to an empty ethereum hex hash.

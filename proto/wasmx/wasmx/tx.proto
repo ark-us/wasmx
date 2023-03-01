@@ -107,10 +107,13 @@ message MsgExecuteContract {
     // Msg json encoded message to be passed to the contract
     bytes msg = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
     // Funds coins that are transferred to the contract on execution
-    repeated cosmos.base.v1beta1.Coin funds = 5 [
+    repeated cosmos.base.v1beta1.Coin funds = 4 [
         (gogoproto.nullable) = false,
         (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
     ];
+    // Array of either hex-encoded contract addresses or contract labels
+    // on which the execution of this message depends on
+    repeated string dependencies = 5;
 }
 
 // MsgExecuteContractResponse returns execution result data.
@@ -119,13 +122,14 @@ message MsgExecuteContractResponse {
     bytes data = 1;
 }
 
-// MsgExecuteContract submits the given message data to a smart contract
+// MsgExecuteWithOriginContract forwards a message data from a smart contract
+// to another smart contract
 message MsgExecuteWithOriginContract {
     // Origin is the actor that originally signed the message
     string origin = 1;
-    // Sender is the that actor that signed the messages
+    // Sender is the the smart contract that sent the messages
     string sender = 2;
-    // Contract is the address of the smart contract
+    // Contract is the address of the smart contract that receives the message
     string contract = 3;
     // Msg json encoded message to be passed to the contract
     bytes msg = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
