@@ -3,9 +3,10 @@ package keeper_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	testkeeper "wasmx/testutil/keeper"
 	"wasmx/x/wasmx/types"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetParams(t *testing.T) {

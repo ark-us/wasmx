@@ -96,6 +96,7 @@ import (
 	ibcporttypes "github.com/cosmos/ibc-go/v6/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v6/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v6/modules/core/keeper"
+	ibctestingtypes "github.com/cosmos/ibc-go/v6/testing/types"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
@@ -103,18 +104,12 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	appparams "wasmx/app/params"
+	"wasmx/docs"
 	wasmxmodule "wasmx/x/wasmx"
 	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
 	wasmxmoduletypes "wasmx/x/wasmx/types"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
-
-	appparams "wasmx/app/params"
-	"wasmx/docs"
-)
-
-const (
-	AccountAddressPrefix = "cosmos"
-	Name                 = "wasmx"
 )
 
 // this line is used by starport scaffolding # stargate/wasm/app/enabledProposals
@@ -178,6 +173,7 @@ var (
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+		wasmxmoduletypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 		// this line is used by starport scaffolding # stargate/app/maccPerms
 	}
 )
@@ -214,24 +210,25 @@ type App struct {
 	memKeys map[string]*storetypes.MemoryStoreKey
 
 	// keepers
-	AccountKeeper    authkeeper.AccountKeeper
-	AuthzKeeper      authzkeeper.Keeper
-	BankKeeper       bankkeeper.Keeper
-	CapabilityKeeper *capabilitykeeper.Keeper
-	StakingKeeper    stakingkeeper.Keeper
-	SlashingKeeper   slashingkeeper.Keeper
-	MintKeeper       mintkeeper.Keeper
-	DistrKeeper      distrkeeper.Keeper
-	GovKeeper        govkeeper.Keeper
-	CrisisKeeper     crisiskeeper.Keeper
-	UpgradeKeeper    upgradekeeper.Keeper
-	ParamsKeeper     paramskeeper.Keeper
-	IBCKeeper        *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
-	EvidenceKeeper   evidencekeeper.Keeper
-	TransferKeeper   ibctransferkeeper.Keeper
-	ICAHostKeeper    icahostkeeper.Keeper
-	FeeGrantKeeper   feegrantkeeper.Keeper
-	GroupKeeper      groupkeeper.Keeper
+	AccountKeeper       authkeeper.AccountKeeper
+	AuthzKeeper         authzkeeper.Keeper
+	BankKeeper          bankkeeper.Keeper
+	CapabilityKeeper    *capabilitykeeper.Keeper
+	StakingKeeper       stakingkeeper.Keeper
+	SlashingKeeper      slashingkeeper.Keeper
+	MintKeeper          mintkeeper.Keeper
+	DistrKeeper         distrkeeper.Keeper
+	GovKeeper           govkeeper.Keeper
+	CrisisKeeper        crisiskeeper.Keeper
+	UpgradeKeeper       upgradekeeper.Keeper
+	ParamsKeeper        paramskeeper.Keeper
+	IBCKeeper           *ibckeeper.Keeper // IBC Keeper must be a pointer in the app, so we can SetRouter on it correctly
+	EvidenceKeeper      evidencekeeper.Keeper
+	TransferKeeper      ibctransferkeeper.Keeper
+	ICAHostKeeper       icahostkeeper.Keeper
+	ICAControllerKeeper icacontrollerkeeper.Keeper
+	FeeGrantKeeper      feegrantkeeper.Keeper
+	GroupKeeper         groupkeeper.Keeper
 
 	// make scoped keepers public for test purposes
 	ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
@@ -455,14 +452,14 @@ func New(
 		scopedICAHostKeeper,
 		app.MsgServiceRouter(),
 	)
-	icaControllerKeeper := icacontrollerkeeper.NewKeeper(
+	app.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
 		appCodec, keys[icacontrollertypes.StoreKey],
 		app.GetSubspace(icacontrollertypes.SubModuleName),
 		app.IBCKeeper.ChannelKeeper, // may be replaced with middleware such as ics29 fee
 		app.IBCKeeper.ChannelKeeper, &app.IBCKeeper.PortKeeper,
 		scopedICAControllerKeeper, app.MsgServiceRouter(),
 	)
-	icaModule := ica.NewAppModule(&icaControllerKeeper, &app.ICAHostKeeper)
+	icaModule := ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
 
 	// Create evidence Keeper for to register the IBC light client misbehaviour evidence route
@@ -500,6 +497,14 @@ func New(
 		keys[wasmxmoduletypes.StoreKey],
 		keys[wasmxmoduletypes.MemStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
+		app.AccountKeeper,
+		app.BankKeeper,
+		wasmxmoduletypes.DefaultWasmConfig(),
+		homePath,
+		Denom,
+		app.interfaceRegistry,
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 
@@ -861,6 +866,34 @@ func (app *App) RegisterTendermintService(clientCtx client.Context) {
 // RegisterNodeService implements the Application.RegisterNodeService method.
 func (app *App) RegisterNodeService(clientCtx client.Context) {
 	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter())
+}
+
+// IBC Go TestingApp functions
+
+// GetBaseApp implements the TestingApp interface.
+func (app *App) GetBaseApp() *baseapp.BaseApp {
+	return app.BaseApp
+}
+
+// GetStakingKeeper implements the TestingApp interface.
+func (app *App) GetStakingKeeper() ibctestingtypes.StakingKeeper {
+	return app.StakingKeeper
+}
+
+// GetIBCKeeper implements the TestingApp interface.
+func (app *App) GetIBCKeeper() *ibckeeper.Keeper {
+	return app.IBCKeeper
+}
+
+// GetScopedIBCKeeper implements the TestingApp interface.
+func (app *App) GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper {
+	return app.ScopedIBCKeeper
+}
+
+// GetTxConfig implements the TestingApp interface.
+func (app *App) GetTxConfig() client.TxConfig {
+	cfg := MakeEncodingConfig()
+	return cfg.TxConfig
 }
 
 // GetMaccPerms returns a copy of the module account permissions

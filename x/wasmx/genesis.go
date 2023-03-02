@@ -1,9 +1,10 @@
 package wasmx
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"wasmx/x/wasmx/keeper"
 	"wasmx/x/wasmx/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.

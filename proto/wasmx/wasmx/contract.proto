@@ -1,0 +1,55 @@
+syntax = "proto3";
+package wasmx.wasmx;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "wasmx/x/wasmx/types";
+
+// ContractStorage
+message ContractStorage {
+    // hex-encode key
+    bytes key = 1 [ (gogoproto.casttype) =
+                        "github.com/tendermint/tendermint/libs/bytes.HexBytes" ];
+    // raw value
+    bytes value = 2;
+}
+
+// CodeInfo is data for the uploaded contract WASM code
+message CodeInfo {
+    // CodeHash is the unique identifier created by hashing the wasm code
+    bytes code_hash = 1;
+    // Creator address who initially stored the code
+    string creator = 2;
+    // deps can be hex-formatted contract addresses (32 bytes)
+    // or versioned interface labels
+    repeated string deps = 3;
+    string abi = 4;
+    string json_schema = 5;
+}
+
+// ContractInfo stores a WASM contract instance
+message ContractInfo {
+    option (gogoproto.equal) = true;
+
+    // CodeID is the reference to the stored Wasm code
+    uint64 code_id = 1;
+    // Creator address who initially instantiated the contract
+    string creator = 2;
+    // Label is optional metadata to be stored with a contract instance.
+    string label = 3;
+    // Initialization message
+    bytes init_message = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
+    string ibc_port_id = 5;
+    // Created Tx position when the contract was instantiated.
+    // AbsoluteTxPosition created = 5;
+}
+
+// AbsoluteTxPosition is a unique transaction position that allows for global
+// ordering of transactions.
+message AbsoluteTxPosition {
+    // BlockHeight is the block the contract was created at
+    uint64 block_height = 1;
+    // TxIndex is a monotonic counter within the block (actual transaction index,
+    // or gas consumed)
+    uint64 tx_index = 2;
+}

@@ -3,18 +3,26 @@ package keeper
 import (
 	"testing"
 
+	"wasmx/app"
+	"wasmx/x/wasmx/keeper"
+	"wasmx/x/wasmx/types"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
-	"wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
@@ -29,6 +37,8 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 
 	registry := codectypes.NewInterfaceRegistry()
 	cdc := codec.NewProtoCodec(registry)
+	encodingConfig := app.MakeEncodingConfig()
+	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	paramsSubspace := typesparams.NewSubspace(cdc,
 		types.Amino,
@@ -36,11 +46,48 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		memStoreKey,
 		"WasmxParams",
 	)
+	paramsKeeper := paramskeeper.NewKeeper(
+		cdc,
+		legacyAmino,
+		sdk.NewKVStoreKey(paramstypes.StoreKey),
+		sdk.NewTransientStoreKey(paramstypes.TStoreKey),
+	)
+	paramsKeeper.Subspace(authtypes.ModuleName)
+	paramsKeeper.Subspace(banktypes.ModuleName)
+	subspace := func(m string) paramstypes.Subspace {
+		r, ok := paramsKeeper.GetSubspace(m)
+		require.True(t, ok)
+		return r
+	}
+	maccPerms := map[string][]string{}
+	accountKeeper := authkeeper.NewAccountKeeper(
+		cdc,
+		sdk.NewKVStoreKey(authtypes.StoreKey), // target store
+		subspace(authtypes.ModuleName),
+		authtypes.ProtoBaseAccount, // prototype
+		maccPerms,
+		sdk.Bech32PrefixAccAddr,
+	)
+	bankKeeper := bankkeeper.NewBaseKeeper(
+		cdc,
+		sdk.NewKVStoreKey(banktypes.StoreKey),
+		accountKeeper,
+		subspace(banktypes.ModuleName),
+		make(map[string]bool),
+	)
 	k := keeper.NewKeeper(
 		cdc,
 		storeKey,
 		memStoreKey,
 		paramsSubspace,
+		accountKeeper,
+		bankKeeper,
+		types.DefaultWasmConfig(),
+		app.DefaultNodeHome,
+		app.Denom,
+		app.MakeEncodingConfig().InterfaceRegistry,
+		nil,
+		nil,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())
