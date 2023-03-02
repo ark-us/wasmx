@@ -31,8 +31,15 @@ func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
 	balance := h.Keeper.bank.GetBalance(h.Ctx, addr, h.Keeper.denom)
 	return balance.Amount.BigInt()
 }
+func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
+	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
+	if err != nil {
+		return types.EMPTY_BYTES32
+	}
+	return codeInfo.CodeHash
+}
 func (h *WasmxCosmosHandler) GetBlockHash(blockNumber uint64) types.Checksum {
-	return make([]byte, 32)
+	return types.EMPTY_BYTES32
 }
 
 func (k Keeper) newCosmosHandler(ctx sdk.Context, caller sdk.AccAddress) types.WasmxCosmosHandler {

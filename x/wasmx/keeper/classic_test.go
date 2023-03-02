@@ -249,9 +249,18 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
 
+	calld = balancehex + "00000000000000000000000039B1BF12E9e21D78F0c76d192c26d47fa710Ec98"
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
+	s.Require().Contains(qres, "0000000000000000000000000000000000000000000000000000000000000000")
+
 	calld = balancehex + "000000000000000000000000" + contractAddressHex[2:]
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
+
+	calld = extcodehashhex + "000000000000000000000000" + strings.ToLower(contractAddressHex[2:])
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
+	codeInfo := appA.app.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().Equal(qres, hex.EncodeToString(codeInfo.CodeHash))
 
 	calld = gashex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
@@ -260,11 +269,6 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	calld = codesizehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001a5d", qres)
-
-	calld = extcodehashhex + "000000000000000000000000" + strings.ToLower(contractAddressHex[2:])
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
-	codeInfo := appA.app.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
-	s.Require().Equal(qres, hex.EncodeToString(codeInfo.CodeHash))
 
 	calld = blockhashhex + "0000000000000000000000000000000000000000000000000000000000000002"
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)

@@ -77,7 +77,6 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 	}
 	balance := ctx.CosmosHandler.GetBalance(cleanupAddress(addressbz))
 	writeBigInt(callframe, balance, params[1])
-	// fmt.Println("Go: getExternalBalance", addressbz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -210,13 +209,13 @@ func externalCodeCopy(context interface{}, callframe *wasmedge.CallingFrame, par
 // EXTCODEHASH address_ptr: i32, result_ptr: i32
 func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getExternalCodeHash")
-	// addressbz, err := readMem(callframe, params[0], int32(32))
-	// if err != nil {
-	// 	return nil, wasmedge.Result_Fail
-	// }
-	data := EMPTY_BYTES32
+	ctx := context.(*Context)
+	addressbz, err := readMem(callframe, params[0], int32(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := ctx.CosmosHandler.GetCodeHash(cleanupAddress(addressbz))
 	writeMem(callframe, data, params[1])
-	// fmt.Println("Go: getExternalCodeHash", addressbz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

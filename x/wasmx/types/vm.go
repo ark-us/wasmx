@@ -1,6 +1,7 @@
 package types
 
 import (
+	bytes "bytes"
 	"math/big"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -11,6 +12,8 @@ import (
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
 const DefaultMaxQueryStackSize uint32 = 10
+
+var EMPTY_BYTES32 = bytes.Repeat([]byte{0}, 32)
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
 type Checksum []byte
@@ -54,6 +57,7 @@ type WasmxCosmosHandler interface {
 	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
 	ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int
+	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetBlockHash(blockNumber uint64) Checksum
 }
 

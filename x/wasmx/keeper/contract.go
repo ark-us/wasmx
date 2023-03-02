@@ -279,7 +279,7 @@ func (k Keeper) instantiateInternal(
 // Execute executes the contract instance
 func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStore, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// TODO get deps also from codeInfo.Dependencies
 	for _, hexaddr := range dependencies {
 		addr := wasmeth.AccAddressFromHex(hexaddr)
-		_, codeInfo, prefixStore, err := k.contractInstance(ctx, addr)
+		_, codeInfo, prefixStore, err := k.ContractInstance(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
@@ -345,12 +345,12 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "executeWithOrigin")
 
 	// fail if caller is not a contract
-	_, _, _, err := k.contractInstance(ctx, caller)
+	_, _, _, err := k.ContractInstance(ctx, caller)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, "cannot executeWithOrigin from EOA")
 	}
 
-	contractInfo, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStore, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 // Execute executes the contract instance
 func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
-	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
+	_, codeInfo, prefixStore, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +410,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// TODO get deps also from codeInfo.Dependencies
 	for _, hexaddr := range dependencies {
 		addr := wasmeth.AccAddressFromHex(hexaddr)
-		_, codeInfo, prefixStore, err := k.contractInstance(ctx, addr)
+		_, codeInfo, prefixStore, err := k.ContractInstance(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
