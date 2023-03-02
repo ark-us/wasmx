@@ -3,15 +3,21 @@ package ewasm
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"wasmx/x/wasmx/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
 const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
+
+var (
+	INTERPRETER_EXPORT     = "ewasm_interface_version_"
+	REQUIRED_IBC_EXPORTS   = []string{}
+	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
+	// codesize_constructor
+)
 
 func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	wrapper := context.(EwasmFunctionWrapper)
@@ -24,9 +30,213 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 	return returns, wasmedge.Result_Success
 }
 
-func AnalyzeWasm() {
-
+func checkRequiredIbcExports(exports []string) bool {
+	// TODO
+	return true
 }
+
+func InstantiateWasm(contractVm *wasmedge.VM, filePath string, wasmbuffer []byte) error {
+	var err error
+	if wasmbuffer == nil {
+		err = contractVm.LoadWasmFile(filePath)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = contractVm.LoadWasmBuffer(wasmbuffer)
+		if err != nil {
+			return err
+		}
+	}
+	err = contractVm.Validate()
+	if err != nil {
+		return err
+	}
+	err = contractVm.Instantiate()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitiateWasm(context *Context, filePath string, wasmbuffer []byte) (*wasmedge.VM, *wasmedge.Module, error) {
+	wasmedge.SetLogErrorLevel()
+	// wasmedge.SetLogDebugLevel()
+	// conf := wasmedge.NewConfigure()
+	// conf.SetStatisticsInstructionCounting(true)
+	// conf.SetStatisticsTimeMeasuring(true)
+
+	ewasmEnv := BuildEwasmEnv(context)
+	contractVm := wasmedge.NewVM()
+	err := contractVm.RegisterModule(ewasmEnv)
+	if err != nil {
+		return contractVm, ewasmEnv, err
+	}
+	// We also register the interpreter
+	err = contractVm.RegisterWasmFile("ewasm", coreOpcodesModule)
+	if err != nil {
+		return contractVm, ewasmEnv, err
+	}
+	err = InstantiateWasm(contractVm, filePath, wasmbuffer)
+	return contractVm, ewasmEnv, err
+}
+
+func InitiateWasmWithWrap(context *Context, filePath string, wasmbuffer []byte) (*wasmedge.VM, *wasmedge.Module, *wasmedge.VM, *wasmedge.Module, error) {
+	var err error
+	wasmedge.SetLogErrorLevel()
+	contractVm := wasmedge.NewVM()
+	contractEnv := wasmedge.NewModule("ewasm")
+	ewasmVm := wasmedge.NewVM()
+	ewasmEnv := BuildEwasmEnv(context)
+
+	err = ewasmVm.RegisterModule(ewasmEnv)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	err = InstantiateWasm(ewasmVm, coreOpcodesModule, nil)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	ewasmFnList, ewasmFnTypes := ewasmVm.GetFunctionList()
+	for i, name := range ewasmFnList {
+		data := EwasmFunctionWrapper{Name: name, Vm: ewasmVm}
+		fntype := ewasmFnTypes[i]
+		wrappedFn := wasmedge.NewFunction(fntype, ewasm_wrapper, data, 0)
+		contractEnv.AddFunction(name, wrappedFn)
+	}
+
+	err = contractVm.RegisterModule(contractEnv)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	err = InstantiateWasm(contractVm, filePath, nil)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return contractVm, contractEnv, ewasmVm, ewasmEnv, nil
+}
+
+func buildExecutionContextClassic(filePath string, env types.Env, kvstore types.KVStore, conf *wasmedge.Configure) (*ContractContext, error) {
+	contractCtx := &ContractContext{
+		FilePath:      filePath,
+		ContractStore: kvstore,
+	}
+	return contractCtx, nil
+}
+
+func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
+	report := types.AnalysisReport{}
+	vm, ewasmEnv, err := InitiateWasm(&Context{}, "", wasmbuffer)
+	if err != nil {
+		return report, err
+	}
+	fnames, _ := vm.GetFunctionList()
+
+	// TODO REQUIRED_EWASM_EXPORTS
+	// TODO checkRequiredIbcExports
+
+	for _, fname := range fnames {
+		if strings.Contains(fname, INTERPRETER_EXPORT) {
+			v := fname[24:]
+			dep := v
+			if len(v) > 2 && v[0:2] != "0x" {
+				dep = "ewasm_" + v
+			}
+			report.Dependencies = append(report.Dependencies, dep)
+		}
+	}
+
+	ewasmEnv.Release()
+	vm.Release()
+
+	return report, nil
+}
+
+// TODO remove
+// func buildExecutionContextClassic_0(filePath string, env types.Env, kvstore types.KVStore, conf *wasmedge.Configure) (*ContractContext, error) {
+// 	fmt.Println("--buildExecutionContextClassic", filePath)
+// 	var err error
+// 	loader := wasmedge.NewLoader()
+// 	ast, err := loader.LoadFile(filePath)
+// 	if err != nil {
+// 		fmt.Println("Load WASM from file FAILED:", err.Error())
+// 		return nil, err
+// 	}
+
+// 	contractVm := wasmedge.NewVM()
+// 	context := Context{
+// 		Env:           &env,
+// 		ContractStore: kvstore,
+// 	}
+// 	ewasmEnv := BuildEwasmEnv(&context)
+// 	err = contractVm.RegisterModule(ewasmEnv)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	err = contractVm.GetValidator().Validate(ast)
+// 	if err != nil {
+// 		fmt.Println("Validation FAILED:", err.Error())
+// 		return nil, err
+// 	}
+
+// 	err = contractVm.LoadWasmAST(ast)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	// err = contractVm.Validate()
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
+
+// 	contractCtx := &ContractContext{
+// 		FilePath:      filePath,
+// 		Vm:            contractVm,
+// 		VmAst:         ast,
+// 		ContractStore: kvstore,
+// 		Context:       &context,
+// 	}
+// 	return contractCtx, nil
+// }
+
+// func buildExecutionContextClassic_(filePath string, env types.Env, kvstore types.KVStore, conf *wasmedge.Configure) (*ContractContext, error) {
+// 	var err error
+// 	stat := wasmedge.NewStatistics()
+// 	loader := wasmedge.NewLoaderWithConfig(conf)
+// 	validator := wasmedge.NewValidatorWithConfig(conf)
+// 	executor := wasmedge.NewExecutorWithConfigAndStatistics(conf, stat)
+
+// 	ast, err := loader.LoadFile(filePath)
+// 	if err != nil {
+// 		fmt.Println("Load WASM from file FAILED:", err.Error())
+// 		return nil, err
+// 	}
+// 	err = validator.Validate(ast)
+// 	if err != nil {
+// 		fmt.Println("Validation FAILED:", err.Error())
+// 		return nil, err
+// 	}
+
+// 	context := Context{
+// 		Env:           &env,
+// 		ContractStore: kvstore,
+// 	}
+// 	ewasmEnv := BuildEwasmEnv(&context)
+// 	ewasmStore := wasmedge.NewStore()
+// 	err = executor.RegisterImport(ewasmStore, ewasmEnv)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	contractCtx := &ContractContext{
+// 		VmAst:         ast,
+// 		VmExecutor:    executor,
+// 		ContractStore: kvstore,
+// 		Context:       &context,
+// 	}
+// 	return contractCtx, nil
+// }
 
 func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore) (types.ContractResponse, error) {
 	var err error
@@ -36,94 +246,19 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-
-	wasmedge.SetLogErrorLevel()
-	// conf := wasmedge.NewConfigure()
-	// conf.SetStatisticsInstructionCounting(true)
-	// stat := wasmedge.NewStatistics()
-	// loader := wasmedge.NewLoaderWithConfig(conf)
-	// validator := wasmedge.NewValidatorWithConfig(conf)
-	// executor := wasmedge.NewExecutorWithConfigAndStatistics(conf, stat)
-
-	store := wasmedge.NewStore()
-	ewasmVm := wasmedge.NewVMWithStore(store)
-	callvalue, ok := sdk.NewIntFromString(messageInfo.Funds[0].Amount)
-	if !ok {
-		return types.ContractResponse{}, fmt.Errorf("invalid funds")
-	}
-
-	context := Context{
-		Env:           env,
+	context := &Context{
+		Env:           &env,
 		ContractStore: kvstore,
 		CallContext:   messageInfo,
 		Calldata:      ethMsg.Data,
-		Callvalue:     callvalue.BigInt(),
+		Callvalue:     messageInfo.Funds,
 	}
-	ewasmEnv := BuildEwasmEnv(&context)
-
-	err = ewasmVm.RegisterModule(ewasmEnv)
+	contractVm, ewasmEnv, err := InitiateWasm(context, filePath, nil)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-	fmt.Println("ExecuteWasm: eWasm module registered")
-	err = ewasmVm.LoadWasmFile(coreOpcodesModule)
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	err = ewasmVm.Validate()
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	err = ewasmVm.Instantiate()
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	fmt.Println("ExecuteWasm: eWasm module instantiate")
-
-	ewasmFnList, ewasmFnTypes := ewasmVm.GetFunctionList()
-	fmt.Println("ExecuteWasm: ewasmFnList", ewasmFnList, ewasmFnTypes)
-
-	var contractVm = wasmedge.NewVM()
-	var contractEnv = wasmedge.NewModule("ewasm")
-
-	for i, name := range ewasmFnList {
-		data := EwasmFunctionWrapper{Name: name, Vm: ewasmVm}
-		fntype := ewasmFnTypes[i]
-
-		var wrappedFn = wasmedge.NewFunction(fntype, ewasm_wrapper, data, 0)
-		contractEnv.AddFunction(name, wrappedFn)
-	}
-
-	err = contractVm.RegisterModule(contractEnv)
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	fmt.Println("ExecuteWasm: Contract module registered")
-
-	// Instantiate wasm
-	err = contractVm.LoadWasmFile(filePath)
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	fmt.Println("ExecuteWasm: Contract loaded")
-	err = contractVm.Validate()
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	err = contractVm.Instantiate()
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	fmt.Println("ExecuteWasm: Contract instantiated")
-
-	var res []interface{}
-	res, err = contractVm.Execute(funcName)
-	fmt.Println("--vm res", res, err)
-	fmt.Println("--vm context.ReturnData", context.ReturnData)
-
+	_, err = contractVm.Execute(funcName)
 	contractVm.Release()
-	contractEnv.Release()
-	ewasmVm.Release()
 	ewasmEnv.Release()
 
 	response := types.ContractResponse{
@@ -137,7 +272,7 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	return response, nil
 }
 
-func ExecuteWasmClassic(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore) (types.ContractResponse, error) {
+func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, dependencies []types.ContractDependency) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -145,49 +280,45 @@ func ExecuteWasmClassic(filePath string, funcName string, env types.Env, message
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-
-	wasmedge.SetLogErrorLevel()
-	// conf := wasmedge.NewConfigure()
-	// conf.SetStatisticsInstructionCounting(true)
-	// stat := wasmedge.NewStatistics()
-	// loader := wasmedge.NewLoaderWithConfig(conf)
-	// validator := wasmedge.NewValidatorWithConfig(conf)
-	// executor := wasmedge.NewExecutorWithConfigAndStatistics(conf, stat)
+	conf := wasmedge.NewConfigure()
 
 	store := wasmedge.NewStore()
 	contractVm := wasmedge.NewVMWithStore(store)
-
-	callvalue := sdk.NewInt(0)
-	if messageInfo.Funds != nil && len(messageInfo.Funds) > 0 {
-		callvalue_, ok := sdk.NewIntFromString(messageInfo.Funds[0].Amount)
-		if !ok {
-			return types.ContractResponse{}, fmt.Errorf("invalid funds")
+	var contractRouter ContractRouter = make(map[string]ContractContext)
+	context := &Context{
+		Env:            &env,
+		ContractStore:  kvstore,
+		CallContext:    messageInfo,
+		Calldata:       ethMsg.Data,
+		Callvalue:      messageInfo.Funds,
+		ContractRouter: contractRouter,
+	}
+	for _, dep := range dependencies {
+		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.Store, conf)
+		if err != nil {
+			return types.ContractResponse{}, err
 		}
-		callvalue = callvalue_
+		context.ContractRouter[dep.Address.String()] = *contractContext
 	}
-
-	context := Context{
-		Env:           env,
-		ContractStore: kvstore,
-		CallContext:   messageInfo,
-		Calldata:      ethMsg.Data,
-		Callvalue:     callvalue.BigInt(),
+	// add itself
+	selfContext, err := buildExecutionContextClassic(filePath, env, kvstore, conf)
+	if err != nil {
+		return types.ContractResponse{}, err
 	}
-	ewasmEnv := BuildEwasmEnv(&context)
+	context.ContractRouter[env.Contract.Address.String()] = *selfContext
 
+	ewasmEnv := BuildEwasmEnv(context)
 	err = contractVm.RegisterModule(ewasmEnv)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-
-	fmt.Println("ExecuteWasmClassic: Contract module registered")
+	// stat := wasmedge.NewStatistics()
 
 	// Instantiate wasm
 	err = contractVm.LoadWasmFile(filePath)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-	fmt.Println("ExecuteWasmClassic: Contract loaded")
 	err = contractVm.Validate()
 	if err != nil {
 		return types.ContractResponse{}, err
@@ -196,15 +327,11 @@ func ExecuteWasmClassic(filePath string, funcName string, env types.Env, message
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-	fmt.Println("ExecuteWasmClassic: Contract instantiated")
-
-	var res []interface{}
-	res, err = contractVm.Execute(funcName)
-	fmt.Println("--vm res", res, err)
-	fmt.Println("--vm context.ReturnData", context.ReturnData)
+	_, err = contractVm.Execute(funcName)
 
 	contractVm.Release()
 	ewasmEnv.Release()
+	store.Release() // release after vm is released
 
 	response := types.ContractResponse{
 		Data: context.ReturnData,

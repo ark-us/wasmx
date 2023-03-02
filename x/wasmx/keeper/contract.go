@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -42,8 +41,8 @@ func (k Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, code
 	return nil, nil
 }
 
-func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
-	return k.query(ctx, contractAddr, senderAddr, msg, funds)
+func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error) {
+	return k.query(ctx, contractAddr, senderAddr, msg, funds, deps)
 }
 
 // QueryRaw returns the contract's state for give key. Returns `nil` when key is `nil`.
@@ -69,19 +68,18 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte)
 			return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 		}
 	}
-
 	// ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
+	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
+	if err != nil {
+		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+	}
 	checksum, err = k.wasmvm.Create(wasmCode)
 	if err != nil {
 		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
-	report, err := k.wasmvm.AnalyzeCode(checksum)
-	if err != nil {
-		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
-	}
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
-	k.Logger(ctx).Debug("storing new contract", "capabilities", report.RequiredCapabilities, "code_id", codeID)
-	codeInfo := types.NewCodeInfo(checksum, creator)
+	k.Logger(ctx).Debug("storing new contract", "capabilities", report.Dependencies, "code_id", codeID)
+	codeInfo := types.NewCodeInfo(checksum, creator, report.Dependencies)
 	k.storeCodeInfo(ctx, codeID, codeInfo)
 
 	evt := sdk.NewEvent(
@@ -89,8 +87,8 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte)
 		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(checksum)),
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)), // last element to be compatible with scripts
 	)
-	for _, f := range strings.Split(report.RequiredCapabilities, ",") {
-		evt.AppendAttributes(sdk.NewAttribute(types.AttributeKeyRequiredCapability, strings.TrimSpace(f)))
+	for _, d := range report.Dependencies {
+		evt.AppendAttributes(sdk.NewAttribute(types.AttributeKeyRequiredCapability, d))
 	}
 	ctx.EventManager().EmitEvent(evt)
 
@@ -236,7 +234,7 @@ func (k Keeper) instantiateInternal(
 	// res, gasUsed, err := k.wasmvm.Instantiate(codeInfo.CodeHash, env, info, initMsg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 	// k.consumeRuntimeGas(ctx, gasUsed)
 
-	res, _, err := k.wasmvm.Instantiate(codeInfo.CodeHash, env, info, initMsg, prefixStore)
+	res, _, err := k.wasmvm.Instantiate(codeInfo.CodeHash, env, info, initMsg, prefixStore, codeInfo.Deps)
 
 	if err != nil {
 		return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -245,8 +243,8 @@ func (k Keeper) instantiateInternal(
 	// persist instance first
 	contractInfo := types.NewContractInfo(codeID, creator, label)
 
-	// check for IBC flag
-	// report, err := k.wasmvm.AnalyzeCode(codeInfo.CodeHash)
+	// check for IBC flag - TODO use codeInfo.Dependencies
+	// report, err := k.wasmvm.AnalyzeWasm(codeInfo.CodeHash)
 	// if err != nil {
 	// 	return nil, nil, sdkerrors.Wrap(types.ErrInstantiateFailed, err.Error())
 	// }
@@ -286,9 +284,13 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		return nil, err
 	}
 
+	// fmt.Println("===execute==", contractInfo.Label, dependencies)
+
 	var deps []types.ContractDependency
+	// TODO get deps also from codeInfo.Dependencies
 	for _, hexaddr := range dependencies {
 		addr := wasmeth.AccAddressFromHex(hexaddr)
+		// fmt.Println("===execute=addr=", addr)
 		_, codeInfo, prefixStore, err := k.contractInstance(ctx, addr)
 		if err != nil {
 			return nil, err
@@ -299,6 +301,8 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			FilePath: k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
 		})
 	}
+	// fmt.Println("===execute==deps", deps)
+
 	// TODO panic if coin is not the correct denomination
 	// add denom param for ewasm
 
@@ -320,7 +324,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, deps)
+	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, codeInfo.Deps, deps)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 	if execErr != nil {
@@ -373,7 +377,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, nil)
+	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, codeInfo.Deps, nil)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 
@@ -395,7 +399,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 }
 
 // Execute executes the contract instance
-func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
 	_, codeInfo, prefixStore, err := k.contractInstance(ctx, contractAddress)
 	if err != nil {
@@ -407,6 +411,22 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 
 	// executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeID), len(msg))
 	// ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+
+	var deps []types.ContractDependency
+	// TODO get deps also from codeInfo.Dependencies
+	for _, hexaddr := range dependencies {
+		addr := wasmeth.AccAddressFromHex(hexaddr)
+		// fmt.Println("===execute=addr=", addr)
+		_, codeInfo, prefixStore, err := k.contractInstance(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+		deps = append(deps, types.ContractDependency{
+			Address:  addr,
+			Store:    prefixStore,
+			FilePath: k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
+		})
+	}
 
 	// add more funds
 	if !coins.IsZero() {
@@ -423,7 +443,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.QueryExecute(codeInfo.CodeHash, env, info, msg, prefixStore, 0)
+	res, _, execErr := k.wasmvm.QueryExecute(codeInfo.CodeHash, env, info, msg, prefixStore, 0, dependencies, deps)
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())

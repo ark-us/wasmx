@@ -571,6 +571,7 @@ Query/SmartContractCall RPC method
 | `address` | [string](#string) |  | Address is the address of the smart contract |
 | `query_data` | [bytes](#bytes) |  |  |
 | `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on execution |
+| `dependencies` | [string](#string) | repeated | Array of either hex-encoded contract addresses or contract labels on which the execution of this message depends on |
 
 
 

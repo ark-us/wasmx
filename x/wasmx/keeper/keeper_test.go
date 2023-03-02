@@ -372,13 +372,13 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	return codeId
 }
 
-func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage) sdk.AccAddress {
+func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string) sdk.AccAddress {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.s.Require().NoError(err)
 	instantiateContractMsg := &types.MsgInstantiateContract{
 		Sender: sender.Address.String(),
 		CodeId: codeId,
-		Label:  "test",
+		Label:  label,
 		Msg:    msgbz,
 	}
 	res := s.DeliverTxWithOpts(sender, instantiateContractMsg, 1000000, nil) // 135690
@@ -406,14 +406,15 @@ func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress s
 	return res
 }
 
-func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins) string {
+func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
 	msgbz, err := json.Marshal(executeMsg)
 	s.s.Require().NoError(err)
 	query := types.QuerySmartContractCallRequest{
-		Sender:    account.Address.String(),
-		Address:   contract.String(),
-		QueryData: msgbz,
-		Funds:     funds,
+		Sender:       account.Address.String(),
+		Address:      contract.String(),
+		QueryData:    msgbz,
+		Funds:        funds,
+		Dependencies: dependencies,
 	}
 	bz, err := query.Marshal()
 	s.s.Require().NoError(err)

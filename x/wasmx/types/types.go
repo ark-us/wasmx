@@ -47,10 +47,11 @@ func (c CodeInfo) ValidateBasic() error {
 }
 
 // NewCodeInfo fills a new CodeInfo struct
-func NewCodeInfo(codeHash []byte, creator sdk.AccAddress) CodeInfo {
+func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, deps []string) CodeInfo {
 	return CodeInfo{
 		CodeHash: codeHash,
 		Creator:  creator.String(),
+		Deps:     deps,
 	}
 }
 

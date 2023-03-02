@@ -59,10 +59,7 @@ func (o OutOfGasError) Error() string {
 // Contains static analysis info of the contract (the Wasm code to be precise).
 // This type is returned by VM.AnalyzeCode().
 type AnalysisReport struct {
-	HasIBCEntryPoints bool
-	// Deprecated, use RequiredCapabilities. For now both fields contain the same value.
-	RequiredFeatures     string
-	RequiredCapabilities string
+	Dependencies []string
 }
 
 //---------- Env ---------

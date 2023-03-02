@@ -172,6 +172,7 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 	if err != nil {
 		return nil, err
 	}
+	// TODO validate deps
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
 	// recover from out-of-gas panic
 	defer func() {
@@ -194,7 +195,7 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 		}
 	}()
 
-	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds)
+	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
 	switch {
 	case err != nil:
 		return nil, err

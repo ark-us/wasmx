@@ -38,8 +38,8 @@ func (k WasmxEngine) Create(code types.WasmCode) (types.Checksum, error) {
 	return k.save_wasm(k.DataDir, code)
 }
 
-func (k WasmxEngine) AnalyzeCode(checksum types.Checksum) (types.AnalysisReport, error) {
-	return types.AnalysisReport{}, nil
+func (k WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, error) {
+	return ewasm.AnalyzeWasm(code)
 }
 
 func (k WasmxEngine) Instantiate(
@@ -52,13 +52,14 @@ func (k WasmxEngine) Instantiate(
 	// gasMeter types.GasMeter,
 	// gasLimit uint64,
 	// deserCost types.UFraction,
+	systemDeps []string,
 ) (types.ContractResponse, uint64, error) {
-	// load wasm
-	// execute instantiate export
+	var data types.ContractResponse
+	var err error
 
 	// TODO gas
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassic(filepath, "instantiate", env, info, initMsg, store)
+	data, err = ewasm.ExecuteWasm(filepath, "instantiate", env, info, initMsg, store)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -74,13 +75,14 @@ func (k WasmxEngine) Execute(
 	// querier types.Querier,
 	// gasMeter types.GasMeter,
 	gasLimit uint64,
+	systemDeps []string,
 	dependencies []types.ContractDependency,
 	// deserCost types.UFraction,
 ) (types.ContractResponse, uint64, error) {
-	// load wasm
-	// execute instantiate export
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassicWithDeps(filepath, "main", env, info, executeMsg, store, dependencies)
+	var data types.ContractResponse
+	var err error
+	data, err = ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -97,10 +99,11 @@ func (k WasmxEngine) QueryExecute(
 	// gasMeter types.GasMeter,
 	gasLimit uint64,
 	// deserCost types.UFraction,
+	systemDeps []string,
+	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmClassic(filepath, "main", env, info, executeMsg, store)
-	fmt.Println("--WasmxEngine QueryExecute", data)
+	data, err := ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}
@@ -124,8 +127,6 @@ func (k WasmxEngine) Unpin(checksum types.Checksum) error {
 }
 
 func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (types.Checksum, error) {
-	// TODO analyze code
-
 	h := sha256.New()
 	h.Write(wasmBytecode)
 	checksum := h.Sum(nil)

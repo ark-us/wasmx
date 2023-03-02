@@ -145,6 +145,9 @@ message QuerySmartContractCallRequest {
     (gogoproto.nullable) = false,
     (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
   ];
+  // Array of either hex-encoded contract addresses or contract labels
+  // on which the execution of this message depends on
+  repeated string dependencies = 5;
 }
 
 // QuerySmartContractCallResponse is the response type for the
