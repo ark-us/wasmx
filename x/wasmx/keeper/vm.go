@@ -48,9 +48,9 @@ func (k WasmxEngine) Instantiate(
 	info types.MessageInfo,
 	initMsg []byte,
 	store types.KVStore,
-	// querier types.Querier,
+	cosmosHandler types.WasmxCosmosHandler,
 	// gasMeter types.GasMeter,
-	// gasLimit uint64,
+	gasLimit uint64,
 	// deserCost types.UFraction,
 	systemDeps []string,
 ) (types.ContractResponse, uint64, error) {
@@ -72,7 +72,7 @@ func (k WasmxEngine) Execute(
 	info types.MessageInfo,
 	executeMsg []byte,
 	store types.KVStore,
-	// querier types.Querier,
+	cosmosHandler types.WasmxCosmosHandler,
 	// gasMeter types.GasMeter,
 	gasLimit uint64,
 	systemDeps []string,
@@ -82,7 +82,7 @@ func (k WasmxEngine) Execute(
 	filepath := k.build_path(k.DataDir, checksum)
 	var data types.ContractResponse
 	var err error
-	data, err = ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies)
+	data, err = ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies, cosmosHandler)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -95,7 +95,7 @@ func (k WasmxEngine) QueryExecute(
 	info types.MessageInfo,
 	executeMsg []byte,
 	store types.KVStore,
-	// querier types.Querier,
+	cosmosHandler types.WasmxCosmosHandler,
 	// gasMeter types.GasMeter,
 	gasLimit uint64,
 	// deserCost types.UFraction,
@@ -103,7 +103,7 @@ func (k WasmxEngine) QueryExecute(
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies)
+	data, err := ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies, cosmosHandler)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}

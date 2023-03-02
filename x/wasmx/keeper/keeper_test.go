@@ -101,7 +101,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain *ibcgotesting.TestChain) AppCo
 	}
 	encodingConfig := app.MakeEncodingConfig()
 	appContext.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
-	appContext.denom = "amyt"
+	appContext.denom = app.Denom
 
 	t := suite.T()
 	appContext.faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), mapp.BankKeeper, types.ModuleName, sdk.NewCoin(appContext.denom, sdk.NewInt(100_000_000_000)))
@@ -427,7 +427,7 @@ func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddre
 
 	var data types.WasmxQueryResponse
 	err = json.Unmarshal(resp.Data, &data)
-	s.s.Require().NoError(err)
+	s.s.Require().NoError(err, abcires)
 	return hex.EncodeToString(data.Data)
 }
 

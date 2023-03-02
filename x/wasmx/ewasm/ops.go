@@ -60,8 +60,9 @@ func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params 
 // SELFBALANCE result_ptr: i32
 func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getBalance")
-	data := EMPTY_BYTES32
-	writeMem(callframe, data, params[0])
+	ctx := context.(*Context)
+	balance := ctx.CosmosHandler.GetBalance(ctx.Env.Contract.Address)
+	writeBigInt(callframe, balance, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -69,12 +70,13 @@ func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []
 // BALANCE value_ptr: i32, result_ptr: i32,
 func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getExternalBalance")
-	// addressbz, err := readMem(callframe, params[0], int32(32))
-	// if err != nil {
-	// 	return nil, wasmedge.Result_Fail
-	// }
-	data := EMPTY_BYTES32
-	writeMem(callframe, data, params[1])
+	ctx := context.(*Context)
+	addressbz, err := readMem(callframe, params[0], int32(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	balance := ctx.CosmosHandler.GetBalance(cleanupAddress(addressbz))
+	writeBigInt(callframe, balance, params[1])
 	// fmt.Println("Go: getExternalBalance", addressbz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -108,7 +110,7 @@ func getCallValue(context interface{}, callframe *wasmedge.CallingFrame, params 
 	// fmt.Println("Go: getCallValue")
 	ctx := context.(*Context)
 	// fmt.Println("Go: getCallValue", ctx.Callvalue)
-	writeMem(callframe, ctx.Callvalue.FillBytes(make([]byte, 32)), params[0])
+	writeBigInt(callframe, ctx.Callvalue, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -703,6 +705,11 @@ func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}
 	mem := callframe.GetMemoryByIndex(0)
 	err := mem.SetData(data, uint(ptr), uint(length))
 	return err
+}
+
+func writeBigInt(callframe *wasmedge.CallingFrame, value *big.Int, pointer interface{}) error {
+	data := value.FillBytes(make([]byte, 32))
+	return writeMem(callframe, data, pointer)
 }
 
 func readBigInt(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (*big.Int, error) {

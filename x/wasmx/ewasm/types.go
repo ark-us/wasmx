@@ -73,6 +73,7 @@ type Context struct {
 	ContractRouter     ContractRouter
 	ContractStore      types.KVStore
 	CallContext        types.MessageInfo
+	CosmosHandler      types.WasmxCosmosHandler
 	Calldata           []byte
 	Callvalue          *big.Int
 	ReturnData         []byte

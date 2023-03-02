@@ -82,6 +82,8 @@ var (
 
 	ErrInvalidChainID = sdkErrors.Register(DefaultCodespace, 28, "invalid chain ID")
 
+	ErrInvalidRoute = sdkErrors.Register(DefaultCodespace, 29, "invalid route")
+
 	// ErrInvalidCode error if an attribute/event from the contract is invalid
 	_ = sdkErrors.Register(DefaultCodespace, 45, "invalid code id")
 )

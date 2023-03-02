@@ -1,6 +1,11 @@
 package types
 
 import (
+	"math/big"
+
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
 )
 
@@ -44,6 +49,19 @@ type Gas = uint64
 type GasMeter interface {
 	GasConsumed() Gas
 }
+
+type WasmxCosmosHandler interface {
+	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
+	ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
+	GetBalance(addr sdk.AccAddress) *big.Int
+	GetBlockHash(blockNumber uint64) Checksum
+}
+
+// WasmxGasRegister implements GasRegister interface
+type WasmxGasRegister struct{}
+
+// GasRegister abstract source for gas costs
+type GasRegister interface{}
 
 // LibwasmvmVersion returns the version of the loaded library
 // at runtime. This can be used for debugging to verify the loaded version

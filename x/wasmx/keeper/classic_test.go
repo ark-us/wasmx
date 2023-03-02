@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
 
 	wasmeth "wasmx/x/wasmx/ewasm"
@@ -27,7 +28,6 @@ var (
 )
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
-	return
 	wasmbin := opcodeswasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
@@ -242,15 +242,16 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
 	s.Require().Equal("000000000000000000000000"+hex.EncodeToString(appA.Context().BlockHeader().ProposerAddress), qres)
 
-	return
-
-	calld = balancehex + "000000000000000000000000" + contractAddressHex[2:]
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
-	s.Require().Contains(qres, "00"+hex.EncodeToString(initBalance.BigInt().Bytes()))
+	realBalance, err := appA.app.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.denom})
+	s.Require().NoError(err)
 
 	calld = selfbalancehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
-	s.Require().Contains(qres, "00"+hex.EncodeToString(initBalance.BigInt().Bytes()))
+	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
+
+	calld = balancehex + "000000000000000000000000" + contractAddressHex[2:]
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
+	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
 
 	calld = gashex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)

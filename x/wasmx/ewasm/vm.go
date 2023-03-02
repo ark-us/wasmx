@@ -155,12 +155,10 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 
 // TODO remove
 // func buildExecutionContextClassic_0(filePath string, env types.Env, kvstore types.KVStore, conf *wasmedge.Configure) (*ContractContext, error) {
-// 	fmt.Println("--buildExecutionContextClassic", filePath)
 // 	var err error
 // 	loader := wasmedge.NewLoader()
 // 	ast, err := loader.LoadFile(filePath)
 // 	if err != nil {
-// 		fmt.Println("Load WASM from file FAILED:", err.Error())
 // 		return nil, err
 // 	}
 
@@ -177,7 +175,6 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 
 // 	err = contractVm.GetValidator().Validate(ast)
 // 	if err != nil {
-// 		fmt.Println("Validation FAILED:", err.Error())
 // 		return nil, err
 // 	}
 
@@ -209,12 +206,10 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 
 // 	ast, err := loader.LoadFile(filePath)
 // 	if err != nil {
-// 		fmt.Println("Load WASM from file FAILED:", err.Error())
 // 		return nil, err
 // 	}
 // 	err = validator.Validate(ast)
 // 	if err != nil {
-// 		fmt.Println("Validation FAILED:", err.Error())
 // 		return nil, err
 // 	}
 
@@ -272,7 +267,7 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	return response, nil
 }
 
-func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, dependencies []types.ContractDependency) (types.ContractResponse, error) {
+func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, dependencies []types.ContractDependency, cosmosHandler types.WasmxCosmosHandler) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -289,6 +284,7 @@ func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messag
 		Env:            &env,
 		ContractStore:  kvstore,
 		CallContext:    messageInfo,
+		CosmosHandler:  cosmosHandler,
 		Calldata:       ethMsg.Data,
 		Callvalue:      messageInfo.Funds,
 		ContractRouter: contractRouter,

@@ -501,6 +501,10 @@ func New(
 		app.BankKeeper,
 		wasmxmoduletypes.DefaultWasmConfig(),
 		homePath,
+		Denom,
+		app.interfaceRegistry,
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 

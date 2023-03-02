@@ -7,6 +7,7 @@ import (
 const (
 	AccountAddressPrefix = "cosmos"
 	Name                 = "wasmx"
+	Denom                = "amyt"
 )
 
 func InitSDKConfig() {

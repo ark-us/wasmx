@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -20,22 +22,27 @@ const contractMemoryLimit = 32
 
 type (
 	Keeper struct {
-		cdc        codec.BinaryCodec
-		storeKey   storetypes.StoreKey
-		memKey     storetypes.StoreKey
-		paramstore paramtypes.Subspace
+		cdc               codec.Codec
+		storeKey          storetypes.StoreKey
+		memKey            storetypes.StoreKey
+		paramstore        paramtypes.Subspace
+		interfaceRegistry cdctypes.InterfaceRegistry
+		msgRouter         *baseapp.MsgServiceRouter
+		grpcQueryRouter   *baseapp.GRPCQueryRouter
 
 		accountKeeper types.AccountKeeper
 		bank          types.BankKeeper
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
 		queryGasLimit uint64
+		gasRegister   types.GasRegister
+		denom         string
 
 		wasmvm WasmxEngine
 	}
 )
 
 func NewKeeper(
-	cdc codec.BinaryCodec,
+	cdc codec.Codec,
 	storeKey,
 	memKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
@@ -43,6 +50,10 @@ func NewKeeper(
 	bankKeeper types.BankKeeper,
 	wasmConfig types.WasmConfig,
 	homeDir string,
+	denom string,
+	interfaceRegistry cdctypes.InterfaceRegistry,
+	msgRouter *baseapp.MsgServiceRouter,
+	grpcQueryRouter *baseapp.GRPCQueryRouter,
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
@@ -61,14 +72,19 @@ func NewKeeper(
 	}
 
 	return &Keeper{
-		cdc:        cdc,
-		storeKey:   storeKey,
-		memKey:     memKey,
-		paramstore: ps,
+		cdc:               cdc,
+		storeKey:          storeKey,
+		memKey:            memKey,
+		paramstore:        ps,
+		interfaceRegistry: interfaceRegistry,
+		msgRouter:         msgRouter,
+		grpcQueryRouter:   grpcQueryRouter,
+		denom:             denom,
 
 		accountKeeper: accountKeeper,
 		bank:          bankKeeper,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
+		gasRegister:   types.WasmxGasRegister{},
 		wasmvm:        *wasmvm,
 	}
 }
