@@ -13,15 +13,20 @@ import (
 var EMPTY_BYTES32 = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func useGas(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
+	ctx := context.(*Context)
+	returns := make([]interface{}, 0)
+	gasToConsume := params[0].(int64)
+	// panics with out of gas error when out of gas
+	ctx.GasMeter.ConsumeGas(uint64(gasToConsume), "ewasm")
 	return returns, wasmedge.Result_Success
 }
 
 // GAS -> i64
 func getGasLeft(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getGasLeft")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(1000000)
+	returns[0] = int64(ctx.GasMeter.GasConsumed())
 	return returns, wasmedge.Result_Success
 }
 
@@ -51,6 +56,7 @@ func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS), "ewasm")
 	ctx.ContractStore.Set(keybz, valuebz)
 	// fmt.Println("Go: storageLoad", keybz, valuebz)
 	returns := make([]interface{}, 0)
@@ -369,6 +375,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 
 	newctx := &Context{
 		Ctx:            tempCtx,
+		GasMeter:       ctx.GasMeter,
 		Callvalue:      value,
 		Calldata:       calldata,
 		ContractStore:  contractStore,
@@ -449,6 +456,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 
 	newctx := &Context{
 		Ctx:            tempCtx,
+		GasMeter:       ctx.GasMeter,
 		Callvalue:      value,
 		Calldata:       calldata,
 		ContractStore:  contractStore,
@@ -522,6 +530,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	newctx := &Context{
 		Ctx:            tempCtx,
+		GasMeter:       ctx.GasMeter,
 		Callvalue:      ctx.Callvalue,
 		Calldata:       calldata,
 		ContractStore:  contractStore,
@@ -597,6 +606,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 
 	newctx := &Context{
 		Ctx:            tempCtx,
+		GasMeter:       ctx.GasMeter,
 		Callvalue:      big.NewInt(0),
 		Calldata:       calldata,
 		ContractStore:  contractStore,

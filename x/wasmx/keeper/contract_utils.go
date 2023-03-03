@@ -207,3 +207,10 @@ func (k Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, to
 	}
 	return nil
 }
+
+// IsPinnedCode returns true when codeID is pinned in wasmvm cache
+func (k Keeper) IsPinnedCode(ctx sdk.Context, codeID uint64) bool {
+	// store := ctx.KVStore(k.storeKey)
+	// return store.Has(types.GetPinnedCodeIndexPrefix(codeID))
+	return false
+}

@@ -234,7 +234,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 // 	return contractCtx, nil
 // }
 
-func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore) (types.ContractResponse, error) {
+func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, gasMeter types.GasMeter) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -244,6 +244,7 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	}
 	context := &Context{
 		Env:           &env,
+		GasMeter:      gasMeter,
 		ContractStore: kvstore,
 		CallContext:   messageInfo,
 		Calldata:      ethMsg.Data,
@@ -268,7 +269,7 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	return response, nil
 }
 
-func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, storeKey []byte, kvstore types.KVStore, dependencies []types.ContractDependency, cosmosHandler types.WasmxCosmosHandler) (types.ContractResponse, error) {
+func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, storeKey []byte, kvstore types.KVStore, dependencies []types.ContractDependency, cosmosHandler types.WasmxCosmosHandler, gasMeter types.GasMeter) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -283,6 +284,7 @@ func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env 
 	var contractRouter ContractRouter = make(map[string]ContractContext)
 	context := &Context{
 		Ctx:            ctx,
+		GasMeter:       gasMeter,
 		Env:            &env,
 		ContractStore:  kvstore,
 		CallContext:    messageInfo,

@@ -58,7 +58,7 @@ func (k Keeper) AnyFromBz(bz []byte) (cdctypes.Any, error) {
 
 // ConvertProtoToJSONMarshal  unmarshals the given bytes into a proto message and then marshals it to json.
 // This is done so that clients calling stargate queries do not need to define their own proto unmarshalers,
-// being able to use response directly by json marshalling, which is supported in cosmwasm.
+// being able to use response directly by json marshalling.
 func (k Keeper) ConvertProtoToJSONMarshal(protoResponse codec.ProtoMarshaler, bz []byte) ([]byte, error) {
 	// unmarshal binary into stargate response data structure
 	err := k.cdc.Unmarshal(bz, protoResponse)

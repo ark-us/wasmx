@@ -291,7 +291,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000175e626ad9975", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000007f615420f00", qres)
 
 	calld = codesizehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
@@ -553,4 +553,26 @@ func (suite *KeeperTestSuite) TestEwasmDelegateCall() {
 	deps := []string{wasmeth.EvmAddressFromAcc(contractAddressAccLib).Hex()}
 	res := appA.ExecuteContract(sender, contractAddressAcc, types.WasmxExecutionMessage{Data: suite.hex2bz("000000000000000000000000" + contractHex1)}, nil, deps)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000009")
+}
+
+func (suite *KeeperTestSuite) TestCallOutOfGas() {
+	wasmbin := fibonacciwasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	fibstorehex := "cf837088"
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "fibonacci", nil)
+
+	value := "0000000000000000000000000000000000000000000000000000000000000005"
+	msgFibStore := types.WasmxExecutionMessage{Data: append(suite.hex2bz(fibstorehex), suite.hex2bz(value)...)}
+
+	res := appA.ExecuteContractWithGas(sender, contractAddress, msgFibStore, nil, nil, 140_000, nil)
+	s.Require().False(res.IsOK(), res.GetLog())
+	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
+	s.Commit()
 }

@@ -50,9 +50,7 @@ func (k WasmxEngine) Instantiate(
 	initMsg []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
-	// gasMeter types.GasMeter,
-	gasLimit uint64,
-	// deserCost types.UFraction,
+	gasMeter types.GasMeter,
 	systemDeps []string,
 ) (types.ContractResponse, uint64, error) {
 	var data types.ContractResponse
@@ -60,7 +58,7 @@ func (k WasmxEngine) Instantiate(
 
 	// TODO gas
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err = ewasm.ExecuteWasm(filepath, "instantiate", env, info, initMsg, store)
+	data, err = ewasm.ExecuteWasm(filepath, "instantiate", env, info, initMsg, store, gasMeter)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -76,16 +74,14 @@ func (k WasmxEngine) Execute(
 	prefixStoreKey []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
-	// gasMeter types.GasMeter,
-	gasLimit uint64,
+	gasMeter types.GasMeter,
 	systemDeps []string,
 	dependencies []types.ContractDependency,
-	// deserCost types.UFraction,
 ) (types.ContractResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
 	var data types.ContractResponse
 	var err error
-	data, err = ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler)
+	data, err = ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler, gasMeter)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -101,14 +97,12 @@ func (k WasmxEngine) QueryExecute(
 	prefixStoreKey []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
-	// gasMeter types.GasMeter,
-	gasLimit uint64,
-	// deserCost types.UFraction,
+	gasMeter types.GasMeter,
 	systemDeps []string,
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler)
+	data, err := ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler, gasMeter)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}

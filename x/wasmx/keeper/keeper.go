@@ -34,7 +34,7 @@ type (
 		bank          types.BankKeeper
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
 		queryGasLimit uint64
-		gasRegister   types.GasRegister
+		gasRegister   GasRegister
 		denom         string
 
 		wasmvm WasmxEngine
@@ -84,7 +84,7 @@ func NewKeeper(
 		accountKeeper: accountKeeper,
 		bank:          bankKeeper,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
-		gasRegister:   types.WasmxGasRegister{},
+		gasRegister:   NewDefaultWasmGasRegister(),
 		wasmvm:        *wasmvm,
 	}
 }

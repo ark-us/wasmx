@@ -329,7 +329,7 @@ func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) abci.
 
 // 	// TODO: what is the query?
 // 	res := s.app.Query(abci.RequestQuery{
-// 		Path: "/cosmwasm.wasm.v1.Query/SmartContractState",
+// 		Path: "/wasmx.wasmx.v1.Query/SmartContractState",
 // 		Data: reqBin,
 // 	})
 
@@ -391,6 +391,14 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 }
 
 func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) abci.ResponseDeliverTx {
+	res := s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 1500000, nil)
+	s.s.Require().True(res.IsOK(), res.GetLog())
+	s.s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
+	s.s.Commit()
+	return res
+}
+
+func (s AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
 	msgbz, err := json.Marshal(executeMsg)
 	s.s.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{
@@ -400,11 +408,7 @@ func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress s
 		Funds:        funds,
 		Dependencies: dependencies,
 	}
-	res := s.DeliverTxWithOpts(sender, executeContractMsg, 1500000, nil) // 135690
-	s.s.Require().True(res.IsOK(), res.GetLog())
-	s.s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
-	s.s.Commit()
-	return res
+	return s.DeliverTxWithOpts(sender, executeContractMsg, gasLimit, gasPrice)
 }
 
 func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {

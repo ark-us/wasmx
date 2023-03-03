@@ -10,6 +10,11 @@ import (
 	"wasmx/x/wasmx/types"
 )
 
+var (
+	// 0, 1, 2 are used by wasmedge for success, terminate, fail
+	Result_OutOfGas = wasmedge.NewResult(wasmedge.ErrCategory_UserLevel, 10)
+)
+
 type ContractContext struct {
 	FilePath         string
 	Vm               *wasmedge.VM
@@ -71,6 +76,7 @@ type ContractRouter = map[string]ContractContext
 
 type Context struct {
 	Ctx                sdk.Context
+	GasMeter           types.GasMeter
 	Env                *types.Env
 	ContractRouter     ContractRouter
 	ContractStore      types.KVStore

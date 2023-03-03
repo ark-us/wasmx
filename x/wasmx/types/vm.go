@@ -52,6 +52,7 @@ type QueryRequest struct{}
 type Gas = uint64
 type GasMeter interface {
 	GasConsumed() Gas
+	ConsumeGas(gas uint64, descriptor string)
 }
 
 type WasmxCosmosHandler interface {
@@ -62,12 +63,6 @@ type WasmxCosmosHandler interface {
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetBlockHash(blockNumber uint64) Checksum
 }
-
-// WasmxGasRegister implements GasRegister interface
-type WasmxGasRegister struct{}
-
-// GasRegister abstract source for gas costs
-type GasRegister interface{}
 
 // LibwasmvmVersion returns the version of the loaded library
 // at runtime. This can be used for debugging to verify the loaded version
