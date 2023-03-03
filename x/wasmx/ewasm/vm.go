@@ -1,6 +1,7 @@
 package ewasm
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
+	"golang.org/x/exp/slices"
 )
 
 const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
@@ -74,10 +76,10 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte) (*wasmed
 		return contractVm, ewasmEnv, err
 	}
 	// We also register the interpreter
-	err = contractVm.RegisterWasmFile("ewasm", coreOpcodesModule)
-	if err != nil {
-		return contractVm, ewasmEnv, err
-	}
+	// err = contractVm.RegisterWasmFile("ewasm", coreOpcodesModule)
+	// if err != nil {
+	// 	return contractVm, ewasmEnv, err
+	// }
 	err = InstantiateWasm(contractVm, filePath, wasmbuffer)
 	return contractVm, ewasmEnv, err
 }
@@ -243,25 +245,27 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 		return types.ContractResponse{}, err
 	}
 	context := &Context{
-		Env:           &env,
-		GasMeter:      gasMeter,
-		ContractStore: kvstore,
-		CallContext:   messageInfo,
-		Calldata:      ethMsg.Data,
-		Callvalue:     messageInfo.Funds,
+		Env:                &env,
+		GasMeter:           gasMeter,
+		ContractStore:      kvstore,
+		CallContext:        messageInfo,
+		Calldata:           ethMsg.Data,
+		Callvalue:          messageInfo.Funds,
+		DeploymentCodeSize: 0,
+		CodeSize:           0,
 	}
 	contractVm, ewasmEnv, err := InitiateWasm(context, filePath, nil)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
+
+	setCodeSize(context, contractVm, funcName)
+
 	_, err = contractVm.Execute(funcName)
 	contractVm.Release()
 	ewasmEnv.Release()
 
-	response := types.ContractResponse{
-		Data: context.ReturnData,
-	}
-
+	response := handleContractResponse(funcName, context.ReturnData, context.Logs)
 	if err != nil {
 		return response, err
 	}
@@ -283,15 +287,17 @@ func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env 
 	contractVm := wasmedge.NewVMWithStore(store)
 	var contractRouter ContractRouter = make(map[string]ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CallContext:    messageInfo,
-		CosmosHandler:  cosmosHandler,
-		Calldata:       ethMsg.Data,
-		Callvalue:      messageInfo.Funds,
-		ContractRouter: contractRouter,
+		Ctx:                ctx,
+		GasMeter:           gasMeter,
+		Env:                &env,
+		ContractStore:      kvstore,
+		CallContext:        messageInfo,
+		CosmosHandler:      cosmosHandler,
+		Calldata:           ethMsg.Data,
+		Callvalue:          messageInfo.Funds,
+		ContractRouter:     contractRouter,
+		DeploymentCodeSize: 0,
+		CodeSize:           0,
 	}
 	for _, dep := range dependencies {
 		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf)
@@ -314,32 +320,74 @@ func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env 
 	}
 	// stat := wasmedge.NewStatistics()
 
-	// Instantiate wasm
-	err = contractVm.LoadWasmFile(filePath)
+	err = InstantiateWasm(contractVm, filePath, nil)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-	err = contractVm.Validate()
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
-	err = contractVm.Instantiate()
-	if err != nil {
-		return types.ContractResponse{}, err
-	}
+
+	setCodeSize(context, contractVm, funcName)
+
 	_, err = contractVm.Execute(funcName)
 
 	contractVm.Release()
 	ewasmEnv.Release()
 	store.Release() // release after vm is released
 
-	response := types.ContractResponse{
-		Data: context.ReturnData,
-	}
-
+	response := handleContractResponse(funcName, context.ReturnData, context.Logs)
 	if err != nil {
 		return response, err
 	}
 
 	return response, nil
+}
+
+func setCodeSize(context *Context, contractVm *wasmedge.VM, funcName string) {
+	fnList, _ := contractVm.GetFunctionList()
+
+	if funcName == "instantiate" && slices.Contains(fnList, "codesize_constructor") {
+		retvalue, err := contractVm.Execute("codesize_constructor")
+		if err == nil {
+			codesize := retvalue[0].(int32)
+			context.DeploymentCodeSize = codesize
+			context.CodeSize = codesize + int32(len(context.Calldata))
+		}
+
+	} else if slices.Contains(fnList, "codesize") {
+		retvalue, err := contractVm.Execute("codesize")
+		if err == nil {
+			codesize := retvalue[0].(int32)
+			context.DeploymentCodeSize = codesize
+			context.CodeSize = codesize
+		}
+	}
+}
+
+func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types.ContractResponse {
+	var events []types.Event
+	for i, log := range logs {
+		var attributes []types.EventAttribute
+		attributes = append(attributes, types.EventAttribute{
+			Key:   AttributeKeyIndex,
+			Value: fmt.Sprint(i),
+		})
+		attributes = append(attributes, types.EventAttribute{
+			Key:   AttributeKeyData,
+			Value: "0x" + hex.EncodeToString(log.Data),
+		})
+		for j, topic := range log.Topics {
+			attributes = append(attributes, types.EventAttribute{
+				Key:   AttributeKeyTopic + fmt.Sprint(j),
+				Value: "0x" + hex.EncodeToString(topic),
+			})
+		}
+		events = append(events, types.Event{
+			Type:       EventTypeEwasmLog,
+			Attributes: attributes,
+		})
+	}
+
+	return types.ContractResponse{
+		Data:   data,
+		Events: events,
+	}
 }

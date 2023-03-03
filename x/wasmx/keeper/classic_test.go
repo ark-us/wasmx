@@ -295,7 +295,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = codesizehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001a5d", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001e15", qres)
 
 	calld = blockhashhex + "0000000000000000000000000000000000000000000000000000000000000002"
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: s.hex2bz(calld)}, nil, nil)
@@ -366,8 +366,8 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	codeIdFibo := appA.StoreCode(sender, fibowasm)
 	contractAddressFibo := appA.InstantiateCode(sender, codeIdFibo, types.WasmxExecutionMessage{Data: []byte{}}, "fibonacci", nil)
 
-	value := "0000000000000000000000000000000000000000000000000000000000000002"
-	result := "0000000000000000000000000000000000000000000000000000000000000001"
+	value := "0000000000000000000000000000000000000000000000000000000000000005"
+	result := "0000000000000000000000000000000000000000000000000000000000000005"
 	paddedAddr := append(make([]byte, 12), contractAddressFibo.Bytes()...)
 	msgFib := types.WasmxExecutionMessage{Data: append(
 		append(paddedAddr, suite.hex2bz(fibhex)...),

@@ -21,10 +21,6 @@ type ContractResult struct {
 
 // ContractResponse defines the return value on a successful instantiate/execute/migrate.
 type ContractResponse struct {
-	// Messages comes directly from the contract and is its request for action.
-	// If the ReplyOn value matches the result, the runtime will invoke this
-	// contract's `reply` entry point after execution. Otherwise, this is all
-	// "fire and forget".
 	// Messages []SubMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`

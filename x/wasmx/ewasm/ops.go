@@ -1,6 +1,7 @@
 package ewasm
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -9,8 +10,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
-
-var EMPTY_BYTES32 = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func useGas(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
@@ -180,8 +179,9 @@ func returnDataCopy(context interface{}, callframe *wasmedge.CallingFrame, param
 // CODESIZE -> i32
 func getCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getCodeSize")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int32(100000)
+	returns[0] = ctx.CodeSize
 	return returns, wasmedge.Result_Success
 }
 
@@ -199,8 +199,15 @@ func getExternalCodeSize(context interface{}, callframe *wasmedge.CallingFrame, 
 }
 
 // CODECOPY result_ptr: i32, code_ptr: i32, data_len: i32
+// works only for constructor args that need to be copied at deployment time
 func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: codeCopy")
+	ctx := context.(*Context)
+	codePtr := params[1].(int32)
+	// constructor args
+	if codePtr == ctx.DeploymentCodeSize {
+		writeMem(callframe, paddToMultiple32(ctx.Calldata), params[0])
+	}
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -229,7 +236,7 @@ func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, 
 // GASPRICE result_ptr: i32
 func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getTxGasPrice")
-	data := EMPTY_BYTES32
+	data := types.EMPTY_BYTES32
 	writeMem(callframe, data, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -268,10 +275,7 @@ func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, par
 func getBlockHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("Go: getBlockHash")
 	ctx := context.(*Context)
-	blockNumber, err := readI64(callframe, params[0], int32(32))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
+	blockNumber := params[0].(int64)
 	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
 	writeMem(callframe, data, params[1])
 	returns := make([]interface{}, 0)
@@ -299,7 +303,7 @@ func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, pa
 // DIFFICULTY result_ptr: i32
 func getBlockDifficulty(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getBlockDifficulty")
-	data := EMPTY_BYTES32
+	data := types.EMPTY_BYTES32
 	writeMem(callframe, data, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -318,7 +322,7 @@ func getChainId(context interface{}, callframe *wasmedge.CallingFrame, params []
 // BASEFEE result_ptr: i32
 func getBaseFee(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: getBaseFee")
-	data := EMPTY_BYTES32
+	data := types.EMPTY_BYTES32
 	writeMem(callframe, data, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -402,6 +406,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		commit()
 		// Write events
 		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
+		ctx.Logs = append(ctx.Logs, newctx.Logs...)
 	}
 	ctx.ReturnData = newctx.ReturnData
 	// fmt.Println("Go: call result ReturnData", ctx.ReturnData)
@@ -483,6 +488,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		commit()
 		// Write events
 		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
+		ctx.Logs = append(ctx.Logs, newctx.Logs...)
 	}
 	ctx.ReturnData = newctx.ReturnData
 	writeMemBoundBySize(callframe, ctx.ReturnData, params[5], params[6])
@@ -557,6 +563,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 		commit()
 		// Write events
 		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
+		ctx.Logs = append(ctx.Logs, newctx.Logs...)
 	}
 	ctx.ReturnData = newctx.ReturnData
 	writeMemBoundBySize(callframe, ctx.ReturnData, params[4], params[5])
@@ -661,6 +668,23 @@ func selfDestruct(context interface{}, callframe *wasmedge.CallingFrame, params 
 // LOG data_ptr: i32, data_len: i32, topic_count: i32, topic_ptr1: i32, topic_ptr2: i32, topic_ptr3: i32, topic_ptr4: i32
 func log(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: log")
+	ctx := context.(*Context)
+	data, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	log := EwasmLog{Data: data, ContractAddress: ctx.Env.Contract.Address}
+	topicCount := int(params[2].(int32))
+	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
+
+	for i := 0; i < topicCount; i++ {
+		topic, err := readMem(callframe, topicPtrs[i], int32(32))
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+		log.Topics = append(log.Topics, topic)
+	}
+	ctx.Logs = append(ctx.Logs, log)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -772,6 +796,10 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
+	functype_i64i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
 	functype_i32i32_i32 := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
@@ -823,7 +851,7 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	ewasmEnv.AddFunction("ethereum_getTxOrigin", wasmedge.NewFunction(functype_i32_, getTxOrigin, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockNumber", wasmedge.NewFunction(functype__i64, getBlockNumber, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockCoinbase", wasmedge.NewFunction(functype_i32_, getBlockCoinbase, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockHash", wasmedge.NewFunction(functype_i32i32_, getBlockHash, context, 0))
+	ewasmEnv.AddFunction("ethereum_getBlockHash", wasmedge.NewFunction(functype_i64i32_, getBlockHash, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockGasLimit", wasmedge.NewFunction(functype__i64, getBlockGasLimit, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockTimestamp", wasmedge.NewFunction(functype__i64, getBlockTimestamp, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockDifficulty", wasmedge.NewFunction(functype_i32_, getBlockDifficulty, context, 0))
@@ -922,4 +950,13 @@ func cleanupAddress(addr []byte) []byte {
 		return addr[12:]
 	}
 	return addr
+}
+
+func paddToMultiple32(data []byte) []byte {
+	length := len(data)
+	c := length % 32
+	if c > 0 {
+		data = append(data, bytes.Repeat([]byte{0}, 32-c)...)
+	}
+	return data
 }

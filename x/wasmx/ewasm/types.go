@@ -15,6 +15,14 @@ var (
 	Result_OutOfGas = wasmedge.NewResult(wasmedge.ErrCategory_UserLevel, 10)
 )
 
+var (
+	EventTypeEwasmFunction = "ewasm_function"
+	EventTypeEwasmLog      = "ewasm_log"
+	AttributeKeyIndex      = "index"
+	AttributeKeyData       = "data"
+	AttributeKeyTopic      = "topic_"
+)
+
 type ContractContext struct {
 	FilePath         string
 	Vm               *wasmedge.VM
@@ -44,24 +52,12 @@ func (c ContractContext) Execute_() ([]byte, error) {
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
-	contractVm := wasmedge.NewVM()
-	ewasmEnv := BuildEwasmEnv(newctx)
-	err := contractVm.RegisterModule(ewasmEnv)
+	contractVm, ewasmEnv, err := InitiateWasm(newctx, c.FilePath, nil)
 	if err != nil {
 		return nil, err
 	}
-	err = contractVm.LoadWasmFile(c.FilePath)
-	if err != nil {
-		return nil, err
-	}
-	err = contractVm.Validate()
-	if err != nil {
-		return nil, err
-	}
-	err = contractVm.Instantiate()
-	if err != nil {
-		return nil, err
-	}
+	setCodeSize(newctx, contractVm, "main")
+
 	_, err = contractVm.Execute("main")
 	if err != nil {
 		return nil, err
@@ -87,8 +83,8 @@ type Context struct {
 	ReturnData         []byte
 	CurrentCallId      uint32
 	Logs               []EwasmLog
-	DeploymentCodeSize uint32
-	CodeSize           uint32
+	DeploymentCodeSize int32
+	CodeSize           int32
 }
 
 type EwasmFunctionWrapper struct {
@@ -97,6 +93,7 @@ type EwasmFunctionWrapper struct {
 }
 
 type EwasmLog struct {
-	Data   []byte
-	Topics [][]byte
+	ContractAddress sdk.AccAddress
+	Data            []byte
+	Topics          [][]byte
 }
