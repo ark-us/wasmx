@@ -46,6 +46,12 @@ var (
 
 	//go:embed testdata/classic/call_static_inner.wasm
 	callstaticinnerwasm []byte
+
+	//go:embed testdata/classic/call_delegate.wasm
+	delegatecallwasm []byte
+
+	//go:embed testdata/classic/call_delegate_lib.wasm
+	delegatecalllibwasm []byte
 )
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
@@ -521,4 +527,30 @@ func (suite *KeeperTestSuite) TestEwasmStaticCall() {
 
 	queryres = appA.app.WasmxKeeper.QueryRaw(appA.Context(), innerContractAddress, keybz)
 	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", hex.EncodeToString(queryres))
+}
+
+func (suite *KeeperTestSuite) TestEwasmDelegateCall() {
+	// lib reads from storage key 0 and returns the value
+	wasmlib := delegatecalllibwasm
+	// contract stores 9 at key value 0 and returns the delegatecall return value
+	wasmbin := delegatecallwasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(10_000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	// Deploy library code
+	codeIdLib := appA.StoreCode(sender, wasmlib)
+	contractAddressAccLib := appA.InstantiateCode(sender, codeIdLib, types.WasmxExecutionMessage{Data: []byte{}}, "delegatecalllibwasm", nil)
+	contractHex1 := hex.EncodeToString(contractAddressAccLib.Bytes())
+
+	// Deploy second contract
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddressAcc := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: suite.hex2bz(contractHex1)}, "delegatecallwasm", sdk.NewCoins(sdk.NewCoin(appA.denom, sdk.NewInt(100000))))
+
+	deps := []string{wasmeth.EvmAddressFromAcc(contractAddressAccLib).Hex()}
+	res := appA.ExecuteContract(sender, contractAddressAcc, types.WasmxExecutionMessage{Data: suite.hex2bz("000000000000000000000000" + contractHex1)}, nil, deps)
+	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000009")
 }

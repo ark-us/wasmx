@@ -399,22 +399,158 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	ctx.ReturnData = newctx.ReturnData
 	// fmt.Println("Go: call result ReturnData", ctx.ReturnData)
 
+	writeMemBoundBySize(callframe, ctx.ReturnData, params[5], params[6])
 	return returns, wasmedge.Result_Success
 }
 
 // CALLCODE gas_limit: i64, address_ptr: i32, value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: callCode")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+
+	addrbz, err := readMem(callframe, params[1], int32(32))
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	addr := sdk.AccAddress(cleanupAddress(addrbz))
+	value, err := readBigInt(callframe, params[2], int32(32))
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	calldata, err := readMem(callframe, params[3], params[4])
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+
+	_, ok := ctx.ContractRouter[addr.String()]
+	if !ok {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+
+	// keep same origin, change caller, funds
+	callContext := types.MessageInfo{
+		Origin:   ctx.CallContext.Origin,
+		Sender:   ctx.Env.Contract.Address,
+		Funds:    value,
+		IsQuery:  false,
+		ReadOnly: false,
+	}
+
+	tempCtx, commit := ctx.Ctx.CacheContext()
+
+	// use current contract storage key and contract address
+	currentAddress := ctx.Env.Contract.Address
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
+
+	newctx := &Context{
+		Ctx:            tempCtx,
+		Callvalue:      value,
+		Calldata:       calldata,
+		ContractStore:  contractStore,
+		CosmosHandler:  ctx.CosmosHandler,
+		ContractRouter: ctx.ContractRouter,
+		CallContext:    callContext,
+		Env: &types.Env{
+			Block:       ctx.Env.Block,
+			Transaction: ctx.Env.Transaction,
+			Chain:       ctx.Env.Chain,
+			Contract: types.EnvContractInfo{
+				Address: currentAddress,
+			},
+		},
+	}
+
+	// use the wasm code of the user-given address
+	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
+	// Returns 0 on success, 1 on failure and 2 on revert
+	if err != nil {
+		returns[0] = int32(2)
+	} else {
+		returns[0] = int32(0)
+		commit()
+		// Write events
+		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
+	}
+	ctx.ReturnData = newctx.ReturnData
+	writeMemBoundBySize(callframe, ctx.ReturnData, params[5], params[6])
 	return returns, wasmedge.Result_Success
 }
 
 // CALLDELEGATE gas_limit: i64, address_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: callDelegate")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+
+	addrbz, err := readMem(callframe, params[1], int32(32))
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	addr := sdk.AccAddress(cleanupAddress(addrbz))
+	calldata, err := readMem(callframe, params[2], params[3])
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+
+	_, ok := ctx.ContractRouter[addr.String()]
+	if !ok {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+
+	// keep same origin, sender, funds
+	callContext := types.MessageInfo{
+		Origin:   ctx.CallContext.Origin,
+		Sender:   ctx.CallContext.Sender,
+		Funds:    ctx.Callvalue,
+		IsQuery:  false,
+		ReadOnly: false,
+	}
+
+	tempCtx, commit := ctx.Ctx.CacheContext()
+
+	// use current contract storage key and contract address
+	currentAddress := ctx.Env.Contract.Address
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
+
+	newctx := &Context{
+		Ctx:            tempCtx,
+		Callvalue:      ctx.Callvalue,
+		Calldata:       calldata,
+		ContractStore:  contractStore,
+		CosmosHandler:  ctx.CosmosHandler,
+		ContractRouter: ctx.ContractRouter,
+		CallContext:    callContext,
+		Env: &types.Env{
+			Block:       ctx.Env.Block,
+			Transaction: ctx.Env.Transaction,
+			Chain:       ctx.Env.Chain,
+			Contract: types.EnvContractInfo{
+				Address: currentAddress,
+			},
+		},
+	}
+
+	// use the wasm code of the user-given address
+	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
+	// Returns 0 on success, 1 on failure and 2 on revert
+	if err != nil {
+		returns[0] = int32(2)
+	} else {
+		returns[0] = int32(0)
+		commit()
+		// Write events
+		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
+	}
+	ctx.ReturnData = newctx.ReturnData
+	writeMemBoundBySize(callframe, ctx.ReturnData, params[4], params[5])
 	return returns, wasmedge.Result_Success
 }
 
@@ -487,6 +623,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	ctx.ReturnData = newctx.ReturnData
 	// fmt.Println("Go: call result ReturnData", ctx.ReturnData)
 
+	writeMemBoundBySize(callframe, ctx.ReturnData, params[4], params[5])
 	return returns, wasmedge.Result_Success
 }
 
@@ -721,6 +858,11 @@ func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}
 	mem := callframe.GetMemoryByIndex(0)
 	err := mem.SetData(data, uint(ptr), uint(length))
 	return err
+}
+
+func writeMemBoundBySize(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}, size interface{}) error {
+	length := size.(int32)
+	return writeMem(callframe, data[0:length], pointer)
 }
 
 func writeBigInt(callframe *wasmedge.CallingFrame, value *big.Int, pointer interface{}) error {
