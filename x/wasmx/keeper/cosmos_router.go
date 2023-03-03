@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -40,6 +41,9 @@ func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.C
 }
 func (h *WasmxCosmosHandler) GetBlockHash(blockNumber uint64) types.Checksum {
 	return types.EMPTY_BYTES32
+}
+func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store {
+	return h.Keeper.ContractStore(ctx, prefixStoreKey)
 }
 
 func (k Keeper) newCosmosHandler(ctx sdk.Context, caller sdk.AccAddress) types.WasmxCosmosHandler {

@@ -7,6 +7,7 @@ import (
 
 	"wasmx/x/wasmx/types"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
@@ -65,7 +66,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte) (*wasmed
 	// conf := wasmedge.NewConfigure()
 	// conf.SetStatisticsInstructionCounting(true)
 	// conf.SetStatisticsTimeMeasuring(true)
-
+	// contractVm := wasmedge.NewVMWithConfig(conf)
 	ewasmEnv := BuildEwasmEnv(context)
 	contractVm := wasmedge.NewVM()
 	err := contractVm.RegisterModule(ewasmEnv)
@@ -117,10 +118,10 @@ func InitiateWasmWithWrap(context *Context, filePath string, wasmbuffer []byte) 
 	return contractVm, contractEnv, ewasmVm, ewasmEnv, nil
 }
 
-func buildExecutionContextClassic(filePath string, env types.Env, kvstore types.KVStore, conf *wasmedge.Configure) (*ContractContext, error) {
+func buildExecutionContextClassic(filePath string, env types.Env, storeKey []byte, conf *wasmedge.Configure) (*ContractContext, error) {
 	contractCtx := &ContractContext{
-		FilePath:      filePath,
-		ContractStore: kvstore,
+		FilePath:         filePath,
+		ContractStoreKey: storeKey,
 	}
 	return contractCtx, nil
 }
@@ -267,7 +268,7 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 	return response, nil
 }
 
-func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, dependencies []types.ContractDependency, cosmosHandler types.WasmxCosmosHandler) (types.ContractResponse, error) {
+func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, storeKey []byte, kvstore types.KVStore, dependencies []types.ContractDependency, cosmosHandler types.WasmxCosmosHandler) (types.ContractResponse, error) {
 	var err error
 
 	var ethMsg types.WasmxExecutionMessage
@@ -281,6 +282,7 @@ func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messag
 	contractVm := wasmedge.NewVMWithStore(store)
 	var contractRouter ContractRouter = make(map[string]ContractContext)
 	context := &Context{
+		Ctx:            ctx,
 		Env:            &env,
 		ContractStore:  kvstore,
 		CallContext:    messageInfo,
@@ -290,14 +292,14 @@ func ExecuteWasmWithDeps(filePath string, funcName string, env types.Env, messag
 		ContractRouter: contractRouter,
 	}
 	for _, dep := range dependencies {
-		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.Store, conf)
+		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf)
 		if err != nil {
 			return types.ContractResponse{}, err
 		}
 		context.ContractRouter[dep.Address.String()] = *contractContext
 	}
 	// add itself
-	selfContext, err := buildExecutionContextClassic(filePath, env, kvstore, conf)
+	selfContext, err := buildExecutionContextClassic(filePath, env, storeKey, conf)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}

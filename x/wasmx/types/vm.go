@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
@@ -54,6 +55,7 @@ type GasMeter interface {
 }
 
 type WasmxCosmosHandler interface {
+	ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store
 	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
 	ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int

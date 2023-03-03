@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"path"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -67,10 +68,12 @@ func (k WasmxEngine) Instantiate(
 }
 
 func (k WasmxEngine) Execute(
+	ctx sdk.Context,
 	checksum types.Checksum,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
+	prefixStoreKey []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	// gasMeter types.GasMeter,
@@ -82,7 +85,7 @@ func (k WasmxEngine) Execute(
 	filepath := k.build_path(k.DataDir, checksum)
 	var data types.ContractResponse
 	var err error
-	data, err = ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies, cosmosHandler)
+	data, err = ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -90,10 +93,12 @@ func (k WasmxEngine) Execute(
 }
 
 func (k WasmxEngine) QueryExecute(
+	ctx sdk.Context,
 	checksum types.Checksum,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
+	prefixStoreKey []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	// gasMeter types.GasMeter,
@@ -103,7 +108,7 @@ func (k WasmxEngine) QueryExecute(
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmWithDeps(filepath, "main", env, info, executeMsg, store, dependencies, cosmosHandler)
+	data, err := ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}

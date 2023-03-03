@@ -43,25 +43,28 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 	return nil
 }
 
-func (k Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, prefix.Store, error) {
+func (k Keeper) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store {
+	return prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+}
+
+func (k Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
 	store := ctx.KVStore(k.storeKey)
 
 	contractBz := store.Get(types.GetContractAddressKey(contractAddress))
 	if contractBz == nil {
-		return types.ContractInfo{}, types.CodeInfo{}, prefix.Store{}, sdkerrors.Wrap(types.ErrNotFound, "contract")
+		return types.ContractInfo{}, types.CodeInfo{}, nil, sdkerrors.Wrap(types.ErrNotFound, "contract")
 	}
 	var contractInfo types.ContractInfo
 	k.cdc.MustUnmarshal(contractBz, &contractInfo)
 
 	codeInfoBz := store.Get(types.GetCodeKey(contractInfo.CodeId))
 	if codeInfoBz == nil {
-		return contractInfo, types.CodeInfo{}, prefix.Store{}, sdkerrors.Wrap(types.ErrNotFound, "code info")
+		return contractInfo, types.CodeInfo{}, nil, sdkerrors.Wrap(types.ErrNotFound, "code info")
 	}
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
-	return contractInfo, codeInfo, prefixStore, nil
+	return contractInfo, codeInfo, prefixStoreKey, nil
 }
 
 func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {

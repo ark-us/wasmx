@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
@@ -128,6 +127,6 @@ type CallCacheMap = []CallCache
 
 type ContractDependency struct {
 	Address  sdk.AccAddress
-	Store    types.KVStore
+	StoreKey []byte
 	FilePath string
 }

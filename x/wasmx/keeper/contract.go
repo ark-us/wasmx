@@ -279,7 +279,7 @@ func (k Keeper) instantiateInternal(
 // Execute executes the contract instance
 func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
-	contractInfo, codeInfo, prefixStore, err := k.ContractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -288,13 +288,13 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// TODO get deps also from codeInfo.Dependencies
 	for _, hexaddr := range dependencies {
 		addr := wasmeth.AccAddressFromHex(hexaddr)
-		_, codeInfo, prefixStore, err := k.ContractInstance(ctx, addr)
+		_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
 		deps = append(deps, types.ContractDependency{
 			Address:  addr,
-			Store:    prefixStore,
+			StoreKey: prefixStoreKey,
 			FilePath: k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
 		})
 	}
@@ -320,7 +320,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, handler, 0, codeInfo.Deps, deps)
+	res, _, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, 0, codeInfo.Deps, deps)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 	if execErr != nil {
@@ -350,7 +350,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, "cannot executeWithOrigin from EOA")
 	}
 
-	contractInfo, codeInfo, prefixStore, err := k.ContractInstance(ctx, contractAddress)
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, handler, 0, codeInfo.Deps, nil)
+	res, _, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, 0, codeInfo.Deps, nil)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 
@@ -395,7 +395,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 // Execute executes the contract instance
 func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
-	_, codeInfo, prefixStore, err := k.ContractInstance(ctx, contractAddress)
+	_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -410,13 +410,13 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// TODO get deps also from codeInfo.Dependencies
 	for _, hexaddr := range dependencies {
 		addr := wasmeth.AccAddressFromHex(hexaddr)
-		_, codeInfo, prefixStore, err := k.ContractInstance(ctx, addr)
+		_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
 		deps = append(deps, types.ContractDependency{
 			Address:  addr,
-			Store:    prefixStore,
+			StoreKey: prefixStoreKey,
 			FilePath: k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
 		})
 	}
@@ -434,7 +434,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// gas := k.runtimeGasForContract(ctx)
 	// res, gasUsed, execErr := k.wasmVM.Execute(codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, k.gasMeter(ctx), gas, costJSONDeserialization)
 
-	res, _, execErr := k.wasmvm.QueryExecute(codeInfo.CodeHash, env, info, msg, prefixStore, handler, 0, dependencies, deps)
+	res, _, execErr := k.wasmvm.QueryExecute(ctx, codeInfo.CodeHash, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, 0, dependencies, deps)
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())

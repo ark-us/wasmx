@@ -3,18 +3,20 @@ package ewasm
 import (
 	"math/big"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"wasmx/x/wasmx/types"
 )
 
 type ContractContext struct {
-	FilePath      string
-	Vm            *wasmedge.VM
-	VmAst         *wasmedge.AST
-	VmExecutor    *wasmedge.Executor
-	ContractStore types.KVStore // TODO remove
-	Context       *Context
+	FilePath         string
+	Vm               *wasmedge.VM
+	VmAst            *wasmedge.AST
+	VmExecutor       *wasmedge.Executor
+	ContractStoreKey []byte
+	Context          *Context
 }
 
 func (c ContractContext) Execute_() ([]byte, error) {
@@ -55,7 +57,6 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	_, err = contractVm.Execute("main")
 	if err != nil {
 		return nil, err
@@ -69,6 +70,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 type ContractRouter = map[string]ContractContext
 
 type Context struct {
+	Ctx                sdk.Context
 	Env                *types.Env
 	ContractRouter     ContractRouter
 	ContractStore      types.KVStore

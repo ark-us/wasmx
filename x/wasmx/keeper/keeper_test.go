@@ -372,7 +372,7 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	return codeId
 }
 
-func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string) sdk.AccAddress {
+func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) sdk.AccAddress {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.s.Require().NoError(err)
 	instantiateContractMsg := &types.MsgInstantiateContract{
@@ -380,6 +380,7 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 		CodeId: codeId,
 		Label:  label,
 		Msg:    msgbz,
+		Funds:  funds,
 	}
 	res := s.DeliverTxWithOpts(sender, instantiateContractMsg, 1000000, nil) // 135690
 	s.s.Require().True(res.IsOK(), res.GetLog())
