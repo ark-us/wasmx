@@ -3,6 +3,7 @@ package ewasm
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"wasmx/x/wasmx/types"
@@ -209,7 +210,7 @@ func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	codePtr := params[1].(int32)
 	// constructor args
 	if codePtr == ctx.DeploymentCodeSize {
-		writeMem(callframe, paddToMultiple32(ctx.Calldata), params[0])
+		writeMem(callframe, paddRightToMultiple32(ctx.Calldata), params[0])
 	}
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -650,14 +651,68 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 // CREATE value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32
 func create(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: create")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
+	value, err := readBigInt(callframe, params[0], int32(32))
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	// data: codeId + args
+	codeId, err := readI64(callframe, params[1], int32(32))
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	constructorArgs, err := readMem(callframe, params[1].(int32)+32, params[2])
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	label := fmt.Sprintf("%s_%d", ctx.Env.Contract.Address.String(), codeId)
+	msg := types.WasmxExecutionMessage{Data: constructorArgs}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	contractAddress, err := ctx.CosmosHandler.Create(uint64(codeId), ctx.Env.Contract.Address, initMsg, label, value)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	writeMem(callframe, paddLeftTo32(contractAddress.Bytes()), params[3])
 	return returns, wasmedge.Result_Success
 }
 
 // CREATE2 value_ptr: i32, data_ptr: i32, data_len: i32, salt_ptr: i32, result_ptr: i32
 func create2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: create2")
+	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
+	value, err := readBigInt(callframe, params[0], int32(32))
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	salt, err := readMem(callframe, params[3], int32(32))
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	// data: codeId + args
+	codeId, err := readI64(callframe, params[1], int32(32))
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	constructorArgs, err := readMem(callframe, params[1].(int32)+32, params[2])
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	label := fmt.Sprintf("%s_%d", ctx.Env.Contract.Address.String(), codeId)
+	msg := types.WasmxExecutionMessage{Data: constructorArgs}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	contractAddress, err := ctx.CosmosHandler.Create2(uint64(codeId), ctx.Env.Contract.Address, initMsg, salt, label, value)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	writeMem(callframe, paddLeftTo32(contractAddress.Bytes()), params[3])
 	return returns, wasmedge.Result_Success
 }
 
@@ -956,11 +1011,20 @@ func cleanupAddress(addr []byte) []byte {
 	return addr
 }
 
-func paddToMultiple32(data []byte) []byte {
+func paddRightToMultiple32(data []byte) []byte {
 	length := len(data)
 	c := length % 32
 	if c > 0 {
 		data = append(data, bytes.Repeat([]byte{0}, 32-c)...)
 	}
+	return data
+}
+
+func paddLeftTo32(data []byte) []byte {
+	length := len(data)
+	if length >= 32 {
+		return data
+	}
+	data = append(bytes.Repeat([]byte{0}, 32-length), data...)
 	return data
 }

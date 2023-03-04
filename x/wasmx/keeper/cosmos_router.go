@@ -45,6 +45,16 @@ func (h *WasmxCosmosHandler) GetBlockHash(blockNumber uint64) types.Checksum {
 func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store {
 	return h.Keeper.ContractStore(ctx, prefixStoreKey)
 }
+func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error) {
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
+	address, _, err := h.Keeper.Instantiate(h.Ctx, codeId, creator, initMsg, label, funds)
+	return address, err
+}
+func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt types.Checksum, label string, value *big.Int) (sdk.AccAddress, error) {
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
+	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, label, funds, salt, false)
+	return address, err
+}
 
 func (k Keeper) newCosmosHandler(ctx sdk.Context, caller sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{

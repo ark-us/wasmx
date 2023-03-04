@@ -27,7 +27,7 @@ func (k Keeper) Instantiate(ctx sdk.Context, codeId uint64, creator sdk.AccAddre
 }
 
 func (k Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccAddress, msg types.RawContractMessage, label string, funds sdk.Coins, salt []byte, fixMsg bool) (sdk.AccAddress, []byte, error) {
-	return nil, nil, nil
+	return k.instantiate2(ctx, codeId, senderAddr, msg, label, funds, salt, fixMsg)
 }
 
 func (k Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error) {
@@ -166,6 +166,29 @@ func (k Keeper) instantiate(
 	// TODO if we support multiple types of address generation
 	// the type should be saved in CodeInfo
 	contractAddress := k.EwasmClassicAddressGenerator(creator)(ctx, codeID, codeInfo.CodeHash)
+	return k.instantiateInternal(ctx, codeID, creator, initMsg, label, deposit, contractAddress, codeInfo)
+}
+
+func (k Keeper) instantiate2(
+	ctx sdk.Context,
+	codeID uint64,
+	creator sdk.AccAddress,
+	initMsg []byte,
+	label string,
+	deposit sdk.Coins,
+	salt []byte,
+	fixMsg bool,
+) (sdk.AccAddress, []byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate")
+
+	// get contact info
+	codeInfo := k.GetCodeInfo(ctx, codeID)
+	if codeInfo == nil {
+		return nil, nil, sdkerrors.Wrap(types.ErrNotFound, "code")
+	}
+	// TODO if we support multiple types of address generation
+	// the type should be saved in CodeInfo
+	contractAddress := k.EwasmPredictableAddressGenerator(creator, salt, initMsg, fixMsg)(ctx, codeID, codeInfo.CodeHash)
 	return k.instantiateInternal(ctx, codeID, creator, initMsg, label, deposit, contractAddress, codeInfo)
 }
 

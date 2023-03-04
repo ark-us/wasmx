@@ -39,7 +39,7 @@ func EwasmBuildContractAddressClassic(creator sdk.AccAddress, nonce uint64) sdk.
 }
 
 // EwasmPredictableAddressGenerator generates a predictable contract address
-func EwasmPredictableAddressGenerator(creator sdk.AccAddress, salt []byte, _ []byte, _ bool) AddressGenerator {
+func (k Keeper) EwasmPredictableAddressGenerator(creator sdk.AccAddress, salt []byte, _ []byte, _ bool) AddressGenerator {
 	return func(ctx sdk.Context, _ uint64, checksum []byte) sdk.AccAddress {
 		if len(checksum) != 32 {
 			panic("invalid checksum")

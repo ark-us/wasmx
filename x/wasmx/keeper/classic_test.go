@@ -665,7 +665,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 	codeInfo := appA.app.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
 	s.Require().NotNil(codeInfo)
 
-	_createdContractAddress := wasmxkeeper.EwasmPredictableAddressGenerator(factoryAccount, saltb, innerExecuteMsgb, false)(appA.Context(), codeId2, codeInfo.CodeHash)
+	_createdContractAddress := appA.app.WasmxKeeper.EwasmPredictableAddressGenerator(factoryAccount, saltb, innerExecuteMsgb, false)(appA.Context(), codeId2, codeInfo.CodeHash)
 
 	_contractInfo := appA.app.WasmxKeeper.GetContractInfo(appA.Context(), _createdContractAddress)
 	s.Require().NotNil(_contractInfo)
