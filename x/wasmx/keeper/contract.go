@@ -105,6 +105,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 }
 
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
+	fmt.Println("----create")
 	if creator == nil {
 		return 0, checksum, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
 	}
@@ -261,6 +262,7 @@ func (k Keeper) instantiateWithAddress(
 	label string,
 ) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate_with_address")
+	fmt.Println("---instantiateWithAddress", label)
 
 	// get contact info
 	codeInfo := k.GetCodeInfo(ctx, codeID)
@@ -280,6 +282,7 @@ func (k Keeper) instantiate(
 	label string,
 ) (sdk.AccAddress, []byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate")
+	fmt.Println("---instantiate", label)
 
 	// get contact info
 	codeInfo := k.GetCodeInfo(ctx, codeID)
@@ -325,6 +328,7 @@ func (k Keeper) instantiateInternal(
 	codeInfo *types.CodeInfo,
 	label string,
 ) (sdk.AccAddress, []byte, error) {
+	fmt.Println("---instantiateInternal", label)
 	if creator == nil {
 		return nil, nil, types.ErrEmpty.Wrap("creator")
 	}
@@ -462,6 +466,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("---execute", contractInfo.Label)
 
 	// add known dependencies for that codeId
 	// TODO system deps in the form of smart contracts
@@ -502,6 +507,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
+	fmt.Println("--ewasmExecute execute", contractInfo.Label)
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
@@ -519,6 +525,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "dispatch")
 	}
+	fmt.Println("---execute END", contractInfo.Label)
 
 	return data, nil
 }
@@ -552,7 +559,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-
+	fmt.Println("--ewasmExecute execute origin", contractInfo.Label)
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
@@ -582,6 +589,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("---query", contractInfo.Label)
 
 	// TODO panic if coin is not the correct denomination
 	// add denom param for wasmx
@@ -619,6 +627,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
 	handler := k.newCosmosHandler(ctx, contractAddress)
+	fmt.Println("--ewasmExecute query", contractInfo.Label)
 	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
@@ -636,6 +645,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// if err != nil {
 	// 	return nil, sdkerrors.Wrap(err, "dispatch")
 	// }
+	fmt.Println("---query END", contractInfo.Label)
 
 	return json.Marshal(res)
 }
