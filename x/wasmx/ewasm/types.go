@@ -17,7 +17,7 @@ var (
 
 var (
 	EventTypeEwasmFunction = "ewasm_function"
-	EventTypeEwasmLog      = "ewasm_log"
+	EventTypeEwasmLog      = "ewasm_log_"
 	AttributeKeyIndex      = "index"
 	AttributeKeyData       = "data"
 	AttributeKeyTopic      = "topic_"

@@ -3,6 +3,8 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
+	"fmt"
+	"strconv"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	wasmeth "wasmx/x/wasmx/ewasm"
+	wasmxkeeper "wasmx/x/wasmx/keeper"
 	"wasmx/x/wasmx/types"
 )
 
@@ -52,6 +55,24 @@ var (
 
 	//go:embed testdata/classic/call_delegate_lib.wasm
 	delegatecalllibwasm []byte
+
+	//go:embed testdata/classic/origin.wasm
+	originwasm []byte
+
+	//go:embed testdata/classic/create.wasm
+	createwasm []byte
+
+	//go:embed testdata/classic/create2.wasm
+	create2wasm []byte
+
+	//go:embed testdata/classic/logs.wasm
+	logswasm []byte
+
+	//go:embed testdata/classic/erc20.wasm
+	erc20wasm []byte
+
+	//go:embed testdata/classic/switch.wasm
+	switchbin []byte
 )
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
@@ -575,4 +596,307 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
 	s.Commit()
+}
+
+func (suite *KeeperTestSuite) TestEwasmFibonacci() {
+	wasmbin := fibonacciwasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	fibhex := "c6c2ea17"
+	fibstorehex := "cf837088"
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "fibonacciwasm", nil)
+
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(fibhex + "0000000000000000000000000000000000000000000000000000000000000005")}, nil, nil)
+	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000005")
+
+	queryMsg := fibhex + "0000000000000000000000000000000000000000000000000000000000000005"
+	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", qres)
+
+	queryMsg = fibstorehex + "0000000000000000000000000000000000000000000000000000000000000005"
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", qres)
+
+	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	queryres := appA.app.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
+	suite.Require().Equal("", hex.EncodeToString(queryres))
+
+	suite.Require().NotContains(res.GetLog(), "topic_0")
+	suite.Require().NotContains(res.GetLog(), "wasmx-ewasm_log")
+
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(fibstorehex + "0000000000000000000000000000000000000000000000000000000000000005")}, nil, nil)
+	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000005")
+
+	queryres = appA.app.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
+	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", hex.EncodeToString(queryres))
+
+	suite.Require().Contains(res.GetLog(), `{"key":"data","value":"0x"},{"key":"topic_0","value":"0x5566666666666666666666666666666666666666666666666666666666666677"},{"key":"topic_1","value":"0x0000000000000000000000000000000000000000000000000000000000000005"}`)
+}
+
+func (suite *KeeperTestSuite) TestEwasmCreate2() {
+	wasmToCreate := callstaticinnerwasm
+	wasmbin := create2wasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmToCreate)
+
+	// Deploy factory
+	codeId2 := appA.StoreCode(sender, wasmbin)
+	factoryAccount := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "create2wasm", nil)
+
+	codeIdHex := fmt.Sprintf("%064s", strconv.FormatUint(codeId, 16))
+	innerExecuteMsg := "0000000000000000000000000000000000000000000000000000000000000008"
+	salt := "0000000000000000000000000000000000000000000000000000000000000001"
+	creationFunds := sdk.Coins{sdk.NewCoin(appA.denom, sdk.NewInt(10000))}
+	res := appA.ExecuteContract(sender, factoryAccount, types.WasmxExecutionMessage{Data: suite.hex2bz(salt + codeIdHex + innerExecuteMsg)}, creationFunds, nil)
+
+	saltb, _ := hex.DecodeString(salt)
+	innerExecuteMsgb, _ := hex.DecodeString(innerExecuteMsg)
+	codeInfo := appA.app.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().NotNil(codeInfo)
+
+	_createdContractAddress := wasmxkeeper.EwasmPredictableAddressGenerator(factoryAccount, saltb, innerExecuteMsgb, false)(appA.Context(), codeId2, codeInfo.CodeHash)
+
+	_contractInfo := appA.app.WasmxKeeper.GetContractInfo(appA.Context(), _createdContractAddress)
+	s.Require().NotNil(_contractInfo)
+	s.Require().Equal(codeId, _contractInfo.CodeId)
+	s.Require().Equal(factoryAccount.String(), _contractInfo.Creator)
+
+	s.Require().Contains(hex.EncodeToString(res.Data), "000000000000000000000000"+hex.EncodeToString(_createdContractAddress.Bytes()))
+
+	wrappedCtx := sdk.WrapSDKContext(appA.Context())
+	createdContractFunds, err := appA.app.BankKeeper.AllBalances(wrappedCtx, &banktypes.QueryAllBalancesRequest{Address: _createdContractAddress.String()})
+	s.Require().NoError(err)
+	s.Require().Equal(creationFunds, createdContractFunds.Balances)
+
+	// contract creation logs
+	createdContractAddressStr := suite.GetContractAddressFromLog(res.GetLog())
+	_, err = sdk.AccAddressFromBech32(createdContractAddressStr)
+	s.Require().NoError(err)
+
+	res = appA.ExecuteContract(sender, _createdContractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(innerExecuteMsg)}, nil, nil)
+
+	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	queryres := appA.app.WasmxKeeper.QueryRaw(appA.Context(), _createdContractAddress, keybz)
+	suite.Require().Equal(innerExecuteMsg, hex.EncodeToString(queryres))
+}
+
+func (suite *KeeperTestSuite) TestEwasmSwitchJump() {
+	wasmbin := switchbin
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "switchbin", nil)
+
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz("0000000000000000000000000000000000000000000000000000000000000001")}, nil, nil)
+	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000001")
+
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz("0000000000000000000000000000000000000000000000000000000000000000")}, nil, nil)
+	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000008")
+}
+
+func (suite *KeeperTestSuite) TestEwasmAddressGeneration() {
+	// TODO
+	// addressGenerator := appA.app.WasmxKeeper.Keeper.EwasmClassicAddressGenerator(sender.Address)
+}
+
+func (suite *KeeperTestSuite) TestEwasmLogs() {
+	wasmbin := logswasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "logswasm", nil)
+
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz("0000000000000000000000000000000000000000000000000000000000000008")}, nil, nil)
+	logCount := strings.Count(res.GetLog(), "wasmx-ewasm_log_")
+	s.Require().Equal(5, logCount, res.GetLog())
+}
+
+func (suite *KeeperTestSuite) TestEwasmCreate() {
+	wasmToCreate := callstaticinnerwasm
+	wasmbin := createwasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmToCreate)
+
+	// Deploy factory
+	codeId2 := appA.StoreCode(sender, wasmbin)
+	factoryAccount := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
+
+	codeIdHex := fmt.Sprintf("%064s", strconv.FormatUint(codeId, 16))
+	creationFunds := sdk.Coins{sdk.NewCoin(appA.denom, sdk.NewInt(10000))}
+	res := appA.ExecuteContract(sender, factoryAccount, types.WasmxExecutionMessage{Data: suite.hex2bz(codeIdHex)}, creationFunds, nil)
+
+	_factoryAccount := appA.app.AccountKeeper.GetAccount(appA.Context(), factoryAccount)
+	_nonce := _factoryAccount.GetSequence()
+	// TODO this should be _nonce - 1
+	_createdContractAddress := wasmxkeeper.EwasmBuildContractAddressClassic(factoryAccount, _nonce)
+
+	_contractInfo := appA.app.WasmxKeeper.GetContractInfo(appA.Context(), _createdContractAddress)
+	s.Require().NotNil(_contractInfo)
+	s.Require().Equal(codeId, _contractInfo.CodeId)
+	s.Require().Equal(factoryAccount.String(), _contractInfo.Creator)
+
+	s.Require().Contains(hex.EncodeToString(res.Data), "000000000000000000000000"+hex.EncodeToString(_createdContractAddress.Bytes()))
+
+	// contract creation logs
+	createdContractAddressStr := suite.GetContractAddressFromLog(res.GetLog())
+	_, err := sdk.AccAddressFromBech32(createdContractAddressStr)
+	s.Require().NoError(err)
+
+	wrappedCtx := sdk.WrapSDKContext(appA.Context())
+	createdContractFunds, err := appA.app.BankKeeper.AllBalances(wrappedCtx, &banktypes.QueryAllBalancesRequest{Address: _createdContractAddress.String()})
+	s.Require().NoError(err)
+	s.Require().Equal(creationFunds, createdContractFunds.Balances)
+
+	innerExecuteMsg := "0000000000000000000000000000000000000000000000000000000000000008"
+	res = appA.ExecuteContract(sender, _createdContractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(innerExecuteMsg)}, nil, nil)
+
+	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	queryres := appA.app.WasmxKeeper.QueryRaw(appA.Context(), _createdContractAddress, keybz)
+	suite.Require().Equal(innerExecuteMsg, hex.EncodeToString(queryres))
+}
+
+func (suite *KeeperTestSuite) TestEwasmOrigin() {
+	wasmorigin := originwasm
+	wasmbin := callstaticwasm
+	sender := suite.GetRandomAccount()
+	senderAddressHex := hex.EncodeToString(sender.Address.Bytes())
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmorigin)
+	innerContractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "originwasm", nil)
+	innerHex1 := hex.EncodeToString(innerContractAddress.Bytes())
+
+	// Deploy staticcall contract
+	codeId2 := appA.StoreCode(sender, wasmbin)
+	scContractAddress := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "callstaticwasm", nil)
+
+	deps := []string{wasmeth.EvmAddressFromAcc(innerContractAddress).Hex()}
+	res := appA.ExecuteContract(sender, scContractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz("000000000000000000000000" + innerHex1 + "0000000000000000000000000000000000000000000000000000000000000000")}, nil, deps)
+	s.Require().Contains(hex.EncodeToString(res.Data), senderAddressHex)
+}
+
+// func (suite *KeeperTestSuite) TestCosmWasm() {
+// 	wasmbin := erc20cw
+// }
+
+func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
+	wasmbin := simpleStorage
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	setHex := `60fe47b1`
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
+
+	executeMsg := []byte(`{"readonly": false, "data": "0x` + setHex + `0000000000000000000000000000000000000000000000000000000000000006"}`)
+
+	executeCodeMsg := &types.MsgExecuteWithOriginContract{
+		Origin:   sender.Address.String(),
+		Sender:   sender.Address.String(),
+		Contract: contractAddress.String(),
+		Msg:      executeMsg,
+		Funds:    sdk.Coins{},
+	}
+	res := appA.DeliverTxWithOpts(sender, executeCodeMsg, 1500000, nil)
+	s.Require().False(res.IsOK(), res.GetLog())
+	suite.Commit()
+}
+
+func (suite *KeeperTestSuite) TestEwasmErc20() {
+	wasmbin := erc20wasm
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	getDecimalsHex := `313ce567`
+	getNameHex := `06fdde03`
+	getSymbolHex := `95d89b41`
+	mintHex := `1249c58b`
+	balanceOfHex := `70a08231`
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+
+	tokenName := "00000000000000000000000000000000000000000000000000000000000000074d79546f6b656e00000000000000000000000000000000000000000000000000"
+	tokenSymbol := "0000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"
+	constructorArgs := "00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000080" + tokenName + tokenSymbol
+
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: suite.hex2bz(constructorArgs)}, "erc20wasm", nil)
+
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(getDecimalsHex)}, nil, nil)
+	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000012")
+
+	queryMsg := getDecimalsHex
+	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Contains(qres, "0000000000000000000000000000000000000000000000000000000000000012")
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000012", qres)
+
+	queryMsg = getNameHex
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Contains(qres, tokenName)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020"+tokenName, qres)
+
+	queryMsg = getSymbolHex
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Contains(qres, tokenSymbol)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020"+tokenSymbol, qres)
+
+	// Test minting, test callvalue
+	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(sender.Address).Hex()[2:]
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000000")
+
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(mintHex)}, sdk.Coins{sdk.NewCoin(appA.denom, sdk.NewInt(10000000))}, nil)
+
+	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(sender.Address).Hex()[2:]
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000989680")
+
+	// mint through a contract call
+	wasmbincall := callwasm
+	codeIdCall := appA.StoreCode(sender, wasmbincall)
+	contractAddressCall := appA.InstantiateCode(sender, codeIdCall, types.WasmxExecutionMessage{Data: []byte{}}, "callwasm", nil)
+	contractAddressErc20Hex := wasmeth.Evm32AddressFromAcc(contractAddress).Hex()
+
+	deps := []string{wasmeth.EvmAddressFromAcc(contractAddress).Hex()}
+	res = appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: suite.hex2bz(contractAddressErc20Hex[2:] + mintHex)}, sdk.Coins{sdk.NewCoin(appA.denom, sdk.NewInt(8888))}, deps)
+
+	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(contractAddressCall).Hex()[2:]
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
+	s.Require().Equal(qres, "00000000000000000000000000000000000000000000000000000000000022b8")
 }

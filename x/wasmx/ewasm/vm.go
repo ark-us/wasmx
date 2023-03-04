@@ -381,7 +381,7 @@ func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types
 			})
 		}
 		events = append(events, types.Event{
-			Type:       EventTypeEwasmLog,
+			Type:       EventTypeEwasmLog + fmt.Sprint(i),
 			Attributes: attributes,
 		})
 	}
