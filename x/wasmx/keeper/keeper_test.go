@@ -101,7 +101,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain *ibcgotesting.TestChain) AppCo
 	}
 	encodingConfig := app.MakeEncodingConfig()
 	appContext.clientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
-	appContext.denom = app.Denom
+	appContext.denom = app.BaseDenom
 
 	t := suite.T()
 	appContext.faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), mapp.BankKeeper, types.ModuleName, sdk.NewCoin(appContext.denom, sdk.NewInt(100_000_000_000)))

@@ -66,7 +66,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		subspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount, // prototype
 		maccPerms,
-		sdk.Bech32PrefixAccAddr,
+		app.Bech32PrefixAccAddr,
 	)
 	bankKeeper := bankkeeper.NewBaseKeeper(
 		cdc,
@@ -84,7 +84,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		bankKeeper,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
-		app.Denom,
+		app.BaseDenom,
 		app.MakeEncodingConfig().InterfaceRegistry,
 		nil,
 		nil,

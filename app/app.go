@@ -328,7 +328,7 @@ func New(
 		app.GetSubspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount,
 		maccPerms,
-		sdk.Bech32PrefixAccAddr,
+		Bech32PrefixAccAddr,
 	)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(
@@ -501,7 +501,7 @@ func New(
 		app.BankKeeper,
 		wasmxmoduletypes.DefaultWasmConfig(),
 		homePath,
-		Denom,
+		BaseDenom,
 		app.interfaceRegistry,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),

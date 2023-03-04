@@ -14,9 +14,6 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
-func init() {
-	InitSDKConfig()
-}
 
 // DefaultTestingAppInit defines the IBC application used for testing
 var DefaultTestingAppInit func() (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
