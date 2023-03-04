@@ -13,7 +13,7 @@ message GenesisState {
 
   // bootstrap address
   string bootstrap_account_address = 2;
-  repeated SystemContract contract = 3 [(gogoproto.nullable) = false];
+  repeated SystemContract system_contracts = 3 [(gogoproto.nullable) = false];
 
   repeated Code codes = 4
       [ (gogoproto.nullable) = false, (gogoproto.jsontag) = "codes,omitempty" ];

@@ -38,6 +38,9 @@ func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params [
 		return nil, wasmedge.Result_Fail
 	}
 	data := ctx.ContractStore.Get(keybz)
+	if len(data) == 0 {
+		data = types.EMPTY_BYTES32
+	}
 	writeMem(callframe, data, params[1])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -701,14 +704,15 @@ func finish(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	returns[0] = result
 	ctx.ReturnData = result
 	// fmt.Println("Go: finish", result)
-	return returns, wasmedge.Result_Success
+	// terminate the WASM execution
+	return returns, wasmedge.Result_Terminate
 }
 
 // STOP data_ptr: i32, data_len: i32
 func stop(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	// fmt.Println("Go: stop")
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, wasmedge.Result_Terminate
 }
 
 // REVERT data_ptr: i32, data_len: i32

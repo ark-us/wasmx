@@ -96,7 +96,7 @@ func (k Keeper) StoreContractInfo(ctx sdk.Context, contractAddress sdk.AccAddres
 }
 
 func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.ContractKeyPrefix)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyContractPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()
 
@@ -157,7 +157,7 @@ func (k Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
 }
 
 func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo) bool) {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.CodeKeyPrefix)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyCodePrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()
 

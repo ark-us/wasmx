@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	// this line is used by starport scaffolding # 1
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -11,14 +12,15 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"wasmx/x/wasmx/client/cli"
+	"wasmx/x/wasmx/keeper"
+	"wasmx/x/wasmx/types"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"wasmx/x/wasmx/client/cli"
-	"wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
 )
 
 var (
@@ -56,7 +58,7 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesis())
+	return cdc.MustMarshalJSON(types.DefaultGenesisState())
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form
@@ -135,6 +137,15 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 	var genState types.GenesisState
 	// Initialize global index to index in genesis state
 	cdc.MustUnmarshalJSON(gs, &genState)
+
+	bootstrapAccountAddr, err := sdk.AccAddressFromBech32(genState.BootstrapAccountAddress)
+	if err != nil {
+		panic(fmt.Sprintf("bootstrap account: %+v", err))
+	}
+
+	if err := am.keeper.BootstrapEwasmPrecompiles(ctx, bootstrapAccountAddr, genState.SystemContracts); err != nil {
+		panic(fmt.Sprintf("bootstrap ewasm precompiles: %+v", err))
+	}
 
 	InitGenesis(ctx, am.keeper, genState)
 

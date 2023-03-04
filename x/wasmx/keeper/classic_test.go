@@ -592,7 +592,7 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	msgFibStore := types.WasmxExecutionMessage{Data: append(suite.hex2bz(fibstorehex), suite.hex2bz(value)...)}
 
-	res := appA.ExecuteContractWithGas(sender, contractAddress, msgFibStore, nil, nil, 140_000, nil)
+	res := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 140_000, nil)
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
 	s.Commit()

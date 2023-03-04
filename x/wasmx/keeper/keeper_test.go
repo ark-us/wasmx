@@ -391,14 +391,18 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 }
 
 func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) abci.ResponseDeliverTx {
-	res := s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 1500000, nil)
+	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 1500000, nil)
+}
+
+func (s AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
+	res := s.ExecuteContractNoCheck(sender, contractAddress, executeMsg, funds, dependencies, gasLimit, gasPrice)
 	s.s.Require().True(res.IsOK(), res.GetLog())
 	s.s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
 	s.s.Commit()
 	return res
 }
 
-func (s AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
+func (s AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
 	msgbz, err := json.Marshal(executeMsg)
 	s.s.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{

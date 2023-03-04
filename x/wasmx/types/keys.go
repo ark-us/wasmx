@@ -20,14 +20,23 @@ const (
 	ContractsDir = "wasmx"
 )
 
-var (
-	CodeKeyPrefix       = []byte{0x01}
-	ContractKeyPrefix   = []byte{0x02}
-	ContractStorePrefix = []byte{0x03}
-	SequenceKeyPrefix   = []byte{0x04}
+const (
+	codePrefix = iota + 1
+	contractPrefix
+	contractStorePrefix
+	sequencePrefix
+	prefixPrecompile
+)
 
-	KeyLastCodeID     = append(SequenceKeyPrefix, []byte("lastCodeId")...)
-	KeyLastInstanceID = append(SequenceKeyPrefix, []byte("lastContractId")...)
+var (
+	KeyCodePrefix          = []byte{codePrefix}
+	KeyContractPrefix      = []byte{contractPrefix}
+	KeyContractStorePrefix = []byte{contractStorePrefix}
+	KeySequencePrefix      = []byte{sequencePrefix}
+	KeyPrefixPrecompile    = []byte{prefixPrecompile}
+
+	KeyLastCodeID     = append(KeySequencePrefix, []byte("lastCodeId")...)
+	KeyLastInstanceID = append(KeySequencePrefix, []byte("lastContractId")...)
 )
 
 func KeyPrefix(p string) []byte {
@@ -37,15 +46,15 @@ func KeyPrefix(p string) []byte {
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
 func GetCodeKey(codeID uint64) []byte {
 	contractIDBz := sdk.Uint64ToBigEndian(codeID)
-	return append(CodeKeyPrefix, contractIDBz...)
+	return append(KeyCodePrefix, contractIDBz...)
 }
 
 // GetContractAddressKey returns the key for the WASM contract instance
 func GetContractAddressKey(addr sdk.AccAddress) []byte {
-	return append(ContractKeyPrefix, addr...)
+	return append(KeyContractPrefix, addr...)
 }
 
 // GetContractStorePrefix returns the store prefix for the WASM contract instance
 func GetContractStorePrefix(addr sdk.AccAddress) []byte {
-	return append(ContractStorePrefix, addr...)
+	return append(KeyContractStorePrefix, addr...)
 }

@@ -90,6 +90,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	app.InitChain(
 		abci.RequestInitChain{
 			ChainId:         chainID,
+			Time:            time.Now().UTC(),
 			Validators:      []abci.ValidatorUpdate{},
 			ConsensusParams: wasmxapp.DefaultConsensusParams,
 			AppStateBytes:   stateBytes,

@@ -132,10 +132,10 @@ func (k Keeper) instantiateWithAddress(
 	ctx sdk.Context,
 	codeID uint64,
 	creator sdk.AccAddress,
+	contractAddress sdk.AccAddress,
 	initMsg []byte,
 	label string,
 	deposit sdk.Coins,
-	contractAddress sdk.AccAddress,
 ) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate_with_address")
 

@@ -227,7 +227,7 @@ GenesisState defines the wasmx module's genesis state.
 | ----- | ---- | ----- | ----------- |
 | `params` | [Params](#wasmx.wasmx.Params) |  |  |
 | `bootstrap_account_address` | [string](#string) |  | bootstrap address |
-| `contract` | [SystemContract](#wasmx.wasmx.SystemContract) | repeated |  |
+| `system_contracts` | [SystemContract](#wasmx.wasmx.SystemContract) | repeated |  |
 | `codes` | [Code](#wasmx.wasmx.Code) | repeated |  |
 | `contracts` | [Contract](#wasmx.wasmx.Contract) | repeated |  |
 | `sequences` | [Sequence](#wasmx.wasmx.Sequence) | repeated |  |
