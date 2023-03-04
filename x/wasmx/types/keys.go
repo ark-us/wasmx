@@ -25,15 +25,15 @@ const (
 	contractPrefix
 	contractStorePrefix
 	sequencePrefix
-	prefixPrecompile
+	prefixSystemContract
 )
 
 var (
-	KeyCodePrefix          = []byte{codePrefix}
-	KeyContractPrefix      = []byte{contractPrefix}
-	KeyContractStorePrefix = []byte{contractStorePrefix}
-	KeySequencePrefix      = []byte{sequencePrefix}
-	KeyPrefixPrecompile    = []byte{prefixPrecompile}
+	KeyCodePrefix           = []byte{codePrefix}
+	KeyContractPrefix       = []byte{contractPrefix}
+	KeyContractStorePrefix  = []byte{contractStorePrefix}
+	KeySequencePrefix       = []byte{sequencePrefix}
+	KeyPrefixSystemContract = []byte{prefixSystemContract}
 
 	KeyLastCodeID     = append(KeySequencePrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(KeySequencePrefix, []byte("lastContractId")...)

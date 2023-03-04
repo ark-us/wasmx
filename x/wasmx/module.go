@@ -143,8 +143,8 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 		panic(fmt.Sprintf("bootstrap account: %+v", err))
 	}
 
-	if err := am.keeper.BootstrapEwasmPrecompiles(ctx, bootstrapAccountAddr, genState.SystemContracts); err != nil {
-		panic(fmt.Sprintf("bootstrap ewasm precompiles: %+v", err))
+	if err := am.keeper.BootstrapSystemContracts(ctx, bootstrapAccountAddr, genState.SystemContracts); err != nil {
+		panic(fmt.Sprintf("bootstrap system contracts: %+v", err))
 	}
 
 	InitGenesis(ctx, am.keeper, genState)

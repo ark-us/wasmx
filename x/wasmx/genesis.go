@@ -11,8 +11,8 @@ import (
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) {
 	// this line is used by starport scaffolding # genesis/module/init
 	k.SetParams(ctx, genState.Params)
-	for _, precompile := range genState.SystemContracts {
-		k.SetPrecompile(ctx, precompile)
+	for _, contract := range genState.SystemContracts {
+		k.SetSystemContract(ctx, contract)
 	}
 }
 
@@ -22,8 +22,8 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		Params:          k.GetParams(ctx),
 		SystemContracts: []types.SystemContract{},
 	}
-	k.IteratePrecompiles(ctx, func(precompile types.SystemContract) bool {
-		genState.SystemContracts = append(genState.SystemContracts, precompile)
+	k.IterateSystemContracts(ctx, func(contract types.SystemContract) bool {
+		genState.SystemContracts = append(genState.SystemContracts, contract)
 		return false
 	})
 	return genState

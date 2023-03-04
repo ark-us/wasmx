@@ -29,8 +29,8 @@ func (gs GenesisState) Validate() error {
 	if err := gs.Params.Validate(); err != nil {
 		return err
 	}
-	for _, precompile := range gs.SystemContracts {
-		if err := precompile.Validate(); err != nil {
+	for _, contract := range gs.SystemContracts {
+		if err := contract.Validate(); err != nil {
 			return err
 		}
 	}

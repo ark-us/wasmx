@@ -11,9 +11,9 @@ import (
 	"wasmx/x/wasmx/ewasm"
 )
 
-func (k Keeper) BootstrapEwasmPrecompiles(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, precompiles []types.SystemContract) error {
-	for _, precompile := range precompiles {
-		err := k.ActivateEmbeddedPrecompile(ctx, bootstrapAccountAddr, precompile)
+func (k Keeper) BootstrapSystemContracts(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, contracts []types.SystemContract) error {
+	for _, contract := range contracts {
+		err := k.ActivateEmbeddedSystemContract(ctx, bootstrapAccountAddr, contract)
 		if err != nil {
 			return sdkerrors.Wrap(err, "bootstrap")
 		}
@@ -21,62 +21,62 @@ func (k Keeper) BootstrapEwasmPrecompiles(ctx sdk.Context, bootstrapAccountAddr 
 	return nil
 }
 
-// ActivateEmbeddedPrecompile
-func (k Keeper) ActivateEmbeddedPrecompile(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, precompile types.SystemContract) error {
-	wasmbin := ewasm.GetPrecompileByLabel(precompile.Label)
-	return k.ActivatePrecompile(ctx, bootstrapAccountAddr, precompile, wasmbin)
+// ActivateEmbeddedSystemContract
+func (k Keeper) ActivateEmbeddedSystemContract(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, contract types.SystemContract) error {
+	wasmbin := ewasm.GetPrecompileByLabel(contract.Label)
+	return k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, wasmbin)
 }
 
-// ActivatePrecompile
-func (k Keeper) ActivatePrecompile(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, precompile types.SystemContract, wasmbin []byte) error {
-	k.SetPrecompile(ctx, precompile)
+// ActivateSystemContract
+func (k Keeper) ActivateSystemContract(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, contract types.SystemContract, wasmbin []byte) error {
+	k.SetSystemContract(ctx, contract)
 
 	codeID, _, err := k.Create(ctx, bootstrapAccountAddr, wasmbin)
 	if err != nil {
-		return sdkerrors.Wrap(err, "store precompile: "+precompile.Label)
+		return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
 	}
-	contractAddress := ewasm.AccAddressFromHex(precompile.Address)
+	contractAddress := ewasm.AccAddressFromHex(contract.Address)
 
 	_, err = k.instantiateWithAddress(
 		ctx,
 		codeID,
 		bootstrapAccountAddr,
 		contractAddress,
-		precompile.InitMessage,
-		precompile.Label,
+		contract.InitMessage,
+		contract.Label,
 		nil,
 	)
 	if err != nil {
-		return sdkerrors.Wrap(err, "instantiate precompile: "+precompile.Label)
+		return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)
 	}
 	// if err := k.PinCode(ctx, codeID); err != nil {
-	// 	return sdkerrors.Wrap(err, "pin precompile: "+precompile.Label)
+	// 	return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
 	// }
-	k.Logger(ctx).Info("precompile", precompile.Label, "address", precompile.Address, "code_id", codeID)
+	k.Logger(ctx).Info("contract", contract.Label, "address", contract.Address, "code_id", codeID)
 	return nil
 }
 
-// SetPrecompile
-func (k Keeper) SetPrecompile(ctx sdk.Context, precompile types.SystemContract) {
-	addr := ewasm.AccAddressFromHex(precompile.Address)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixPrecompile)
-	bz := k.cdc.MustMarshal(&precompile)
+// SetSystemContract
+func (k Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract) {
+	addr := ewasm.AccAddressFromHex(contract.Address)
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
+	bz := k.cdc.MustMarshal(&contract)
 	prefixStore.Set(addr.Bytes(), bz)
 }
 
-// GetPrecompiles
-func (k Keeper) GetPrecompiles(ctx sdk.Context) (precompiles []types.SystemContract) {
-	k.IteratePrecompiles(ctx, func(precompile types.SystemContract) bool {
-		precompiles = append(precompiles, precompile)
+// GetSystemContracts
+func (k Keeper) GetSystemContracts(ctx sdk.Context) (contracts []types.SystemContract) {
+	k.IterateSystemContracts(ctx, func(contract types.SystemContract) bool {
+		contracts = append(contracts, contract)
 		return false
 	})
 	return
 }
 
-// IteratePrecompiles
+// IterateSystemContracts
 // When the callback returns true, the loop is aborted early.
-func (k Keeper) IteratePrecompiles(ctx sdk.Context, cb func(types.SystemContract) bool) {
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixPrecompile)
+func (k Keeper) IterateSystemContracts(ctx sdk.Context, cb func(types.SystemContract) bool) {
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
