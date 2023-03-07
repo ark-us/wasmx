@@ -29,6 +29,9 @@ var (
 	//go:embed testdata/classic/simple_storage.wasm
 	simpleStorage []byte
 
+	//go:embed testdata/classic/simple_storage_wc.wasm
+	simpleStorageWC []byte
+
 	//go:embed testdata/classic/call_revert.wasm
 	callrevertbin []byte
 
@@ -367,6 +370,28 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(getHex2)}, nil, nil)
 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000008")
+}
+
+func (suite *KeeperTestSuite) TestEwasmSimpleStorageConstructor() {
+	wasmbin := simpleStorageWC
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	getHex := `6d4ce63c`
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	initvalue := "0000000000000000000000000000000000000000000000000000000000000005"
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: suite.hex2bz(initvalue)}, "simpleStorage", nil)
+
+	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	queryres := appA.app.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
+	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
+
+	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(getHex)}, nil, nil)
+	s.Require().Equal(initvalue, qres)
 }
 
 func (suite *KeeperTestSuite) TestCallFibonacci() {

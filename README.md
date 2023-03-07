@@ -4,7 +4,7 @@
 
 ```
 
-wasmx testnet init-files --chain-id=mythos_7000-7 --output-dir=$(pwd)/testnet --v=4 --keyring-backend=test --minimum-gas-prices="1000amyt"
+wasmx testnet init-files --chain-id=mythos_7000-7 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt"
 
 wasmx start --home=./testnet/node0/mythosd
 
