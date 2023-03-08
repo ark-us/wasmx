@@ -14,9 +14,9 @@ import (
 )
 
 type WasmxCosmosHandler struct {
-	Ctx    sdk.Context
-	Keeper Keeper
-	Caller sdk.AccAddress
+	Ctx             sdk.Context
+	Keeper          Keeper
+	ContractAddress sdk.AccAddress
 }
 
 func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
@@ -26,11 +26,14 @@ func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]by
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
 func (h *WasmxCosmosHandler) ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error) {
-	return h.Keeper.ExecuteCosmosMsg(h.Ctx, any, h.Caller)
+	return h.Keeper.ExecuteCosmosMsg(h.Ctx, any, h.ContractAddress)
 }
 func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
 	balance := h.Keeper.bank.GetBalance(h.Ctx, addr, h.Keeper.denom)
 	return balance.Amount.BigInt()
+}
+func (h *WasmxCosmosHandler) SendCoin(addr sdk.AccAddress, value *big.Int) error {
+	return h.Keeper.bank.SendCoins(h.Ctx, h.ContractAddress, addr, sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value))))
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
@@ -56,11 +59,11 @@ func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, init
 	return address, err
 }
 
-func (k Keeper) newCosmosHandler(ctx sdk.Context, caller sdk.AccAddress) types.WasmxCosmosHandler {
+func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
-		Ctx:    ctx,
-		Keeper: k,
-		Caller: caller,
+		Ctx:             ctx,
+		Keeper:          k,
+		ContractAddress: contractAddress,
 	}
 }
 

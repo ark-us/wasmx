@@ -76,6 +76,9 @@ var (
 
 	//go:embed testdata/classic/switch.wasm
 	switchbin []byte
+
+	//go:embed testdata/classic/transfer.wasm
+	transferbin []byte
 )
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
@@ -936,4 +939,29 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(contractAddressCall).Hex()[2:]
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(queryMsg)}, nil, nil)
 	s.Require().Equal(qres, "00000000000000000000000000000000000000000000000000000000000022b8")
+}
+
+func (suite *KeeperTestSuite) TestContractTransfer() {
+	wasmbin := transferbin
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	sendETH := "c664c714"
+
+	receiver := common.HexToAddress("0x89ec06bFA519Ca6182b3ADaFDe0f05Eeb15394A9")
+	value := "0000000000000000000000000000000000000000000000000000000000000001"
+
+	appA := s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "callwasm", nil)
+	appA.faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: suite.hex2bz(fmt.Sprintf("%s%s%s", sendETH, value, receiver.Hash().Hex()[2:]))}, nil, nil)
+
+	realBalance, err := appA.app.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: wasmeth.AccAddressFromEvm(receiver).String(), Denom: appA.denom})
+	s.Require().NoError(err)
+	s.Require().Equal(realBalance.GetBalance().Amount, sdk.NewInt(1))
 }

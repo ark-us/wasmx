@@ -315,6 +315,19 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		return returns, wasmedge.Result_Success
 	}
 
+	// If this is just a value call, we simply send the value
+	if len(calldata) == 0 {
+		ctx.ReturnData = []byte{}
+		returns[0] = int32(0)
+		if value.BitLen() > 0 {
+			err := ctx.CosmosHandler.SendCoin(addr, value)
+			if err != nil {
+				returns[0] = int32(2)
+			}
+		}
+		return returns, wasmedge.Result_Success
+	}
+
 	_, ok := ctx.ContractRouter[addr.String()]
 	if !ok {
 		returns[0] = int32(1)

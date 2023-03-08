@@ -60,6 +60,7 @@ type WasmxCosmosHandler interface {
 	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
 	ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int
+	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetBlockHash(blockNumber uint64) Checksum
 	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error)
