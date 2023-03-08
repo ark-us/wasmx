@@ -130,10 +130,9 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if dataStart >= calldLen {
 		return returns, wasmedge.Result_Success
 	}
-
-	if dataStart+dataLen > calldLen {
+	if dataStart+dataLen >= calldLen {
 		part = make([]byte, dataLen)
-		copy(part, ctx.Calldata[dataStart:dataStart+calldLen])
+		copy(part, ctx.Calldata[dataStart:calldLen])
 	} else {
 		part = ctx.Calldata[dataStart : dataStart+dataLen]
 	}
