@@ -1867,46 +1867,56 @@
     (block
         (if (i32.and (i64.eqz (local.get $x1)) (i64.eqz (local.get $x2))) (then
             (if (i64.eqz (local.get $x3)) (then
-                (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
-                    (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
-                        (local.set $y4 (local.get $y2))
-                        (local.set $y3 (local.get $y1))
-                        (local.set $y2 (i64.const 0))
-                        (local.set $y1 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
-                    ))
-                    (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
-                        (local.set $y4 (local.get $y3))
-                        (local.set $y3 (local.get $y2))
-                        (local.set $y2 (local.get $y1))
-                        (local.set $y1 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
-                    ))
-                    (nop)
-                    (block
-                        (local.set $z4 (call $shr_single_ (local.get $y4) (local.get $x4)))
-                        (local.set $t (global.get $global_))
-
+                (if (i64.eqz (local.get $x4))
+                    (then
+                        (local.set $z1 (local.get $y1))
+                        (local.set $z2 (local.get $y2))
+                        (local.set $z3 (local.get $y3))
+                        (local.set $z4 (local.get $y4))
                     )
-                    (block
-                        (local.set $z3 (call $shr_single_ (local.get $y3) (local.get $x4)))
-                        (local.set $t (global.get $global_))
+                    (else
+                        (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
+                            (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
+                                (local.set $y4 (local.get $y2))
+                                (local.set $y3 (local.get $y1))
+                                (local.set $y2 (i64.const 0))
+                                (local.set $y1 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
+                            ))
+                            (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
+                                (local.set $y4 (local.get $y3))
+                                (local.set $y3 (local.get $y2))
+                                (local.set $y2 (local.get $y1))
+                                (local.set $y1 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
+                            ))
+                            (nop)
+                            (block
+                                (local.set $z4 (call $shr_single (local.get $y4) (local.get $x4)))
+                                (local.set $t (global.get $global_))
 
-                    )
-                    (local.set $z4 (i64.or (local.get $z4) (local.get $t)))
-                    (block
-                        (local.set $z2 (call $shr_single_ (local.get $y2) (local.get $x4)))
-                        (local.set $t (global.get $global_))
+                            )
+                            (block
+                                (local.set $z3 (call $shr_single (local.get $y3) (local.get $x4)))
+                                (local.set $t (global.get $global_))
 
-                    )
-                    (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
-                    (block
-                        (local.set $z1 (call $shr_single_ (local.get $y1) (local.get $x4)))
-                        (local.set $t (global.get $global_))
+                            )
+                            (local.set $z4 (i64.or (local.get $z4) (local.get $t)))
+                            (block
+                                (local.set $z2 (call $shr_single (local.get $y2) (local.get $x4)))
+                                (local.set $t (global.get $global_))
 
+                            )
+                            (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
+                            (block
+                                (local.set $z1 (call $shr_single (local.get $y1) (local.get $x4)))
+                                (local.set $t (global.get $global_))
+
+                            )
+                            (local.set $z2 (i64.or (local.get $z2) (local.get $t)))
+                        ))
                     )
-                    (local.set $z2 (i64.or (local.get $z2) (local.get $t)))
-                ))
+                )
             ))
         ))
 
@@ -1952,46 +1962,56 @@
     (block
         (if (i32.and (i64.eqz (local.get $x1)) (i64.eqz (local.get $x2))) (then
             (if (i64.eqz (local.get $x3)) (then
-                (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
-                    (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
-                        (local.set $y1 (local.get $y3))
-                        (local.set $y2 (local.get $y4))
-                        (local.set $y3 (i64.const 0))
-                        (local.set $y4 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
-                    ))
-                    (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
-                        (local.set $y1 (local.get $y2))
-                        (local.set $y2 (local.get $y3))
-                        (local.set $y3 (local.get $y4))
-                        (local.set $y4 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
-                    ))
-                    (nop)
-                    (block
-                        (local.set $t (call $shl_single_ (local.get $y4) (local.get $x4)))
-                        (local.set $z4 (global.get $global_))
-
+                (if (i64.eqz (local.get $x4))
+                    (then
+                        (local.set $z1 (local.get $y1))
+                        (local.set $z2 (local.get $y2))
+                        (local.set $z3 (local.get $y3))
+                        (local.set $z4 (local.get $y4))
                     )
-                    (block
-                        (local.set $r (call $shl_single_ (local.get $y3) (local.get $x4)))
-                        (local.set $z3 (global.get $global_))
+                    (else
+                        (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
+                            (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
+                                (local.set $y1 (local.get $y3))
+                                (local.set $y2 (local.get $y4))
+                                (local.set $y3 (i64.const 0))
+                                (local.set $y4 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
+                            ))
+                            (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
+                                (local.set $y1 (local.get $y2))
+                                (local.set $y2 (local.get $y3))
+                                (local.set $y3 (local.get $y4))
+                                (local.set $y4 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
+                            ))
+                            (nop)
+                            (block
+                                (local.set $t (call $shl_single (local.get $y4) (local.get $x4)))
+                                (local.set $z4 (global.get $global_))
 
-                    )
-                    (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
-                    (block
-                        (local.set $t (call $shl_single_ (local.get $y2) (local.get $x4)))
-                        (local.set $z2 (global.get $global_))
+                            )
+                            (block
+                                (local.set $r (call $shl_single (local.get $y3) (local.get $x4)))
+                                (local.set $z3 (global.get $global_))
 
-                    )
-                    (local.set $z2 (i64.or (local.get $z2) (local.get $r)))
-                    (block
-                        (local.set $r (call $shl_single_ (local.get $y1) (local.get $x4)))
-                        (local.set $z1 (global.get $global_))
+                            )
+                            (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
+                            (block
+                                (local.set $t (call $shl_single (local.get $y2) (local.get $x4)))
+                                (local.set $z2 (global.get $global_))
 
+                            )
+                            (local.set $z2 (i64.or (local.get $z2) (local.get $r)))
+                            (block
+                                (local.set $r (call $shl_single (local.get $y1) (local.get $x4)))
+                                (local.set $z1 (global.get $global_))
+
+                            )
+                            (local.set $z1 (i64.or (local.get $z1) (local.get $t)))
+                        ))
                     )
-                    (local.set $z1 (i64.or (local.get $z1) (local.get $t)))
-                ))
+                )
             ))
         ))
 
@@ -2314,46 +2334,56 @@
     (block
         (if (i32.and (i64.eqz (local.get $x1)) (i64.eqz (local.get $x2))) (then
             (if (i64.eqz (local.get $x3)) (then
-                (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
-                    (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
-                        (local.set $y1 (local.get $y3))
-                        (local.set $y2 (local.get $y4))
-                        (local.set $y3 (i64.const 0))
-                        (local.set $y4 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
-                    ))
-                    (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
-                        (local.set $y1 (local.get $y2))
-                        (local.set $y2 (local.get $y3))
-                        (local.set $y3 (local.get $y4))
-                        (local.set $y4 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
-                    ))
-                    (nop)
-                    (block
-                        (local.set $t (call $shl_single (local.get $y4) (local.get $x4)))
-                        (local.set $z4 (global.get $global_))
-
+                (if (i64.eqz (local.get $x4))
+                    (then
+                        (local.set $z1 (local.get $y1))
+                        (local.set $z2 (local.get $y2))
+                        (local.set $z3 (local.get $y3))
+                        (local.set $z4 (local.get $y4))
                     )
-                    (block
-                        (local.set $r (call $shl_single (local.get $y3) (local.get $x4)))
-                        (local.set $z3 (global.get $global_))
+                    (else
+                        (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
+                            (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
+                                (local.set $y1 (local.get $y3))
+                                (local.set $y2 (local.get $y4))
+                                (local.set $y3 (i64.const 0))
+                                (local.set $y4 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
+                            ))
+                            (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
+                                (local.set $y1 (local.get $y2))
+                                (local.set $y2 (local.get $y3))
+                                (local.set $y3 (local.get $y4))
+                                (local.set $y4 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
+                            ))
+                            (nop)
+                            (block
+                                (local.set $t (call $shl_single (local.get $y4) (local.get $x4)))
+                                (local.set $z4 (global.get $global_))
 
-                    )
-                    (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
-                    (block
-                        (local.set $t (call $shl_single (local.get $y2) (local.get $x4)))
-                        (local.set $z2 (global.get $global_))
+                            )
+                            (block
+                                (local.set $r (call $shl_single (local.get $y3) (local.get $x4)))
+                                (local.set $z3 (global.get $global_))
 
-                    )
-                    (local.set $z2 (i64.or (local.get $z2) (local.get $r)))
-                    (block
-                        (local.set $r (call $shl_single (local.get $y1) (local.get $x4)))
-                        (local.set $z1 (global.get $global_))
+                            )
+                            (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
+                            (block
+                                (local.set $t (call $shl_single (local.get $y2) (local.get $x4)))
+                                (local.set $z2 (global.get $global_))
 
+                            )
+                            (local.set $z2 (i64.or (local.get $z2) (local.get $r)))
+                            (block
+                                (local.set $r (call $shl_single (local.get $y1) (local.get $x4)))
+                                (local.set $z1 (global.get $global_))
+
+                            )
+                            (local.set $z1 (i64.or (local.get $z1) (local.get $t)))
+                        ))
                     )
-                    (local.set $z1 (i64.or (local.get $z1) (local.get $t)))
-                ))
+                )
             ))
         ))
 
@@ -2412,46 +2442,56 @@
     (block
         (if (i32.and (i64.eqz (local.get $x1)) (i64.eqz (local.get $x2))) (then
             (if (i64.eqz (local.get $x3)) (then
-                (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
-                    (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
-                        (local.set $y4 (local.get $y2))
-                        (local.set $y3 (local.get $y1))
-                        (local.set $y2 (i64.const 0))
-                        (local.set $y1 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
-                    ))
-                    (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
-                        (local.set $y4 (local.get $y3))
-                        (local.set $y3 (local.get $y2))
-                        (local.set $y2 (local.get $y1))
-                        (local.set $y1 (i64.const 0))
-                        (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
-                    ))
-                    (nop)
-                    (block
-                        (local.set $z4 (call $shr_single (local.get $y4) (local.get $x4)))
-                        (local.set $t (global.get $global_))
-
+                (if (i64.eqz (local.get $x4))
+                    (then
+                        (local.set $z1 (local.get $y1))
+                        (local.set $z2 (local.get $y2))
+                        (local.set $z3 (local.get $y3))
+                        (local.set $z4 (local.get $y4))
                     )
-                    (block
-                        (local.set $z3 (call $shr_single (local.get $y3) (local.get $x4)))
-                        (local.set $t (global.get $global_))
+                    (else
+                        (if (i64.lt_u (local.get $x4) (i64.const 256)) (then
+                            (if (i64.ge_u (local.get $x4) (i64.const 128)) (then
+                                (local.set $y4 (local.get $y2))
+                                (local.set $y3 (local.get $y1))
+                                (local.set $y2 (i64.const 0))
+                                (local.set $y1 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 128)))
+                            ))
+                            (if (i64.ge_u (local.get $x4) (i64.const 64)) (then
+                                (local.set $y4 (local.get $y3))
+                                (local.set $y3 (local.get $y2))
+                                (local.set $y2 (local.get $y1))
+                                (local.set $y1 (i64.const 0))
+                                (local.set $x4 (i64.sub (local.get $x4) (i64.const 64)))
+                            ))
+                            (nop)
+                            (block
+                                (local.set $z4 (call $shr_single (local.get $y4) (local.get $x4)))
+                                (local.set $t (global.get $global_))
 
-                    )
-                    (local.set $z4 (i64.or (local.get $z4) (local.get $t)))
-                    (block
-                        (local.set $z2 (call $shr_single (local.get $y2) (local.get $x4)))
-                        (local.set $t (global.get $global_))
+                            )
+                            (block
+                                (local.set $z3 (call $shr_single (local.get $y3) (local.get $x4)))
+                                (local.set $t (global.get $global_))
 
-                    )
-                    (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
-                    (block
-                        (local.set $z1 (call $shr_single (local.get $y1) (local.get $x4)))
-                        (local.set $t (global.get $global_))
+                            )
+                            (local.set $z4 (i64.or (local.get $z4) (local.get $t)))
+                            (block
+                                (local.set $z2 (call $shr_single (local.get $y2) (local.get $x4)))
+                                (local.set $t (global.get $global_))
 
+                            )
+                            (local.set $z3 (i64.or (local.get $z3) (local.get $t)))
+                            (block
+                                (local.set $z1 (call $shr_single (local.get $y1) (local.get $x4)))
+                                (local.set $t (global.get $global_))
+
+                            )
+                            (local.set $z2 (i64.or (local.get $z2) (local.get $t)))
+                        ))
                     )
-                    (local.set $z2 (i64.or (local.get $z2) (local.get $t)))
-                ))
+                )
             ))
         ))
 
