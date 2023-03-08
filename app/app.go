@@ -492,6 +492,8 @@ func New(
 		govConfig,
 	)
 
+	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
+	wasmconfig.SmartQueryGasLimit = 5_000_000
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
@@ -499,7 +501,7 @@ func New(
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
-		wasmxmoduletypes.DefaultWasmConfig(),
+		wasmconfig,
 		homePath,
 		BaseDenom,
 		app.interfaceRegistry,

@@ -14,7 +14,6 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
-
 // DefaultTestingAppInit defines the IBC application used for testing
 var DefaultTestingAppInit func() (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 
@@ -22,8 +21,8 @@ var DefaultTestingAppInit func() (ibctesting.TestingApp, map[string]json.RawMess
 // Mythos testing.
 var DefaultConsensusParams = &abci.ConsensusParams{
 	Block: &abci.BlockParams{
-		MaxBytes: 2000000,
-		MaxGas:   2000000, // -1 no limit
+		MaxBytes: 2_000_000,
+		MaxGas:   30_000_000, // -1 no limit
 	},
 	Evidence: &tmproto.EvidenceParams{
 		MaxAgeNumBlocks: 302400,

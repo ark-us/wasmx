@@ -522,3 +522,10 @@ func GetSdkEvents(events []abci.Event, evtype string) []sdk.Event {
 	}
 	return sdkEvents
 }
+
+// -short
+func SkipCIExpensiveTests(t *testing.T, name string) {
+	if testing.Short() {
+		t.Skipf("Skipping expensive test: %s", name)
+	}
+}

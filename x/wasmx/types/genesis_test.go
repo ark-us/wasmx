@@ -3,8 +3,9 @@ package types_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"wasmx/x/wasmx/types"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenesisState_Validate(t *testing.T) {
@@ -15,7 +16,7 @@ func TestGenesisState_Validate(t *testing.T) {
 	}{
 		{
 			desc:     "default is valid",
-			genState: types.DefaultGenesis(),
+			genState: types.DefaultGenesisState(),
 			valid:    true,
 		},
 		{
