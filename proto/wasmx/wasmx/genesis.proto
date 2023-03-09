@@ -25,6 +25,10 @@ message GenesisState {
     (gogoproto.nullable) = false,
     (gogoproto.jsontag) = "sequences,omitempty"
   ];
+  // not recommended
+  // initiate pinned/AOT compiled contracts from a provided folder
+  // instead of compiling the contracts from wasm
+  string compiled_folder_path = 7;
 }
 
 message SystemContract {
@@ -38,8 +42,7 @@ message Code {
   uint64 code_id = 1;
   CodeInfo code_info = 2 [ (gogoproto.nullable) = false ];
   bytes code_bytes = 3;
-  // Pinned to wasmvm cache
-  bool pinned = 4;
+  CodeMetadata code_metadata = 4 [ (gogoproto.nullable) = false ];
 }
 
 // Contract struct encompasses ContractAddress, ContractInfo, and ContractState

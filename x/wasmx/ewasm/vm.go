@@ -236,6 +236,26 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 // 	return contractCtx, nil
 // }
 
+func AotCompile(inPath string, outPath string) error {
+	// Create Configure
+	// conf := wasmedge.NewConfigure(wasmedge.THREADS, wasmedge.EXTENDED_CONST, wasmedge.TAIL_CALL, wasmedge.MULTI_MEMORIES)
+
+	// Create Compiler
+	// compiler := wasmedge.NewCompilerWithConfig(conf)
+	compiler := wasmedge.NewCompiler()
+
+	// Compile WASM AOT
+	err := compiler.Compile(inPath, outPath)
+	if err != nil {
+		fmt.Println("Go: Compile WASM to AOT mode Failed!!")
+		return err
+	}
+
+	// conf.Release()
+	compiler.Release()
+	return nil
+}
+
 func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, gasMeter types.GasMeter) (types.ContractResponse, error) {
 	var err error
 

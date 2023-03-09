@@ -32,7 +32,7 @@ var (
 	//go:embed contracts/precompiles/09.blake2f.e.wasm
 	blake2f []byte
 
-	//go:embed contracts/precompiles/curve384.wasm
+	//go:embed contracts/precompiles/20.curve384.wasm
 	curve384 []byte
 )
 

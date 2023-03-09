@@ -3,12 +3,11 @@ package keeper
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"io/ioutil"
+	"os"
 	"path"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"wasmx/x/wasmx/ewasm"
 	"wasmx/x/wasmx/types"
@@ -16,18 +15,12 @@ import (
 
 type WasmxEngine struct {
 	DataDir    string
-	Cache      map[string]*wasmedge.VM
 	printDebug bool
 }
 
 func NewVM(dataDir string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*WasmxEngine, error) {
-	// cache, err := api.InitCache(dataDir, supportedFeatures, cacheSize, memoryLimit)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	return &WasmxEngine{
 		DataDir:    dataDir,
-		Cache:      make(map[string]*wasmedge.VM, 0),
 		printDebug: printDebug,
 	}, nil
 }
@@ -45,6 +38,7 @@ func (k WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, err
 
 func (k WasmxEngine) Instantiate(
 	checksum types.Checksum,
+	pinned bool,
 	env types.Env,
 	info types.MessageInfo,
 	initMsg []byte,
@@ -53,11 +47,15 @@ func (k WasmxEngine) Instantiate(
 	gasMeter types.GasMeter,
 	systemDeps []string,
 ) (types.ContractResponse, uint64, error) {
+	// TODO gas
 	var data types.ContractResponse
 	var err error
-
-	// TODO gas
-	filepath := k.build_path(k.DataDir, checksum)
+	var filepath string
+	if pinned {
+		filepath = k.build_path_pinned(k.DataDir, checksum)
+	} else {
+		filepath = k.build_path(k.DataDir, checksum)
+	}
 	data, err = ewasm.ExecuteWasm(filepath, "instantiate", env, info, initMsg, store, gasMeter)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -68,6 +66,7 @@ func (k WasmxEngine) Instantiate(
 func (k WasmxEngine) Execute(
 	ctx sdk.Context,
 	checksum types.Checksum,
+	pinned bool,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
@@ -78,9 +77,14 @@ func (k WasmxEngine) Execute(
 	systemDeps []string,
 	dependencies []types.ContractDependency,
 ) (types.ContractResponse, uint64, error) {
-	filepath := k.build_path(k.DataDir, checksum)
 	var data types.ContractResponse
 	var err error
+	var filepath string
+	if pinned {
+		filepath = k.build_path_pinned(k.DataDir, checksum)
+	} else {
+		filepath = k.build_path(k.DataDir, checksum)
+	}
 	data, err = ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler, gasMeter)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -91,6 +95,7 @@ func (k WasmxEngine) Execute(
 func (k WasmxEngine) QueryExecute(
 	ctx sdk.Context,
 	checksum types.Checksum,
+	pinned bool,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
@@ -101,7 +106,12 @@ func (k WasmxEngine) QueryExecute(
 	systemDeps []string,
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
-	filepath := k.build_path(k.DataDir, checksum)
+	var filepath string
+	if pinned {
+		filepath = k.build_path_pinned(k.DataDir, checksum)
+	} else {
+		filepath = k.build_path(k.DataDir, checksum)
+	}
 	data, err := ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler, gasMeter)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
@@ -117,12 +127,27 @@ func (k WasmxEngine) Cleanup() {
 
 }
 
-func (k WasmxEngine) Pin(checksum types.Checksum) error {
-	return nil
+func (k WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) error {
+	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
+	if compiledFolderPath != "" {
+		compiledPath := k.build_path(compiledFolderPath, checksum) + ".so"
+		err := copyFile(compiledPath, pinnedPath)
+		if err != nil {
+			return nil
+		}
+		return nil
+	}
+	return k.pin_code(k.build_path(k.DataDir, checksum), pinnedPath)
 }
 
 func (k WasmxEngine) Unpin(checksum types.Checksum) error {
+	// TODO
+	// remove pinned compiled code
 	return nil
+}
+
+func (k WasmxEngine) pin_code(inPath string, outPath string) error {
+	return ewasm.AotCompile(inPath, outPath)
 }
 
 func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (types.Checksum, error) {
@@ -132,18 +157,35 @@ func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (typ
 	filepath := k.build_path(k.DataDir, checksum)
 
 	// Read and write permissions for the owner and read-only permissions for everyone else
-	err := ioutil.WriteFile(filepath, wasmBytecode, 0644)
+	err := os.WriteFile(filepath, wasmBytecode, 0644)
 	if err != nil {
 		return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
+
 	return checksum, nil
 }
 
 func (k WasmxEngine) load_wasm(dataDir string, checksum types.Checksum) (types.WasmCode, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	return ioutil.ReadFile(filepath)
+	return os.ReadFile(filepath)
 }
 
 func (k WasmxEngine) build_path(dataDir string, checksum types.Checksum) string {
 	return path.Join(dataDir, hex.EncodeToString(checksum))
+}
+
+func (k WasmxEngine) build_path_pinned(dataDir string, checksum types.Checksum) string {
+	return path.Join(dataDir, types.PINNED_FOLDER, hex.EncodeToString(checksum)+".so")
+}
+
+func copyFile(sourceFile string, destinationFile string) error {
+	input, err := os.ReadFile(sourceFile)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(destinationFile, input, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }

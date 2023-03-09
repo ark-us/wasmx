@@ -7,9 +7,11 @@ import (
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(params Params) GenesisState {
+func NewGenesisState(params Params, systemContracts []SystemContract, bootstrapAccount sdk.AccAddress) GenesisState {
 	return GenesisState{
-		Params: params,
+		Params:                  params,
+		SystemContracts:         systemContracts,
+		BootstrapAccountAddress: bootstrapAccount.String(),
 	}
 }
 

@@ -14,6 +14,8 @@ import (
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
 const DefaultMaxQueryStackSize uint32 = 10
 
+var PINNED_FOLDER = "pinned"
+
 var EMPTY_BYTES32 = bytes.Repeat([]byte{0}, 32)
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.

@@ -7,6 +7,7 @@
 - [wasmx/wasmx/contract.proto](#wasmx/wasmx/contract.proto)
     - [AbsoluteTxPosition](#wasmx.wasmx.AbsoluteTxPosition)
     - [CodeInfo](#wasmx.wasmx.CodeInfo)
+    - [CodeMetadata](#wasmx.wasmx.CodeMetadata)
     - [ContractInfo](#wasmx.wasmx.ContractInfo)
     - [ContractStorage](#wasmx.wasmx.ContractStorage)
   
@@ -97,6 +98,21 @@ CodeInfo is data for the uploaded contract WASM code
 | `code_hash` | [bytes](#bytes) |  | CodeHash is the unique identifier created by hashing the wasm code |
 | `creator` | [string](#string) |  | Creator address who initially stored the code |
 | `deps` | [string](#string) | repeated | deps can be hex-formatted contract addresses (32 bytes) or versioned interface labels |
+| `pinned` | [bool](#bool) |  | Pinned contract |
+
+
+
+
+
+
+<a name="wasmx.wasmx.CodeMetadata"></a>
+
+### CodeMetadata
+Metadata for each codeId
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
 | `abi` | [string](#string) |  |  |
 | `json_schema` | [string](#string) |  |  |
 
@@ -193,7 +209,7 @@ Code - for importing and exporting code data
 | `code_id` | [uint64](#uint64) |  |  |
 | `code_info` | [CodeInfo](#wasmx.wasmx.CodeInfo) |  |  |
 | `code_bytes` | [bytes](#bytes) |  |  |
-| `pinned` | [bool](#bool) |  | Pinned to wasmvm cache |
+| `code_metadata` | [CodeMetadata](#wasmx.wasmx.CodeMetadata) |  |  |
 
 
 
@@ -231,6 +247,7 @@ GenesisState defines the wasmx module's genesis state.
 | `codes` | [Code](#wasmx.wasmx.Code) | repeated |  |
 | `contracts` | [Contract](#wasmx.wasmx.Contract) | repeated |  |
 | `sequences` | [Sequence](#wasmx.wasmx.Sequence) | repeated |  |
+| `compiled_folder_path` | [string](#string) |  | not recommended initiate pinned/AOT compiled contracts from a provided folder instead of compiling the contracts from wasm |
 
 
 
