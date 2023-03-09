@@ -1,0 +1,7 @@
+syntax = "proto3";
+package wasmx.websrv;
+
+option go_package = "wasmx/x/websrv/types";
+
+// Msg defines the Msg service.
+service Msg {}

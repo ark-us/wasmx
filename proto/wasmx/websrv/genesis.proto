@@ -1,0 +1,12 @@
+syntax = "proto3";
+package wasmx.websrv;
+
+import "gogoproto/gogo.proto";
+import "wasmx/websrv/params.proto";
+
+option go_package = "wasmx/x/websrv/types";
+
+// GenesisState defines the websrv module's genesis state.
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+}
