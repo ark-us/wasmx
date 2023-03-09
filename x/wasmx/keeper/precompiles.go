@@ -11,9 +11,14 @@ import (
 	"wasmx/x/wasmx/ewasm"
 )
 
-func (k Keeper) BootstrapSystemContracts(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, contracts []types.SystemContract) error {
+func (k Keeper) BootstrapSystemContracts(
+	ctx sdk.Context,
+	bootstrapAccountAddr sdk.AccAddress,
+	contracts []types.SystemContract,
+	compiledFolderPath string,
+) error {
 	for _, contract := range contracts {
-		err := k.ActivateEmbeddedSystemContract(ctx, bootstrapAccountAddr, contract)
+		err := k.ActivateEmbeddedSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath)
 		if err != nil {
 			return sdkerrors.Wrap(err, "bootstrap")
 		}
@@ -22,21 +27,36 @@ func (k Keeper) BootstrapSystemContracts(ctx sdk.Context, bootstrapAccountAddr s
 }
 
 // ActivateEmbeddedSystemContract
-func (k Keeper) ActivateEmbeddedSystemContract(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, contract types.SystemContract) error {
+func (k Keeper) ActivateEmbeddedSystemContract(
+	ctx sdk.Context,
+	bootstrapAccountAddr sdk.AccAddress,
+	contract types.SystemContract,
+	compiledFolderPath string,
+) error {
 	wasmbin := ewasm.GetPrecompileByLabel(contract.Label)
-	return k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, wasmbin)
+	return k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, wasmbin, compiledFolderPath)
 }
 
 // ActivateSystemContract
-func (k Keeper) ActivateSystemContract(ctx sdk.Context, bootstrapAccountAddr sdk.AccAddress, contract types.SystemContract, wasmbin []byte) error {
+func (k Keeper) ActivateSystemContract(
+	ctx sdk.Context,
+	bootstrapAccountAddr sdk.AccAddress,
+	contract types.SystemContract,
+	wasmbin []byte,
+	compiledFolderPath string,
+) error {
 	k.SetSystemContract(ctx, contract)
 
 	codeID, _, err := k.Create(ctx, bootstrapAccountAddr, wasmbin)
 	if err != nil {
 		return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
 	}
-	contractAddress := ewasm.AccAddressFromHex(contract.Address)
 
+	if err := k.PinCode(ctx, codeID, compiledFolderPath); err != nil {
+		return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
+	}
+
+	contractAddress := ewasm.AccAddressFromHex(contract.Address)
 	_, err = k.instantiateWithAddress(
 		ctx,
 		codeID,
@@ -49,9 +69,6 @@ func (k Keeper) ActivateSystemContract(ctx sdk.Context, bootstrapAccountAddr sdk
 	if err != nil {
 		return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)
 	}
-	// if err := k.PinCode(ctx, codeID); err != nil {
-	// 	return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
-	// }
 	k.Logger(ctx).Info("contract", contract.Label, "address", contract.Address, "code_id", codeID)
 	return nil
 }

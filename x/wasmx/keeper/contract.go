@@ -22,6 +22,14 @@ func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []b
 	return k.create(ctx, creator, wasmByteCode)
 }
 
+func (k Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+	return k.pinCode(ctx, codeId, compiledFolderPath)
+}
+
+func (k Keeper) UnpinCode(ctx sdk.Context, codeId uint64) error {
+	return k.unpinCode(ctx, codeId)
+}
+
 func (k Keeper) Instantiate(ctx sdk.Context, codeId uint64, creator sdk.AccAddress, msg types.RawContractMessage, label string, funds sdk.Coins) (sdk.AccAddress, []byte, error) {
 	return k.instantiate(ctx, codeId, creator, msg, label, funds)
 }
@@ -68,10 +76,16 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 			sdeps = append(sdeps, dep)
 		}
 	}
+	var filepath string
+	if codeInfo.Pinned {
+		filepath = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
+	} else {
+		filepath = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
+	}
 	return types.ContractDependency{
 		Address:    addr,
 		StoreKey:   prefixStoreKey,
-		FilePath:   k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
+		FilePath:   filepath,
 		SystemDeps: sdeps,
 	}, nil
 }
@@ -272,7 +286,7 @@ func (k Keeper) instantiateInternal(
 	handler := k.newCosmosHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
-	res, gasUsed, err := k.wasmvm.Instantiate(codeInfo.CodeHash, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx), codeInfo.Deps)
+	res, gasUsed, err := k.wasmvm.Instantiate(codeInfo.CodeHash, codeInfo.Pinned, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx), codeInfo.Deps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -313,6 +327,47 @@ func (k Keeper) instantiateInternal(
 	// return contractAddress, data, nil
 
 	return contractAddress, res.Data, nil
+}
+
+// PinCode pins the wasm contract in wasmvm cache
+func (k Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+	codeInfo := k.GetCodeInfo(ctx, codeId)
+	if codeInfo == nil {
+		return sdkerrors.Wrap(types.ErrNotFound, "code info")
+	}
+
+	if err := k.wasmvm.Pin(codeInfo.CodeHash, compiledFolderPath); err != nil {
+		return sdkerrors.Wrap(types.ErrPinContractFailed, err.Error())
+	}
+
+	codeInfo.Pinned = true
+	k.storeCodeInfo(ctx, codeId, *codeInfo)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypePinCode,
+		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeId, 10)),
+	))
+	return nil
+}
+
+// UnpinCode removes the wasm contract from wasmvm cache
+func (k Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
+	codeInfo := k.GetCodeInfo(ctx, codeId)
+	if codeInfo == nil {
+		return sdkerrors.Wrap(types.ErrNotFound, "code info")
+	}
+	if err := k.wasmvm.Unpin(codeInfo.CodeHash); err != nil {
+		return sdkerrors.Wrap(types.ErrUnpinContractFailed, err.Error())
+	}
+
+	codeInfo.Pinned = false
+	k.storeCodeInfo(ctx, codeId, *codeInfo)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeUnpinCode,
+		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeId, 10)),
+	))
+	return nil
 }
 
 // Execute executes the contract instance
@@ -362,7 +417,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, codeInfo.Pinned, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -411,7 +466,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	env := types.NewEnv(ctx, contractAddress)
 	info := types.NewInfo(origin, caller, coins, false, false)
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), codeInfo.Deps, nil)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, codeInfo.Pinned, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), codeInfo.Deps, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -478,7 +533,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	env := types.NewEnv(ctx, contractAddress)
 	info := types.NewInfo(caller, caller, coins, true, true)
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo.CodeHash, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo.CodeHash, codeInfo.Pinned, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
