@@ -476,6 +476,8 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	wasmbin := callrevertbin
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
+	receiver := common.HexToAddress("0x0000000000000000000000000000000000001111")
+	receiverAcc := wasmeth.AccAddressFromEvm(receiver)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
@@ -484,9 +486,29 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	codeId := appA.StoreCode(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "callrevertbin", nil)
 
-	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil)
+	balance, err := appA.app.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverAcc.String(), Denom: appA.denom})
+	s.Require().NoError(err)
+	s.Require().Equal(balance.GetBalance().Amount, sdk.NewInt(0))
 
+	// contract does not have funds, so the inner call fails but tx returns
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000004")
+
+	balance, err = appA.app.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverAcc.String(), Denom: appA.denom})
+	s.Require().NoError(err)
+	s.Require().Equal(balance.GetBalance().Amount, sdk.NewInt(0))
+
+	// contract has funds, so the inner call succeeds, but tx fails
+	appA = s.GetAppContext(s.chainA)
+	appA.faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.denom, initBalance))
+	suite.Commit()
+	res = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil, 500_000, nil)
+	s.Require().True(res.IsErr(), res.GetLog())
+	s.Require().Contains(res.GetLog(), "failed to execute message", res.GetLog())
+
+	balance, err = appA.app.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverAcc.String(), Denom: appA.denom})
+	s.Require().NoError(err)
+	s.Require().Equal(balance.GetBalance().Amount, sdk.NewInt(0))
 }
 
 func (suite *KeeperTestSuite) TestEwasmNestedGeneralCall() {
