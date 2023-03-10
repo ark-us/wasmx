@@ -5,6 +5,7 @@ import (
 
 	"wasmx/x/websrv/keeper"
 	"wasmx/x/websrv/types"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -37,10 +38,12 @@ func WebsrvKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		"WebsrvParams",
 	)
 	k := keeper.NewKeeper(
-	    cdc,
-	    storeKey,
-	    memStoreKey,
-	    paramsSubspace, 
+		cdc,
+		storeKey,
+		memStoreKey,
+		paramsSubspace,
+		nil,
+		nil,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

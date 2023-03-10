@@ -4,4 +4,19 @@ package wasmx.websrv;
 option go_package = "wasmx/x/websrv/types";
 
 // Msg defines the Msg service.
-service Msg {}
+service Msg {
+    // RegisterRoute to register a route
+    rpc RegisterRoute(MsgRegisterRoute) returns (MsgRegisterRouteResponse);
+}
+
+// MsgRegisterRoute submit Wasm code to the system
+message MsgRegisterRoute {
+    string sender = 1;
+    // Route path
+    string path = 2;
+    // Contract address in bech32 format
+    string contract_address = 3;
+}
+
+// MsgRegisterRouteResponse returns store result data.
+message MsgRegisterRouteResponse {}

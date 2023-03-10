@@ -522,8 +522,15 @@ func New(
 		keys[websrvmoduletypes.StoreKey],
 		keys[websrvmoduletypes.MemStoreKey],
 		app.GetSubspace(websrvmoduletypes.ModuleName),
+		app.WasmxKeeper,
+		app.Query,
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
+	go func() {
+		if err := app.WebsrvKeeper.Init(); err != nil {
+			app.Logger().Error("Error serving websrv", "err", err)
+		}
+	}()
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 

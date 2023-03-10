@@ -7,6 +7,7 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
 	"wasmx/x/websrv/types"
@@ -18,6 +19,8 @@ type (
 		storeKey   storetypes.StoreKey
 		memKey     storetypes.StoreKey
 		paramstore paramtypes.Subspace
+		wasmx      types.WasmxKeeper
+		query      func(req abci.RequestQuery) (res abci.ResponseQuery)
 	}
 )
 
@@ -26,6 +29,8 @@ func NewKeeper(
 	storeKey,
 	memKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
+	wasmx types.WasmxKeeper,
+	query func(req abci.RequestQuery) (res abci.ResponseQuery),
 
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -38,6 +43,8 @@ func NewKeeper(
 		storeKey:   storeKey,
 		memKey:     memKey,
 		paramstore: ps,
+		wasmx:      wasmx,
+		query:      query,
 	}
 }
 
