@@ -238,7 +238,6 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 
 func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, kvstore types.KVStore, gasMeter types.GasMeter) (types.ContractResponse, error) {
 	var err error
-
 	var ethMsg types.WasmxExecutionMessage
 	err = json.Unmarshal(msg, &ethMsg)
 	if err != nil {
@@ -275,7 +274,6 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 
 func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env types.Env, messageInfo types.MessageInfo, msg []byte, storeKey []byte, kvstore types.KVStore, dependencies []types.ContractDependency, cosmosHandler types.WasmxCosmosHandler, gasMeter types.GasMeter) (types.ContractResponse, error) {
 	var err error
-
 	var ethMsg types.WasmxExecutionMessage
 	err = json.Unmarshal(msg, &ethMsg)
 	if err != nil {
