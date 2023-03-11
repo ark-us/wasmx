@@ -36,9 +36,10 @@ func (suite *KeeperTestSuite) TestWebServerGet() {
 	s.Commit()
 
 	req := types.HttpRequestGet{Url: &types.RequestUrl{Path: "/"}}
-	resp, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
+	content, contentType, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
 	s.Require().NoError(err)
-	s.Require().Equal("Hello from contract. Path: /", resp)
+	s.Require().Equal("text/html", contentType)
+	s.Require().Equal("Hello from contract. Path: /", string(content))
 
 	res = appA.DeliverTx(sender, &types.MsgRegisterRoute{
 		Sender:          sender.Address.String(),
@@ -49,12 +50,14 @@ func (suite *KeeperTestSuite) TestWebServerGet() {
 	s.Commit()
 
 	req = types.HttpRequestGet{Url: &types.RequestUrl{Path: "/arg1/arg2"}}
-	resp, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
+	content, contentType, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
 	s.Require().NoError(err)
-	s.Require().Equal("Hello from contract. Path: /arg1/arg2", resp)
+	s.Require().Equal("text/html", contentType)
+	s.Require().Equal("Hello from contract. Path: /arg1/arg2", string(content))
 
 	req = types.HttpRequestGet{Url: &types.RequestUrl{Path: "/arg1/arg2/arg3"}}
-	resp, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
+	content, contentType, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
 	s.Require().NoError(err)
-	s.Require().Equal("Hello from contract. Path: /arg1/arg2/arg3", resp)
+	s.Require().Equal("text/html", contentType)
+	s.Require().Equal("Hello from contract. Path: /arg1/arg2/arg3", string(content))
 }
