@@ -244,21 +244,20 @@ func ExecuteWasm(filePath string, funcName string, env types.Env, messageInfo ty
 		return types.ContractResponse{}, err
 	}
 	context := &Context{
-		Env:                &env,
-		GasMeter:           gasMeter,
-		ContractStore:      kvstore,
-		CallContext:        messageInfo,
-		Calldata:           ethMsg.Data,
-		Callvalue:          messageInfo.Funds,
-		DeploymentCodeSize: 0,
-		CodeSize:           0,
+		Env:               &env,
+		GasMeter:          gasMeter,
+		ContractStore:     kvstore,
+		CallContext:       messageInfo,
+		Calldata:          ethMsg.Data,
+		Callvalue:         messageInfo.Funds,
+		ExecutionBytecode: []byte{},
 	}
 	contractVm, ewasmEnv, err := InitiateWasm(context, filePath, nil)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
 
-	setCodeSize(context, contractVm, funcName)
+	setExecutionBytecode(context, contractVm, funcName)
 
 	_, err = contractVm.Execute(funcName)
 	contractVm.Release()
@@ -285,17 +284,16 @@ func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env 
 	contractVm := wasmedge.NewVMWithStore(store)
 	var contractRouter ContractRouter = make(map[string]ContractContext)
 	context := &Context{
-		Ctx:                ctx,
-		GasMeter:           gasMeter,
-		Env:                &env,
-		ContractStore:      kvstore,
-		CallContext:        messageInfo,
-		CosmosHandler:      cosmosHandler,
-		Calldata:           ethMsg.Data,
-		Callvalue:          messageInfo.Funds,
-		ContractRouter:     contractRouter,
-		DeploymentCodeSize: 0,
-		CodeSize:           0,
+		Ctx:               ctx,
+		GasMeter:          gasMeter,
+		Env:               &env,
+		ContractStore:     kvstore,
+		CallContext:       messageInfo,
+		CosmosHandler:     cosmosHandler,
+		Calldata:          ethMsg.Data,
+		Callvalue:         messageInfo.Funds,
+		ContractRouter:    contractRouter,
+		ExecutionBytecode: []byte{},
 	}
 	for _, dep := range dependencies {
 		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf)
@@ -323,7 +321,7 @@ func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env 
 		return types.ContractResponse{}, err
 	}
 
-	setCodeSize(context, contractVm, funcName)
+	setExecutionBytecode(context, contractVm, funcName)
 
 	_, err = contractVm.Execute(funcName)
 
@@ -339,24 +337,40 @@ func ExecuteWasmWithDeps(ctx sdk.Context, filePath string, funcName string, env 
 	return response, nil
 }
 
-func setCodeSize(context *Context, contractVm *wasmedge.VM, funcName string) {
+// deploymentBytecode = constructorBytecode + runtimeBytecode
+// codesize/codecopy at deployment = deploymentBytecode + args
+// codesize/codecopy at runtime execution = runtimeBytecode
+func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName string) {
 	fnList, _ := contractVm.GetFunctionList()
 
-	if funcName == "instantiate" && slices.Contains(fnList, "codesize_constructor") {
-		retvalue, err := contractVm.Execute("codesize_constructor")
-		if err == nil {
-			codesize := retvalue[0].(int32)
-			context.DeploymentCodeSize = codesize
-			context.CodeSize = codesize + int32(len(context.Calldata))
+	if slices.Contains(fnList, "evm_bytecode") {
+		retvalues, err := contractVm.Execute("evm_bytecode")
+		if err != nil {
+			return
 		}
 
-	} else if slices.Contains(fnList, "codesize") {
-		retvalue, err := contractVm.Execute("codesize")
-		if err == nil {
-			codesize := retvalue[0].(int32)
-			context.DeploymentCodeSize = codesize
-			context.CodeSize = codesize
+		memoffset := retvalues[0].(int32)
+		constructorLength := retvalues[1].(int32)
+		runtimeLength := retvalues[2].(int32)
+		activeMemory := contractVm.GetActiveModule().FindMemory("memory")
+		if activeMemory == nil {
+			return
 		}
+		executionBytecode, err := activeMemory.GetData(uint(memoffset+constructorLength), uint(runtimeLength))
+		if err != nil {
+			return
+		}
+
+		if funcName == "instantiate" {
+			constructorBytecode, err := activeMemory.GetData(uint(memoffset), uint(constructorLength))
+			if err != nil {
+				return
+			}
+			executionBytecode = append(constructorBytecode, executionBytecode...)
+			executionBytecode = append(executionBytecode, context.Calldata...)
+		}
+
+		context.ExecutionBytecode = executionBytecode
 	}
 }
 

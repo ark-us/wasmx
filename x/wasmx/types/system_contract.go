@@ -64,6 +64,11 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       "blake2f",
 			InitMessage: initMsg,
 		},
+		{
+			Address:     "0x0000000000000000000000000000000000000020",
+			Label:       "curve384",
+			InitMessage: initMsg,
+		},
 	}
 }
 

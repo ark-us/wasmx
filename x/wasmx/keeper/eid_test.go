@@ -30,10 +30,8 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	curve384 := ewasm.GetPrecompileByLabel("curve384")
 	deps := []string{"0x0000000000000000000000000000000000000005"}
-	codeIdCurve := appA.StoreCode(sender, curve384)
-	addressCurve := appA.InstantiateCode(sender, codeIdCurve, types.WasmxExecutionMessage{Data: []byte{}}, "curve384direct", nil)
+	addressCurve := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000020"))
 
 	// fadd
 	fsig := "6422c13f"

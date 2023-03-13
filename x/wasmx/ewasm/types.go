@@ -56,7 +56,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	setCodeSize(newctx, contractVm, "main")
+	setExecutionBytecode(newctx, contractVm, "main")
 
 	_, err = contractVm.Execute("main")
 	if err != nil {
@@ -71,20 +71,21 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 type ContractRouter = map[string]ContractContext
 
 type Context struct {
-	Ctx                sdk.Context
-	GasMeter           types.GasMeter
-	Env                *types.Env
-	ContractRouter     ContractRouter
-	ContractStore      types.KVStore
-	CallContext        types.MessageInfo
-	CosmosHandler      types.WasmxCosmosHandler
-	Calldata           []byte
-	Callvalue          *big.Int
-	ReturnData         []byte
-	CurrentCallId      uint32
-	Logs               []EwasmLog
-	DeploymentCodeSize int32
-	CodeSize           int32
+	Ctx            sdk.Context
+	GasMeter       types.GasMeter
+	Env            *types.Env
+	ContractRouter ContractRouter
+	ContractStore  types.KVStore
+	CallContext    types.MessageInfo
+	CosmosHandler  types.WasmxCosmosHandler
+	Calldata       []byte
+	Callvalue      *big.Int
+	ReturnData     []byte
+	CurrentCallId  uint32
+	Logs           []EwasmLog
+	// instantiate -> this is the constructor + runtime + constructor args
+	// execute -> this is the runtime bytecode
+	ExecutionBytecode []byte
 }
 
 type EwasmFunctionWrapper struct {

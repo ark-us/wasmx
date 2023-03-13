@@ -35,7 +35,7 @@ var (
 	//go:embed testdata/classic/call_revert.wasm
 	callrevertbin []byte
 
-	//go:embed testdata/classic/call_simple.wasm
+	//go:embed testdata/classic/call_nested_simple.wasm
 	callsimplewasm []byte
 
 	//go:embed testdata/classic/call_nested.wasm
@@ -79,6 +79,9 @@ var (
 
 	//go:embed testdata/classic/transfer.wasm
 	transferbin []byte
+
+	//go:embed testdata/classic/constructor_test.wasm
+	constructortestbin []byte
 )
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
@@ -654,7 +657,7 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
 
-	res := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 140_000, nil)
+	res := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 100_000, nil)
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
 	s.Commit()
@@ -986,4 +989,32 @@ func (suite *KeeperTestSuite) TestContractTransfer() {
 	realBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: wasmeth.AccAddressFromEvm(receiver).String(), Denom: appA.Denom})
 	s.Require().NoError(err)
 	s.Require().Equal(realBalance.GetBalance().Amount, sdk.NewInt(1))
+}
+
+func (suite *KeeperTestSuite) TestConstructorTestBin() {
+	wasmbin := constructortestbin
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	fsig := "c1b4625e"
+	fsig2 := "4a53d41e"
+	strmap := "e71a136a"
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin)
+	calld := "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000597364666173666761736b736b646d6664736b6e766b6d6c2c76642c2e6777656c2e72336c742c6b34336f702c65726c3b2c2e663b3b2e6673643b6c2c666c6b6d6766646b6e736b6a61646e6b6c6d73646c76642c6c3b732c6600000000000000"
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, "callwasm", nil)
+	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	res := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002163636861727365743d5554462d383e3c2f703e3c2f626f64793e3c2f68746d6c3e00000000000000000000000000000000000000000000000000000000000000", res)
+
+	res = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig2)}, nil, nil)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000d93c21444f43545950452068746d6c3e3c68746d6c3e3c686561643e3c6d65746120636861727365743d225554462d38223e3c6d65746120687474702d65717569763d22582d55412d436f6d70617469626c652220636f6e74656e743d2249453d65646765223e3c6d657461206e616d653d2276696577706f72742220636f6e74656e743d2277696474683d6465766963652d77696474682c20696e697469616c2d7363616c653d312e30223e3c7469746c653e466972737420446f63756d656e743c2f7469746c653e3c2f686561643e3c626f64793e3c703e00000000000000", res)
+
+	res = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(strmap + "0000000000000000000000000000000000000000000000000000000000000000")}, nil, nil)
+	s.Require().Equal(calld, res)
 }

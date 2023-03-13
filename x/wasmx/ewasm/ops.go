@@ -124,18 +124,7 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	ctx := context.(*Context)
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
-	calldLen := int32(len(ctx.Calldata))
-	var part []byte
-
-	if dataStart >= calldLen {
-		return returns, wasmedge.Result_Success
-	}
-	if dataStart+dataLen >= calldLen {
-		part = make([]byte, dataLen)
-		copy(part, ctx.Calldata[dataStart:calldLen])
-	} else {
-		part = ctx.Calldata[dataStart : dataStart+dataLen]
-	}
+	part := readAndFillWithZero(ctx.Calldata, dataStart, dataLen)
 
 	writeMem(callframe, part, params[0])
 	return returns, wasmedge.Result_Success
@@ -164,7 +153,7 @@ func returnDataCopy(context interface{}, callframe *wasmedge.CallingFrame, param
 func getCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = ctx.CodeSize
+	returns[0] = len(ctx.ExecutionBytecode)
 	return returns, wasmedge.Result_Success
 }
 
@@ -180,10 +169,9 @@ func getExternalCodeSize(context interface{}, callframe *wasmedge.CallingFrame, 
 func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	codePtr := params[1].(int32)
-	// constructor args
-	if codePtr == ctx.DeploymentCodeSize {
-		writeMem(callframe, paddRightToMultiple32(ctx.Calldata), params[0])
-	}
+	dataLen := params[2].(int32)
+	part := readAndFillWithZero(ctx.ExecutionBytecode, codePtr, dataLen)
+	writeMem(callframe, part, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -939,6 +927,21 @@ func readI32(callframe *wasmedge.CallingFrame, pointer interface{}, size interfa
 	return xi32, nil
 }
 
+func readAndFillWithZero(data []byte, start int32, length int32) []byte {
+	dataLen := int32(len(data))
+	end := start + length
+	var value []byte
+	if end >= dataLen {
+		if len(data) > 0 {
+			value = data[start:]
+		}
+		value = padWithZeros(value, int(length))
+	} else {
+		value = data[start:end]
+	}
+	return value
+}
+
 func isEvmAddress(addr AddressCW) bool {
 	return hex.EncodeToString(addr.Bytes()[:12]) == hex.EncodeToString(make([]byte, 12))
 }
@@ -965,5 +968,14 @@ func paddLeftTo32(data []byte) []byte {
 		return data
 	}
 	data = append(bytes.Repeat([]byte{0}, 32-length), data...)
+	return data
+}
+
+func padWithZeros(data []byte, targetLen int) []byte {
+	dataLen := len(data)
+	if targetLen <= dataLen {
+		return data
+	}
+	data = append(data, bytes.Repeat([]byte{0}, targetLen-dataLen)...)
 	return data
 }
