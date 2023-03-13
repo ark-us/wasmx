@@ -109,6 +109,9 @@ import (
 	wasmxmodule "wasmx/x/wasmx"
 	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
 	wasmxmoduletypes "wasmx/x/wasmx/types"
+	websrvmodule "wasmx/x/websrv"
+	websrvmodulekeeper "wasmx/x/websrv/keeper"
+	websrvmoduletypes "wasmx/x/websrv/types"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 )
 
@@ -160,6 +163,7 @@ var (
 		ica.AppModuleBasic{},
 		vesting.AppModuleBasic{},
 		wasmxmodule.AppModuleBasic{},
+		websrvmodule.AppModuleBasic{},
 		// this line is used by starport scaffolding # stargate/app/moduleBasic
 	)
 
@@ -236,6 +240,8 @@ type App struct {
 	ScopedICAHostKeeper  capabilitykeeper.ScopedKeeper
 
 	WasmxKeeper wasmxmodulekeeper.Keeper
+
+	WebsrvKeeper websrvmodulekeeper.Keeper
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
 
 	// mm is the module manager
@@ -281,6 +287,7 @@ func New(
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
 		icacontrollertypes.StoreKey,
 		wasmxmoduletypes.StoreKey,
+		websrvmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -510,6 +517,21 @@ func New(
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 
+	app.WebsrvKeeper = *websrvmodulekeeper.NewKeeper(
+		appCodec,
+		keys[websrvmoduletypes.StoreKey],
+		keys[websrvmoduletypes.MemStoreKey],
+		app.GetSubspace(websrvmoduletypes.ModuleName),
+		app.WasmxKeeper,
+		app.Query,
+	)
+	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
+	go func() {
+		if err := app.WebsrvKeeper.Init(); err != nil {
+			app.Logger().Error("Error serving websrv", "err", err)
+		}
+	}()
+
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
 	/**** IBC Routing ****/
@@ -576,6 +598,7 @@ func New(
 		transferModule,
 		icaModule,
 		wasmxModule,
+		websrvModule,
 		// this line is used by starport scaffolding # stargate/app/appModule
 	)
 
@@ -606,6 +629,7 @@ func New(
 		paramstypes.ModuleName,
 		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
 	)
 
@@ -631,6 +655,7 @@ func New(
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers
 	)
 
@@ -661,6 +686,7 @@ func New(
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/initGenesis
 	)
 
@@ -691,6 +717,7 @@ func New(
 		ibc.NewAppModule(app.IBCKeeper),
 		transferModule,
 		wasmxModule,
+		websrvModule,
 		// this line is used by starport scaffolding # stargate/app/appModule
 	)
 	app.sm.RegisterStoreDecoders()
@@ -924,6 +951,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(wasmxmoduletypes.ModuleName)
+	paramsKeeper.Subspace(websrvmoduletypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 
 	return paramsKeeper
