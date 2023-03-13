@@ -286,7 +286,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	s.Require().True(res.IsOK(), res.GetLog())
 	s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
 	s.Commit()
-	s.Require().True(false)
 
 	// test_verify_neg
 	// 0x2cb2e7f1
