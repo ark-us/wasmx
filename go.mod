@@ -3,6 +3,7 @@ module wasmx
 go 1.19
 
 require (
+	cosmossdk.io/math v1.0.0-beta.3
 	github.com/cosmos/cosmos-sdk v0.46.7
 	github.com/cosmos/gogoproto v1.4.2
 	github.com/cosmos/ibc-go/v6 v6.1.0
@@ -14,6 +15,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.1
 	github.com/onsi/ginkgo/v2 v2.8.3
 	github.com/onsi/gomega v1.27.1
+	github.com/pkg/errors v0.9.1
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/second-state/WasmEdge-go v0.11.2
 	github.com/spf13/cast v1.5.0
@@ -22,6 +24,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tendermint/tendermint v0.34.24
 	github.com/tendermint/tm-db v0.6.7
+	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
 	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148
 	google.golang.org/grpc v1.53.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -34,7 +37,6 @@ require (
 	cloud.google.com/go/iam v0.11.0 // indirect
 	cloud.google.com/go/storage v1.27.0 // indirect
 	cosmossdk.io/errors v1.0.0-beta.7 // indirect
-	cosmossdk.io/math v1.0.0-beta.3 // indirect
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.1 // indirect
@@ -125,7 +127,6 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -150,7 +151,6 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.2.0 // indirect
-	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
@@ -170,4 +170,5 @@ require (
 replace (
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
+	github.com/second-state/WasmEdge-go => github.com/loredanacirstea/WasmEdge-go v0.11.3-0.20230314131152-38caaf64a4b7
 )

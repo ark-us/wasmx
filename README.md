@@ -10,7 +10,6 @@ wasmx start --home=./testnet/node0/mythosd
 
 ```
 
-
 ## Get started
 
 ```
@@ -51,3 +50,11 @@ curl https://get.ignite.com/username/wasmx@latest! | sudo bash
 ```
 `username/wasmx` should match the `username` and `repo_name` of the Github repository to which the source code was pushed. Learn more about [the install process](https://github.com/allinbits/starport-installer).
 
+
+## Run tests
+
+```
+go test -v ./...
+
+go test --count=1 -short -v ./...
+```

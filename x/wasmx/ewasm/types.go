@@ -30,29 +30,11 @@ type ContractContext struct {
 	VmExecutor       *wasmedge.Executor
 	ContractStoreKey []byte
 	Context          *Context
-}
-
-func (c ContractContext) Execute_() ([]byte, error) {
-	store := wasmedge.NewStore()
-	mod, err := c.VmExecutor.Instantiate(store, c.VmAst)
-	if err != nil {
-		return nil, err
-	}
-
-	funcinst := mod.FindFunction("main")
-	if funcinst == nil {
-		return nil, err
-	}
-	_, err = c.VmExecutor.Invoke(store, funcinst)
-	if err != nil {
-		return nil, err
-	}
-	store.Release()
-	return c.Context.ReturnData, nil
+	SystemDeps       []string
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
-	contractVm, ewasmEnv, err := InitiateWasm(newctx, c.FilePath, nil)
+	contractVm, cleanups, err := InitiateWasm(newctx, c.FilePath, nil, c.SystemDeps)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +44,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ewasmEnv.Release()
+	runCleanups(cleanups)
 	contractVm.Release()
 	return newctx.ReturnData, nil
 }
