@@ -39,9 +39,8 @@
 (import "env" "ethereum_revert" (func $revert (param i32 i32) ))
 
 
-  (type $et12 (func))
-  (func $ewasm_interface_version_1 (export "ewasm_interface_version_1") (export "requires_ewasm") (type $et12)
-      (nop))
+(type $et12 (func))
+(func $ewasm_env_1 (export "ewasm_env_1") (type $et12) (nop))
 
 (global $sp (mut i32) (i32.const -32))
 
@@ -63,6 +62,9 @@
 
 (func $global_get_sp  (export "GLOBAL_GET_SP") (result i32) (global.get $sp))
 (func $global_set_sp  (export "GLOBAL_SET_SP") (param $newsp i32) (global.set $sp (local.get $newsp)))
+
+;; temporary
+(func $useGas_external  (export "ethereum_useGas") (param $x i64) (call $useGas (local.get $x)))
 
 
 (func $LOG  (export "LOG")
@@ -2948,7 +2950,7 @@
   (local.get $sp)
 )
 
-(func $check_overflow
+(func $check_overflow (export "check_overflow")
   (param $a i64)
   (param $b i64)
   (param $c i64)

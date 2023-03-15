@@ -7,13 +7,8 @@
   (import "ewasm" "GLOBAL_GET_SP" (func $GLOBAL_GET_SP (result i32)))
   (import "ewasm" "GLOBAL_SET_SP" (func $GLOBAL_SET_SP (param i32)))
 
-  ;; /*** for cosmwasm
-
-  (type $et12 (func))
-  (func $ewasm_interface_version_1 (export "ewasm_interface_version_1") (export "requires_ewasm") (type $et12)
-      (nop))
-
-  ;; ********** /
+(type $et12 (func))
+(func $ewasm_ewasm_1 (export "ewasm_ewasm_1") (type $et12) (nop))
 
   (global $cb_dest (mut i32) (i32.const 0))
   (global $init (mut i32) (i32.const 0))
@@ -56,5 +51,11 @@
 (call $RETURN) (br $done)
 (call $GLOBAL_SET_SP (i32.add (call $GLOBAL_GET_SP) (i32.const -64)))
 )))
+
+(func $evm_bytecode (export "evm_bytecode") (result i32 i32 i32)
+    i32.const 33832
+    i32.const 0
+    i32.const 0)
+
 
 )

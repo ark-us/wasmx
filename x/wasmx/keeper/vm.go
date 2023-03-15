@@ -58,7 +58,7 @@ func (k WasmxEngine) Instantiate(
 
 	// TODO gas
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err = ewasm.ExecuteWasm(filepath, "instantiate", env, info, initMsg, store, gasMeter)
+	data, err = ewasm.ExecuteWasm(sdk.Context{}, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -81,7 +81,7 @@ func (k WasmxEngine) Execute(
 	filepath := k.build_path(k.DataDir, checksum)
 	var data types.ContractResponse
 	var err error
-	data, err = ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler, gasMeter)
+	data, err = ewasm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -102,7 +102,7 @@ func (k WasmxEngine) QueryExecute(
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
 	filepath := k.build_path(k.DataDir, checksum)
-	data, err := ewasm.ExecuteWasmWithDeps(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, dependencies, cosmosHandler, gasMeter)
+	data, err := ewasm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}
