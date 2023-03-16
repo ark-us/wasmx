@@ -39,32 +39,34 @@ func (k Keeper) Route(w http.ResponseWriter, r *http.Request) {
 }
 
 func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	params := []types.RequestParam{}
-	req := types.HttpRequestGet{
-		Url: &types.RequestUrl{
-			Path:   r.URL.Path,
-			Params: params,
-		},
+	// TODO query params
+	params := []types.RequestQueryParam{}
+	header := []types.HeaderItem{}
+
+	req := types.HttpRequest{
+		Header:      header,
+		QueryParams: params,
 	}
-	content, contentType, err := k.HandleContractRoute(req)
+	response, err := k.HandleContractRoute(req)
 	if err != nil {
 		return nil, sdkerrors.Wrapf(err, "RouteGET failed")
 	}
-	w.Header().Set("Content-Type", contentType)
-	return content, nil
+	// TODO set header
+	// w.Header().Set("Content-Type", contentType)
+	return response.Content, nil
 }
 
-func (k Keeper) HandleContractRoute(req types.HttpRequestGet) ([]byte, string, error) {
+func (k Keeper) HandleContractRoute(req types.HttpRequest) (*types.HttpResponse, error) {
 	httpReqBz, err := req.Marshal()
 	if err != nil {
-		return nil, "", sdkerrors.Wrapf(err, "cannot marshal HttpRequestGet")
+		return nil, sdkerrors.Wrapf(err, "cannot marshal HttpRequestGet")
 	}
-	websrvQuery := types.QueryHttpGetRequest{
+	websrvQuery := types.QueryHttpRequestGet{
 		HttpRequest: httpReqBz,
 	}
 	websrvQueryBz, err := websrvQuery.Marshal()
 	if err != nil {
-		return nil, "", sdkerrors.Wrapf(err, "cannot marshal QueryHttpGetRequest")
+		return nil, sdkerrors.Wrapf(err, "cannot marshal QueryHttpGetRequest")
 	}
 	reqQuery := abci.RequestQuery{
 		Path: "/wasmx.websrv.Query/HttpGet",
@@ -72,14 +74,14 @@ func (k Keeper) HandleContractRoute(req types.HttpRequestGet) ([]byte, string, e
 	}
 	abcires := k.query(reqQuery)
 	if abcires.IsErr() {
-		return nil, "", sdkerrors.Wrapf(types.ErrRouteInternalError, "log: %s", abcires.GetLog())
+		return nil, sdkerrors.Wrapf(types.ErrRouteInternalError, "log: %s", abcires.GetLog())
 	}
 
-	var respGet types.QueryHttpGetResponse
+	var respGet types.QueryHttpResponseGet
 	err = respGet.Unmarshal(abcires.Value)
 	if err != nil {
-		return nil, "", sdkerrors.Wrapf(err, "cannot unmarshal QueryHttpGetResponse")
+		return nil, sdkerrors.Wrapf(err, "cannot unmarshal QueryHttpGetResponse")
 	}
 
-	return respGet.Data.Content, respGet.Data.ContentType, nil
+	return respGet.Data, nil
 }

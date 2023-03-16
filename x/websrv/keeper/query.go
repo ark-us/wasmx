@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,25 +44,27 @@ func (k Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContra
 	}, nil
 }
 
-func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpGetRequest) (*types.QueryHttpGetResponse, error) {
+func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*types.QueryHttpResponseGet, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	var request types.HttpRequestGet
+	var request types.HttpRequest
 	k.cdc.Unmarshal(req.HttpRequest, &request)
 
 	rsp, err := k.HttpGetInternal(sdk.UnwrapSDKContext(c), request)
 	if err != nil {
 		return nil, err
 	}
-	return &types.QueryHttpGetResponse{Data: rsp}, nil
+	return &types.QueryHttpResponseGet{Data: rsp}, nil
 }
 
-func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequestGet) (*types.HttpRequestGetResponse, error) {
-	contractAddress := k.GetMostSpecificRouteToContract(ctx, req.Url.Path)
+func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.HttpResponse, error) {
+	headerMap := k.headersToMap(req)
+	path := headerMap[types.HeaderOption_PathInfo]
+	contractAddress := k.GetMostSpecificRouteToContract(ctx, path)
 	if contractAddress == nil {
-		return nil, sdkerrors.Wrapf(types.ErrRouteNotFound, "request path %s", req.Url.Path)
+		return nil, sdkerrors.Wrapf(types.ErrRouteNotFound, "request path %s", path)
 	}
 	msg, err := types.RequestGetEncodeAbi(req)
 	if err != nil {
@@ -84,4 +87,13 @@ func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequestGet) (*typ
 	}
 
 	return types.ResponseGetDecodeAbi(contractResponse.Data)
+}
+
+func (k Keeper) headersToMap(req types.HttpRequest) map[types.HeaderOption]string {
+	var headerMap map[types.HeaderOption]string
+	for _, header := range req.Header {
+		bz, bint := header.HeaderType.EnumDescriptor()
+		headerMap[header.HeaderType] = header.Value
+	}
+	return headerMap
 }

@@ -10,13 +10,15 @@ import (
 )
 
 var (
-
 	//go:embed testdata/classic/webserver.wasm
-	webserver []byte
+	webserverwasm []byte
+
+	//go:embed testdata/classic/mythos.wasm
+	mythoswasm []byte
 )
 
-func (suite *KeeperTestSuite) TestWebServerGet() {
-	wasmbin := webserver
+func (suite *KeeperTestSuite) TestSimpleWebServer() {
+	wasmbin := mythoswasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
 
@@ -35,11 +37,11 @@ func (suite *KeeperTestSuite) TestWebServerGet() {
 	s.Require().True(res.IsOK(), res.GetLog())
 	s.Commit()
 
-	req := types.HttpRequestGet{Url: &types.RequestUrl{Path: "/"}}
-	content, contentType, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
+	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.HeaderOption_PathInfo, Value: "/"}}}
+	response, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
 	s.Require().NoError(err)
-	s.Require().Equal("text/html", contentType)
-	s.Require().Equal("Hello from contract. Path: /", string(content))
+	// s.Require().Equal("text/html", contentType)
+	s.Require().Equal("Hello from contract. Path: /", string(response.Content))
 
 	res = appA.DeliverTx(sender, &types.MsgRegisterRoute{
 		Sender:          sender.Address.String(),
@@ -49,15 +51,15 @@ func (suite *KeeperTestSuite) TestWebServerGet() {
 	s.Require().True(res.IsOK(), res.GetLog())
 	s.Commit()
 
-	req = types.HttpRequestGet{Url: &types.RequestUrl{Path: "/arg1/arg2"}}
-	content, contentType, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
+	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.HeaderOption_PathInfo, Value: "/arg1/arg2"}}}
+	response, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
 	s.Require().NoError(err)
-	s.Require().Equal("text/html", contentType)
-	s.Require().Equal("Hello from contract. Path: /arg1/arg2", string(content))
+	// s.Require().Equal("text/html", contentType)
+	s.Require().Equal("Hello from contract. Path: /arg1/arg2", string(response.Content))
 
-	req = types.HttpRequestGet{Url: &types.RequestUrl{Path: "/arg1/arg2/arg3"}}
-	content, contentType, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
+	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.HeaderOption_PathInfo, Value: "/arg1/arg2/arg3"}}}
+	response, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
 	s.Require().NoError(err)
-	s.Require().Equal("text/html", contentType)
-	s.Require().Equal("Hello from contract. Path: /arg1/arg2/arg3", string(content))
+	// s.Require().Equal("text/html", contentType)
+	s.Require().Equal("Hello from contract. Path: /arg1/arg2/arg3", string(response.Content))
 }

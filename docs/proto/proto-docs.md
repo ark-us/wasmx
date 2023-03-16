@@ -11,18 +11,20 @@
     - [GenesisState](#wasmx.websrv.GenesisState)
   
 - [wasmx/websrv/query.proto](#wasmx/websrv/query.proto)
-    - [HttpRequestGet](#wasmx.websrv.HttpRequestGet)
-    - [HttpRequestGetResponse](#wasmx.websrv.HttpRequestGetResponse)
+    - [HeaderItem](#wasmx.websrv.HeaderItem)
+    - [HttpRequest](#wasmx.websrv.HttpRequest)
+    - [HttpResponse](#wasmx.websrv.HttpResponse)
     - [QueryContractByRouteRequest](#wasmx.websrv.QueryContractByRouteRequest)
     - [QueryContractByRouteResponse](#wasmx.websrv.QueryContractByRouteResponse)
-    - [QueryHttpGetRequest](#wasmx.websrv.QueryHttpGetRequest)
-    - [QueryHttpGetResponse](#wasmx.websrv.QueryHttpGetResponse)
+    - [QueryHttpRequestGet](#wasmx.websrv.QueryHttpRequestGet)
+    - [QueryHttpResponseGet](#wasmx.websrv.QueryHttpResponseGet)
     - [QueryParamsRequest](#wasmx.websrv.QueryParamsRequest)
     - [QueryParamsResponse](#wasmx.websrv.QueryParamsResponse)
     - [QueryRouteByContractRequest](#wasmx.websrv.QueryRouteByContractRequest)
     - [QueryRouteByContractResponse](#wasmx.websrv.QueryRouteByContractResponse)
-    - [RequestParam](#wasmx.websrv.RequestParam)
-    - [RequestUrl](#wasmx.websrv.RequestUrl)
+    - [RequestQueryParam](#wasmx.websrv.RequestQueryParam)
+  
+    - [HeaderOption](#wasmx.websrv.HeaderOption)
   
     - [Query](#wasmx.websrv.Query)
   
@@ -100,31 +102,48 @@ GenesisState defines the websrv module's genesis state.
 
 
 
-<a name="wasmx.websrv.HttpRequestGet"></a>
+<a name="wasmx.websrv.HeaderItem"></a>
 
-### HttpRequestGet
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `url` | [RequestUrl](#wasmx.websrv.RequestUrl) |  |  |
-
-
-
-
-
-
-<a name="wasmx.websrv.HttpRequestGetResponse"></a>
-
-### HttpRequestGetResponse
+### HeaderItem
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `content` | [bytes](#bytes) |  | The http get response |
-| `content_type` | [string](#string) |  | Content-Type |
+| `header_type` | [HeaderOption](#wasmx.websrv.HeaderOption) |  |  |
+| `Value` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="wasmx.websrv.HttpRequest"></a>
+
+### HttpRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `header` | [HeaderItem](#wasmx.websrv.HeaderItem) | repeated |  |
+| `query_params` | [RequestQueryParam](#wasmx.websrv.RequestQueryParam) | repeated |  |
+
+
+
+
+
+
+<a name="wasmx.websrv.HttpResponse"></a>
+
+### HttpResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `header` | [HeaderItem](#wasmx.websrv.HeaderItem) | repeated |  |
+| `content` | [bytes](#bytes) |  |  |
 
 
 
@@ -163,9 +182,9 @@ Query/ContractByRoute RPC method.
 
 
 
-<a name="wasmx.websrv.QueryHttpGetRequest"></a>
+<a name="wasmx.websrv.QueryHttpRequestGet"></a>
 
-### QueryHttpGetRequest
+### QueryHttpRequestGet
 QueryHttpGetRequest is the request type for the
 Query/HttpGet RPC method.
 
@@ -179,16 +198,16 @@ Query/HttpGet RPC method.
 
 
 
-<a name="wasmx.websrv.QueryHttpGetResponse"></a>
+<a name="wasmx.websrv.QueryHttpResponseGet"></a>
 
-### QueryHttpGetResponse
-QueryHttpGetResponse is the response type for the
+### QueryHttpResponseGet
+QueryHttpResponseGet is the response type for the
 Query/HttpGet RPC method.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `data` | [HttpRequestGetResponse](#wasmx.websrv.HttpRequestGetResponse) |  |  |
+| `data` | [HttpResponse](#wasmx.websrv.HttpResponse) |  |  |
 
 
 
@@ -252,9 +271,9 @@ Query/RouteByContract RPC method.
 
 
 
-<a name="wasmx.websrv.RequestParam"></a>
+<a name="wasmx.websrv.RequestQueryParam"></a>
 
-### RequestParam
+### RequestQueryParam
 
 
 
@@ -267,23 +286,43 @@ Query/RouteByContract RPC method.
 
 
 
-
-<a name="wasmx.websrv.RequestUrl"></a>
-
-### RequestUrl
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `Path` | [string](#string) |  |  |
-| `params` | [RequestParam](#wasmx.websrv.RequestParam) | repeated |  |
-
-
-
-
-
  <!-- end messages -->
+
+
+<a name="wasmx.websrv.HeaderOption"></a>
+
+### HeaderOption
+HeaderOption enumerates the valid http headers supported.
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| content_type | 0 | content_type Content-Type indicates the media type of the resource; "text/html; charset=UTF-8" |
+| content_encoding | 1 | content_encoding Content-Encoding is used to specify the compression algorithm |
+| content_language | 2 | content_language Content-Language describes the human language(s) intended for the audience; "en" |
+| location | 3 | location Location indicates the URL to redirect a page to |
+| status | 4 | status Status indicates the status code response; "200" |
+| www_authenticate | 5 | www_authenticate WWW-Authenticate defines the authentication method that should be used to access a resource |
+| authorization | 6 | authorization Authorization contains the credentials to authenticate a user-agent with a server |
+| content_length | 7 | content_length Content-Length indicates the size of the resource, in decimal number of bytes; "0" |
+| content_location | 8 | content_location Content-Location "/" |
+| gateway_interface | 9 | gateway_interface Gateway-Interface; ""CGI/1.1"" |
+| connection | 10 | connection Connection controls whether the network connection stays open after the current transaction finishes |
+| keep_alive | 11 | keep_alive Keep-Alive controls how long a persistent connection should stay open |
+| cookie | 12 | cookie Cookie contains stored HTTP cookies previously sent by the server with the Set-Cookie header |
+| set_cookie | 13 | set_cookie Set-Cookie send cookies from the server to the user-agent |
+| access_control_allow_origin | 14 | access_control_allow_origin Access-Control-Allow-Origin indicates whether the response can be shared |
+| server | 15 | server Server |
+| auth_type | 16 | auth_type Auth-Type |
+| accept | 17 | accept Accept |
+| request_method | 18 | request_method Request-Method; "GET" |
+| http_host | 19 | http_host Http-Host; "example.com" |
+| path_info | 20 | path_info Path-Info; "/foo/bar" |
+| query_string | 21 | query_string Query-String; "var1=value1&var2=with%20percent%20encoding" |
+| remote_addr | 22 | remote_addr Remote-Addr |
+| server_port | 23 | server_port ServerPort; "80" |
+| accept_push_policy | 24 | status Accept-Push-Policy |
+| accept_signature | 25 | accept_signature Accept-Signature indicates the intention to take advantage of any available signatures and to indicate what kinds of signatures it supports |
+
 
  <!-- end enums -->
 
@@ -297,7 +336,7 @@ Query defines the gRPC querier service.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `HttpGet` | [QueryHttpGetRequest](#wasmx.websrv.QueryHttpGetRequest) | [QueryHttpGetResponse](#wasmx.websrv.QueryHttpGetResponse) | HttpGet makes a get request to the webserver | GET|/wasmx/websrv/v1/get/{http_request}|
+| `HttpGet` | [QueryHttpRequestGet](#wasmx.websrv.QueryHttpRequestGet) | [QueryHttpResponseGet](#wasmx.websrv.QueryHttpResponseGet) | HttpGet makes a get request to the webserver | GET|/wasmx/websrv/v1/get/{http_request}|
 | `ContractByRoute` | [QueryContractByRouteRequest](#wasmx.websrv.QueryContractByRouteRequest) | [QueryContractByRouteResponse](#wasmx.websrv.QueryContractByRouteResponse) | ContractByRoute gets the contract controlling a given route | GET|/wasmx/websrv/v1/route/{path}|
 | `RouteByContract` | [QueryRouteByContractRequest](#wasmx.websrv.QueryRouteByContractRequest) | [QueryRouteByContractResponse](#wasmx.websrv.QueryRouteByContractResponse) | RouteByContract gets the route controlled by a given contract | GET|/wasmx/websrv/v1/contract/{contract_address}|
 | `Params` | [QueryParamsRequest](#wasmx.websrv.QueryParamsRequest) | [QueryParamsResponse](#wasmx.websrv.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/wasmx/websrv/v1/params|
