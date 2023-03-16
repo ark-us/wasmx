@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,8 +41,12 @@ func (k Keeper) Route(w http.ResponseWriter, r *http.Request) {
 
 func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	// TODO query params
+	// TODO header items
 	params := []types.RequestQueryParam{}
 	header := []types.HeaderItem{}
+
+	// r.URL.Path,
+	// r.Header
 
 	req := types.HttpRequest{
 		Header:      header,
@@ -53,11 +58,11 @@ func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error)
 	}
 	// TODO set header
 	// w.Header().Set("Content-Type", contentType)
-	return response.Content, nil
+	return []byte(response.Content), nil
 }
 
 func (k Keeper) HandleContractRoute(req types.HttpRequest) (*types.HttpResponse, error) {
-	httpReqBz, err := req.Marshal()
+	httpReqBz, err := json.Marshal(req)
 	if err != nil {
 		return nil, sdkerrors.Wrapf(err, "cannot marshal HttpRequestGet")
 	}
@@ -83,5 +88,11 @@ func (k Keeper) HandleContractRoute(req types.HttpRequest) (*types.HttpResponse,
 		return nil, sdkerrors.Wrapf(err, "cannot unmarshal QueryHttpGetResponse")
 	}
 
-	return respGet.Data, nil
+	var requestResp types.HttpResponse
+	err = json.Unmarshal(respGet.Data, &requestResp)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "cannot unmarshal HttpResponse")
+	}
+
+	return &requestResp, nil
 }

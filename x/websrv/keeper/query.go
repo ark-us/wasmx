@@ -3,7 +3,6 @@ package keeper
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,18 +49,26 @@ func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*typ
 	}
 
 	var request types.HttpRequest
-	k.cdc.Unmarshal(req.HttpRequest, &request)
+	// err := k.cdc.Unmarshal(req.HttpRequest, &request)
+	err := json.Unmarshal(req.HttpRequest, &request)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "could not unmarshal HttpRequest")
+	}
 
 	rsp, err := k.HttpGetInternal(sdk.UnwrapSDKContext(c), request)
 	if err != nil {
-		return nil, err
+		return nil, sdkerrors.Wrapf(err, "http get failed")
 	}
-	return &types.QueryHttpResponseGet{Data: rsp}, nil
+	rspbz, err := json.Marshal(rsp)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "could not marshal HttpResponse")
+	}
+	return &types.QueryHttpResponseGet{Data: rspbz}, nil
 }
 
 func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.HttpResponse, error) {
 	headerMap := k.headersToMap(req)
-	path := headerMap[types.HeaderOption_PathInfo]
+	path := headerMap[types.Path_Info]
 	contractAddress := k.GetMostSpecificRouteToContract(ctx, path)
 	if contractAddress == nil {
 		return nil, sdkerrors.Wrapf(types.ErrRouteNotFound, "request path %s", path)
@@ -86,13 +93,16 @@ func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.
 		return nil, sdkerrors.Wrapf(err, "cannot unmarshal WasmxQueryResponse")
 	}
 
-	return types.ResponseGetDecodeAbi(contractResponse.Data)
+	resp, err := types.ResponseGetDecodeAbi(contractResponse.Data)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "cannot abi decode WasmxQueryResponse")
+	}
+	return resp, nil
 }
 
-func (k Keeper) headersToMap(req types.HttpRequest) map[types.HeaderOption]string {
-	var headerMap map[types.HeaderOption]string
+func (k Keeper) headersToMap(req types.HttpRequest) map[uint8]string {
+	var headerMap = map[uint8]string{}
 	for _, header := range req.Header {
-		bz, bint := header.HeaderType.EnumDescriptor()
 		headerMap[header.HeaderType] = header.Value
 	}
 	return headerMap

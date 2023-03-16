@@ -11,9 +11,6 @@
     - [GenesisState](#wasmx.websrv.GenesisState)
   
 - [wasmx/websrv/query.proto](#wasmx/websrv/query.proto)
-    - [HeaderItem](#wasmx.websrv.HeaderItem)
-    - [HttpRequest](#wasmx.websrv.HttpRequest)
-    - [HttpResponse](#wasmx.websrv.HttpResponse)
     - [QueryContractByRouteRequest](#wasmx.websrv.QueryContractByRouteRequest)
     - [QueryContractByRouteResponse](#wasmx.websrv.QueryContractByRouteResponse)
     - [QueryHttpRequestGet](#wasmx.websrv.QueryHttpRequestGet)
@@ -22,9 +19,6 @@
     - [QueryParamsResponse](#wasmx.websrv.QueryParamsResponse)
     - [QueryRouteByContractRequest](#wasmx.websrv.QueryRouteByContractRequest)
     - [QueryRouteByContractResponse](#wasmx.websrv.QueryRouteByContractResponse)
-    - [RequestQueryParam](#wasmx.websrv.RequestQueryParam)
-  
-    - [HeaderOption](#wasmx.websrv.HeaderOption)
   
     - [Query](#wasmx.websrv.Query)
   
@@ -102,54 +96,6 @@ GenesisState defines the websrv module's genesis state.
 
 
 
-<a name="wasmx.websrv.HeaderItem"></a>
-
-### HeaderItem
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `header_type` | [HeaderOption](#wasmx.websrv.HeaderOption) |  |  |
-| `Value` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="wasmx.websrv.HttpRequest"></a>
-
-### HttpRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `header` | [HeaderItem](#wasmx.websrv.HeaderItem) | repeated |  |
-| `query_params` | [RequestQueryParam](#wasmx.websrv.RequestQueryParam) | repeated |  |
-
-
-
-
-
-
-<a name="wasmx.websrv.HttpResponse"></a>
-
-### HttpResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `header` | [HeaderItem](#wasmx.websrv.HeaderItem) | repeated |  |
-| `content` | [bytes](#bytes) |  |  |
-
-
-
-
-
-
 <a name="wasmx.websrv.QueryContractByRouteRequest"></a>
 
 ### QueryContractByRouteRequest
@@ -207,7 +153,7 @@ Query/HttpGet RPC method.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `data` | [HttpResponse](#wasmx.websrv.HttpResponse) |  |  |
+| `data` | [bytes](#bytes) |  | HttpResponse data = 1; |
 
 
 
@@ -270,59 +216,7 @@ Query/RouteByContract RPC method.
 
 
 
-
-<a name="wasmx.websrv.RequestQueryParam"></a>
-
-### RequestQueryParam
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `key` | [string](#string) |  |  |
-| `value` | [string](#string) |  |  |
-
-
-
-
-
  <!-- end messages -->
-
-
-<a name="wasmx.websrv.HeaderOption"></a>
-
-### HeaderOption
-HeaderOption enumerates the valid http headers supported.
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| content_type | 0 | content_type Content-Type indicates the media type of the resource; "text/html; charset=UTF-8" |
-| content_encoding | 1 | content_encoding Content-Encoding is used to specify the compression algorithm |
-| content_language | 2 | content_language Content-Language describes the human language(s) intended for the audience; "en" |
-| location | 3 | location Location indicates the URL to redirect a page to |
-| status | 4 | status Status indicates the status code response; "200" |
-| www_authenticate | 5 | www_authenticate WWW-Authenticate defines the authentication method that should be used to access a resource |
-| authorization | 6 | authorization Authorization contains the credentials to authenticate a user-agent with a server |
-| content_length | 7 | content_length Content-Length indicates the size of the resource, in decimal number of bytes; "0" |
-| content_location | 8 | content_location Content-Location "/" |
-| gateway_interface | 9 | gateway_interface Gateway-Interface; ""CGI/1.1"" |
-| connection | 10 | connection Connection controls whether the network connection stays open after the current transaction finishes |
-| keep_alive | 11 | keep_alive Keep-Alive controls how long a persistent connection should stay open |
-| cookie | 12 | cookie Cookie contains stored HTTP cookies previously sent by the server with the Set-Cookie header |
-| set_cookie | 13 | set_cookie Set-Cookie send cookies from the server to the user-agent |
-| access_control_allow_origin | 14 | access_control_allow_origin Access-Control-Allow-Origin indicates whether the response can be shared |
-| server | 15 | server Server |
-| auth_type | 16 | auth_type Auth-Type |
-| accept | 17 | accept Accept |
-| request_method | 18 | request_method Request-Method; "GET" |
-| http_host | 19 | http_host Http-Host; "example.com" |
-| path_info | 20 | path_info Path-Info; "/foo/bar" |
-| query_string | 21 | query_string Query-String; "var1=value1&var2=with%20percent%20encoding" |
-| remote_addr | 22 | remote_addr Remote-Addr |
-| server_port | 23 | server_port ServerPort; "80" |
-| accept_push_policy | 24 | status Accept-Push-Policy |
-| accept_signature | 25 | accept_signature Accept-Signature indicates the intention to take advantage of any available signatures and to indicate what kinds of signatures it supports |
-
 
  <!-- end enums -->
 

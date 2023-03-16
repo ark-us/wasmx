@@ -55,93 +55,17 @@ message QueryRouteByContractResponse {
   string path = 1;
 }
 
-// HeaderOption enumerates the valid http headers supported.
-enum HeaderOption {
-  // content_type Content-Type indicates the media type of the resource;  "text/html; charset=UTF-8"
-  content_type = 0 [(gogoproto.enumvalue_customname) = "ContentType"];
-  // content_encoding Content-Encoding is used to specify the compression algorithm
-  content_encoding = 1 [(gogoproto.enumvalue_customname) = "ContentEncoding"];
-  // content_language Content-Language describes the human language(s) intended for the audience; "en"
-  content_language = 2 [(gogoproto.enumvalue_customname) = "ContentLanguage"];
-  // location Location indicates the URL to redirect a page to
-  location = 3 [(gogoproto.enumvalue_customname) = "Location"];
-  // status Status indicates the status code response; "200"
-  status = 4 [(gogoproto.enumvalue_customname) = "Status"];
-  // www_authenticate WWW-Authenticate defines the authentication method that should be used to access a resource
-  www_authenticate = 5 [(gogoproto.enumvalue_customname) = "WWWAuthenticate"];
-  // authorization Authorization contains the credentials to authenticate a user-agent with a server
-  authorization = 6 [(gogoproto.enumvalue_customname) = "Authorization"];
-  // content_length Content-Length indicates the size of the resource, in decimal number of bytes; "0"
-  content_length = 7 [(gogoproto.enumvalue_customname) = "ContentLength"];
-  // content_location Content-Location "/"
-  content_location = 8 [(gogoproto.enumvalue_customname) = "ContentLocation"];
-  // gateway_interface Gateway-Interface; ""CGI/1.1""
-  gateway_interface = 9 [(gogoproto.enumvalue_customname) = "GatewayInterface"];
-  // connection Connection controls whether the network connection stays open after the current transaction finishes
-  connection = 10 [(gogoproto.enumvalue_customname) = "Connection"];
-  // keep_alive Keep-Alive controls how long a persistent connection should stay open
-  keep_alive = 11 [(gogoproto.enumvalue_customname) = "KeepAlive"];
-  // cookie Cookie contains stored HTTP cookies previously sent by the server with the Set-Cookie header
-  cookie = 12 [(gogoproto.enumvalue_customname) = "Cookie"];
-  // set_cookie Set-Cookie send cookies from the server to the user-agent
-  set_cookie = 13 [(gogoproto.enumvalue_customname) = "SetCookie"];
-  // access_control_allow_origin Access-Control-Allow-Origin indicates whether the response can be shared
-  access_control_allow_origin = 14 [(gogoproto.enumvalue_customname) = "AccessControlAllowOrigin"];
-  // server Server
-  server = 15 [(gogoproto.enumvalue_customname) = "Server"];
-  // auth_type Auth-Type
-  auth_type = 16 [(gogoproto.enumvalue_customname) = "AuthType"];
-  // accept Accept
-  accept = 17 [(gogoproto.enumvalue_customname) = "Accept"];
-  // request_method Request-Method; "GET"
-  request_method = 18 [(gogoproto.enumvalue_customname) = "RequestMethod"];
-  // http_host Http-Host; "example.com"
-  http_host = 19 [(gogoproto.enumvalue_customname) = "HttpHost"];
-  // path_info Path-Info; "/foo/bar"
-  path_info = 20 [(gogoproto.enumvalue_customname) = "PathInfo"];
-  // query_string Query-String; "var1=value1&var2=with%20percent%20encoding"
-  query_string = 21 [(gogoproto.enumvalue_customname) = "QueryString"];
-  // remote_addr Remote-Addr
-  remote_addr = 22 [(gogoproto.enumvalue_customname) = "RemoteAddr"];
-  // server_port ServerPort; "80"
-  server_port = 23 [(gogoproto.enumvalue_customname) = "ServerPort"];
-  // status Accept-Push-Policy
-  accept_push_policy = 24 [(gogoproto.enumvalue_customname) = "AcceptPushPolicy"];
-  // accept_signature Accept-Signature indicates the intention to take advantage of
-  // any available signatures and to indicate what kinds of signatures it supports
-  accept_signature = 25 [(gogoproto.enumvalue_customname) = "AcceptSignature"];
-}
-
-message HeaderItem {
-  HeaderOption header_type = 1;
-  string Value = 2;
-}
-
-message RequestQueryParam {
-  string key = 1;
-  string value = 2;
-}
-
-message HttpRequest {
-  repeated HeaderItem header = 1 [(gogoproto.nullable) = false];
-	repeated RequestQueryParam query_params = 2 [(gogoproto.nullable) = false];
-}
-
 // QueryHttpGetRequest is the request type for the
 // Query/HttpGet RPC method.
 message QueryHttpRequestGet {
   bytes http_request = 1;
 }
 
-message HttpResponse {
-  repeated HeaderItem header = 1 [(gogoproto.nullable) = false];
-  bytes content = 2;
-}
-
 // QueryHttpResponseGet is the response type for the
 // Query/HttpGet RPC method.
 message QueryHttpResponseGet {
-  HttpResponse data = 1;
+  // HttpResponse data = 1;
+  bytes data = 1;
 }
 
 // QueryParamsRequest is request type for the Query/Params RPC method.
