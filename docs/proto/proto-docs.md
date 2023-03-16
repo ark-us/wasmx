@@ -11,18 +11,14 @@
     - [GenesisState](#wasmx.websrv.GenesisState)
   
 - [wasmx/websrv/query.proto](#wasmx/websrv/query.proto)
-    - [HttpRequestGet](#wasmx.websrv.HttpRequestGet)
-    - [HttpRequestGetResponse](#wasmx.websrv.HttpRequestGetResponse)
     - [QueryContractByRouteRequest](#wasmx.websrv.QueryContractByRouteRequest)
     - [QueryContractByRouteResponse](#wasmx.websrv.QueryContractByRouteResponse)
-    - [QueryHttpGetRequest](#wasmx.websrv.QueryHttpGetRequest)
-    - [QueryHttpGetResponse](#wasmx.websrv.QueryHttpGetResponse)
+    - [QueryHttpRequestGet](#wasmx.websrv.QueryHttpRequestGet)
+    - [QueryHttpResponseGet](#wasmx.websrv.QueryHttpResponseGet)
     - [QueryParamsRequest](#wasmx.websrv.QueryParamsRequest)
     - [QueryParamsResponse](#wasmx.websrv.QueryParamsResponse)
     - [QueryRouteByContractRequest](#wasmx.websrv.QueryRouteByContractRequest)
     - [QueryRouteByContractResponse](#wasmx.websrv.QueryRouteByContractResponse)
-    - [RequestParam](#wasmx.websrv.RequestParam)
-    - [RequestUrl](#wasmx.websrv.RequestUrl)
   
     - [Query](#wasmx.websrv.Query)
   
@@ -100,37 +96,6 @@ GenesisState defines the websrv module's genesis state.
 
 
 
-<a name="wasmx.websrv.HttpRequestGet"></a>
-
-### HttpRequestGet
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `url` | [RequestUrl](#wasmx.websrv.RequestUrl) |  |  |
-
-
-
-
-
-
-<a name="wasmx.websrv.HttpRequestGetResponse"></a>
-
-### HttpRequestGetResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `content` | [bytes](#bytes) |  | The http get response |
-| `content_type` | [string](#string) |  | Content-Type |
-
-
-
-
-
-
 <a name="wasmx.websrv.QueryContractByRouteRequest"></a>
 
 ### QueryContractByRouteRequest
@@ -163,9 +128,9 @@ Query/ContractByRoute RPC method.
 
 
 
-<a name="wasmx.websrv.QueryHttpGetRequest"></a>
+<a name="wasmx.websrv.QueryHttpRequestGet"></a>
 
-### QueryHttpGetRequest
+### QueryHttpRequestGet
 QueryHttpGetRequest is the request type for the
 Query/HttpGet RPC method.
 
@@ -179,16 +144,16 @@ Query/HttpGet RPC method.
 
 
 
-<a name="wasmx.websrv.QueryHttpGetResponse"></a>
+<a name="wasmx.websrv.QueryHttpResponseGet"></a>
 
-### QueryHttpGetResponse
-QueryHttpGetResponse is the response type for the
+### QueryHttpResponseGet
+QueryHttpResponseGet is the response type for the
 Query/HttpGet RPC method.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `data` | [HttpRequestGetResponse](#wasmx.websrv.HttpRequestGetResponse) |  |  |
+| `data` | [bytes](#bytes) |  | HttpResponse data = 1; |
 
 
 
@@ -251,38 +216,6 @@ Query/RouteByContract RPC method.
 
 
 
-
-<a name="wasmx.websrv.RequestParam"></a>
-
-### RequestParam
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `key` | [string](#string) |  |  |
-| `value` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="wasmx.websrv.RequestUrl"></a>
-
-### RequestUrl
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `Path` | [string](#string) |  |  |
-| `params` | [RequestParam](#wasmx.websrv.RequestParam) | repeated |  |
-
-
-
-
-
  <!-- end messages -->
 
  <!-- end enums -->
@@ -297,7 +230,7 @@ Query defines the gRPC querier service.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `HttpGet` | [QueryHttpGetRequest](#wasmx.websrv.QueryHttpGetRequest) | [QueryHttpGetResponse](#wasmx.websrv.QueryHttpGetResponse) | HttpGet makes a get request to the webserver | GET|/wasmx/websrv/v1/get/{http_request}|
+| `HttpGet` | [QueryHttpRequestGet](#wasmx.websrv.QueryHttpRequestGet) | [QueryHttpResponseGet](#wasmx.websrv.QueryHttpResponseGet) | HttpGet makes a get request to the webserver | GET|/wasmx/websrv/v1/get/{http_request}|
 | `ContractByRoute` | [QueryContractByRouteRequest](#wasmx.websrv.QueryContractByRouteRequest) | [QueryContractByRouteResponse](#wasmx.websrv.QueryContractByRouteResponse) | ContractByRoute gets the contract controlling a given route | GET|/wasmx/websrv/v1/route/{path}|
 | `RouteByContract` | [QueryRouteByContractRequest](#wasmx.websrv.QueryRouteByContractRequest) | [QueryRouteByContractResponse](#wasmx.websrv.QueryRouteByContractResponse) | RouteByContract gets the route controlled by a given contract | GET|/wasmx/websrv/v1/contract/{contract_address}|
 | `Params` | [QueryParamsRequest](#wasmx.websrv.QueryParamsRequest) | [QueryParamsResponse](#wasmx.websrv.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/wasmx/websrv/v1/params|

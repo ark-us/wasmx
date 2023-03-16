@@ -21,10 +21,15 @@ func (k Keeper) GetMostSpecificRouteToContract(ctx sdk.Context, route string) sd
 			return contractAddress
 		}
 		parts = parts[:len(parts)-1]
-		if len(parts) < 1 {
+		partlen := len(parts)
+		if partlen < 1 {
 			break
 		}
-		route = strings.Join(parts, "/")
+		if partlen > 1 {
+			route = strings.Join(parts, "/")
+		} else {
+			route = "/"
+		}
 	}
 	return nil
 }

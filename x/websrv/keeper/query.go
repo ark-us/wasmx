@@ -43,25 +43,35 @@ func (k Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContra
 	}, nil
 }
 
-func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpGetRequest) (*types.QueryHttpGetResponse, error) {
+func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*types.QueryHttpResponseGet, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	var request types.HttpRequestGet
-	k.cdc.Unmarshal(req.HttpRequest, &request)
+	var request types.HttpRequest
+	// err := k.cdc.Unmarshal(req.HttpRequest, &request)
+	err := json.Unmarshal(req.HttpRequest, &request)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "could not unmarshal HttpRequest")
+	}
 
 	rsp, err := k.HttpGetInternal(sdk.UnwrapSDKContext(c), request)
 	if err != nil {
-		return nil, err
+		return nil, sdkerrors.Wrapf(err, "http get failed")
 	}
-	return &types.QueryHttpGetResponse{Data: rsp}, nil
+	rspbz, err := json.Marshal(rsp)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "could not marshal HttpResponse")
+	}
+	return &types.QueryHttpResponseGet{Data: rspbz}, nil
 }
 
-func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequestGet) (*types.HttpRequestGetResponse, error) {
-	contractAddress := k.GetMostSpecificRouteToContract(ctx, req.Url.Path)
+func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.HttpResponse, error) {
+	headerMap := k.headersToMap(req)
+	path := headerMap[types.Path_Info]
+	contractAddress := k.GetMostSpecificRouteToContract(ctx, path)
 	if contractAddress == nil {
-		return nil, sdkerrors.Wrapf(types.ErrRouteNotFound, "request path %s", req.Url.Path)
+		return nil, sdkerrors.Wrapf(types.ErrRouteNotFound, "request path %s", path)
 	}
 	msg, err := types.RequestGetEncodeAbi(req)
 	if err != nil {
@@ -83,5 +93,17 @@ func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequestGet) (*typ
 		return nil, sdkerrors.Wrapf(err, "cannot unmarshal WasmxQueryResponse")
 	}
 
-	return types.ResponseGetDecodeAbi(contractResponse.Data)
+	resp, err := types.ResponseGetDecodeAbi(contractResponse.Data)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "cannot abi decode WasmxQueryResponse")
+	}
+	return resp, nil
+}
+
+func (k Keeper) headersToMap(req types.HttpRequest) map[uint8]string {
+	var headerMap = map[uint8]string{}
+	for _, header := range req.Header {
+		headerMap[header.HeaderType] = header.Value
+	}
+	return headerMap
 }

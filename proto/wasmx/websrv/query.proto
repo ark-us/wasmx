@@ -11,8 +11,8 @@ option go_package = "wasmx/x/websrv/types";
 // Query defines the gRPC querier service.
 service Query {
   // HttpGet makes a get request to the webserver
-  rpc HttpGet(QueryHttpGetRequest)
-      returns (QueryHttpGetResponse) {
+  rpc HttpGet(QueryHttpRequestGet)
+      returns (QueryHttpResponseGet) {
     option (google.api.http).get = "/wasmx/websrv/v1/get/{http_request}";
   }
   // ContractByRoute gets the contract controlling a given route
@@ -55,37 +55,17 @@ message QueryRouteByContractResponse {
   string path = 1;
 }
 
-message RequestParam {
-  string key = 1;
-  string value = 2;
-}
-
-message RequestUrl {
-  string Path = 1;
-  repeated RequestParam params = 2 [(gogoproto.nullable) = false];
-}
-
-message HttpRequestGet {
-	RequestUrl url = 1;
-}
-
 // QueryHttpGetRequest is the request type for the
 // Query/HttpGet RPC method.
-message QueryHttpGetRequest {
+message QueryHttpRequestGet {
   bytes http_request = 1;
 }
 
-message HttpRequestGetResponse {
-	// The http get response
-  bytes content = 1;
-  // Content-Type
-  string content_type = 2;
-}
-
-// QueryHttpGetResponse is the response type for the
+// QueryHttpResponseGet is the response type for the
 // Query/HttpGet RPC method.
-message QueryHttpGetResponse {
-  HttpRequestGetResponse data = 1;
+message QueryHttpResponseGet {
+  // HttpResponse data = 1;
+  bytes data = 1;
 }
 
 // QueryParamsRequest is request type for the Query/Params RPC method.
