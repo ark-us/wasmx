@@ -66,7 +66,12 @@ func DefaultSystemContracts() SystemContracts {
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000020",
-			Label:       "curve384",
+			Label:       "secp384r1",
+			InitMessage: initMsg,
+		},
+		{
+			Address:     "0x0000000000000000000000000000000000000021",
+			Label:       "secp384r1_registry",
 			InitMessage: initMsg,
 		},
 	}

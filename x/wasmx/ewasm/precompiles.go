@@ -32,8 +32,11 @@ var (
 	//go:embed contracts/precompiles/09.blake2f.e.wasm
 	blake2f []byte
 
-	//go:embed contracts/precompiles/20.curve384.wasm
-	curve384 []byte
+	//go:embed contracts/precompiles/20.secp384r1.wasm
+	secp384r1 []byte
+
+	//go:embed contracts/precompiles/21.secp384r1_registry.wasm
+	secp384r1_registry []byte
 )
 
 func GetPrecompileByLabel(label string) []byte {
@@ -57,8 +60,10 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = ecpairings
 	case "blake2f":
 		wasmbin = blake2f
-	case "curve384":
-		wasmbin = curve384
+	case "secp384r1":
+		wasmbin = secp384r1
+	case "secp384r1_registry":
+		wasmbin = secp384r1_registry
 	}
 	return wasmbin
 }
