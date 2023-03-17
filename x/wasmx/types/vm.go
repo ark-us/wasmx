@@ -65,6 +65,7 @@ type WasmxCosmosHandler interface {
 	GetBlockHash(blockNumber uint64) Checksum
 	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error)
 	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int) (sdk.AccAddress, error)
+	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 }
 
 // LibwasmvmVersion returns the version of the loaded library

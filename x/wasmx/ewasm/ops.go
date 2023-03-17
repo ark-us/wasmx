@@ -318,8 +318,17 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 
 	_, ok := ctx.ContractRouter[addr.String()]
 	if !ok {
-		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		ctx.ContractRouter[addr.String()] = *depContext
 	}
 
 	callContext := types.MessageInfo{
@@ -393,8 +402,17 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 
 	_, ok := ctx.ContractRouter[addr.String()]
 	if !ok {
-		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		ctx.ContractRouter[addr.String()] = *depContext
 	}
 
 	// keep same origin, change caller, funds
@@ -467,8 +485,17 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	_, ok := ctx.ContractRouter[addr.String()]
 	if !ok {
-		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		ctx.ContractRouter[addr.String()] = *depContext
 	}
 
 	// keep same origin, sender, funds
@@ -542,8 +569,17 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	_, ok := ctx.ContractRouter[addr.String()]
 	if !ok {
-		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+		ctx.ContractRouter[addr.String()] = *depContext
 	}
 
 	callContext := types.MessageInfo{

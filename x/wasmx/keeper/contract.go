@@ -57,6 +57,25 @@ func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []
 	return prefixStore.Get(key)
 }
 
+func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
+	_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
+	if err != nil {
+		return types.ContractDependency{}, err
+	}
+	var sdeps []string
+	for _, dep := range codeInfo.Deps {
+		if dep[0:2] != "0x" {
+			sdeps = append(sdeps, dep)
+		}
+	}
+	return types.ContractDependency{
+		Address:    addr,
+		StoreKey:   prefixStoreKey,
+		FilePath:   k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
+		SystemDeps: sdeps,
+	}, nil
+}
+
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
@@ -318,22 +337,11 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 			continue
 		}
 		addr := wasmeth.AccAddressFromHex(hexaddr)
-		_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
+		contractDep, err := k.GetContractDependency(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
-		var sdeps []string
-		for _, dep := range codeInfo.Deps {
-			if dep[0:2] != "0x" {
-				sdeps = append(sdeps, dep)
-			}
-		}
-		contractDeps = append(contractDeps, types.ContractDependency{
-			Address:    addr,
-			StoreKey:   prefixStoreKey,
-			FilePath:   k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
-			SystemDeps: sdeps,
-		})
+		contractDeps = append(contractDeps, contractDep)
 	}
 
 	// TODO panic if coin is not the correct denomination
@@ -453,22 +461,11 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 			continue
 		}
 		addr := wasmeth.AccAddressFromHex(hexaddr)
-		_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
+		contractDep, err := k.GetContractDependency(ctx, addr)
 		if err != nil {
 			return nil, err
 		}
-		var sdeps []string
-		for _, dep := range codeInfo.Deps {
-			if dep[0:2] != "0x" {
-				sdeps = append(sdeps, dep)
-			}
-		}
-		contractDeps = append(contractDeps, types.ContractDependency{
-			Address:    addr,
-			StoreKey:   prefixStoreKey,
-			FilePath:   k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash),
-			SystemDeps: sdeps,
-		})
+		contractDeps = append(contractDeps, contractDep)
 	}
 
 	// add more funds

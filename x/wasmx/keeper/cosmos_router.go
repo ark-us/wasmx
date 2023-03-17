@@ -58,6 +58,9 @@ func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, init
 	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, label, funds, salt, false)
 	return address, err
 }
+func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
+	return h.Keeper.GetContractDependency(ctx, addr)
+}
 
 func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
