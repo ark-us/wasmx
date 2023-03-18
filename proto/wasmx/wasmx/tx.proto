@@ -24,6 +24,9 @@ service Msg {
     rpc ExecuteWithOriginContract(MsgExecuteWithOriginContract) returns (MsgExecuteContractResponse);
     // ExecuteDelegate submits the given message data to a smart contract
     rpc ExecuteDelegateContract(MsgExecuteDelegateContract) returns (MsgExecuteDelegateContractResponse);
+
+    // CompileContract submits a smart contract to be precompiled
+    rpc CompileContract(MsgCompileContract) returns (MsgCompileContractResponse);
 }
 
 // MsgStoreCode submit Wasm code to the system
@@ -166,3 +169,12 @@ message MsgExecuteDelegateContractResponse {
     // Data contains bytes to returned from the contract
     bytes data = 1;
 }
+
+message MsgCompileContract {
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // Contract is the address of the smart contract
+    uint64 codeId = 2;
+}
+
+message MsgCompileContractResponse {}

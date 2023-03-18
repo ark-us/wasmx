@@ -38,26 +38,31 @@ func EwasmBuildContractAddressClassic(creator sdk.AccAddress, nonce uint64) sdk.
 	return sdk.AccAddress(contractAddr.Bytes())
 }
 
+// EwasmBuildContractAddressPredictable builds an sdk account address for a contract.
+func EwasmBuildContractAddressPredictable(creator sdk.AccAddress, salt []byte, checksum []byte) sdk.AccAddress {
+	if len(checksum) != 32 {
+		panic("invalid checksum")
+	}
+	if err := sdk.VerifyAddressFormat(creator); err != nil {
+		panic(fmt.Sprintf("creator: %s", err))
+	}
+
+	if len(salt) != 32 {
+		panic(fmt.Sprintf("salt is not 32 bytes"))
+	}
+
+	creatorAddress := common.BytesToAddress(creator.Bytes())
+
+	var salt32 [32]byte
+	copy(salt32[:], salt)
+
+	contractAddr := crypto.CreateAddress2(creatorAddress, salt32, checksum)
+	return sdk.AccAddress(contractAddr.Bytes())
+}
+
 // EwasmPredictableAddressGenerator generates a predictable contract address
 func (k Keeper) EwasmPredictableAddressGenerator(creator sdk.AccAddress, salt []byte, _ []byte, _ bool) AddressGenerator {
 	return func(ctx sdk.Context, _ uint64, checksum []byte) sdk.AccAddress {
-		if len(checksum) != 32 {
-			panic("invalid checksum")
-		}
-		if err := sdk.VerifyAddressFormat(creator); err != nil {
-			panic(fmt.Sprintf("creator: %s", err))
-		}
-
-		if len(salt) != 32 {
-			panic(fmt.Sprintf("salt is not 32 bytes"))
-		}
-
-		creatorAddress := common.BytesToAddress(creator.Bytes())
-
-		var salt32 [32]byte
-		copy(salt32[:], salt)
-
-		contractAddr := crypto.CreateAddress2(creatorAddress, salt32, checksum)
-		return sdk.AccAddress(contractAddr.Bytes())
+		return EwasmBuildContractAddressPredictable(creator, salt, checksum)
 	}
 }

@@ -70,12 +70,12 @@ type WasmxCosmosHandler interface {
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 }
 
-// LibwasmvmVersion returns the version of the loaded library
+// LibWasmEdgeVersion returns the version of the loaded wasmedge library
 // at runtime. This can be used for debugging to verify the loaded version
 // matches the expected version.
 //
 // When cgo is disabled at build time, this returns an error at runtime.
-func LibWasmxVersion() (string, error) {
+func LibWasmEdgeVersion() (string, error) {
 	// TODO
-	return "", nil
+	return "Not implemented", nil
 }

@@ -346,6 +346,7 @@ func (k Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath strin
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypePinCode,
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeId, 10)),
+		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(codeInfo.CodeHash)),
 	))
 	return nil
 }
