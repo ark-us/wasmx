@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -41,12 +42,36 @@ func (k Keeper) Route(w http.ResponseWriter, r *http.Request) {
 
 func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	// TODO query params
-	// TODO header items
 	params := []types.RequestQueryParam{}
 	header := []types.HeaderItem{}
 
-	// r.URL.Path,
-	// r.Header
+	header = append(header, types.HeaderItem{
+		HeaderType: types.Query_String,
+		Value:      r.URL.RawQuery,
+	})
+	header = append(header, types.HeaderItem{
+		HeaderType: types.Path_Info,
+		Value:      r.URL.Path,
+	})
+
+	for key, values := range r.Header {
+		headerType, ok := types.HeaderStringToType[key]
+		if ok {
+			header = append(header, types.HeaderItem{
+				HeaderType: headerType,
+				Value:      strings.Join(values, ","),
+			})
+		}
+	}
+
+	paramPairs := strings.Split(r.URL.RawQuery, "&")
+	for _, pair := range paramPairs {
+		paramArr := strings.Split(pair, "=")
+		params = append(params, types.RequestQueryParam{
+			Key:   paramArr[0],
+			Value: paramArr[1],
+		})
+	}
 
 	req := types.HttpRequest{
 		Header:      header,
@@ -56,8 +81,9 @@ func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error)
 	if err != nil {
 		return nil, sdkerrors.Wrapf(err, "RouteGET failed")
 	}
-	// TODO set header
-	// w.Header().Set("Content-Type", contentType)
+	for _, header := range response.Header {
+		w.Header().Set(types.HeaderTypeToString[header.HeaderType], header.Value)
+	}
 	return []byte(response.Content), nil
 }
 

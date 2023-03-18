@@ -12,18 +12,6 @@ var ModuleAddress = sdk.AccAddress([]byte(ModuleName))
 
 var HttpRequestGetAbiStr = `[{"inputs":[{"components":[{"components":[{"internalType":"enum HeaderOption","name":"HeaderType","type":"uint8"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct HeaderItem[]","name":"Header","type":"tuple[]"},{"components":[{"internalType":"string","name":"Key","type":"string"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct RequestQueryParam[]","name":"QueryParams","type":"tuple[]"}],"internalType":"struct HttpRequest","name":"request","type":"tuple"}],"name":"get","outputs":[{"components":[{"components":[{"internalType":"enum HeaderOption","name":"HeaderType","type":"uint8"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct HeaderItem[]","name":"Header","type":"tuple[]"},{"internalType":"string","name":"Content","type":"string"}],"internalType":"struct HttpResponse","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"components":[{"internalType":"enum HeaderOption","name":"HeaderType","type":"uint8"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct HeaderItem[]","name":"header","type":"tuple[]"},{"internalType":"enum HeaderOption","name":"headerType","type":"uint8"}],"name":"getHeaderValue","outputs":[{"internalType":"string","name":"value","type":"string"}],"stateMutability":"pure","type":"function"},{"inputs":[{"components":[{"components":[{"internalType":"enum HeaderOption","name":"HeaderType","type":"uint8"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct HeaderItem[]","name":"Header","type":"tuple[]"},{"components":[{"internalType":"string","name":"Key","type":"string"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct RequestQueryParam[]","name":"QueryParams","type":"tuple[]"}],"internalType":"struct HttpRequest","name":"request","type":"tuple"}],"name":"post","outputs":[{"components":[{"components":[{"internalType":"enum HeaderOption","name":"HeaderType","type":"uint8"},{"internalType":"string","name":"Value","type":"string"}],"internalType":"struct HeaderItem[]","name":"Header","type":"tuple[]"},{"internalType":"string","name":"Content","type":"string"}],"internalType":"struct HttpResponse","name":"","type":"tuple"}],"stateMutability":"payable","type":"function"}]`
 
-var HttpRequestGetAbi aabi.ABI
-
-func init() {
-	abi, err := aabi.JSON(strings.NewReader(HttpRequestGetAbiStr))
-	if err != nil {
-		panic(err)
-	}
-	HttpRequestGetAbi = abi
-}
-
-// type HeaderOption uint8
-
 const (
 	Undefined                   uint8 = iota // 0
 	Proto                                    // 1 // "HTTP/1.1"
@@ -57,6 +45,53 @@ const (
 	Accept_Signature                         // 29 // accept_signature Accept-Signature indicates the intention to take advantage of
 	// any available signatures and to indicate what kinds of signatures it supports
 )
+
+var HeaderTypeToString = map[uint8]string{
+	Undefined:                   "",
+	Proto:                       "Proto",
+	ProtoMajor:                  "Proto-Major",
+	ProtoMinor:                  "Proto-Minor",
+	Request_Method:              "Request-Method",
+	Http_Host:                   "Http-Host",
+	Path_Info:                   "Path-Info",
+	Query_String:                "Query-String",
+	Location:                    "Location",
+	Content_Type:                "Content-Type",
+	Content_Encoding:            "Content-Encoding",
+	Content_Language:            "Content-Language",
+	Content_Length:              "Content-Length",
+	Content_Location:            "Content-Location",
+	Status:                      "Status",
+	StatusCode:                  "Status-Code",
+	WWW_Authenticate:            "WWW-Authenticate",
+	Authorization:               "Authorization",
+	Auth_Type:                   "Auth-Type",
+	Accept:                      "Accept",
+	Connection:                  "Connection",
+	Keep_Alive:                  "Keep-Alive",
+	Cookie:                      "Cookie",
+	Set_Cookie:                  "Set-Cookie",
+	Access_Control_Allow_Origin: "Access-Control-Allow-Origin",
+	Server:                      "Server",
+	Remote_Addr:                 "Remote-Addr",
+	Server_Port:                 "Server-Port",
+	Accept_Push_Policy:          "Accept-Push-Policy",
+	Accept_Signature:            "Accept-Signature",
+}
+
+var HeaderStringToType = map[string]uint8{}
+
+var HttpRequestGetAbi aabi.ABI
+
+func init() {
+	abi, err := aabi.JSON(strings.NewReader(HttpRequestGetAbiStr))
+	if err != nil {
+		panic(err)
+	}
+	HttpRequestGetAbi = abi
+
+	HeaderStringToType = reverseMap(HeaderTypeToString)
+}
 
 type RequestQueryParam struct {
 	Key   string `json:"Key"`
@@ -103,14 +138,13 @@ func ResponseGetDecodeAbi(data []byte) (*HttpResponse, error) {
 	return &tuple.Message, nil
 }
 
-// func ResponseGetDecodeAbi(data []byte) (string, error) {
-// 	result, err := HttpRequestGetAbi.Methods["getStr"].Outputs.Unpack(data)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	content := result[0].(string)
-// 	return content, nil
-// }
+func reverseMap(m map[uint8]string) map[string]uint8 {
+	revMap := make(map[string]uint8)
+	for k, v := range m {
+		revMap[v] = k
+	}
+	return revMap
+}
 
 var CGIsol = `// SPDX-License-Identifier: MIT
 
