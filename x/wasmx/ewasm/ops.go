@@ -251,7 +251,9 @@ func getBlockGasLimit(context interface{}, callframe *wasmedge.CallingFrame, par
 func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(ctx.Env.Block.Time)
+	// EVM time is in seconds since unix epoch
+	// ctx.Env.Block.Time is in nanoseconds
+	returns[0] = int64(ctx.Env.Block.Time / 1_000_000)
 	return returns, wasmedge.Result_Success
 }
 

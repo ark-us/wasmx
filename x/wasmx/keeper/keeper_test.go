@@ -132,6 +132,10 @@ func (suite *KeeperTestSuite) Commit() {
 	suite.coordinator.CommitBlock(suite.chainA, suite.chainB)
 }
 
+func (suite *KeeperTestSuite) CommitNBlocks(chain *ibcgotesting.TestChain, n uint64) {
+	suite.coordinator.CommitNBlocks(chain, n)
+}
+
 func (s *KeeperTestSuite) GetRandomAccount() simulation.Account {
 	pk := ed25519.GenPrivKey()
 	privKey := secp256k1.GenPrivKeyFromSecret(pk.GetKey().Seed())

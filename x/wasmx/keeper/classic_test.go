@@ -4,8 +4,10 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -165,8 +167,10 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	gaspricehex := "dd5d9040"
 
 	// "9cb9a1ab": "number_()",
+	numberhex := "9cb9a1ab"
 	// "287c71e8": "origin_()",
 	// "24b60399": "timestamp_()",
+	timestamphex := "24b60399"
 
 	// "b7af15de": "calldatacopy_(uint256,uint256,uint256)",
 	// "7445bcc5": "codecopy_(uint256,uint256,uint256)",
@@ -306,6 +310,21 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(callvalue)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(99999999))}, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000005f5e0ff")
+
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(numberhex)}, nil, nil)
+	blockno := new(big.Int)
+	qresbz, err := hex.DecodeString(qres)
+	s.Require().NoError(err)
+	blockno.SetBytes(qresbz)
+	s.Require().Equal(appA.App.LastBlockHeight(), blockno.Int64())
+
+	currentTime := time.Now()
+	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(timestamphex)}, nil, nil)
+	timestamp := new(big.Int)
+	qresbz, err = hex.DecodeString(qres)
+	s.Require().NoError(err)
+	blockno.SetBytes(qresbz)
+	s.Require().Equal(currentTime.Unix(), timestamp.Int64())
 
 	calld = coinbasehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
