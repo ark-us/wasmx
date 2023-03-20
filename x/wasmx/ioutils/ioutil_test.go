@@ -15,10 +15,10 @@ import (
 )
 
 func TestUncompress(t *testing.T) {
-	wasmRaw, err := os.ReadFile("../keeper/testdata/hackatom.wasm")
+	wasmRaw, err := os.ReadFile("../keeper/testdata/classic/call.wasm")
 	require.NoError(t, err)
 
-	wasmGzipped, err := os.ReadFile("../keeper/testdata/hackatom.wasm.gzip")
+	wasmGzipped, err := os.ReadFile("../keeper/testdata/classic/call.wasm.gz")
 	require.NoError(t, err)
 
 	const maxSize = 400_000

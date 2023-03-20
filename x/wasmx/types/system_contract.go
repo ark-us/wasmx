@@ -84,7 +84,7 @@ func (p SystemContract) Validate() error {
 	if err := validateString(p.Address); err != nil {
 		return err
 	}
-	if err := validateBytes(p.InitMessage); err != nil {
+	if err := p.InitMessage.ValidateBasic(); err != nil {
 		return err
 	}
 	if p.InitMessage == nil {
