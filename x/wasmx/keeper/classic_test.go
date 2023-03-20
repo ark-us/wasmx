@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -318,13 +317,14 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	blockno.SetBytes(qresbz)
 	s.Require().Equal(appA.App.LastBlockHeight(), blockno.Int64())
 
-	currentTime := time.Now()
+	currentTime := s.Coordinator().CurrentTime.Unix()
+	s.Commit()
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(timestamphex)}, nil, nil)
 	timestamp := new(big.Int)
 	qresbz, err = hex.DecodeString(qres)
 	s.Require().NoError(err)
-	blockno.SetBytes(qresbz)
-	s.Require().Equal(currentTime.Unix(), timestamp.Int64())
+	timestamp.SetBytes(qresbz)
+	s.Require().Equal(currentTime, timestamp.Int64())
 
 	calld = coinbasehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)

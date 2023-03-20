@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 	"wasmx/x/wasmx/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -253,7 +254,8 @@ func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, pa
 	returns := make([]interface{}, 1)
 	// EVM time is in seconds since unix epoch
 	// ctx.Env.Block.Time is in nanoseconds
-	returns[0] = int64(ctx.Env.Block.Time / 1_000_000)
+	timestamp := time.Unix(0, int64(ctx.Env.Block.Time))
+	returns[0] = timestamp.Unix()
 	return returns, wasmedge.Result_Success
 }
 
