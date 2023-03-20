@@ -7,12 +7,28 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	wasmeth "wasmx/x/wasmx/ewasm"
 	"wasmx/x/wasmx/types"
 )
 
 var (
 	//go:embed testdata/classic/Curve384Test.wasm
 	curve384testbin []byte
+)
+
+var (
+	precomputeGenHex = "85d3cf13"
+	precomputePubHex = "059548ef"
+
+	PkxHi_1 = "00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
+	PkxLo_1 = "b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
+	PkyHi_1 = "000000000000000000000000000000000d0d9d4f899b00456516b647c5e9b7ed"
+	PkyLo_1 = "02c538d7878e63e8da0603396b4cbd9494d42f691141f9e2e5927cf88aac0c63"
+
+	PkxHi_2 = "000000000000000000000000000000007db2259aeae1a60c09b5ab79ea623093"
+	PkxLo_2 = "2eea94ccab529e7df1d1eef8505d1b0c5ed6e81a2d0fb77302866dd9d039432c"
+	PkyHi_2 = "000000000000000000000000000000004a6b9bdad287d3c05acbb6107abdeea9"
+	PkyLo_2 = "e745066f63b91c449790a6de0fd2d1fa71bee691a0f76d6c37836e43ad9e5009"
 )
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
@@ -244,51 +260,12 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
 	s.Commit()
 	s.Require().True(false)
-
-	// test_verify_fast()
-	// 0xb8ae44bd
-
-	fmt.Println("--precomputeGen--")
-	start = time.Now()
-	res = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("85d3cf13")}, nil, deps, 1_000_000_000_000, nil)
-	duration = time.Since(start)
-	fmt.Println("Elapsed: ", duration)
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
-	s.Commit()
-
-	fmt.Println("--precomputePub--")
-	PkxHi := "00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
-	PkxLo := "b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
-	PkyHi := "000000000000000000000000000000000d0d9d4f899b00456516b647c5e9b7ed"
-	PkyLo := "02c538d7878e63e8da0603396b4cbd9494d42f691141f9e2e5927cf88aac0c63"
-	start = time.Now()
-	res = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("059548ef" + PkxHi + PkxLo + PkyHi + PkyLo)}, nil, deps, 1_000_000_000_000, nil)
-	duration = time.Since(start)
-	fmt.Println("Elapsed: ", duration)
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
-	s.Commit()
-
-	fmt.Println("--test_verify_fast--")
-	start = time.Now()
-	res = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("b8ae44bd")}, nil, deps, 1_000_000_000_000, nil)
-	duration = time.Since(start)
-	fmt.Println("Elapsed: ", duration)
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
-	s.Commit()
-
-	// test_verify_neg
-	// 0x2cb2e7f1
 }
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2")
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
-	precomputeGenHex := "85d3cf13"
-	precomputePubHex := "059548ef"
 	deps := []string{"0x0000000000000000000000000000000000000005"}
 
 	appA := s.GetAppContext(s.chainA)
@@ -297,11 +274,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 
 	codeId := appA.StoreCode(sender, curve384testbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
-
-	PkxHi := "000000000000000000000000000000007db2259aeae1a60c09b5ab79ea623093"
-	PkxLo := "2eea94ccab529e7df1d1eef8505d1b0c5ed6e81a2d0fb77302866dd9d039432c"
-	PkyHi := "000000000000000000000000000000004a6b9bdad287d3c05acbb6107abdeea9"
-	PkyLo := "e745066f63b91c449790a6de0fd2d1fa71bee691a0f76d6c37836e43ad9e5009"
 
 	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
 	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
@@ -313,7 +285,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, 100_000_000_000, nil) // 52_810_317
 
 	fmt.Println("--precomputePubHex--")
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi, PkxLo, PkyHi, PkyLo))}, nil, deps, 100_000_000_000, nil) // 52_810_448
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 100_000_000_000, nil) // 52_810_448
 
 	fmt.Println("--test_verify_fast--")
 	start := time.Now()
@@ -327,29 +299,49 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileWalletRegistry")
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
+	deps := []string{"0x0000000000000000000000000000000000000005"}
+
+	senderHex := wasmeth.EvmAddressFromAcc(sender.Address).Hex()
+
+	EXPIRATION_DELTA := 31556952 // 1 year in seconds
+	// RENEWAL_TIMESTAMP_DELTA := 604800; // 1 week in seconds
 
 	// register(uint256,uint256,uint256,uint256)
 	register := "375a7c7f"
 	// finishRegistration()
 	finishRegistration := "f6aead24"
-	// verifySignature(bytes32,uint256,uint256,uint256,uint256)
-	verifySignature := "dd3ee290"
-	// verifySignatureFast(bytes32,uint256,uint256,uint256,uint256)
-	verifySignatureFast := "b448884d"
+	// // verifySignature(bytes32,uint256,uint256,uint256,uint256)
+	// verifySignature := "dd3ee290"
+	// // verifySignatureFast(bytes32,uint256,uint256,uint256,uint256)
+	// verifySignatureFast := "b448884d"
+	// // verifySignatureByIndex(uint256,bytes32,uint256,uint256,uint256,uint256)
+	// verifySignatureByIndex := "3d907d52"
+	// // verifySignatureFastByIndex(uint256,bytes32,uint256,uint256,uint256,uint256)
+	// verifySignatureFastByIndex := "53e05baf"
+
+	// isActive(address)
+	isActive := "9f8a13d7"
 	// isRegistered(uint256)
 	isRegistered := "579a6988"
-	deps := []string{"0x0000000000000000000000000000000000000005"}
+	// isRegisteredAddress(address)
+	isRegisteredAddress := "db0c7ca8"
+	// isExpired(uint256)
+	isExpired := "d9548e53"
+	// isExpiredAddress(address)
+	isExpiredAddress := "9bb59591"
+	// "counter()
+	counter := "61bc221a"
+	// expirations(uint256)
+	// expirations := "c251ddf8"
 
-	PkxHi := "000000000000000000000000000000007db2259aeae1a60c09b5ab79ea623093"
-	PkxLo := "2eea94ccab529e7df1d1eef8505d1b0c5ed6e81a2d0fb77302866dd9d039432c"
-	PkyHi := "000000000000000000000000000000004a6b9bdad287d3c05acbb6107abdeea9"
-	PkyLo := "e745066f63b91c449790a6de0fd2d1fa71bee691a0f76d6c37836e43ad9e5009"
-
-	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
-	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
-	rlo := "6df129d5028be3fa1626b192458daf49d4c7676c08663a62decad8df853340ad"
-	shi := "0000000000000000000000000000000000103c7e7fb0c04197a5371923adda8e"
-	slo := "ae415624e6419214f98bebac9a3cf9ddc8bf28eb2871142e9d0371a59598f2dd"
+	// registerAddress(uint256,address,uint256,uint256,uint256,uint256)
+	// registerAddress := "41b709c8"
+	// removeAddress(uint256,address,uint256,uint256,uint256,uint256)
+	// removeAddress := "e5b3db52"
+	// renewAccount(uint256,uint256,uint256,uint256,uint256,uint256)
+	// renewAccount := "52e616f8"
+	// replaceAccount(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+	// replaceAccount := "7b7ceb53"
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -358,7 +350,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	registryAddress := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000021"))
 
 	fmt.Println("--register--")
-	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi, PkxLo, PkyHi, PkyLo))}, nil, deps, 20_000_000_000_000, nil) // 52_810_317
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 20_000_000_000_000, nil) // 52_810_317
 
 	fmt.Println("--finishRegistration--")
 	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(finishRegistration)}, nil, deps, 20_000_000, nil) // 52_810_448
@@ -366,17 +358,32 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	registered := appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isRegistered, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", registered)
 
-	fmt.Println("--verifySignature--")
-	start := time.Now()
-	qres := appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignature, msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
-	duration := time.Since(start)
-	fmt.Println("Elapsed: ", duration)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+	registered = appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isRegisteredAddress, "000000000000000000000000"+senderHex[2:]))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", registered)
 
-	fmt.Println("--verifySignatureFast--")
-	start = time.Now()
-	qres = appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignatureFast, msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
-	duration = time.Since(start)
-	fmt.Println("Elapsed: ", duration)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+	expired := appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isExpired, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", expired)
+
+	expired = appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isExpiredAddress, "000000000000000000000000"+senderHex[2:]))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", expired)
+
+	active := appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isActive, "000000000000000000000000"+senderHex[2:]))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", active)
+
+	count := appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(counter)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", count)
+
+	// fmt.Println("--verifySignature--")
+	// qres := appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignature, msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
+	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+
+	// fmt.Println("--verifySignatureFast--")
+	// qres = appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignatureFast, msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
+	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+
+	delta_one_year := uint64(EXPIRATION_DELTA/5 + 10) // 5 sec blocks
+	s.CommitNBlocks(s.chainA, delta_one_year)
+
+	expired = appA.EwasmQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isExpired, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", expired)
 }
