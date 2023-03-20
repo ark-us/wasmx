@@ -51,7 +51,7 @@ func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error)
 	})
 	header = append(header, types.HeaderItem{
 		HeaderType: types.Path_Info,
-		Value:      r.URL.Path,
+		Value:      strings.ToLower(r.URL.Path),
 	})
 
 	for key, values := range r.Header {
@@ -66,11 +66,16 @@ func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error)
 
 	paramPairs := strings.Split(r.URL.RawQuery, "&")
 	for _, pair := range paramPairs {
+		if len(pair) == 0 {
+			continue
+		}
 		paramArr := strings.Split(pair, "=")
-		params = append(params, types.RequestQueryParam{
-			Key:   paramArr[0],
-			Value: paramArr[1],
-		})
+		if len(paramArr) >= 2 {
+			params = append(params, types.RequestQueryParam{
+				Key:   paramArr[0],
+				Value: paramArr[1],
+			})
+		}
 	}
 
 	req := types.HttpRequest{
