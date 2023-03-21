@@ -110,6 +110,7 @@ import (
 	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
 	wasmxmoduletypes "wasmx/x/wasmx/types"
 	websrvmodule "wasmx/x/websrv"
+	websrvclient "wasmx/x/websrv/client"
 	websrvmodulekeeper "wasmx/x/websrv/keeper"
 	websrvmoduletypes "wasmx/x/websrv/types"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
@@ -128,6 +129,8 @@ func getGovProposalHandlers() []govclient.ProposalHandler {
 		upgradeclient.LegacyCancelProposalHandler,
 		ibcclientclient.UpdateClientProposalHandler,
 		ibcclientclient.UpgradeProposalHandler,
+		websrvclient.RegisterRouteProposalHandler,
+		websrvclient.DeregisterRouteProposalHandler,
 		// this line is used by starport scaffolding # stargate/app/govProposalHandler
 	)
 
@@ -485,7 +488,8 @@ func New(
 		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
 		AddRoute(distrtypes.RouterKey, distr.NewCommunityPoolSpendProposalHandler(app.DistrKeeper)).
 		AddRoute(upgradetypes.RouterKey, upgrade.NewSoftwareUpgradeProposalHandler(app.UpgradeKeeper)).
-		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.IBCKeeper.ClientKeeper))
+		AddRoute(ibcclienttypes.RouterKey, ibcclient.NewClientProposalHandler(app.IBCKeeper.ClientKeeper)).
+		AddRoute(websrvmoduletypes.RouterKey, websrvmodule.NewWebsrvProposalHandler(&app.WebsrvKeeper))
 	govConfig := govtypes.DefaultConfig()
 	app.GovKeeper = govkeeper.NewKeeper(
 		appCodec,

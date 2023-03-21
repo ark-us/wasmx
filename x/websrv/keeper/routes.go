@@ -42,6 +42,12 @@ func (k Keeper) RegisterRoute(ctx sdk.Context, route string, contractAddress sdk
 	k.SetRouteToContract(ctx, route, contractAddress)
 }
 
+func (k Keeper) DeregisterRoute(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
+	// If it was previously registered, remove that registration
+	k.DeleteContractToRoute(ctx, contractAddress)
+	k.DeleteRouteToContract(ctx, route)
+}
+
 func (k Keeper) GetRouteToContract(ctx sdk.Context, route string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)
 	addressbz := store.Get(types.GetRouteToContractKey(route))

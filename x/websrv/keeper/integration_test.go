@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
 
 	wasmeth "wasmx/x/wasmx/ewasm"
 	wasmxtypes "wasmx/x/wasmx/types"
@@ -22,22 +23,25 @@ var (
 func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	wasmbin := testserverwasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	valAccount := simulation.Account{
+		PrivKey: s.chainA.SenderPrivKey,
+		PubKey:  s.chainA.SenderPrivKey.PubKey(),
+		Address: s.chainA.SenderAccount.GetAddress(),
+	}
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 
-	res := appA.DeliverTx(sender, &types.MsgRegisterRoute{
-		Sender:          sender.Address.String(),
-		Path:            "/",
-		ContractAddress: contractAddress.String(),
-	})
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Commit()
+	// Register route proposal
+	registerRouteProposal := types.NewRegisterRouteProposal("Register /", "because", "/", contractAddress.String())
+	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
 
 	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/"}}}
 	response, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
@@ -46,13 +50,9 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	s.Require().Equal("text/html", response.Header[0].Value)
 	s.Require().Equal("Hello from contract. Path: /", string(response.Content))
 
-	res = appA.DeliverTx(sender, &types.MsgRegisterRoute{
-		Sender:          sender.Address.String(),
-		Path:            "/arg1/arg2",
-		ContractAddress: contractAddress.String(),
-	})
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Commit()
+	// Register route proposal
+	registerRouteProposal = types.NewRegisterRouteProposal("Register /arg1/arg2", "because", "/arg1/arg2", contractAddress.String())
+	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
 
 	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/arg1/arg2"}}}
 	response, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
@@ -72,10 +72,17 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 func (suite *KeeperTestSuite) TestWebServer() {
 	wasmbin := testserverwasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(2_000_000_000_000)
+	valAccount := simulation.Account{
+		PrivKey: s.chainA.SenderPrivKey,
+		PubKey:  s.chainA.SenderPrivKey.PubKey(),
+		Address: s.chainA.SenderAccount.GetAddress(),
+	}
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin)
@@ -87,13 +94,9 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	contractAddressRoot := appA.InstantiateCode(sender, codeIdRoot, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 	deps := []string{contractAddressHex}
 
-	res := appA.DeliverTx(sender, &types.MsgRegisterRoute{
-		Sender:          sender.Address.String(),
-		Path:            "/",
-		ContractAddress: contractAddressRoot.String(),
-	})
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Commit()
+	// Register route proposal
+	registerRouteProposal := types.NewRegisterRouteProposal("Register /", "because", "/", contractAddressRoot.String())
+	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
 
 	resp, err := appA.App.WebsrvKeeper.ContractByRoute(appA.Context(), &types.QueryContractByRouteRequest{Path: "/"})
 	s.Require().NoError(err)
