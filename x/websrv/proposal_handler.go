@@ -10,8 +10,8 @@ import (
 	"wasmx/x/websrv/types"
 )
 
-// NewQuasarProposalHandler creates a governance handler to manage new proposal types.
-func NewQuasarProposalHandler(k *keeper.Keeper) govv1beta1.Handler {
+// NewWebsrvProposalHandler creates a governance handler to manage new proposal types.
+func NewWebsrvProposalHandler(k *keeper.Keeper) govv1beta1.Handler {
 	return func(ctx sdk.Context, content govv1beta1.Content) error {
 		switch c := content.(type) {
 		case *types.RegisterRouteProposal:

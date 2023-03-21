@@ -95,7 +95,7 @@ func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, any *cdctypes.Any, owner sdk.A
 
 	signers := msg.GetSigners()
 	if signers[0].String() != owner.String() {
-		return nil, sdkerrors.ErrUnauthorized.Wrapf("quasar cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+		return nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
 	}
 
 	msgResponse, err := k.executeMsg(ctx, msg)
