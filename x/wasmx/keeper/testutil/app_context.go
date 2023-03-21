@@ -3,7 +3,9 @@ package testutil
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"strconv"
+	"time"
 
 	//nolint
 
@@ -15,6 +17,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+
+	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	icatypes "github.com/cosmos/ibc-go/v6/modules/apps/27-interchain-accounts/types"
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
@@ -232,6 +237,58 @@ func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddre
 	return hex.EncodeToString(data.Data)
 }
 
+func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1.Content, deposit sdk.Coins) abci.ResponseDeliverTx {
+	proposalMsg, err := v1beta1.NewMsgSubmitProposal(content, deposit, sender.Address)
+	s.S.Require().NoError(err)
+	resp := s.DeliverTx(sender, proposalMsg)
+	s.S.Require().True(resp.IsOK(), resp.GetLog())
+	s.S.Commit()
+	return resp
+}
+
+func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, content v1beta1.Content) {
+	deposit := sdk.NewCoins(sdk.NewCoin(s.Denom, sdk.NewInt(1_000_000_000_000)))
+	resp := s.SubmitGovProposal(sender, content, deposit)
+
+	proposalId, err := s.GetProposalIdFromLog(resp.GetLog())
+	s.S.Require().NoError(err)
+	proposal, found := s.App.GovKeeper.GetProposal(s.Context(), proposalId)
+	s.S.Require().True(found)
+	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Status)
+
+	// msgs, err := s.ParseProposal(proposal)
+	// s.S.Require().NoError(err)
+	// msg3, ok := msgs[0].(*govtypes1.MsgExecLegacyContent)
+	// s.S.Require().True(ok)
+	// textProp, ok := msg3.Content.GetCachedValue().(*v1beta1.TextProposal)
+	// s.S.Require().True(ok)
+	// s.S.Require().Equal(content.GetTitle(), textProp.Title)
+	// s.S.Require().Equal(content.GetDescription(), textProp.Description)
+
+	voteMsg := v1beta1.NewMsgVote(valAccount.Address, proposalId, v1beta1.OptionYes)
+	resp = s.DeliverTx(valAccount, voteMsg)
+	s.S.Require().True(resp.IsOK(), resp.GetLog())
+	s.S.Commit()
+
+	votingParams := s.App.GovKeeper.GetVotingParams(s.Context())
+	voteEnd := *votingParams.VotingPeriod + time.Hour
+	s.S.CommitNBlocks(s.Chain, uint64(voteEnd.Seconds()/5))
+	s.S.Commit()
+}
+
+func (s AppContext) ParseProposal(proposal govtypes1.Proposal) ([]sdk.Msg, error) {
+	msgs := make([]sdk.Msg, len(proposal.Messages))
+	for i, anyJSON := range proposal.Messages {
+		var msg sdk.Msg
+		err := s.App.AppCodec().UnpackAny(anyJSON, &msg)
+		if err != nil {
+			return msgs, err
+		}
+		msgs[i] = msg
+	}
+	return msgs, nil
+}
+
 func (s AppContext) Hex2bz(hexd string) []byte {
 	if hexd[:2] == "0x" {
 		hexd = hexd[2:]
@@ -295,6 +352,21 @@ func (s AppContext) GetContractAddressFromLog(logstr string) string {
 	}
 	s.S.Require().True(false, "no contract address found in log")
 	return ""
+}
+
+func (s AppContext) GetProposalIdFromLog(logstr string) (uint64, error) {
+	attrs := s.GetFromLog(logstr, "submit_proposal")
+	// attrs := s.getSubmitProposalFromLog(logstr)
+	for _, attr := range *attrs {
+		if attr.Key == "proposal_id" {
+			val, err := strconv.ParseInt(attr.Value, 10, 64)
+			if err != nil {
+				return 0, err
+			}
+			return uint64(val), nil
+		}
+	}
+	return 0, errors.New("not found")
 }
 
 func GetSdkEvents(events []abci.Event, evtype string) []sdk.Event {

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -15,7 +17,9 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/stretchr/testify/require"
+
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
@@ -62,19 +66,27 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	}
 
 	// set validators and delegations
-	stakingGenesis := stakingtypes.NewGenesisState(stakingtypes.DefaultParams(), validators, delegations)
+	stakingParams := stakingtypes.DefaultParams()
+	stakingParams.BondDenom = wasmxapp.BondDenom
+	stakingGenesis := stakingtypes.NewGenesisState(stakingParams, validators, delegations)
 	genesisState[stakingtypes.ModuleName] = app.AppCodec().MustMarshalJSON(stakingGenesis)
 
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {
 		// add genesis acc tokens and delegated tokens to total supply
-		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(sdk.DefaultBondDenom, bondAmt))...)
+		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(wasmxapp.BondDenom, bondAmt))...)
 	}
+
+	govGenesis := govtypes1.DefaultGenesisState()
+	govGenesis.DepositParams.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, sdk.NewInt(1_000_000_000)))
+	votingPeriod := time.Hour
+	govGenesis.VotingParams.VotingPeriod = &votingPeriod
+	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGenesis)
 
 	// add bonded amount to bonded pool module account
 	balances = append(balances, banktypes.Balance{
 		Address: authtypes.NewModuleAddress(stakingtypes.BondedPoolName).String(),
-		Coins:   sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, bondAmt.Mul(sdk.NewInt(int64(len(valSet.Validators)))))},
+		Coins:   sdk.Coins{sdk.NewCoin(wasmxapp.BondDenom, bondAmt.Mul(sdk.NewInt(int64(len(valSet.Validators)))))},
 	})
 
 	// update total supply
