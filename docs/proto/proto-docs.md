@@ -10,6 +10,10 @@
 - [wasmx/websrv/genesis.proto](#wasmx/websrv/genesis.proto)
     - [GenesisState](#wasmx.websrv.GenesisState)
   
+- [wasmx/websrv/proposal.proto](#wasmx/websrv/proposal.proto)
+    - [DeregisterRouteProposal](#wasmx.websrv.DeregisterRouteProposal)
+    - [RegisterRouteProposal](#wasmx.websrv.RegisterRouteProposal)
+  
 - [wasmx/websrv/query.proto](#wasmx/websrv/query.proto)
     - [QueryContractByRouteRequest](#wasmx.websrv.QueryContractByRouteRequest)
     - [QueryContractByRouteResponse](#wasmx.websrv.QueryContractByRouteResponse)
@@ -23,9 +27,6 @@
     - [Query](#wasmx.websrv.Query)
   
 - [wasmx/websrv/tx.proto](#wasmx/websrv/tx.proto)
-    - [MsgRegisterRoute](#wasmx.websrv.MsgRegisterRoute)
-    - [MsgRegisterRouteResponse](#wasmx.websrv.MsgRegisterRouteResponse)
-  
     - [Msg](#wasmx.websrv.Msg)
   
 - [Scalar Value Types](#scalar-value-types)
@@ -74,6 +75,59 @@ GenesisState defines the websrv module's genesis state.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `params` | [Params](#wasmx.websrv.Params) |  |  |
+
+
+
+
+
+ <!-- end messages -->
+
+ <!-- end enums -->
+
+ <!-- end HasExtensions -->
+
+ <!-- end services -->
+
+
+
+<a name="wasmx/websrv/proposal.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## wasmx/websrv/proposal.proto
+
+
+
+<a name="wasmx.websrv.DeregisterRouteProposal"></a>
+
+### DeregisterRouteProposal
+DisallowCosmosMessagesProposal is a gov Content type to remove a previously
+allowed Cosmos message or query to be called from the EVM
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `title` | [string](#string) |  | title of the proposal |
+| `description` | [string](#string) |  | description of the proposal |
+| `path` | [string](#string) |  | Route path |
+| `contract_address` | [string](#string) |  | Contract address in bech32 format |
+
+
+
+
+
+
+<a name="wasmx.websrv.RegisterRouteProposal"></a>
+
+### RegisterRouteProposal
+RegisterRouteProposal is a gov Content type to register a web server route
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `title` | [string](#string) |  | title of the proposal |
+| `description` | [string](#string) |  | description of the proposal |
+| `path` | [string](#string) |  | Route path |
+| `contract_address` | [string](#string) |  | Contract address in bech32 format |
 
 
 
@@ -245,33 +299,6 @@ Query defines the gRPC querier service.
 ## wasmx/websrv/tx.proto
 
 
-
-<a name="wasmx.websrv.MsgRegisterRoute"></a>
-
-### MsgRegisterRoute
-MsgRegisterRoute submit Wasm code to the system
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `sender` | [string](#string) |  |  |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
-
-<a name="wasmx.websrv.MsgRegisterRouteResponse"></a>
-
-### MsgRegisterRouteResponse
-MsgRegisterRouteResponse returns store result data.
-
-
-
-
-
  <!-- end messages -->
 
  <!-- end enums -->
@@ -286,7 +313,6 @@ Msg defines the Msg service.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `RegisterRoute` | [MsgRegisterRoute](#wasmx.websrv.MsgRegisterRoute) | [MsgRegisterRouteResponse](#wasmx.websrv.MsgRegisterRouteResponse) | RegisterRoute to register a route | |
 
  <!-- end services -->
 
