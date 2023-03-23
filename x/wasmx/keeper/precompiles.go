@@ -69,7 +69,7 @@ func (k Keeper) ActivateSystemContract(
 	if err != nil {
 		return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)
 	}
-	k.Logger(ctx).Info("contract", contract.Label, "address", contract.Address, "code_id", codeID)
+	k.Logger(ctx).Info("activated system contract", contract.Label, "address", contract.Address, "code_id", codeID)
 	return nil
 }
 
