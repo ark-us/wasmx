@@ -23,56 +23,67 @@ func DefaultSystemContracts() SystemContracts {
 			Address:     "0x0000000000000000000000000000000000000001",
 			Label:       "ecrecover",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000002",
 			Label:       "sha2-256",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000003",
 			Label:       "ripmd160",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000004",
 			Label:       "identity",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000005",
 			Label:       "modexp",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000006",
 			Label:       "ecadd",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000007",
 			Label:       "ecmul",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000008",
 			Label:       "ecpairings",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000009",
 			Label:       "blake2f",
 			InitMessage: initMsg,
+			Pinned:      true,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000020",
 			Label:       "secp384r1",
 			InitMessage: initMsg,
+			Pinned:      false,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000021",
 			Label:       "secp384r1_registry",
 			InitMessage: initMsg,
+			Pinned:      false,
 		},
 	}
 }

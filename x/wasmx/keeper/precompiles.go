@@ -52,8 +52,10 @@ func (k Keeper) ActivateSystemContract(
 		return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
 	}
 
-	if err := k.PinCode(ctx, codeID, compiledFolderPath); err != nil {
-		return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
+	if contract.Pinned {
+		if err := k.PinCode(ctx, codeID, compiledFolderPath); err != nil {
+			return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
+		}
 	}
 
 	contractAddress := ewasm.AccAddressFromHex(contract.Address)

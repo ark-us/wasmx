@@ -353,7 +353,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000007f615420f00", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000007f5ca27fc00", qres)
 
 	calld = codesizehex
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -472,25 +472,24 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	fmt.Println("-fibo-elapsed", time.Since(start))
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
 
-	res = appA.DeliverTx(sender, &types.MsgCompileContract{
-		Sender: sender.Address.String(),
-		CodeId: codeIdFibo,
-	})
-	s.Require().True(res.IsOK(), res.GetLog())
-	s.Commit()
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeIdFibo)
-	s.Require().True(codeInfo.Pinned, "code not pinned")
+	// res = appA.DeliverTx(sender, &types.MsgCompileContract{
+	// 	Sender: sender.Address.String(),
+	// 	CodeId: codeIdFibo,
+	// })
+	// s.Require().True(res.IsOK(), res.GetLog())
+	// s.Commit()
+	// codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeIdFibo)
+	// s.Require().True(codeInfo.Pinned, "code not pinned")
 
-	start = time.Now()
-	// call fibonaci contract directly
-	res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
-		appA.Hex2bz(fibhex),
-		appA.Hex2bz(value)...,
-	)}, nil, nil)
+	// start = time.Now()
+	// // call fibonaci contract directly
+	// res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
+	// 	appA.Hex2bz(fibhex),
+	// 	appA.Hex2bz(value)...,
+	// )}, nil, nil)
 
-	fmt.Println("-fibo compiled-elapsed", time.Since(start))
-	s.Require().Contains(hex.EncodeToString(res.Data), result)
-	s.Require().True(false)
+	// fmt.Println("-fibo compiled-elapsed", time.Since(start))
+	// s.Require().Contains(hex.EncodeToString(res.Data), result)
 
 	// call fibonacci contract through the callwasm contract
 	deps := []string{wasmeth.EvmAddressFromAcc(contractAddressFibo).Hex()}

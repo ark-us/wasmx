@@ -82,7 +82,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	govGenesis := govtypes1.DefaultGenesisState()
 	govGenesis.DepositParams.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, sdk.NewInt(1_000_000_000)))
-	votingPeriod := time.Hour
+	votingPeriod := time.Second * 5
 	govGenesis.VotingParams.VotingPeriod = &votingPeriod
 	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGenesis)
 
