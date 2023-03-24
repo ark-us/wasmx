@@ -13,11 +13,11 @@ import (
 	"wasmx/x/websrv/types"
 )
 
-func (k Keeper) Init() error {
+func (k Keeper) Init(addr string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", k.Route)
 
-	err := http.ListenAndServe(":9999", mux)
+	err := http.ListenAndServe(addr, mux)
 	if err != nil {
 		return sdkerrors.Wrapf(err, "websrv could not start")
 	}
