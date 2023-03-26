@@ -121,6 +121,37 @@ func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{senderAddr}
 }
 
+func (msg MsgCompileContract) Route() string {
+	return RouterKey
+}
+
+func (msg MsgCompileContract) Type() string {
+	return "instantiate"
+}
+
+func (msg MsgCompileContract) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return sdkerrors.Wrap(err, "sender")
+	}
+
+	if msg.CodeId == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+	}
+	return nil
+}
+
+func (msg MsgCompileContract) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgCompileContract) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}
+
 func (msg MsgExecuteContract) Route() string {
 	return RouterKey
 }

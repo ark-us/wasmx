@@ -127,6 +127,26 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	return report, nil
 }
 
+func AotCompile(inPath string, outPath string) error {
+	// Create Configure
+	// conf := wasmedge.NewConfigure(wasmedge.THREADS, wasmedge.EXTENDED_CONST, wasmedge.TAIL_CALL, wasmedge.MULTI_MEMORIES)
+
+	// Create Compiler
+	// compiler := wasmedge.NewCompilerWithConfig(conf)
+	compiler := wasmedge.NewCompiler()
+
+	// Compile WASM AOT
+	err := compiler.Compile(inPath, outPath)
+	if err != nil {
+		fmt.Println("Go: Compile WASM to AOT mode Failed!!")
+		return err
+	}
+
+	// conf.Release()
+	compiler.Release()
+	return nil
+}
+
 // Returns the hex address of the interpreter if exists or the version string
 func parseDependency(contractVersion string, part string) string {
 	dep := contractVersion

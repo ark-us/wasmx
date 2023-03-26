@@ -3,6 +3,7 @@ package keeper
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
@@ -57,6 +58,10 @@ func NewKeeper(
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
+	if err != nil {
+		panic(err)
+	}
+	err = createDirsIfNotExist(path.Join(contractsPath, types.PINNED_FOLDER))
 	if err != nil {
 		panic(err)
 	}

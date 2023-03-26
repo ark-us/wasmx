@@ -1,5 +1,11 @@
 # wasmx
 
+## prerequisites
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.11.2
+```
+
 ## testnet
 
 ```

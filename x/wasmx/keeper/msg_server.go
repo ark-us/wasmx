@@ -105,6 +105,27 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 	}, nil
 }
 
+// CompileContract does an AOT compilation for a contract
+func (m msgServer) CompileContract(goCtx context.Context, msg *types.MsgCompileContract) (*types.MsgCompileContractResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	err := m.Keeper.PinCode(ctx, msg.CodeId, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgCompileContractResponse{}, nil
+}
+
 func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err

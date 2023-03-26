@@ -768,15 +768,17 @@ func sendCosmosQuery(context interface{}, callframe *wasmedge.CallingFrame, para
 
 // value: i32
 func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("Go: debugPrinti32", params[0].(int32))
-	returns := make([]interface{}, 0)
+	fmt.Println("Go: debugPrinti32", params[0].(int32), params[1].(int32))
+	returns := make([]interface{}, 1)
+	returns[0] = params[0]
 	return returns, wasmedge.Result_Success
 }
 
 // value: i64
 func debugPrinti64(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("Go: debugPrinti64", params[0].(int64))
-	returns := make([]interface{}, 0)
+	fmt.Println("Go: debugPrinti64", params[0].(int64), params[1].(int32))
+	returns := make([]interface{}, 1)
+	returns[0] = params[0]
 	return returns, wasmedge.Result_Success
 }
 
@@ -825,6 +827,10 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	functype_i64i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
+	)
+	functype_i64i32_i64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I64},
 	)
 	functype_i32i32_i32 := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
@@ -896,8 +902,8 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	ewasmEnv.AddFunction("ethereum_revert", wasmedge.NewFunction(functype_i32i32_, revert, context, 0))
 	ewasmEnv.AddFunction("ethereum_sendCosmosMsg", wasmedge.NewFunction(functype_i32i32_i32, sendCosmosMsg, context, 0))
 	ewasmEnv.AddFunction("ethereum_sendCosmosQuery", wasmedge.NewFunction(functype_i32i32_i32, sendCosmosQuery, context, 0))
-	ewasmEnv.AddFunction("ethereum_debugPrinti32", wasmedge.NewFunction(functype_i32_, debugPrinti32, context, 0))
-	ewasmEnv.AddFunction("ethereum_debugPrinti64", wasmedge.NewFunction(functype_i64_, debugPrinti64, context, 0))
+	ewasmEnv.AddFunction("ethereum_debugPrinti32", wasmedge.NewFunction(functype_i32i32_i32, debugPrinti32, context, 0))
+	ewasmEnv.AddFunction("ethereum_debugPrinti64", wasmedge.NewFunction(functype_i64i32_i64, debugPrinti64, context, 0))
 	ewasmEnv.AddFunction("ethereum_debugPrintMemHex", wasmedge.NewFunction(functype_i32i32_, debugPrintMemHex, context, 0))
 
 	return ewasmEnv
@@ -920,6 +926,9 @@ func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}
 	ptr := pointer.(int32)
 	length := len(data)
 	mem := callframe.GetMemoryByIndex(0)
+	if mem == nil {
+		return fmt.Errorf("no memory found")
+	}
 	err := mem.SetData(data, uint(ptr), uint(length))
 	return err
 }

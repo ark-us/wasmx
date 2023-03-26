@@ -143,7 +143,7 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 		panic(fmt.Sprintf("bootstrap account: %+v", err))
 	}
 
-	if err := am.keeper.BootstrapSystemContracts(ctx, bootstrapAccountAddr, genState.SystemContracts); err != nil {
+	if err := am.keeper.BootstrapSystemContracts(ctx, bootstrapAccountAddr, genState.SystemContracts, genState.CompiledFolderPath); err != nil {
 		panic(fmt.Sprintf("bootstrap system contracts: %+v", err))
 	}
 

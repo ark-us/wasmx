@@ -14,6 +14,8 @@ import (
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
 const DefaultMaxQueryStackSize uint32 = 10
 
+var PINNED_FOLDER = "pinned"
+
 var EMPTY_BYTES32 = bytes.Repeat([]byte{0}, 32)
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
@@ -68,12 +70,12 @@ type WasmxCosmosHandler interface {
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 }
 
-// LibwasmvmVersion returns the version of the loaded library
+// LibWasmEdgeVersion returns the version of the loaded wasmedge library
 // at runtime. This can be used for debugging to verify the loaded version
 // matches the expected version.
 //
 // When cgo is disabled at build time, this returns an error at runtime.
-func LibWasmxVersion() (string, error) {
+func LibWasmEdgeVersion() (string, error) {
 	// TODO
-	return "", nil
+	return "Not implemented", nil
 }

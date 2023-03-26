@@ -2,6 +2,8 @@ package ibctesting
 
 import (
 	"encoding/json"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
 	wasmxapp "wasmx/app"
+	wasmxtypes "wasmx/x/wasmx/types"
 )
 
 var DefaultTestingAppInit func() (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp
@@ -79,7 +82,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	govGenesis := govtypes1.DefaultGenesisState()
 	govGenesis.DepositParams.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, sdk.NewInt(1_000_000_000)))
-	votingPeriod := time.Hour
+	votingPeriod := time.Second * 5
 	govGenesis.VotingParams.VotingPeriod = &votingPeriod
 	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGenesis)
 
@@ -94,6 +97,15 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	bankGenesis.Supply = nil
 	genesisState[banktypes.ModuleName] = app.AppCodec().MustMarshalJSON(bankGenesis)
+
+	// We are using precompiled contracts to avoid compiling at every chain instantiation
+	wasmxGenesis := wasmxtypes.DefaultGenesisState()
+	mydir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
+	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 
 	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
 	require.NoError(t, err)

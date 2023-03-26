@@ -23,8 +23,15 @@ message CodeInfo {
     // deps can be hex-formatted contract addresses (32 bytes)
     // or versioned interface labels
     repeated string deps = 3;
-    string abi = 4;
-    string json_schema = 5;
+    // Pinned contract
+    bool pinned = 4;
+
+}
+
+// Metadata for each codeId
+message CodeMetadata {
+    string abi = 1;
+    string json_schema = 2;
 }
 
 // ContractInfo stores a WASM contract instance

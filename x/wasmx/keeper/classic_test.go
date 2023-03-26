@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -461,12 +462,34 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 		appA.Hex2bz(value)...,
 	)}
 
+	start := time.Now()
 	// call fibonaci contract directly
 	res := appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
 		appA.Hex2bz(fibhex),
 		appA.Hex2bz(value)...,
 	)}, nil, nil)
+
+	fmt.Println("-fibo-elapsed", time.Since(start))
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
+
+	// res = appA.DeliverTx(sender, &types.MsgCompileContract{
+	// 	Sender: sender.Address.String(),
+	// 	CodeId: codeIdFibo,
+	// })
+	// s.Require().True(res.IsOK(), res.GetLog())
+	// s.Commit()
+	// codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeIdFibo)
+	// s.Require().True(codeInfo.Pinned, "code not pinned")
+
+	// start = time.Now()
+	// // call fibonaci contract directly
+	// res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
+	// 	appA.Hex2bz(fibhex),
+	// 	appA.Hex2bz(value)...,
+	// )}, nil, nil)
+
+	// fmt.Println("-fibo compiled-elapsed", time.Since(start))
+	// s.Require().Contains(hex.EncodeToString(res.Data), result)
 
 	// call fibonacci contract through the callwasm contract
 	deps := []string{wasmeth.EvmAddressFromAcc(contractAddressFibo).Hex()}
