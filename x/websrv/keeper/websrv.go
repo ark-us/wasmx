@@ -17,7 +17,7 @@ func (k Keeper) Init() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", k.Route)
 
-	err := http.ListenAndServe(":80", mux)
+	err := http.ListenAndServe(":9999", mux)
 	if err != nil {
 		return sdkerrors.Wrapf(err, "websrv could not start")
 	}
