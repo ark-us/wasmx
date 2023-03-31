@@ -39,6 +39,9 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"wasmx/app"
+	config "wasmx/server/config"
+	websrvconfig "wasmx/x/websrv/server/config"
+	websrvflags "wasmx/x/websrv/server/flags"
 	// "wasmx/testutil/network"
 )
 
@@ -77,6 +80,8 @@ type startArgs struct {
 	numValidators int
 	enableLogging bool
 	printMnemonic bool
+	websrvEnable  bool
+	websrvAddress string
 }
 
 func addTestnetFlagsToCmd(cmd *cobra.Command) {
@@ -175,6 +180,8 @@ Example:
 			args.rpcAddress, _ = cmd.Flags().GetString(flagRPCAddress)
 			args.apiAddress, _ = cmd.Flags().GetString(flagAPIAddress)
 			args.printMnemonic, _ = cmd.Flags().GetBool(flagPrintMnemonic)
+			args.websrvEnable, _ = cmd.Flags().GetBool(websrvflags.WebsrvEnable)
+			args.websrvAddress, _ = cmd.Flags().GetString(websrvflags.WebsrvAddress)
 
 			return startTestnet(cmd, args)
 		},
@@ -185,6 +192,8 @@ Example:
 	cmd.Flags().String(flagRPCAddress, "tcp://0.0.0.0:26657", "the RPC address to listen on")
 	cmd.Flags().String(flagAPIAddress, "tcp://0.0.0.0:1317", "the address to listen on for REST API")
 	cmd.Flags().Bool(flagPrintMnemonic, true, "print mnemonic of first validator to stdout for manual testing")
+	cmd.Flags().Bool(websrvflags.WebsrvEnable, true, "Define if the websrv web server should be enabled")
+	cmd.Flags().String(websrvflags.WebsrvAddress, websrvconfig.DefaultWebservAddress, "the websrv web server address to listen on")
 	return cmd
 }
 
@@ -206,7 +215,7 @@ func initTestnetFiles(
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
 
-	appConfig := srvconfig.DefaultConfig()
+	appConfig := config.DefaultConfig()
 	appConfig.MinGasPrices = args.minGasPrices
 	appConfig.API.Enable = true
 	appConfig.Telemetry.Enabled = true
@@ -329,6 +338,11 @@ func initTestnetFiles(
 			return err
 		}
 
+		customAppTemplate, customAppConfig := config.AppConfig()
+		srvconfig.SetConfigTemplate(customAppTemplate)
+		if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig()); err != nil {
+			return err
+		}
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfig)
 	}
 
