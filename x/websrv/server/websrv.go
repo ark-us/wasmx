@@ -1,30 +1,80 @@
-package keeper
+package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strings"
 
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 
+	wasmxtypes "wasmx/x/wasmx/types"
+	"wasmx/x/websrv/server/config"
 	"wasmx/x/websrv/types"
 )
 
-func (k Keeper) Init(addr string) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", k.Route)
-
-	err := http.ListenAndServe(addr, mux)
-	if err != nil {
-		return sdkerrors.Wrapf(err, "websrv could not start")
-	}
-	return nil
+type WebsrvServer struct {
+	ctx         context.Context
+	clientCtx   client.Context
+	queryClient types.QueryClient // gRPC query client
+	logger      log.Logger
+	chainID     *big.Int
+	longChainID string
+	cfg         *config.WebsrvConfig
 }
 
-func (k Keeper) Route(w http.ResponseWriter, r *http.Request) {
+// NewBackend creates a new Backend instance for cosmos and ethereum namespaces
+func NewWebsrvServer(
+	ctx *server.Context,
+	logger log.Logger,
+	clientCtx client.Context,
+	config *config.WebsrvConfig,
+) *WebsrvServer {
+	chainID, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
+	if err != nil {
+		panic(err)
+	}
+
+	// appConf, err := config.GetConfig(ctx.Viper)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// algos, _ := clientCtx.Keyring.SupportedAlgorithms()
+	// if !algos.Contains(hd.EthSecp256k1) {
+	// 	kr, err := keyring.New(
+	// 		sdk.KeyringServiceName(),
+	// 		viper.GetString(flags.FlagKeyringBackend),
+	// 		clientCtx.KeyringDir,
+	// 		clientCtx.Input,
+	// 		clientCtx.Codec,
+	// 		hd.EthSecp256k1Option(),
+	// 	)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	clientCtx = clientCtx.WithKeyring(kr)
+	// }
+
+	return &WebsrvServer{
+		ctx:         context.Background(),
+		clientCtx:   clientCtx,
+		queryClient: types.NewQueryClient(clientCtx),
+		logger:      logger.With("module", "backend"),
+		chainID:     chainID,
+		longChainID: clientCtx.ChainID,
+		cfg:         config,
+	}
+}
+
+func (k WebsrvServer) Route(w http.ResponseWriter, r *http.Request) {
 	var response []byte
 	var err error
 	switch r.Method {
@@ -40,7 +90,7 @@ func (k Keeper) Route(w http.ResponseWriter, r *http.Request) {
 	w.Write(response)
 }
 
-func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error) {
+func (k WebsrvServer) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	// TODO query params
 	params := []types.RequestQueryParam{}
 	header := []types.HeaderItem{}
@@ -92,31 +142,17 @@ func (k Keeper) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, error)
 	return []byte(response.Content), nil
 }
 
-func (k Keeper) HandleContractRoute(req types.HttpRequest) (*types.HttpResponse, error) {
+func (k WebsrvServer) HandleContractRoute(req types.HttpRequest) (*types.HttpResponse, error) {
 	httpReqBz, err := json.Marshal(req)
 	if err != nil {
 		return nil, sdkerrors.Wrapf(err, "cannot marshal HttpRequestGet")
 	}
-	websrvQuery := types.QueryHttpRequestGet{
+	websrvQuery := &types.QueryHttpRequestGet{
 		HttpRequest: httpReqBz,
 	}
-	websrvQueryBz, err := websrvQuery.Marshal()
+	respGet, err := k.queryClient.HttpGet(k.ctx, websrvQuery)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot marshal QueryHttpGetRequest")
-	}
-	reqQuery := abci.RequestQuery{
-		Path: "/wasmx.websrv.Query/HttpGet",
-		Data: websrvQueryBz,
-	}
-	abcires := k.query(reqQuery)
-	if abcires.IsErr() {
-		return nil, sdkerrors.Wrapf(types.ErrRouteInternalError, "log: %s", abcires.GetLog())
-	}
-
-	var respGet types.QueryHttpResponseGet
-	err = respGet.Unmarshal(abcires.Value)
-	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot unmarshal QueryHttpGetResponse")
+		return nil, sdkerrors.Wrapf(err, "Websrv HttpGet failed")
 	}
 
 	var requestResp types.HttpResponse

@@ -39,6 +39,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"wasmx/app"
+	config "wasmx/server/config"
 	websrvconfig "wasmx/x/websrv/server/config"
 	websrvflags "wasmx/x/websrv/server/flags"
 	// "wasmx/testutil/network"
@@ -214,7 +215,7 @@ func initTestnetFiles(
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
 
-	appConfig := websrvconfig.DefaultConfig()
+	appConfig := config.DefaultConfig()
 	appConfig.MinGasPrices = args.minGasPrices
 	appConfig.API.Enable = true
 	appConfig.Telemetry.Enabled = true
@@ -337,12 +338,11 @@ func initTestnetFiles(
 			return err
 		}
 
-		customAppTemplate, customAppConfig := websrvconfig.AppConfig()
+		customAppTemplate, customAppConfig := config.AppConfig()
 		srvconfig.SetConfigTemplate(customAppTemplate)
 		if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig()); err != nil {
 			return err
 		}
-
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfig)
 	}
 

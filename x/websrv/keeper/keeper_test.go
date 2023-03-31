@@ -55,7 +55,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain *ibcgotesting.TestChain) testu
 		Chain: chain,
 	}
 	encodingConfig := app.MakeEncodingConfig()
-	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig)
+	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainID)
 	appContext.Denom = app.BaseDenom
 
 	t := suite.T()

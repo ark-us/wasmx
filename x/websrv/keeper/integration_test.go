@@ -2,12 +2,14 @@ package keeper_test
 
 import (
 	_ "embed"
+	"encoding/json"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
 	wasmeth "wasmx/x/wasmx/ewasm"
+	"wasmx/x/wasmx/keeper/testutil"
 	wasmxtypes "wasmx/x/wasmx/types"
 	"wasmx/x/websrv/types"
 )
@@ -36,6 +38,8 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
+	// websrv := websrvserver.NewWebsrvServer(nil, appA.App.Logger(), appA.ClientCtx, config.DefaultWebsrvConfigConfig())
+
 	codeId := appA.StoreCode(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 
@@ -44,7 +48,7 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
 
 	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/"}}}
-	response, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
+	response, err := HandleContractRoute(appA, req)
 	s.Require().NoError(err)
 	s.Require().Equal(types.Content_Type, response.Header[0].HeaderType)
 	s.Require().Equal("text/html", response.Header[0].Value)
@@ -55,14 +59,14 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
 
 	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/arg1/arg2"}}}
-	response, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
+	response, err = HandleContractRoute(appA, req)
 	s.Require().NoError(err)
 	s.Require().Equal(types.Content_Type, response.Header[0].HeaderType)
 	s.Require().Equal("text/html", response.Header[0].Value)
 	s.Require().Equal("Hello from contract. Path: /arg1/arg2", string(response.Content))
 
 	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/arg1/arg2/arg3"}}}
-	response, err = appA.App.WebsrvKeeper.HandleContractRoute(req)
+	response, err = HandleContractRoute(appA, req)
 	s.Require().NoError(err)
 	s.Require().Equal(types.Content_Type, response.Header[0].HeaderType)
 	s.Require().Equal("text/html", response.Header[0].Value)
@@ -115,9 +119,29 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	s.Require().Equal("000000000000000000000000"+contractAddressHex[2:], qres)
 
 	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/testserver"}}}
-	response, err := appA.App.WebsrvKeeper.HandleContractRoute(req)
+	response, err := HandleContractRoute(appA, req)
 	s.Require().NoError(err)
 	s.Require().Equal(types.Content_Type, response.Header[0].HeaderType)
 	s.Require().Equal("text/html", response.Header[0].Value)
 	s.Require().Equal("Hello from contract. Path: /testserver", string(response.Content))
+}
+
+func HandleContractRoute(app testutil.AppContext, httpReq types.HttpRequest) (*types.HttpResponse, error) {
+	httpReqBz, err := json.Marshal(httpReq)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &types.QueryHttpRequestGet{HttpRequest: httpReqBz}
+	reqResp, err := app.App.WebsrvKeeper.HttpGet(app.Context(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var response types.HttpResponse
+	err = json.Unmarshal(reqResp.Data, &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
 }

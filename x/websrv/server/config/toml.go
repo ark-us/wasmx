@@ -9,20 +9,24 @@ const DefaultConfigTemplate = `
 [websrv]
 
 # Enable defines if the websrv web server should be enabled.
-enable = {{ .WEBSRV.Enable }}
+enable = {{ .Websrv.Enable }}
 
 # Address defines the websrv HTTP server address to bind to.
-address = "{{ .WEBSRV.Address }}"
+address = "{{ .Websrv.Address }}"
 
 # A list of origins a cross-domain request can be executed from
 # Default value '[]' disables cors support
 # Use '["*"]' to allow any origin
-cors-allowed-origins = [{{ range .WEBSRV.CORSAllowedOrigins }}{{ printf "%q, " . }}{{end}}]
+cors-allowed-origins = [{{ range .Websrv.CORSAllowedOrigins }}{{ printf "%q, " . }}{{end}}]
 
 # A list of methods the client is allowed to use with cross-domain requests
-cors-allowed-methods = [{{ range .WEBSRV.CORSAllowedMethods }}{{ printf "%q, " . }}{{end}}]
+cors-allowed-methods = [{{ range .Websrv.CORSAllowedMethods }}{{ printf "%q, " . }}{{end}}]
 
 # A list of non simple headers the client is allowed to use with cross-domain requests
-cors-allowed-headers = [{{ range .WEBSRV.CORSAllowedHeaders }}{{ printf "%q, " . }}{{end}}]
+cors-allowed-headers = [{{ range .Websrv.CORSAllowedHeaders }}{{ printf "%q, " . }}{{end}}]
+
+# MaxOpenConnections sets the maximum number of simultaneous connections
+# for the server listener.
+max-open-connections = {{ .Websrv.MaxOpenConnections }}
 
 `
