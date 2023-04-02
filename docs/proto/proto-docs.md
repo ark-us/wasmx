@@ -27,6 +27,9 @@
     - [Query](#wasmx.websrv.Query)
   
 - [wasmx/websrv/tx.proto](#wasmx/websrv/tx.proto)
+    - [MsgRegisterOAuthClient](#wasmx.websrv.MsgRegisterOAuthClient)
+    - [MsgRegisterOAuthClientResponse](#wasmx.websrv.MsgRegisterOAuthClientResponse)
+  
     - [Msg](#wasmx.websrv.Msg)
   
 - [Scalar Value Types](#scalar-value-types)
@@ -299,6 +302,37 @@ Query defines the gRPC querier service.
 ## wasmx/websrv/tx.proto
 
 
+
+<a name="wasmx.websrv.MsgRegisterOAuthClient"></a>
+
+### MsgRegisterOAuthClient
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `client_address` | [string](#string) |  | bech32 address |
+| `domain` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="wasmx.websrv.MsgRegisterOAuthClientResponse"></a>
+
+### MsgRegisterOAuthClientResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `client_id` | [string](#string) |  | string client_secret = 2; |
+
+
+
+
+
  <!-- end messages -->
 
  <!-- end enums -->
@@ -313,6 +347,7 @@ Msg defines the Msg service.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
+| `RegisterOAuthClient` | [MsgRegisterOAuthClient](#wasmx.websrv.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#wasmx.websrv.MsgRegisterOAuthClientResponse) | Register OAuth client | |
 
  <!-- end services -->
 

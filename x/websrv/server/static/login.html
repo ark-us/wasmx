@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+    <script type="module">
+        import * as keplrWalletprovider from 'https://esm.run/@keplr-wallet/provider';
+
+        async function signMessageKeplr(chainId, message) {
+            await window.keplr.enable(chainId);
+            const offlineSigner = window.keplr.getOfflineSigner(chainId);
+            const accounts = await offlineSigner.getAccounts();
+            const signature = await window.keplr.signArbitrary(
+                chainId,
+                accounts[0].address,
+                message,
+            )
+            console.log('signature', signature);
+            return {signature, account: accounts[0]};
+        }
+
+        function uint8ArrayToHex(arr) {
+            return Array.from(arr, byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+		async function signMessage() {
+			// Get the message and authorization URL from the HTML form
+			const message = document.getElementById("message").value;
+            const chainId = document.getElementById("chainid").value;
+            console.log('signMessage', chainId, typeof message, message);
+
+			// Sign the message with Keplr
+			const {signature, account} = await signMessageKeplr(chainId, message);
+
+            const verified = await window.keplr.verifyArbitrary(chainId, account.address, message, signature);
+            console.log('verified', verified);
+            if (!verified) return;
+
+            document.getElementById("pubkey").value = uint8ArrayToHex(account.pubkey);
+            document.getElementById("algo").value = account.algo;
+            document.getElementById("signature").value = signature.signature
+		}
+        document.getElementById("signButton").onclick = signMessage;
+	</script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Log in by signing a message</h1>
+        <h2>with your Cosmos wallet</h2>
+        <button id="signButton" class="btn btn-primary">Sign</button>
+        <form action="/login" method="POST">
+            <div class="form-group">
+                <label for="message">Message</label>
+                <input type="text" class="form-control" name="message" readonly required value="{{ .Message }}" id="message">
+            </div>
+            <div class="form-group">
+                <label for="pubkey">PubKey</label>
+                <input type="text" class="form-control" name="pubkey" id="pubkey" readonly required placeholder="Please sign">
+            </div>
+            <div class="form-group">
+                <label for="algo">Algo</label>
+                <input type="text" class="form-control" name="algo" id="algo" readonly required placeholder="Please sign">
+            </div>
+            <div class="form-group">
+                <label for="signature">Signature</label>
+                <input type="text" class="form-control" name="signature" id="signature" readonly required placeholder="Please sign">
+            </div>
+            <button type="submit" class="btn btn-success">Login</button>
+        </form>
+        <input type="hidden" id="chainid" value="{{ .ChainId }}">
+    </div>
+</body>
+
+</html>

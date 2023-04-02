@@ -20,4 +20,6 @@ var (
 	ErrEmptyRoute = sdkerrors.Register(DefaultCodespace, 4, "empty route provided")
 
 	ErrWebsrvInternal = sdkerrors.Register(DefaultCodespace, 5, "websrv internal error")
+
+	ErrOAuthClientInvalidDomain = sdkerrors.Register(DefaultCodespace, 6, "websrv oauth invalid client domain")
 )

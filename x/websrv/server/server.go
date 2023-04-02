@@ -21,9 +21,15 @@ func StartWebsrv(
 	clientCtx client.Context,
 	cfg *config.WebsrvConfig,
 ) (*http.Server, chan struct{}, error) {
+	ctx.Logger.Info("starting websrv web server at ", cfg.Address)
 	websrvServer := NewWebsrvServer(ctx, ctx.Logger, clientCtx, cfg)
 
 	mux := http.NewServeMux()
+
+	if cfg.EnableOAuth {
+		ctx.Logger.Info("starting websrv oauth2 server at ", cfg.Address)
+		websrvServer.InitOauth2(mux)
+	}
 	mux.HandleFunc("/", websrvServer.Route)
 
 	handlerWithCors := cors.Default()
@@ -73,7 +79,7 @@ func StartWebsrv(
 
 func Listen(addr string, cfg *config.WebsrvConfig) (net.Listener, error) {
 	if addr == "" {
-		addr = ":" + config.DefaultWebservPort
+		addr = ":" + config.DefaultWebsrvPort
 	}
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {

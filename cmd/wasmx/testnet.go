@@ -70,18 +70,19 @@ type initArgs struct {
 }
 
 type startArgs struct {
-	algo          string
-	apiAddress    string
-	chainID       string
-	grpcAddress   string
-	minGasPrices  string
-	outputDir     string
-	rpcAddress    string
-	numValidators int
-	enableLogging bool
-	printMnemonic bool
-	websrvEnable  bool
-	websrvAddress string
+	algo              string
+	apiAddress        string
+	chainID           string
+	grpcAddress       string
+	minGasPrices      string
+	outputDir         string
+	rpcAddress        string
+	numValidators     int
+	enableLogging     bool
+	printMnemonic     bool
+	websrvEnable      bool
+	WebsrvEnableOAuth bool
+	websrvAddress     string
 }
 
 func addTestnetFlagsToCmd(cmd *cobra.Command) {
@@ -181,6 +182,7 @@ Example:
 			args.apiAddress, _ = cmd.Flags().GetString(flagAPIAddress)
 			args.printMnemonic, _ = cmd.Flags().GetBool(flagPrintMnemonic)
 			args.websrvEnable, _ = cmd.Flags().GetBool(websrvflags.WebsrvEnable)
+			args.WebsrvEnableOAuth, _ = cmd.Flags().GetBool(websrvflags.WebsrvEnableOAuth)
 			args.websrvAddress, _ = cmd.Flags().GetString(websrvflags.WebsrvAddress)
 
 			return startTestnet(cmd, args)
@@ -193,7 +195,8 @@ Example:
 	cmd.Flags().String(flagAPIAddress, "tcp://0.0.0.0:1317", "the address to listen on for REST API")
 	cmd.Flags().Bool(flagPrintMnemonic, true, "print mnemonic of first validator to stdout for manual testing")
 	cmd.Flags().Bool(websrvflags.WebsrvEnable, true, "Define if the websrv web server should be enabled")
-	cmd.Flags().String(websrvflags.WebsrvAddress, websrvconfig.DefaultWebservAddress, "the websrv web server address to listen on")
+	cmd.Flags().Bool(websrvflags.WebsrvEnableOAuth, true, "Define if the websrv oauth server should be enabled")
+	cmd.Flags().String(websrvflags.WebsrvAddress, websrvconfig.DefaultWebsrvAddress, "the websrv web server address to listen on")
 	return cmd
 }
 

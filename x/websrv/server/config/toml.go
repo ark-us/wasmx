@@ -11,6 +11,9 @@ const DefaultConfigTemplate = `
 # Enable defines if the websrv web server should be enabled.
 enable = {{ .Websrv.Enable }}
 
+# Enable defines if the websrv oauth2 server should be enabled.
+enable-oauth = {{ .Websrv.EnableOAuth }}
+
 # Address defines the websrv HTTP server address to bind to.
 address = "{{ .Websrv.Address }}"
 

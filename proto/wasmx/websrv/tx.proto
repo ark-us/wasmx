@@ -5,4 +5,17 @@ option go_package = "wasmx/x/websrv/types";
 
 // Msg defines the Msg service.
 service Msg {
+  // Register OAuth client
+  rpc RegisterOAuthClient(MsgRegisterOAuthClient) returns (MsgRegisterOAuthClientResponse);
+}
+
+message MsgRegisterOAuthClient {
+    // bech32 address
+    string client_address = 1;
+    string domain = 2;
+}
+
+message MsgRegisterOAuthClientResponse {
+    string client_id = 1;
+    // string client_secret = 2;
 }
