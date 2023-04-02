@@ -46,10 +46,18 @@ func (k Keeper) ActivateSystemContract(
 	compiledFolderPath string,
 ) error {
 	k.SetSystemContract(ctx, contract)
+	var codeID uint64
+	var err error
 
-	codeID, _, err := k.Create(ctx, bootstrapAccountAddr, wasmbin)
-	if err != nil {
-		return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
+	if contract.Native {
+		codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
+		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr, nil)
+		k.storeCodeInfo(ctx, codeID, codeInfo)
+	} else {
+		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin)
+		if err != nil {
+			return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
+		}
 	}
 
 	if contract.Pinned {
@@ -59,17 +67,22 @@ func (k Keeper) ActivateSystemContract(
 	}
 
 	contractAddress := ewasm.AccAddressFromHex(contract.Address)
-	_, err = k.instantiateWithAddress(
-		ctx,
-		codeID,
-		bootstrapAccountAddr,
-		contractAddress,
-		contract.InitMessage,
-		contract.Label,
-		nil,
-	)
-	if err != nil {
-		return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)
+	if contract.Native {
+		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, contract.Label)
+		k.storeContractInfo(ctx, contractAddress, &contractInfo)
+	} else {
+		_, err = k.instantiateWithAddress(
+			ctx,
+			codeID,
+			bootstrapAccountAddr,
+			contractAddress,
+			contract.InitMessage,
+			contract.Label,
+			nil,
+		)
+		if err != nil {
+			return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)
+		}
 	}
 	k.Logger(ctx).Info("activated system contract", contract.Label, "address", contract.Address, "code_id", codeID)
 	return nil

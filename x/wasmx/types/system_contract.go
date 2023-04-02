@@ -23,6 +23,14 @@ func DefaultSystemContracts() SystemContracts {
 			Address:     "0x0000000000000000000000000000000000000001",
 			Label:       "ecrecover",
 			InitMessage: initMsg,
+			Pinned:      false,
+			Native:      true,
+		},
+		// Ethereum ecrecover
+		{
+			Address:     "0x000000000000000000000000000000000000001f",
+			Label:       "ecrecovereth",
+			InitMessage: initMsg,
 			Pinned:      true,
 		},
 		{

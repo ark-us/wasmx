@@ -179,6 +179,14 @@ func ExecuteWasm(
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not decode wasm execution message")
 	}
 
+	// native implementations
+	hexaddr := EvmAddressFromAcc(env.Contract.Address).Hex()
+	nativePrecompile, found := NativeMap[hexaddr]
+	if found {
+		data := nativePrecompile(ethMsg.Data)
+		return types.ContractResponse{Data: data}, nil
+	}
+
 	conf := wasmedge.NewConfigure()
 	var contractRouter ContractRouter = make(map[string]ContractContext)
 	context := &Context{
