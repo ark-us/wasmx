@@ -43,6 +43,44 @@ func (k Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContra
 	}, nil
 }
 
+func (k Keeper) GetAllOauthClients(c context.Context, req *types.QueryGetAllOauthClientsRequest) (*types.QueryGetAllOauthClientsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	clients := k.GetOauthClients(sdk.UnwrapSDKContext(c))
+	return &types.QueryGetAllOauthClientsResponse{
+		Clients: clients,
+	}, nil
+}
+
+func (k Keeper) GetOauthClient(c context.Context, req *types.QueryGetOauthClientRequest) (*types.QueryGetOauthClientResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	client, err := k.GetClientIdToInfo(sdk.UnwrapSDKContext(c), req.ClientId)
+	return &types.QueryGetOauthClientResponse{
+		Client: client,
+	}, err
+}
+
+func (k Keeper) GetOauthClientsByOwner(c context.Context, req *types.QueryGetOauthClientsByOwnerRequest) (*types.QueryGetOauthClientsByOwnerResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	owner, err := sdk.AccAddressFromBech32(req.Owner)
+	if err != nil {
+		return nil, sdkerrors.ErrInvalidAddress
+	}
+
+	clientIds, err := k.GetAddressToClients(sdk.UnwrapSDKContext(c), owner)
+	if err != nil {
+		return nil, err
+	}
+	return &types.QueryGetOauthClientsByOwnerResponse{
+		ClientIds: clientIds,
+	}, nil
+}
+
 func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*types.QueryHttpResponseGet, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")

@@ -3,6 +3,7 @@ package server
 import (
 	"net"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/rs/cors"
@@ -15,6 +16,8 @@ import (
 	"wasmx/x/websrv/server/config"
 )
 
+var dirname = "oauth"
+
 // StartJSONRPC starts the JSON-RPC server
 func StartWebsrv(
 	ctx *server.Context,
@@ -23,12 +26,11 @@ func StartWebsrv(
 ) (*http.Server, chan struct{}, error) {
 	ctx.Logger.Info("starting websrv web server at ", cfg.Address)
 	websrvServer := NewWebsrvServer(ctx, ctx.Logger, clientCtx, cfg)
-
 	mux := http.NewServeMux()
 
 	if cfg.EnableOAuth {
 		ctx.Logger.Info("starting websrv oauth2 server at ", cfg.Address)
-		websrvServer.InitOauth2(mux)
+		websrvServer.InitOauth2(mux, path.Join(clientCtx.HomeDir, dirname))
 	}
 	mux.HandleFunc("/", websrvServer.Route)
 

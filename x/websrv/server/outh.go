@@ -10,10 +10,12 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"github.com/go-oauth2/oauth2/v4/errors"
@@ -26,6 +28,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"wasmx/x/websrv/types"
 )
 
 type SignMessage struct {
@@ -76,19 +80,13 @@ var AUTHORIZATION_CODE_EXPIRATION = time.Minute * 5
 var nonceDB = map[string]time.Time{}
 
 var (
-	dumpvar   bool
-	idvar     string
-	secretvar string
-	domainvar string
+	tokenDbName = "tokendb"
+	dumpvar     bool
 )
 
-func (k WebsrvServer) InitOauth2(mux *http.ServeMux) {
+func (k WebsrvServer) InitOauth2(mux *http.ServeMux, dirname string) {
+	tokenDbPath := path.Join(dirname, tokenDbName)
 	dumpvar = false
-	idvar = "222222"
-	secretvar = "22222222"
-	// domainvar = "http://localhost:9094"
-	// domainvar = "http://192.168.2.63:9094"
-	domainvar = "https://oauthdebugger.com/debug"
 
 	flag.Parse()
 	if dumpvar {
@@ -98,19 +96,29 @@ func (k WebsrvServer) InitOauth2(mux *http.ServeMux) {
 	manager.SetAuthorizeCodeTokenCfg(manage.DefaultAuthorizeCodeTokenCfg)
 
 	// token store
-	manager.MustTokenStorage(store.NewMemoryTokenStore())
+	manager.MustTokenStorage(store.NewFileTokenStore(tokenDbPath))
 
 	// generate jwt access token
 	// manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", []byte("00000000"), jwt.SigningMethodHS512))
 	manager.MapAccessGenerate(generates.NewAccessGenerate())
 
+	var clients []types.OauthClientInfo
+
+	clientsResp, _ := k.queryClient.GetAllOauthClients(k.ctx, &types.QueryGetAllOauthClientsRequest{})
+	if clientsResp != nil {
+		clients = clientsResp.Clients
+	}
 	clientStore := store.NewClientStore()
-	clientStore.Set(idvar, &models.Client{
-		ID:     idvar,
-		Secret: secretvar,
-		Domain: domainvar,
-		Public: true,
-	})
+	for _, client := range clients {
+		id := string(big.NewInt(int64(client.ClientId)).FillBytes(make([]byte, 32)))
+		clientStore.Set(id, &models.Client{
+			ID:     id,
+			Secret: "",
+			Domain: client.Domain,
+			Public: true,
+		})
+	}
+
 	manager.MapClientStorage(clientStore)
 
 	srv := server.NewServer(server.NewConfig(), manager)

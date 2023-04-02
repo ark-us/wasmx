@@ -26,25 +26,71 @@ func (m msgServer) RegisterOAuthClient(goCtx context.Context, msg *types.MsgRegi
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := sdk.AccAddressFromBech32(msg.ClientAddress)
+
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerrors.Wrap(err, "owner")
+	}
+
+	if m.Keeper.GetOauthClientRegistrationOnlyEId(ctx) {
+		if !m.Keeper.isEIdActive(ctx, owner) {
+			return nil, sdkerrors.Wrap(err, "action requires an active eID")
+		}
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.ClientAddress),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
 		sdk.NewAttribute(sdk.AttributeKeyAction, "register_outh2_client"),
 	))
 
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.WasmByteCode)
+	clientId := m.Keeper.autoIncrementClientId(ctx, types.KeyLastClientId)
+	info := types.OauthClientInfo{
+		ClientId: clientId,
+		Owner:    msg.Owner,
+		Domain:   msg.Domain,
+		Public:   true,
+	}
+	m.Keeper.SetClientIdToInfo(ctx, clientId, info)
+	m.Keeper.SetNewClientId(ctx, owner, clientId)
+
+	return &types.MsgRegisterOAuthClientResponse{
+		ClientId: clientId,
+	}, nil
+}
+
+func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAuthClient) (*types.MsgEditOAuthClientResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	_, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "owner")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
+		sdk.NewAttribute(sdk.AttributeKeyAction, "edit_outh2_client"),
+	))
+
+	info, err := m.Keeper.GetClientIdToInfo(ctx, msg.ClientId)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "invalid client id")
+	}
+	if info.Owner != msg.Owner {
+		return nil, sdkerrors.Wrap(err, "unauthorized")
+	}
+
+	info.Domain = msg.Domain
+	err = m.Keeper.SetClientIdToInfo(ctx, msg.ClientId, *info)
 	if err != nil {
 		return nil, err
 	}
 
-	return &types.MsgStoreCodeResponse{
-		CodeId:   codeId,
-		Checksum: checksum,
-	}, nil
+	return &types.MsgEditOAuthClientResponse{}, nil
 }

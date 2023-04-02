@@ -29,6 +29,21 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/wasmx/websrv/v1/params";
   }
+  // GetAllClients gets all the registered client apps for the oauth service
+  rpc GetAllOauthClients(QueryGetAllOauthClientsRequest)
+      returns (QueryGetAllOauthClientsResponse) {
+    option (google.api.http).get = "/wasmx/websrv/v1/oauth/clients";
+  }
+  // GetOauthClient gets the registered oauth client by client id
+  rpc GetOauthClient(QueryGetOauthClientRequest)
+      returns (QueryGetOauthClientResponse) {
+    option (google.api.http).get = "/wasmx/websrv/v1/oauth/client/{client_id}";
+  }
+  // GetOauthClientsByOwner gets all the registered oauth client by an owner address
+  rpc GetOauthClientsByOwner(QueryGetOauthClientsByOwnerRequest)
+      returns (QueryGetOauthClientsByOwnerResponse) {
+    option (google.api.http).get = "/wasmx/websrv/v1/oauth/clients/{owner}";
+  }
 }
 
 // QueryContractByRouteRequest is the request type for the
@@ -76,3 +91,47 @@ message QueryParamsResponse {
   // params holds all the parameters of this module.
   Params params = 1 [(gogoproto.nullable) = false];
 }
+
+message OauthClientInfo {
+  uint64 client_id = 1;
+  string owner = 2;
+  string domain = 3;
+  bool public = 4;
+}
+
+// QueryGetAllOauthClientsRequest is the request type for the
+// Query/GetAllOauthClients RPC method.
+message QueryGetAllOauthClientsRequest {}
+
+// QueryGetAllOauthClientsResponse is the response type for the
+// Query/GetAllOauthClients RPC method.
+message QueryGetAllOauthClientsResponse {
+  repeated OauthClientInfo clients = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryGetOauthClientRequest is the request type for the
+// Query/GetOauthClient RPC method.
+message QueryGetOauthClientRequest {
+  uint64 client_id = 1;
+}
+
+// QueryGetOauthClientResponse is the response type for the
+// Query/GetOauthClient RPC method.
+message QueryGetOauthClientResponse {
+  OauthClientInfo client = 1;
+}
+
+
+// QueryGetAllOauthClientsRequest is the request type for the
+// Query/GetOauthClientsByOwner RPC method.
+message QueryGetOauthClientsByOwnerRequest {
+  // bech32 address
+  string owner = 1;
+}
+
+// QueryGetAllOauthClientsResponse is the response type for the
+// Query/GetOauthClientsByOwner RPC method.
+message QueryGetOauthClientsByOwnerResponse {
+  repeated uint64 client_ids = 1;
+}
+

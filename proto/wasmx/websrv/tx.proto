@@ -7,15 +7,25 @@ option go_package = "wasmx/x/websrv/types";
 service Msg {
   // Register OAuth client
   rpc RegisterOAuthClient(MsgRegisterOAuthClient) returns (MsgRegisterOAuthClientResponse);
+  // Edit OAuth client
+  rpc EditOAuthClient(MsgEditOAuthClient) returns (MsgEditOAuthClientResponse);
 }
 
 message MsgRegisterOAuthClient {
     // bech32 address
-    string client_address = 1;
+    string owner = 1;
     string domain = 2;
 }
 
 message MsgRegisterOAuthClientResponse {
-    string client_id = 1;
-    // string client_secret = 2;
+    uint64 client_id = 1;
 }
+
+message MsgEditOAuthClient {
+    // bech32 address
+    string owner = 1;
+    uint64 client_id = 2;
+    string domain = 3;
+}
+
+message MsgEditOAuthClientResponse {}
