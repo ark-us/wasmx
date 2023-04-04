@@ -109,22 +109,22 @@ func (k WebsrvServer) InitOauth2(mux *http.ServeMux, dirname string) {
 	// manager.MapAccessGenerate(generates.NewJWTAccessGenerate("", []byte("00000000"), jwt.SigningMethodHS512))
 	manager.MapAccessGenerate(generates.NewAccessGenerate())
 
-	var clients []types.OauthClientInfo
+	// var clients []types.OauthClientInfo
 
-	clientsResp, _ := k.queryClient.GetAllOauthClients(k.ctx, &types.QueryGetAllOauthClientsRequest{})
-	if clientsResp != nil {
-		clients = clientsResp.Clients
-	}
+	// clientsResp, _ := k.queryClient.GetAllOauthClients(k.ctx, &types.QueryGetAllOauthClientsRequest{})
+	// if clientsResp != nil {
+	// 	clients = clientsResp.Clients
+	// }
 	clientStore := store.NewClientStore()
-	for _, client := range clients {
-		id := types.OauthClientIdToString(client.ClientId)
-		clientStore.Set(id, &models.Client{
-			ID:     id,
-			Secret: "",
-			Domain: client.Domain,
-			Public: true,
-		})
-	}
+	// for _, client := range clients {
+	// 	id := types.OauthClientIdToString(client.ClientId)
+	// 	clientStore.Set(id, &models.Client{
+	// 		ID:     id,
+	// 		Secret: "",
+	// 		Domain: client.Domain,
+	// 		Public: true,
+	// 	})
+	// }
 
 	manager.MapClientStorage(clientStore)
 
