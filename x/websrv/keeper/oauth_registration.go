@@ -15,19 +15,47 @@ import (
 func (k Keeper) GetAddressToClients(ctx sdk.Context, owner sdk.AccAddress) ([]uint64, error) {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetKeyOauthAddressToClientsPrefix(owner))
-	var clientIds *[]uint64
-	err := json.Unmarshal(bz, clientIds)
+	if len(bz) == 0 {
+		return []uint64{}, nil
+	}
+	var clientIds []uint64
+	err := json.Unmarshal(bz, &clientIds)
 	if err != nil {
 		return nil, err
 	}
-	return *clientIds, nil
+	return clientIds, nil
 }
 
 func (k Keeper) SetNewClientId(ctx sdk.Context, owner sdk.AccAddress, clientId uint64) error {
 	store := ctx.KVStore(k.storeKey)
 	clientIds, _ := k.GetAddressToClients(ctx, owner)
+	if len(clientIds) > 100 {
+		return sdkerrors.Wrapf(types.ErrOAuthTooManyClientsRegistered, "%d already registered", len(clientIds))
+	}
 	clientIds = append(clientIds, clientId)
 	bz, err := json.Marshal(clientIds)
+	if err != nil {
+		return err
+	}
+	store.Set(types.GetKeyOauthAddressToClientsPrefix(owner), bz)
+	return nil
+}
+
+func (k Keeper) DeleteClientIdFromOwner(ctx sdk.Context, owner sdk.AccAddress, clientId uint64) error {
+	store := ctx.KVStore(k.storeKey)
+
+	clientIds, _ := k.GetAddressToClients(ctx, owner)
+	var newClientIds []uint64
+	for _, id := range clientIds {
+		if id != clientId {
+			newClientIds = append(newClientIds, id)
+		}
+	}
+	if len(newClientIds) == 0 {
+		store.Delete(types.GetKeyOauthAddressToClientsPrefix(owner))
+		return nil
+	}
+	bz, err := json.Marshal(newClientIds)
 	if err != nil {
 		return err
 	}
@@ -38,12 +66,15 @@ func (k Keeper) SetNewClientId(ctx sdk.Context, owner sdk.AccAddress, clientId u
 func (k Keeper) GetClientIdToInfo(ctx sdk.Context, clientId uint64) (*types.OauthClientInfo, error) {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetKeyOauthClientIdToInfoPrefix(clientId))
-	var info *types.OauthClientInfo
-	err := k.cdc.Unmarshal(bz, info)
+	if len(bz) == 0 {
+		return nil, nil
+	}
+	var info types.OauthClientInfo
+	err := k.cdc.Unmarshal(bz, &info)
 	if err != nil {
 		return nil, err
 	}
-	return info, nil
+	return &info, nil
 }
 
 func (k Keeper) SetClientIdToInfo(ctx sdk.Context, clientId uint64, info types.OauthClientInfo) error {
@@ -54,6 +85,11 @@ func (k Keeper) SetClientIdToInfo(ctx sdk.Context, clientId uint64, info types.O
 	}
 	store.Set(types.GetKeyOauthClientIdToInfoPrefix(clientId), bz)
 	return nil
+}
+
+func (k Keeper) DeleteClientIdToInfo(ctx sdk.Context, clientId uint64) {
+	store := ctx.KVStore(k.storeKey)
+	store.Delete(types.GetKeyOauthClientIdToInfoPrefix(clientId))
 }
 
 func (k Keeper) autoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uint64 {

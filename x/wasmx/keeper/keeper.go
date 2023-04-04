@@ -98,6 +98,11 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
+// 0755 = User:rwx Group:r-x World:r-x
+// 0750 = User:rwx Group:r-x World:---
+// 0770
+const nodeDirPerm = 0o755
+
 func createDirsIfNotExist(dirpath string) error {
-	return os.MkdirAll(dirpath, 0770)
+	return os.MkdirAll(dirpath, nodeDirPerm)
 }

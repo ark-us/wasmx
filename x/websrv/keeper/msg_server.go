@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -38,13 +39,6 @@ func (m msgServer) RegisterOAuthClient(goCtx context.Context, msg *types.MsgRegi
 		}
 	}
 
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
-		sdk.NewAttribute(sdk.AttributeKeyAction, "register_outh2_client"),
-	))
-
 	clientId := m.Keeper.autoIncrementClientId(ctx, types.KeyLastClientId)
 	info := types.OauthClientInfo{
 		ClientId: clientId,
@@ -54,6 +48,13 @@ func (m msgServer) RegisterOAuthClient(goCtx context.Context, msg *types.MsgRegi
 	}
 	m.Keeper.SetClientIdToInfo(ctx, clientId, info)
 	m.Keeper.SetNewClientId(ctx, owner, clientId)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeRegisterOauthClient,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
+		sdk.NewAttribute(types.AttributeKeyOauthClientId, string(clientId)),
+	))
 
 	return &types.MsgRegisterOAuthClientResponse{
 		ClientId: clientId,
@@ -72,10 +73,10 @@ func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAut
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		sdk.EventTypeMessage,
+		types.EventTypeEditOauthClient,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
-		sdk.NewAttribute(sdk.AttributeKeyAction, "edit_outh2_client"),
+		sdk.NewAttribute(types.AttributeKeyOauthClientId, string(msg.ClientId)),
 	))
 
 	info, err := m.Keeper.GetClientIdToInfo(ctx, msg.ClientId)
@@ -93,4 +94,28 @@ func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAut
 	}
 
 	return &types.MsgEditOAuthClientResponse{}, nil
+}
+
+func (m msgServer) DeregisterOAuthClient(goCtx context.Context, msg *types.MsgDeregisterOAuthClient) (*types.MsgDeregisterOAuthClientResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "owner")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeDeregisterOauthClient,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
+		sdk.NewAttribute(types.AttributeKeyOauthClientId, fmt.Sprint(msg.ClientId)),
+	))
+
+	m.Keeper.DeleteClientIdFromOwner(ctx, owner, msg.ClientId)
+	m.Keeper.DeleteClientIdToInfo(ctx, msg.ClientId)
+
+	return &types.MsgDeregisterOAuthClientResponse{}, nil
 }

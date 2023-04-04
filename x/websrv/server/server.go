@@ -24,12 +24,12 @@ func StartWebsrv(
 	clientCtx client.Context,
 	cfg *config.WebsrvConfig,
 ) (*http.Server, chan struct{}, error) {
-	ctx.Logger.Info("starting websrv web server at ", cfg.Address)
+	ctx.Logger.Info("starting websrv web server ", cfg.Address)
 	websrvServer := NewWebsrvServer(ctx, ctx.Logger, clientCtx, cfg)
 	mux := http.NewServeMux()
 
 	if cfg.EnableOAuth {
-		ctx.Logger.Info("starting websrv oauth2 server at ", cfg.Address)
+		ctx.Logger.Info("starting websrv oauth2 server ", cfg.Address)
 		websrvServer.InitOauth2(mux, path.Join(clientCtx.HomeDir, dirname))
 	}
 	mux.HandleFunc("/", websrvServer.Route)

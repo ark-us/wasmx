@@ -9,8 +9,8 @@ import (
 	"flag"
 	"html/template"
 	"io"
+	"io/fs"
 	"log"
-	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -76,6 +76,9 @@ var (
 
 var AUTHORIZATION_CODE_EXPIRATION = time.Minute * 5
 
+// User:rwx Group:r-x World:---
+var secretPerm fs.FileMode = 0o750
+
 // temporary nonces
 var nonceDB = map[string]time.Time{}
 
@@ -87,6 +90,10 @@ var (
 func (k WebsrvServer) InitOauth2(mux *http.ServeMux, dirname string) {
 	tokenDbPath := path.Join(dirname, tokenDbName)
 	dumpvar = false
+
+	if err := os.MkdirAll(dirname, secretPerm); err != nil {
+		panic(err)
+	}
 
 	flag.Parse()
 	if dumpvar {
@@ -110,7 +117,7 @@ func (k WebsrvServer) InitOauth2(mux *http.ServeMux, dirname string) {
 	}
 	clientStore := store.NewClientStore()
 	for _, client := range clients {
-		id := string(big.NewInt(int64(client.ClientId)).FillBytes(make([]byte, 32)))
+		id := types.OauthClientIdToString(client.ClientId)
 		clientStore.Set(id, &models.Client{
 			ID:     id,
 			Secret: "",
@@ -147,6 +154,20 @@ func (k WebsrvServer) InitOauth2(mux *http.ServeMux, dirname string) {
 	mux.HandleFunc("/oauth/authorize", func(w http.ResponseWriter, r *http.Request) {
 		if dumpvar {
 			dumpRequest(os.Stdout, "authorize", r)
+		}
+
+		clientIdHex := r.URL.Query().Get("client_id")
+		clientId, err := types.OauthClientIdFromString(clientIdHex)
+		if err == nil {
+			client, err := k.queryClient.GetOauthClient(k.ctx, &types.QueryGetOauthClientRequest{ClientId: clientId})
+			if err == nil && client != nil && client.Client != nil {
+				clientStore.Set(clientIdHex, &models.Client{
+					ID:     clientIdHex,
+					Secret: "",
+					Domain: client.Client.Domain,
+					Public: true,
+				})
+			}
 		}
 
 		store, err := session.Start(r.Context(), w, r)

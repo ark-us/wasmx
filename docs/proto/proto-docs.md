@@ -34,6 +34,8 @@
     - [Query](#wasmx.websrv.Query)
   
 - [wasmx/websrv/tx.proto](#wasmx/websrv/tx.proto)
+    - [MsgDeregisterOAuthClient](#wasmx.websrv.MsgDeregisterOAuthClient)
+    - [MsgDeregisterOAuthClientResponse](#wasmx.websrv.MsgDeregisterOAuthClientResponse)
     - [MsgEditOAuthClient](#wasmx.websrv.MsgEditOAuthClient)
     - [MsgEditOAuthClientResponse](#wasmx.websrv.MsgEditOAuthClientResponse)
     - [MsgRegisterOAuthClient](#wasmx.websrv.MsgRegisterOAuthClient)
@@ -224,6 +226,11 @@ QueryGetAllOauthClientsRequest is the request type for the
 Query/GetAllOauthClients RPC method.
 
 
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | pagination defines an optional pagination for the request. |
+
+
 
 
 
@@ -238,6 +245,7 @@ Query/GetAllOauthClients RPC method.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `clients` | [OauthClientInfo](#wasmx.websrv.OauthClientInfo) | repeated |  |
+| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
 
 
 
@@ -429,6 +437,32 @@ Query defines the gRPC querier service.
 
 
 
+<a name="wasmx.websrv.MsgDeregisterOAuthClient"></a>
+
+### MsgDeregisterOAuthClient
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `owner` | [string](#string) |  | bech32 address |
+| `client_id` | [uint64](#uint64) |  |  |
+
+
+
+
+
+
+<a name="wasmx.websrv.MsgDeregisterOAuthClientResponse"></a>
+
+### MsgDeregisterOAuthClientResponse
+
+
+
+
+
+
+
 <a name="wasmx.websrv.MsgEditOAuthClient"></a>
 
 ### MsgEditOAuthClient
@@ -502,6 +536,7 @@ Msg defines the Msg service.
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
 | `RegisterOAuthClient` | [MsgRegisterOAuthClient](#wasmx.websrv.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#wasmx.websrv.MsgRegisterOAuthClientResponse) | Register OAuth client | |
 | `EditOAuthClient` | [MsgEditOAuthClient](#wasmx.websrv.MsgEditOAuthClient) | [MsgEditOAuthClientResponse](#wasmx.websrv.MsgEditOAuthClientResponse) | Edit OAuth client | |
+| `DeregisterOAuthClient` | [MsgDeregisterOAuthClient](#wasmx.websrv.MsgDeregisterOAuthClient) | [MsgDeregisterOAuthClientResponse](#wasmx.websrv.MsgDeregisterOAuthClientResponse) | Deregister OAuth client | |
 
  <!-- end services -->
 

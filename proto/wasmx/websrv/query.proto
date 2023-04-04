@@ -101,12 +101,17 @@ message OauthClientInfo {
 
 // QueryGetAllOauthClientsRequest is the request type for the
 // Query/GetAllOauthClients RPC method.
-message QueryGetAllOauthClientsRequest {}
+message QueryGetAllOauthClientsRequest {
+  // pagination defines an optional pagination for the request.
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
 
 // QueryGetAllOauthClientsResponse is the response type for the
 // Query/GetAllOauthClients RPC method.
 message QueryGetAllOauthClientsResponse {
   repeated OauthClientInfo clients = 1 [(gogoproto.nullable) = false];
+  // pagination defines the pagination in the response.
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 // QueryGetOauthClientRequest is the request type for the

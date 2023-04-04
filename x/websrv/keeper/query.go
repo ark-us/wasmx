@@ -58,9 +58,12 @@ func (k Keeper) GetOauthClient(c context.Context, req *types.QueryGetOauthClient
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 	client, err := k.GetClientIdToInfo(sdk.UnwrapSDKContext(c), req.ClientId)
+	if err != nil {
+		return nil, err
+	}
 	return &types.QueryGetOauthClientResponse{
 		Client: client,
-	}, err
+	}, nil
 }
 
 func (k Keeper) GetOauthClientsByOwner(c context.Context, req *types.QueryGetOauthClientsByOwnerRequest) (*types.QueryGetOauthClientsByOwnerResponse, error) {

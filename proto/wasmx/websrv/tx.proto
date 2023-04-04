@@ -9,6 +9,8 @@ service Msg {
   rpc RegisterOAuthClient(MsgRegisterOAuthClient) returns (MsgRegisterOAuthClientResponse);
   // Edit OAuth client
   rpc EditOAuthClient(MsgEditOAuthClient) returns (MsgEditOAuthClientResponse);
+  // Deregister OAuth client
+  rpc DeregisterOAuthClient(MsgDeregisterOAuthClient) returns (MsgDeregisterOAuthClientResponse);
 }
 
 message MsgRegisterOAuthClient {
@@ -29,3 +31,11 @@ message MsgEditOAuthClient {
 }
 
 message MsgEditOAuthClientResponse {}
+
+message MsgDeregisterOAuthClient {
+    // bech32 address
+    string owner = 1;
+    uint64 client_id = 2;
+}
+
+message MsgDeregisterOAuthClientResponse {}
