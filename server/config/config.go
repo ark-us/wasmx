@@ -111,6 +111,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 	}
 	websrvConf := websrvconfig.WebsrvConfig{
 		Enable:             v.GetBool("websrv.enable"),
+		EnableOAuth:        v.GetBool("websrv.enable-oauth"),
 		Address:            v.GetString("websrv.address"),
 		CORSAllowedOrigins: v.GetStringSlice("websrv.cors-allowed-origins"),
 		CORSAllowedMethods: v.GetStringSlice("websrv.cors-allowed-methods"),

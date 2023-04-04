@@ -161,8 +161,9 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Bool(srvflags.RPCEnable, false, "Defines if Cosmos-sdk REST server should be enabled")
 	cmd.Flags().Bool(srvflags.EnabledUnsafeCors, false, "Defines if CORS should be enabled (unsafe - use it at your own risk)")
 
-	cmd.Flags().Bool(websrvflags.WebsrvEnable, true, "Define if the JSON-RPC server should be enabled")
-	cmd.Flags().String(websrvflags.WebsrvAddress, websrvconfig.DefaultWebservAddress, "the Websrv web server address to listen on")
+	cmd.Flags().Bool(websrvflags.WebsrvEnable, true, "Define if the websrv web server should be enabled")
+	cmd.Flags().Bool(websrvflags.WebsrvEnableOAuth, true, "Define if the websrv oauth server should be enabled. (Note: websrv.enable must also be enabled.)")
+	cmd.Flags().String(websrvflags.WebsrvAddress, websrvconfig.DefaultWebsrvAddress, "the Websrv web server address to listen on")
 	cmd.Flags().Int(websrvflags.WebsrvMaxOpenConnections, websrvconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener") //nolint:lll
 	cmd.Flags().StringSlice(websrvflags.WebsrvCORSAllowedOrigins, websrvconfig.DefaultCORSAllowedOrigins, "Sets the allowed origins for the server listener")
 	cmd.Flags().StringSlice(websrvflags.WebsrvCORSAllowedMethods, websrvconfig.DefaultCORSAllowedMethods, "Sets the allowed methods for the server listener")

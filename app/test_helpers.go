@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibctesting "github.com/cosmos/ibc-go/v6/testing"
 	"github.com/cosmos/ibc-go/v6/testing/simapp"
 
@@ -13,6 +14,11 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 )
+
+func init() {
+	cfg := sdk.GetConfig()
+	SetBech32Prefixes(cfg)
+}
 
 // DefaultTestingAppInit defines the IBC application used for testing
 var DefaultTestingAppInit func() (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
