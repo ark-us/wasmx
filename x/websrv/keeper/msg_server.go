@@ -53,7 +53,7 @@ func (m msgServer) RegisterOAuthClient(goCtx context.Context, msg *types.MsgRegi
 		types.EventTypeRegisterOauthClient,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
-		sdk.NewAttribute(types.AttributeKeyOauthClientId, string(clientId)),
+		sdk.NewAttribute(types.AttributeKeyOauthClientId, fmt.Sprint(clientId)),
 	))
 
 	return &types.MsgRegisterOAuthClientResponse{
@@ -76,7 +76,7 @@ func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAut
 		types.EventTypeEditOauthClient,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Owner),
-		sdk.NewAttribute(types.AttributeKeyOauthClientId, string(msg.ClientId)),
+		sdk.NewAttribute(types.AttributeKeyOauthClientId, fmt.Sprint(msg.ClientId)),
 	))
 
 	info, err := m.Keeper.GetClientIdToInfo(ctx, msg.ClientId)
