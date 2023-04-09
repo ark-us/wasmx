@@ -1,15 +1,20 @@
 package keeper_test
 
 import (
+	"crypto/sha256"
 	_ "embed"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
+	"strings"
 
-	"github.com/cosmos/cosmos-sdk/codec/legacy"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
+
+	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"wasmx/x/wasmx/ewasm"
 	"wasmx/x/wasmx/types"
@@ -118,44 +123,33 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
 
-	fmt.Println("--sender.Address.Bytes()--", hex.EncodeToString(sender.Address.Bytes()))
-	fmt.Println("--sender.PubKey.Bytes()--", hex.EncodeToString(sender.PubKey.Bytes()))
-	fmt.Println("--sender.PubKey.Address()--", hex.EncodeToString(sender.PubKey.Address()))
-	pubKey, err := legacy.PubKeyFromBytes(sender.PubKey.Bytes())
-	s.Require().NoError(err)
-	s.Require().Equal(pubKey.Bytes(), sender.PubKey.Bytes(), "wrong pub key")
-
-	pubKey, err = legacy.PubKeyFromBytes(sender.Address.Bytes())
-	s.Require().NoError(err)
-	s.Require().Equal(pubKey.Bytes(), sender.PubKey.Bytes(), "wrong pub key")
-
-	// Address = sdk.AccAddress(accs[i].PubKey.Address())
-
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	// secp256k1
 	contractAddress := ewasm.AccAddressFromHex("0x0000000000000000000000000000000000000001")
 
-	msgHash, err := hex.DecodeString("38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e")
-	s.Require().NoError(err)
-	signature, err := sender.PrivKey.Sign(msgHash)
-	s.Require().NoError(err)
+	message := []byte("This is a test message")
+	msgHash_ := sha256.Sum256(message)
+	msgHash := msgHash_[:]
 
-	verified := sender.PubKey.VerifySignature(msgHash, signature)
+	// Signature must be compatible with Ethereum
+	privKeyBtcec := (sender.PrivKey).(*secp256k1.PrivKey)
+	btcecPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBtcec.Key)
+	signature, err := btcec.SignCompact(btcec.S256(), btcecPrivKey, msgHash, false)
+	s.Require().NoError(err)
+	v := signature[0] - 27
+	copy(signature, signature[1:])
+	signature[64] = v
+
+	verified := sender.PubKey.VerifySignature(message, signature[:64])
 	s.Require().True(verified)
 
 	inputbz := append(msgHash, signature...)
-
-	// inputhex := "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02"
-
-	fmt.Println("-inputhex--", hex.EncodeToString(inputbz))
-	fmt.Println("-msgHash--", hex.EncodeToString(msgHash))
-	fmt.Println("-signature--", hex.EncodeToString(signature))
+	senderhex := strings.ToLower(ewasm.EvmAddressFromAcc(sender.Address).Hex())
 
 	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: inputbz}, nil, nil)
-	s.Require().Equal("000000000000000000000000ceaccac640adf55b2028469bd36ba501f28b699d", qres)
+	s.Require().Equal(senderhex[2:], qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
