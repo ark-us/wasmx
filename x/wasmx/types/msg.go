@@ -78,6 +78,38 @@ func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{senderAddr}
 }
 
+func (msg MsgStoreCodeEvm) Route() string {
+	return RouterKey
+}
+
+func (msg MsgStoreCodeEvm) Type() string {
+	return "store-code-evm"
+}
+
+func (msg MsgStoreCodeEvm) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return err
+	}
+
+	if err := validateEvmCode(msg.EvmByteCode, MaxEvmSize); err != nil {
+		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+	}
+
+	return nil
+}
+
+func (msg MsgStoreCodeEvm) GetSignBytes() []byte {
+	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
+}
+
+func (msg MsgStoreCodeEvm) GetSigners() []sdk.AccAddress {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{senderAddr}
+}
+
 func (msg MsgInstantiateContract) Route() string {
 	return RouterKey
 }
