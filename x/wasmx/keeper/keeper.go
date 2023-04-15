@@ -38,7 +38,8 @@ type (
 		gasRegister   GasRegister
 		denom         string
 
-		wasmvm WasmxEngine
+		wasmvm  WasmxEngine
+		tempDir string
 	}
 )
 
@@ -62,6 +63,11 @@ func NewKeeper(
 		panic(err)
 	}
 	err = createDirsIfNotExist(path.Join(contractsPath, types.PINNED_FOLDER))
+	if err != nil {
+		panic(err)
+	}
+	tempDir := path.Join(homeDir, types.TempDir)
+	err = createDirsIfNotExist(tempDir)
 	if err != nil {
 		panic(err)
 	}
@@ -91,6 +97,7 @@ func NewKeeper(
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		gasRegister:   NewDefaultWasmGasRegister(),
 		wasmvm:        *wasmvm,
+		tempDir:       tempDir,
 	}
 }
 

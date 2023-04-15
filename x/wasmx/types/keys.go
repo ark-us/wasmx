@@ -18,6 +18,8 @@ const (
 	MemStoreKey = "mem_wasmx"
 
 	ContractsDir = "wasmx"
+
+	TempDir = "temp"
 )
 
 const (
