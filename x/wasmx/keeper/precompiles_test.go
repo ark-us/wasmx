@@ -1,18 +1,23 @@
 package keeper_test
 
 import (
+	"crypto/sha256"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
+	"strings"
 
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/go-bip39"
+
+	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"wasmx/x/wasmx/ewasm"
 	"wasmx/x/wasmx/types"
-)
-
-var (
-	//go:embed testdata/classic/ecrecover.wasm
-	ecrecoverbin []byte
 )
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
@@ -33,6 +38,87 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000077", qres)
 }
 
+func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverEthDirect() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	contractAddress := ewasm.AccAddressFromHex("0x000000000000000000000000000000000000001f")
+
+	inputhex := "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02"
+
+	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(inputhex)}, nil, nil)
+	s.Require().Equal("000000000000000000000000ceaccac640adf55b2028469bd36ba501f28b699d", qres)
+}
+
+// type SignedMesssage struct {
+// 	ChainId string `json:"chain_id"`
+// 	AccountNumber string `json:"account_number"`
+// 	Sequence `json:"sequence"`
+// 	Fee
+// }
+
+func (suite *KeeperTestSuite) TestVerification() {
+	mnemonic := "carpet toddler provide announce damage uniform excite planet gap apology spatial nerve increase clump dial enforce basket thunder grain flee tent sleep heavy bonus"
+
+	// algo secp256k1
+	// accountPubKey := []byte{2, 88, 67, 184, 75, 57, 134, 207, 115, 243, 57, 191, 96, 117, 251, 24, 202, 193, 170, 41, 152, 7, 47, 100, 241, 36, 47, 133, 234, 24, 103, 115, 97}
+	accountBech32 := "mythos1sap78sy28k29xq48vfk37w5hwvd54ltq54jt69"
+	// accountBech32 := "cosmos1sap78sy28k29xq48vfk37w5hwvd54ltqt6pg84"
+
+	s.Require().True(bip39.IsMnemonicValid(mnemonic))
+
+	hdPath := hd.CreateHDPath(118, 0, 0).String()
+
+	derivedPriv, err := hd.Secp256k1.Derive()(mnemonic, "", hdPath)
+	s.Require().NoError(err)
+	privKey := hd.Secp256k1.Generate()(derivedPriv)
+
+	// privKey := secp256k1.GenPrivKeyFromSecret(pk.GetKey().Seed())
+	pubKey := privKey.PubKey()
+	address := sdk.AccAddress(pubKey.Address())
+
+	s.Require().Equal(accountBech32, address.String())
+
+	// msg := `{"scope":"oauth","client_id":"1234","nonce":"TGKUgDB77OL4ScJNLaRhTNj3CBJDr1eltGiiivjyYco=","chain_id":"mythos_7000-7"}`
+	// signature := "2ExEqYF7XWE/q9D7vgOOwbDm5ZUXeyU0szXQicvIwJVeNj3tq4CjO8a6I1kiQVTW2MQfwhv/2NI6um2JEEvpRQ=="
+	// signaturePubKey := "AlhDuEs5hs9z8zm/YHX7GMrBqimYBy9k8SQvheoYZ3Nh"
+	// signaturePubKeyType := "tendermint/PubKeySecp256k1"
+
+	// msg := `{"chain_id":"","account_number":"0","sequence":"0","fee":{"gas":"0","amount":[]},"msgs":[{"type":"sign/MsgSignData","value":{"signer":"mythos1sap78sy28k29xq48vfk37w5hwvd54ltq54jt69","data":"a"}}],"memo":""}`
+	msg := `{"account_number":"0","chain_id":"","fee":{"amount":[],"gas":"0"},"memo":"","msgs":[{"type":"sign/MsgSignData","value":{"data":"YQ==","signer":"mythos1sap78sy28k29xq48vfk37w5hwvd54ltq54jt69"}}],"sequence":"0"}`
+	signature := "LqSI0Lx1Xy7fLUn07Xx0aVV2jpuCA7mHkj/CvwTVbf8CWrVgElmvUuHwikrA50PPwlr8mdspHSt+eVc+br4Qcw=="
+
+	signedMsg := []byte(msg)
+	// Sign applies sha256 on the message
+	signature2, err := privKey.Sign(signedMsg)
+	s.Require().NoError(err)
+
+	signature2str := base64.StdEncoding.EncodeToString(signature2)
+	s.Require().Equal(signature, signature2str)
+
+	signatureBz, err := base64.StdEncoding.DecodeString(signature)
+	s.Require().NoError(err)
+	// VerifySignature applies sha256 on the message
+	verified := pubKey.VerifySignature(signedMsg, signatureBz)
+	s.Require().True(verified)
+
+	msg = `{"account_number":"0","chain_id":"","fee":{"amount":[],"gas":"0"},"memo":"","msgs":[{"type":"sign/MsgSignData","value":{"data":"eyJzY29wZSI6Im9hdXRoIiwiY2xpZW50X2lkIjoiMTIzNCIsIm5vbmNlIjoiRlo2U25MUmRZL2M0V3dxZ01GSitQSzJjdDd2Q0g5YkVkdkhrNFhWdEZaTT0ifQ==","signer":"mythos1sap78sy28k29xq48vfk37w5hwvd54ltq54jt69"}}],"sequence":"0"}`
+	signature = "2KPHrWqQdfOCkaWQQ40XdG4LsJo3v9iMgw00ZIH5fpdO2n4FDg1hqApOS6u1Q7XEk/ylPSm4kYMT2aQkGfeJKw=="
+	signature2, err = privKey.Sign([]byte(msg))
+	s.Require().NoError(err)
+	signature2str = base64.StdEncoding.EncodeToString(signature2)
+	s.Require().Equal(signature, signature2str)
+	signatureBz, err = base64.StdEncoding.DecodeString(signature)
+	s.Require().NoError(err)
+	// VerifySignature applies sha256 on the message
+	verified = pubKey.VerifySignature([]byte(msg), signatureBz)
+	s.Require().True(verified)
+}
+
 func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
@@ -43,31 +129,27 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 
 	contractAddress := ewasm.AccAddressFromHex("0x0000000000000000000000000000000000000001")
 
-	inputhex := "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02"
+	message := []byte("This is a test message")
+	msgHash_ := sha256.Sum256(message)
+	msgHash := msgHash_[:]
 
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(inputhex)}, nil, nil)
-	s.Require().Equal("000000000000000000000000ceaccac640adf55b2028469bd36ba501f28b699d", qres)
-}
+	// Signature must be compatible with Ethereum
+	privKeyBtcec := (sender.PrivKey).(*secp256k1.PrivKey)
+	btcecPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBtcec.Key)
+	signature, err := btcec.SignCompact(btcec.S256(), btcecPrivKey, msgHash, false)
+	s.Require().NoError(err)
+	v := signature[0] - 27
+	copy(signature, signature[1:])
+	signature[64] = v
 
-func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecover() {
-	wasmbin := ecrecoverbin
-	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	verified := sender.PubKey.VerifySignature(message, signature[:64])
+	s.Require().True(verified)
 
-	appA := s.GetAppContext(s.chainA)
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
+	inputbz := append(msgHash, signature...)
+	senderhex := strings.ToLower(ewasm.EvmAddressFromAcc(sender.Address).Hex())
 
-	codeId := appA.StoreCode(sender, wasmbin)
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "ecrecoverbin", nil)
-
-	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
-
-	inputhex := "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02"
-	deps := []string{"0x0000000000000000000000000000000000000001"}
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(inputhex)}, nil, deps)
-	s.Require().Equal("000000000000000000000000ceaccac640adf55b2028469bd36ba501f28b699d", qres)
+	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: inputbz}, nil, nil)
+	s.Require().Equal(senderhex[2:], qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {

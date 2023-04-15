@@ -36,6 +36,7 @@ message SystemContract {
   string label = 2;
   bytes init_message = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
   bool pinned = 4;
+  bool native = 5;
 }
 
 // Code - for importing and exporting code data
