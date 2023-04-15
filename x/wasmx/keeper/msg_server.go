@@ -3,10 +3,13 @@ package keeper
 import (
 	"context"
 
-	"wasmx/x/wasmx/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
+	"github.com/ark-us/evm2wat"
+	"github.com/ark-us/wat2wasm"
+
+	"wasmx/x/wasmx/types"
 )
 
 type msgServer struct {
@@ -43,6 +46,42 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 	}
 
 	return &types.MsgStoreCodeResponse{
+		CodeId:   codeId,
+		Checksum: checksum,
+	}, nil
+}
+
+func (m msgServer) StoreCodeEvm(goCtx context.Context, msg *types.MsgStoreCodeEvm) (*types.MsgStoreCodeEvmResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "sender")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		sdk.EventTypeMessage,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+	))
+
+	watCode, err := evm2wat.EvmToWat(msg.EvmByteCode, evm2wat.DefaultOptions())
+	if err != nil {
+		return nil, err
+	}
+	wasmByteCode, err := wat2wasm.WatToWasm(watCode.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, wasmByteCode)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgStoreCodeEvmResponse{
 		CodeId:   codeId,
 		Checksum: checksum,
 	}, nil

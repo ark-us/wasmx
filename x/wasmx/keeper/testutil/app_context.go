@@ -169,6 +169,20 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	return codeId
 }
 
+func (s AppContext) StoreCodeEvm(sender simulation.Account, evmcode []byte) uint64 {
+	storeCodeMsg := &types.MsgStoreCodeEvm{
+		Sender:      sender.Address.String(),
+		EvmByteCode: evmcode,
+	}
+
+	res := s.DeliverTx(sender, storeCodeMsg)
+	s.S.Require().True(res.IsOK(), res.GetLog())
+	s.S.Commit()
+
+	codeId := s.GetCodeIdFromLog(res.GetLog())
+	return codeId
+}
+
 func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) sdk.AccAddress {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.S.Require().NoError(err)

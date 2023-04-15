@@ -10,6 +10,8 @@ option go_package = "wasmx/x/wasmx/types";
 service Msg {
     // StoreCode to submit Wasm code to the system
     rpc StoreCode(MsgStoreCode) returns (MsgStoreCodeResponse);
+    // StoreCode to submit Wasm code to the system
+    rpc StoreCodeEvm(MsgStoreCodeEvm) returns (MsgStoreCodeEvmResponse);
     //  InstantiateContract creates a new smart contract instance for the given
     //  code id.
     rpc InstantiateContract(MsgInstantiateContract)
@@ -38,6 +40,21 @@ message MsgStoreCode {
 }
 // MsgStoreCodeResponse returns store result data.
 message MsgStoreCodeResponse {
+    // CodeID is the reference to the stored WASM code
+    uint64 code_id = 1;
+    // Checksum is the sha256 hash of the stored code
+    bytes checksum = 2;
+}
+
+// MsgStoreCodeEvm submit Wasm code to the system
+message MsgStoreCodeEvm {
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // EVM bytecode
+    bytes evm_byte_code = 2;
+}
+// MsgStoreCodeEvmResponse returns store result data.
+message MsgStoreCodeEvmResponse {
     // CodeID is the reference to the stored WASM code
     uint64 code_id = 1;
     // Checksum is the sha256 hash of the stored code
