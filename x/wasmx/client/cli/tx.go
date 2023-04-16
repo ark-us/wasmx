@@ -56,6 +56,7 @@ func GetTxCmd() *cobra.Command {
 	}
 	txCmd.AddCommand(
 		StoreCodeCmd(),
+		StoreCodeEvmCmd(),
 		InstantiateContractCmd(),
 		InstantiateContract2Cmd(),
 		ExecuteContractCmd(),
@@ -114,6 +115,42 @@ func parseStoreCodeArgs(file string, sender sdk.AccAddress, flags *flag.FlagSet)
 		WasmByteCode: wasm,
 	}
 	return msg, nil
+}
+
+// StoreCodeEvmCmd will upload code to be reused.
+func StoreCodeEvmCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "store-evm [evm-hex-bytecode]",
+		Short:   "Upload EVM bytecode",
+		Aliases: []string{"upload-evm"},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			sender := clientCtx.GetFromAddress()
+			evmByteCode, err := hex.DecodeString(args[0])
+			if err != nil {
+				return err
+			}
+
+			msg := types.MsgStoreCodeEvm{
+				Sender:      sender.String(),
+				EvmByteCode: evmByteCode,
+			}
+
+			if err = msg.ValidateBasic(); err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), &msg)
+		},
+		SilenceUsage: true,
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
 }
 
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.

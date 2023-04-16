@@ -20,6 +20,9 @@ const (
 	ContractsDir = "wasmx"
 
 	TempDir = "temp"
+
+	BinDir          = "bin"
+	Wat2WasmBinName = "wat2wasm"
 )
 
 const (

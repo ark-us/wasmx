@@ -71,7 +71,7 @@ func (m msgServer) StoreCodeEvm(goCtx context.Context, msg *types.MsgStoreCodeEv
 	if err != nil {
 		return nil, err
 	}
-	wasmByteCode, err := wat2wasm.WatToWasm(watCode.Code, m.tempDir)
+	wasmByteCode, err := wat2wasm.WatToWasm(watCode.Code, m.tempDir, m.wat2wasmBinPath)
 	if err != nil {
 		return nil, err
 	}
