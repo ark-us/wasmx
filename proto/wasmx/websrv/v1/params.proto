@@ -1,9 +1,9 @@
 syntax = "proto3";
-package wasmx.websrv;
+package wasmx.websrv.v1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "wasmx/x/websrv/types";
+option go_package = "wasmx/v1/x/websrv/types";
 
 // Params defines the parameters for the module.
 message Params {

@@ -1,12 +1,12 @@
 syntax = "proto3";
-package wasmx.websrv;
+package wasmx.websrv.v1;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-import "wasmx/websrv/params.proto";
+import "wasmx/websrv/v1/params.proto";
 
-option go_package = "wasmx/x/websrv/types";
+option go_package = "wasmx/v1/x/websrv/types";
 
 // Query defines the gRPC querier service.
 service Query {
