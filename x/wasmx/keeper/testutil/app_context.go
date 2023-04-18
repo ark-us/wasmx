@@ -239,7 +239,7 @@ func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddre
 	bz, err := query.Marshal()
 	s.S.Require().NoError(err)
 
-	req := abci.RequestQuery{Data: bz, Path: "/wasmx.wasmx.v1.Query/SmartContractCall"}
+	req := abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/SmartContractCall"}
 	abcires := s.App.BaseApp.Query(req)
 	var resp types.QuerySmartContractCallResponse
 	err = resp.Unmarshal(abcires.Value)
