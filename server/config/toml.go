@@ -1,7 +1,7 @@
 package config
 
 import (
-	websrvconfig "wasmx/x/websrv/server/config"
+	websrvconfig "mythos/v1/x/websrv/server/config"
 )
 
 const DefaultConfigTemplate = websrvconfig.DefaultConfigTemplate

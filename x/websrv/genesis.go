@@ -1,9 +1,10 @@
 package websrv
 
 import (
+	"mythos/v1/x/websrv/keeper"
+	"mythos/v1/x/websrv/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"wasmx/x/websrv/keeper"
-	"wasmx/x/websrv/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.

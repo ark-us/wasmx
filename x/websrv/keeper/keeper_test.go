@@ -17,11 +17,11 @@ import (
 
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
-	"wasmx/app"
-	ibctesting "wasmx/testutil/ibc"
-	wasmxkeeper "wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/keeper/testutil"
-	"wasmx/x/wasmx/types"
+	app "mythos/v1/app"
+	ibctesting "mythos/v1/testutil/ibc"
+	wasmxkeeper "mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/keeper/testutil"
+	"mythos/v1/x/wasmx/types"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions

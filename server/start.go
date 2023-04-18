@@ -42,11 +42,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	config "wasmx/server/config"
-	srvflags "wasmx/server/flags"
-	websrv "wasmx/x/websrv/server"
-	websrvconfig "wasmx/x/websrv/server/config"
-	websrvflags "wasmx/x/websrv/server/flags"
+	config "mythos/v1/server/config"
+	srvflags "mythos/v1/server/flags"
+	websrv "mythos/v1/x/websrv/server"
+	websrvconfig "mythos/v1/x/websrv/server/config"
+	websrvflags "mythos/v1/x/websrv/server/flags"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with

@@ -13,11 +13,11 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
 
-	wasmeth "wasmx/x/wasmx/ewasm"
-	wasmxkeeper "wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
+	wasmeth "mythos/v1/x/wasmx/ewasm"
+	wasmxkeeper "mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/types"
 
-	testdata "wasmx/x/wasmx/keeper/testdata/classic"
+	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 )
 
 var (

@@ -1,10 +1,10 @@
 syntax = "proto3";
-package wasmx.websrv.v1;
+package mythos.websrv.v1;
 
 import "cosmos/bank/v1beta1/bank.proto";
 import "gogoproto/gogo.proto";
 
-option go_package = "wasmx/v1/x/websrv/types";
+option go_package = "mythos/v1/x/websrv/types";
 
 // RegisterRouteProposal is a gov Content type to register a web server route
 message RegisterRouteProposal {

@@ -3,9 +3,10 @@ package keeper_test
 import (
 	"testing"
 
+	testkeeper "mythos/v1/testutil/keeper"
+	"mythos/v1/x/websrv/types"
+
 	"github.com/stretchr/testify/require"
-	testkeeper "wasmx/testutil/keeper"
-	"wasmx/x/websrv/types"
 )
 
 func TestGetParams(t *testing.T) {

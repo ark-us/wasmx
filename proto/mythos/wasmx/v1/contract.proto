@@ -1,9 +1,9 @@
 syntax = "proto3";
-package wasmx.wasmx.v1;
+package mythos.wasmx.v1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "wasmx/v1/x/wasmx/types";
+option go_package = "mythos/v1/x/wasmx/types";
 
 // ContractStorage
 message ContractStorage {

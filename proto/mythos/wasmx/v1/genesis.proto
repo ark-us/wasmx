@@ -1,11 +1,11 @@
 syntax = "proto3";
-package wasmx.wasmx.v1;
+package mythos.wasmx.v1;
 
 import "gogoproto/gogo.proto";
-import "wasmx/wasmx/v1/params.proto";
-import "wasmx/wasmx/v1/contract.proto";
+import "mythos/wasmx/v1/params.proto";
+import "mythos/wasmx/v1/contract.proto";
 
-option go_package = "wasmx/v1/x/wasmx/types";
+option go_package = "mythos/v1/x/wasmx/types";
 
 // GenesisState defines the wasmx module's genesis state.
 message GenesisState {

@@ -1,12 +1,11 @@
 syntax = "proto3";
-package wasmx.websrv.v1;
+package mythos.wasmx.v1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "wasmx/v1/x/websrv/types";
+option go_package = "mythos/v1/x/wasmx/types";
 
 // Params defines the parameters for the module.
 message Params {
   option (gogoproto.goproto_stringer) = false;
-  bool oauth_client_registration_only_e_id = 1;
 }

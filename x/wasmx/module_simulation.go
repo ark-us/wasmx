@@ -3,15 +3,16 @@ package wasmx
 import (
 	"math/rand"
 
+	"mythos/v1/testutil/sample"
+	wasmxsimulation "mythos/v1/x/wasmx/simulation"
+	"mythos/v1/x/wasmx/types"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
-	"wasmx/testutil/sample"
-	wasmxsimulation "wasmx/x/wasmx/simulation"
-	"wasmx/x/wasmx/types"
 )
 
 // avoid unused import issue

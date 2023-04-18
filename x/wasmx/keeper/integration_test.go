@@ -3,7 +3,7 @@ package keeper_test
 // import (
 // 	_ "embed"
 // 	"encoding/hex"
-// 	"wasmx/x/wasmx/types"
+// 	"mythos/v1/x/wasmx/types"
 
 // 	sdk "github.com/cosmos/cosmos-sdk/types"
 // )

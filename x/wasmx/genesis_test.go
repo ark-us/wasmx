@@ -3,11 +3,12 @@ package wasmx_test
 import (
 	"testing"
 
+	keepertest "mythos/v1/testutil/keeper"
+	"mythos/v1/testutil/nullify"
+	"mythos/v1/x/wasmx"
+	"mythos/v1/x/wasmx/types"
+
 	"github.com/stretchr/testify/require"
-	keepertest "wasmx/testutil/keeper"
-	"wasmx/testutil/nullify"
-	"wasmx/x/wasmx"
-	"wasmx/x/wasmx/types"
 )
 
 func TestGenesis(t *testing.T) {

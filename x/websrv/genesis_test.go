@@ -3,11 +3,12 @@ package websrv_test
 import (
 	"testing"
 
+	keepertest "mythos/v1/testutil/keeper"
+	"mythos/v1/testutil/nullify"
+	"mythos/v1/x/websrv"
+	"mythos/v1/x/websrv/types"
+
 	"github.com/stretchr/testify/require"
-	keepertest "wasmx/testutil/keeper"
-	"wasmx/testutil/nullify"
-	"wasmx/x/websrv"
-	"wasmx/x/websrv/types"
 )
 
 func TestGenesis(t *testing.T) {

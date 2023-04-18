@@ -9,7 +9,7 @@ import (
 	"github.com/ark-us/evm2wat"
 	"github.com/ark-us/wat2wasm"
 
-	"wasmx/x/wasmx/types"
+	"mythos/v1/x/wasmx/types"
 )
 
 type msgServer struct {

@@ -3,9 +3,9 @@ package keeper
 import (
 	"testing"
 
-	"wasmx/app"
-	"wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
+	app "mythos/v1/app"
+	"mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"

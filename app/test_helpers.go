@@ -60,7 +60,7 @@ func Setup(
 		// Initialize the chain
 		app.InitChain(
 			abci.RequestInitChain{
-				ChainId:         "wasmx_1000-1",
+				ChainId:         "mythos_1000-1",
 				Time:            time.Now().UTC(),
 				Validators:      []abci.ValidatorUpdate{},
 				ConsensusParams: DefaultConsensusParams,

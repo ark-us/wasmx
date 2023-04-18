@@ -6,6 +6,7 @@ COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
 SDK_PACK := $(shell go list -m github.com/cosmos/cosmos-sdk | sed  's/ /\@/g')
 BINDIR ?= $(GOPATH)/bin
+MYTHOS_BINARY = mythosd
 SIMAPP = ./app
 
 # for dockerized protobuf tools
@@ -55,8 +56,8 @@ build_tags_comma_sep := $(subst $(empty),$(comma),$(build_tags))
 
 # process linker flags
 
-ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=wasmx \
-		  -X github.com/cosmos/cosmos-sdk/version.AppName=wasmx \
+ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=mythos \
+		  -X github.com/cosmos/cosmos-sdk/version.AppName=$(MYTHOS_BINARY) \
 		  -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 		  -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
 		  -X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)"
@@ -82,11 +83,11 @@ build: go.sum
 ifeq ($(OS),Windows_NT)
 	exit 1
 else
-	go build -mod=readonly $(BUILD_FLAGS) -o build/wasmx ./cmd/wasmx
+	go build -mod=readonly $(BUILD_FLAGS) -o build/mythosd ./cmd/mythosd
 endif
 
 install: go.sum
-	go install -mod=readonly $(BUILD_FLAGS) ./cmd/wasmx
+	go install -mod=readonly $(BUILD_FLAGS) ./cmd/mythosd
 
 build-docker:
 	$(DOCKER) build -t ark-us/wasmx:local .
@@ -105,7 +106,7 @@ go.sum: go.mod
 draw-deps:
 	@# requires brew install graphviz or apt-get install graphviz
 	go install github.com/RobotsAndPencils/goviz
-	@goviz -i ./cmd/wasmx -d 2 | dot -Tpng -o dependency-graph.png
+	@goviz -i ./cmd/mythosd -d 2 | dot -Tpng -o dependency-graph.png
 
 clean:
 	rm -rf build/ testnet/

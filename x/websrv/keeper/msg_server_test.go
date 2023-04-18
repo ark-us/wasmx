@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
+	keepertest "mythos/v1/testutil/keeper"
+	"mythos/v1/x/websrv/keeper"
+	"mythos/v1/x/websrv/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	keepertest "wasmx/testutil/keeper"
-	"wasmx/x/websrv/keeper"
-	"wasmx/x/websrv/types"
 )
 
 func setupMsgServer(t testing.TB) (types.MsgServer, context.Context) {

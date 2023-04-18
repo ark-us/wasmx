@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"mythos/v1/x/wasmx/types"
 	"time"
-	"wasmx/x/wasmx/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"

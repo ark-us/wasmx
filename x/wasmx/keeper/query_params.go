@@ -3,10 +3,11 @@ package keeper
 import (
 	"context"
 
+	"mythos/v1/x/wasmx/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"wasmx/x/wasmx/types"
 )
 
 func (k Keeper) Params(goCtx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {

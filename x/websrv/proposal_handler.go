@@ -6,8 +6,8 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
-	"wasmx/x/websrv/keeper"
-	"wasmx/x/websrv/types"
+	"mythos/v1/x/websrv/keeper"
+	"mythos/v1/x/websrv/types"
 )
 
 // NewWebsrvProposalHandler creates a governance handler to manage new proposal types.

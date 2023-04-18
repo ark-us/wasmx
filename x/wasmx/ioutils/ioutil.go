@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"io"
 
-	"wasmx/x/wasmx/types"
+	"mythos/v1/x/wasmx/types"
 )
 
 // Uncompress expects a valid gzip source to unpack or fails. See IsGzip

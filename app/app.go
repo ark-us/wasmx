@@ -104,15 +104,15 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
-	appparams "wasmx/app/params"
-	"wasmx/docs"
-	wasmxmodule "wasmx/x/wasmx"
-	wasmxmodulekeeper "wasmx/x/wasmx/keeper"
-	wasmxmoduletypes "wasmx/x/wasmx/types"
-	websrvmodule "wasmx/x/websrv"
-	websrvclient "wasmx/x/websrv/client"
-	websrvmodulekeeper "wasmx/x/websrv/keeper"
-	websrvmoduletypes "wasmx/x/websrv/types"
+	appparams "mythos/v1/app/params"
+	docs "mythos/v1/docs"
+	wasmxmodule "mythos/v1/x/wasmx"
+	wasmxmodulekeeper "mythos/v1/x/wasmx/keeper"
+	wasmxmoduletypes "mythos/v1/x/wasmx/types"
+	websrvmodule "mythos/v1/x/websrv"
+	websrvclient "mythos/v1/x/websrv/client"
+	websrvmodulekeeper "mythos/v1/x/websrv/keeper"
+	websrvmoduletypes "mythos/v1/x/websrv/types"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
 )
 

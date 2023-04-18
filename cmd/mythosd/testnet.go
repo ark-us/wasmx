@@ -38,11 +38,11 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"wasmx/app"
-	config "wasmx/server/config"
-	websrvconfig "wasmx/x/websrv/server/config"
-	websrvflags "wasmx/x/websrv/server/flags"
-	// "wasmx/testutil/network"
+	app "mythos/v1/app"
+	config "mythos/v1/server/config"
+	websrvconfig "mythos/v1/x/websrv/server/config"
+	websrvflags "mythos/v1/x/websrv/server/flags"
+	// "mythos/v1/testutil/network"
 )
 
 var (
