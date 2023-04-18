@@ -3,7 +3,7 @@ package cli
 import (
 	"context"
 
-	"wasmx/v1/x/websrv/types"
+	"mythos/v1/x/websrv/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"

@@ -2,13 +2,13 @@ package keeper
 
 import (
 	_ "embed"
-	"wasmx/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"wasmx/v1/x/wasmx/ewasm"
+	"mythos/v1/x/wasmx/ewasm"
 )
 
 func (k Keeper) BootstrapSystemContracts(

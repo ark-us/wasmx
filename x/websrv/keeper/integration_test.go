@@ -8,10 +8,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	wasmeth "wasmx/v1/x/wasmx/ewasm"
-	"wasmx/v1/x/wasmx/keeper/testutil"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	"wasmx/v1/x/websrv/types"
+	wasmeth "mythos/v1/x/wasmx/ewasm"
+	"mythos/v1/x/wasmx/keeper/testutil"
+	wasmxtypes "mythos/v1/x/wasmx/types"
+	"mythos/v1/x/websrv/types"
 )
 
 var (

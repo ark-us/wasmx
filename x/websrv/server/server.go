@@ -13,7 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
 
-	"wasmx/v1/x/websrv/server/config"
+	"mythos/v1/x/websrv/server/config"
 )
 
 var dirname = "oauth"

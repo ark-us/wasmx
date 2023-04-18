@@ -20,7 +20,7 @@ import (
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	tmdb "github.com/tendermint/tm-db"
 
-	"wasmx/v1/app"
+	app "mythos/v1/app"
 )
 
 type (

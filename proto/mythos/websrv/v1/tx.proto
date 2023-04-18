@@ -1,7 +1,7 @@
 syntax = "proto3";
-package wasmx.websrv.v1;
+package mythos.websrv.v1;
 
-option go_package = "wasmx/v1/x/websrv/types";
+option go_package = "mythos/v1/x/websrv/types";
 
 // Msg defines the Msg service.
 service Msg {

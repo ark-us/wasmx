@@ -1,3 +1,3 @@
 # Protobufs
 
-This is the public protocol buffers API for [wasmx](https://github.com/ark-us/wasmx).
+This is the public protocol buffers API for [mythos](https://github.com/ark-us/wasmx).

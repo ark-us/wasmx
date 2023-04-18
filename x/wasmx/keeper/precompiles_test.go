@@ -16,8 +16,8 @@ import (
 
 	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
-	"wasmx/v1/x/wasmx/ewasm"
-	"wasmx/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/ewasm"
+	"mythos/v1/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {

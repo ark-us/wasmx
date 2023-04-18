@@ -10,7 +10,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"wasmx/v1/x/websrv/types"
+	"mythos/v1/x/websrv/types"
 )
 
 type (

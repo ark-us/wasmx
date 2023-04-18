@@ -12,9 +12,9 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"wasmx/v1/x/wasmx/client/cli"
-	"wasmx/v1/x/wasmx/keeper"
-	"wasmx/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/client/cli"
+	"mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"

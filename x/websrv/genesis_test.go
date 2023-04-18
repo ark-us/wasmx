@@ -3,10 +3,10 @@ package websrv_test
 import (
 	"testing"
 
-	keepertest "wasmx/v1/testutil/keeper"
-	"wasmx/v1/testutil/nullify"
-	"wasmx/v1/x/websrv"
-	"wasmx/v1/x/websrv/types"
+	keepertest "mythos/v1/testutil/keeper"
+	"mythos/v1/testutil/nullify"
+	"mythos/v1/x/websrv"
+	"mythos/v1/x/websrv/types"
 
 	"github.com/stretchr/testify/require"
 )

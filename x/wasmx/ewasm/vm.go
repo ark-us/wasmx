@@ -13,7 +13,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"wasmx/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/types"
 )
 
 func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {

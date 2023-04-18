@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	keepertest "wasmx/v1/testutil/keeper"
-	"wasmx/v1/x/websrv/keeper"
-	"wasmx/v1/x/websrv/types"
+	keepertest "mythos/v1/testutil/keeper"
+	"mythos/v1/x/websrv/keeper"
+	"mythos/v1/x/websrv/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

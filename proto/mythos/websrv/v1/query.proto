@@ -1,48 +1,48 @@
 syntax = "proto3";
-package wasmx.websrv.v1;
+package mythos.websrv.v1;
 
 import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-import "wasmx/websrv/v1/params.proto";
+import "mythos/websrv/v1/params.proto";
 
-option go_package = "wasmx/v1/x/websrv/types";
+option go_package = "mythos/v1/x/websrv/types";
 
 // Query defines the gRPC querier service.
 service Query {
   // HttpGet makes a get request to the webserver
   rpc HttpGet(QueryHttpRequestGet)
       returns (QueryHttpResponseGet) {
-    option (google.api.http).get = "/wasmx/websrv/v1/get/{http_request}";
+    option (google.api.http).get = "/websrv/v1/get/{http_request}";
   }
   // ContractByRoute gets the contract controlling a given route
   rpc ContractByRoute(QueryContractByRouteRequest)
       returns (QueryContractByRouteResponse) {
-    option (google.api.http).get = "/wasmx/websrv/v1/route/{path}";
+    option (google.api.http).get = "/websrv/v1/route/{path}";
   }
   // RouteByContract gets the route controlled by a given contract
   rpc RouteByContract(QueryRouteByContractRequest)
       returns (QueryRouteByContractResponse) {
-    option (google.api.http).get = "/wasmx/websrv/v1/contract/{contract_address}";
+    option (google.api.http).get = "/websrv/v1/contract/{contract_address}";
   }
   // Parameters queries the parameters of the module.
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/wasmx/websrv/v1/params";
+    option (google.api.http).get = "/websrv/v1/params";
   }
   // GetAllClients gets all the registered client apps for the oauth service
   rpc GetAllOauthClients(QueryGetAllOauthClientsRequest)
       returns (QueryGetAllOauthClientsResponse) {
-    option (google.api.http).get = "/wasmx/websrv/v1/oauth/clients";
+    option (google.api.http).get = "/websrv/v1/oauth/clients";
   }
   // GetOauthClient gets the registered oauth client by client id
   rpc GetOauthClient(QueryGetOauthClientRequest)
       returns (QueryGetOauthClientResponse) {
-    option (google.api.http).get = "/wasmx/websrv/v1/oauth/client/{client_id}";
+    option (google.api.http).get = "/websrv/v1/oauth/client/{client_id}";
   }
   // GetOauthClientsByOwner gets all the registered oauth client by an owner address
   rpc GetOauthClientsByOwner(QueryGetOauthClientsByOwnerRequest)
       returns (QueryGetOauthClientsByOwnerResponse) {
-    option (google.api.http).get = "/wasmx/websrv/v1/oauth/clients/{owner}";
+    option (google.api.http).get = "/websrv/v1/oauth/clients/{owner}";
   }
 }
 

@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	"github.com/stretchr/testify/require"
 
-	"wasmx/v1/app"
+	app "mythos/v1/app"
 )
 
 func init() {

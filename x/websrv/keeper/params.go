@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"wasmx/v1/x/websrv/types"
+	"mythos/v1/x/websrv/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

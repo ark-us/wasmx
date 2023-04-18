@@ -1,4 +1,4 @@
-module wasmx/v1
+module mythos/v1
 
 go 1.19
 

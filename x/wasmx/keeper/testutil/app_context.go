@@ -24,9 +24,9 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v6/modules/apps/27-interchain-accounts/types"
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
-	"wasmx/v1/app"
-	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
-	"wasmx/v1/x/wasmx/types"
+	app "mythos/v1/app"
+	wasmxkeeper "mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/types"
 )
 
 var (

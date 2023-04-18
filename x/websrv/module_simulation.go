@@ -3,9 +3,9 @@ package websrv
 import (
 	"math/rand"
 
-	"wasmx/v1/testutil/sample"
-	websrvsimulation "wasmx/v1/x/websrv/simulation"
-	"wasmx/v1/x/websrv/types"
+	"mythos/v1/testutil/sample"
+	websrvsimulation "mythos/v1/x/websrv/simulation"
+	"mythos/v1/x/websrv/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"

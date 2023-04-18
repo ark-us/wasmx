@@ -7,8 +7,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	wasmeth "wasmx/v1/x/wasmx/ewasm"
-	"wasmx/v1/x/wasmx/types"
+	wasmeth "mythos/v1/x/wasmx/ewasm"
+	"mythos/v1/x/wasmx/types"
 )
 
 var (

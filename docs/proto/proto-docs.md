@@ -4,57 +4,57 @@
 
 ## Table of Contents
 
-- [wasmx/websrv/v1/params.proto](#wasmx/websrv/v1/params.proto)
-    - [Params](#wasmx.websrv.v1.Params)
+- [mythos/websrv/v1/params.proto](#mythos/websrv/v1/params.proto)
+    - [Params](#mythos.websrv.v1.Params)
   
-- [wasmx/websrv/v1/genesis.proto](#wasmx/websrv/v1/genesis.proto)
-    - [GenesisState](#wasmx.websrv.v1.GenesisState)
+- [mythos/websrv/v1/genesis.proto](#mythos/websrv/v1/genesis.proto)
+    - [GenesisState](#mythos.websrv.v1.GenesisState)
   
-- [wasmx/websrv/v1/proposal.proto](#wasmx/websrv/v1/proposal.proto)
-    - [DeregisterRouteProposal](#wasmx.websrv.v1.DeregisterRouteProposal)
-    - [RegisterRouteProposal](#wasmx.websrv.v1.RegisterRouteProposal)
+- [mythos/websrv/v1/proposal.proto](#mythos/websrv/v1/proposal.proto)
+    - [DeregisterRouteProposal](#mythos.websrv.v1.DeregisterRouteProposal)
+    - [RegisterRouteProposal](#mythos.websrv.v1.RegisterRouteProposal)
   
-- [wasmx/websrv/v1/query.proto](#wasmx/websrv/v1/query.proto)
-    - [OauthClientInfo](#wasmx.websrv.v1.OauthClientInfo)
-    - [QueryContractByRouteRequest](#wasmx.websrv.v1.QueryContractByRouteRequest)
-    - [QueryContractByRouteResponse](#wasmx.websrv.v1.QueryContractByRouteResponse)
-    - [QueryGetAllOauthClientsRequest](#wasmx.websrv.v1.QueryGetAllOauthClientsRequest)
-    - [QueryGetAllOauthClientsResponse](#wasmx.websrv.v1.QueryGetAllOauthClientsResponse)
-    - [QueryGetOauthClientRequest](#wasmx.websrv.v1.QueryGetOauthClientRequest)
-    - [QueryGetOauthClientResponse](#wasmx.websrv.v1.QueryGetOauthClientResponse)
-    - [QueryGetOauthClientsByOwnerRequest](#wasmx.websrv.v1.QueryGetOauthClientsByOwnerRequest)
-    - [QueryGetOauthClientsByOwnerResponse](#wasmx.websrv.v1.QueryGetOauthClientsByOwnerResponse)
-    - [QueryHttpRequestGet](#wasmx.websrv.v1.QueryHttpRequestGet)
-    - [QueryHttpResponseGet](#wasmx.websrv.v1.QueryHttpResponseGet)
-    - [QueryParamsRequest](#wasmx.websrv.v1.QueryParamsRequest)
-    - [QueryParamsResponse](#wasmx.websrv.v1.QueryParamsResponse)
-    - [QueryRouteByContractRequest](#wasmx.websrv.v1.QueryRouteByContractRequest)
-    - [QueryRouteByContractResponse](#wasmx.websrv.v1.QueryRouteByContractResponse)
+- [mythos/websrv/v1/query.proto](#mythos/websrv/v1/query.proto)
+    - [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo)
+    - [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest)
+    - [QueryContractByRouteResponse](#mythos.websrv.v1.QueryContractByRouteResponse)
+    - [QueryGetAllOauthClientsRequest](#mythos.websrv.v1.QueryGetAllOauthClientsRequest)
+    - [QueryGetAllOauthClientsResponse](#mythos.websrv.v1.QueryGetAllOauthClientsResponse)
+    - [QueryGetOauthClientRequest](#mythos.websrv.v1.QueryGetOauthClientRequest)
+    - [QueryGetOauthClientResponse](#mythos.websrv.v1.QueryGetOauthClientResponse)
+    - [QueryGetOauthClientsByOwnerRequest](#mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest)
+    - [QueryGetOauthClientsByOwnerResponse](#mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse)
+    - [QueryHttpRequestGet](#mythos.websrv.v1.QueryHttpRequestGet)
+    - [QueryHttpResponseGet](#mythos.websrv.v1.QueryHttpResponseGet)
+    - [QueryParamsRequest](#mythos.websrv.v1.QueryParamsRequest)
+    - [QueryParamsResponse](#mythos.websrv.v1.QueryParamsResponse)
+    - [QueryRouteByContractRequest](#mythos.websrv.v1.QueryRouteByContractRequest)
+    - [QueryRouteByContractResponse](#mythos.websrv.v1.QueryRouteByContractResponse)
   
-    - [Query](#wasmx.websrv.v1.Query)
+    - [Query](#mythos.websrv.v1.Query)
   
-- [wasmx/websrv/v1/tx.proto](#wasmx/websrv/v1/tx.proto)
-    - [MsgDeregisterOAuthClient](#wasmx.websrv.v1.MsgDeregisterOAuthClient)
-    - [MsgDeregisterOAuthClientResponse](#wasmx.websrv.v1.MsgDeregisterOAuthClientResponse)
-    - [MsgEditOAuthClient](#wasmx.websrv.v1.MsgEditOAuthClient)
-    - [MsgEditOAuthClientResponse](#wasmx.websrv.v1.MsgEditOAuthClientResponse)
-    - [MsgRegisterOAuthClient](#wasmx.websrv.v1.MsgRegisterOAuthClient)
-    - [MsgRegisterOAuthClientResponse](#wasmx.websrv.v1.MsgRegisterOAuthClientResponse)
+- [mythos/websrv/v1/tx.proto](#mythos/websrv/v1/tx.proto)
+    - [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient)
+    - [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse)
+    - [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient)
+    - [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse)
+    - [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient)
+    - [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse)
   
-    - [Msg](#wasmx.websrv.v1.Msg)
+    - [Msg](#mythos.websrv.v1.Msg)
   
 - [Scalar Value Types](#scalar-value-types)
 
 
 
-<a name="wasmx/websrv/v1/params.proto"></a>
+<a name="mythos/websrv/v1/params.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## wasmx/websrv/v1/params.proto
+## mythos/websrv/v1/params.proto
 
 
 
-<a name="wasmx.websrv.v1.Params"></a>
+<a name="mythos.websrv.v1.Params"></a>
 
 ### Params
 Params defines the parameters for the module.
@@ -78,14 +78,14 @@ Params defines the parameters for the module.
 
 
 
-<a name="wasmx/websrv/v1/genesis.proto"></a>
+<a name="mythos/websrv/v1/genesis.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## wasmx/websrv/v1/genesis.proto
+## mythos/websrv/v1/genesis.proto
 
 
 
-<a name="wasmx.websrv.v1.GenesisState"></a>
+<a name="mythos.websrv.v1.GenesisState"></a>
 
 ### GenesisState
 GenesisState defines the websrv module's genesis state.
@@ -93,7 +93,7 @@ GenesisState defines the websrv module's genesis state.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `params` | [Params](#wasmx.websrv.v1.Params) |  |  |
+| `params` | [Params](#mythos.websrv.v1.Params) |  |  |
 
 
 
@@ -109,14 +109,14 @@ GenesisState defines the websrv module's genesis state.
 
 
 
-<a name="wasmx/websrv/v1/proposal.proto"></a>
+<a name="mythos/websrv/v1/proposal.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## wasmx/websrv/v1/proposal.proto
+## mythos/websrv/v1/proposal.proto
 
 
 
-<a name="wasmx.websrv.v1.DeregisterRouteProposal"></a>
+<a name="mythos.websrv.v1.DeregisterRouteProposal"></a>
 
 ### DeregisterRouteProposal
 DisallowCosmosMessagesProposal is a gov Content type to remove a previously
@@ -135,7 +135,7 @@ allowed Cosmos message or query to be called from the EVM
 
 
 
-<a name="wasmx.websrv.v1.RegisterRouteProposal"></a>
+<a name="mythos.websrv.v1.RegisterRouteProposal"></a>
 
 ### RegisterRouteProposal
 RegisterRouteProposal is a gov Content type to register a web server route
@@ -162,14 +162,14 @@ RegisterRouteProposal is a gov Content type to register a web server route
 
 
 
-<a name="wasmx/websrv/v1/query.proto"></a>
+<a name="mythos/websrv/v1/query.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## wasmx/websrv/v1/query.proto
+## mythos/websrv/v1/query.proto
 
 
 
-<a name="wasmx.websrv.v1.OauthClientInfo"></a>
+<a name="mythos.websrv.v1.OauthClientInfo"></a>
 
 ### OauthClientInfo
 
@@ -187,7 +187,7 @@ RegisterRouteProposal is a gov Content type to register a web server route
 
 
 
-<a name="wasmx.websrv.v1.QueryContractByRouteRequest"></a>
+<a name="mythos.websrv.v1.QueryContractByRouteRequest"></a>
 
 ### QueryContractByRouteRequest
 QueryContractByRouteRequest is the request type for the
@@ -203,7 +203,7 @@ Query/ContractByRoute RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryContractByRouteResponse"></a>
+<a name="mythos.websrv.v1.QueryContractByRouteResponse"></a>
 
 ### QueryContractByRouteResponse
 QueryContractByRouteResponse is the response type for the
@@ -219,7 +219,7 @@ Query/ContractByRoute RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryGetAllOauthClientsRequest"></a>
+<a name="mythos.websrv.v1.QueryGetAllOauthClientsRequest"></a>
 
 ### QueryGetAllOauthClientsRequest
 QueryGetAllOauthClientsRequest is the request type for the
@@ -235,7 +235,7 @@ Query/GetAllOauthClients RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryGetAllOauthClientsResponse"></a>
+<a name="mythos.websrv.v1.QueryGetAllOauthClientsResponse"></a>
 
 ### QueryGetAllOauthClientsResponse
 QueryGetAllOauthClientsResponse is the response type for the
@@ -244,7 +244,7 @@ Query/GetAllOauthClients RPC method.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `clients` | [OauthClientInfo](#wasmx.websrv.v1.OauthClientInfo) | repeated |  |
+| `clients` | [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo) | repeated |  |
 | `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
 
 
@@ -252,7 +252,7 @@ Query/GetAllOauthClients RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryGetOauthClientRequest"></a>
+<a name="mythos.websrv.v1.QueryGetOauthClientRequest"></a>
 
 ### QueryGetOauthClientRequest
 QueryGetOauthClientRequest is the request type for the
@@ -268,7 +268,7 @@ Query/GetOauthClient RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryGetOauthClientResponse"></a>
+<a name="mythos.websrv.v1.QueryGetOauthClientResponse"></a>
 
 ### QueryGetOauthClientResponse
 QueryGetOauthClientResponse is the response type for the
@@ -277,14 +277,14 @@ Query/GetOauthClient RPC method.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `client` | [OauthClientInfo](#wasmx.websrv.v1.OauthClientInfo) |  |  |
+| `client` | [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo) |  |  |
 
 
 
 
 
 
-<a name="wasmx.websrv.v1.QueryGetOauthClientsByOwnerRequest"></a>
+<a name="mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest"></a>
 
 ### QueryGetOauthClientsByOwnerRequest
 QueryGetAllOauthClientsRequest is the request type for the
@@ -300,7 +300,7 @@ Query/GetOauthClientsByOwner RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryGetOauthClientsByOwnerResponse"></a>
+<a name="mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse"></a>
 
 ### QueryGetOauthClientsByOwnerResponse
 QueryGetAllOauthClientsResponse is the response type for the
@@ -316,7 +316,7 @@ Query/GetOauthClientsByOwner RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryHttpRequestGet"></a>
+<a name="mythos.websrv.v1.QueryHttpRequestGet"></a>
 
 ### QueryHttpRequestGet
 QueryHttpGetRequest is the request type for the
@@ -332,7 +332,7 @@ Query/HttpGet RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryHttpResponseGet"></a>
+<a name="mythos.websrv.v1.QueryHttpResponseGet"></a>
 
 ### QueryHttpResponseGet
 QueryHttpResponseGet is the response type for the
@@ -348,7 +348,7 @@ Query/HttpGet RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryParamsRequest"></a>
+<a name="mythos.websrv.v1.QueryParamsRequest"></a>
 
 ### QueryParamsRequest
 QueryParamsRequest is request type for the Query/Params RPC method.
@@ -358,7 +358,7 @@ QueryParamsRequest is request type for the Query/Params RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryParamsResponse"></a>
+<a name="mythos.websrv.v1.QueryParamsResponse"></a>
 
 ### QueryParamsResponse
 QueryParamsResponse is response type for the Query/Params RPC method.
@@ -366,14 +366,14 @@ QueryParamsResponse is response type for the Query/Params RPC method.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `params` | [Params](#wasmx.websrv.v1.Params) |  | params holds all the parameters of this module. |
+| `params` | [Params](#mythos.websrv.v1.Params) |  | params holds all the parameters of this module. |
 
 
 
 
 
 
-<a name="wasmx.websrv.v1.QueryRouteByContractRequest"></a>
+<a name="mythos.websrv.v1.QueryRouteByContractRequest"></a>
 
 ### QueryRouteByContractRequest
 QueryRouteByContractRequest is the request type for the
@@ -389,7 +389,7 @@ Query/RouteByContract RPC method.
 
 
 
-<a name="wasmx.websrv.v1.QueryRouteByContractResponse"></a>
+<a name="mythos.websrv.v1.QueryRouteByContractResponse"></a>
 
 ### QueryRouteByContractResponse
 QueryRouteByContractResponse is the response type for the
@@ -411,33 +411,33 @@ Query/RouteByContract RPC method.
  <!-- end HasExtensions -->
 
 
-<a name="wasmx.websrv.v1.Query"></a>
+<a name="mythos.websrv.v1.Query"></a>
 
 ### Query
 Query defines the gRPC querier service.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `HttpGet` | [QueryHttpRequestGet](#wasmx.websrv.v1.QueryHttpRequestGet) | [QueryHttpResponseGet](#wasmx.websrv.v1.QueryHttpResponseGet) | HttpGet makes a get request to the webserver | GET|/wasmx/websrv/v1/get/{http_request}|
-| `ContractByRoute` | [QueryContractByRouteRequest](#wasmx.websrv.v1.QueryContractByRouteRequest) | [QueryContractByRouteResponse](#wasmx.websrv.v1.QueryContractByRouteResponse) | ContractByRoute gets the contract controlling a given route | GET|/wasmx/websrv/v1/route/{path}|
-| `RouteByContract` | [QueryRouteByContractRequest](#wasmx.websrv.v1.QueryRouteByContractRequest) | [QueryRouteByContractResponse](#wasmx.websrv.v1.QueryRouteByContractResponse) | RouteByContract gets the route controlled by a given contract | GET|/wasmx/websrv/v1/contract/{contract_address}|
-| `Params` | [QueryParamsRequest](#wasmx.websrv.v1.QueryParamsRequest) | [QueryParamsResponse](#wasmx.websrv.v1.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/wasmx/websrv/v1/params|
-| `GetAllOauthClients` | [QueryGetAllOauthClientsRequest](#wasmx.websrv.v1.QueryGetAllOauthClientsRequest) | [QueryGetAllOauthClientsResponse](#wasmx.websrv.v1.QueryGetAllOauthClientsResponse) | GetAllClients gets all the registered client apps for the oauth service | GET|/wasmx/websrv/v1/oauth/clients|
-| `GetOauthClient` | [QueryGetOauthClientRequest](#wasmx.websrv.v1.QueryGetOauthClientRequest) | [QueryGetOauthClientResponse](#wasmx.websrv.v1.QueryGetOauthClientResponse) | GetOauthClient gets the registered oauth client by client id | GET|/wasmx/websrv/v1/oauth/client/{client_id}|
-| `GetOauthClientsByOwner` | [QueryGetOauthClientsByOwnerRequest](#wasmx.websrv.v1.QueryGetOauthClientsByOwnerRequest) | [QueryGetOauthClientsByOwnerResponse](#wasmx.websrv.v1.QueryGetOauthClientsByOwnerResponse) | GetOauthClientsByOwner gets all the registered oauth client by an owner address | GET|/wasmx/websrv/v1/oauth/clients/{owner}|
+| `HttpGet` | [QueryHttpRequestGet](#mythos.websrv.v1.QueryHttpRequestGet) | [QueryHttpResponseGet](#mythos.websrv.v1.QueryHttpResponseGet) | HttpGet makes a get request to the webserver | GET|/websrv/v1/get/{http_request}|
+| `ContractByRoute` | [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest) | [QueryContractByRouteResponse](#mythos.websrv.v1.QueryContractByRouteResponse) | ContractByRoute gets the contract controlling a given route | GET|/websrv/v1/route/{path}|
+| `RouteByContract` | [QueryRouteByContractRequest](#mythos.websrv.v1.QueryRouteByContractRequest) | [QueryRouteByContractResponse](#mythos.websrv.v1.QueryRouteByContractResponse) | RouteByContract gets the route controlled by a given contract | GET|/websrv/v1/contract/{contract_address}|
+| `Params` | [QueryParamsRequest](#mythos.websrv.v1.QueryParamsRequest) | [QueryParamsResponse](#mythos.websrv.v1.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/websrv/v1/params|
+| `GetAllOauthClients` | [QueryGetAllOauthClientsRequest](#mythos.websrv.v1.QueryGetAllOauthClientsRequest) | [QueryGetAllOauthClientsResponse](#mythos.websrv.v1.QueryGetAllOauthClientsResponse) | GetAllClients gets all the registered client apps for the oauth service | GET|/websrv/v1/oauth/clients|
+| `GetOauthClient` | [QueryGetOauthClientRequest](#mythos.websrv.v1.QueryGetOauthClientRequest) | [QueryGetOauthClientResponse](#mythos.websrv.v1.QueryGetOauthClientResponse) | GetOauthClient gets the registered oauth client by client id | GET|/websrv/v1/oauth/client/{client_id}|
+| `GetOauthClientsByOwner` | [QueryGetOauthClientsByOwnerRequest](#mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest) | [QueryGetOauthClientsByOwnerResponse](#mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse) | GetOauthClientsByOwner gets all the registered oauth client by an owner address | GET|/websrv/v1/oauth/clients/{owner}|
 
  <!-- end services -->
 
 
 
-<a name="wasmx/websrv/v1/tx.proto"></a>
+<a name="mythos/websrv/v1/tx.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## wasmx/websrv/v1/tx.proto
+## mythos/websrv/v1/tx.proto
 
 
 
-<a name="wasmx.websrv.v1.MsgDeregisterOAuthClient"></a>
+<a name="mythos.websrv.v1.MsgDeregisterOAuthClient"></a>
 
 ### MsgDeregisterOAuthClient
 
@@ -453,7 +453,7 @@ Query defines the gRPC querier service.
 
 
 
-<a name="wasmx.websrv.v1.MsgDeregisterOAuthClientResponse"></a>
+<a name="mythos.websrv.v1.MsgDeregisterOAuthClientResponse"></a>
 
 ### MsgDeregisterOAuthClientResponse
 
@@ -463,7 +463,7 @@ Query defines the gRPC querier service.
 
 
 
-<a name="wasmx.websrv.v1.MsgEditOAuthClient"></a>
+<a name="mythos.websrv.v1.MsgEditOAuthClient"></a>
 
 ### MsgEditOAuthClient
 
@@ -480,7 +480,7 @@ Query defines the gRPC querier service.
 
 
 
-<a name="wasmx.websrv.v1.MsgEditOAuthClientResponse"></a>
+<a name="mythos.websrv.v1.MsgEditOAuthClientResponse"></a>
 
 ### MsgEditOAuthClientResponse
 
@@ -490,7 +490,7 @@ Query defines the gRPC querier service.
 
 
 
-<a name="wasmx.websrv.v1.MsgRegisterOAuthClient"></a>
+<a name="mythos.websrv.v1.MsgRegisterOAuthClient"></a>
 
 ### MsgRegisterOAuthClient
 
@@ -506,7 +506,7 @@ Query defines the gRPC querier service.
 
 
 
-<a name="wasmx.websrv.v1.MsgRegisterOAuthClientResponse"></a>
+<a name="mythos.websrv.v1.MsgRegisterOAuthClientResponse"></a>
 
 ### MsgRegisterOAuthClientResponse
 
@@ -527,16 +527,16 @@ Query defines the gRPC querier service.
  <!-- end HasExtensions -->
 
 
-<a name="wasmx.websrv.v1.Msg"></a>
+<a name="mythos.websrv.v1.Msg"></a>
 
 ### Msg
 Msg defines the Msg service.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `RegisterOAuthClient` | [MsgRegisterOAuthClient](#wasmx.websrv.v1.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#wasmx.websrv.v1.MsgRegisterOAuthClientResponse) | Register OAuth client | |
-| `EditOAuthClient` | [MsgEditOAuthClient](#wasmx.websrv.v1.MsgEditOAuthClient) | [MsgEditOAuthClientResponse](#wasmx.websrv.v1.MsgEditOAuthClientResponse) | Edit OAuth client | |
-| `DeregisterOAuthClient` | [MsgDeregisterOAuthClient](#wasmx.websrv.v1.MsgDeregisterOAuthClient) | [MsgDeregisterOAuthClientResponse](#wasmx.websrv.v1.MsgDeregisterOAuthClientResponse) | Deregister OAuth client | |
+| `RegisterOAuthClient` | [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse) | Register OAuth client | |
+| `EditOAuthClient` | [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient) | [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse) | Edit OAuth client | |
+| `DeregisterOAuthClient` | [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient) | [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse) | Deregister OAuth client | |
 
  <!-- end services -->
 

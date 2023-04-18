@@ -43864,7 +43864,7 @@ paths:
                         }
       tags:
         - Query
-  /wasmx/wasmx/params:
+  /mythos/wasmx/params:
     get:
       summary: Parameters queries the parameters of the module.
       operationId: WasmxWasmxParams

@@ -36,11 +36,11 @@ import (
 
 	// this line is used by starport scaffolding # root/moduleImport
 
-	"wasmx/v1/app"
-	appparams "wasmx/v1/app/params"
-	"wasmx/v1/server"
-	serverconfig "wasmx/v1/server/config"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	app "mythos/v1/app"
+	appparams "mythos/v1/app/params"
+	server "mythos/v1/server"
+	serverconfig "mythos/v1/server/config"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
@@ -58,7 +58,7 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 
 	rootCmd := &cobra.Command{
 		Use:   app.Name + "d",
-		Short: "Start wasmx node",
+		Short: "Start mythos node",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// set the default command outputs
 			cmd.SetOut(cmd.OutOrStdout())

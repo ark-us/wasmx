@@ -20,11 +20,11 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
-	"wasmx/v1/app"
-	ibctesting "wasmx/v1/testutil/ibc"
-	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
-	"wasmx/v1/x/wasmx/keeper/testutil"
-	"wasmx/v1/x/wasmx/types"
+	"mythos/v1/app"
+	ibctesting "mythos/v1/testutil/ibc"
+	wasmxkeeper "mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/keeper/testutil"
+	"mythos/v1/x/wasmx/types"
 )
 
 var (

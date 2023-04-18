@@ -3,7 +3,7 @@ package keeper
 import (
 	"context"
 
-	"wasmx/v1/x/websrv/types"
+	"mythos/v1/x/websrv/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"

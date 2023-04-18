@@ -13,9 +13,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	wasmeth "wasmx/v1/x/wasmx/ewasm"
-	"wasmx/v1/x/wasmx/ioutils"
-	"wasmx/v1/x/wasmx/types"
+	wasmeth "mythos/v1/x/wasmx/ewasm"
+	"mythos/v1/x/wasmx/ioutils"
+	"mythos/v1/x/wasmx/types"
 )
 
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte) (uint64, []byte, error) {
