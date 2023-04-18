@@ -16,7 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
-	"wasmx/x/websrv/types"
+	"wasmx/v1/x/websrv/types"
 )
 
 var (

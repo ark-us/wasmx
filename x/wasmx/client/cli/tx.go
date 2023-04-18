@@ -16,8 +16,8 @@ import (
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
-	"wasmx/x/wasmx/ioutils"
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/ioutils"
+	"wasmx/v1/x/wasmx/types"
 )
 
 const (

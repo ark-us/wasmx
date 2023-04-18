@@ -10,8 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	wasmxtypes "wasmx/x/wasmx/types"
-	"wasmx/x/websrv/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	"wasmx/v1/x/websrv/types"
 )
 
 var _ types.QueryServer = Keeper{}

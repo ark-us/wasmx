@@ -5,7 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var (

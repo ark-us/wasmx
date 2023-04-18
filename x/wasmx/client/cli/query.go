@@ -16,8 +16,8 @@ import (
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
-	"wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 )
 
 func GetQueryCmd(queryRoute string) *cobra.Command {

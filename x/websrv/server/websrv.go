@@ -14,9 +14,9 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/tendermint/tendermint/libs/log"
 
-	wasmxtypes "wasmx/x/wasmx/types"
-	"wasmx/x/websrv/server/config"
-	"wasmx/x/websrv/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	"wasmx/v1/x/websrv/server/config"
+	"wasmx/v1/x/websrv/types"
 )
 
 type WebsrvServer struct {

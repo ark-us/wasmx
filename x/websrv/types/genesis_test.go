@@ -3,8 +3,9 @@ package types_test
 import (
 	"testing"
 
+	"wasmx/v1/x/websrv/types"
+
 	"github.com/stretchr/testify/require"
-	"wasmx/x/websrv/types"
 )
 
 func TestGenesisState_Validate(t *testing.T) {

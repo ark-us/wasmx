@@ -24,9 +24,9 @@ import (
 	icatypes "github.com/cosmos/ibc-go/v6/modules/apps/27-interchain-accounts/types"
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
-	"wasmx/app"
-	wasmxkeeper "wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/app"
+	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var (
@@ -239,7 +239,7 @@ func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddre
 	bz, err := query.Marshal()
 	s.S.Require().NoError(err)
 
-	req := abci.RequestQuery{Data: bz, Path: "/wasmx.wasmx.Query/SmartContractCall"}
+	req := abci.RequestQuery{Data: bz, Path: "/wasmx.wasmx.v1.Query/SmartContractCall"}
 	abcires := s.App.BaseApp.Query(req)
 	var resp types.QuerySmartContractCallResponse
 	err = resp.Unmarshal(abcires.Value)

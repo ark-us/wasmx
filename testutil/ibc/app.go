@@ -25,8 +25,8 @@ import (
 
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 
-	wasmxapp "wasmx/app"
-	wasmxtypes "wasmx/x/wasmx/types"
+	wasmxapp "wasmx/v1/app"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 var DefaultTestingAppInit func() (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp

@@ -24,7 +24,7 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
 	"github.com/cosmos/ibc-go/v6/testing/mock"
 
-	wasmxapp "wasmx/app"
+	wasmxapp "wasmx/v1/app"
 )
 
 // ChainIDPrefix defines the default chain ID prefix for Mythos test chains

@@ -36,11 +36,11 @@ import (
 
 	// this line is used by starport scaffolding # root/moduleImport
 
-	"wasmx/app"
-	appparams "wasmx/app/params"
-	"wasmx/server"
-	serverconfig "wasmx/server/config"
-	wasmxtypes "wasmx/x/wasmx/types"
+	"wasmx/v1/app"
+	appparams "wasmx/v1/app/params"
+	"wasmx/v1/server"
+	serverconfig "wasmx/v1/server/config"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

@@ -15,7 +15,7 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/tendermint/tendermint/libs/log"
 
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 )
 
 // contractMemoryLimit is the memory limit of each contract execution (in MiB)

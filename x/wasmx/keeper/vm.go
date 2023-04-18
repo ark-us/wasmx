@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"wasmx/x/wasmx/ewasm"
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/ewasm"
+	"wasmx/v1/x/wasmx/types"
 )
 
 type WasmxEngine struct {

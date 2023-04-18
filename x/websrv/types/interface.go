@@ -1,7 +1,7 @@
 package types
 
 import (
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

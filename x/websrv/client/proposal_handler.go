@@ -3,7 +3,7 @@ package client
 import (
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 
-	"wasmx/x/websrv/client/cli"
+	"wasmx/v1/x/websrv/client/cli"
 )
 
 var (

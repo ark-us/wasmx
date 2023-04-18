@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	websrvconfig "wasmx/x/websrv/server/config"
+	websrvconfig "wasmx/v1/x/websrv/server/config"
 )
 
 const (

@@ -1,8 +1,8 @@
 package wasmx
 
 import (
-	"wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

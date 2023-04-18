@@ -10,7 +10,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 )
 
 type WasmxCosmosHandler struct {

@@ -16,7 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	"wasmx/x/websrv/types"
+	"wasmx/v1/x/websrv/types"
 )
 
 // GetQueryCmd returns the cli query commands for this module

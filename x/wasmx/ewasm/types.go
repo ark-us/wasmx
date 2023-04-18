@@ -7,7 +7,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"wasmx/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var (

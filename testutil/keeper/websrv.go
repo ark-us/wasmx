@@ -3,8 +3,8 @@ package keeper
 import (
 	"testing"
 
-	"wasmx/x/websrv/keeper"
-	"wasmx/x/websrv/types"
+	"wasmx/v1/x/websrv/keeper"
+	"wasmx/v1/x/websrv/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"

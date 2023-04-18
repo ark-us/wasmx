@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	keepertest "wasmx/testutil/keeper"
-	"wasmx/x/wasmx/keeper"
-	"wasmx/x/wasmx/types"
+	keepertest "wasmx/v1/testutil/keeper"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

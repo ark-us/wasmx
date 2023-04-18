@@ -3,10 +3,11 @@ package keeper_test
 import (
 	"testing"
 
+	testkeeper "wasmx/v1/testutil/keeper"
+	"wasmx/v1/x/websrv/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-	testkeeper "wasmx/testutil/keeper"
-	"wasmx/x/websrv/types"
 )
 
 func TestParamsQuery(t *testing.T) {
