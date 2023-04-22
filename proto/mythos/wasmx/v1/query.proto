@@ -45,6 +45,10 @@ service Query {
   rpc Code(QueryCodeRequest) returns (QueryCodeResponse) {
     option (google.api.http).get = "/wasmx/v1/code/{code_id}";
   }
+  // CodeInfo gets the binary code and metadata for a singe wasm code
+  rpc CodeInfo(QueryCodeInfoRequest) returns (QueryCodeInfoResponse) {
+    option (google.api.http).get = "/wasmx/v1/code_info/{code_id}";
+  }
   // Codes gets the metadata for all stored wasm codes
   rpc Codes(QueryCodesRequest) returns (QueryCodesResponse) {
     option (google.api.http).get = "/wasmx/v1/code";
@@ -162,26 +166,24 @@ message QueryCodeRequest {
   uint64 code_id = 1; // grpc-gateway_out does not support Go style CodID
 }
 
-// CodeInfoResponse contains code meta data from CodeInfo
-message CodeInfoResponse {
-  option (gogoproto.equal) = true;
-
-  uint64 code_id = 1 [
-    (gogoproto.customname) = "CodeID",
-    (gogoproto.jsontag) = "id"
-  ]; // id for legacy support
-  string creator = 2;
-  bytes data_hash = 3
-      [ (gogoproto.casttype) =
-            "github.com/tendermint/tendermint/libs/bytes.HexBytes" ];
-}
-
 // QueryCodeResponse is the response type for the Query/Code RPC method
 message QueryCodeResponse {
   option (gogoproto.equal) = true;
-  CodeInfoResponse code_info = 1
+  CodeInfo code_info = 1
       [ (gogoproto.embed) = true, (gogoproto.jsontag) = "" ];
   bytes data = 2 [ (gogoproto.jsontag) = "data" ];
+}
+
+// QueryCodeInfoRequest is the request type for the Query/CodeInfo RPC method
+message QueryCodeInfoRequest {
+  uint64 code_id = 1; // grpc-gateway_out does not support Go style CodID
+}
+
+// QueryCodeInfoResponse is the response type for the Query/Code RPC method
+message QueryCodeInfoResponse {
+  option (gogoproto.equal) = true;
+  CodeInfo code_info = 1
+      [ (gogoproto.embed) = true, (gogoproto.jsontag) = "" ];
 }
 
 // QueryCodesRequest is the request type for the Query/Codes RPC method
@@ -192,7 +194,7 @@ message QueryCodesRequest {
 
 // QueryCodesResponse is the response type for the Query/Codes RPC method
 message QueryCodesResponse {
-  repeated CodeInfoResponse code_infos = 1 [ (gogoproto.nullable) = false ];
+  repeated CodeInfo code_infos = 1 [ (gogoproto.nullable) = false ];
   // pagination defines the pagination in the response.
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }

@@ -1,8 +1,9 @@
 syntax = "proto3";
 package mythos.wasmx.v1;
 
-import "cosmos/base/v1beta1/coin.proto";
 import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "mythos/wasmx/v1/contract.proto";
 
 option go_package = "mythos/v1/x/wasmx/types";
 
@@ -37,6 +38,8 @@ message MsgStoreCode {
     string sender = 1;
     // WASMByteCode can be raw or gzip compressed
     bytes wasm_byte_code = 2;
+    CodeMetadata metadata = 3 [(gogoproto.nullable) = false];
+
 }
 // MsgStoreCodeResponse returns store result data.
 message MsgStoreCodeResponse {
@@ -52,6 +55,7 @@ message MsgStoreCodeEvm {
     string sender = 1;
     // EVM bytecode
     bytes evm_byte_code = 2;
+    CodeMetadata metadata = 3 [(gogoproto.nullable) = false];
 }
 // MsgStoreCodeEvmResponse returns store result data.
 message MsgStoreCodeEvmResponse {

@@ -67,11 +67,13 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	}
 
 	for _, systemDep := range systemDeps {
-		handler := SystemDepHandler[systemDep]
-		releaseFn, err := handler(context, contractVm)
-		cleanups = append(cleanups, releaseFn...)
-		if err != nil {
-			return nil, cleanups, err
+		handler, found := SystemDepHandler[systemDep]
+		if found {
+			releaseFn, err := handler(context, contractVm)
+			cleanups = append(cleanups, releaseFn...)
+			if err != nil {
+				return nil, cleanups, err
+			}
 		}
 	}
 

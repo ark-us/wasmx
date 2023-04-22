@@ -220,8 +220,24 @@ func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.Que
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryCodeResponse{
-		CodeInfoResponse: rsp.CodeInfoResponse,
-		Data:             rsp.Data,
+		CodeInfo: rsp.CodeInfo,
+		Data:     rsp.Data,
+	}, nil
+}
+
+func (k Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*types.QueryCodeInfoResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	if req.CodeId == 0 {
+		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+	}
+	res := k.GetCodeInfo(sdk.UnwrapSDKContext(c), req.CodeId)
+	if res == nil {
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryCodeInfoResponse{
+		CodeInfo: res,
 	}, nil
 }
 
@@ -230,7 +246,7 @@ func (k Keeper) Codes(c context.Context, req *types.QueryCodesRequest) (*types.Q
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }
 	// ctx := sdk.UnwrapSDKContext(c)
-	// r := make([]types.CodeInfoResponse, 0)
+	// r := make([]types.CodeInfo, 0)
 	// prefixStore := prefix.NewStore(ctx.KVStore(q.storeKey), types.CodeKeyPrefix)
 	// pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 	// 	if accumulate {
@@ -274,18 +290,13 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeR
 		// nil, nil leads to 404 in rest handler
 		return nil, nil
 	}
-	info := types.CodeInfoResponse{
-		CodeID:   codeID,
-		Creator:  res.Creator,
-		DataHash: res.CodeHash,
-	}
 
 	code, err := keeper.GetByteCode(ctx, codeID)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "loading wasm code")
 	}
 
-	return &types.QueryCodeResponse{CodeInfoResponse: &info, Data: code}, nil
+	return &types.QueryCodeResponse{CodeInfo: res, Data: code}, nil
 }
 
 func (k Keeper) ContractsByCreator(c context.Context, req *types.QueryContractsByCreatorRequest) (*types.QueryContractsByCreatorResponse, error) {

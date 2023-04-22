@@ -18,8 +18,8 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
-func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte) (uint64, []byte, error) {
-	return k.create(ctx, creator, wasmByteCode)
+func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, metadata types.CodeMetadata) (uint64, []byte, error) {
+	return k.create(ctx, creator, wasmByteCode, metadata)
 }
 
 func (k Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
@@ -90,7 +90,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 	}, nil
 }
 
-func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte) (codeID uint64, checksum []byte, err error) {
+func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
 	}
@@ -113,7 +113,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte)
 	}
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
 	k.Logger(ctx).Debug("storing new contract", "capabilities", report.Dependencies, "code_id", codeID)
-	codeInfo := types.NewCodeInfo(checksum, creator, report.Dependencies)
+	codeInfo := types.NewCodeInfo(checksum, creator, report.Dependencies, metadata)
 	k.storeCodeInfo(ctx, codeID, codeInfo)
 
 	evt := sdk.NewEvent(
