@@ -16,6 +16,8 @@ message ContractStorage {
 
 // Metadata for each codeId
 message CodeMetadata {
+    option (gogoproto.equal) = true;
+
     string name = 1;
     // category paths e.g. "/dapps/history"
     repeated string categ = 2;
@@ -29,6 +31,8 @@ message CodeMetadata {
 
 // CodeInfo is data for the uploaded contract WASM code
 message CodeInfo {
+    option (gogoproto.equal) = true;
+
     // CodeHash is the unique identifier created by hashing the wasm code
     bytes code_hash = 1;
     // Creator address who initially stored the code
@@ -42,6 +46,8 @@ message CodeInfo {
 }
 
 message CodeOrigin {
+    option (gogoproto.equal) = true;
+
     // unique chain ID
     string chain_id = 1;
     // hex-encoded address

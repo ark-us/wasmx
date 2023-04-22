@@ -251,11 +251,11 @@ func GetCmdQueryCodeInfo() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if res.CodeInfoResponse == nil {
+			if res.CodeInfo == nil {
 				return fmt.Errorf("contract not found")
 			}
 
-			return clientCtx.PrintProto(res.CodeInfoResponse)
+			return clientCtx.PrintProto(res.CodeInfo)
 		},
 		SilenceUsage: true,
 	}

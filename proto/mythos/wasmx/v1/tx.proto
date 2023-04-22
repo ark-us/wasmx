@@ -38,7 +38,7 @@ message MsgStoreCode {
     string sender = 1;
     // WASMByteCode can be raw or gzip compressed
     bytes wasm_byte_code = 2;
-    CodeMetadata metadata = 3;
+    CodeMetadata metadata = 3 [(gogoproto.nullable) = false];
 
 }
 // MsgStoreCodeResponse returns store result data.
@@ -55,7 +55,7 @@ message MsgStoreCodeEvm {
     string sender = 1;
     // EVM bytecode
     bytes evm_byte_code = 2;
-    CodeMetadata metadata = 3;
+    CodeMetadata metadata = 3 [(gogoproto.nullable) = false];
 }
 // MsgStoreCodeEvmResponse returns store result data.
 message MsgStoreCodeEvmResponse {
