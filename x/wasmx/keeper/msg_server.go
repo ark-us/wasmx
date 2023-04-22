@@ -40,7 +40,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.WasmByteCode)
+	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.WasmByteCode, *msg.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (m msgServer) StoreCodeEvm(goCtx context.Context, msg *types.MsgStoreCodeEv
 		return nil, err
 	}
 
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, wasmByteCode)
+	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, wasmByteCode, *msg.Metadata)
 	if err != nil {
 		return nil, err
 	}
