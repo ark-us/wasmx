@@ -18,14 +18,15 @@ message ContractStorage {
 message CodeMetadata {
     option (gogoproto.equal) = true;
 
-    string name = 1;
+    string name = 1 [(gogoproto.nullable) = true];
     // category paths e.g. "/dapps/history"
     repeated string categ = 2;
-    string icon = 3;
-    string author = 4; // off-chain identifier
-    string site = 5;
-    string abi = 6;
-    string json_schema = 7;
+    string icon = 3 [(gogoproto.nullable) = true];
+    // off-chain identifier
+    string author = 4 [(gogoproto.nullable) = true];
+    string site = 5 [(gogoproto.nullable) = true];
+    string abi = 6 [(gogoproto.nullable) = true];
+    string json_schema = 7 [(gogoproto.nullable) = true];
     CodeOrigin origin = 8;
 }
 
