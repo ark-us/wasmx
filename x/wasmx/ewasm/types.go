@@ -7,6 +7,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	"mythos/v1/x/wasmx/ewasm/native"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -34,8 +35,17 @@ type ContractContext struct {
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
+	hexaddr := EvmAddressFromAcc(newctx.Env.Contract.Address).Hex()
+	nativePrecompile, found := native.NativeMap[hexaddr]
+	if found {
+		data := nativePrecompile(newctx.Calldata)
+		newctx.ReturnData = data
+		return data, nil
+	}
+
 	contractVm, cleanups, err := InitiateWasm(newctx, c.FilePath, nil, c.SystemDeps)
 	if err != nil {
+		runCleanups(cleanups)
 		return nil, err
 	}
 	setExecutionBytecode(newctx, contractVm, "main")

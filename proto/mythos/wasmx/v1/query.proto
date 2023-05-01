@@ -45,7 +45,7 @@ service Query {
   rpc Code(QueryCodeRequest) returns (QueryCodeResponse) {
     option (google.api.http).get = "/wasmx/v1/code/{code_id}";
   }
-  // CodeInfo gets the binary code and metadata for a singe wasm code
+  // CodeInfo gets the metadata for a singe wasm code
   rpc CodeInfo(QueryCodeInfoRequest) returns (QueryCodeInfoResponse) {
     option (google.api.http).get = "/wasmx/v1/code_info/{code_id}";
   }

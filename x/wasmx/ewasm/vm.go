@@ -13,6 +13,8 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	"mythos/v1/x/wasmx/ewasm/native"
+	"mythos/v1/x/wasmx/ewasm/wasmutils"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -25,30 +27,6 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 	}
 	fmt.Println("Go: ewasm_wrapper: leaving", wrapper.Name, returns)
 	return returns, wasmedge.Result_Success
-}
-
-func InstantiateWasm(contractVm *wasmedge.VM, filePath string, wasmbuffer []byte) error {
-	var err error
-	if wasmbuffer == nil {
-		err = contractVm.LoadWasmFile(filePath)
-		if err != nil {
-			return sdkerrors.Wrapf(err, "load wasm file failed %s", filePath)
-		}
-	} else {
-		err = contractVm.LoadWasmBuffer(wasmbuffer)
-		if err != nil {
-			return sdkerrors.Wrapf(err, "load wasm file failed from buffer")
-		}
-	}
-	err = contractVm.Validate()
-	if err != nil {
-		return sdkerrors.Wrapf(err, "wasm validate failed")
-	}
-	err = contractVm.Instantiate()
-	if err != nil {
-		return sdkerrors.Wrapf(err, "wasm instantiate failed")
-	}
-	return nil
 }
 
 func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []string) (*wasmedge.VM, []func(), error) {
@@ -77,7 +55,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 		}
 	}
 
-	err := InstantiateWasm(contractVm, filePath, wasmbuffer)
+	err := wasmutils.InstantiateWasm(contractVm, filePath, wasmbuffer)
 	return contractVm, cleanups, err
 }
 
@@ -183,7 +161,7 @@ func ExecuteWasm(
 
 	// native implementations
 	hexaddr := EvmAddressFromAcc(env.Contract.Address).Hex()
-	nativePrecompile, found := NativeMap[hexaddr]
+	nativePrecompile, found := native.NativeMap[hexaddr]
 	if found {
 		data := nativePrecompile(ethMsg.Data)
 		return types.ContractResponse{Data: data}, nil

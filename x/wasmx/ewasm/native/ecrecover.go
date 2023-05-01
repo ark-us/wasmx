@@ -1,4 +1,4 @@
-package ewasm
+package native
 
 import (
 	"bytes"
@@ -14,9 +14,6 @@ import (
 )
 
 var EMPTY_ADDRESS = bytes.Repeat([]byte{0}, 20)
-var NativeMap = map[string]func([]byte) []byte{
-	"0x0000000000000000000000000000000000000001": Secp256k1Recover,
-}
 
 func Secp256k1Recover(msg []byte) []byte {
 	msgHash := msg[0:32]
