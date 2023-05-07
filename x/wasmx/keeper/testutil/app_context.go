@@ -227,6 +227,11 @@ func (s AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAd
 }
 
 func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
+	result := s.EwasmQueryRaw(account, contract, executeMsg, funds, dependencies)
+	return hex.EncodeToString(result)
+}
+
+func (s AppContext) EwasmQueryRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	query := types.QuerySmartContractCallRequest{
@@ -248,7 +253,7 @@ func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddre
 	var data types.WasmxQueryResponse
 	err = json.Unmarshal(resp.Data, &data)
 	s.S.Require().NoError(err, abcires)
-	return hex.EncodeToString(data.Data)
+	return data.Data
 }
 
 func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1.Content, deposit sdk.Coins) abci.ResponseDeliverTx {

@@ -9,6 +9,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/ewasm"
+	precompiles "mythos/v1/x/wasmx/ewasm/contracts"
 )
 
 func (k Keeper) BootstrapSystemContracts(
@@ -33,7 +34,7 @@ func (k Keeper) ActivateEmbeddedSystemContract(
 	contract types.SystemContract,
 	compiledFolderPath string,
 ) error {
-	wasmbin := ewasm.GetPrecompileByLabel(contract.Label)
+	wasmbin := precompiles.GetPrecompileByLabel(contract.Label)
 	return k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, wasmbin, compiledFolderPath)
 }
 

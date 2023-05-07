@@ -2,6 +2,8 @@ package ewasm
 
 import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	"mythos/v1/x/wasmx/ewasm/wasmutils"
 )
 
 const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
@@ -37,7 +39,7 @@ func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]f
 	if err != nil {
 		return cleanups, err
 	}
-	err = InstantiateWasm(ewasmVm, coreOpcodesModule, nil)
+	err = wasmutils.InstantiateWasm(ewasmVm, coreOpcodesModule, nil)
 	if err != nil {
 		return cleanups, err
 	}

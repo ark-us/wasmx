@@ -93,6 +93,13 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 		},
+		{
+			Address:     "0x0000000000000000000000000000000000000022",
+			Label:       "secret_sharing",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Native:      true,
+		},
 	}
 }
 

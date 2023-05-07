@@ -17,6 +17,7 @@ import (
 	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"mythos/v1/x/wasmx/ewasm"
+	"mythos/v1/x/wasmx/ewasm/native"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -213,4 +214,55 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil)
 	expected = "ba2909a8e60a55d7a0caf129a18c6c6aa41434c431646bb4a928e76ad732152f35eb59e6df429de7323e5813809f03dc"
 	s.Require().Equal(expected, qres)
+}
+
+func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	contractAddress := ewasm.AccAddressFromHex("0x0000000000000000000000000000000000000022")
+
+	args1 := native.InputShamirSplit{
+		Secret:    "this is a secret",
+		Count:     4,
+		Threshold: 2,
+	}
+
+	fabi := native.SecretSharingAbi.Methods["shamirSplit"]
+	input, err := fabi.Inputs.Pack(args1.Secret, args1.Count, args1.Threshold)
+	s.Require().NoError(err)
+	input = append(fabi.ID, input...)
+
+	qres := appA.EwasmQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: input}, nil, nil)
+
+	unpacked, err := fabi.Outputs.Unpack(qres)
+	s.Require().NoError(err)
+
+	var tuple native.ResultShares
+	err = fabi.Outputs.Copy(&tuple, unpacked)
+	s.Require().NoError(err)
+
+	sampleShares := []string{
+		tuple.Shares[0],
+		tuple.Shares[2],
+	}
+
+	fabi = native.SecretSharingAbi.Methods["shamirRecover"]
+	input, err = fabi.Inputs.Pack(sampleShares)
+	s.Require().NoError(err)
+	input = append(fabi.ID, input...)
+
+	qres = appA.EwasmQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: input}, nil, nil)
+
+	unpacked, err = fabi.Outputs.Unpack(qres)
+	s.Require().NoError(err)
+
+	var result native.ResultSecret
+	err = fabi.Outputs.Copy(&result, unpacked)
+	s.Require().NoError(err)
+	s.Require().Equal(args1.Secret, result.Secret)
 }
