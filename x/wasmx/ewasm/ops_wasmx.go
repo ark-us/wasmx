@@ -9,6 +9,8 @@ import (
 )
 
 type WasmxLog struct {
+	Data   []byte
+	Topics [][32]byte
 }
 
 // getCallData(): ArrayBuffer
@@ -68,16 +70,21 @@ func wasmxStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, par
 }
 
 func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("----wasmxLog", params)
 	ctx := context.(*Context)
 	data, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var log EwasmLog
-	err = json.Unmarshal(data, &log)
+	var wlog WasmxLog
+	err = json.Unmarshal(data, &wlog)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
+	}
+	// TODO rename log to WasmxLog by adding types
+	log := EwasmLog{
+		ContractAddress: ctx.Env.Contract.Address,
+		Data:            wlog.Data,
+		Topics:          wlog.Topics,
 	}
 	ctx.Logs = append(ctx.Logs, log)
 	returns := make([]interface{}, 0)
