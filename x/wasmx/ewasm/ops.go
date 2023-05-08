@@ -332,7 +332,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	callContext := types.MessageInfo{
@@ -416,7 +416,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	// keep same origin, change caller, funds
@@ -499,7 +499,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	// keep same origin, sender, funds
@@ -583,7 +583,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	callContext := types.MessageInfo{

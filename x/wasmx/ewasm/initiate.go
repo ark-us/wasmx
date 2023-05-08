@@ -11,11 +11,30 @@ const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
 var (
 	EWASM_VM_EXPORT          = "ewasm_env_"
 	EWASM_INTERPRETER_EXPORT = "ewasm_ewasm_"
+	WASMX_VM_EXPORT          = "wasmx_env_"
 
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
 	// codesize_constructor
 )
+
+func InitiateWasmTypeWasmx(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+	wasmx := BuildWasmxEnv(context)
+	env := BuildAssemblyScriptEnv(context)
+
+	var cleanups []func()
+	cleanups = append(cleanups, wasmx.Release)
+	err := contractVm.RegisterModule(wasmx)
+	if err != nil {
+		return cleanups, err
+	}
+	cleanups = append(cleanups, env.Release)
+	err = contractVm.RegisterModule(env)
+	if err != nil {
+		return cleanups, err
+	}
+	return cleanups, nil
+}
 
 func InitiateWasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
@@ -64,6 +83,7 @@ func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]f
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM) ([]func(), error){}
 
 func init() {
+	SystemDepHandler["wasmx_env_1"] = InitiateWasmTypeWasmx
 	SystemDepHandler["ewasm_env_1"] = InitiateWasmTypeEnv
 	SystemDepHandler["ewasm_ewasm_1"] = InitiateWasmTypeInterpreter
 }

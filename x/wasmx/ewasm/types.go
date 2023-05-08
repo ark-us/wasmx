@@ -60,7 +60,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 }
 
 // key is a bech32 string
-type ContractRouter = map[string]ContractContext
+type ContractRouter = map[string]*ContractContext
 
 type Context struct {
 	Ctx            sdk.Context
