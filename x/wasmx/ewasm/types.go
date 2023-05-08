@@ -88,5 +88,5 @@ type EwasmFunctionWrapper struct {
 type EwasmLog struct {
 	ContractAddress sdk.AccAddress
 	Data            []byte
-	Topics          [][]byte
+	Topics          [][32]byte
 }

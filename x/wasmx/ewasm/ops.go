@@ -714,7 +714,9 @@ func log(context interface{}, callframe *wasmedge.CallingFrame, params []interfa
 		if err != nil {
 			return nil, wasmedge.Result_Fail
 		}
-		log.Topics = append(log.Topics, topic)
+		var topic_ [32]byte
+		copy(topic_[:], topic)
+		log.Topics = append(log.Topics, topic_)
 	}
 	ctx.Logs = append(ctx.Logs, log)
 	returns := make([]interface{}, 0)

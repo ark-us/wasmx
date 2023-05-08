@@ -271,7 +271,7 @@ func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types
 		for j, topic := range log.Topics {
 			attributes = append(attributes, types.EventAttribute{
 				Key:   AttributeKeyTopic + fmt.Sprint(j),
-				Value: "0x" + hex.EncodeToString(topic),
+				Value: "0x" + hex.EncodeToString(topic[:]),
 			})
 		}
 		events = append(events, types.Event{
