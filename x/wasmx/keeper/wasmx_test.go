@@ -27,7 +27,7 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 
 	data := []byte(`{"method":"set","params":"{\"key\":\"hello\",\"value\":\"sammy\"}"}`)
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	suite.Require().Contains(res.GetLog(), "wasmx-log_ewasm_0")
+	suite.Require().Contains(res.GetLog(), "wasmx-log_wasmx_0")
 	suite.Require().Contains(res.GetLog(), `{"key":"topic_0","value":"0x68656c6c6f000000000000000000000000000000000000000000000000000000"}`)
 
 	initvalue := "sammy"
