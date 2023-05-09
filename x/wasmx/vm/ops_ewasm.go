@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"bytes"
@@ -332,7 +332,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	callContext := types.MessageInfo{
@@ -416,7 +416,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	// keep same origin, change caller, funds
@@ -499,7 +499,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	// keep same origin, sender, funds
@@ -583,7 +583,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 			returns[0] = int32(1)
 			return returns, wasmedge.Result_Success
 		}
-		ctx.ContractRouter[addr.String()] = *depContext
+		ctx.ContractRouter[addr.String()] = depContext
 	}
 
 	callContext := types.MessageInfo{
@@ -705,7 +705,7 @@ func log(context interface{}, callframe *wasmedge.CallingFrame, params []interfa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	log := EwasmLog{Data: data, ContractAddress: ctx.Env.Contract.Address}
+	log := WasmxLog{Type: LOG_TYPE_EWASM, Data: data, ContractAddress: ctx.Env.Contract.Address}
 	topicCount := int(params[2].(int32))
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
 
@@ -714,7 +714,9 @@ func log(context interface{}, callframe *wasmedge.CallingFrame, params []interfa
 		if err != nil {
 			return nil, wasmedge.Result_Fail
 		}
-		log.Topics = append(log.Topics, topic)
+		var topic_ [32]byte
+		copy(topic_[:], topic)
+		log.Topics = append(log.Topics, topic_)
 	}
 	ctx.Logs = append(ctx.Logs, log)
 	returns := make([]interface{}, 0)

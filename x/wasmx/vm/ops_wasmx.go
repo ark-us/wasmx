@@ -1,0 +1,242 @@
+package vm
+
+import (
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
+
+	"github.com/second-state/WasmEdge-go/wasmedge"
+)
+
+type WasmxJsonLog struct {
+	Data   []byte
+	Topics [][32]byte
+}
+
+// getCallData(): ArrayBuffer
+func getCallData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	ptr, err := allocateMem(ctx, int32(len(ctx.Calldata)))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, ctx.Calldata, ptr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+// storageStore(key: ArrayBuffer, value: ArrayBuffer)
+func wasmxStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	key, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data, err := readMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	ctx := context.(*Context)
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS), "wasmx")
+
+	ctx.ContractStore.Set(key, data)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+// storageLoad(key: ArrayBuffer): ArrayBuffer
+func wasmxStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	keybz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := ctx.ContractStore.Get(keybz)
+	newptr, err := allocateMem(ctx, int32(len(data)))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, data, newptr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = newptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var wlog WasmxJsonLog
+	err = json.Unmarshal(data, &wlog)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	log := WasmxLog{
+		Type:            LOG_TYPE_WASMX,
+		ContractAddress: ctx.Env.Contract.Address,
+		Data:            wlog.Data,
+		Topics:          wlog.Topics,
+	}
+	ctx.Logs = append(ctx.Logs, log)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+// SSTORE key_ptr: i32, value_ptr: i32,
+func storageStoreGlobal(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+// SLOAD key_ptr: i32, result_ptr: i32
+func storageLoadGlobal(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = data
+	ctx.ReturnData = data
+	// terminate the WASM execution
+	return returns, wasmedge.Result_Terminate
+}
+
+func wasmxRevert(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = data
+	ctx.ReturnData = data
+	return returns, wasmedge.Result_Fail
+}
+
+// message: usize, fileName: usize, line: u32, column: u32
+func asAbort(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	message, _ := readMemFromPtr(callframe, params[0])
+	fileName, _ := readMemFromPtr(callframe, params[1])
+	fmt.Println("--ABORT--", readJsString(message), readJsString(fileName), ", line: ", params[2], ", column: ", params[3])
+	return wasmxRevert(context, callframe, params)
+}
+
+func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	message, _ := readMemFromPtr(callframe, params[0])
+	fmt.Println("--console.log--", readJsString(message))
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func readJsString(arr []byte) string {
+	msg := []byte{}
+	for i, char := range arr {
+		if i%2 == 0 {
+			msg = append(msg, char)
+		}
+	}
+	return string(msg)
+}
+
+// function env.trace?(message: usize, n: i32, a0..4?: f64): void
+// function env.seed?(): f64
+
+func BuildWasmxEnv(context *Context) *wasmedge.Module {
+	env := wasmedge.NewModule("wasmx")
+	functype_i32i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
+	functype_i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
+	functype__i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
+	functype_i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
+
+	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
+	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
+	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
+	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
+	env.AddFunction("finish", wasmedge.NewFunction(functype_i32_, wasmxFinish, context, 0))
+	env.AddFunction("revert", wasmedge.NewFunction(functype_i32_, wasmxRevert, context, 0))
+	env.AddFunction("storageLoad_global", wasmedge.NewFunction(functype_i32i32_, storageLoadGlobal, context, 0))
+	env.AddFunction("storageStore_global", wasmedge.NewFunction(functype_i32i32_, storageStoreGlobal, context, 0))
+
+	return env
+}
+
+func BuildAssemblyScriptEnv(context *Context) *wasmedge.Module {
+	env := wasmedge.NewModule("env")
+	functype_i32i32i32i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
+	functype_i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
+
+	env.AddFunction("abort", wasmedge.NewFunction(functype_i32i32i32i32_, asAbort, context, 0))
+	env.AddFunction("console.log", wasmedge.NewFunction(functype_i32_, asConsoleLog, context, 0))
+	return env
+}
+
+const AS_PTR_LENGHT_OFFSET = int32(4)
+const AS_ARRAY_BUFFER_TYPE = int32(1)
+
+// https://www.assemblyscript.org/runtime.html#memory-layout
+// Name	   Offset	Type	Description
+// mmInfo	-20	    usize	Memory manager info
+// gcInfo	-16	    usize	Garbage collector info
+// gcInfo2	-12	    usize	Garbage collector info
+// rtId 	-8	    u32	    Unique id of the concrete class
+// rtSize	-4	    u32	    Size of the data following the header
+//           0		Payload starts here
+
+func readMemFromPtr(callframe *wasmedge.CallingFrame, pointer interface{}) ([]byte, error) {
+	lengthbz, err := readMem(callframe, pointer.(int32)-AS_PTR_LENGHT_OFFSET, int32(AS_PTR_LENGHT_OFFSET))
+	if err != nil {
+		return nil, err
+	}
+	length := binary.LittleEndian.Uint32(lengthbz)
+	data, err := readMem(callframe, pointer, int32(length))
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func allocateMem(ctx *Context, size int32) (int32, error) {
+	addr := ctx.Env.Contract.Address
+	vm := ctx.ContractRouter[addr.String()].Vm
+	if vm == nil {
+		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
+	}
+	result, err := vm.Execute("__new", size, AS_ARRAY_BUFFER_TYPE)
+	if err != nil {
+		return 0, err
+	}
+	return result[0].(int32), nil
+}

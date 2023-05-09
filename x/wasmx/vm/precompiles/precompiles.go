@@ -1,44 +1,44 @@
-package contracts
+package precompiles
 
 import (
 	_ "embed"
 )
 
 var (
-	//go:embed precompiles/01.ecrecover.e.wasm
+	//go:embed 01.ecrecover.e.wasm
 	ecrecovereth []byte
 
-	//go:embed precompiles/02.sha2-256.e.wasm
+	//go:embed 02.sha2-256.e.wasm
 	sha2_256 []byte
 
-	//go:embed precompiles/03.ripmd160.e.wasm
+	//go:embed 03.ripmd160.e.wasm
 	ripmd160 []byte
 
-	//go:embed precompiles/04.identity.e.wasm
+	//go:embed 04.identity.e.wasm
 	identity []byte
 
-	//go:embed precompiles/05.modexp.e.wasm
+	//go:embed 05.modexp.e.wasm
 	modexp []byte
 
-	//go:embed precompiles/06.ecadd.e.wasm
+	//go:embed 06.ecadd.e.wasm
 	ecadd []byte
 
-	//go:embed precompiles/07.ecmul.e.wasm
+	//go:embed 07.ecmul.e.wasm
 	ecmul []byte
 
-	//go:embed precompiles/08.ecpairings.e.wasm
+	//go:embed 08.ecpairings.e.wasm
 	ecpairings []byte
 
-	//go:embed precompiles/09.blake2f.e.wasm
+	//go:embed 09.blake2f.e.wasm
 	blake2f []byte
 
-	//go:embed precompiles/20.secp384r1.wasm
+	//go:embed 20.secp384r1.wasm
 	secp384r1 []byte
 
-	//go:embed precompiles/21.secp384r1_registry.wasm
+	//go:embed 21.secp384r1_registry.wasm
 	secp384r1_registry []byte
 
-	//go:embed precompiles/22.secret_sharing.wasm
+	//go:embed 22.secret_sharing.wasm
 	secret_sharing []byte
 )
 

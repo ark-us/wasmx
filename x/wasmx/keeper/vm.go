@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"mythos/v1/x/wasmx/ewasm"
 	"mythos/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/vm"
 )
 
 type WasmxEngine struct {
@@ -33,7 +33,7 @@ func (k WasmxEngine) Create(code types.WasmCode) (types.Checksum, error) {
 }
 
 func (k WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, error) {
-	return ewasm.AnalyzeWasm(code)
+	return vm.AnalyzeWasm(code)
 }
 
 func (k WasmxEngine) Instantiate(
@@ -58,7 +58,7 @@ func (k WasmxEngine) Instantiate(
 	} else {
 		filepath = k.build_path(k.DataDir, checksum)
 	}
-	data, err = ewasm.ExecuteWasm(sdk.Context{}, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
+	data, err = vm.ExecuteWasm(sdk.Context{}, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
 
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -89,7 +89,7 @@ func (k WasmxEngine) Execute(
 	} else {
 		filepath = k.build_path(k.DataDir, checksum)
 	}
-	data, err = ewasm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+	data, err = vm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -116,7 +116,7 @@ func (k WasmxEngine) QueryExecute(
 	} else {
 		filepath = k.build_path(k.DataDir, checksum)
 	}
-	data, err := ewasm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+	data, err := vm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}
@@ -151,7 +151,7 @@ func (k WasmxEngine) Unpin(checksum types.Checksum) error {
 }
 
 func (k WasmxEngine) pin_code(inPath string, outPath string) error {
-	return ewasm.AotCompile(inPath, outPath)
+	return vm.AotCompile(inPath, outPath)
 }
 
 func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (types.Checksum, error) {

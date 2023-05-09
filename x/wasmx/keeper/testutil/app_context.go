@@ -226,12 +226,12 @@ func (s AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAd
 	return s.DeliverTxWithOpts(sender, executeContractMsg, gasLimit, gasPrice)
 }
 
-func (s AppContext) EwasmQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
-	result := s.EwasmQueryRaw(account, contract, executeMsg, funds, dependencies)
+func (s AppContext) WasmxQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
+	result := s.WasmxQueryRaw(account, contract, executeMsg, funds, dependencies)
 	return hex.EncodeToString(result)
 }
 
-func (s AppContext) EwasmQueryRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
+func (s AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	query := types.QuerySmartContractCallRequest{

@@ -1,23 +1,41 @@
-package ewasm
+package vm
 
 import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"mythos/v1/x/wasmx/ewasm/wasmutils"
+	"mythos/v1/x/wasmx/vm/interpreters"
+	"mythos/v1/x/wasmx/vm/wasmutils"
 )
-
-const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
 
 var (
 	EWASM_VM_EXPORT          = "ewasm_env_"
 	EWASM_INTERPRETER_EXPORT = "ewasm_ewasm_"
+	WASMX_VM_EXPORT          = "wasmx_env_"
 
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
 	// codesize_constructor
 )
 
-func InitiateWasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateWasmxTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+	wasmx := BuildWasmxEnv(context)
+	env := BuildAssemblyScriptEnv(context)
+
+	var cleanups []func()
+	cleanups = append(cleanups, wasmx.Release)
+	err := contractVm.RegisterModule(wasmx)
+	if err != nil {
+		return cleanups, err
+	}
+	cleanups = append(cleanups, env.Release)
+	err = contractVm.RegisterModule(env)
+	if err != nil {
+		return cleanups, err
+	}
+	return cleanups, nil
+}
+
+func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
 	cleanups = append(cleanups, ewasmEnv.Release)
@@ -28,7 +46,7 @@ func InitiateWasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), e
 	return cleanups, nil
 }
 
-func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	var cleanups []func()
 	contractEnv := wasmedge.NewModule("ewasm")
 	ewasmVm := wasmedge.NewVM()
@@ -39,7 +57,7 @@ func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]f
 	if err != nil {
 		return cleanups, err
 	}
-	err = wasmutils.InstantiateWasm(ewasmVm, coreOpcodesModule, nil)
+	err = wasmutils.InstantiateWasm(ewasmVm, "", interpreters.EwasmInterpreter_1)
 	if err != nil {
 		return cleanups, err
 	}
@@ -64,8 +82,9 @@ func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]f
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM) ([]func(), error){}
 
 func init() {
-	SystemDepHandler["ewasm_env_1"] = InitiateWasmTypeEnv
-	SystemDepHandler["ewasm_ewasm_1"] = InitiateWasmTypeInterpreter
+	SystemDepHandler["wasmx_env_1"] = InitiateWasmxTypeEnv
+	SystemDepHandler["ewasm_env_1"] = InitiateEwasmTypeEnv
+	SystemDepHandler["ewasm_ewasm_1"] = InitiateEwasmTypeInterpreter
 }
 
 func VerifyEnv(version string, imports []*wasmedge.ImportType) error {

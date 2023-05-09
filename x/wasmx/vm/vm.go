@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"encoding/hex"
@@ -13,9 +13,9 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"mythos/v1/x/wasmx/ewasm/native"
-	"mythos/v1/x/wasmx/ewasm/wasmutils"
 	"mythos/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/vm/native"
+	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
 func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -91,6 +91,8 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			part = EWASM_VM_EXPORT
 		} else if strings.Contains(fname, EWASM_INTERPRETER_EXPORT) {
 			part = EWASM_INTERPRETER_EXPORT
+		} else if strings.Contains(fname, WASMX_VM_EXPORT) {
+			part = WASMX_VM_EXPORT
 		}
 		if part != "" {
 			dep := parseDependency(fname, EWASM_VM_EXPORT)
@@ -168,7 +170,7 @@ func ExecuteWasm(
 	}
 
 	conf := wasmedge.NewConfigure()
-	var contractRouter ContractRouter = make(map[string]ContractContext)
+	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
 		Ctx:               ctx,
 		GasMeter:          gasMeter,
@@ -186,20 +188,21 @@ func ExecuteWasm(
 		if err != nil {
 			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
-		context.ContractRouter[dep.Address.String()] = *contractContext
+		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
 	selfContext, err := buildExecutionContextClassic(filePath, env, storeKey, conf, systemDeps)
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
-	context.ContractRouter[env.Contract.Address.String()] = *selfContext
+	context.ContractRouter[env.Contract.Address.String()] = selfContext
 
 	contractVm, cleanups, err := InitiateWasm(context, filePath, nil, systemDeps)
 	if err != nil {
 		runCleanups(cleanups)
 		return types.ContractResponse{}, err
 	}
+	selfContext.Vm = contractVm
 
 	setExecutionBytecode(context, contractVm, funcName)
 
@@ -253,7 +256,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	}
 }
 
-func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types.ContractResponse {
+func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types.ContractResponse {
 	var events []types.Event
 	for i, log := range logs {
 		var attributes []types.EventAttribute
@@ -268,11 +271,11 @@ func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types
 		for j, topic := range log.Topics {
 			attributes = append(attributes, types.EventAttribute{
 				Key:   AttributeKeyTopic + fmt.Sprint(j),
-				Value: "0x" + hex.EncodeToString(topic),
+				Value: "0x" + hex.EncodeToString(topic[:]),
 			})
 		}
 		events = append(events, types.Event{
-			Type:       EventTypeEwasmLog + fmt.Sprint(i),
+			Type:       EventTypeWasmxLog + log.Type + "_" + fmt.Sprint(i),
 			Attributes: attributes,
 		})
 	}
