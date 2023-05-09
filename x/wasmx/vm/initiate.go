@@ -3,10 +3,9 @@ package vm
 import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	"mythos/v1/x/wasmx/vm/interpreters"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
-
-const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
 
 var (
 	EWASM_VM_EXPORT          = "ewasm_env_"
@@ -58,7 +57,7 @@ func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]
 	if err != nil {
 		return cleanups, err
 	}
-	err = wasmutils.InstantiateWasm(ewasmVm, coreOpcodesModule, nil)
+	err = wasmutils.InstantiateWasm(ewasmVm, "", interpreters.EwasmInterpreter_1)
 	if err != nil {
 		return cleanups, err
 	}
