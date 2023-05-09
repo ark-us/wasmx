@@ -8,8 +8,8 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"mythos/v1/x/wasmx/ewasm/contracts"
-	"mythos/v1/x/wasmx/ewasm/wasmutils"
+	"mythos/v1/x/wasmx/vm/precompiles"
+	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
 const LENGTH_SIZE = 4
@@ -44,7 +44,7 @@ func init() {
 
 func SecretSharing(input []byte) []byte {
 	emtpyResult := make([]byte, 0)
-	wasmbin := contracts.GetPrecompileByLabel("secret_sharing")
+	wasmbin := precompiles.GetPrecompileByLabel("secret_sharing")
 	wasmedge.SetLogErrorLevel()
 	conf := wasmedge.NewConfigure(wasmedge.WASI)
 	vm := wasmedge.NewVMWithConfig(conf)

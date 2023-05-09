@@ -8,9 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	wasmeth "mythos/v1/x/wasmx/ewasm"
 	"mythos/v1/x/wasmx/keeper/testutil"
 	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmeth "mythos/v1/x/wasmx/vm"
 	"mythos/v1/x/websrv/types"
 )
 
@@ -115,7 +115,7 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	appA.ExecuteContract(sender, contractAddressRoot, wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("baafbf770000000000000000000000000000000000000000000000000000000000000040000000000000000000000000" + contractAddressHex[2:] + "000000000000000000000000000000000000000000000000000000000000000b2f74657374736572766572000000000000000000000000000000000000000000")}, nil, deps)
 
 	// query pages /testserver
-	qres := appA.EwasmQuery(sender, contractAddressRoot, wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("918a4fd40000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000b2f74657374736572766572000000000000000000000000000000000000000000")}, nil, nil)
+	qres := appA.WasmxQuery(sender, contractAddressRoot, wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("918a4fd40000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000b2f74657374736572766572000000000000000000000000000000000000000000")}, nil, nil)
 	s.Require().Equal("000000000000000000000000"+contractAddressHex[2:], qres)
 
 	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/testserver"}}}

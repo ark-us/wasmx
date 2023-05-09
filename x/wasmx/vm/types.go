@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"math/big"
@@ -7,21 +7,22 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"mythos/v1/x/wasmx/ewasm/native"
 	"mythos/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/vm/native"
 )
 
 var (
 	// 0, 1, 2 are used by wasmedge for success, terminate, fail
 	Result_OutOfGas = wasmedge.NewResult(wasmedge.ErrCategory_UserLevel, 10)
+
+	LOG_TYPE_WASMX = "wasmx"
 )
 
 var (
-	EventTypeEwasmFunction = "ewasm_function"
-	EventTypeEwasmLog      = "ewasm_log_"
-	AttributeKeyIndex      = "index"
-	AttributeKeyData       = "data"
-	AttributeKeyTopic      = "topic_"
+	EventTypeWasmxLog = "log_"
+	AttributeKeyIndex = "index"
+	AttributeKeyData  = "data"
+	AttributeKeyTopic = "topic_"
 )
 
 type ContractContext struct {
@@ -74,7 +75,7 @@ type Context struct {
 	Callvalue      *big.Int
 	ReturnData     []byte
 	CurrentCallId  uint32
-	Logs           []EwasmLog
+	Logs           []WasmxLog
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
 	ExecutionBytecode []byte
@@ -85,8 +86,9 @@ type EwasmFunctionWrapper struct {
 	Vm   *wasmedge.VM
 }
 
-type EwasmLog struct {
+type WasmxLog struct {
 	ContractAddress sdk.AccAddress
 	Data            []byte
 	Topics          [][32]byte
+	Type            string
 }

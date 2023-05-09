@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"encoding/hex"
@@ -13,9 +13,9 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"mythos/v1/x/wasmx/ewasm/native"
-	"mythos/v1/x/wasmx/ewasm/wasmutils"
 	"mythos/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/vm/native"
+	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
 func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -256,7 +256,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	}
 }
 
-func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types.ContractResponse {
+func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types.ContractResponse {
 	var events []types.Event
 	for i, log := range logs {
 		var attributes []types.EventAttribute
@@ -275,7 +275,7 @@ func handleContractResponse(funcName string, data []byte, logs []EwasmLog) types
 			})
 		}
 		events = append(events, types.Event{
-			Type:       EventTypeEwasmLog + fmt.Sprint(i),
+			Type:       EventTypeWasmxLog + log.Type + "_" + fmt.Sprint(i),
 			Attributes: attributes,
 		})
 	}

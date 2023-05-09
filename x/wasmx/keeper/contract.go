@@ -13,9 +13,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	wasmeth "mythos/v1/x/wasmx/ewasm"
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
+	wasmeth "mythos/v1/x/wasmx/vm"
 )
 
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, metadata types.CodeMetadata) (uint64, []byte, error) {
@@ -401,7 +401,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	// TODO panic if coin is not the correct denomination
-	// add denom param for ewasm
+	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
@@ -498,7 +498,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	}
 
 	// TODO panic if coin is not the correct denomination
-	// add denom param for ewasm
+	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")

@@ -1,9 +1,9 @@
-package ewasm
+package vm
 
 import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	"mythos/v1/x/wasmx/ewasm/wasmutils"
+	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
 const coreOpcodesModule = "../ewasm/contracts/ewasm.wasm"
@@ -18,7 +18,7 @@ var (
 	// codesize_constructor
 )
 
-func InitiateWasmTypeWasmx(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateWasmxTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	wasmx := BuildWasmxEnv(context)
 	env := BuildAssemblyScriptEnv(context)
 
@@ -36,7 +36,7 @@ func InitiateWasmTypeWasmx(context *Context, contractVm *wasmedge.VM) ([]func(),
 	return cleanups, nil
 }
 
-func InitiateWasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
 	cleanups = append(cleanups, ewasmEnv.Release)
@@ -47,7 +47,7 @@ func InitiateWasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), e
 	return cleanups, nil
 }
 
-func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	var cleanups []func()
 	contractEnv := wasmedge.NewModule("ewasm")
 	ewasmVm := wasmedge.NewVM()
@@ -83,9 +83,9 @@ func InitiateWasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]f
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM) ([]func(), error){}
 
 func init() {
-	SystemDepHandler["wasmx_env_1"] = InitiateWasmTypeWasmx
-	SystemDepHandler["ewasm_env_1"] = InitiateWasmTypeEnv
-	SystemDepHandler["ewasm_ewasm_1"] = InitiateWasmTypeInterpreter
+	SystemDepHandler["wasmx_env_1"] = InitiateWasmxTypeEnv
+	SystemDepHandler["ewasm_env_1"] = InitiateEwasmTypeEnv
+	SystemDepHandler["ewasm_ewasm_1"] = InitiateEwasmTypeInterpreter
 }
 
 func VerifyEnv(version string, imports []*wasmedge.ImportType) error {

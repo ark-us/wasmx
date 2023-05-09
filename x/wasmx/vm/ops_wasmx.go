@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"encoding/binary"
@@ -8,7 +8,7 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
-type WasmxLog struct {
+type WasmxJsonLog struct {
 	Data   []byte
 	Topics [][32]byte
 }
@@ -75,13 +75,13 @@ func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var wlog WasmxLog
+	var wlog WasmxJsonLog
 	err = json.Unmarshal(data, &wlog)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO rename log to WasmxLog by adding types
-	log := EwasmLog{
+	log := WasmxLog{
+		Type:            LOG_TYPE_WASMX,
 		ContractAddress: ctx.Env.Contract.Address,
 		Data:            wlog.Data,
 		Topics:          wlog.Topics,

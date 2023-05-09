@@ -61,12 +61,12 @@ func (suite *KeeperTestSuite) TestInterpreterContractTest() {
 // 	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
 // 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000006")
 
-// 	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
+// 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
 // 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", qres)
 
-// 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex1)}, nil, nil)
+// 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex1)}, nil, nil)
 // 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000007")
 
-// 	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex2)}, nil, nil)
+// 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex2)}, nil, nil)
 // 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000008")
 // }

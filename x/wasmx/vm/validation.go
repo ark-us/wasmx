@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"bytes"

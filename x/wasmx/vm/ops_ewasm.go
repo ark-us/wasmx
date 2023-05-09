@@ -1,4 +1,4 @@
-package ewasm
+package vm
 
 import (
 	"bytes"
@@ -705,7 +705,7 @@ func log(context interface{}, callframe *wasmedge.CallingFrame, params []interfa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	log := EwasmLog{Data: data, ContractAddress: ctx.Env.Contract.Address}
+	log := WasmxLog{Type: LOG_TYPE_EWASM, Data: data, ContractAddress: ctx.Env.Contract.Address}
 	topicCount := int(params[2].(int32))
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
 

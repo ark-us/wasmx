@@ -13,9 +13,9 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
 
-	wasmeth "mythos/v1/x/wasmx/ewasm"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
+	wasmeth "mythos/v1/x/wasmx/vm"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 )
@@ -156,108 +156,108 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(addresshex)}, nil, nil)
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(addresshex)}, nil, nil)
 	s.Require().Equal("000000000000000000000000"+strings.ToLower(contractAddressHex[2:]), qres)
 
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(basefeehex)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(basefeehex)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", qres)
 
 	calld := andhex + "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000002", qres)
 
 	calld = addhex + "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", qres)
 
 	calld = subhex + "00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
 
 	calld = mulhex + "00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", qres)
 
 	calld = lthex + "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
 
 	calld = gthex + "00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
 
 	calld = modhex + "00000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000003"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000002", qres)
 
 	calld = nothex + "0000000000000000000000000000000000000000000000000000000000000002"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", qres)
 
 	calld = addmodhex + "000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000003"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000002", qres)
 
 	calld = mulmodhex + "000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000004"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", qres)
 
 	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000c"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", qres)
 
 	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000000aa0000000000000000000000000000000000000000000000000000000000000c"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", qres)
 
 	calld = shlhex + "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000c"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000030", qres)
 
 	calld = shlhex + "0000000000000000000000000000000000000000000000000000000000000000aa0000000000000000000000000000000000000000000000000000000000000c"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", qres)
 
 	calld = sarhex + "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000c"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", qres)
 
 	calld = sarhex + "0000000000000000000000000000000000000000000000000000000000000000aa0000000000000000000000000000000000000000000000000000000000000c"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", qres)
 
 	calld = sarhex + "0000000000000000000000000000000000000000000000000000000000000002fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", qres)
 
 	calld = calldataloadhex + "0000000000000000000000000000000000000000000000000000000000000024123456789abcdef111111111111111111111111111111111111fffffffffffff"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("123456789abcdef111111111111111111111111111111111111fffffffffffff", qres)
 
 	calld = calldatasizehex + "112233"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000007", qres)
 
 	calld = callerhex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("000000000000000000000000"+strings.ToLower(common.BytesToAddress(sender.Address.Bytes()).Hex()[2:]), qres)
 
 	calld = chainidhex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001b59", qres)
 
 	calld = gaslimithex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000989680", qres)
 
 	calld = callvalue
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(99999999))}, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(99999999))}, nil)
 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000005f5e0ff")
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(callvalue)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(99999999))}, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000005f5e0ff")
 
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(numberhex)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(numberhex)}, nil, nil)
 	blockno := new(big.Int)
 	qresbz, err := hex.DecodeString(qres)
 	s.Require().NoError(err)
@@ -266,7 +266,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	currentTime := s.Coordinator().CurrentTime.Unix()
 	s.Commit()
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(timestamphex)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(timestamphex)}, nil, nil)
 	timestamp := new(big.Int)
 	qresbz, err = hex.DecodeString(qres)
 	s.Require().NoError(err)
@@ -274,43 +274,43 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	s.Require().Equal(currentTime, timestamp.Int64())
 
 	calld = coinbasehex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("000000000000000000000000"+hex.EncodeToString(appA.Context().BlockHeader().ProposerAddress), qres)
 
 	realBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
 	s.Require().NoError(err)
 
 	calld = selfbalancehex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
 
 	calld = balancehex + "00000000000000000000000039B1BF12E9e21D78F0c76d192c26d47fa710Ec98"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "0000000000000000000000000000000000000000000000000000000000000000")
 
 	calld = balancehex + "000000000000000000000000" + contractAddressHex[2:]
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
 
 	calld = extcodehashhex + "000000000000000000000000" + strings.ToLower(contractAddressHex[2:])
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
 	s.Require().Equal(qres, hex.EncodeToString(codeInfo.CodeHash))
 
 	calld = gashex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("000000000000000000000000000000000000000000000000000007f741aa5b00", qres)
 
 	calld = codesizehex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001e15", qres)
 
 	calld = blockhashhex + "0000000000000000000000000000000000000000000000000000000000000002"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal(string(qres), "0000000000000000000000000000000000000000000000000000000000000000")
 
 	calld = gaspricehex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal(string(qres), "0000000000000000000000000000000000000000000000000000000000000000")
 }
 
@@ -346,13 +346,13 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000006")
 
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", qres)
 
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex1)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex1)}, nil, nil)
 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000007")
 
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex2)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex2)}, nil, nil)
 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000008")
 }
 
@@ -374,7 +374,7 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorageConstructor() {
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
 
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getHex)}, nil, nil)
 	s.Require().Equal(initvalue, qres)
 }
 
@@ -445,11 +445,11 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
 
 	// query fibonacci through the callwasm contract
-	qres := appA.EwasmQuery(sender, contractAddress, msgFib, nil, deps)
+	qres := appA.WasmxQuery(sender, contractAddress, msgFib, nil, deps)
 	s.Require().Equal(result, qres)
 
 	// query fibonacci through the callwasm contract - with storage
-	qres = appA.EwasmQuery(sender, contractAddress, msgFibStore, nil, deps)
+	qres = appA.WasmxQuery(sender, contractAddress, msgFibStore, nil, deps)
 	s.Require().Equal(result, qres)
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -680,11 +680,11 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000005")
 
 	queryMsg := fibhex + "0000000000000000000000000000000000000000000000000000000000000005"
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", qres)
 
 	queryMsg = fibstorehex + "0000000000000000000000000000000000000000000000000000000000000005"
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", qres)
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -692,7 +692,7 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	suite.Require().Equal("", hex.EncodeToString(queryres))
 
 	suite.Require().NotContains(res.GetLog(), "topic_0")
-	suite.Require().NotContains(res.GetLog(), "wasmx-ewasm_log")
+	suite.Require().NotContains(res.GetLog(), "wasmx-log_ewasm_")
 
 	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fibstorehex + "0000000000000000000000000000000000000000000000000000000000000005")}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000005")
@@ -797,7 +797,7 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "logswasm", nil)
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("0000000000000000000000000000000000000000000000000000000000000008")}, nil, nil)
-	logCount := strings.Count(res.GetLog(), "wasmx-ewasm_log_")
+	logCount := strings.Count(res.GetLog(), "wasmx-log_ewasm_")
 	s.Require().Equal(5, logCount, res.GetLog())
 }
 
@@ -933,29 +933,29 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000012")
 
 	queryMsg := getDecimalsHex
-	qres := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Contains(qres, "0000000000000000000000000000000000000000000000000000000000000012")
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000012", qres)
 
 	queryMsg = getNameHex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Contains(qres, tokenName)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020"+tokenName, qres)
 
 	queryMsg = getSymbolHex
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Contains(qres, tokenSymbol)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020"+tokenSymbol, qres)
 
 	// Test minting, test callvalue
 	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(sender.Address).Hex()[2:]
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000000000")
 
 	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(mintHex)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(10000000))}, nil)
 
 	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(sender.Address).Hex()[2:]
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Equal(qres, "0000000000000000000000000000000000000000000000000000000000989680")
 
 	// mint through a contract call
@@ -969,7 +969,7 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 	res = appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: appA.Hex2bz(contractAddressErc20Hex[2:] + mintHex)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(8888))}, deps)
 
 	queryMsg = balanceOfHex + "000000000000000000000000" + wasmeth.EvmAddressFromAcc(contractAddressCall).Hex()[2:]
-	qres = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(queryMsg)}, nil, nil)
 	s.Require().Equal(qres, "00000000000000000000000000000000000000000000000000000000000022b8")
 }
 
@@ -1017,12 +1017,12 @@ func (suite *KeeperTestSuite) TestConstructorTestBin() {
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	res := appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig)}, nil, nil)
+	res := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002163636861727365743d5554462d383e3c2f703e3c2f626f64793e3c2f68746d6c3e00000000000000000000000000000000000000000000000000000000000000", res)
 
-	res = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig2)}, nil, nil)
+	res = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig2)}, nil, nil)
 	s.Require().Equal("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000d93c21444f43545950452068746d6c3e3c68746d6c3e3c686561643e3c6d65746120636861727365743d225554462d38223e3c6d65746120687474702d65717569763d22582d55412d436f6d70617469626c652220636f6e74656e743d2249453d65646765223e3c6d657461206e616d653d2276696577706f72742220636f6e74656e743d2277696474683d6465766963652d77696474682c20696e697469616c2d7363616c653d312e30223e3c7469746c653e466972737420446f63756d656e743c2f7469746c653e3c2f686561643e3c626f64793e3c703e00000000000000", res)
 
-	res = appA.EwasmQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(strmap + "0000000000000000000000000000000000000000000000000000000000000000")}, nil, nil)
+	res = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(strmap + "0000000000000000000000000000000000000000000000000000000000000000")}, nil, nil)
 	s.Require().Equal(calld, res)
 }

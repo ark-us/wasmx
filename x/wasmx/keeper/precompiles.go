@@ -2,14 +2,14 @@ package keeper
 
 import (
 	_ "embed"
-	"mythos/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"mythos/v1/x/wasmx/ewasm"
-	precompiles "mythos/v1/x/wasmx/ewasm/contracts"
+	"mythos/v1/x/wasmx/types"
+	"mythos/v1/x/wasmx/vm"
+	"mythos/v1/x/wasmx/vm/precompiles"
 )
 
 func (k Keeper) BootstrapSystemContracts(
@@ -67,7 +67,7 @@ func (k Keeper) ActivateSystemContract(
 		}
 	}
 
-	contractAddress := ewasm.AccAddressFromHex(contract.Address)
+	contractAddress := vm.AccAddressFromHex(contract.Address)
 	if contract.Native {
 		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, contract.Label)
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
@@ -91,7 +91,7 @@ func (k Keeper) ActivateSystemContract(
 
 // SetSystemContract
 func (k Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract) {
-	addr := ewasm.AccAddressFromHex(contract.Address)
+	addr := vm.AccAddressFromHex(contract.Address)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
 	bz := k.cdc.MustMarshal(&contract)
 	prefixStore.Set(addr.Bytes(), bz)
