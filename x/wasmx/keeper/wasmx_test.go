@@ -25,7 +25,7 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	codeId := appA.StoreCode(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
 
-	data := []byte(`{"method":"set","params":"{\"key\":\"hello\",\"value\":\"sammy\"}"}`)
+	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Contains(res.GetLog(), "wasmx-log_wasmx_0")
 	suite.Require().Contains(res.GetLog(), `{"key":"topic_0","value":"0x68656c6c6f000000000000000000000000000000000000000000000000000000"}`)
@@ -35,7 +35,7 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal(initvalue, string(queryres))
 
-	data = []byte(`{"method":"get","params":"{\"key\":\"hello\"}"}`)
+	data = []byte(`{"get":{"key":"hello"}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(string(qres), "sammy")
 }
