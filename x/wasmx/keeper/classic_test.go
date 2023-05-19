@@ -892,7 +892,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	codeId := appA.StoreCode(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
 
-	executeMsg := []byte(`{"readonly": false, "data": "0x` + setHex + `0000000000000000000000000000000000000000000000000000000000000006"}`)
+	executeMsg := []byte(`{"data": "0x` + setHex + `0000000000000000000000000000000000000000000000000000000000000006"}`)
 
 	executeCodeMsg := &types.MsgExecuteWithOriginContract{
 		Origin:   sender.Address.String(),

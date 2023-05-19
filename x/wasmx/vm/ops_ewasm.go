@@ -336,11 +336,9 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	}
 
 	callContext := types.MessageInfo{
-		Origin:   ctx.CallContext.Origin,
-		Sender:   ctx.Env.Contract.Address,
-		Funds:    value,
-		IsQuery:  false,
-		ReadOnly: false,
+		Origin: ctx.CallContext.Origin,
+		Sender: ctx.Env.Contract.Address,
+		Funds:  value,
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -421,11 +419,9 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 
 	// keep same origin, change caller, funds
 	callContext := types.MessageInfo{
-		Origin:   ctx.CallContext.Origin,
-		Sender:   ctx.Env.Contract.Address,
-		Funds:    value,
-		IsQuery:  false,
-		ReadOnly: false,
+		Origin: ctx.CallContext.Origin,
+		Sender: ctx.Env.Contract.Address,
+		Funds:  value,
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -504,11 +500,9 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	// keep same origin, sender, funds
 	callContext := types.MessageInfo{
-		Origin:   ctx.CallContext.Origin,
-		Sender:   ctx.CallContext.Sender,
-		Funds:    ctx.Callvalue,
-		IsQuery:  false,
-		ReadOnly: false,
+		Origin: ctx.CallContext.Origin,
+		Sender: ctx.CallContext.Sender,
+		Funds:  ctx.Callvalue,
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -587,10 +581,8 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 
 	callContext := types.MessageInfo{
-		Origin:   ctx.CallContext.Origin,
-		Sender:   ctx.Env.Contract.Address,
-		IsQuery:  false,
-		ReadOnly: true,
+		Origin: ctx.CallContext.Origin,
+		Sender: ctx.Env.Contract.Address,
 	}
 	tempCtx, _ := ctx.Ctx.CacheContext()
 	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[addr.String()].ContractStoreKey)

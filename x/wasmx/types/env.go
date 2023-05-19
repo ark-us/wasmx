@@ -113,8 +113,6 @@ type MessageInfo struct {
 	// Amount of funds send to the contract along with this message
 	Funds        *big.Int     `json:"funds"`
 	CallCacheMap CallCacheMap `json:"call_cache_map"`
-	ReadOnly     bool         `json:"readonly"`
-	IsQuery      bool         `json:"is_query"`
 }
 
 type CallCache struct {

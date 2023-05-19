@@ -99,17 +99,15 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 }
 
 // NewInfo initializes the MessageInfo for a contract instance
-func NewInfo(origin sdk.AccAddress, creator sdk.AccAddress, deposit sdk.Coins, readOnly bool, isQuery bool) MessageInfo {
+func NewInfo(origin sdk.AccAddress, creator sdk.AccAddress, deposit sdk.Coins) MessageInfo {
 	funds := big.NewInt(0)
 	if len(deposit) > 0 {
 		funds = deposit[0].Amount.BigInt()
 	}
 	return MessageInfo{
-		Sender:   creator,
-		Funds:    funds,
-		Origin:   origin,
-		ReadOnly: readOnly,
-		IsQuery:  isQuery,
+		Sender: creator,
+		Funds:  funds,
+		Origin: origin,
 	}
 }
 
