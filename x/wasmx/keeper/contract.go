@@ -275,7 +275,7 @@ func (k Keeper) instantiateInternal(
 
 	// prepare params for contract instantiate call
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(creator, creator, deposit, false, false)
+	info := types.NewInfo(creator, creator, deposit)
 
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
@@ -414,7 +414,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(caller, caller, coins, false, false)
+	info := types.NewInfo(caller, caller, coins)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -465,7 +465,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	}
 
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(origin, caller, coins, false, false)
+	info := types.NewInfo(origin, caller, coins)
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo.CodeHash, codeInfo.Pinned, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), codeInfo.Deps, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
@@ -532,7 +532,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	}
 
 	env := types.NewEnv(ctx, contractAddress)
-	info := types.NewInfo(caller, caller, coins, true, true)
+	info := types.NewInfo(caller, caller, coins)
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo.CodeHash, codeInfo.Pinned, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
