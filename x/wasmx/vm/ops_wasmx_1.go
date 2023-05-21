@@ -109,11 +109,11 @@ func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params [
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	returns := make([]interface{}, 1)
-	returns[0] = data
 	ctx.ReturnData = data
+	returns := make([]interface{}, 0)
 	// terminate the WASM execution
-	return returns, wasmedge.Result_Terminate
+	// return returns, wasmedge.Result_Terminate
+	return returns, wasmedge.Result_Success
 }
 
 func wasmxRevert(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -156,7 +156,7 @@ func readJsString(arr []byte) string {
 // function env.trace?(message: usize, n: i32, a0..4?: f64): void
 // function env.seed?(): f64
 
-func BuildWasmxEnv(context *Context) *wasmedge.Module {
+func BuildWasmxEnv1(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},

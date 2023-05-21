@@ -55,7 +55,7 @@ func (k Keeper) ActivateSystemContract(
 		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr, nil, contract.Metadata)
 		k.storeCodeInfo(ctx, codeID, codeInfo)
 	} else {
-		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Metadata)
+		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, []string{}, contract.Metadata)
 		if err != nil {
 			return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
 		}
@@ -78,8 +78,8 @@ func (k Keeper) ActivateSystemContract(
 			bootstrapAccountAddr,
 			contractAddress,
 			contract.InitMessage,
-			contract.Label,
 			nil,
+			contract.Label,
 		)
 		if err != nil {
 			return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)

@@ -5,8 +5,6 @@ go 1.19
 require (
 	cosmossdk.io/errors v1.0.0-beta.7
 	cosmossdk.io/math v1.0.0-beta.3
-	github.com/ark-us/evm2wat v0.0.4
-	github.com/ark-us/wat2wasm v0.0.5
 	github.com/cosmos/cosmos-sdk v0.46.7
 	github.com/cosmos/gogoproto v1.4.2
 	github.com/cosmos/ibc-go/v6 v6.1.0
@@ -186,8 +184,6 @@ require (
 )
 
 replace (
-	github.com/ark-us/evm2wat => ../evm2wasm/evm2wat
-	github.com/ark-us/wat2wasm => ../evm2wasm/wat2wasm
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/second-state/WasmEdge-go => github.com/loredanacirstea/WasmEdge-go v0.11.3-0.20230314131152-38caaf64a4b7

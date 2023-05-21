@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"strconv"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -59,8 +61,13 @@ func (msg MsgStoreCode) ValidateBasic() error {
 		return err
 	}
 
-	if err := validateWasmCode(msg.WasmByteCode, MaxWasmSize); err != nil {
+	maxSize := GetMaxCodeSize(msg.Deps)
+	if err := validateWasmCode(msg.ByteCode, maxSize); err != nil {
 		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+	}
+
+	if msg.Metadata.Name == "" {
+		msg.Metadata.Name = "unknown_" + strconv.FormatInt(time.Now().Unix(), 10)
 	}
 
 	return nil
@@ -78,31 +85,40 @@ func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{senderAddr}
 }
 
-func (msg MsgStoreCodeEvm) Route() string {
+func (msg MsgDeployCode) Route() string {
 	return RouterKey
 }
 
-func (msg MsgStoreCodeEvm) Type() string {
-	return "store-code-evm"
+func (msg MsgDeployCode) Type() string {
+	return "deploy-code"
 }
 
-func (msg MsgStoreCodeEvm) ValidateBasic() error {
+func (msg MsgDeployCode) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
 		return err
 	}
 
-	if err := validateEvmCode(msg.EvmByteCode, MaxEvmSize); err != nil {
+	maxSize := GetMaxCodeSize(msg.Deps)
+	if err := validateCode(msg.ByteCode, maxSize); err != nil {
 		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+	}
+
+	if !msg.Funds.IsValid() {
+		return sdkerrors.ErrInvalidCoins
+	}
+
+	if err := msg.Msg.ValidateBasic(); err != nil {
+		return sdkerrors.Wrap(err, "payload msg")
 	}
 
 	return nil
 }
 
-func (msg MsgStoreCodeEvm) GetSignBytes() []byte {
+func (msg MsgDeployCode) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
-func (msg MsgStoreCodeEvm) GetSigners() []sdk.AccAddress {
+func (msg MsgDeployCode) GetSigners() []sdk.AccAddress {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil { // should never happen as valid basic rejects invalid addresses
 		panic(err.Error())

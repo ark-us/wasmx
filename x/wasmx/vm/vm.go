@@ -38,6 +38,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	// contractVm := wasmedge.NewVMWithConfig(conf)
 	contractVm := wasmedge.NewVM()
 	var cleanups []func()
+	var err error
 
 	// set default
 	if len(systemDeps) == 0 {
@@ -55,7 +56,9 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 		}
 	}
 
-	err := wasmutils.InstantiateWasm(contractVm, filePath, wasmbuffer)
+	if filePath != "" || len(wasmbuffer) > 0 {
+		err = wasmutils.InstantiateWasm(contractVm, filePath, wasmbuffer)
+	}
 	return contractVm, cleanups, err
 }
 
@@ -95,6 +98,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			part = WASMX_VM_EXPORT
 		}
 		if part != "" {
+			// TODO change this default env
 			dep := parseDependency(fname, EWASM_VM_EXPORT)
 			err := VerifyEnv(dep, imports)
 			if err != nil {
@@ -139,6 +143,78 @@ func parseDependency(contractVersion string, part string) string {
 		}
 	}
 	return dep
+}
+
+func ExecuteWasmInterpreted(
+	ctx sdk.Context,
+	code []byte,
+	funcName string,
+	env types.Env,
+	messageInfo types.MessageInfo,
+	msg []byte,
+	storeKey []byte, kvstore types.KVStore,
+	cosmosHandler types.WasmxCosmosHandler,
+	gasMeter types.GasMeter,
+	systemDeps []string,
+	dependencies []types.ContractDependency,
+) (types.ContractResponse, error) {
+	var err error
+	var ethMsg types.WasmxExecutionMessage
+	err = json.Unmarshal(msg, &ethMsg)
+	if err != nil {
+		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not decode wasm execution message")
+	}
+
+	conf := wasmedge.NewConfigure()
+	var contractRouter ContractRouter = make(map[string]*ContractContext)
+	context := &Context{
+		Ctx:               ctx,
+		GasMeter:          gasMeter,
+		Env:               &env,
+		ContractStore:     kvstore,
+		CallContext:       messageInfo,
+		CosmosHandler:     cosmosHandler,
+		Calldata:          ethMsg.Data,
+		Callvalue:         messageInfo.Funds,
+		ContractRouter:    contractRouter,
+		ExecutionBytecode: append(code, msg...),
+	}
+	for _, dep := range dependencies {
+		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)
+		if err != nil {
+			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
+		}
+		context.ContractRouter[dep.Address.String()] = contractContext
+	}
+	// add itself
+	selfContext, err := buildExecutionContextClassic("", env, storeKey, conf, systemDeps)
+	if err != nil {
+		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
+	}
+	context.ContractRouter[env.Contract.Address.String()] = selfContext
+
+	contractVm, cleanups, err := InitiateWasm(context, "", nil, systemDeps)
+	if err != nil {
+		runCleanups(cleanups)
+		return types.ContractResponse{}, err
+	}
+	selfContext.Vm = contractVm
+
+	_, err = contractVm.Execute("main")
+	if err != nil {
+		return types.ContractResponse{}, err
+	}
+	runCleanups(cleanups)
+	conf.Release()
+	contractVm.Release()
+
+	response := handleContractResponse(funcName, context.ReturnData, context.Logs)
+	if err != nil {
+		runCleanups(cleanups)
+		return response, err
+	}
+
+	return response, nil
 }
 
 func ExecuteWasm(
@@ -207,6 +283,10 @@ func ExecuteWasm(
 	setExecutionBytecode(context, contractVm, funcName)
 
 	_, err = contractVm.Execute(funcName)
+	if err != nil {
+		runCleanups(cleanups)
+		return types.ContractResponse{}, err
+	}
 	runCleanups(cleanups)
 	conf.Release()
 	contractVm.Release()
