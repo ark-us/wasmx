@@ -9,6 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
+
+	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
@@ -75,7 +77,7 @@ type WasmxCosmosHandler interface {
 // matches the expected version.
 //
 // When cgo is disabled at build time, this returns an error at runtime.
-func LibWasmEdgeVersion() (string, error) {
-	// TODO
-	return "Not implemented", nil
+func LibWasmEdgeVersion() string {
+	return wasmedge.GetVersion()
+}
 }

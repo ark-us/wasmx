@@ -52,10 +52,7 @@ func GetCmdLibVersion() *cobra.Command {
 		Aliases: []string{"lib-version"},
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			version, err := types.LibWasmEdgeVersion()
-			if err != nil {
-				return fmt.Errorf("error retrieving wasmedge version: %w", err)
-			}
+			version := types.LibWasmEdgeVersion()
 			fmt.Println(version)
 			return nil
 		},
