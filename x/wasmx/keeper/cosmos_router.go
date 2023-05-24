@@ -42,6 +42,13 @@ func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.C
 	}
 	return codeInfo.CodeHash
 }
+func (h *WasmxCosmosHandler) GetCodeInfo(contractAddress sdk.AccAddress) types.CodeInfo {
+	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
+	if err != nil {
+		return types.CodeInfo{CodeHash: types.EMPTY_BYTES32}
+	}
+	return codeInfo
+}
 func (h *WasmxCosmosHandler) GetBlockHash(blockNumber uint64) types.Checksum {
 	return types.EMPTY_BYTES32
 }

@@ -37,6 +37,7 @@ func (k WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, err
 }
 
 func (k WasmxEngine) Instantiate(
+	ctx sdk.Context,
 	codeInfo *types.CodeInfo,
 	env types.Env,
 	info types.MessageInfo,
@@ -53,7 +54,7 @@ func (k WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(sdk.Context{}, codeInfo.InterpretedBytecodeDeployment, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
+		data, err = vm.ExecuteWasmInterpreted(ctx, codeInfo.InterpretedBytecodeDeployment, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
 	} else {
 		// TODO gas
 		var filepath string
@@ -62,7 +63,7 @@ func (k WasmxEngine) Instantiate(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(sdk.Context{}, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
+		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -89,7 +90,7 @@ func (k WasmxEngine) Execute(
 	pinned := codeInfo.Pinned
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(sdk.Context{}, codeInfo.InterpretedBytecodeRuntime, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+		data, err = vm.ExecuteWasmInterpreted(ctx, codeInfo.InterpretedBytecodeRuntime, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	} else {
 
 		var filepath string
@@ -126,7 +127,7 @@ func (k WasmxEngine) QueryExecute(
 	pinned := codeInfo.Pinned
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(sdk.Context{}, codeInfo.InterpretedBytecodeRuntime, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+		data, err = vm.ExecuteWasmInterpreted(ctx, codeInfo.InterpretedBytecodeRuntime, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	} else {
 
 		var filepath string

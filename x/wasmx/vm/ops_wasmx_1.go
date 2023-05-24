@@ -16,11 +16,7 @@ type WasmxJsonLog struct {
 // getCallData(): ArrayBuffer
 func getCallData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	ptr, err := allocateMem(ctx, int32(len(ctx.Calldata)))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	err = writeMem(callframe, ctx.Calldata, ptr)
+	ptr, err := allocateWriteMem(ctx, callframe, ctx.Calldata)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -56,11 +52,7 @@ func wasmxStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 	data := ctx.ContractStore.Get(keybz)
-	newptr, err := allocateMem(ctx, int32(len(data)))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	err = writeMem(callframe, data, newptr)
+	newptr, err := allocateWriteMem(ctx, callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -239,4 +231,16 @@ func allocateMem(ctx *Context, size int32) (int32, error) {
 		return 0, err
 	}
 	return result[0].(int32), nil
+}
+
+func allocateWriteMem(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
+	ptr, err := allocateMem(ctx, int32(len(data)))
+	if err != nil {
+		return ptr, err
+	}
+	err = writeMem(callframe, data, ptr)
+	if err != nil {
+		return ptr, err
+	}
+	return ptr, nil
 }

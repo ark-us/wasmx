@@ -2,8 +2,11 @@ package vm
 
 import (
 	"encoding/json"
+	"math/big"
 	"strconv"
 	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type ChainInfoJson struct {
@@ -25,10 +28,11 @@ type TransactionInfoJson struct {
 	GasPrice CustomBytes `json:"gasPrice"`
 }
 
-type ContractInfoJson struct {
+type AccountInfoJson struct {
 	Address  CustomBytes `json:"address"`
-	Bytecode CustomBytes `json:"bytecode"`
 	Balance  CustomBytes `json:"balance"`
+	CodeHash CustomBytes `json:"codeHash"`
+	Bytecode CustomBytes `json:"bytecode"`
 }
 
 type CurrentCallInfoJson struct {
@@ -43,8 +47,24 @@ type EnvJson struct {
 	Chain       ChainInfoJson       `json:"chain"`
 	Block       BlockInfoJson       `json:"block"`
 	Transaction TransactionInfoJson `json:"transaction"`
-	Contract    ContractInfoJson    `json:"contract"`
+	Contract    AccountInfoJson     `json:"contract"`
 	CurrentCall CurrentCallInfoJson `json:"currentCall"`
+}
+
+type CallRequestJson struct {
+	To       CustomBytes `json:"to"`
+	From     CustomBytes `json:"from"`
+	Value    CustomBytes `json:"value"`
+	GasLimit CustomBytes `json:"gasLimit"`
+	Calldata CustomBytes `json:"calldata"`
+	Bytecode CustomBytes `json:"bytecode"`
+	CodeHash CustomBytes `json:"codeHash"`
+	IsQuery  CustomBytes `json:"isQuery"`
+}
+
+type CallResponseJson struct {
+	Success int32       `json:"success"`
+	Data    CustomBytes `json:"data"`
 }
 
 type CustomBytes struct {
@@ -80,4 +100,28 @@ func (m *CustomBytes) fromInt32(data []int32) []byte {
 		intArray[i] = byte(val)
 	}
 	return intArray
+}
+
+type CallRequest struct {
+	To       sdk.AccAddress
+	From     sdk.AccAddress
+	Value    *big.Int
+	GasLimit *big.Int
+	Calldata []byte
+	Bytecode []byte
+	CodeHash []byte
+	IsQuery  bool
+}
+
+func (v CallRequestJson) Transform() CallRequest {
+	return CallRequest{
+		To:       sdk.AccAddress(v.To.Value),
+		From:     sdk.AccAddress(v.From.Value),
+		Value:    big.NewInt(0).SetBytes(v.Value.Value),
+		GasLimit: big.NewInt(0).SetBytes(v.GasLimit.Value),
+		Calldata: v.Calldata.Value,
+		Bytecode: v.Bytecode.Value,
+		CodeHash: v.CodeHash.Value,
+		IsQuery:  big.NewInt(0).SetBytes(v.IsQuery.Value).Int64() == 1,
+	}
 }

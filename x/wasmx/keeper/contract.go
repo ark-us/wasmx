@@ -96,11 +96,15 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 	} else {
 		filepath = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
 	}
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+		filepath = ""
+	}
 	return types.ContractDependency{
 		Address:    addr,
 		StoreKey:   prefixStoreKey,
 		FilePath:   filepath,
 		SystemDeps: sdeps,
+		Bytecode:   codeInfo.InterpretedBytecodeRuntime,
 	}, nil
 }
 
@@ -351,7 +355,7 @@ func (k Keeper) instantiateInternal(
 	}
 
 	// prepare params for contract instantiate call
-	env := types.NewEnv(ctx, contractAddress)
+	env := types.NewEnv(ctx, contractAddress, codeInfo.CodeHash)
 	info := types.NewInfo(creator, creator, deposit)
 
 	// create prefixed data store
@@ -363,7 +367,7 @@ func (k Keeper) instantiateInternal(
 	handler := k.newCosmosHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
-	res, gasUsed, err := k.wasmvm.Instantiate(codeInfo, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx))
+	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx))
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -483,7 +487,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 
-	env := types.NewEnv(ctx, contractAddress)
+	env := types.NewEnv(ctx, contractAddress, codeInfo.CodeHash)
 	info := types.NewInfo(caller, caller, coins)
 
 	// prepare querier
@@ -534,7 +538,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 		}
 	}
 
-	env := types.NewEnv(ctx, contractAddress)
+	env := types.NewEnv(ctx, contractAddress, codeInfo.CodeHash)
 	info := types.NewInfo(origin, caller, coins)
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), codeInfo.Deps, nil)
@@ -601,7 +605,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 		}
 	}
 
-	env := types.NewEnv(ctx, contractAddress)
+	env := types.NewEnv(ctx, contractAddress, codeInfo.CodeHash)
 	info := types.NewInfo(caller, caller, coins)
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)

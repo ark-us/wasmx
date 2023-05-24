@@ -81,7 +81,8 @@ type ChainInfo struct {
 }
 
 type EnvContractInfo struct {
-	Address sdk.AccAddress
+	Address  sdk.AccAddress
+	CodeHash []byte
 }
 
 type BlockInfo struct {
@@ -128,4 +129,5 @@ type ContractDependency struct {
 	StoreKey   []byte
 	FilePath   string
 	SystemDeps []string
+	Bytecode   []byte
 }

@@ -177,7 +177,7 @@ func ExecuteWasmInterpreted(
 		Calldata:          ethMsg.Data,
 		Callvalue:         messageInfo.Funds,
 		ContractRouter:    contractRouter,
-		ExecutionBytecode: append(code, msg...),
+		ExecutionBytecode: append(code, ethMsg.Data...),
 	}
 	for _, dep := range dependencies {
 		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)

@@ -50,6 +50,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 		return nil, err
 	}
 	setExecutionBytecode(newctx, contractVm, "main")
+	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
 	_, err = contractVm.Execute("main")
 	if err != nil {

@@ -57,7 +57,7 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, deps []string, metadat
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
+func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress, codeHash []byte) Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -87,7 +87,8 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 			Proposer: sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
 		},
 		Contract: EnvContractInfo{
-			Address: contractAddr,
+			Address:  contractAddr,
+			CodeHash: codeHash,
 		},
 		Chain: ChainInfo{
 			ChainId: *chainId,
