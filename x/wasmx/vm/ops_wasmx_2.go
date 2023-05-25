@@ -63,6 +63,47 @@ func setAccount(context interface{}, callframe *wasmedge.CallingFrame, params []
 	return returns, wasmedge.Result_Success
 }
 
+func keccak256Util(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	if ctx.ContractRouter["keccak256"] == nil {
+		return nil, wasmedge.Result_Fail
+	}
+	keccakVm := ctx.ContractRouter["keccak256"].Vm
+	input_offset := int32(0)
+	input_length := int32(len(data))
+	output_offset := input_length
+	context_offset := output_offset + int32(32)
+
+	keccakMem := keccakVm.GetActiveModule().FindMemory("memory")
+	if keccakMem == nil {
+		return nil, wasmedge.Result_Fail
+	}
+	err = keccakMem.SetData(data, uint(input_offset), uint(input_length))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	_, err = keccakVm.Execute("keccak", context_offset, input_offset, input_length, output_offset)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	result, err := keccakMem.GetData(uint(output_offset), uint(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, result)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 // call request -> call response
 func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
@@ -127,6 +168,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("setAccount", wasmedge.NewFunction(functype_i32_, setAccount, context, 0))
 
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
+
+	env.AddFunction("keccak256", wasmedge.NewFunction(functype_i32_i32, keccak256Util, context, 0))
 
 	return env
 }

@@ -1027,3 +1027,41 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 // 	res = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(strmap + "0000000000000000000000000000000000000000000000000000000000000000")}, nil, nil)
 // 	s.Require().Equal(calld, res)
 // }
+
+func (suite *KeeperTestSuite) TestKeccak256() {
+	var input string
+	var expected string
+	var res string
+	var inputbz []byte
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	evmcode, err := hex.DecodeString(testdata.Keccak256Test)
+	s.Require().NoError(err)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "Keccak256Test")
+
+	input = "0000000000000000000000000000000000000000000000000000000000000000"
+	expected = "290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563"
+	inputbz, err = hex.DecodeString(input)
+	s.Require().NoError(err)
+	res = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: inputbz}, nil, nil)
+	s.Require().Equal(expected, res)
+
+	input = "1122000000000000000000000000000000000000000000000000000000000000"
+	expected = "8d68541fa58fc102a5b96a6e237ecb2983f1a85ab7d0775e54abc387c3c8c398"
+	inputbz, err = hex.DecodeString(input)
+	s.Require().NoError(err)
+	res = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: inputbz}, nil, nil)
+	s.Require().Equal(expected, res)
+
+	input = "39B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec9839B1BF12E9e21D78F0c76d192c26d47fa710Ec98"
+	expected = "2e064f6f67e2db421e871e20dd66564e18cba7fa7def016cce92643a23da36ec"
+	inputbz, err = hex.DecodeString(input)
+	s.Require().NoError(err)
+	res = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: inputbz}, nil, nil)
+	s.Require().Equal(expected, res)
+}
