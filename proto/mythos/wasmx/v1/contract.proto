@@ -63,7 +63,6 @@ message CodeOrigin {
 // ContractInfo stores a WASM contract instance
 message ContractInfo {
     option (gogoproto.equal) = true;
-
     // CodeID is the reference to the stored Wasm code
     uint64 code_id = 1;
     // Creator address who initially instantiated the contract

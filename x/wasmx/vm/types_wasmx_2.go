@@ -16,11 +16,11 @@ type ChainInfoJson struct {
 }
 
 type BlockInfoJson struct {
-	Height   CustomBytes `json:"height"`
-	Time     CustomBytes `json:"time"`
-	GasLimit CustomBytes `json:"gasLimit"`
-	Hash     CustomBytes `json:"hash"`
-	Proposer CustomBytes `json:"proposer"`
+	Height    CustomBytes `json:"height"`
+	Timestamp CustomBytes `json:"timestamp"`
+	GasLimit  CustomBytes `json:"gasLimit"`
+	Hash      CustomBytes `json:"hash"`
+	Proposer  CustomBytes `json:"proposer"`
 }
 
 type TransactionInfoJson struct {
@@ -59,7 +59,7 @@ type CallRequestJson struct {
 	Calldata CustomBytes `json:"calldata"`
 	Bytecode CustomBytes `json:"bytecode"`
 	CodeHash CustomBytes `json:"codeHash"`
-	IsQuery  CustomBytes `json:"isQuery"`
+	IsQuery  bool        `json:"isQuery"`
 }
 
 type CallResponseJson struct {
@@ -115,13 +115,50 @@ type CallRequest struct {
 
 func (v CallRequestJson) Transform() CallRequest {
 	return CallRequest{
-		To:       sdk.AccAddress(v.To.Value),
-		From:     sdk.AccAddress(v.From.Value),
-		Value:    big.NewInt(0).SetBytes(v.Value.Value),
-		GasLimit: big.NewInt(0).SetBytes(v.GasLimit.Value),
+		To:       sdk.AccAddress(cleanupAddress(paddLeftTo32(v.To.Value))),
+		From:     sdk.AccAddress(cleanupAddress(paddLeftTo32(v.From.Value))),
+		Value:    big.NewInt(0).SetBytes(paddLeftTo32(v.Value.Value)),
+		GasLimit: big.NewInt(0).SetBytes(paddLeftTo32(v.GasLimit.Value)),
 		Calldata: v.Calldata.Value,
 		Bytecode: v.Bytecode.Value,
-		CodeHash: v.CodeHash.Value,
-		IsQuery:  big.NewInt(0).SetBytes(v.IsQuery.Value).Int64() == 1,
+		CodeHash: paddLeftTo32(v.CodeHash.Value),
+		IsQuery:  v.IsQuery,
+	}
+}
+
+type CreateAccountRequest struct {
+	Bytecode []byte
+	Balance  *big.Int
+}
+
+type Create2AccountRequest struct {
+	Bytecode []byte
+	Balance  *big.Int
+	Salt     *big.Int
+}
+
+type CreateAccountRequestJson struct {
+	Bytecode CustomBytes `json:"bytecode"`
+	Balance  CustomBytes `json:"balance"`
+}
+
+type Create2AccountRequestJson struct {
+	Bytecode CustomBytes `json:"bytecode"`
+	Balance  CustomBytes `json:"balance"`
+	Salt     CustomBytes `json:"salt"`
+}
+
+func (v CreateAccountRequestJson) Transform() CreateAccountRequest {
+	return CreateAccountRequest{
+		Bytecode: v.Bytecode.Value,
+		Balance:  big.NewInt(0).SetBytes(paddLeftTo32(v.Balance.Value)),
+	}
+}
+
+func (v Create2AccountRequestJson) Transform() Create2AccountRequest {
+	return Create2AccountRequest{
+		Bytecode: v.Bytecode.Value,
+		Balance:  big.NewInt(0).SetBytes(paddLeftTo32(v.Balance.Value)),
+		Salt:     big.NewInt(0).SetBytes(paddLeftTo32(v.Salt.Value)),
 	}
 }

@@ -177,7 +177,7 @@ func ExecuteWasmInterpreted(
 		Calldata:          ethMsg.Data,
 		Callvalue:         messageInfo.Funds,
 		ContractRouter:    contractRouter,
-		ExecutionBytecode: append(code, ethMsg.Data...),
+		ExecutionBytecode: code,
 	}
 	for _, dep := range dependencies {
 		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)
@@ -199,6 +199,7 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, err
 	}
 	selfContext.Vm = contractVm
+	setExecutionBytecode(context, contractVm, funcName)
 
 	_, err = contractVm.Execute("main")
 	if err != nil {
@@ -303,6 +304,11 @@ func ExecuteWasm(
 // codesize/codecopy at deployment = deploymentBytecode + args
 // codesize/codecopy at runtime execution = runtimeBytecode
 func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName string) {
+	// for interpreted code
+	if len(context.ExecutionBytecode) > 0 && funcName == "instantiate" {
+		context.ExecutionBytecode = append(context.ExecutionBytecode, context.Calldata...)
+	}
+
 	fnList, _ := contractVm.GetFunctionList()
 
 	if slices.Contains(fnList, "evm_bytecode") {

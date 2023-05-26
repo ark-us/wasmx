@@ -55,15 +55,23 @@ func (h *WasmxCosmosHandler) GetBlockHash(blockNumber uint64) types.Checksum {
 func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store {
 	return h.Keeper.ContractStore(ctx, prefixStoreKey)
 }
+
+// TODO provenance
 func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
 	address, _, err := h.Keeper.Instantiate(h.Ctx, codeId, creator, initMsg, funds, label)
 	return address, err
 }
+
+// TODO provenance
 func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt types.Checksum, label string, value *big.Int) (sdk.AccAddress, error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
 	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, funds, salt, false, label)
 	return address, err
+}
+func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error) {
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
+	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
 }
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
 	return h.Keeper.GetContractDependency(ctx, addr)

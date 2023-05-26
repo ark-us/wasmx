@@ -69,7 +69,7 @@ func (k Keeper) ActivateSystemContract(
 
 	contractAddress := vm.AccAddressFromHex(contract.Address)
 	if contract.Native {
-		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, contract.Label)
+		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, []byte{}, contract.Label)
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 	} else {
 		_, err = k.instantiateWithAddress(

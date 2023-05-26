@@ -17,16 +17,17 @@ func UInt64LengthPrefix(bz []byte) []byte {
 	return append(sdk.Uint64ToBigEndian(uint64(len(bz))), bz...)
 }
 
-// EwasmClassicAddressGenerator generates a contract address using codeID and instanceID sequence
+// EwasmClassicAddressGenerator generates a contract address using codeID and instanceID sequence and increments sequence
 func (k Keeper) EwasmClassicAddressGenerator(creator sdk.AccAddress) AddressGenerator {
 	return func(ctx sdk.Context, _ uint64, _ []byte) sdk.AccAddress {
 		existingAcct := k.accountKeeper.GetAccount(ctx, creator)
 		if existingAcct == nil {
 			// create an empty account (so we don't have issues later)
 			existingAcct = k.accountKeeper.NewAccountWithAddress(ctx, creator)
-			k.accountKeeper.SetAccount(ctx, existingAcct)
 		}
 		nonce := existingAcct.GetSequence()
+		existingAcct.SetSequence(nonce + 1)
+		k.accountKeeper.SetAccount(ctx, existingAcct)
 		return EwasmBuildContractAddressClassic(creator, nonce)
 	}
 }

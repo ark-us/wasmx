@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -33,7 +32,7 @@ func (k Keeper) Deploy(
 	funds sdk.Coins,
 	label string,
 ) (uint64, []byte, sdk.AccAddress, error) {
-	return k.createInterpreted(ctx, creator, wasmByteCode, deps, metadata, initMsg, funds, label)
+	return k.CreateInterpreted(ctx, creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{})
 }
 
 func (k Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
@@ -156,15 +155,17 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, checksum, nil
 }
 
-func (k Keeper) createInterpreted(
+func (k Keeper) CreateInterpreted(
 	ctx sdk.Context,
 	creator sdk.AccAddress,
+	provenance sdk.AccAddress,
 	wasmCode []byte,
 	deps []string,
 	metadata types.CodeMetadata,
 	initMsg types.RawContractMessage,
 	deposit sdk.Coins,
 	label string,
+	salt []byte,
 ) (codeID uint64, checksum []byte, contractAddress sdk.AccAddress, err error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "createInterpreted")
 
@@ -186,13 +187,21 @@ func (k Keeper) createInterpreted(
 	codeInfo := types.NewCodeInfo(checksum, creator, deps, metadata)
 	codeInfo.InterpretedBytecodeDeployment = wasmCode
 
-	// TODO deps: support multiple types of address generation
-	contractAddress = k.EwasmClassicAddressGenerator(creator)(ctx, codeID, codeInfo.CodeHash)
-	_, runtimeCode, err := k.instantiateInternal(ctx, codeID, creator, initMsg, deposit, contractAddress, &codeInfo, label)
+	addressParent := provenance
+	if addressParent == nil {
+		addressParent = creator
+	}
+
+	if len(salt) == 0 {
+		contractAddress = k.EwasmClassicAddressGenerator(addressParent)(ctx, codeID, codeInfo.CodeHash)
+	} else {
+		contractAddress = k.EwasmPredictableAddressGenerator(addressParent, salt, []byte{}, false)(ctx, codeID, codeInfo.CodeHash)
+	}
+
+	_, runtimeCode, err := k.instantiateInternal(ctx, codeID, creator, provenance, initMsg, deposit, contractAddress, &codeInfo, label)
 	if err != nil {
 		return 0, checksum, contractAddress, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
-	fmt.Println("--runtimeCode", len(runtimeCode))
 	codeInfo.InterpretedBytecodeRuntime = runtimeCode
 	// TODO the hash algo will depend on deps
 	codeInfo.RuntimeHash = k.wasmvm.checksum(runtimeCode)
@@ -259,7 +268,7 @@ func (k Keeper) instantiateWithAddress(
 	if codeInfo == nil {
 		return nil, sdkerrors.Wrap(types.ErrNotFound, "code")
 	}
-	_, data, err := k.instantiateInternal(ctx, codeID, creator, initMsg, deposit, contractAddress, codeInfo, label)
+	_, data, err := k.instantiateInternal(ctx, codeID, creator, nil, initMsg, deposit, contractAddress, codeInfo, label)
 	return data, err
 }
 
@@ -280,7 +289,7 @@ func (k Keeper) instantiate(
 	}
 	// TODO deps: support multiple types of address generation
 	contractAddress := k.EwasmClassicAddressGenerator(creator)(ctx, codeID, codeInfo.CodeHash)
-	return k.instantiateInternal(ctx, codeID, creator, initMsg, deposit, contractAddress, codeInfo, label)
+	return k.instantiateInternal(ctx, codeID, creator, nil, initMsg, deposit, contractAddress, codeInfo, label)
 }
 
 func (k Keeper) instantiate2(
@@ -303,13 +312,14 @@ func (k Keeper) instantiate2(
 	// TODO if we support multiple types of address generation
 	// the type should be saved in CodeInfo
 	contractAddress := k.EwasmPredictableAddressGenerator(creator, salt, initMsg, fixMsg)(ctx, codeID, codeInfo.CodeHash)
-	return k.instantiateInternal(ctx, codeID, creator, initMsg, deposit, contractAddress, codeInfo, label)
+	return k.instantiateInternal(ctx, codeID, creator, nil, initMsg, deposit, contractAddress, codeInfo, label)
 }
 
 func (k Keeper) instantiateInternal(
 	ctx sdk.Context,
 	codeID uint64,
 	creator sdk.AccAddress,
+	provenance sdk.AccAddress,
 	initMsg []byte,
 	deposit sdk.Coins,
 	contractAddress sdk.AccAddress,
@@ -349,7 +359,7 @@ func (k Keeper) instantiateInternal(
 	}
 	// deposit initial contract funds
 	if !deposit.IsZero() {
-		if err := k.bank.SendCoins(ctx, creator, contractAddress, deposit); err != nil {
+		if err := k.TransferCoins(ctx, creator, contractAddress, deposit); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -375,7 +385,7 @@ func (k Keeper) instantiateInternal(
 	}
 
 	// persist instance first
-	contractInfo := types.NewContractInfo(codeID, creator, label)
+	contractInfo := types.NewContractInfo(codeID, creator, provenance, initMsg, label)
 
 	// check for IBC flag - TODO use codeInfo.Dependencies
 	// report, err := k.wasmvm.AnalyzeWasm(codeInfo.CodeHash)
