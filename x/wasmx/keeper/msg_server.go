@@ -6,9 +6,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/ark-us/evm2wat"
-	"github.com/ark-us/wat2wasm"
-
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -40,7 +37,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.WasmByteCode, msg.Metadata)
+	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +48,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 	}, nil
 }
 
-func (m msgServer) StoreCodeEvm(goCtx context.Context, msg *types.MsgStoreCodeEvm) (*types.MsgStoreCodeEvmResponse, error) {
+func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (*types.MsgDeployCodeResponse, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
@@ -67,23 +64,15 @@ func (m msgServer) StoreCodeEvm(goCtx context.Context, msg *types.MsgStoreCodeEv
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	watCode, err := evm2wat.EvmToWat(msg.EvmByteCode, evm2wat.DefaultOptions())
-	if err != nil {
-		return nil, err
-	}
-	wasmByteCode, err := wat2wasm.WatToWasm(watCode.Code, m.tempDir, m.wat2wasmBinPath)
+	codeId, checksum, address, err := m.Keeper.Deploy(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata, msg.Msg, msg.Funds, msg.Label)
 	if err != nil {
 		return nil, err
 	}
 
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, wasmByteCode, msg.Metadata)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.MsgStoreCodeEvmResponse{
+	return &types.MsgDeployCodeResponse{
 		CodeId:   codeId,
 		Checksum: checksum,
+		Address:  address.String(),
 	}, nil
 }
 
@@ -105,7 +94,7 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	contractAddr, data, err := m.Keeper.Instantiate(ctx, msg.CodeId, senderAddr, msg.Msg, msg.Label, msg.Funds)
+	contractAddr, data, err := m.Keeper.Instantiate(ctx, msg.CodeId, senderAddr, msg.Msg, msg.Funds, msg.Label)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +122,7 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
-	contractAddr, data, err := m.Keeper.Instantiate2(ctx, msg.CodeId, senderAddr, msg.Msg, msg.Label, msg.Funds, msg.Salt, msg.FixMsg)
+	contractAddr, data, err := m.Keeper.Instantiate2(ctx, msg.CodeId, senderAddr, msg.Msg, msg.Funds, msg.Salt, msg.FixMsg, msg.Label)
 	if err != nil {
 		return nil, err
 	}

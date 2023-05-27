@@ -6,7 +6,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/ark-us/wat2wasm"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -39,10 +38,9 @@ type (
 		gasRegister   GasRegister
 		denom         string
 
-		wasmvm          WasmxEngine
-		tempDir         string
-		binDir          string
-		wat2wasmBinPath string
+		wasmvm  WasmxEngine
+		tempDir string
+		binDir  string
 	}
 )
 
@@ -79,10 +77,6 @@ func NewKeeper(
 	if err != nil {
 		panic(err)
 	}
-	wat2wasmBinPath, err := wat2wasm.InstallWat2Wasm(binDir)
-	if err != nil {
-		panic(err)
-	}
 
 	wasmvm, err := NewVM(contractsPath, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
 	if err != nil {
@@ -104,14 +98,13 @@ func NewKeeper(
 		grpcQueryRouter:   grpcQueryRouter,
 		denom:             denom,
 
-		accountKeeper:   accountKeeper,
-		bank:            bankKeeper,
-		queryGasLimit:   wasmConfig.SmartQueryGasLimit,
-		gasRegister:     NewDefaultWasmGasRegister(),
-		wasmvm:          *wasmvm,
-		tempDir:         tempDir,
-		binDir:          binDir,
-		wat2wasmBinPath: wat2wasmBinPath,
+		accountKeeper: accountKeeper,
+		bank:          bankKeeper,
+		queryGasLimit: wasmConfig.SmartQueryGasLimit,
+		gasRegister:   NewDefaultWasmGasRegister(),
+		wasmvm:        *wasmvm,
+		tempDir:       tempDir,
+		binDir:        binDir,
 	}
 }
 

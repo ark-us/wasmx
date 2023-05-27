@@ -57,7 +57,7 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, deps []string, metadat
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
+func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress, codeHash []byte) Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -81,20 +81,23 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress) Env {
 		Block: BlockInfo{
 			Height:   uint64(ctx.BlockHeight()),
 			Time:     uint64(nano),
-			ChainID:  ctx.ChainID(),
 			GasLimit: blockGasLimit,
 			Hash:     "0x" + hex.EncodeToString(ctx.HeaderHash()),
 			Proposer: sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
 		},
+		Transaction: &TransactionInfo{
+			GasPrice: *big.NewInt(1), // TODO
+		},
 		Contract: EnvContractInfo{
-			Address: contractAddr,
+			Address:  contractAddr,
+			CodeHash: codeHash,
 		},
 		Chain: ChainInfo{
-			ChainId: *chainId,
+			ChainIdFull: ctx.ChainID(),
+			ChainId:     *chainId,
 			// Denom: , // TODO
 		},
 	}
-	env.Transaction = &TransactionInfo{}
 	return env
 }
 
@@ -124,14 +127,19 @@ func NewWasmCoins(cosmosCoins sdk.Coins) (wasmCoins []Coin) {
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(CodeId uint64, creator sdk.AccAddress, label string) ContractInfo {
-	return ContractInfo{
-		CodeId:  CodeId,
-		Creator: creator.String(),
-		Label:   label,
+func NewContractInfo(CodeId uint64, creator sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, label string) ContractInfo {
+	info := ContractInfo{
+		CodeId:      CodeId,
+		Creator:     creator.String(),
+		Label:       label,
+		InitMessage: initMsg,
 		// Created: createdAt,
 		// TODO tx hash
 	}
+	if provenance != nil {
+		info.Provenance = provenance.String()
+	}
+	return info
 }
 
 // validatable is an optional interface that can be implemented by an ContractInfoExtension to enable validation
@@ -151,6 +159,11 @@ func (c *ContractInfo) ValidateBasic() error {
 	}
 	if err := ValidateLabel(c.Label); err != nil {
 		return sdkerrors.Wrap(err, "label")
+	}
+	if c.Provenance != "" {
+		if _, err := sdk.AccAddressFromBech32(c.Provenance); err != nil {
+			return sdkerrors.Wrap(err, "creator")
+		}
 	}
 	return nil
 }

@@ -34,7 +34,8 @@ message CodeMetadata {
 message CodeInfo {
     option (gogoproto.equal) = true;
 
-    // CodeHash is the unique identifier created by hashing the wasm code
+    // CodeHash is the unique identifier created by hashing the
+    // wasm or interpreted code
     bytes code_hash = 1;
     // Creator address who initially stored the code
     string creator = 2;
@@ -44,6 +45,10 @@ message CodeInfo {
     // Pinned contract
     bool pinned = 4;
     CodeMetadata metadata = 5 [(gogoproto.nullable) = false];
+    // for code that has a different runtime, like EVM
+    bytes interpreted_bytecode_deployment = 6;
+    bytes interpreted_bytecode_runtime = 7;
+    bytes runtime_hash = 8;
 }
 
 message CodeOrigin {
@@ -58,7 +63,6 @@ message CodeOrigin {
 // ContractInfo stores a WASM contract instance
 message ContractInfo {
     option (gogoproto.equal) = true;
-
     // CodeID is the reference to the stored Wasm code
     uint64 code_id = 1;
     // Creator address who initially instantiated the contract
@@ -67,8 +71,10 @@ message ContractInfo {
     string label = 3;
     // Initialization message
     bytes init_message = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
-    string ibc_port_id = 5;
-    // Created Tx position when the contract was instantiated.
+    // factory/deployer address
+    string provenance = 5;
+    string ibc_port_id = 6;
+    // TODO either tx hash or
     // AbsoluteTxPosition created = 5;
 }
 

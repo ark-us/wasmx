@@ -37,29 +37,34 @@ func (k WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, err
 }
 
 func (k WasmxEngine) Instantiate(
-	checksum types.Checksum,
-	pinned bool,
+	ctx sdk.Context,
+	codeInfo *types.CodeInfo,
 	env types.Env,
 	info types.MessageInfo,
 	initMsg []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []string,
 ) (types.ContractResponse, uint64, error) {
 	// TODO gas
+	checksum := codeInfo.CodeHash
+	pinned := codeInfo.Pinned
+	systemDeps := codeInfo.Deps
 	var data types.ContractResponse
 	var err error
 
-	// TODO gas
-	var filepath string
-	if pinned {
-		filepath = k.build_path_pinned(k.DataDir, checksum)
+	if len(codeInfo.InterpretedBytecodeDeployment) > 0 {
+		data, err = vm.ExecuteWasmInterpreted(ctx, codeInfo.InterpretedBytecodeDeployment, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
 	} else {
-		filepath = k.build_path(k.DataDir, checksum)
+		// TODO gas
+		var filepath string
+		if pinned {
+			filepath = k.build_path_pinned(k.DataDir, checksum)
+		} else {
+			filepath = k.build_path(k.DataDir, checksum)
+		}
+		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
 	}
-	data, err = vm.ExecuteWasm(sdk.Context{}, filepath, "instantiate", env, info, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
-
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -68,8 +73,7 @@ func (k WasmxEngine) Instantiate(
 
 func (k WasmxEngine) Execute(
 	ctx sdk.Context,
-	checksum types.Checksum,
-	pinned bool,
+	codeInfo *types.CodeInfo,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
@@ -82,14 +86,22 @@ func (k WasmxEngine) Execute(
 ) (types.ContractResponse, uint64, error) {
 	var data types.ContractResponse
 	var err error
+	checksum := codeInfo.CodeHash
+	pinned := codeInfo.Pinned
 
-	var filepath string
-	if pinned {
-		filepath = k.build_path_pinned(k.DataDir, checksum)
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+		data, err = vm.ExecuteWasmInterpreted(ctx, codeInfo.InterpretedBytecodeRuntime, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	} else {
-		filepath = k.build_path(k.DataDir, checksum)
+
+		var filepath string
+		if pinned {
+			filepath = k.build_path_pinned(k.DataDir, checksum)
+		} else {
+			filepath = k.build_path(k.DataDir, checksum)
+		}
+		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	}
-	data, err = vm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
@@ -98,8 +110,7 @@ func (k WasmxEngine) Execute(
 
 func (k WasmxEngine) QueryExecute(
 	ctx sdk.Context,
-	checksum types.Checksum,
-	pinned bool,
+	codeInfo *types.CodeInfo,
 	env types.Env,
 	info types.MessageInfo,
 	executeMsg []byte,
@@ -110,13 +121,24 @@ func (k WasmxEngine) QueryExecute(
 	systemDeps []string,
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
-	var filepath string
-	if pinned {
-		filepath = k.build_path_pinned(k.DataDir, checksum)
+	var data types.ContractResponse
+	var err error
+	checksum := codeInfo.CodeHash
+	pinned := codeInfo.Pinned
+
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+		data, err = vm.ExecuteWasmInterpreted(ctx, codeInfo.InterpretedBytecodeRuntime, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	} else {
-		filepath = k.build_path(k.DataDir, checksum)
+
+		var filepath string
+		if pinned {
+			filepath = k.build_path_pinned(k.DataDir, checksum)
+		} else {
+			filepath = k.build_path(k.DataDir, checksum)
+		}
+		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
 	}
-	data, err := vm.ExecuteWasm(ctx, filepath, "main", env, info, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+
 	if err != nil {
 		return types.WasmxQueryResponse{}, 0, err
 	}
@@ -154,10 +176,14 @@ func (k WasmxEngine) pin_code(inPath string, outPath string) error {
 	return vm.AotCompile(inPath, outPath)
 }
 
-func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (types.Checksum, error) {
+func (k WasmxEngine) checksum(wasmBytecode types.WasmCode) types.Checksum {
 	h := sha256.New()
 	h.Write(wasmBytecode)
-	checksum := h.Sum(nil)
+	return h.Sum(nil)
+}
+
+func (k WasmxEngine) save_wasm(dataDir string, wasmBytecode types.WasmCode) (types.Checksum, error) {
+	checksum := k.checksum(wasmBytecode)
 	filepath := k.build_path(k.DataDir, checksum)
 
 	// Read and write permissions for the owner and read-only permissions for everyone else

@@ -20,6 +20,23 @@ var PINNED_FOLDER = "pinned"
 
 var EMPTY_BYTES32 = bytes.Repeat([]byte{0}, 32)
 
+// MaxSaltSize is the longest salt that can be used when instantiating a contract
+const MaxSaltSize = 64
+
+var (
+	// MaxLabelSize is the longest label that can be used when instantiating a contract
+	MaxLabelSize = 128 // extension point for chains to customize via compile flag.
+
+	// MaxWasmSize is the largest a compiled contract code can be when storing code on chain
+	MaxWasmSize = 800 * 1024 // extension point for chains to customize via compile flag.
+
+	// MaxProposalWasmSize is the largest a gov proposal compiled contract code can be when storing code on chain
+	MaxProposalWasmSize = 3 * 1024 * 1024 // extension point for chains to customize via compile flag.
+
+	// 0x6000 must be minimum, to support Ethereum contracts
+	MaxInterpretedCodeSize = 0x6000
+)
+
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
 type Checksum []byte
 
@@ -67,8 +84,10 @@ type WasmxCosmosHandler interface {
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetBlockHash(blockNumber uint64) Checksum
+	GetCodeInfo(addr sdk.AccAddress) CodeInfo
 	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error)
 	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int) (sdk.AccAddress, error)
+	Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error)
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 }
 
@@ -80,4 +99,45 @@ type WasmxCosmosHandler interface {
 func LibWasmEdgeVersion() string {
 	return wasmedge.GetVersion()
 }
+
+// simplest wasmx version 1 interface
+var WASMX_WASMX_1 = "wasmx_wasmx_1"
+
+// wasmx version 2 with env information
+var WASMX_WASMX_2 = "wasmx_wasmx_2"
+
+// current ewasm interface
+var EWASM_ENV_1 = "ewasm_env_1"
+
+var SUPPORTED_HOST_INTERFACES = map[string]bool{
+	WASMX_WASMX_1: true,
+	WASMX_WASMX_2: true,
+	EWASM_ENV_1:   true,
+}
+
+var INTERPRETER_EWASM_1 = "ewasm_ewasm_1" // outdated
+var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
+
+var SUPPORTED_INTERPRETERS = map[string]bool{
+	INTERPRETER_EVM_SHANGHAI: true,
+}
+
+func GetMaxCodeSize(sdeps []string) int {
+	for _, dep := range sdeps {
+		_, found := SUPPORTED_INTERPRETERS[dep]
+		if found {
+			return MaxInterpretedCodeSize
+		}
+	}
+	return MaxWasmSize
+}
+
+func IsWasmDeps(sdeps []string) bool {
+	for _, dep := range sdeps {
+		_, found := SUPPORTED_INTERPRETERS[dep]
+		if found {
+			return false
+		}
+	}
+	return true
 }

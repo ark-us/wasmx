@@ -76,12 +76,14 @@ type Env struct {
 }
 
 type ChainInfo struct {
-	Denom   string  `json:"denom"`
-	ChainId big.Int `json:"chain_id"`
+	Denom       string  `json:"denom"`
+	ChainId     big.Int `json:"chain_id"`
+	ChainIdFull string  `json:"chain_id_full"`
 }
 
 type EnvContractInfo struct {
-	Address sdk.AccAddress
+	Address  sdk.AccAddress `json:"address"`
+	CodeHash []byte         `json:"code_hash"`
 }
 
 type BlockInfo struct {
@@ -89,7 +91,6 @@ type BlockInfo struct {
 	Height uint64 `json:"height"`
 	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
 	Time     uint64         `json:"time,string"`
-	ChainID  string         `json:"chain_id"`
 	GasLimit uint64         `json:"gas_limit"`
 	Hash     string         `json:"hash"`
 	Proposer sdk.AccAddress `json:"proposer"`
@@ -101,8 +102,8 @@ type TransactionInfo struct {
 	//
 	// Along with BlockInfo.Height, this allows you to get a unique
 	// transaction identifier for the chain for future queries
-	Index    uint32 `json:"index"`
-	GasPrice string `json:"gas_price"`
+	Index    uint32  `json:"index"`
+	GasPrice big.Int `json:"gas_price"`
 }
 
 type MessageInfo struct {
@@ -128,4 +129,5 @@ type ContractDependency struct {
 	StoreKey   []byte
 	FilePath   string
 	SystemDeps []string
+	Bytecode   []byte
 }

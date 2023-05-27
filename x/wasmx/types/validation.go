@@ -7,22 +7,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
-// MaxSaltSize is the longest salt that can be used when instantiating a contract
-const MaxSaltSize = 64
-
-var (
-	// MaxLabelSize is the longest label that can be used when instantiating a contract
-	MaxLabelSize = 128 // extension point for chains to customize via compile flag.
-
-	// MaxWasmSize is the largest a compiled contract code can be when storing code on chain
-	MaxWasmSize = 800 * 1024 // extension point for chains to customize via compile flag.
-
-	// MaxProposalWasmSize is the largest a gov proposal compiled contract code can be when storing code on chain
-	MaxProposalWasmSize = 3 * 1024 * 1024 // extension point for chains to customize via compile flag.
-
-	MaxEvmSize = 0x6000
-)
-
 func validateWasmCode(s []byte, maxSize int) error {
 	if len(s) == 0 {
 		return sdkerrors.Wrap(ErrEmpty, "is required")
@@ -33,7 +17,7 @@ func validateWasmCode(s []byte, maxSize int) error {
 	return nil
 }
 
-func validateEvmCode(s []byte, maxSize int) error {
+func validateCode(s []byte, maxSize int) error {
 	if len(s) == 0 {
 		return sdkerrors.Wrap(ErrEmpty, "is required")
 	}

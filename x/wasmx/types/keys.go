@@ -21,8 +21,7 @@ const (
 
 	TempDir = "temp"
 
-	BinDir          = "bin"
-	Wat2WasmBinName = "wat2wasm"
+	BinDir = "bin"
 )
 
 const (

@@ -1047,7 +1047,7 @@ type QueryClient interface {
 	SmartContractCall(ctx context.Context, in *QuerySmartContractCallRequest, opts ...grpc.CallOption) (*QuerySmartContractCallResponse, error)
 	// Code gets the binary code and metadata for a singe wasm code
 	Code(ctx context.Context, in *QueryCodeRequest, opts ...grpc.CallOption) (*QueryCodeResponse, error)
-	// CodeInfo gets the binary code and metadata for a singe wasm code
+	// CodeInfo gets the metadata for a singe wasm code
 	CodeInfo(ctx context.Context, in *QueryCodeInfoRequest, opts ...grpc.CallOption) (*QueryCodeInfoResponse, error)
 	// Codes gets the metadata for all stored wasm codes
 	Codes(ctx context.Context, in *QueryCodesRequest, opts ...grpc.CallOption) (*QueryCodesResponse, error)
@@ -1169,7 +1169,7 @@ type QueryServer interface {
 	SmartContractCall(context.Context, *QuerySmartContractCallRequest) (*QuerySmartContractCallResponse, error)
 	// Code gets the binary code and metadata for a singe wasm code
 	Code(context.Context, *QueryCodeRequest) (*QueryCodeResponse, error)
-	// CodeInfo gets the binary code and metadata for a singe wasm code
+	// CodeInfo gets the metadata for a singe wasm code
 	CodeInfo(context.Context, *QueryCodeInfoRequest) (*QueryCodeInfoResponse, error)
 	// Codes gets the metadata for all stored wasm codes
 	Codes(context.Context, *QueryCodesRequest) (*QueryCodesResponse, error)

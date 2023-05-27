@@ -9,6 +9,7 @@ import (
 )
 
 type WasmxJsonLog struct {
+	Type   string
 	Data   []byte
 	Topics [][32]byte
 }
@@ -16,11 +17,7 @@ type WasmxJsonLog struct {
 // getCallData(): ArrayBuffer
 func getCallData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	ptr, err := allocateMem(ctx, int32(len(ctx.Calldata)))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	err = writeMem(callframe, ctx.Calldata, ptr)
+	ptr, err := allocateWriteMem(ctx, callframe, ctx.Calldata)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -56,11 +53,10 @@ func wasmxStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 	data := ctx.ContractStore.Get(keybz)
-	newptr, err := allocateMem(ctx, int32(len(data)))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
+	if len(data) == 0 {
+		data = make([]byte, 32)
 	}
-	err = writeMem(callframe, data, newptr)
+	newptr, err := allocateWriteMem(ctx, callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -81,7 +77,7 @@ func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		return nil, wasmedge.Result_Fail
 	}
 	log := WasmxLog{
-		Type:            LOG_TYPE_WASMX,
+		Type:            wlog.Type,
 		ContractAddress: ctx.Env.Contract.Address,
 		Data:            wlog.Data,
 		Topics:          wlog.Topics,
@@ -109,11 +105,11 @@ func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params [
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	returns := make([]interface{}, 1)
-	returns[0] = data
 	ctx.ReturnData = data
+	returns := make([]interface{}, 0)
 	// terminate the WASM execution
-	return returns, wasmedge.Result_Terminate
+	// return returns, wasmedge.Result_Terminate
+	return returns, wasmedge.Result_Success
 }
 
 func wasmxRevert(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -156,7 +152,7 @@ func readJsString(arr []byte) string {
 // function env.trace?(message: usize, n: i32, a0..4?: f64): void
 // function env.seed?(): f64
 
-func BuildWasmxEnv(context *Context) *wasmedge.Module {
+func BuildWasmxEnv1(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
@@ -239,4 +235,16 @@ func allocateMem(ctx *Context, size int32) (int32, error) {
 		return 0, err
 	}
 	return result[0].(int32), nil
+}
+
+func allocateWriteMem(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
+	ptr, err := allocateMem(ctx, int32(len(data)))
+	if err != nil {
+		return ptr, err
+	}
+	err = writeMem(callframe, data, ptr)
+	if err != nil {
+		return ptr, err
+	}
+	return ptr, nil
 }

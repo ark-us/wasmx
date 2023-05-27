@@ -153,8 +153,8 @@ func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, g
 
 func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 {
 	storeCodeMsg := &types.MsgStoreCode{
-		Sender:       sender.Address.String(),
-		WasmByteCode: wasmbin,
+		Sender:   sender.Address.String(),
+		ByteCode: wasmbin,
 	}
 
 	res := s.DeliverTx(sender, storeCodeMsg)
@@ -169,10 +169,17 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	return codeId
 }
 
-func (s AppContext) StoreCodeEvm(sender simulation.Account, evmcode []byte) uint64 {
-	storeCodeMsg := &types.MsgStoreCodeEvm{
-		Sender:      sender.Address.String(),
-		EvmByteCode: evmcode,
+func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
+	msgbz, err := json.Marshal(instantiateMsg)
+	s.S.Require().NoError(err)
+	storeCodeMsg := &types.MsgDeployCode{
+		Sender:   sender.Address.String(),
+		ByteCode: code,
+		Deps:     deps,
+		Metadata: types.CodeMetadata{Name: "mycontract"},
+		Msg:      msgbz,
+		Funds:    funds,
+		// Label:    label,
 	}
 
 	res := s.DeliverTx(sender, storeCodeMsg)
@@ -180,7 +187,13 @@ func (s AppContext) StoreCodeEvm(sender simulation.Account, evmcode []byte) uint
 	s.S.Commit()
 
 	codeId := s.GetCodeIdFromLog(res.GetLog())
-	return codeId
+	contractAddressStr := s.GetContractAddressFromLog(res.GetLog())
+	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
+	return codeId, contractAddress
+}
+
+func (s AppContext) DeployEvm(sender simulation.Account, evmcode []byte, initMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
+	return s.Deploy(sender, evmcode, []string{types.WASMX_WASMX_2, types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label)
 }
 
 func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) sdk.AccAddress {
