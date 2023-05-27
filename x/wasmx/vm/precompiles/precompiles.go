@@ -40,6 +40,12 @@ var (
 
 	//go:embed 22.secret_sharing.wasm
 	secret_sharing []byte
+
+	//go:embed 23.evm_shanghai.wasm
+	evmInterpreterShanghai []byte
+
+	//go:embed keccak256.wasm
+	keccak256Util []byte
 )
 
 func GetPrecompileByLabel(label string) []byte {
@@ -69,6 +75,10 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = secp384r1_registry
 	case "secret_sharing":
 		wasmbin = secret_sharing
+	case "interpreter_evm_shanghai":
+		wasmbin = evmInterpreterShanghai
+	case "keccak256":
+		wasmbin = keccak256Util
 	}
 	return wasmbin
 }

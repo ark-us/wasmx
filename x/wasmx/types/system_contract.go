@@ -100,6 +100,12 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Native:      true,
 		},
+		// {
+		// 	Address:     "0x0000000000000000000000000000000000000023",
+		// 	Label:       "interpreter_evm_shanghai",
+		// 	InitMessage: initMsg,
+		// 	Pinned:      true,
+		// },
 	}
 }
 

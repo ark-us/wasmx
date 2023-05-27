@@ -68,4 +68,6 @@ go test --count=1 -short -v ./x/wasmx/keeper
 
 go test --count=1 -v -run KeeperTestSuite/TestEwasmFibonacci ./x/wasmx/keeper
 
+go test --count=1 -short -v -run TestKeeperTestSuite/TestEwasmPrecompileCurve384Test ./x/wasmx/keeper
+
 ```

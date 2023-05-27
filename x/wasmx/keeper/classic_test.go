@@ -337,6 +337,33 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", qres)
 }
 
+func (suite *KeeperTestSuite) TestFibonacciByCall() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	fibhex := "c6c2ea17"
+	fiboevm, err := hex.DecodeString(testdata.Fibonacci)
+	s.Require().NoError(err)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	_, contractAddressFibo := appA.DeployEvm(sender, fiboevm, types.WasmxExecutionMessage{Data: []byte{}}, nil, "fibonacci")
+
+	value := "0000000000000000000000000000000000000000000000000000000000000005"
+	result := "0000000000000000000000000000000000000000000000000000000000000005"
+
+	start := time.Now()
+	// call fibonaci contract directly
+	res := appA.ExecuteContractWithGas(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
+		appA.Hex2bz(fibhex),
+		appA.Hex2bz(value)...,
+	)}, nil, nil, 10000000, nil)
+
+	fmt.Println("-fibo-elapsed", time.Since(start))
+	s.Require().Contains(hex.EncodeToString(res.Data), result)
+}
+
 func (suite *KeeperTestSuite) TestCallFibonacci() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
