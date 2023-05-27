@@ -9,6 +9,7 @@ import (
 )
 
 type WasmxJsonLog struct {
+	Type   string
 	Data   []byte
 	Topics [][32]byte
 }
@@ -76,7 +77,7 @@ func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		return nil, wasmedge.Result_Fail
 	}
 	log := WasmxLog{
-		Type:            LOG_TYPE_WASMX,
+		Type:            wlog.Type,
 		ContractAddress: ctx.Env.Contract.Address,
 		Data:            wlog.Data,
 		Topics:          wlog.Topics,

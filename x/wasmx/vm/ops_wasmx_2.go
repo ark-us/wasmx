@@ -139,7 +139,6 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-
 	returns[0] = ptr
 	return returns, wasmedge.Result_Success
 }
@@ -352,7 +351,7 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractStoreKey)
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, depContext.ContractStoreKey)
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	contractRouter[req.To.String()] = depContext

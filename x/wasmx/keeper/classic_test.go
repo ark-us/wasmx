@@ -821,22 +821,18 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 	getSymbolHex := `95d89b41`
 	mintHex := `1249c58b`
 	balanceOfHex := `70a08231`
-	// evmcode, err := hex.DecodeString(testdata.ERC20)
-	// s.Require().NoError(err)
+	evmcode, err := hex.DecodeString(testdata.ERC20)
+	s.Require().NoError(err)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	// TODO
-	// codeId := appA.StoreCodeInterpreted(sender, evmcode)
-	codeId := uint64(0)
-
 	tokenName := "00000000000000000000000000000000000000000000000000000000000000074d79546f6b656e00000000000000000000000000000000000000000000000000"
 	tokenSymbol := "0000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000"
 	constructorArgs := "00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000080" + tokenName + tokenSymbol
 
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: appA.Hex2bz(constructorArgs)}, "erc20wasm", nil)
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: appA.Hex2bz(constructorArgs)}, nil, "erc20wasm")
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(getDecimalsHex)}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000012")

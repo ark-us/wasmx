@@ -63,4 +63,9 @@ curl https://get.ignite.com/username/wasmx@latest! | sudo bash
 go test -v ./...
 
 go test --count=1 -short -v ./...
+
+go test --count=1 -short -v ./x/wasmx/keeper
+
+go test --count=1 -v -run KeeperTestSuite/TestEwasmFibonacci ./x/wasmx/keeper
+
 ```
