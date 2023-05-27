@@ -40,7 +40,7 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 
 	// websrv := websrvserver.NewWebsrvServer(nil, appA.App.Logger(), appA.ClientCtx, config.DefaultWebsrvConfigConfig())
 
-	codeId := appA.StoreCode(sender, wasmbin)
+	codeId := appA.StoreCodeEwasmEnv1(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 
 	// Register route proposal
@@ -89,12 +89,12 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, wasmbin)
+	codeId := appA.StoreCodeEwasmEnv1(sender, wasmbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 	contractAddressHex := strings.ToLower(wasmeth.EvmAddressFromAcc(contractAddress).Hex())
 
 	wasmbinRoot := webserverwasm
-	codeIdRoot := appA.StoreCode(sender, wasmbinRoot)
+	codeIdRoot := appA.StoreCodeEwasmEnv1(sender, wasmbinRoot)
 	contractAddressRoot := appA.InstantiateCode(sender, codeIdRoot, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 	deps := []string{contractAddressHex}
 
