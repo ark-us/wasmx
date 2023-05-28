@@ -205,6 +205,7 @@ func ExecuteWasmInterpreted(
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
+
 	runCleanups(cleanups)
 	conf.Release()
 	contractVm.Release()

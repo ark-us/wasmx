@@ -120,11 +120,7 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		success = int32(2)
 	} else {
-		if len(req.Bytecode) > 0 {
-			success, returnData = wasmxCall(ctx, req)
-		} else {
-			success = int32(0)
-		}
+		success, returnData = wasmxCall(ctx, req)
 	}
 
 	response := CallResponseJson{
@@ -336,8 +332,11 @@ func buildEnv(ctx *Context) *EnvJson {
 func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	// TODO cache contract dependency
 	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, req.To)
+	// ! we return success here in case the contract does not exist
+	// an empty transaction to any account should succeed (evm way)
+	// even with value 0 & no calldata
 	if err != nil {
-		return int32(1), nil
+		return int32(0), nil
 	}
 	depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
 	if err != nil {

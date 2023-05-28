@@ -48,8 +48,9 @@ func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM) ([]func(), e
 
 func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	var cleanups []func()
+	var err error
 	keccakVm := wasmedge.NewVM()
-	err := wasmutils.InstantiateWasm(keccakVm, "", interpreters.Keccak256Util)
+	err = wasmutils.InstantiateWasm(keccakVm, "", interpreters.Keccak256Util)
 	if err != nil {
 		return cleanups, err
 	}
@@ -75,6 +76,7 @@ func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM) ([]func(), e
 func InitiateEvmInterpreter_1(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	var cleanups []func()
 	err := wasmutils.InstantiateWasm(contractVm, "", interpreters.EvmInterpreter_1)
+
 	if err != nil {
 		return cleanups, err
 	}
