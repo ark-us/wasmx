@@ -342,6 +342,7 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	initBalance := sdk.NewInt(1000_000_000)
 	fibhex := "c6c2ea17"
 	fibstorehex := "cf837088"
+	fibInternal := "b1960274"
 	evmcode, err := hex.DecodeString(testdata.Call)
 	s.Require().NoError(err)
 	fiboevm, err := hex.DecodeString(testdata.Fibonacci)
@@ -369,14 +370,15 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 
 	start := time.Now()
 	// call fibonaci contract directly
-	res := appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
-		appA.Hex2bz(fibhex),
+	res := appA.ExecuteContractWithGas(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
+		appA.Hex2bz(fibInternal),
 		appA.Hex2bz(value)...,
-	)}, nil, nil)
+	)}, nil, nil, 10000000, nil)
 
 	fmt.Println("-fibo-elapsed", time.Since(start))
+	fmt.Println("--fibo-data", hex.EncodeToString(res.Data))
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
-
+	return
 	// start = time.Now()
 	// // call fibonaci contract directly
 	// res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
