@@ -2,6 +2,7 @@ package vm
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"mythos/v1/x/wasmx/types"
 
@@ -105,6 +106,7 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	fmt.Println("--requestbz", string(requestbz))
 	var request CallRequestJson
 	json.Unmarshal(requestbz, &request)
 
@@ -120,11 +122,7 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		success = int32(2)
 	} else {
-		if len(req.Bytecode) > 0 {
-			success, returnData = wasmxCall(ctx, req)
-		} else {
-			success = int32(0)
-		}
+		success, returnData = wasmxCall(ctx, req)
 	}
 
 	response := CallResponseJson{
@@ -336,8 +334,11 @@ func buildEnv(ctx *Context) *EnvJson {
 func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	// TODO cache contract dependency
 	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, req.To)
+	// ! we return success here in case the contract does not exist
+	// an empty transaction to any account should succeed (evm way)
+	// even with value 0 & no calldata
 	if err != nil {
-		return int32(1), nil
+		return int32(0), nil
 	}
 	depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
 	if err != nil {
@@ -377,7 +378,10 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 		ExecutionBytecode: req.Bytecode,
 	}
 
+	fmt.Println("--wasmCall before Execute")
+
 	_, err = newctx.ContractRouter[req.To.String()].Execute(newctx)
+	fmt.Println("--wasmCall post Execute", newctx.ReturnData)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
