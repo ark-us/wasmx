@@ -2,11 +2,13 @@ package keeper_test
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
 	wasmeth "mythos/v1/x/wasmx/vm"
 )
@@ -273,6 +275,44 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 
 	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
+
+	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
+	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
+	rlo := "6df129d5028be3fa1626b192458daf49d4c7676c08663a62decad8df853340ad"
+	shi := "0000000000000000000000000000000000103c7e7fb0c04197a5371923adda8e"
+	slo := "ae415624e6419214f98bebac9a3cf9ddc8bf28eb2871142e9d0371a59598f2dd"
+
+	fmt.Println("--precomputeGenHex--")
+	start := time.Now()
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, 100_000_000_000, nil) // 52_810_317
+	fmt.Println("Elapsed precomputeGenHex: ", time.Since(start))
+
+	fmt.Println("--precomputePubHex--")
+	start = time.Now()
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 100_000_000_000, nil) // 52_810_448
+	fmt.Println("Elapsed precomputePubHex: ", time.Since(start))
+
+	fmt.Println("--test_verify_fast--")
+	start = time.Now()
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", "5879e57c", msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
+	fmt.Println("Elapsed test_verify_fast: ", time.Since(start))
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+}
+
+func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() {
+	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2Interpreted")
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	deps := []string{"0x0000000000000000000000000000000000000005"}
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	evmcode, err := hex.DecodeString(testdata.Curve384)
+	s.Require().NoError(err)
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin")
 
 	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
 	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"

@@ -74,8 +74,8 @@ func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM) ([]func(), e
 
 func InitiateEvmInterpreter_1(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	var cleanups []func()
-	// err := wasmutils.InstantiateWasm(contractVm, "", interpreters.EvmInterpreter_1)
-	err := wasmutils.InstantiateWasm(contractVm, "../vm/interpreters/evm_shanghai.so", nil)
+	err := wasmutils.InstantiateWasm(contractVm, "", interpreters.EvmInterpreter_1)
+	// err := wasmutils.InstantiateWasm(contractVm, "../vm/interpreters/evm_shanghai.so", nil)
 
 	if err != nil {
 		return cleanups, err
