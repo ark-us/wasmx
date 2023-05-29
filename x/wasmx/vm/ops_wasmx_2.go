@@ -2,7 +2,6 @@ package vm
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"mythos/v1/x/wasmx/types"
 
@@ -106,7 +105,6 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--requestbz", string(requestbz))
 	var request CallRequestJson
 	json.Unmarshal(requestbz, &request)
 
@@ -378,10 +376,7 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 		ExecutionBytecode: req.Bytecode,
 	}
 
-	fmt.Println("--wasmCall before Execute")
-
 	_, err = newctx.ContractRouter[req.To.String()].Execute(newctx)
-	fmt.Println("--wasmCall post Execute", newctx.ReturnData)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
