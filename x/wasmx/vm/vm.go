@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"golang.org/x/exp/slices"
 
@@ -201,10 +202,14 @@ func ExecuteWasmInterpreted(
 	selfContext.Vm = contractVm
 	setExecutionBytecode(context, contractVm, funcName)
 
+	start := time.Now()
+
 	_, err = contractVm.Execute("main")
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
+	fmt.Println("-interpreted exec-elapsed", time.Since(start))
+
 	runCleanups(cleanups)
 	conf.Release()
 	contractVm.Release()

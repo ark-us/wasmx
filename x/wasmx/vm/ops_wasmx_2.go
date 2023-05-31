@@ -58,41 +58,42 @@ func getAccount(context interface{}, callframe *wasmedge.CallingFrame, params []
 }
 
 func keccak256Util(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	data, err := readMemFromPtr(callframe, params[0])
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	if ctx.ContractRouter["keccak256"] == nil {
-		return nil, wasmedge.Result_Fail
-	}
-	keccakVm := ctx.ContractRouter["keccak256"].Vm
-	input_offset := int32(0)
-	input_length := int32(len(data))
-	output_offset := input_length
-	context_offset := output_offset + int32(32)
+	// ctx := context.(*Context)
+	// data, err := readMemFromPtr(callframe, params[0])
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	// if ctx.ContractRouter["keccak256"] == nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	// keccakVm := ctx.ContractRouter["keccak256"].Vm
+	// input_offset := int32(0)
+	// input_length := int32(len(data))
+	// output_offset := input_length
+	// context_offset := output_offset + int32(32)
 
-	keccakMem := keccakVm.GetActiveModule().FindMemory("memory")
-	if keccakMem == nil {
-		return nil, wasmedge.Result_Fail
-	}
-	err = keccakMem.SetData(data, uint(input_offset), uint(input_length))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
+	// keccakMem := keccakVm.GetActiveModule().FindMemory("memory")
+	// if keccakMem == nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	// err = keccakMem.SetData(data, uint(input_offset), uint(input_length))
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
 
-	_, err = keccakVm.Execute("keccak", context_offset, input_offset, input_length, output_offset)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	result, err := keccakMem.GetData(uint(output_offset), uint(32))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	ptr, err := allocateWriteMem(ctx, callframe, result)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
+	// _, err = keccakVm.Execute("keccak", context_offset, input_offset, input_length, output_offset)
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	// result, err := keccakMem.GetData(uint(output_offset), uint(32))
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	// ptr, err := allocateWriteMem(ctx, callframe, result)
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	ptr := 0
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
 	return returns, wasmedge.Result_Success

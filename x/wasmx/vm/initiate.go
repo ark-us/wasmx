@@ -48,13 +48,14 @@ func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM) ([]func(), e
 
 func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
 	var cleanups []func()
-	keccakVm := wasmedge.NewVM()
-	err := wasmutils.InstantiateWasm(keccakVm, "", interpreters.Keccak256Util)
-	if err != nil {
-		return cleanups, err
-	}
-	cleanups = append(cleanups, keccakVm.Release)
-	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
+	var err error
+	// keccakVm := wasmedge.NewVM()
+	// err := wasmutils.InstantiateWasm(keccakVm, "", interpreters.Keccak256Util)
+	// if err != nil {
+	// 	return cleanups, err
+	// }
+	// cleanups = append(cleanups, keccakVm.Release)
+	// context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
 
 	wasmx := BuildWasmxEnv2(context)
 	env := BuildAssemblyScriptEnv(context)
