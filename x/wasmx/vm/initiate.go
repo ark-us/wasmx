@@ -28,7 +28,7 @@ var (
 // interpreter_evm_shanghai
 // interpreter_ewasm_shanghai
 
-func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	wasmx := BuildWasmxEnv1(context)
 	env := BuildAssemblyScriptEnv(context)
 
@@ -46,7 +46,7 @@ func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM) ([]func(), e
 	return cleanups, nil
 }
 
-func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	var err error
 	keccakVm := wasmedge.NewVM()
@@ -73,9 +73,9 @@ func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM) ([]func(), e
 	return cleanups, nil
 }
 
-func InitiateEvmInterpreter_1(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
-	err := wasmutils.InstantiateWasm(contractVm, "", interpreters.EvmInterpreter_1)
+	err := wasmutils.InstantiateWasm(contractVm, dep.FilePath, nil)
 
 	if err != nil {
 		return cleanups, err
@@ -83,7 +83,7 @@ func InitiateEvmInterpreter_1(context *Context, contractVm *wasmedge.VM) ([]func
 	return cleanups, nil
 }
 
-func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
 	cleanups = append(cleanups, ewasmEnv.Release)
@@ -94,7 +94,7 @@ func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM) ([]func(), 
 	return cleanups, nil
 }
 
-func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]func(), error) {
+func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	contractEnv := wasmedge.NewModule("ewasm")
 	ewasmVm := wasmedge.NewVM()
@@ -127,14 +127,14 @@ func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM) ([]
 	return cleanups, nil
 }
 
-var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM) ([]func(), error){}
+var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
 
 func init() {
 	SystemDepHandler[types.WASMX_WASMX_1] = InitiateWasmxWasmx1
 	SystemDepHandler[types.WASMX_WASMX_2] = InitiateWasmxWasmx2
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.INTERPRETER_EWASM_1] = InitiateEwasmTypeInterpreter
-	SystemDepHandler[types.INTERPRETER_EVM_SHANGHAI] = InitiateEvmInterpreter_1
+	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 }
 
 func VerifyEnv(version string, imports []*wasmedge.ImportType) error {

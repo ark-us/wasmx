@@ -30,6 +30,8 @@ const (
 	contractStorePrefix
 	sequencePrefix
 	prefixSystemContract
+	roleContractPrefix
+	roleLabelPrefix
 )
 
 var (
@@ -38,6 +40,9 @@ var (
 	KeyContractStorePrefix  = []byte{contractStorePrefix}
 	KeySequencePrefix       = []byte{sequencePrefix}
 	KeyPrefixSystemContract = []byte{prefixSystemContract}
+
+	KeyRoleContractPrefix = []byte{roleContractPrefix}
+	KeyRoleLabelPrefix    = []byte{roleLabelPrefix}
 
 	KeyLastCodeID     = append(KeySequencePrefix, []byte("lastCodeId")...)
 	KeyLastInstanceID = append(KeySequencePrefix, []byte("lastContractId")...)
@@ -61,4 +66,14 @@ func GetContractAddressKey(addr sdk.AccAddress) []byte {
 // GetContractStorePrefix returns the store prefix for the WASM contract instance
 func GetContractStorePrefix(addr sdk.AccAddress) []byte {
 	return append(KeyContractStorePrefix, addr...)
+}
+
+// GetRoleContractPrefix returns the store prefix for the system roles
+func GetRoleContractPrefix(addr sdk.AccAddress) []byte {
+	return append(KeyRoleContractPrefix, addr...)
+}
+
+// GetRoleLabelPrefix returns the store prefix for the system roles
+func GetRoleLabelPrefix(label string) []byte {
+	return append(KeyRoleLabelPrefix, []byte(label)...)
 }

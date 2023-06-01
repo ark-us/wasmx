@@ -12,6 +12,9 @@ const (
 	EventTypeMigrate     = "migrate"
 	EventTypePinCode     = "pin_code"
 	EventTypeUnpinCode   = "unpin_code"
+
+	EventTypeRegisterRole   = "register_role"
+	EventTypeDeregisterRole = "deregister_role"
 )
 
 // event attributes returned from contract execution
@@ -23,4 +26,7 @@ const (
 	AttributeKeyChecksum           = "code_checksum"
 	AttributeKeyResultDataHex      = "result"
 	AttributeKeyRequiredCapability = "required_capability"
+
+	AttributeKeyRole      = "role"
+	AttributeKeyRoleLabel = "role_label"
 )

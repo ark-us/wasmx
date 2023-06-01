@@ -61,6 +61,8 @@ func GetTxCmd() *cobra.Command {
 		InstantiateContract2Cmd(),
 		ExecuteContractCmd(),
 		CompileContractCmd(),
+		NewRegisterRoleProposalCmd(),
+		NewDeregisterRoleProposalCmd(),
 	)
 	return txCmd
 }

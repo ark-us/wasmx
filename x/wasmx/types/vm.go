@@ -115,11 +115,20 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	EWASM_ENV_1:   true,
 }
 
+var ROLE_INTERPRETER = "interpreter"
+var ROLE_PRECOMPILE = "precompile"
+
 var INTERPRETER_EWASM_1 = "ewasm_ewasm_1" // outdated
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
 
 var SUPPORTED_INTERPRETERS = map[string]bool{
 	INTERPRETER_EVM_SHANGHAI: true,
+}
+
+type SystemDep struct {
+	Role     string
+	Label    string
+	FilePath string
 }
 
 func GetMaxCodeSize(sdeps []string) int {

@@ -191,13 +191,17 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
+	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
 		ctx.CallContext.Origin,
 		ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
-		ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps,
+		sdeps,
 		metadata,
 		"", // TODO label?
 		[]byte{},
@@ -234,13 +238,18 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
+	}
+
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
 		ctx.CallContext.Origin,
 		ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
-		ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps,
+		sdeps,
 		metadata,
 		"", // TODO label?
 		req.Salt.FillBytes(make([]byte, 32)),

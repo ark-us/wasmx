@@ -37,7 +37,8 @@ message SystemContract {
   bytes init_message = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
   bool pinned = 4;
   bool native = 5;
-  CodeMetadata metadata = 6 [(gogoproto.nullable) = false];
+  string role = 6;
+  CodeMetadata metadata = 7 [(gogoproto.nullable) = false];
 }
 
 // Code - for importing and exporting code data

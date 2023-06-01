@@ -45,11 +45,11 @@ func (k WasmxEngine) Instantiate(
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
+	systemDeps []types.SystemDep,
 ) (types.ContractResponse, uint64, error) {
 	// TODO gas
 	checksum := codeInfo.CodeHash
 	pinned := codeInfo.Pinned
-	systemDeps := codeInfo.Deps
 	var data types.ContractResponse
 	var err error
 
@@ -81,7 +81,7 @@ func (k WasmxEngine) Execute(
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []string,
+	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 ) (types.ContractResponse, uint64, error) {
 	var data types.ContractResponse
@@ -118,7 +118,7 @@ func (k WasmxEngine) QueryExecute(
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []string,
+	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 ) (types.WasmxQueryResponse, uint64, error) {
 	var data types.ContractResponse

@@ -126,8 +126,10 @@ type CallCacheMap = []CallCache
 
 type ContractDependency struct {
 	Address    sdk.AccAddress
+	Role       string
+	Label      string
 	StoreKey   []byte
 	FilePath   string
-	SystemDeps []string
+	SystemDeps []SystemDep
 	Bytecode   []byte
 }
