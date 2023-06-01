@@ -25,7 +25,7 @@ func (suite *KeeperTestSuite) TestInterpreterContractTest() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, wasmbin)
+	codeId := appA.StoreCodeEwasmEnv1(sender, wasmbin)
 	appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "contract", nil)
 }
 
@@ -42,7 +42,7 @@ func (suite *KeeperTestSuite) TestInterpreterContractTest() {
 // 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 // 	suite.Commit()
 
-// 	codeId := appA.StoreCode(sender, wasmbin)
+// 	codeId := appA.StoreCodeEwasmEnv1(sender, wasmbin)
 // 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
 
 // 	initvalue := "0000000000000000000000000000000000000000000000000000000000000005"

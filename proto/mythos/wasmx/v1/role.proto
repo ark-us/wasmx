@@ -1,0 +1,17 @@
+syntax = "proto3";
+package mythos.wasmx.v1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "mythos/v1/x/wasmx/types";
+
+// RegisterRouteProposal is a gov Content type to register a web server route
+message Role {
+    option (gogoproto.equal) = false;
+    // smart contract role
+    string role = 1;
+    // smart contract label
+    string label = 2;
+    // contract address in bech32 format
+    string contract_address = 3;
+}

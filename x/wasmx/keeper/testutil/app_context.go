@@ -151,10 +151,11 @@ func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, g
 	return res
 }
 
-func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 {
+func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []string) uint64 {
 	storeCodeMsg := &types.MsgStoreCode{
 		Sender:   sender.Address.String(),
 		ByteCode: wasmbin,
+		Deps:     deps,
 	}
 
 	res := s.DeliverTx(sender, storeCodeMsg)
@@ -167,6 +168,16 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte) uint64 
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(bytecode, wasmbin)
 	return codeId
+}
+
+func (s AppContext) StoreCodeWasmx1(sender simulation.Account, wasmbin []byte) uint64 {
+	deps := []string{types.WASMX_WASMX_1}
+	return s.StoreCode(sender, wasmbin, deps)
+}
+
+func (s AppContext) StoreCodeEwasmEnv1(sender simulation.Account, wasmbin []byte) uint64 {
+	deps := []string{types.EWASM_ENV_1}
+	return s.StoreCode(sender, wasmbin, deps)
 }
 
 func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {

@@ -2,11 +2,13 @@ package keeper_test
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
 	wasmeth "mythos/v1/x/wasmx/vm"
 )
@@ -155,12 +157,12 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, curve384testbin)
+	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
+	deps := []string{"0x0000000000000000000000000000000000000005"}
 
 	// test_cadd
 	calldata := "38e3a7eb0000000000000000000000000000000058df4b4c45b7d92e15838cc2ec62e63d26a7a65903a36031844d06d753766895e2ebf62f2d593d88f797f25a39a72c9800000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde2643200000000000000000000000000000000aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7000000000000000000000000000000003617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f"
-	deps := []string{"0x0000000000000000000000000000000000000005"}
 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
 	xhi, ok := sdk.NewIntFromString("269429570830637862272946976383477993217")
 	s.Require().True(ok)
@@ -236,7 +238,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, curve384testbin)
+	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
 	// test_cmul
@@ -271,8 +273,130 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, curve384testbin)
+	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
+
+	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
+	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
+	rlo := "6df129d5028be3fa1626b192458daf49d4c7676c08663a62decad8df853340ad"
+	shi := "0000000000000000000000000000000000103c7e7fb0c04197a5371923adda8e"
+	slo := "ae415624e6419214f98bebac9a3cf9ddc8bf28eb2871142e9d0371a59598f2dd"
+
+	fmt.Println("--precomputeGenHex--")
+	start := time.Now()
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, 100_000_000_000, nil) // 52_810_317
+	fmt.Println("Elapsed precomputeGenHex: ", time.Since(start))
+
+	fmt.Println("--precomputePubHex--")
+	start = time.Now()
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 100_000_000_000, nil) // 52_810_448
+	fmt.Println("Elapsed precomputePubHex: ", time.Since(start))
+
+	fmt.Println("--test_verify_fast--")
+	start = time.Now()
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", "5879e57c", msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
+	fmt.Println("Elapsed test_verify_fast: ", time.Since(start))
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+}
+
+func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
+	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestInterpreted")
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	evmcode, err := hex.DecodeString(testdata.Curve384Test)
+	s.Require().NoError(err)
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin")
+	deps := []string{"0x0000000000000000000000000000000000000005"}
+
+	// test_cadd()
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("6c96097e")}, nil, deps)
+
+	// test_cadd
+	calldata := "38e3a7eb0000000000000000000000000000000058df4b4c45b7d92e15838cc2ec62e63d26a7a65903a36031844d06d753766895e2ebf62f2d593d88f797f25a39a72c9800000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde2643200000000000000000000000000000000aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7000000000000000000000000000000003617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f"
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
+	xhi, ok := sdk.NewIntFromString("269429570830637862272946976383477993217")
+	s.Require().True(ok)
+	xlo, ok := sdk.NewIntFromString("33164330947121508193438466374545365582299057006401131236103295757451220504030")
+	s.Require().True(ok)
+	yhi, ok := sdk.NewIntFromString("6242975231567010735109018283462506476")
+	s.Require().True(ok)
+	ylo, ok := sdk.NewIntFromString("34117617441610352774892141774972852389619107500421055621444636069156687180366")
+	s.Require().True(ok)
+	s.Require().Equal("00000000000000000000000000000000"+xhi.BigInt().Text(16)+xlo.BigInt().Text(16)+"000000000000000000000000000000000"+yhi.BigInt().Text(16)+ylo.BigInt().Text(16), qres)
+
+	// test_cdbl
+	calldata = "1b2874700000000000000000000000000000000058df4b4c45b7d92e15838cc2ec62e63d26a7a65903a36031844d06d753766895e2ebf62f2d593d88f797f25a39a72c9800000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
+	xhi, ok = sdk.NewIntFromString("217463657038587930709755035849976368433")
+	s.Require().True(ok)
+	xlo, ok = sdk.NewIntFromString("26937741697835980130682031784621424112724455479537907929997665780497544946843")
+	s.Require().True(ok)
+	yhi, ok = sdk.NewIntFromString("98383791699341512653244436809366107612")
+	s.Require().True(ok)
+	ylo, ok = sdk.NewIntFromString("5059714547996504795299887014531209785147688643102472020979042830755696392339")
+	s.Require().True(ok)
+	s.Require().Equal("00000000000000000000000000000000"+xhi.BigInt().Text(16)+xlo.BigInt().Text(16)+"00000000000000000000000000000000"+yhi.BigInt().Text(16)+"0"+ylo.BigInt().Text(16), qres)
+
+	// test_cmul
+	calldata = "0dcdcb38000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001", qres)
+
+	// test_cmul2
+	calldata = "0dcdcb38000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
+	xhi, ok = sdk.NewIntFromString("245781082670945953400715156833221871355")
+	s.Require().True(ok)
+	xlo, ok = sdk.NewIntFromString("63561210578733136403401621863479295999629046857190053662312855096114351736595")
+	s.Require().True(ok)
+	yhi, ok = sdk.NewIntFromString("180019394029199568620537828433208332692")
+	s.Require().True(ok)
+	ylo, ok = sdk.NewIntFromString("33725942635937835172842051555502887548933743943411496924409836942121128525645")
+	s.Require().True(ok)
+	s.Require().Equal("00000000000000000000000000000000"+xhi.BigInt().Text(16)+xlo.BigInt().Text(16)+"00000000000000000000000000000000"+yhi.BigInt().Text(16)+ylo.BigInt().Text(16), qres)
+
+	// test_fadd()
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("0492770c")}, nil, deps)
+
+	// test_finv
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("eb69ead0")}, nil, deps)
+
+	// test_fmul
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("9ae6c915")}, nil, deps)
+
+	// test_fmul2
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("cbd1c8d6")}, nil, deps)
+
+	// test_fsub
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("5fb43bb4")}, nil, deps)
+
+	// test_cadd()
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("6c96097e")}, nil, deps)
+
+	// test_cdbl
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("b3baeed1")}, nil, deps)
+}
+
+func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() {
+	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2Interpreted")
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	deps := []string{"0x0000000000000000000000000000000000000005"}
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	evmcode, err := hex.DecodeString(testdata.Curve384Test)
+	s.Require().NoError(err)
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin")
 
 	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
 	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -83,12 +84,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 	if err != nil {
 		return types.ContractDependency{}, err
 	}
-	var sdeps []string
-	for _, dep := range codeInfo.Deps {
-		if dep[0:2] != "0x" {
-			sdeps = append(sdeps, dep)
-		}
-	}
+	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 	var filepath string
 	if codeInfo.Pinned {
 		filepath = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
@@ -98,6 +94,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
 		filepath = ""
 	}
+
 	return types.ContractDependency{
 		Address:    addr,
 		StoreKey:   prefixStoreKey,
@@ -124,9 +121,10 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")
 	}
 
-	if !types.IsWasmDeps(deps) {
-		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
-	}
+	// TODO cache current supported deps (including interpreters) and verify these here
+	// if !types.IsWasmDeps(deps) {
+	// 	return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
+	// }
 
 	ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
 	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
@@ -177,9 +175,10 @@ func (k Keeper) CreateInterpreted(
 		return 0, nil, nil, sdkerrors.Wrap(types.ErrCreateFailed, "this is wasm code, use store")
 	}
 
-	if types.IsWasmDeps(deps) {
-		return 0, nil, nil, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
-	}
+	// TODO cache current supported deps (including interpreters) and verify these here
+	// if types.IsWasmDeps(deps) {
+	// 	return 0, nil, nil, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
+	// }
 
 	checksum = k.wasmvm.checksum(wasmCode)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
@@ -375,9 +374,10 @@ func (k Keeper) instantiateInternal(
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
 	// instantiate wasm contract
-	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx))
+	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx), systemDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -469,11 +469,11 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
 
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
 	var contractDeps []types.ContractDependency
-	var systemDeps []string
+
 	for _, hexaddr := range allDeps {
 		if hexaddr[0:2] != "0x" {
-			systemDeps = append(systemDeps, hexaddr)
 			continue
 		}
 		addr := wasmeth.AccAddressFromHex(hexaddr)
@@ -551,7 +551,9 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	env := types.NewEnv(ctx, contractAddress, codeInfo.CodeHash)
 	info := types.NewInfo(origin, caller, coins)
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), codeInfo.Deps, nil)
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
+
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, info, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -592,12 +594,11 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// e.g. dep = {value, type}
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
 
 	var contractDeps []types.ContractDependency
-	var systemDeps []string
 	for _, hexaddr := range allDeps {
 		if hexaddr[0:2] != "0x" {
-			systemDeps = append(systemDeps, hexaddr)
 			continue
 		}
 		addr := wasmeth.AccAddressFromHex(hexaddr)
@@ -689,6 +690,55 @@ func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	if ctx.GasMeter().IsOutOfGas() {
 		panic(sdk.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
 	}
+}
+
+func (k Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []types.SystemDep {
+	var sdeps []types.SystemDep
+	for _, dep := range depLabels {
+		if dep[0:2] != "0x" {
+			sdep, err := k.SystemDepFromLabel(ctx, dep)
+			if err != nil {
+				sdep = types.SystemDep{
+					Label: dep,
+					Role:  dep,
+				}
+			}
+			sdeps = append(sdeps, sdep)
+		}
+	}
+	return sdeps
+}
+
+func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
+	cached, ok := k.systemDepsByLabelCache[label]
+	if ok {
+		return cached, nil
+	}
+	role := k.GetRoleByLabel(ctx, label)
+	if role == nil {
+		return types.SystemDep{}, fmt.Errorf("no role from label")
+	}
+	contractAddress, err := sdk.AccAddressFromBech32(role.ContractAddress)
+	if err != nil {
+		return types.SystemDep{}, err
+	}
+	_, codeInfo, _, err := k.ContractInstance(ctx, contractAddress)
+	if err != nil {
+		return types.SystemDep{}, err
+	}
+	var path string
+	if codeInfo.Pinned {
+		path = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
+	} else {
+		path = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
+	}
+	dep := types.SystemDep{
+		Role:     role.Role,
+		Label:    label,
+		FilePath: path,
+	}
+	k.systemDepsByLabelCache[label] = dep
+	return dep, nil
 }
 
 // MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier

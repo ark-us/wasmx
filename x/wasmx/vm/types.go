@@ -32,7 +32,7 @@ type ContractContext struct {
 	VmExecutor       *wasmedge.Executor
 	ContractStoreKey []byte
 	Context          *Context
-	SystemDeps       []string
+	SystemDeps       []types.SystemDep
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {

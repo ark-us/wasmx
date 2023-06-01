@@ -3,6 +3,7 @@ package types
 import (
 	bytes "bytes"
 	"math/big"
+	"strings"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -115,29 +116,39 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	EWASM_ENV_1:   true,
 }
 
+var ROLE_INTERPRETER = "interpreter"
+var ROLE_PRECOMPILE = "precompile"
+
 var INTERPRETER_EWASM_1 = "ewasm_ewasm_1" // outdated
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
 
-var SUPPORTED_INTERPRETERS = map[string]bool{
-	INTERPRETER_EVM_SHANGHAI: true,
+// var SUPPORTED_INTERPRETERS = map[string]bool{
+// 	INTERPRETER_EVM_SHANGHAI: true,
+// }
+
+type SystemDep struct {
+	Role     string
+	Label    string
+	FilePath string
 }
 
 func GetMaxCodeSize(sdeps []string) int {
 	for _, dep := range sdeps {
-		_, found := SUPPORTED_INTERPRETERS[dep]
-		if found {
+		// _, found := SUPPORTED_INTERPRETERS[dep]
+		isInterpreter := strings.Contains(dep, "interpreter")
+		if isInterpreter {
 			return MaxInterpretedCodeSize
 		}
 	}
 	return MaxWasmSize
 }
 
-func IsWasmDeps(sdeps []string) bool {
-	for _, dep := range sdeps {
-		_, found := SUPPORTED_INTERPRETERS[dep]
-		if found {
-			return false
-		}
-	}
-	return true
-}
+// func IsWasmDeps(sdeps []string) bool {
+// 	for _, dep := range sdeps {
+// 		_, found := SUPPORTED_INTERPRETERS[dep]
+// 		if found {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }

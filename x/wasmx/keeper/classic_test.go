@@ -263,15 +263,15 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	realBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
 	s.Require().NoError(err)
 
-	calld = selfbalancehex
-	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
-
 	calld = balancehex + "00000000000000000000000039B1BF12E9e21D78F0c76d192c26d47fa710Ec98"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "0000000000000000000000000000000000000000000000000000000000000000")
 
 	calld = balancehex + "000000000000000000000000" + contractAddressHex[2:]
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
+
+	calld = selfbalancehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
 
@@ -342,6 +342,7 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	initBalance := sdk.NewInt(1000_000_000)
 	fibhex := "c6c2ea17"
 	fibstorehex := "cf837088"
+	fibInternal := "b1960274"
 	evmcode, err := hex.DecodeString(testdata.Call)
 	s.Require().NoError(err)
 	fiboevm, err := hex.DecodeString(testdata.Fibonacci)
@@ -369,14 +370,15 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 
 	start := time.Now()
 	// call fibonaci contract directly
-	res := appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
-		appA.Hex2bz(fibhex),
+	res := appA.ExecuteContractWithGas(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
+		appA.Hex2bz(fibInternal),
 		appA.Hex2bz(value)...,
-	)}, nil, nil)
+	)}, nil, nil, 10000000, nil)
 
 	fmt.Println("-fibo-elapsed", time.Since(start))
+	fmt.Println("--fibo-data", hex.EncodeToString(res.Data))
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
-
+	return
 	// start = time.Now()
 	// // call fibonaci contract directly
 	// res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(

@@ -29,7 +29,7 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 	return returns, wasmedge.Result_Success
 }
 
-func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []string) (*wasmedge.VM, []func(), error) {
+func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
 	wasmedge.SetLogErrorLevel()
 	// wasmedge.SetLogDebugLevel()
 	// conf := wasmedge.NewConfigure()
@@ -42,13 +42,17 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 
 	// set default
 	if len(systemDeps) == 0 {
-		systemDeps = append(systemDeps, EWASM_VM_EXPORT+"1")
+		label := EWASM_VM_EXPORT + "1"
+		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
 
 	for _, systemDep := range systemDeps {
-		handler, found := SystemDepHandler[systemDep]
+		handler, found := SystemDepHandler[systemDep.Role]
+		if !found {
+			handler, found = SystemDepHandler[systemDep.Label]
+		}
 		if found {
-			releaseFn, err := handler(context, contractVm)
+			releaseFn, err := handler(context, contractVm, &systemDep)
 			cleanups = append(cleanups, releaseFn...)
 			if err != nil {
 				return nil, cleanups, err
@@ -68,7 +72,7 @@ func runCleanups(cleanups []func()) {
 	}
 }
 
-func buildExecutionContextClassic(filePath string, env types.Env, storeKey []byte, conf *wasmedge.Configure, systemDeps []string) (*ContractContext, error) {
+func buildExecutionContextClassic(filePath string, env types.Env, storeKey []byte, conf *wasmedge.Configure, systemDeps []types.SystemDep) (*ContractContext, error) {
 	contractCtx := &ContractContext{
 		FilePath:         filePath,
 		ContractStoreKey: storeKey,
@@ -155,7 +159,7 @@ func ExecuteWasmInterpreted(
 	storeKey []byte, kvstore types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []string,
+	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 ) (types.ContractResponse, error) {
 	var err error
@@ -205,6 +209,7 @@ func ExecuteWasmInterpreted(
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
+
 	runCleanups(cleanups)
 	conf.Release()
 	contractVm.Release()
@@ -228,7 +233,7 @@ func ExecuteWasm(
 	storeKey []byte, kvstore types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []string,
+	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 ) (types.ContractResponse, error) {
 	var err error

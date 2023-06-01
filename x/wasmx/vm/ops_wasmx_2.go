@@ -120,11 +120,7 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		success = int32(2)
 	} else {
-		if len(req.Bytecode) > 0 {
-			success, returnData = wasmxCall(ctx, req)
-		} else {
-			success = int32(0)
-		}
+		success, returnData = wasmxCall(ctx, req)
 	}
 
 	response := CallResponseJson{
@@ -195,13 +191,17 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
+	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
 		ctx.CallContext.Origin,
 		ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
-		ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps,
+		sdeps,
 		metadata,
 		"", // TODO label?
 		[]byte{},
@@ -238,13 +238,18 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
+	}
+
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
 		ctx.CallContext.Origin,
 		ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
-		ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps,
+		sdeps,
 		metadata,
 		"", // TODO label?
 		req.Salt.FillBytes(make([]byte, 32)),
@@ -336,8 +341,11 @@ func buildEnv(ctx *Context) *EnvJson {
 func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	// TODO cache contract dependency
 	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, req.To)
+	// ! we return success here in case the contract does not exist
+	// an empty transaction to any account should succeed (evm way)
+	// even with value 0 & no calldata
 	if err != nil {
-		return int32(1), nil
+		return int32(0), nil
 	}
 	depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
 	if err != nil {

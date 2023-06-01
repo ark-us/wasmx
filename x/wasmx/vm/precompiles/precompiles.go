@@ -2,6 +2,7 @@ package precompiles
 
 import (
 	_ "embed"
+	"mythos/v1/x/wasmx/types"
 )
 
 var (
@@ -40,6 +41,9 @@ var (
 
 	//go:embed 22.secret_sharing.wasm
 	secret_sharing []byte
+
+	//go:embed 23.evm_shanghai.wasm
+	interpreter_evm_shanghai []byte
 )
 
 func GetPrecompileByLabel(label string) []byte {
@@ -69,6 +73,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = secp384r1_registry
 	case "secret_sharing":
 		wasmbin = secret_sharing
+	case types.INTERPRETER_EVM_SHANGHAI:
+		wasmbin = interpreter_evm_shanghai
 	}
 	return wasmbin
 }
