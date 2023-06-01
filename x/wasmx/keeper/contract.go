@@ -121,9 +121,10 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")
 	}
 
-	if !types.IsWasmDeps(deps) {
-		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
-	}
+	// TODO cache current supported deps (including interpreters) and verify these here
+	// if !types.IsWasmDeps(deps) {
+	// 	return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
+	// }
 
 	ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
 	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
@@ -174,9 +175,10 @@ func (k Keeper) CreateInterpreted(
 		return 0, nil, nil, sdkerrors.Wrap(types.ErrCreateFailed, "this is wasm code, use store")
 	}
 
-	if types.IsWasmDeps(deps) {
-		return 0, nil, nil, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
-	}
+	// TODO cache current supported deps (including interpreters) and verify these here
+	// if types.IsWasmDeps(deps) {
+	// 	return 0, nil, nil, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
+	// }
 
 	checksum = k.wasmvm.checksum(wasmCode)
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)

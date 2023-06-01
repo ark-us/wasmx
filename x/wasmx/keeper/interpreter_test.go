@@ -4,7 +4,6 @@ import (
 	_ "embed"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/simulation"
 
 	"mythos/v1/x/wasmx/types"
 )
@@ -16,34 +15,6 @@ var (
 	//go:embed testdata/interpreter/contract.wasm
 	iContract []byte
 )
-
-func (suite *KeeperTestSuite) TestDynamicInterpreter() {
-	wasmbin := iContract
-	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
-	valAccount := simulation.Account{
-		PrivKey: s.chainA.SenderPrivKey,
-		PubKey:  s.chainA.SenderPrivKey.PubKey(),
-		Address: s.chainA.SenderAccount.GetAddress(),
-	}
-
-	appA := s.GetAppContext(s.chainA)
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
-
-	codeId := appA.StoreCodeEwasmEnv1(sender, wasmbin)
-	appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "contract", nil)
-
-	// // Register route proposal
-	// proposal := types.NewRegisterRoleProposal("Register interpreter", "Register interpreter", "interpreter", "", contractAddressRoot.String())
-	// appA.PassGovProposal(valAccount, sender, registerRouteProposal)
-
-	// resp, err := appA.App.WebsrvKeeper.ContractByRoute(appA.Context(), &types.QueryContractByRouteRequest{Path: "/"})
-	// s.Require().NoError(err)
-	// s.Require().Equal(contractAddressRoot.String(), resp.ContractAddress)
-}
 
 func (suite *KeeperTestSuite) TestInterpreterContractTest() {
 	wasmbin := iContract
