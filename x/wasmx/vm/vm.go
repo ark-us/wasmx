@@ -205,10 +205,14 @@ func ExecuteWasmInterpreted(
 	selfContext.Vm = contractVm
 	setExecutionBytecode(context, contractVm, funcName)
 
+	fmt.Println("----DEBUGG-wasmx vm before execution--")
+
 	_, err = contractVm.Execute("main")
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
+
+	fmt.Println("----DEBUGG-wasmx vm after execution--")
 
 	runCleanups(cleanups)
 	conf.Release()

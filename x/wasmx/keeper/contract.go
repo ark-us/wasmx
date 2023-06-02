@@ -191,16 +191,20 @@ func (k Keeper) CreateInterpreted(
 		addressParent = creator
 	}
 
+	fmt.Println("----DEBUGG-wasmx before AddressGenerator--")
+
 	if len(salt) == 0 {
 		contractAddress = k.EwasmClassicAddressGenerator(addressParent)(ctx, codeID, codeInfo.CodeHash)
 	} else {
 		contractAddress = k.EwasmPredictableAddressGenerator(addressParent, salt, []byte{}, false)(ctx, codeID, codeInfo.CodeHash)
 	}
+	fmt.Println("----DEBUGG-wasmx after AddressGenerator--")
 
 	_, runtimeCode, err := k.instantiateInternal(ctx, codeID, creator, provenance, initMsg, deposit, contractAddress, &codeInfo, label)
 	if err != nil {
 		return 0, checksum, contractAddress, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
+	fmt.Println("----DEBUGG-wasmx after instantiateInternal--")
 	codeInfo.InterpretedBytecodeRuntime = runtimeCode
 	// TODO the hash algo will depend on deps
 	codeInfo.RuntimeHash = k.wasmvm.checksum(runtimeCode)
@@ -342,6 +346,7 @@ func (k Keeper) instantiateInternal(
 	// decision logic also very flexible and extendable. We provide new options to overwrite the default settings via WithAcceptedAccountTypesOnContractInstantiation and
 	// WithPruneAccountTypesOnContractInstantiation as constructor arguments
 	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
+	fmt.Println("----DEBUGG-wasmx before existingAcct--", existingAcct)
 	if existingAcct != nil {
 		if existingAcct.GetSequence() != 0 || existingAcct.GetPubKey() != nil {
 			return nil, nil, types.ErrAccountExists.Wrap("address is claimed by external account")
@@ -356,6 +361,7 @@ func (k Keeper) instantiateInternal(
 		contractAccount := k.accountKeeper.NewAccountWithAddress(ctx, contractAddress)
 		k.accountKeeper.SetAccount(ctx, contractAccount)
 	}
+	fmt.Println("----DEBUGG-wasmx after existingAcct--")
 	// deposit initial contract funds
 	if !deposit.IsZero() {
 		if err := k.TransferCoins(ctx, creator, contractAddress, deposit); err != nil {
@@ -376,8 +382,13 @@ func (k Keeper) instantiateInternal(
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
+	fmt.Println("----DEBUGG-wasmx before Instantiate--")
+
 	// instantiate wasm contract
 	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, info, initMsg, prefixStore, handler, k.gasMeter(ctx), systemDeps)
+
+	fmt.Println("----DEBUGG-wasmx after Instantiate--")
+
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -713,6 +724,7 @@ func (k Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []ty
 
 func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
 	cached, ok := k.systemDepsByLabelCache[label]
+	fmt.Println("----DEBUGG-wasmx SystemDepFromLabel cached--", label, ok)
 	if ok {
 		return cached, nil
 	}
