@@ -187,4 +187,7 @@ replace (
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/second-state/WasmEdge-go => github.com/loredanacirstea/WasmEdge-go v0.11.3-0.20230314131152-38caaf64a4b7
+	github.com/tendermint/tendermint => ../tendermint
+	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
+
 )

@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -49,6 +50,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 }
 
 func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (*types.MsgDeployCodeResponse, error) {
+	fmt.Println("--DEBUGG-wasmx-DeployCode--START-")
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
@@ -69,11 +71,14 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 		return nil, err
 	}
 
-	return &types.MsgDeployCodeResponse{
+	v := &types.MsgDeployCodeResponse{
 		CodeId:   codeId,
 		Checksum: checksum,
 		Address:  address.String(),
-	}, nil
+	}
+	fmt.Println("--DEBUGG-wasmx-DeployCode--END-", v)
+
+	return v, nil
 }
 
 // InstantiateContract instantiate a new contract with classic sequence based address generation

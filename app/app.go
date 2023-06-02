@@ -268,6 +268,8 @@ func New(
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
+	fmt.Println("----DEBUGG--NEW wasmx app--")
+	logger.Info("----DEBUGG--NEW wasmx app-log-")
 	appCodec := encodingConfig.Marshaler
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry

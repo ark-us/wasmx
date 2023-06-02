@@ -684,7 +684,9 @@ func (k Keeper) runtimeGasForContract(ctx sdk.Context) uint64 {
 }
 
 func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
+	fmt.Println("--DEBUGG-wasmx-consumeRuntimeGas-", gas)
 	consumed := k.gasRegister.FromWasmVMGas(gas)
+	fmt.Println("--DEBUGG-wasmx-consumeRuntimeGas-consumed-", consumed)
 	ctx.GasMeter().ConsumeGas(consumed, "wasm contract")
 	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
 	if ctx.GasMeter().IsOutOfGas() {
