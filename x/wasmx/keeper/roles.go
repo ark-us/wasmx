@@ -32,7 +32,6 @@ func (k Keeper) DeregisterRole(
 	ctx sdk.Context,
 	contractAddress sdk.AccAddress,
 ) error {
-	// TODO remove from k.systemDepsByLabelCache
 	return fmt.Errorf("DeregisterRole not implemented")
 }
 

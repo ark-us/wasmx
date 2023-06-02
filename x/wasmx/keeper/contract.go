@@ -710,10 +710,6 @@ func (k Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []ty
 }
 
 func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
-	cached, ok := k.systemDepsByLabelCache[label]
-	if ok {
-		return cached, nil
-	}
 	role := k.GetRoleByLabel(ctx, label)
 	if role == nil {
 		return types.SystemDep{}, fmt.Errorf("no role from label")
@@ -737,7 +733,6 @@ func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemD
 		Label:    label,
 		FilePath: path,
 	}
-	k.systemDepsByLabelCache[label] = dep
 	return dep, nil
 }
 

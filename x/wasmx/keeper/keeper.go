@@ -41,8 +41,6 @@ type (
 		wasmvm  WasmxEngine
 		tempDir string
 		binDir  string
-
-		systemDepsByLabelCache map[string]types.SystemDep
 	}
 )
 
@@ -107,8 +105,6 @@ func NewKeeper(
 		wasmvm:        *wasmvm,
 		tempDir:       tempDir,
 		binDir:        binDir,
-
-		systemDepsByLabelCache: map[string]types.SystemDep{},
 	}
 }
 
