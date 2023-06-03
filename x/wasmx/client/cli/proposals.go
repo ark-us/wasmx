@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -23,7 +24,7 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(3),
 		Short:   "Submit a governance proposal to register a contract for a system role.",
 		Long:    "Submit a governance proposal to register a contract for a system role.",
-		Example: fmt.Sprintf("$ %s tx gov submit-legacy-proposal register-role <role> <role_label> <contract-address> --from=<key_or_address>", version.AppName),
+		Example: fmt.Sprintf("$ %s tx wasmx register-role <role> <role_label> <contract-address> --title=<title> --description=<description> --deposit=<deposit> --from=<key_or_address>", version.AppName),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -82,6 +83,7 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 	if err := cmd.MarkFlagRequired(cli.FlagDeposit); err != nil {
 		panic(err)
 	}
+	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
 

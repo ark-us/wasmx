@@ -10,7 +10,7 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 
 ```
 
-mythosd testnet init-files --chain-id=mythos_7000-12 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt"
+mythosd testnet init-files --chain-id=mythos_7000-13 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt"
 
 mythosd start --home=./testnet/node0/mythosd
 
