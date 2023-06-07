@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"math/big"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -39,7 +37,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	hexaddr := EvmAddressFromAcc(newctx.Env.Contract.Address).Hex()
 	nativePrecompile, found := native.NativeMap[hexaddr]
 	if found {
-		data := nativePrecompile(newctx.Calldata)
+		data := nativePrecompile(newctx.Env.CurrentCall.CallData)
 		newctx.ReturnData = data
 		return data, nil
 	}
@@ -70,16 +68,10 @@ type Context struct {
 	Env            *types.Env
 	ContractRouter ContractRouter
 	ContractStore  types.KVStore
-	CallContext    types.MessageInfo
 	CosmosHandler  types.WasmxCosmosHandler
-	Calldata       []byte
-	Callvalue      *big.Int
 	ReturnData     []byte
 	CurrentCallId  uint32
 	Logs           []WasmxLog
-	// instantiate -> this is the constructor + runtime + constructor args
-	// execute -> this is the runtime bytecode
-	ExecutionBytecode []byte
 }
 
 type EwasmFunctionWrapper struct {

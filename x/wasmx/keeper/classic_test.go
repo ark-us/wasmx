@@ -58,8 +58,8 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	// "d8a1aad7": "eq_(uint256,uint256)",
 	// "630834b5": "exp_(uint256,uint256)",
 	// "3f8d6558": "or_(uint256,uint256)",
-	// "bf29425c": "sar_(int256,int256)",
-	sarhex := "bf29425c"
+	// "bf29425c": "sar_(uint256,uint256)",
+	sarhex := "2ea9b94b"
 	// "74f6c5bb": "sdiv_(uint256,uint256)",
 	// "e7a77a56": "sgt_(uint256,uint256)",
 
@@ -138,6 +138,11 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	codeId, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "allopcodes")
 	contractAddressHex := common.BytesToAddress(contractAddress.Bytes()).Hex()
+
+	_, codeInfo1, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), contractAddress)
+	s.Require().NoError(err)
+	s.Require().Greater(len(codeInfo1.InterpretedBytecodeDeployment), 0)
+	s.Require().Greater(len(codeInfo1.InterpretedBytecodeRuntime), 0)
 
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
@@ -282,11 +287,11 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("00000000000000000000000000000000000000000000000000000000001e83a5", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000001312c5e", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001eaa", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001f41", qres)
 
 	calld = blockhashhex + "0000000000000000000000000000000000000000000000000000000000000002"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -675,7 +680,7 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 	s.Require().Equal(5, logCount, res.GetLog())
 }
 
-func (suite *KeeperTestSuite) TestEwasmCreate() {
+func (suite *KeeperTestSuite) TestEwasmCreate1() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
 	evmcode, err := hex.DecodeString(testdata.Create)
@@ -707,7 +712,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate() {
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), createdContractAddress, keybz)
-	suite.Require().Equal(hex.EncodeToString(queryres), initvalue)
+	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
 
 	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)

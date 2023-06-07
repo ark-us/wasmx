@@ -12,8 +12,7 @@ import (
 // getEnv(): ArrayBuffer
 func getEnv(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	env := buildEnv(ctx)
-	envbz, err := json.Marshal(env)
+	envbz, err := json.Marshal(ctx.Env)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -36,12 +35,10 @@ func getAccount(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	address := sdk.AccAddress(cleanupAddress(addr))
 	codeInfo := ctx.CosmosHandler.GetCodeInfo(address)
-	balance := ctx.CosmosHandler.GetBalance(address)
-	code := AccountInfoJson{
-		Address:  NewCustomBytes(address),
-		Balance:  NewCustomBytes(balance.FillBytes(make([]byte, 32))),
-		CodeHash: NewCustomBytes(codeInfo.CodeHash),
-		Bytecode: NewCustomBytes(codeInfo.InterpretedBytecodeRuntime),
+	code := types.EnvContractInfo{
+		Address:  address,
+		CodeHash: codeInfo.CodeHash,
+		Bytecode: codeInfo.InterpretedBytecodeRuntime,
 	}
 
 	codebz, err := json.Marshal(code)
@@ -105,10 +102,9 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var request CallRequestJson
-	json.Unmarshal(requestbz, &request)
+	var req CallRequest
+	json.Unmarshal(requestbz, &req)
 
-	req := request.Transform()
 	returns := make([]interface{}, 1)
 	var success int32
 	var returnData []byte
@@ -123,9 +119,9 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 		success, returnData = wasmxCall(ctx, req)
 	}
 
-	response := CallResponseJson{
-		Success: success,
-		Data:    NewCustomBytes(returnData),
+	response := CallResponse{
+		Success: uint8(success),
+		Data:    returnData,
 	}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
@@ -181,10 +177,8 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var request CreateAccountRequestJson
-	json.Unmarshal(requestbz, &request)
-	req := request.Transform()
-
+	var req CreateAccountRequest
+	json.Unmarshal(requestbz, &req)
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
 	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
@@ -197,7 +191,7 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
-		ctx.CallContext.Origin,
+		ctx.Env.CurrentCall.Origin,
 		ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
@@ -227,10 +221,8 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var request Create2AccountRequestJson
-	json.Unmarshal(requestbz, &request)
-
-	req := request.Transform()
+	var req Create2AccountRequest
+	json.Unmarshal(requestbz, &req)
 
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
@@ -245,7 +237,7 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
-		ctx.CallContext.Origin,
+		ctx.Env.CurrentCall.Origin,
 		ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
@@ -304,40 +296,6 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	return env
 }
 
-func buildEnv(ctx *Context) *EnvJson {
-	return &EnvJson{
-		Chain: ChainInfoJson{
-			Denom:       ctx.Env.Chain.Denom,
-			ChainId:     NewCustomBytes(ctx.Env.Chain.ChainId.FillBytes((make([]byte, 32)))),
-			ChainIdFull: ctx.Env.Chain.ChainIdFull,
-		},
-		Block: BlockInfoJson{
-			Height:    int64ToBytes32(ctx.Ctx.BlockHeight()),
-			Timestamp: int64ToBytes32(ctx.Ctx.BlockTime().Unix()),
-			GasLimit:  uint64ToBytes32(ctx.Env.Block.GasLimit),
-			Hash:      NewCustomBytes(ctx.Ctx.HeaderHash()),
-			Proposer:  NewCustomBytes(ctx.Env.Block.Proposer),
-		},
-		Transaction: TransactionInfoJson{
-			Index:    int32(ctx.Env.Transaction.Index),
-			GasPrice: NewCustomBytes(ctx.Env.Transaction.GasPrice.FillBytes((make([]byte, 32)))),
-		},
-		Contract: AccountInfoJson{
-			Address:  NewCustomBytes(ctx.Env.Contract.Address.Bytes()),
-			CodeHash: NewCustomBytes(ctx.Env.Contract.CodeHash),
-			Bytecode: NewCustomBytes(ctx.ExecutionBytecode),
-			Balance:  int64ToBytes32(0), // TODO
-		},
-		CurrentCall: CurrentCallInfoJson{
-			Origin:   NewCustomBytes(ctx.CallContext.Origin.Bytes()),
-			Sender:   NewCustomBytes(ctx.CallContext.Sender.Bytes()),
-			Funds:    NewCustomBytes(ctx.CallContext.Funds.FillBytes((make([]byte, 32)))),
-			GasLimit: int64ToBytes32(2000000), // TODO
-			CallData: NewCustomBytes(ctx.Calldata),
-		},
-	}
-}
-
 func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	// TODO cache contract dependency
 	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, req.To)
@@ -353,9 +311,11 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	}
 
 	callContext := types.MessageInfo{
-		Origin: ctx.CallContext.Origin,
-		Sender: req.From,
-		Funds:  req.Value,
+		Origin:   ctx.Env.CurrentCall.Origin,
+		Sender:   req.From,
+		Funds:    req.Value,
+		CallData: req.Calldata,
+		GasLimit: req.GasLimit,
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -367,12 +327,9 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
-		Callvalue:      req.Value,
-		Calldata:       req.Calldata,
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: contractRouter,
-		CallContext:    callContext,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -380,9 +337,10 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 			Contract: types.EnvContractInfo{
 				Address:  req.To,
 				CodeHash: req.CodeHash,
+				Bytecode: req.Bytecode,
 			},
+			CurrentCall: callContext,
 		},
-		ExecutionBytecode: req.Bytecode,
 	}
 
 	_, err = newctx.ContractRouter[req.To.String()].Execute(newctx)
@@ -401,12 +359,4 @@ func wasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 	}
 	ctx.ReturnData = newctx.ReturnData
 	return success, newctx.ReturnData
-}
-
-func int64ToBytes32(v int64) CustomBytes {
-	return NewCustomBytes(big.NewInt(v).FillBytes((make([]byte, 32))))
-}
-
-func uint64ToBytes32(v uint64) CustomBytes {
-	return int64ToBytes32(int64(v))
 }

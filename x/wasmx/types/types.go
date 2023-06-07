@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/hex"
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -57,7 +56,7 @@ func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, deps []string, metadat
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress, codeHash []byte) Env {
+func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash []byte, bytecode []byte, info MessageInfo) Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -78,12 +77,17 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress, codeHash []byte) Env {
 	}
 
 	env := Env{
+		Chain: ChainInfo{
+			ChainIdFull: ctx.ChainID(),
+			ChainId:     chainId,
+			Denom:       denom,
+		},
 		Block: BlockInfo{
-			Height:   uint64(ctx.BlockHeight()),
-			Time:     uint64(nano),
-			GasLimit: blockGasLimit,
-			Hash:     "0x" + hex.EncodeToString(ctx.HeaderHash()),
-			Proposer: sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
+			Height:    uint64(ctx.BlockHeight()),
+			Timestamp: uint64(nano),
+			GasLimit:  blockGasLimit,
+			Hash:      PaddLeftTo32(ctx.HeaderHash().Bytes()), // TODO fixme
+			Proposer:  sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
 		},
 		Transaction: &TransactionInfo{
 			GasPrice: *big.NewInt(1), // TODO
@@ -91,12 +95,9 @@ func NewEnv(ctx sdk.Context, contractAddr sdk.AccAddress, codeHash []byte) Env {
 		Contract: EnvContractInfo{
 			Address:  contractAddr,
 			CodeHash: codeHash,
+			Bytecode: bytecode,
 		},
-		Chain: ChainInfo{
-			ChainIdFull: ctx.ChainID(),
-			ChainId:     *chainId,
-			// Denom: , // TODO
-		},
+		CurrentCall: info,
 	}
 	return env
 }
@@ -111,19 +112,9 @@ func NewInfo(origin sdk.AccAddress, creator sdk.AccAddress, deposit sdk.Coins) M
 		Sender: creator,
 		Funds:  funds,
 		Origin: origin,
+		// TODO!!
+		GasLimit: big.NewInt(20000000),
 	}
-}
-
-// NewWasmCoins translates between Cosmos SDK coins and Wasm coins
-func NewWasmCoins(cosmosCoins sdk.Coins) (wasmCoins []Coin) {
-	for _, coin := range cosmosCoins {
-		wasmCoin := Coin{
-			Denom:  coin.Denom,
-			Amount: coin.Amount.String(),
-		}
-		wasmCoins = append(wasmCoins, wasmCoin)
-	}
-	return wasmCoins
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
