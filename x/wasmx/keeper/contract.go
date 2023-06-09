@@ -377,7 +377,7 @@ func (k Keeper) instantiateInternal(
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
 	// instantiate wasm contract
-	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, k.gasMeter(ctx), systemDeps)
+	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, handler, k.gasMeter(ctx), systemDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if err != nil {

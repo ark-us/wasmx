@@ -41,6 +41,7 @@ func (k WasmxEngine) Instantiate(
 	codeInfo *types.CodeInfo,
 	env types.Env,
 	initMsg []byte,
+	prefixStoreKey []byte,
 	store types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
@@ -53,7 +54,7 @@ func (k WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "instantiate", env, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
+		data, err = vm.ExecuteWasmInterpreted(ctx, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil)
 	} else {
 		// TODO gas
 		var filepath string
@@ -62,7 +63,7 @@ func (k WasmxEngine) Instantiate(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, initMsg, nil, store, nil, gasMeter, systemDeps, nil)
+		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
