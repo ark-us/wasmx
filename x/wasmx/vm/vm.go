@@ -340,6 +340,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 
 func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types.ContractResponse {
 	var events []types.Event
+	// module and contract address for the main transaction are added later
 	for i, log := range logs {
 		var attributes []types.EventAttribute
 		attributes = append(attributes, types.EventAttribute{
@@ -350,14 +351,25 @@ func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types
 			Key:   AttributeKeyData,
 			Value: "0x" + hex.EncodeToString(log.Data),
 		})
-		for j, topic := range log.Topics {
+		attributes = append(attributes, types.EventAttribute{
+			Key:   AttributeKeyEventType,
+			Value: log.Type,
+		})
+		// logs can be from nested calls to other contracts
+		attributes = append(attributes, types.EventAttribute{
+			Key:   AttributeKeyCallContractAddress,
+			Value: log.ContractAddress.String(),
+		})
+		for _, topic := range log.Topics {
 			attributes = append(attributes, types.EventAttribute{
-				Key:   AttributeKeyTopic + fmt.Sprint(j),
+				// the topic is the indexed key
+				Key:   "topic",
 				Value: "0x" + hex.EncodeToString(topic[:]),
 			})
 		}
+
 		events = append(events, types.Event{
-			Type:       EventTypeWasmxLog + log.Type + "_" + fmt.Sprint(i),
+			Type:       EventTypeWasmxLog,
 			Attributes: attributes,
 		})
 	}

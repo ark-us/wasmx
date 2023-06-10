@@ -17,10 +17,12 @@ var (
 )
 
 var (
-	EventTypeWasmxLog = "log_"
-	AttributeKeyIndex = "index"
-	AttributeKeyData  = "data"
-	AttributeKeyTopic = "topic_"
+	// this is prefixed with types CustomContractEventPrefix
+	EventTypeWasmxLog               = "log"
+	AttributeKeyEventType           = "type"
+	AttributeKeyIndex               = "index"
+	AttributeKeyData                = "data"
+	AttributeKeyCallContractAddress = "contract_address_call"
 )
 
 type ContractContext struct {

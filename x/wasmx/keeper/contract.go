@@ -645,7 +645,6 @@ func (k *Keeper) handleContractResponse(
 	ctx sdk.Context,
 	contractAddr sdk.AccAddress,
 	ibcPort string,
-	// msgs []wasmvmtypes.SubMsg,
 	attrs []types.EventAttribute,
 	data []byte,
 	evts types.Events,
@@ -653,6 +652,7 @@ func (k *Keeper) handleContractResponse(
 	attributeGasCost := k.gasRegister.EventCosts(attrs, evts)
 	ctx.GasMeter().ConsumeGas(attributeGasCost, "Custom contract event attributes")
 	// emit all events from this contract itself
+	// these are not used
 	if len(attrs) != 0 {
 		wasmEvents, err := newWasmModuleEvent(attrs, contractAddr)
 		if err != nil {
