@@ -32,10 +32,14 @@ func newCustomEvents(evts types.Events, contractAddr sdk.AccAddress) (sdk.Events
 		if len(typ) <= eventTypeMinLength {
 			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
 		}
+		// also adds contract address as attribute
 		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddr)
 		if err != nil {
 			return nil, err
 		}
+		// add wasmx module as attribute
+		attributes = append(attributes, sdk.NewAttribute("module", types.WasmModuleEventType))
+
 		events = append(events, sdk.NewEvent(fmt.Sprintf("%s%s", types.CustomContractEventPrefix, typ), attributes...))
 	}
 	return events, nil

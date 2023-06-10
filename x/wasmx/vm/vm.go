@@ -151,10 +151,8 @@ func parseDependency(contractVersion string, part string) string {
 
 func ExecuteWasmInterpreted(
 	ctx sdk.Context,
-	code []byte,
 	funcName string,
 	env types.Env,
-	messageInfo types.MessageInfo,
 	msg []byte,
 	storeKey []byte, kvstore types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
@@ -172,17 +170,14 @@ func ExecuteWasmInterpreted(
 	conf := wasmedge.NewConfigure()
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:               ctx,
-		GasMeter:          gasMeter,
-		Env:               &env,
-		ContractStore:     kvstore,
-		CallContext:       messageInfo,
-		CosmosHandler:     cosmosHandler,
-		Calldata:          ethMsg.Data,
-		Callvalue:         messageInfo.Funds,
-		ContractRouter:    contractRouter,
-		ExecutionBytecode: code,
+		Ctx:            ctx,
+		GasMeter:       gasMeter,
+		Env:            &env,
+		ContractStore:  kvstore,
+		CosmosHandler:  cosmosHandler,
+		ContractRouter: contractRouter,
 	}
+	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
 		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)
 		if err != nil {
@@ -228,7 +223,6 @@ func ExecuteWasm(
 	filePath string,
 	funcName string,
 	env types.Env,
-	messageInfo types.MessageInfo,
 	msg []byte,
 	storeKey []byte, kvstore types.KVStore,
 	cosmosHandler types.WasmxCosmosHandler,
@@ -254,17 +248,14 @@ func ExecuteWasm(
 	conf := wasmedge.NewConfigure()
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:               ctx,
-		GasMeter:          gasMeter,
-		Env:               &env,
-		ContractStore:     kvstore,
-		CallContext:       messageInfo,
-		CosmosHandler:     cosmosHandler,
-		Calldata:          ethMsg.Data,
-		Callvalue:         messageInfo.Funds,
-		ContractRouter:    contractRouter,
-		ExecutionBytecode: []byte{},
+		Ctx:            ctx,
+		GasMeter:       gasMeter,
+		Env:            &env,
+		ContractStore:  kvstore,
+		CosmosHandler:  cosmosHandler,
+		ContractRouter: contractRouter,
 	}
+	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
 		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)
 		if err != nil {
@@ -310,8 +301,8 @@ func ExecuteWasm(
 // codesize/codecopy at runtime execution = runtimeBytecode
 func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName string) {
 	// for interpreted code
-	if len(context.ExecutionBytecode) > 0 && funcName == "instantiate" {
-		context.ExecutionBytecode = append(context.ExecutionBytecode, context.Calldata...)
+	if len(context.Env.Contract.Bytecode) > 0 && funcName == "instantiate" {
+		context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
 	}
 
 	fnList, _ := contractVm.GetFunctionList()
@@ -340,15 +331,16 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 				return
 			}
 			executionBytecode = append(constructorBytecode, executionBytecode...)
-			executionBytecode = append(executionBytecode, context.Calldata...)
+			executionBytecode = append(executionBytecode, context.Env.CurrentCall.CallData...)
 		}
 
-		context.ExecutionBytecode = executionBytecode
+		context.Env.Contract.Bytecode = executionBytecode
 	}
 }
 
 func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types.ContractResponse {
 	var events []types.Event
+	// module and contract address for the main transaction are added later
 	for i, log := range logs {
 		var attributes []types.EventAttribute
 		attributes = append(attributes, types.EventAttribute{
@@ -359,14 +351,25 @@ func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types
 			Key:   AttributeKeyData,
 			Value: "0x" + hex.EncodeToString(log.Data),
 		})
-		for j, topic := range log.Topics {
+		attributes = append(attributes, types.EventAttribute{
+			Key:   AttributeKeyEventType,
+			Value: log.Type,
+		})
+		// logs can be from nested calls to other contracts
+		attributes = append(attributes, types.EventAttribute{
+			Key:   AttributeKeyCallContractAddress,
+			Value: log.ContractAddress.String(),
+		})
+		for _, topic := range log.Topics {
 			attributes = append(attributes, types.EventAttribute{
-				Key:   AttributeKeyTopic + fmt.Sprint(j),
+				// the topic is the indexed key
+				Key:   "topic",
 				Value: "0x" + hex.EncodeToString(topic[:]),
 			})
 		}
+
 		events = append(events, types.Event{
-			Type:       EventTypeWasmxLog + log.Type + "_" + fmt.Sprint(i),
+			Type:       EventTypeWasmxLog,
 			Attributes: attributes,
 		})
 	}

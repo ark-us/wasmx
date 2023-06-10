@@ -97,7 +97,7 @@ func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []
 // CALLER result_ptr: i32
 func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addr := Evm32AddressFromAcc(ctx.CallContext.Sender)
+	addr := Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender)
 	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -106,7 +106,7 @@ func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []i
 // CALLVALUE  result_ptr: i32
 func getCallValue(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	writeBigInt(callframe, ctx.Callvalue, params[0])
+	writeBigInt(callframe, ctx.Env.CurrentCall.Funds, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -115,7 +115,7 @@ func getCallValue(context interface{}, callframe *wasmedge.CallingFrame, params 
 func getCallDataSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = len(ctx.Calldata)
+	returns[0] = len(ctx.Env.CurrentCall.CallData)
 	return returns, wasmedge.Result_Success
 }
 
@@ -125,7 +125,7 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	ctx := context.(*Context)
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
-	part := readAndFillWithZero(ctx.Calldata, dataStart, dataLen)
+	part := readAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
 
 	writeMem(callframe, part, params[0])
 	return returns, wasmedge.Result_Success
@@ -154,7 +154,7 @@ func returnDataCopy(context interface{}, callframe *wasmedge.CallingFrame, param
 func getCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = len(ctx.ExecutionBytecode)
+	returns[0] = len(ctx.Env.Contract.Bytecode)
 	return returns, wasmedge.Result_Success
 }
 
@@ -171,7 +171,7 @@ func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	ctx := context.(*Context)
 	codePtr := params[1].(int32)
 	dataLen := params[2].(int32)
-	part := readAndFillWithZero(ctx.ExecutionBytecode, codePtr, dataLen)
+	part := readAndFillWithZero(ctx.Env.Contract.Bytecode, codePtr, dataLen)
 	writeMem(callframe, part, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -207,7 +207,7 @@ func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params
 // ORIGIN result_ptr: i32
 func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addr := Evm32AddressFromAcc(ctx.CallContext.Origin)
+	addr := Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin)
 	writeMem(callframe, addr.Bytes(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -254,7 +254,7 @@ func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, pa
 	returns := make([]interface{}, 1)
 	// EVM time is in seconds since unix epoch
 	// ctx.Env.Block.Time is in nanoseconds
-	timestamp := time.Unix(0, int64(ctx.Env.Block.Time))
+	timestamp := time.Unix(0, int64(ctx.Env.Block.Timestamp))
 	returns[0] = timestamp.Unix()
 	return returns, wasmedge.Result_Success
 }
@@ -290,6 +290,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 
+	gasLimit := params[0].(int64)
 	addrbz, err := readMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -333,9 +334,11 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	}
 
 	callContext := types.MessageInfo{
-		Origin: ctx.CallContext.Origin,
-		Sender: ctx.Env.Contract.Address,
-		Funds:  value,
+		Origin:   ctx.Env.CurrentCall.Origin,
+		Sender:   ctx.Env.Contract.Address,
+		Funds:    value,
+		CallData: calldata,
+		GasLimit: big.NewInt(gasLimit),
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -344,12 +347,9 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
-		Callvalue:      value,
-		Calldata:       calldata,
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
-		CallContext:    callContext,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -357,6 +357,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 			Contract: types.EnvContractInfo{
 				Address: addr,
 			},
+			CurrentCall: callContext,
 		},
 	}
 
@@ -382,6 +383,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 
+	gasLimit := params[0].(int64)
 	addrbz, err := readMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -416,9 +418,11 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 
 	// keep same origin, change caller, funds
 	callContext := types.MessageInfo{
-		Origin: ctx.CallContext.Origin,
-		Sender: ctx.Env.Contract.Address,
-		Funds:  value,
+		Origin:   ctx.Env.CurrentCall.Origin,
+		Sender:   ctx.Env.Contract.Address,
+		Funds:    value,
+		CallData: calldata,
+		GasLimit: big.NewInt(gasLimit),
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -430,12 +434,9 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
-		Callvalue:      value,
-		Calldata:       calldata,
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
-		CallContext:    callContext,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -443,6 +444,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 			Contract: types.EnvContractInfo{
 				Address: currentAddress,
 			},
+			CurrentCall: callContext,
 		},
 	}
 
@@ -468,6 +470,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 
+	gasLimit := params[0].(int64)
 	addrbz, err := readMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -497,9 +500,11 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	// keep same origin, sender, funds
 	callContext := types.MessageInfo{
-		Origin: ctx.CallContext.Origin,
-		Sender: ctx.CallContext.Sender,
-		Funds:  ctx.Callvalue,
+		Origin:   ctx.Env.CurrentCall.Origin,
+		Sender:   ctx.Env.CurrentCall.Sender,
+		Funds:    ctx.Env.CurrentCall.Funds,
+		CallData: calldata,
+		GasLimit: big.NewInt(gasLimit),
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
@@ -511,12 +516,9 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
-		Callvalue:      ctx.Callvalue,
-		Calldata:       calldata,
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
-		CallContext:    callContext,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -524,6 +526,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 			Contract: types.EnvContractInfo{
 				Address: currentAddress,
 			},
+			CurrentCall: callContext,
 		},
 	}
 
@@ -551,6 +554,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 
+	gasLimit := params[0].(int64)
 	addrbz, err := readMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -578,8 +582,11 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 
 	callContext := types.MessageInfo{
-		Origin: ctx.CallContext.Origin,
-		Sender: ctx.Env.Contract.Address,
+		Origin:   ctx.Env.CurrentCall.Origin,
+		Sender:   ctx.Env.Contract.Address,
+		Funds:    big.NewInt(0),
+		CallData: calldata,
+		GasLimit: big.NewInt(gasLimit),
 	}
 	tempCtx, _ := ctx.Ctx.CacheContext()
 	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[addr.String()].ContractStoreKey)
@@ -587,12 +594,9 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
-		Callvalue:      big.NewInt(0),
-		Calldata:       calldata,
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
-		CallContext:    callContext,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -600,6 +604,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 			Contract: types.EnvContractInfo{
 				Address: addr,
 			},
+			CurrentCall: callContext,
 		},
 	}
 	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)

@@ -217,7 +217,7 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 		Msg:    msgbz,
 		Funds:  funds,
 	}
-	res := s.DeliverTxWithOpts(sender, instantiateContractMsg, 1000000, nil)
+	res := s.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 	contractAddressStr := s.GetContractAddressFromLog(res.GetLog())

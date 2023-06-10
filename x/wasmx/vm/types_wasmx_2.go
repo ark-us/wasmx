@@ -3,162 +3,123 @@ package vm
 import (
 	"encoding/json"
 	"math/big"
-	"strconv"
-	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"mythos/v1/x/wasmx/types"
 )
 
-type ChainInfoJson struct {
-	Denom       string      `json:"denom"`
-	ChainId     CustomBytes `json:"chainId"`
-	ChainIdFull string      `json:"chainIdFull"`
-}
-
-type BlockInfoJson struct {
-	Height    CustomBytes `json:"height"`
-	Timestamp CustomBytes `json:"timestamp"`
-	GasLimit  CustomBytes `json:"gasLimit"`
-	Hash      CustomBytes `json:"hash"`
-	Proposer  CustomBytes `json:"proposer"`
-}
-
-type TransactionInfoJson struct {
-	Index    int32       `json:"index"`
-	GasPrice CustomBytes `json:"gasPrice"`
-}
-
-type AccountInfoJson struct {
-	Address  CustomBytes `json:"address"`
-	Balance  CustomBytes `json:"balance"`
-	CodeHash CustomBytes `json:"codeHash"`
-	Bytecode CustomBytes `json:"bytecode"`
-}
-
-type CurrentCallInfoJson struct {
-	Origin   CustomBytes `json:"origin"`
-	Sender   CustomBytes `json:"sender"`
-	Funds    CustomBytes `json:"funds"`
-	GasLimit CustomBytes `json:"gasLimit"`
-	CallData CustomBytes `json:"callData"`
-}
-
-type EnvJson struct {
-	Chain       ChainInfoJson       `json:"chain"`
-	Block       BlockInfoJson       `json:"block"`
-	Transaction TransactionInfoJson `json:"transaction"`
-	Contract    AccountInfoJson     `json:"contract"`
-	CurrentCall CurrentCallInfoJson `json:"currentCall"`
-}
-
-type CallRequestJson struct {
-	To       CustomBytes `json:"to"`
-	From     CustomBytes `json:"from"`
-	Value    CustomBytes `json:"value"`
-	GasLimit CustomBytes `json:"gasLimit"`
-	Calldata CustomBytes `json:"calldata"`
-	Bytecode CustomBytes `json:"bytecode"`
-	CodeHash CustomBytes `json:"codeHash"`
-	IsQuery  bool        `json:"isQuery"`
-}
-
-type CallResponseJson struct {
-	Success int32       `json:"success"`
-	Data    CustomBytes `json:"data"`
-}
-
-type CustomBytes struct {
-	Value []byte
-}
-
-func NewCustomBytes(v []byte) CustomBytes {
-	return CustomBytes{Value: v}
-}
-
-func (m CustomBytes) MarshalJSON() ([]byte, error) {
-	strs := []string{}
-	for _, v := range m.Value {
-		strs = append(strs, strconv.FormatInt(int64(v), 10))
-	}
-	str := "[" + strings.Join(strs, ",") + "]"
-	return []byte(str), nil
-}
-
-func (m *CustomBytes) UnmarshalJSON(data []byte) error {
-	// Customize the JSON unmarshaling logic
-	var value []int32
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	m.Value = m.fromInt32(value)
-	return nil
-}
-
-func (m *CustomBytes) fromInt32(data []int32) []byte {
-	intArray := make([]byte, len(data))
-	for i, val := range data {
-		intArray[i] = byte(val)
-	}
-	return intArray
-}
-
 type CallRequest struct {
-	To       sdk.AccAddress
-	From     sdk.AccAddress
-	Value    *big.Int
-	GasLimit *big.Int
-	Calldata []byte
-	Bytecode []byte
-	CodeHash []byte
-	IsQuery  bool
+	To       sdk.AccAddress `json:"to"`
+	From     sdk.AccAddress `json:"from"`
+	Value    *big.Int       `json:"value"`
+	GasLimit *big.Int       `json:"gasLimit"`
+	Calldata types.RawBytes `json:"calldata"`
+	Bytecode types.RawBytes `json:"bytecode"`
+	CodeHash types.RawBytes `json:"codeHash"`
+	IsQuery  bool           `json:"isQuery"`
 }
 
-func (v CallRequestJson) Transform() CallRequest {
-	return CallRequest{
-		To:       sdk.AccAddress(cleanupAddress(paddLeftTo32(v.To.Value))),
-		From:     sdk.AccAddress(cleanupAddress(paddLeftTo32(v.From.Value))),
-		Value:    big.NewInt(0).SetBytes(paddLeftTo32(v.Value.Value)),
-		GasLimit: big.NewInt(0).SetBytes(paddLeftTo32(v.GasLimit.Value)),
-		Calldata: v.Calldata.Value,
-		Bytecode: v.Bytecode.Value,
-		CodeHash: paddLeftTo32(v.CodeHash.Value),
-		IsQuery:  v.IsQuery,
-	}
+type CallRequestRaw struct {
+	To       types.RawBytes `json:"to"`
+	From     types.RawBytes `json:"from"`
+	Value    types.RawBytes `json:"value"`
+	GasLimit types.RawBytes `json:"gasLimit"`
+	Calldata types.RawBytes `json:"calldata"`
+	Bytecode types.RawBytes `json:"bytecode"`
+	CodeHash types.RawBytes `json:"codeHash"`
+	IsQuery  bool           `json:"isQuery"`
+}
+
+type CallResponse struct {
+	Success uint8          `json:"success"`
+	Data    types.RawBytes `json:"data"`
 }
 
 type CreateAccountRequest struct {
-	Bytecode []byte
-	Balance  *big.Int
+	Bytecode types.RawBytes `json:"bytecode"`
+	Balance  *big.Int       `json:"balance"`
+}
+
+type CreateAccountRequestRaw struct {
+	Bytecode types.RawBytes `json:"bytecode"`
+	Balance  types.RawBytes `json:"balance"`
 }
 
 type Create2AccountRequest struct {
-	Bytecode []byte
-	Balance  *big.Int
-	Salt     *big.Int
+	Bytecode types.RawBytes `json:"bytecode"`
+	Balance  *big.Int       `json:"balance"`
+	Salt     *big.Int       `json:"salt"`
 }
 
-type CreateAccountRequestJson struct {
-	Bytecode CustomBytes `json:"bytecode"`
-	Balance  CustomBytes `json:"balance"`
+type Create2AccountRequestRaw struct {
+	Bytecode types.RawBytes `json:"bytecode"`
+	Balance  types.RawBytes `json:"balance"`
+	Salt     types.RawBytes `json:"salt"`
 }
 
-type Create2AccountRequestJson struct {
-	Bytecode CustomBytes `json:"bytecode"`
-	Balance  CustomBytes `json:"balance"`
-	Salt     CustomBytes `json:"salt"`
+func (m CallRequest) MarshalJSON() ([]byte, error) {
+	var to types.RawBytes = types.PaddLeftTo32(m.To.Bytes())
+	var from types.RawBytes = types.PaddLeftTo32(m.From.Bytes())
+	var value types.RawBytes = m.Value.FillBytes(make([]byte, 32))
+	var gasLimit types.RawBytes = m.GasLimit.FillBytes(make([]byte, 32))
+	return json.Marshal(map[string]interface{}{
+		"to":       to,
+		"from":     from,
+		"value":    value,
+		"gasLimit": gasLimit,
+		"calldata": m.Calldata,
+		"bytecode": m.Bytecode,
+		"codeHash": m.CodeHash,
+		"isQuery":  m.IsQuery,
+	})
 }
 
-func (v CreateAccountRequestJson) Transform() CreateAccountRequest {
-	return CreateAccountRequest{
-		Bytecode: v.Bytecode.Value,
-		Balance:  big.NewInt(0).SetBytes(paddLeftTo32(v.Balance.Value)),
+func (m *CallRequest) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
 	}
+	var d CallRequestRaw
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+	m.To = sdk.AccAddress(cleanupAddress(d.To))
+	m.From = sdk.AccAddress(cleanupAddress(d.From))
+	m.Value = big.NewInt(0).SetBytes(d.Value)
+	m.GasLimit = big.NewInt(0).SetBytes(d.GasLimit)
+	m.Calldata = d.Calldata
+	m.Bytecode = d.Bytecode
+	m.CodeHash = d.CodeHash
+	m.IsQuery = d.IsQuery
+	return nil
 }
 
-func (v Create2AccountRequestJson) Transform() Create2AccountRequest {
-	return Create2AccountRequest{
-		Bytecode: v.Bytecode.Value,
-		Balance:  big.NewInt(0).SetBytes(paddLeftTo32(v.Balance.Value)),
-		Salt:     big.NewInt(0).SetBytes(paddLeftTo32(v.Salt.Value)),
+func (m *CreateAccountRequest) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
 	}
+	var d CreateAccountRequestRaw
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+	m.Balance = big.NewInt(0).SetBytes(d.Balance)
+	m.Bytecode = d.Bytecode
+	return nil
+}
+
+func (m *Create2AccountRequest) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var d Create2AccountRequestRaw
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+	m.Balance = big.NewInt(0).SetBytes(d.Balance)
+	m.Bytecode = d.Bytecode
+	m.Salt = big.NewInt(0).SetBytes(d.Salt)
+	return nil
 }

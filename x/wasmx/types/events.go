@@ -4,7 +4,7 @@ const (
 	// WasmModuleEventType is stored with any contract TX that returns non empty EventAttributes
 	WasmModuleEventType = "wasmx"
 	// CustomContractEventPrefix contracts can create custom events. To not mix them with other system events they got the `wasm-` prefix.
-	CustomContractEventPrefix = "wasmx-"
+	CustomContractEventPrefix = "wasmx"
 
 	EventTypeStoreCode   = "store_code"
 	EventTypeInstantiate = "instantiate"
