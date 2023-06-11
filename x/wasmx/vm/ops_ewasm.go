@@ -453,7 +453,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	fmt.Println("Go: call value", value)
+	fmt.Println("Go: callCode value", value)
 	calldata, err := readMem(callframe, params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
@@ -461,10 +461,10 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	}
 	fmt.Println("Go: callCode calldata", hex.EncodeToString(calldata))
 
-	fmt.Println("---ctx.ContractRouter", ctx.ContractRouter)
+	fmt.Println("--callCode-ctx.ContractRouter", ctx.ContractRouter)
 
 	_, ok := ctx.ContractRouter[addr.String()]
-	fmt.Println("---ctx.ContractRouter ok", ok)
+	fmt.Println("--callCode-ctx.ContractRouter ok", ok)
 	if !ok {
 		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
 		if err != nil {
@@ -487,13 +487,13 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		CallData: calldata,
 		GasLimit: big.NewInt(gasLimit),
 	}
-	fmt.Println("--callContext sender", callContext.Sender.String())
+	fmt.Println("-callCode-callContext sender", callContext.Sender.String())
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
 
 	// use current contract storage key and contract address
 	currentAddress := ctx.Env.Contract.Address
-	fmt.Println("--callContext ContractStoreKey", ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
+	fmt.Println("-callCode-callContext ContractStoreKey", ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
 	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
 
 	newctx := &Context{
@@ -554,10 +554,10 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	}
 	fmt.Println("Go: callDelegate calldata", hex.EncodeToString(calldata))
 
-	fmt.Println("---ctx.ContractRouter", ctx.ContractRouter)
+	fmt.Println("-callDelegate--ctx.ContractRouter", ctx.ContractRouter)
 
 	_, ok := ctx.ContractRouter[addr.String()]
-	fmt.Println("---ctx.ContractRouter ok", ok)
+	fmt.Println("--callDelegate-ctx.ContractRouter ok", ok)
 	if !ok {
 		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
 		if err != nil {
@@ -580,13 +580,13 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 		CallData: calldata,
 		GasLimit: big.NewInt(gasLimit),
 	}
-	fmt.Println("--callContext sender", callContext.Sender.String())
+	fmt.Println("--callDelegate-callContext sender", callContext.Sender.String())
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
 
 	// use current contract storage key and contract address
 	currentAddress := ctx.Env.Contract.Address
-	fmt.Println("--callContext ContractStoreKey", ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
+	fmt.Println("-callDelegate-callContext ContractStoreKey", ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
 	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
 
 	newctx := &Context{
@@ -639,19 +639,19 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	fmt.Println("Go: call addrbz", hex.EncodeToString(addrbz))
+	fmt.Println("Go: callStatic addrbz", hex.EncodeToString(addrbz))
 	addr := sdk.AccAddress(cleanupAddress(addrbz))
-	fmt.Println("Go: call addr", addr, addr.String())
+	fmt.Println("Go: callStatic addr", addr, addr.String())
 	calldata, err := readMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	fmt.Println("Go: call calldata", hex.EncodeToString(calldata))
-	fmt.Println("---ctx.ContractRouter", ctx.ContractRouter)
+	fmt.Println("Go: callStatic calldata", hex.EncodeToString(calldata))
+	fmt.Println("--callStatic-ctx.ContractRouter", ctx.ContractRouter)
 
 	_, ok := ctx.ContractRouter[addr.String()]
-	fmt.Println("---ctx.ContractRouter ok", ok)
+	fmt.Println("--callStatic-ctx.ContractRouter ok", ok)
 	if !ok {
 		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
 		if err != nil {
@@ -673,7 +673,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		CallData: calldata,
 		GasLimit: big.NewInt(gasLimit),
 	}
-	fmt.Println("--callContext sender", callContext.Sender.String())
+	fmt.Println("-callStatic-callContext sender", callContext.Sender.String())
 
 	tempCtx, _ := ctx.Ctx.CacheContext()
 	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[addr.String()].ContractStoreKey)
@@ -695,7 +695,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		},
 	}
 	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
-	fmt.Println("Go: call result err", err)
+	fmt.Println("Go: callStatic result err", err)
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
 		returns[0] = int32(2)
@@ -704,7 +704,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	ctx.ReturnData = newctx.ReturnData
 	writeMemBoundBySize(callframe, ctx.ReturnData, params[4], params[5])
-	fmt.Println("Go: call result ReturnData", hex.EncodeToString(ctx.ReturnData))
+	fmt.Println("Go: callStatic result ReturnData", hex.EncodeToString(ctx.ReturnData))
 	return returns, wasmedge.Result_Success
 }
 
