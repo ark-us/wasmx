@@ -282,7 +282,8 @@ func ExecuteWasm(
 	_, err = contractVm.Execute(funcName)
 	if err != nil {
 		runCleanups(cleanups)
-		return types.ContractResponse{}, err
+		wrapErr := sdkerrors.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
+		return types.ContractResponse{Data: context.ReturnData}, wrapErr
 	}
 	runCleanups(cleanups)
 	conf.Release()
