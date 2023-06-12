@@ -35,7 +35,7 @@ var (
 	MaxProposalWasmSize = 3 * 1024 * 1024 // extension point for chains to customize via compile flag.
 
 	// 0x6000 must be minimum, to support Ethereum contracts
-	MaxInterpretedCodeSize = 0x6000
+	MaxInterpretedCodeSize = 0xf000
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
