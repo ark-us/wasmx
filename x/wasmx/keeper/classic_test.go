@@ -641,7 +641,7 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000005", hex.EncodeToString(queryres))
 
-	suite.Require().Contains(res.GetLog(), `{"key":"data","value":"0x"},{"key":"topic_0","value":"0x5566666666666666666666666666666666666666666666666666666666666677"},{"key":"topic_1","value":"0x0000000000000000000000000000000000000000000000000000000000000005"}`)
+	suite.Require().Contains(res.GetLog(), `{"key":"topic","value":"0x5566666666666666666666666666666666666666666666666666666666666677"},{"key":"topic","value":"0x0000000000000000000000000000000000000000000000000000000000000005"},{"key":"module","value":"wasmx"}`)
 }
 
 func (suite *KeeperTestSuite) TestEwasmSwitchJump() {
@@ -676,7 +676,7 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "logswasm")
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("0000000000000000000000000000000000000000000000000000000000000008")}, nil, nil)
-	logCount := strings.Count(res.GetLog(), "wasmx-log_ewasm_")
+	logCount := strings.Count(res.GetLog(), `{"key":"type","value":"ewasm"}`)
 	s.Require().Equal(5, logCount, res.GetLog())
 }
 
