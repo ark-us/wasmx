@@ -37,6 +37,7 @@ func (k Keeper) Deploy(
 }
 
 func (k Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+	fmt.Println("--PinCode")
 	return k.pinCode(ctx, codeId, compiledFolderPath)
 }
 
@@ -166,6 +167,7 @@ func (k Keeper) CreateInterpreted(
 	salt []byte,
 ) (codeID uint64, checksum []byte, contractAddress sdk.AccAddress, err error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "createInterpreted")
+	// fmt.Println("--CreateInterpreted--")
 
 	if creator == nil {
 		return 0, nil, nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
@@ -419,6 +421,7 @@ func (k Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath strin
 	if codeInfo == nil {
 		return sdkerrors.Wrap(types.ErrNotFound, "code info")
 	}
+	fmt.Println("--before k.wasmvm.Pin")
 
 	if err := k.wasmvm.Pin(codeInfo.CodeHash, compiledFolderPath); err != nil {
 		return sdkerrors.Wrap(types.ErrPinContractFailed, err.Error())

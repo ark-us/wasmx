@@ -2,6 +2,7 @@ package keeper
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -46,6 +47,7 @@ func (k Keeper) ActivateSystemContract(
 	wasmbin []byte,
 	compiledFolderPath string,
 ) error {
+	fmt.Println("--******ActivateSystemContract", contract.Label, contract.Pinned)
 	k.SetSystemContract(ctx, contract)
 	var codeID uint64
 	var err error
@@ -62,6 +64,7 @@ func (k Keeper) ActivateSystemContract(
 	}
 
 	if contract.Pinned {
+		fmt.Println("--contract.Pinned")
 		if err := k.PinCode(ctx, codeID, compiledFolderPath); err != nil {
 			return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
 		}

@@ -3,6 +3,7 @@ package keeper
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path"
 
@@ -153,6 +154,7 @@ func (k WasmxEngine) Cleanup() {
 
 func (k WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) error {
 	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
+	fmt.Println("--WasmxEngine-Pin", compiledFolderPath)
 	if compiledFolderPath != "" {
 		compiledPath := k.build_path(compiledFolderPath, checksum) + ".so"
 		err := copyFile(compiledPath, pinnedPath)
@@ -171,6 +173,7 @@ func (k WasmxEngine) Unpin(checksum types.Checksum) error {
 }
 
 func (k WasmxEngine) pin_code(inPath string, outPath string) error {
+	fmt.Println("--pin_code", inPath, outPath)
 	return vm.AotCompile(inPath, outPath)
 }
 

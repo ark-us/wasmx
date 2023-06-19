@@ -204,7 +204,8 @@ func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string
 }
 
 func (s AppContext) DeployEvm(sender simulation.Account, evmcode []byte, initMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
-	return s.Deploy(sender, evmcode, []string{types.WASMX_WASMX_2, types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label)
+	// return s.Deploy(sender, evmcode, []string{types.WASMX_WASMX_2, types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label)
+	return s.Deploy(sender, evmcode, []string{types.EWASM_ENV_1, types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label)
 }
 
 func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) sdk.AccAddress {

@@ -47,6 +47,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	}
 
 	for _, systemDep := range systemDeps {
+		// fmt.Println("--InitiateWasm-systemDep-", systemDep)
 		handler, found := SystemDepHandler[systemDep.Role]
 		if !found {
 			handler, found = SystemDepHandler[systemDep.Label]
@@ -101,9 +102,10 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 		} else if strings.Contains(fname, WASMX_VM_EXPORT) {
 			part = WASMX_VM_EXPORT
 		}
+		// fmt.Println("--AnalyzeWasm-mexport", fname, part)
 		if part != "" {
 			// TODO change this default env
-			dep := parseDependency(fname, EWASM_VM_EXPORT)
+			dep := parseDependency(fname, part)
 			err := VerifyEnv(dep, imports)
 			if err != nil {
 				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
@@ -111,6 +113,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			report.Dependencies = append(report.Dependencies, dep)
 		}
 	}
+	// fmt.Println("--AnalyzeWasm", report.Dependencies)
 
 	ast.Release()
 	loader.Release()
@@ -160,6 +163,7 @@ func ExecuteWasmInterpreted(
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 ) (types.ContractResponse, error) {
+	// fmt.Println("--ExecuteWasmInterpreted--", len(env.Contract.Bytecode))
 	var err error
 	var ethMsg types.WasmxExecutionMessage
 	err = json.Unmarshal(msg, &ethMsg)
@@ -185,25 +189,49 @@ func ExecuteWasmInterpreted(
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
+	// fmt.Println("--ExecuteWasmInterpreted1--", len(env.Contract.Bytecode))
 	// add itself
 	selfContext, err := buildExecutionContextClassic("", env, storeKey, conf, systemDeps)
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
-
 	contractVm, cleanups, err := InitiateWasm(context, "", nil, systemDeps)
 	if err != nil {
 		runCleanups(cleanups)
 		return types.ContractResponse{}, err
 	}
+	// fmt.Println("--ExecuteWasmInterpreted2--", len(env.Contract.Bytecode))
 	selfContext.Vm = contractVm
 	setExecutionBytecode(context, contractVm, funcName)
+	// fmt.Println("--ExecuteWasmInterpreted3--", len(env.Contract.Bytecode))
+
+	runtimeLen, err := hex.DecodeString(fmt.Sprintf("%064x", len(context.Env.Contract.Bytecode)))
+	if err != nil {
+		runCleanups(cleanups)
+		return types.ContractResponse{}, err
+	}
+	calldLen, err := hex.DecodeString(fmt.Sprintf("%064x", len(context.Env.CurrentCall.CallData)))
+	if err != nil {
+		runCleanups(cleanups)
+		return types.ContractResponse{}, err
+	}
+	// fmt.Println(fmt.Sprintf("%064x", len(context.Env.Contract.Bytecode)))
+	// fmt.Println(fmt.Sprintf("%064x", len(context.Env.CurrentCall.CallData)))
+	calld := append(runtimeLen, context.Env.Contract.Bytecode...)
+	calld = append(calld, calldLen...)
+	calld = append(calld, context.Env.CurrentCall.CallData...)
+	context.Env.CurrentCall.CallData = calld
+
+	// fmt.Println("--execute calld--", hex.EncodeToString(calld))
 
 	_, err = contractVm.Execute("main")
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
+
+	// fmt.Println("--execute ReturnData--", hex.EncodeToString(context.ReturnData))
+	// fmt.Println("--execute ReturnData--", len(context.ReturnData))
 
 	runCleanups(cleanups)
 	conf.Release()
@@ -230,6 +258,7 @@ func ExecuteWasm(
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 ) (types.ContractResponse, error) {
+	// fmt.Println("--ExecuteWasm--")
 	var err error
 	var ethMsg types.WasmxExecutionMessage
 	err = json.Unmarshal(msg, &ethMsg)
@@ -302,8 +331,12 @@ func ExecuteWasm(
 // codesize/codecopy at runtime execution = runtimeBytecode
 func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName string) {
 	// for interpreted code
-	if len(context.Env.Contract.Bytecode) > 0 && funcName == "instantiate" {
-		context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
+	// TODO improve detection of interpreted code
+	if len(context.Env.Contract.Bytecode) > 0 {
+		if funcName == "instantiate" {
+			context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
+		}
+		return
 	}
 
 	fnList, _ := contractVm.GetFunctionList()

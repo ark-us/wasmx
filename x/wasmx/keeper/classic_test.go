@@ -357,11 +357,11 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm")
+	fmt.Println("--******TestCallFibonacci", len(fiboevm))
 
 	_, contractAddressFibo := appA.DeployEvm(sender, fiboevm, types.WasmxExecutionMessage{Data: []byte{}}, nil, "fibonacci")
 
-	value := "0000000000000000000000000000000000000000000000000000000000000005"
+	value := "0000000000000000000000000000000000000000000000000000000000000008"
 	result := "0000000000000000000000000000000000000000000000000000000000000005"
 	paddedAddr := append(make([]byte, 12), contractAddressFibo.Bytes()...)
 	msgFib := types.WasmxExecutionMessage{Data: append(
@@ -372,6 +372,8 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 		append(paddedAddr, appA.Hex2bz(fibstorehex)...),
 		appA.Hex2bz(value)...,
 	)}
+
+	fmt.Println("--******TestCallFibonacci execute")
 
 	start := time.Now()
 	// call fibonaci contract directly
@@ -393,6 +395,8 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 
 	// fmt.Println("-fibo compiled-elapsed", time.Since(start))
 	// s.Require().Contains(hex.EncodeToString(res.Data), result)
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm")
 
 	// call fibonacci contract through the callwasm contract
 	deps := []string{wasmeth.EvmAddressFromAcc(contractAddressFibo).Hex()}

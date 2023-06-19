@@ -104,7 +104,7 @@ func DefaultSystemContracts() SystemContracts {
 			Address:     "0x0000000000000000000000000000000000000023",
 			Label:       INTERPRETER_EVM_SHANGHAI,
 			InitMessage: initMsg,
-			Pinned:      false,
+			Pinned:      true,
 			Role:        ROLE_INTERPRETER,
 		},
 	}

@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"fmt"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
@@ -9,9 +11,10 @@ import (
 )
 
 var (
-	EWASM_VM_EXPORT          = "ewasm_env_"
-	EWASM_INTERPRETER_EXPORT = "ewasm_ewasm_"
-	WASMX_VM_EXPORT          = "wasmx_wasmx_"
+	EWASM_VM_EXPORT           = "ewasm_env_"
+	EWASM_INTERPRETER_EXPORT  = "ewasm_ewasm_" // delete this
+	EWASM_INTERPRETER_EXPORT2 = "ewasm_interpreter_"
+	WASMX_VM_EXPORT           = "wasmx_wasmx_"
 
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
@@ -29,6 +32,7 @@ var (
 // interpreter_ewasm_shanghai
 
 func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	fmt.Println("--InitiateWasmxWasmx1", dep)
 	wasmx := BuildWasmxEnv1(context)
 	env := BuildAssemblyScriptEnv(context)
 
@@ -47,6 +51,7 @@ func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM, dep *types.S
 }
 
 func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	fmt.Println("--InitiateWasmxWasmx2", dep)
 	var cleanups []func()
 	var err error
 	keccakVm := wasmedge.NewVM()
@@ -74,6 +79,7 @@ func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM, dep *types.S
 }
 
 func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	// fmt.Println("--InitiateInterpreter", dep)
 	var cleanups []func()
 	err := wasmutils.InstantiateWasm(contractVm, dep.FilePath, nil)
 
@@ -84,6 +90,7 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 }
 
 func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	// fmt.Println("--InitiateEwasmTypeEnv", dep)
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
 	cleanups = append(cleanups, ewasmEnv.Release)
@@ -96,6 +103,7 @@ func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.
 
 func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
+	fmt.Println("--InitiateEwasmTypeInterpreter", dep)
 	contractEnv := wasmedge.NewModule("ewasm")
 	ewasmVm := wasmedge.NewVM()
 	ewasmEnv := BuildEwasmEnv(context)
