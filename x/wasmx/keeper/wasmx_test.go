@@ -22,7 +22,7 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCodeWasmx1(sender, wasmbin)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
 
 	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)

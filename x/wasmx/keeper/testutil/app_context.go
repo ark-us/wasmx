@@ -170,16 +170,6 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []
 	return codeId
 }
 
-func (s AppContext) StoreCodeWasmx1(sender simulation.Account, wasmbin []byte) uint64 {
-	deps := []string{types.WASMX_WASMX_1}
-	return s.StoreCode(sender, wasmbin, deps)
-}
-
-func (s AppContext) StoreCodeEwasmEnv1(sender simulation.Account, wasmbin []byte) uint64 {
-	deps := []string{types.EWASM_ENV_1}
-	return s.StoreCode(sender, wasmbin, deps)
-}
-
 func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.S.Require().NoError(err)
