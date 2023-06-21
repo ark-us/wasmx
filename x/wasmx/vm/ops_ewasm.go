@@ -126,7 +126,6 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := readAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
-
 	writeMem(callframe, part, params[0])
 	return returns, wasmedge.Result_Success
 }
@@ -198,8 +197,8 @@ func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, 
 
 // GASPRICE result_ptr: i32
 func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	data := types.EMPTY_BYTES32
-	writeMem(callframe, data, params[0])
+	ctx := context.(*Context)
+	writeBigInt(callframe, ctx.Env.Transaction.GasPrice, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -267,11 +266,19 @@ func getBlockDifficulty(context interface{}, callframe *wasmedge.CallingFrame, p
 	return returns, wasmedge.Result_Success
 }
 
+// PREVRANDAO result_ptr: i32
+func prevrandao(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	// TODO random
+	data := types.EMPTY_BYTES32
+	writeMem(callframe, data, params[0])
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
 // CHAINID result_ptr: i32
 func getChainId(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	data := ctx.Env.Chain.ChainId.FillBytes(make([]byte, 32))
-	writeMem(callframe, data, params[0])
+	writeBigInt(callframe, ctx.Env.Chain.ChainId, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -308,73 +315,37 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		return returns, wasmedge.Result_Success
 	}
 
+	var success int32
+	var returnData []byte
+
 	// Send funds
 	if value.BitLen() > 0 {
-		err := ctx.CosmosHandler.SendCoin(addr, value)
-		if err != nil {
-			ctx.ReturnData = []byte{}
-			returns[0] = int32(2)
-			return returns, wasmedge.Result_Success
-		}
+		err = ctx.CosmosHandler.SendCoin(addr, value)
 	}
-
-	_, ok := ctx.ContractRouter[addr.String()]
-	if !ok {
-		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		ctx.ContractRouter[addr.String()] = depContext
-	}
-
-	callContext := types.MessageInfo{
-		Origin:   ctx.Env.CurrentCall.Origin,
-		Sender:   ctx.Env.Contract.Address,
-		Funds:    value,
-		CallData: calldata,
-		GasLimit: big.NewInt(gasLimit),
-	}
-
-	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[addr.String()].ContractStoreKey)
-
-	newctx := &Context{
-		Ctx:            tempCtx,
-		GasMeter:       ctx.GasMeter,
-		ContractStore:  contractStore,
-		CosmosHandler:  ctx.CosmosHandler,
-		ContractRouter: ctx.ContractRouter,
-		Env: &types.Env{
-			Block:       ctx.Env.Block,
-			Transaction: ctx.Env.Transaction,
-			Chain:       ctx.Env.Chain,
-			Contract: types.EnvContractInfo{
-				Address: addr,
-			},
-			CurrentCall: callContext,
-		},
-	}
-
-	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
-	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
-		returns[0] = int32(2)
+		success = int32(2)
 	} else {
-		returns[0] = int32(0)
-		commit()
-		// Write events
-		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
-		ctx.Logs = append(ctx.Logs, newctx.Logs...)
+		contractContext := GetContractContext(ctx, addr)
+		if contractContext == nil {
+			// ! we return success here in case the contract does not exist
+			success = int32(0)
+		} else {
+			req := CallRequest{
+				To:       addr,
+				From:     ctx.Env.Contract.Address,
+				Value:    value,
+				GasLimit: big.NewInt(gasLimit),
+				Calldata: calldata,
+				Bytecode: contractContext.Bytecode,
+				CodeHash: contractContext.CodeHash,
+				IsQuery:  false,
+			}
+			success, returnData = WasmxCall(ctx, req)
+		}
 	}
-	ctx.ReturnData = newctx.ReturnData
+	returns[0] = success
 
-	writeMemBoundBySize(callframe, ctx.ReturnData, params[5], params[6])
+	writeMemBoundBySize(callframe, returnData, params[5], params[6])
 	return returns, wasmedge.Result_Success
 }
 
@@ -401,67 +372,30 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		return returns, wasmedge.Result_Success
 	}
 
-	_, ok := ctx.ContractRouter[addr.String()]
-	if !ok {
-		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		ctx.ContractRouter[addr.String()] = depContext
-	}
-
-	// keep same origin, change caller, funds
-	callContext := types.MessageInfo{
-		Origin:   ctx.Env.CurrentCall.Origin,
-		Sender:   ctx.Env.Contract.Address,
-		Funds:    value,
-		CallData: calldata,
-		GasLimit: big.NewInt(gasLimit),
-	}
-
-	tempCtx, commit := ctx.Ctx.CacheContext()
-
-	// use current contract storage key and contract address
-	currentAddress := ctx.Env.Contract.Address
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
-
-	newctx := &Context{
-		Ctx:            tempCtx,
-		GasMeter:       ctx.GasMeter,
-		ContractStore:  contractStore,
-		CosmosHandler:  ctx.CosmosHandler,
-		ContractRouter: ctx.ContractRouter,
-		Env: &types.Env{
-			Block:       ctx.Env.Block,
-			Transaction: ctx.Env.Transaction,
-			Chain:       ctx.Env.Chain,
-			Contract: types.EnvContractInfo{
-				Address: currentAddress,
-			},
-			CurrentCall: callContext,
-		},
-	}
-
-	// use the wasm code of the user-given address
-	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
-	// Returns 0 on success, 1 on failure and 2 on revert
-	if err != nil {
-		returns[0] = int32(2)
+	// We don't need to send funds because it would be sending funds
+	// from the current contract to itself
+	var success int32
+	var returnData []byte
+	contractContext := GetContractContext(ctx, addr)
+	if contractContext == nil {
+		// ! we return success here in case the contract does not exist
+		success = int32(0)
 	} else {
-		returns[0] = int32(0)
-		commit()
-		// Write events
-		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
-		ctx.Logs = append(ctx.Logs, newctx.Logs...)
+		req := CallRequest{
+			To:       ctx.Env.Contract.Address,
+			From:     ctx.Env.Contract.Address,
+			Value:    value,
+			GasLimit: big.NewInt(gasLimit),
+			Calldata: calldata,
+			Bytecode: contractContext.Bytecode,
+			CodeHash: contractContext.CodeHash,
+			IsQuery:  false,
+		}
+		success, returnData = WasmxCall(ctx, req)
 	}
-	ctx.ReturnData = newctx.ReturnData
-	writeMemBoundBySize(callframe, ctx.ReturnData, params[5], params[6])
+	returns[0] = success
+
+	writeMemBoundBySize(callframe, returnData, params[5], params[6])
 	return returns, wasmedge.Result_Success
 }
 
@@ -483,67 +417,30 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 		return returns, wasmedge.Result_Success
 	}
 
-	_, ok := ctx.ContractRouter[addr.String()]
-	if !ok {
-		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		ctx.ContractRouter[addr.String()] = depContext
-	}
-
-	// keep same origin, sender, funds
-	callContext := types.MessageInfo{
-		Origin:   ctx.Env.CurrentCall.Origin,
-		Sender:   ctx.Env.CurrentCall.Sender,
-		Funds:    ctx.Env.CurrentCall.Funds,
-		CallData: calldata,
-		GasLimit: big.NewInt(gasLimit),
-	}
-
-	tempCtx, commit := ctx.Ctx.CacheContext()
-
-	// use current contract storage key and contract address
-	currentAddress := ctx.Env.Contract.Address
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[currentAddress.String()].ContractStoreKey)
-
-	newctx := &Context{
-		Ctx:            tempCtx,
-		GasMeter:       ctx.GasMeter,
-		ContractStore:  contractStore,
-		CosmosHandler:  ctx.CosmosHandler,
-		ContractRouter: ctx.ContractRouter,
-		Env: &types.Env{
-			Block:       ctx.Env.Block,
-			Transaction: ctx.Env.Transaction,
-			Chain:       ctx.Env.Chain,
-			Contract: types.EnvContractInfo{
-				Address: currentAddress,
-			},
-			CurrentCall: callContext,
-		},
-	}
-
-	// use the wasm code of the user-given address
-	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
-	// Returns 0 on success, 1 on failure and 2 on revert
-	if err != nil {
-		returns[0] = int32(2)
+	// We don't need to send funds because it would be sending funds
+	// from the current contract to itself
+	var success int32
+	var returnData []byte
+	contractContext := GetContractContext(ctx, addr)
+	if contractContext == nil {
+		// ! we return success here in case the contract does not exist
+		success = int32(0)
 	} else {
-		returns[0] = int32(0)
-		commit()
-		// Write events
-		ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
-		ctx.Logs = append(ctx.Logs, newctx.Logs...)
+		req := CallRequest{
+			To:       ctx.Env.Contract.Address,
+			From:     ctx.Env.CurrentCall.Sender,
+			Value:    ctx.Env.CurrentCall.Funds,
+			GasLimit: big.NewInt(gasLimit),
+			Calldata: calldata,
+			Bytecode: contractContext.Bytecode,
+			CodeHash: contractContext.CodeHash,
+			IsQuery:  false,
+		}
+		success, returnData = WasmxCall(ctx, req)
 	}
-	ctx.ReturnData = newctx.ReturnData
-	writeMemBoundBySize(callframe, ctx.ReturnData, params[4], params[5])
+	returns[0] = success
+
+	writeMemBoundBySize(callframe, returnData, params[4], params[5])
 	return returns, wasmedge.Result_Success
 }
 
@@ -566,57 +463,29 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	_, ok := ctx.ContractRouter[addr.String()]
-	if !ok {
-		dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		depContext, err := buildExecutionContextClassic(dep.FilePath, *ctx.Env, dep.StoreKey, nil, dep.SystemDeps)
-		if err != nil {
-			returns[0] = int32(1)
-			return returns, wasmedge.Result_Success
-		}
-		ctx.ContractRouter[addr.String()] = depContext
-	}
 
-	callContext := types.MessageInfo{
-		Origin:   ctx.Env.CurrentCall.Origin,
-		Sender:   ctx.Env.Contract.Address,
-		Funds:    big.NewInt(0),
-		CallData: calldata,
-		GasLimit: big.NewInt(gasLimit),
-	}
-	tempCtx, _ := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[addr.String()].ContractStoreKey)
-
-	newctx := &Context{
-		Ctx:            tempCtx,
-		GasMeter:       ctx.GasMeter,
-		ContractStore:  contractStore,
-		CosmosHandler:  ctx.CosmosHandler,
-		ContractRouter: ctx.ContractRouter,
-		Env: &types.Env{
-			Block:       ctx.Env.Block,
-			Transaction: ctx.Env.Transaction,
-			Chain:       ctx.Env.Chain,
-			Contract: types.EnvContractInfo{
-				Address: addr,
-			},
-			CurrentCall: callContext,
-		},
-	}
-	_, err = ctx.ContractRouter[addr.String()].Execute(newctx)
-	// Returns 0 on success, 1 on failure and 2 on revert
-	if err != nil {
-		returns[0] = int32(2)
+	var success int32
+	var returnData []byte
+	contractContext := GetContractContext(ctx, addr)
+	if contractContext == nil {
+		// ! we return success here in case the contract does not exist
+		success = int32(0)
 	} else {
-		returns[0] = int32(0)
+		req := CallRequest{
+			To:       addr,
+			From:     ctx.Env.Contract.Address,
+			Value:    big.NewInt(0),
+			GasLimit: big.NewInt(gasLimit),
+			Calldata: calldata,
+			Bytecode: contractContext.Bytecode,
+			CodeHash: contractContext.CodeHash,
+			IsQuery:  true,
+		}
+		success, returnData = WasmxCall(ctx, req)
 	}
-	ctx.ReturnData = newctx.ReturnData
+	returns[0] = success
 
-	writeMemBoundBySize(callframe, ctx.ReturnData, params[4], params[5])
+	writeMemBoundBySize(callframe, returnData, params[4], params[5])
 	return returns, wasmedge.Result_Success
 }
 
@@ -628,22 +497,31 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	// data: codeId + args
-	codeId, err := readI64(callframe, params[1], int32(32))
+	data, err := readMem(callframe, params[1], params[2])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	constructorArgs, err := readMem(callframe, params[1].(int32)+32, params[2])
+	metadata := types.CodeMetadata{}
+	// TODO info from provenance ?
+	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	label := fmt.Sprintf("%s_%d", ctx.Env.Contract.Address.String(), codeId)
-	msg := types.WasmxExecutionMessage{Data: constructorArgs}
-	initMsg, err := json.Marshal(msg)
-	if err != nil {
-		return returns, wasmedge.Result_Fail
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
 	}
-	contractAddress, err := ctx.CosmosHandler.Create(uint64(codeId), ctx.Env.Contract.Address, initMsg, label, value)
+	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
+		data,
+		ctx.Env.CurrentCall.Origin,
+		ctx.Env.Contract.Address,
+		initMsg,
+		value,
+		sdeps,
+		metadata,
+		"", // TODO label?
+		[]byte{},
+	)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -659,26 +537,35 @@ func create2(context interface{}, callframe *wasmedge.CallingFrame, params []int
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
+	data, err := readMem(callframe, params[1], params[2])
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
 	salt, err := readMem(callframe, params[3], int32(32))
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	// data: codeId + args
-	codeId, err := readI64(callframe, params[1], int32(32))
+	metadata := types.CodeMetadata{}
+	// TODO info from provenance ?
+	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	constructorArgs, err := readMem(callframe, params[1].(int32)+32, params[2])
-	if err != nil {
-		return returns, wasmedge.Result_Fail
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
 	}
-	label := fmt.Sprintf("%s_%d", ctx.Env.Contract.Address.String(), codeId)
-	msg := types.WasmxExecutionMessage{Data: constructorArgs}
-	initMsg, err := json.Marshal(msg)
-	if err != nil {
-		return returns, wasmedge.Result_Fail
-	}
-	contractAddress, err := ctx.CosmosHandler.Create2(uint64(codeId), ctx.Env.Contract.Address, initMsg, salt, label, value)
+	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
+		data,
+		ctx.Env.CurrentCall.Origin,
+		ctx.Env.Contract.Address,
+		initMsg,
+		value,
+		sdeps,
+		metadata,
+		"", // TODO label?
+		salt,
+	)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -699,6 +586,7 @@ func log(context interface{}, callframe *wasmedge.CallingFrame, params []interfa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+
 	log := WasmxLog{Type: LOG_TYPE_EWASM, Data: data, ContractAddress: ctx.Env.Contract.Address}
 	topicCount := int(params[2].(int32))
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
@@ -883,6 +771,7 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	ewasmEnv.AddFunction("ethereum_getBlockGasLimit", wasmedge.NewFunction(functype__i64, getBlockGasLimit, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockTimestamp", wasmedge.NewFunction(functype__i64, getBlockTimestamp, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBlockDifficulty", wasmedge.NewFunction(functype_i32_, getBlockDifficulty, context, 0))
+	ewasmEnv.AddFunction("ethereum_prevrandao", wasmedge.NewFunction(functype_i32_, prevrandao, context, 0))
 	ewasmEnv.AddFunction("ethereum_getChainId", wasmedge.NewFunction(functype_i32_, getChainId, context, 0))
 	ewasmEnv.AddFunction("ethereum_getBaseFee", wasmedge.NewFunction(functype_i32_, getBaseFee, context, 0))
 	ewasmEnv.AddFunction("ethereum_call", wasmedge.NewFunction(functype_i64i32i32i32i32i32i32_i32, call, context, 0))

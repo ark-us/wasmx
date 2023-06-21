@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	EWASM_VM_EXPORT          = "ewasm_env_"
-	EWASM_INTERPRETER_EXPORT = "ewasm_ewasm_"
-	WASMX_VM_EXPORT          = "wasmx_wasmx_"
+	EWASM_VM_EXPORT = "ewasm_env_"
+	// EWASM_INTERPRETER_EXPORT = "ewasm_interpreter_"
+	WASMX_VM_EXPORT = "wasmx_wasmx_"
 
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}

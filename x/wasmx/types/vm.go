@@ -130,6 +130,7 @@ type SystemDep struct {
 	Role     string
 	Label    string
 	FilePath string
+	Deps     []SystemDep
 }
 
 func GetMaxCodeSize(sdeps []string) int {

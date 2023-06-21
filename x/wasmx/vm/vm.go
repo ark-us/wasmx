@@ -46,18 +46,9 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
 
-	for _, systemDep := range systemDeps {
-		handler, found := SystemDepHandler[systemDep.Role]
-		if !found {
-			handler, found = SystemDepHandler[systemDep.Label]
-		}
-		if found {
-			releaseFn, err := handler(context, contractVm, &systemDep)
-			cleanups = append(cleanups, releaseFn...)
-			if err != nil {
-				return nil, cleanups, err
-			}
-		}
+	cleanups, err = initiateWasmDeps(context, contractVm, systemDeps, cleanups)
+	if err != nil {
+		return nil, cleanups, err
 	}
 
 	if filePath != "" || len(wasmbuffer) > 0 {
@@ -66,19 +57,44 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	return contractVm, cleanups, err
 }
 
+func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []types.SystemDep, cleanups []func()) ([]func(), error) {
+	for _, systemDep := range systemDeps {
+		// system deps of system deps
+		cleanups, err := initiateWasmDeps(context, contractVm, systemDep.Deps, cleanups)
+		if err != nil {
+			return cleanups, err
+		}
+
+		handler, found := SystemDepHandler[systemDep.Role]
+		if !found {
+			handler, found = SystemDepHandler[systemDep.Label]
+		}
+		if found {
+			releaseFn, err := handler(context, contractVm, &systemDep)
+			cleanups = append(cleanups, releaseFn...)
+			if err != nil {
+				return cleanups, err
+			}
+		}
+	}
+	return cleanups, nil
+}
+
 func runCleanups(cleanups []func()) {
 	for _, cleanup := range cleanups {
 		cleanup()
 	}
 }
 
-func buildExecutionContextClassic(filePath string, env types.Env, storeKey []byte, conf *wasmedge.Configure, systemDeps []types.SystemDep) (*ContractContext, error) {
+func buildExecutionContextClassic(filePath string, bytecode []byte, codeHash []byte, storeKey []byte, systemDeps []types.SystemDep, conf *wasmedge.Configure) *ContractContext {
 	contractCtx := &ContractContext{
 		FilePath:         filePath,
 		ContractStoreKey: storeKey,
 		SystemDeps:       systemDeps,
+		Bytecode:         bytecode,
+		CodeHash:         codeHash,
 	}
-	return contractCtx, nil
+	return contractCtx
 }
 
 func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
@@ -96,14 +112,14 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 		var part string
 		if strings.Contains(fname, EWASM_VM_EXPORT) {
 			part = EWASM_VM_EXPORT
-		} else if strings.Contains(fname, EWASM_INTERPRETER_EXPORT) {
-			part = EWASM_INTERPRETER_EXPORT
+			// } else if strings.Contains(fname, EWASM_INTERPRETER_EXPORT) {
+			// 	part = EWASM_INTERPRETER_EXPORT
 		} else if strings.Contains(fname, WASMX_VM_EXPORT) {
 			part = WASMX_VM_EXPORT
 		}
 		if part != "" {
 			// TODO change this default env
-			dep := parseDependency(fname, EWASM_VM_EXPORT)
+			dep := parseDependency(fname, part)
 			err := VerifyEnv(dep, imports)
 			if err != nil {
 				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
@@ -179,19 +195,18 @@ func ExecuteWasmInterpreted(
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
-		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)
+		contractContext := buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, conf)
 		if err != nil {
 			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext, err := buildExecutionContextClassic("", env, storeKey, conf, systemDeps)
+	selfContext := buildExecutionContextClassic("", []byte{}, []byte{}, storeKey, systemDeps, conf)
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
-
 	contractVm, cleanups, err := InitiateWasm(context, "", nil, systemDeps)
 	if err != nil {
 		runCleanups(cleanups)
@@ -199,6 +214,8 @@ func ExecuteWasmInterpreted(
 	}
 	selfContext.Vm = contractVm
 	setExecutionBytecode(context, contractVm, funcName)
+	selfContext.Bytecode = context.Env.Contract.Bytecode
+	selfContext.CodeHash = context.Env.Contract.CodeHash
 
 	_, err = contractVm.Execute("main")
 	if err != nil {
@@ -257,14 +274,14 @@ func ExecuteWasm(
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
-		contractContext, err := buildExecutionContextClassic(dep.FilePath, env, dep.StoreKey, conf, dep.SystemDeps)
+		contractContext := buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, conf)
 		if err != nil {
 			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext, err := buildExecutionContextClassic(filePath, env, storeKey, conf, systemDeps)
+	selfContext := buildExecutionContextClassic(filePath, []byte{}, []byte{}, storeKey, systemDeps, conf)
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
@@ -278,6 +295,8 @@ func ExecuteWasm(
 	selfContext.Vm = contractVm
 
 	setExecutionBytecode(context, contractVm, funcName)
+	selfContext.Bytecode = context.Env.Contract.Bytecode
+	selfContext.CodeHash = context.Env.Contract.CodeHash
 
 	_, err = contractVm.Execute(funcName)
 	if err != nil {
@@ -302,8 +321,27 @@ func ExecuteWasm(
 // codesize/codecopy at runtime execution = runtimeBytecode
 func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName string) {
 	// for interpreted code
-	if len(context.Env.Contract.Bytecode) > 0 && funcName == "instantiate" {
-		context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
+	// TODO improve detection of interpreted code
+	if len(context.Env.Contract.Bytecode) > 0 {
+		if funcName == "instantiate" {
+			context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
+		}
+
+		runtimeLen, err := hex.DecodeString(fmt.Sprintf("%064x", len(context.Env.Contract.Bytecode)))
+		if err != nil {
+			return
+		}
+		calldLen, err := hex.DecodeString(fmt.Sprintf("%064x", len(context.Env.CurrentCall.CallData)))
+		if err != nil {
+			return
+		}
+		context.Env.CurrentCall.CallData = append(append(append(
+			runtimeLen,
+			context.Env.Contract.Bytecode...),
+			calldLen...),
+			context.Env.CurrentCall.CallData...,
+		)
+		return
 	}
 
 	fnList, _ := contractVm.GetFunctionList()

@@ -110,8 +110,8 @@ type TransactionInfo struct {
 	//
 	// Along with BlockInfo.Height, this allows you to get a unique
 	// transaction identifier for the chain for future queries
-	Index    uint32  `json:"index"`
-	GasPrice big.Int `json:"gasPrice"`
+	Index    uint32   `json:"index"`
+	GasPrice *big.Int `json:"gasPrice"`
 }
 
 type MessageInfo struct {
@@ -133,6 +133,7 @@ type ContractDependency struct {
 	FilePath   string
 	SystemDeps []SystemDep
 	Bytecode   []byte
+	CodeHash   []byte
 }
 
 func (u RawBytes) MarshalJSON() ([]byte, error) {

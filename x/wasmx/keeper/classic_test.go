@@ -287,7 +287,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000001312c5e", qres)
+	s.Require().Equal("00000000000000000000000000000000000000000000000000000ec61514d400", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -357,21 +357,10 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm")
-
 	_, contractAddressFibo := appA.DeployEvm(sender, fiboevm, types.WasmxExecutionMessage{Data: []byte{}}, nil, "fibonacci")
 
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	result := "0000000000000000000000000000000000000000000000000000000000000005"
-	paddedAddr := append(make([]byte, 12), contractAddressFibo.Bytes()...)
-	msgFib := types.WasmxExecutionMessage{Data: append(
-		append(paddedAddr, appA.Hex2bz(fibhex)...),
-		appA.Hex2bz(value)...,
-	)}
-	msgFibStore := types.WasmxExecutionMessage{Data: append(
-		append(paddedAddr, appA.Hex2bz(fibstorehex)...),
-		appA.Hex2bz(value)...,
-	)}
 
 	start := time.Now()
 	// call fibonaci contract directly
@@ -381,26 +370,36 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	)}, nil, nil, 10000000, nil)
 
 	fmt.Println("-fibo-elapsed", time.Since(start))
-	fmt.Println("--fibo-data", hex.EncodeToString(res.Data))
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
-	return
-	// start = time.Now()
-	// // call fibonaci contract directly
-	// res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
-	// 	appA.Hex2bz(fibhex),
-	// 	appA.Hex2bz(value)...,
-	// )}, nil, nil)
 
-	// fmt.Println("-fibo compiled-elapsed", time.Since(start))
-	// s.Require().Contains(hex.EncodeToString(res.Data), result)
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm")
+
+	paddedAddr := append(make([]byte, 12), contractAddressFibo.Bytes()...)
+	msgFibInternal := types.WasmxExecutionMessage{Data: append(
+		append(paddedAddr, appA.Hex2bz(fibInternal)...),
+		appA.Hex2bz(value)...,
+	)}
+	msgFib := types.WasmxExecutionMessage{Data: append(
+		append(paddedAddr, appA.Hex2bz(fibhex)...),
+		appA.Hex2bz(value)...,
+	)}
+	msgFibStore := types.WasmxExecutionMessage{Data: append(
+		append(paddedAddr, appA.Hex2bz(fibstorehex)...),
+		appA.Hex2bz(value)...,
+	)}
 
 	// call fibonacci contract through the callwasm contract
 	deps := []string{wasmeth.EvmAddressFromAcc(contractAddressFibo).Hex()}
+
+	// query fibonacci internal through the callwasm contract
+	qres := appA.WasmxQuery(sender, contractAddress, msgFibInternal, nil, deps)
+	s.Require().Equal(result, qres)
+
 	res = appA.ExecuteContract(sender, contractAddress, msgFib, nil, deps)
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
 
 	// query fibonacci through the callwasm contract
-	qres := appA.WasmxQuery(sender, contractAddress, msgFib, nil, deps)
+	qres = appA.WasmxQuery(sender, contractAddress, msgFib, nil, deps)
 	s.Require().Equal(result, qres)
 
 	// query fibonacci through the callwasm contract - with storage
@@ -447,9 +446,11 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	s.Require().Equal(balance.GetBalance().Amount, sdk.NewInt(0))
 
 	// contract has funds, so the inner call succeeds, but tx fails
+	// the inner call sends funds to the 0x1111 address, that does not yet exist
 	appA = s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
+
 	res = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil, 500_000, nil)
 	s.Require().True(res.IsErr(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "failed to execute message", res.GetLog())
@@ -675,9 +676,12 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 
 	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "logswasm")
 
-	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("0000000000000000000000000000000000000000000000000000000000000008")}, nil, nil)
+	data := "8888888888888888888888888888888888888888888888888888888888888888"
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(data)}, nil, nil)
 	logCount := strings.Count(res.GetLog(), `{"key":"type","value":"ewasm"}`)
+	dataCount := strings.Count(res.GetLog(), `{"key":"data","value":"0x8888888888888888888888888888888888888888888888888888888888888888"}`)
 	s.Require().Equal(5, logCount, res.GetLog())
+	s.Require().Equal(5, dataCount, res.GetLog())
 }
 
 func (suite *KeeperTestSuite) TestEwasmCreate1() {
