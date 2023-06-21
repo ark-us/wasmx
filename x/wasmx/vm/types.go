@@ -33,6 +33,8 @@ type ContractContext struct {
 	ContractStoreKey []byte
 	Context          *Context
 	SystemDeps       []types.SystemDep
+	Bytecode         []byte // runtime bytecode
+	CodeHash         []byte
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {

@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	_ "embed"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -22,13 +23,18 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCodeWasmx1(sender, wasmbin)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
 
 	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	suite.Require().Contains(res.GetLog(), "wasmx-log_wasmx_0")
-	suite.Require().Contains(res.GetLog(), `{"key":"topic_0","value":"0x68656c6c6f000000000000000000000000000000000000000000000000000000"}`)
+
+	logCount := strings.Count(res.GetLog(), `{"key":"type","value":"wasmx"}`)
+	dataCount := strings.Count(res.GetLog(), `{"key":"data","value":"0x"}`)
+	topicCount := strings.Count(res.GetLog(), `{"key":"topic","value":"0x68656c6c6f000000000000000000000000000000000000000000000000000000"}`)
+	s.Require().Equal(1, logCount, res.GetLog())
+	s.Require().Equal(1, dataCount, res.GetLog())
+	s.Require().Equal(1, topicCount, res.GetLog())
 
 	initvalue := "sammy"
 	keybz := []byte("hello")

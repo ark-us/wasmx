@@ -157,7 +157,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
+	codeId := appA.StoreCode(sender, curve384testbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 	deps := []string{"0x0000000000000000000000000000000000000005"}
 
@@ -238,7 +238,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
+	codeId := appA.StoreCode(sender, curve384testbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
 	// test_cmul
@@ -273,7 +273,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCodeEwasmEnv1(sender, curve384testbin)
+	codeId := appA.StoreCode(sender, curve384testbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
 	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"

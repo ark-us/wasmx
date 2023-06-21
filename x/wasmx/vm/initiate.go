@@ -9,9 +9,8 @@ import (
 )
 
 var (
-	EWASM_VM_EXPORT          = "ewasm_env_"
-	EWASM_INTERPRETER_EXPORT = "ewasm_ewasm_"
-	WASMX_VM_EXPORT          = "wasmx_wasmx_"
+	EWASM_VM_EXPORT = "ewasm_env_"
+	WASMX_VM_EXPORT = "wasmx_env_"
 
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
@@ -21,9 +20,9 @@ var (
 // interface_version
 // interpreter_name / address
 
-// wasmx_wasmx_1 // simplest wasmx version 1 interface
 // ewasm_env_1 // current ewasm interface
-// wasmx_wasmx_2 // wasmx version 2 with env information
+// wasmx_env_1 // simplest wasmx version 1 interface
+// wasmx_env_2 // wasmx version 2 with env information
 
 // interpreter_evm_shanghai
 // interpreter_ewasm_shanghai
@@ -94,46 +93,12 @@ func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.
 	return cleanups, nil
 }
 
-func InitiateEwasmTypeInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	var cleanups []func()
-	contractEnv := wasmedge.NewModule("ewasm")
-	ewasmVm := wasmedge.NewVM()
-	ewasmEnv := BuildEwasmEnv(context)
-	cleanups = append(cleanups, contractEnv.Release, ewasmVm.Release, ewasmEnv.Release)
-
-	err := ewasmVm.RegisterModule(ewasmEnv)
-	if err != nil {
-		return cleanups, err
-	}
-	err = wasmutils.InstantiateWasm(ewasmVm, "", interpreters.EwasmInterpreter_1)
-	if err != nil {
-		return cleanups, err
-	}
-
-	ewasmFnList, ewasmFnTypes := ewasmVm.GetFunctionList()
-	for i, name := range ewasmFnList {
-		data := EwasmFunctionWrapper{Name: name, Vm: ewasmVm}
-		fntype := ewasmFnTypes[i]
-		wrappedFn := wasmedge.NewFunction(fntype, ewasm_wrapper, data, 0)
-		contractEnv.AddFunction(name, wrappedFn)
-	}
-
-	// err = contractVm.RegisterModule(ewasmVm.GetActiveModule())
-	err = contractVm.RegisterModule(contractEnv)
-	if err != nil {
-		return cleanups, err
-	}
-
-	return cleanups, nil
-}
-
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
 
 func init() {
-	SystemDepHandler[types.WASMX_WASMX_1] = InitiateWasmxWasmx1
-	SystemDepHandler[types.WASMX_WASMX_2] = InitiateWasmxWasmx2
+	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxWasmx1
+	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxWasmx2
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
-	SystemDepHandler[types.INTERPRETER_EWASM_1] = InitiateEwasmTypeInterpreter
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 }
 

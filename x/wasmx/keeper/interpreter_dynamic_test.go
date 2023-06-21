@@ -28,7 +28,7 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(types.INTERPRETER_EVM_SHANGHAI)
-	codeId := appA.StoreCodeEwasmEnv1(sender, wasmbin)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
 	interpreterAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "newinterpreter", nil)
 
 	newlabel := types.INTERPRETER_EVM_SHANGHAI + "2"
@@ -54,7 +54,7 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
 	initvaluebz, err := hex.DecodeString(initvalue)
 	s.Require().NoError(err)
-	_, contractAddress := appA.Deploy(sender, evmcode, []string{types.WASMX_WASMX_2, newlabel}, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage")
+	_, contractAddress := appA.Deploy(sender, evmcode, []string{newlabel}, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage")
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)

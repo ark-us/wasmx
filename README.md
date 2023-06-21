@@ -10,7 +10,7 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 
 ```
 
-mythosd testnet init-files --chain-id=mythos_7000-13 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt"
+mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt"
 
 mythosd start --home=./testnet/node0/mythosd
 
@@ -69,3 +69,23 @@ go test --count=1 -short -v ./x/wasmx/keeper
 go test --count=1 -v -run KeeperTestSuite/TestEwasmFibonacci ./x/wasmx/keeper
 
 ```
+
+```
+
+go mod download github.com/second-state/WasmEdge-go
+
+export MACOSX_DEPLOYMENT_TARGET=13.2
+
+```
+
+ld: warning: dylib (/Users/user/.wasmedge/lib/libwasmedge.dylib) was built for newer macOS version (13.2) than being linked (13.0)
+
+
+sudo xcode-select --switch /Applications/Xcode.app
+
+-mmacosx-version-min=13.2
+
+
+
+sudo rm -rf /Library/Developer/CommandLineTools
+sudo xcode-select --install

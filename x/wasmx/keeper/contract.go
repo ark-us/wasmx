@@ -101,6 +101,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 		FilePath:   filepath,
 		SystemDeps: sdeps,
 		Bytecode:   codeInfo.InterpretedBytecodeRuntime,
+		CodeHash:   codeInfo.CodeHash,
 	}, nil
 }
 
@@ -131,6 +132,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	if err != nil {
 		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
 	}
+
 	checksum, err = k.wasmvm.Create(wasmCode)
 	if err != nil {
 		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
@@ -732,6 +734,7 @@ func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemD
 		Role:     role.Role,
 		Label:    label,
 		FilePath: path,
+		Deps:     k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps),
 	}
 	return dep, nil
 }

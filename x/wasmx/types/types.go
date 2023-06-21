@@ -90,7 +90,7 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 			Proposer:  sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
 		},
 		Transaction: &TransactionInfo{
-			GasPrice: *big.NewInt(1), // TODO
+			GasPrice: big.NewInt(1), // TODO
 		},
 		Contract: EnvContractInfo{
 			Address:  contractAddr,
