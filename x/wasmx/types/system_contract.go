@@ -85,13 +85,13 @@ func DefaultSystemContracts() SystemContracts {
 			Address:     "0x0000000000000000000000000000000000000020",
 			Label:       "secp384r1",
 			InitMessage: initMsg,
-			Pinned:      false,
+			Pinned:      false, //TODO
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000021",
 			Label:       "secp384r1_registry",
 			InitMessage: initMsg,
-			Pinned:      false,
+			Pinned:      false, // TODO
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000022",
@@ -104,7 +104,7 @@ func DefaultSystemContracts() SystemContracts {
 			Address:     "0x0000000000000000000000000000000000000023",
 			Label:       INTERPRETER_EVM_SHANGHAI,
 			InitMessage: initMsg,
-			Pinned:      false,
+			Pinned:      true,
 			Role:        ROLE_INTERPRETER,
 		},
 	}
