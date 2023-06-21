@@ -109,17 +109,15 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 
 	for _, mexport := range exports {
 		fname := mexport.GetExternalName()
-		var part string
+		var dep string
 		if strings.Contains(fname, EWASM_VM_EXPORT) {
-			part = EWASM_VM_EXPORT
-			// } else if strings.Contains(fname, EWASM_INTERPRETER_EXPORT) {
-			// 	part = EWASM_INTERPRETER_EXPORT
+			dep = parseDependency(fname, EWASM_VM_EXPORT)
 		} else if strings.Contains(fname, WASMX_VM_EXPORT) {
-			part = WASMX_VM_EXPORT
+			dep = parseDependency(fname, WASMX_VM_EXPORT)
+		} else if fname == types.EWASM_ENV_0 {
+			dep = types.EWASM_ENV_1
 		}
-		if part != "" {
-			// TODO change this default env
-			dep := parseDependency(fname, part)
+		if dep != "" {
 			err := VerifyEnv(dep, imports)
 			if err != nil {
 				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())

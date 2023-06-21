@@ -102,24 +102,27 @@ func LibWasmEdgeVersion() string {
 }
 
 // simplest wasmx version 1 interface
-var WASMX_WASMX_1 = "wasmx_wasmx_1"
+var WASMX_ENV_1 = "wasmx_env_1"
 
 // wasmx version 2 with env information
-var WASMX_WASMX_2 = "wasmx_wasmx_2"
+var WASMX_ENV_2 = "wasmx_env_2"
+
+// initial interface use in precompiles 1 -> 9
+// TODO replace & remove
+var EWASM_ENV_0 = "ewasm_interface_version_1"
 
 // current ewasm interface
 var EWASM_ENV_1 = "ewasm_env_1"
 
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
-	WASMX_WASMX_1: true,
-	WASMX_WASMX_2: true,
-	EWASM_ENV_1:   true,
+	WASMX_ENV_1: true,
+	WASMX_ENV_2: true,
+	EWASM_ENV_1: true,
 }
 
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 
-var INTERPRETER_EWASM_1 = "ewasm_ewasm_1" // outdated
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
 
 // var SUPPORTED_INTERPRETERS = map[string]bool{

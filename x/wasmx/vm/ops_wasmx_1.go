@@ -8,6 +8,10 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
+var (
+	SSTORE_GAS_WASMX = 20_000
+)
+
 type WasmxJsonLog struct {
 	Type   string
 	Data   []byte
@@ -38,7 +42,7 @@ func wasmxStorageStore(context interface{}, callframe *wasmedge.CallingFrame, pa
 	}
 
 	ctx := context.(*Context)
-	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS), "wasmx")
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmx")
 
 	ctx.ContractStore.Set(key, data)
 	returns := make([]interface{}, 0)
@@ -76,8 +80,13 @@ func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	logtype := wlog.Type
+	// cosmos log attributes cannot be empty
+	if logtype == "" {
+		logtype = LOG_TYPE_WASMX
+	}
 	log := WasmxLog{
-		Type:            wlog.Type,
+		Type:            logtype,
 		ContractAddress: ctx.Env.Contract.Address,
 		Data:            wlog.Data,
 		Topics:          wlog.Topics,

@@ -13,6 +13,11 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
+var (
+	SSTORE_GAS_EWASM = 20_000
+	LOG_TYPE_EWASM   = "ewasm"
+)
+
 func useGas(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
@@ -57,7 +62,7 @@ func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS), "ewasm")
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "ewasm")
 	ctx.ContractStore.Set(keybz, valuebz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
