@@ -212,7 +212,8 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
 		return sdkerrors.Wrap(err, "sender")
 	}
-	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
 		return sdkerrors.Wrap(err, "contract")
 	}
 
@@ -221,6 +222,9 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
 		return sdkerrors.Wrap(err, "payload msg")
+	}
+	if IsSystemAddress(contractAddress) {
+		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
 }
@@ -252,7 +256,8 @@ func (msg MsgExecuteWithOriginContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
 		return sdkerrors.Wrap(err, "sender")
 	}
-	if _, err := sdk.AccAddressFromBech32(msg.Contract); err != nil {
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
 		return sdkerrors.Wrap(err, "contract")
 	}
 
@@ -261,6 +266,9 @@ func (msg MsgExecuteWithOriginContract) ValidateBasic() error {
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
 		return sdkerrors.Wrap(err, "payload msg")
+	}
+	if IsSystemAddress(contractAddress) {
+		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
 }
@@ -289,10 +297,12 @@ func (msg MsgExecuteDelegateContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
 		return sdkerrors.Wrap(err, "sender")
 	}
-	if _, err := sdk.AccAddressFromBech32(msg.CodeContract); err != nil {
+	codeAddress, err := sdk.AccAddressFromBech32(msg.CodeContract)
+	if err != nil {
 		return sdkerrors.Wrap(err, "code_contract")
 	}
-	if _, err := sdk.AccAddressFromBech32(msg.StorageContract); err != nil {
+	storageAddress, err := sdk.AccAddressFromBech32(msg.StorageContract)
+	if err != nil {
 		return sdkerrors.Wrap(err, "storage_contract")
 	}
 
@@ -301,6 +311,12 @@ func (msg MsgExecuteDelegateContract) ValidateBasic() error {
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
 		return sdkerrors.Wrap(err, "payload msg")
+	}
+	if IsSystemAddress(codeAddress) {
+		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
+	}
+	if IsSystemAddress(storageAddress) {
+		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
 }

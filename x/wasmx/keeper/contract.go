@@ -330,6 +330,9 @@ func (k Keeper) instantiateInternal(
 	if creator == nil {
 		return nil, nil, types.ErrEmpty.Wrap("creator")
 	}
+	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
+		return nil, nil, err
+	}
 	instanceCosts := k.gasRegister.NewContractInstanceCosts(k.IsPinnedCode(ctx, codeID), len(initMsg))
 	ctx.GasMeter().ConsumeGas(instanceCosts, "Loading wasm module: instantiate")
 
@@ -464,6 +467,9 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return nil, err
 	}
+	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
+		return nil, err
+	}
 
 	// add known dependencies for that codeId
 	// TODO system deps in the form of smart contracts
@@ -539,6 +545,9 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	if err != nil {
 		return nil, err
 	}
+	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
+		return nil, err
+	}
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
@@ -582,6 +591,9 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
+		return nil, err
+	}
+	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
 		return nil, err
 	}
 

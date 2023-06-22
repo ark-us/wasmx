@@ -1,79 +1,43 @@
 package vm
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"math"
+	"math/big"
+	"time"
 
-	"mythos/v1/x/wasmx/types"
+	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
-// Returns nil if there is no contract
-func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
-	depContext, ok := ctx.ContractRouter[addr.String()]
-	if ok {
-		return depContext
-	}
-	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
-	if err != nil {
-		return nil
-	}
-	depContext = buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, nil)
-	ctx.ContractRouter[addr.String()] = depContext
-	return depContext
+type SysContext struct {
+	ctx *Context
 }
 
-func WasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
-	depContext := GetContractContext(ctx, req.To)
-	// ! we return success here in case the contract does not exist
-	// an empty transaction to any account should succeed (evm way)
-	// even with value 0 & no calldata
-	if depContext == nil {
-		return int32(0), nil
+func timeNow(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*SysContext)
+	magnitude := params[0].(int32)
+	if magnitude > 9 {
+		magnitude = 9
 	}
-
-	callContext := types.MessageInfo{
-		Origin:   ctx.Env.CurrentCall.Origin,
-		Sender:   req.From,
-		Funds:    req.Value,
-		CallData: req.Calldata,
-		GasLimit: req.GasLimit,
+	if magnitude < 0 {
+		magnitude = 0
 	}
-
-	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractStoreKey)
-
-	newctx := &Context{
-		Ctx:            tempCtx,
-		GasMeter:       ctx.GasMeter,
-		ContractStore:  contractStore,
-		CosmosHandler:  ctx.CosmosHandler,
-		ContractRouter: ctx.ContractRouter,
-		Env: &types.Env{
-			Block:       ctx.Env.Block,
-			Transaction: ctx.Env.Transaction,
-			Chain:       ctx.Env.Chain,
-			Contract: types.EnvContractInfo{
-				Address:  req.To,
-				CodeHash: req.CodeHash,
-				Bytecode: req.Bytecode,
-			},
-			CurrentCall: callContext,
-		},
-	}
-
-	_, err := newctx.ContractRouter[req.To.String()].Execute(newctx)
-	var success int32
-	// Returns 0 on success, 1 on failure and 2 on revert
+	timed := time.Now().UnixNano() / int64(math.Pow10(int(9-magnitude)))
+	ptr, err := allocateWriteMem(ctx.ctx, callframe, big.NewInt(timed).FillBytes(make([]byte, 32)))
 	if err != nil {
-		success = int32(2)
-	} else {
-		success = int32(0)
-		if !req.IsQuery {
-			commit()
-			// Write events
-			ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
-			ctx.Logs = append(ctx.Logs, newctx.Logs...)
-		}
+		return nil, wasmedge.Result_Fail
 	}
-	ctx.ReturnData = newctx.ReturnData
-	return success, newctx.ReturnData
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func BuildSysEnv(context *Context) *wasmedge.Module {
+	env := wasmedge.NewModule("sys")
+	ctx := &SysContext{ctx: context}
+	functype_i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
+	env.AddFunction("timeNow", wasmedge.NewFunction(functype_i32_i32, timeNow, ctx, 0))
+	return env
 }

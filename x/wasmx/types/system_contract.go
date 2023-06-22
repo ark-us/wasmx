@@ -107,6 +107,12 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
 		},
+		{
+			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			Label:       "sys_proxy",
+			InitMessage: initMsg,
+			Pinned:      false,
+		},
 	}
 }
 

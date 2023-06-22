@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -213,4 +214,25 @@ func (k Keeper) IsPinnedCode(ctx sdk.Context, codeID uint64) bool {
 	// store := ctx.KVStore(k.storeKey)
 	// return store.Has(types.GetPinnedCodeIndexPrefix(codeID))
 	return false
+}
+
+func (k Keeper) CanCallSystemContract(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
+	// is EOA
+	if !k.HasContractInfo(ctx, contractAddress) {
+		return true
+	}
+	// is system contract
+	if types.IsSystemAddress(contractAddress) {
+		return true
+	}
+	return false
+}
+
+func RequireNotSystemContract(contractAddress sdk.AccAddress, deps []string) error {
+	for _, dep := range deps {
+		if strings.Contains(dep, types.SYS_VM_EXPORT) && !types.IsSystemAddress(contractAddress) {
+			return sdkerrors.Wrap(types.ErrUnauthorizedAddress, "invalid address for system contracts")
+		}
+	}
+	return nil
 }

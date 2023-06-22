@@ -195,6 +195,10 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 		}
 	}()
 
+	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
+		return nil, sdkerrors.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
+	}
+
 	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
 	switch {
 	case err != nil:

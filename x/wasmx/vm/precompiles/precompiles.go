@@ -44,6 +44,9 @@ var (
 
 	//go:embed 23.evm_shanghai.wasm
 	interpreter_evm_shanghai []byte
+
+	//go:embed ff.sys_proxy.wasm
+	sys_proxy []byte
 )
 
 func GetPrecompileByLabel(label string) []byte {
@@ -75,6 +78,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = secret_sharing
 	case types.INTERPRETER_EVM_SHANGHAI:
 		wasmbin = interpreter_evm_shanghai
+	case "sys_proxy":
+		wasmbin = sys_proxy
 	}
 	return wasmbin
 }

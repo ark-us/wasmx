@@ -76,6 +76,9 @@ func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, prov
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
 	return h.Keeper.GetContractDependency(ctx, addr)
 }
+func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool {
+	return h.Keeper.CanCallSystemContract(ctx, addr)
+}
 
 func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{

@@ -2,8 +2,10 @@ package types
 
 import (
 	"fmt"
+	"math/big"
 	"net/url"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
@@ -68,4 +70,8 @@ func ValidateVerificationInfo(source, builder string, codeHash []byte) error {
 		// code hash checksum match validation is done in the keeper, ungzipping consumes gas
 	}
 	return nil
+}
+
+func IsSystemAddress(addr sdk.AccAddress) bool {
+	return big.NewInt(0).SetBytes(addr.Bytes()).Cmp(TRUSTED_ADDRESS_LIMIT) >= 0
 }
