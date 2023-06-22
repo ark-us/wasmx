@@ -42,7 +42,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 
 	// set default
 	if len(systemDeps) == 0 {
-		label := EWASM_VM_EXPORT + "1"
+		label := types.EWASM_VM_EXPORT + "1"
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
 
@@ -110,10 +110,12 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	for _, mexport := range exports {
 		fname := mexport.GetExternalName()
 		var dep string
-		if strings.Contains(fname, EWASM_VM_EXPORT) {
-			dep = parseDependency(fname, EWASM_VM_EXPORT)
-		} else if strings.Contains(fname, WASMX_VM_EXPORT) {
-			dep = parseDependency(fname, WASMX_VM_EXPORT)
+		if strings.Contains(fname, types.EWASM_VM_EXPORT) {
+			dep = parseDependency(fname, types.EWASM_VM_EXPORT)
+		} else if strings.Contains(fname, types.WASMX_VM_EXPORT) {
+			dep = parseDependency(fname, types.WASMX_VM_EXPORT)
+		} else if strings.Contains(fname, types.SYS_VM_EXPORT) {
+			dep = parseDependency(fname, types.SYS_VM_EXPORT)
 		} else if fname == types.EWASM_ENV_0 {
 			dep = types.EWASM_ENV_1
 		}

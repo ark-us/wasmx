@@ -84,6 +84,8 @@ var (
 
 	ErrInvalidRoute = sdkErrors.Register(DefaultCodespace, 29, "invalid route")
 
+	ErrUnauthorizedAddress = sdkErrors.Register(DefaultCodespace, 30, "unauthorized address")
+
 	// ErrInvalidCode error if an attribute/event from the contract is invalid
 	_ = sdkErrors.Register(DefaultCodespace, 45, "invalid code id")
 )

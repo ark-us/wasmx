@@ -9,9 +9,6 @@ import (
 )
 
 var (
-	EWASM_VM_EXPORT = "ewasm_env_"
-	WASMX_VM_EXPORT = "wasmx_env_"
-
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
 	// codesize_constructor
@@ -27,7 +24,18 @@ var (
 // interpreter_evm_shanghai
 // interpreter_ewasm_shanghai
 
-func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateSysEnv1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	sys := BuildSysEnv(context)
+	var cleanups []func()
+	cleanups = append(cleanups, sys.Release)
+	err := contractVm.RegisterModule(sys)
+	if err != nil {
+		return cleanups, err
+	}
+	return cleanups, nil
+}
+
+func InitiateWasmxEnv1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	wasmx := BuildWasmxEnv1(context)
 	env := BuildAssemblyScriptEnv(context)
 
@@ -45,7 +53,7 @@ func InitiateWasmxWasmx1(context *Context, contractVm *wasmedge.VM, dep *types.S
 	return cleanups, nil
 }
 
-func InitiateWasmxWasmx2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateWasmxEnv2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	var err error
 	keccakVm := wasmedge.NewVM()
@@ -96,8 +104,9 @@ func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
 
 func init() {
-	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxWasmx1
-	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxWasmx2
+	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
+	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
+	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 }

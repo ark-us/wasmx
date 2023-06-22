@@ -90,6 +90,7 @@ type WasmxCosmosHandler interface {
 	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int) (sdk.AccAddress, error)
 	Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error)
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
+	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library
@@ -101,11 +102,18 @@ func LibWasmEdgeVersion() string {
 	return wasmedge.GetVersion()
 }
 
+var EWASM_VM_EXPORT = "ewasm_env_"
+var WASMX_VM_EXPORT = "wasmx_env_"
+var SYS_VM_EXPORT = "sys_env_"
+
 // simplest wasmx version 1 interface
 var WASMX_ENV_1 = "wasmx_env_1"
 
 // wasmx version 2 with env information
 var WASMX_ENV_2 = "wasmx_env_2"
+
+// non-deterministic system operations, only as queries
+var SYS_ENV_1 = "sys_env_1"
 
 // initial interface use in precompiles 1 -> 9
 // TODO replace & remove
@@ -124,6 +132,8 @@ var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
+
+var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 
 // var SUPPORTED_INTERPRETERS = map[string]bool{
 // 	INTERPRETER_EVM_SHANGHAI: true,
