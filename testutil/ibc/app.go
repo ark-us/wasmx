@@ -2,8 +2,6 @@ package ibctesting
 
 import (
 	"encoding/json"
-	"os"
-	"path"
 	"testing"
 	"time"
 
@@ -100,11 +98,11 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 	wasmxGenesis := wasmxtypes.DefaultGenesisState()
-	mydir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
+	// mydir, err := os.Getwd()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
 	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 
 	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
