@@ -31,6 +31,17 @@ var (
 	PkxLo_2 = "2eea94ccab529e7df1d1eef8505d1b0c5ed6e81a2d0fb77302866dd9d039432c"
 	PkyHi_2 = "000000000000000000000000000000004a6b9bdad287d3c05acbb6107abdeea9"
 	PkyLo_2 = "e745066f63b91c449790a6de0fd2d1fa71bee691a0f76d6c37836e43ad9e5009"
+
+	PkxHi_3 = "0000000000000000000000000000000003e501df64c8d7065d58eac499351e2a"
+	PkxLo_3 = "fcdc74fda6bd4980919ca5dcf51075e51e36e9442aba748d8d9931e0f1332bd6"
+	PkyHi_3 = "0000000000000000000000000000000049451a30e75e7a6a7f48519b72a60e4f"
+	PkyLo_3 = "f737d5a207bc2e493b8455c10652357e19a1044de6e3c1d680f328cb7015f4ee"
+
+	msgHash2 = "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
+	rhi2     = "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
+	rlo2     = "6df129d5028be3fa1626b192458daf49d4c7676c08663a62decad8df853340ad"
+	shi2     = "0000000000000000000000000000000000103c7e7fb0c04197a5371923adda8e"
+	slo2     = "ae415624e6419214f98bebac9a3cf9ddc8bf28eb2871142e9d0371a59598f2dd"
 )
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
@@ -46,43 +57,32 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 
 	// fadd
 	fsig := "6422c13f"
-	xhi := "00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
-	xlo := "b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
-	yhi := "000000000000000000000000000000000d0d9d4f899b00456516b647c5e9b7ed"
-	ylo := "02c538d7878e63e8da0603396b4cbd9494d42f691141f9e2e5927cf88aac0c63"
-	qres := appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, xhi, xlo, yhi, ylo))}, nil, nil)
+	qres := appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, PkxHi_1, PkxLo_1, PkyHi_1, PkyLo_1))}, nil, nil)
 	hi := "00000000000000000000000000000000d5580bbe4b82f354c197e5336a0aaf56"
 	lo := "ba52704a88c4d94eb0ca5ad6871ee0708b22d6cd75b50e65e2c52317488e7095"
 	s.Require().Equal(hi+lo, qres)
 
 	// fsub
 	fsig = "b387fd8f"
-	xhi = "0000000000000000000000000000000003e501df64c8d7065d58eac499351e2a"
-	xlo = "fcdc74fda6bd4980919ca5dcf51075e51e36e9442aba748d8d9931e0f1332bd6"
-	yhi = "0000000000000000000000000000000049451a30e75e7a6a7f48519b72a60e4f"
-	ylo = "f737d5a207bc2e493b8455c10652357e19a1044de6e3c1d680f328cb7015f4ee"
-	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, xhi, xlo, yhi, ylo))}, nil, nil)
+
+	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, PkxHi_3, PkxLo_3, PkyHi_3, PkyLo_3))}, nil, nil)
 	hi = "00000000000000000000000000000000ba9fe7ae7d6a5c9bde109929268f0fdb"
 	lo = "05a49f5b9f011b375618501beebe40660495e4f543d6b2b70ca60916811d36e7"
 	s.Require().Equal(hi+lo, qres)
 
 	// fmul
 	fsig = "970a1fe1"
-	xhi = "00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
-	xlo = "b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
-	yhi = "000000000000000000000000000000000d0d9d4f899b00456516b647c5e9b7ed"
-	ylo = "02c538d7878e63e8da0603396b4cbd9494d42f691141f9e2e5927cf88aac0c63"
-	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, xhi, xlo, yhi, ylo))}, nil, deps)
+	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, PkxHi_1, PkxLo_1, PkyHi_1, PkyLo_1))}, nil, deps)
 	hi = "000000000000000000000000000000005de8b2b22ecdf6790f0c7de8ea01bdd6"
 	lo = "fb8446353273f6053dd29c5ef32974403861d4b388cefccf2e01f63f53b6ffe0"
 	s.Require().Equal(hi+lo, qres)
 
 	// fmul 2
 	fsig = "970a1fe1"
-	xhi = "0000000000000000000000000000000058df4b4c45b7d92e15838cc2ec62e63d"
-	xlo = "26a7a65903a36031844d06d753766895e2ebf62f2d593d88f797f25a39a72c98"
-	yhi = "00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
-	ylo = "b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
+	xhi := "0000000000000000000000000000000058df4b4c45b7d92e15838cc2ec62e63d"
+	xlo := "26a7a65903a36031844d06d753766895e2ebf62f2d593d88f797f25a39a72c98"
+	yhi := "00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
+	ylo := "b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde26432"
 	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, xhi, xlo, yhi, ylo))}, nil, deps)
 	hi = "00000000000000000000000000000000858564b53562cbd97f41a5389d7e6673"
 	lo = "41d0469bbe77677a1ec703fcfcf7fe3f1d0c7b85bf517be09e3b5d480678f3be"
@@ -90,9 +90,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 
 	// finv
 	fsig = "17fac034"
-	xhi = "0000000000000000000000000000000003e501df64c8d7065d58eac499351e2a"
-	xlo = "fcdc74fda6bd4980919ca5dcf51075e51e36e9442aba748d8d9931e0f1332bd6"
-	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s", fsig, xhi, xlo))}, nil, deps)
+	qres = appA.WasmxQuery(sender, addressCurve, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s", fsig, PkxHi_3, PkxLo_3))}, nil, deps)
 	hi = "00000000000000000000000000000000ba2909a8e60a55d7a0caf129a18c6c6a"
 	lo = "a41434c431646bb4a928e76ad732152f35eb59e6df429de7323e5813809f03dc"
 	s.Require().Equal(hi+lo, qres)
@@ -276,12 +274,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	codeId := appA.StoreCode(sender, curve384testbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
-	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
-	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
-	rlo := "6df129d5028be3fa1626b192458daf49d4c7676c08663a62decad8df853340ad"
-	shi := "0000000000000000000000000000000000103c7e7fb0c04197a5371923adda8e"
-	slo := "ae415624e6419214f98bebac9a3cf9ddc8bf28eb2871142e9d0371a59598f2dd"
-
 	fmt.Println("--precomputeGenHex--")
 	start := time.Now()
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, 100_000_000_000, nil) // 52_810_317
@@ -294,7 +286,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 
 	fmt.Println("--test_verify_fast--")
 	start = time.Now()
-	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", "5879e57c", msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", "5879e57c", msgHash2, rhi2, rlo2, shi2, slo2))}, nil, deps) // , 1_000_000_000_000, nil)
 	fmt.Println("Elapsed test_verify_fast: ", time.Since(start))
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
 }
@@ -434,10 +426,10 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	register := "375a7c7f"
 	// finishRegistration()
 	finishRegistration := "f6aead24"
-	// // verifySignature(bytes32,uint256,uint256,uint256,uint256)
-	// verifySignature := "dd3ee290"
-	// // verifySignatureFast(bytes32,uint256,uint256,uint256,uint256)
-	// verifySignatureFast := "b448884d"
+	// verifySignature(bytes32,uint256,uint256,uint256,uint256)
+	verifySignature := "dd3ee290"
+	// verifySignatureFast(bytes32,uint256,uint256,uint256,uint256)
+	verifySignatureFast := "b448884d"
 	// // verifySignatureByIndex(uint256,bytes32,uint256,uint256,uint256,uint256)
 	// verifySignatureByIndex := "3d907d52"
 	// // verifySignatureFastByIndex(uint256,bytes32,uint256,uint256,uint256,uint256)
@@ -471,7 +463,11 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	registryAddress := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000021"))
+	// registryAddress := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000021"))
+	evmcode, err := hex.DecodeString(testdata.WalletRegistry)
+	s.Require().NoError(err)
+	_, registryAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "create")
+	fmt.Println("--registryAddress--", wasmeth.Evm32AddressFromAcc(registryAddress).Hex())
 
 	fmt.Println("--register--")
 	start := time.Now()
@@ -501,15 +497,19 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	count := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(counter)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", count)
 
-	// fmt.Println("--verifySignature--")
-	// qres := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignature, msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+	fmt.Println("--verifySignatureFast--")
+	start = time.Now()
+	qres := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignatureFast, msgHash2, rhi2, rlo2, shi2, slo2))}, nil, deps) // , 1_000_000_000_000, nil)
+	fmt.Println("Elapsed verifySignatureFast: ", time.Since(start))
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
 
-	// fmt.Println("--verifySignatureFast--")
-	// qres = appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignatureFast, msgHash, rhi, rlo, shi, slo))}, nil, deps) // , 1_000_000_000_000, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+	fmt.Println("--verifySignature--")
+	start = time.Now()
+	qres = appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignature, msgHash2, rhi2, rlo2, shi2, slo2))}, nil, deps) // , 1_000_000_000_000, nil)
+	fmt.Println("Elapsed verifySignature: ", time.Since(start))
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
 
-	// EXPIRATION_DELTA := 31556952 // 1 year in seconds
+	// EXPIRATION_DELTA := 31556952                      // 1 year in seconds
 	// delta_one_year := uint64(EXPIRATION_DELTA/5 + 10) // 5 sec blocks
 	// s.CommitNBlocks(s.chainA, delta_one_year)
 
