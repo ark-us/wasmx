@@ -463,7 +463,106 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	// registryAddress := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000021"))
+	registryAddress := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000021"))
+
+	fmt.Println("--register--")
+	start := time.Now()
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 20_000_000_000_000, nil) // 52_810_317
+	fmt.Println("Elapsed register: ", time.Since(start))
+
+	fmt.Println("--finishRegistration--")
+	start = time.Now()
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(finishRegistration)}, nil, deps, 20_000_000, nil) // 52_810_448
+	fmt.Println("Elapsed finishRegistration: ", time.Since(start))
+
+	registered := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isRegistered, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", registered)
+
+	registered = appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isRegisteredAddress, "000000000000000000000000"+senderHex[2:]))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", registered)
+
+	expired := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isExpired, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", expired)
+
+	expired = appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isExpiredAddress, "000000000000000000000000"+senderHex[2:]))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", expired)
+
+	active := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isActive, "000000000000000000000000"+senderHex[2:]))}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", active)
+
+	count := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(counter)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", count)
+
+	fmt.Println("--verifySignatureFast--")
+	start = time.Now()
+	qres := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignatureFast, msgHash2, rhi2, rlo2, shi2, slo2))}, nil, deps) // , 1_000_000_000_000, nil)
+	fmt.Println("Elapsed verifySignatureFast: ", time.Since(start))
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+
+	fmt.Println("--verifySignature--")
+	start = time.Now()
+	qres = appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s%s", verifySignature, msgHash2, rhi2, rlo2, shi2, slo2))}, nil, deps) // , 1_000_000_000_000, nil)
+	fmt.Println("Elapsed verifySignature: ", time.Since(start))
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", qres)
+
+	// EXPIRATION_DELTA := 31556952                      // 1 year in seconds
+	// delta_one_year := uint64(EXPIRATION_DELTA/5 + 10) // 5 sec blocks
+	// s.CommitNBlocks(s.chainA, delta_one_year)
+
+	// expired = appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isExpired, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
+	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000001", expired)
+}
+
+func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
+	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileWalletRegistryInterpreted")
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	deps := []string{"0x0000000000000000000000000000000000000005"}
+	senderHex := wasmeth.EvmAddressFromAcc(sender.Address).Hex()
+
+	// RENEWAL_TIMESTAMP_DELTA := 604800; // 1 week in seconds
+
+	// register(uint256,uint256,uint256,uint256)
+	register := "375a7c7f"
+	// finishRegistration()
+	finishRegistration := "f6aead24"
+	// verifySignature(bytes32,uint256,uint256,uint256,uint256)
+	verifySignature := "dd3ee290"
+	// verifySignatureFast(bytes32,uint256,uint256,uint256,uint256)
+	verifySignatureFast := "b448884d"
+	// // verifySignatureByIndex(uint256,bytes32,uint256,uint256,uint256,uint256)
+	// verifySignatureByIndex := "3d907d52"
+	// // verifySignatureFastByIndex(uint256,bytes32,uint256,uint256,uint256,uint256)
+	// verifySignatureFastByIndex := "53e05baf"
+
+	// isActive(address)
+	isActive := "9f8a13d7"
+	// isRegistered(uint256)
+	isRegistered := "579a6988"
+	// isRegisteredAddress(address)
+	isRegisteredAddress := "db0c7ca8"
+	// isExpired(uint256)
+	isExpired := "d9548e53"
+	// isExpiredAddress(address)
+	isExpiredAddress := "9bb59591"
+	// "counter()
+	counter := "61bc221a"
+	// expirations(uint256)
+	// expirations := "c251ddf8"
+
+	// registerAddress(uint256,address,uint256,uint256,uint256,uint256)
+	// registerAddress := "41b709c8"
+	// removeAddress(uint256,address,uint256,uint256,uint256,uint256)
+	// removeAddress := "e5b3db52"
+	// renewAccount(uint256,uint256,uint256,uint256,uint256,uint256)
+	// renewAccount := "52e616f8"
+	// replaceAccount(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+	// replaceAccount := "7b7ceb53"
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
 	evmcode, err := hex.DecodeString(testdata.WalletRegistry)
 	s.Require().NoError(err)
 	_, registryAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "create")

@@ -74,7 +74,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 
 	qres := appA.WasmxQuery(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	elapsed := big.NewInt(0).SetBytes(appA.Hex2bz(qres))
-	suite.Require().True(elapsed.Cmp(big.NewInt(5)) == 0 || elapsed.Cmp(big.NewInt(6)) == 0)
+	suite.Require().True(elapsed.Cmp(big.NewInt(2)) == 0 || elapsed.Cmp(big.NewInt(3)) == 0, qres)
 
 	// an EOA cannot make a system call by tx
 	res := appA.ExecuteContractNoCheck(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1000000, nil)
