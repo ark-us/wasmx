@@ -150,6 +150,13 @@ func validateBytes(i interface{}) error {
 	return nil
 }
 
+const (
+	// AddressLengthCW is the expected length of a Wasmx and CosmWasm address
+	AddressLengthWasmx = 32
+	// AddressLengthCW is the expected length of an Ethereum address
+	AddressLengthEth = 20
+)
+
 // TODO have addresses be 32bytes
 
 // IsZeroAddress returns true if the address corresponds to an empty ethereum hex address.
@@ -159,13 +166,45 @@ func IsZeroAddress(address string) bool {
 
 // ValidateAddress returns an error if the provided string is either not a hex formatted string address
 func ValidateAddress(address string) error {
-	if !common.IsHexAddress(address) {
+	if !IsHexAddress(address) {
 		return sdkerrors.Wrapf(
 			sdkerrors.ErrInvalidAddress, "address '%s' is not a valid ethereum hex address",
 			address,
 		)
 	}
 	return nil
+}
+
+// IsHexAddress verifies whether a string can represent a valid hex-encoded
+// WasmX or Ethereum address or not.
+func IsHexAddress(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
+	return isHex(s) && (len(s) == 2*AddressLengthWasmx || len(s) == 2*AddressLengthEth)
+}
+
+// has0xPrefix validates str begins with '0x' or '0X'.
+func has0xPrefix(str string) bool {
+	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
+}
+
+// isHexCharacter returns bool of c being a valid hexadecimal.
+func isHexCharacter(c byte) bool {
+	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+}
+
+// isHex validates whether each byte is valid hexadecimal string.
+func isHex(str string) bool {
+	if len(str)%2 != 0 {
+		return false
+	}
+	for _, c := range []byte(str) {
+		if !isHexCharacter(c) {
+			return false
+		}
+	}
+	return true
 }
 
 // ValidateNonZeroAddress returns an error if the provided string is not a hex
