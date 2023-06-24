@@ -54,7 +54,7 @@ func (k WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil)
+		data, err = vm.ExecuteWasmInterpreted(ctx, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
 	} else {
 		// TODO gas
 		var filepath string
@@ -63,7 +63,7 @@ func (k WasmxEngine) Instantiate(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil)
+		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -89,7 +89,7 @@ func (k WasmxEngine) Execute(
 	pinned := codeInfo.Pinned
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+		data, err = vm.ExecuteWasmInterpreted(ctx, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
 
 		var filepath string
@@ -98,7 +98,7 @@ func (k WasmxEngine) Execute(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	}
 
 	if err != nil {
@@ -118,29 +118,28 @@ func (k WasmxEngine) QueryExecute(
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
-) (types.WasmxQueryResponse, uint64, error) {
+	isdebug bool,
+) (types.ContractResponse, uint64, error) {
 	var data types.ContractResponse
 	var err error
 	checksum := codeInfo.CodeHash
 	pinned := codeInfo.Pinned
-
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+		data, err = vm.ExecuteWasmInterpreted(ctx, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	} else {
-
 		var filepath string
 		if pinned {
 			filepath = k.build_path_pinned(k.DataDir, checksum)
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies)
+		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	}
 
 	if err != nil {
-		return types.WasmxQueryResponse{}, 0, err
+		return data, 0, err
 	}
-	return types.WasmxQueryResponse{Data: data.Data}, 0, nil
+	return data, 0, nil
 }
 
 func (k WasmxEngine) GetCode(checksum types.Checksum) (types.WasmCode, error) {

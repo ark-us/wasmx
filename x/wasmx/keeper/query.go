@@ -209,6 +209,51 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 	return &types.QuerySmartContractCallResponse{Data: bz}, nil
 }
 
+func (k Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContractCallRequest) (rsp *types.QueryDebugContractCallResponse, err error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	if err := req.QueryData.ValidateBasic(); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid query data")
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	sender, err := sdk.AccAddressFromBech32(req.Sender)
+	if err != nil {
+		return nil, err
+	}
+	// TODO validate deps
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	// recover from out-of-gas panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch rType := r.(type) {
+			case sdk.ErrorOutOfGas:
+				err = sdkerrors.Wrapf(sdkerrors.ErrOutOfGas,
+					"out of gas in location: %v; gasWanted: %d, gasUsed: %d",
+					rType.Descriptor, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed(),
+				)
+			default:
+				err = sdkerrors.ErrPanic
+			}
+			rsp = nil
+			k.Logger(ctx).
+				Debug("smart query contract",
+					"error", "recovering panic",
+					"contract-address", req.Address,
+					"stacktrace", string(debug.Stack()))
+		}
+	}()
+
+	if !k.CanCallSystemContract(ctx, sender) {
+		return nil, sdkerrors.Wrap(types.ErrUnauthorizedAddress, "debug is non-deterministic and cannot be called as part of a transaction")
+	}
+	bz, memsnapshot, errMsg := k.QueryDebug(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
+	return &types.QueryDebugContractCallResponse{Data: bz, MemorySnapshot: memsnapshot, ErrorMessage: errMsg}, nil
+}
+
 func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")

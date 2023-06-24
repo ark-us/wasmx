@@ -40,6 +40,9 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	var cleanups []func()
 	var err error
 
+	// first in, last cleaned up
+	cleanups = append(cleanups, contractVm.Release)
+
 	// set default
 	if len(systemDeps) == 0 {
 		label := types.EWASM_VM_EXPORT + "1"
@@ -145,6 +148,7 @@ func AotCompile(inPath string, outPath string) error {
 	err := compiler.Compile(inPath, outPath)
 	if err != nil {
 		fmt.Println("Go: Compile WASM to AOT mode Failed!!")
+		compiler.Release()
 		return err
 	}
 
@@ -175,6 +179,7 @@ func ExecuteWasmInterpreted(
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
+	isdebug bool,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -183,7 +188,10 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not decode wasm execution message")
 	}
 
+	var cleanups []func()
 	conf := wasmedge.NewConfigure()
+	cleanups = append(cleanups, conf.Release)
+
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
 		Ctx:            ctx,
@@ -207,7 +215,8 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
-	contractVm, cleanups, err := InitiateWasm(context, "", nil, systemDeps)
+	contractVm, _cleanups, err := InitiateWasm(context, "", nil, systemDeps)
+	cleanups = append(cleanups, _cleanups...)
 	if err != nil {
 		runCleanups(cleanups)
 		return types.ContractResponse{}, err
@@ -219,19 +228,18 @@ func ExecuteWasmInterpreted(
 
 	_, err = contractVm.Execute("main")
 	if err != nil {
+		if isdebug {
+			resp := handleContractErrorResponse(contractVm, funcName, context.ReturnData, isdebug, err)
+			runCleanups(cleanups)
+			return resp, nil
+		}
+		runCleanups(cleanups)
 		return types.ContractResponse{}, err
 	}
 
+	response := handleContractResponse(contractVm, funcName, context.ReturnData, context.Logs, isdebug)
+
 	runCleanups(cleanups)
-	conf.Release()
-	contractVm.Release()
-
-	response := handleContractResponse(funcName, context.ReturnData, context.Logs)
-	if err != nil {
-		runCleanups(cleanups)
-		return response, err
-	}
-
 	return response, nil
 }
 
@@ -246,6 +254,7 @@ func ExecuteWasm(
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
+	isdebug bool,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -262,7 +271,10 @@ func ExecuteWasm(
 		return types.ContractResponse{Data: data}, nil
 	}
 
+	var cleanups []func()
 	conf := wasmedge.NewConfigure()
+	cleanups = append(cleanups, conf.Release)
+
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
 		Ctx:            ctx,
@@ -276,7 +288,7 @@ func ExecuteWasm(
 	for _, dep := range dependencies {
 		contractContext := buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, conf)
 		if err != nil {
-			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
+			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
@@ -287,7 +299,8 @@ func ExecuteWasm(
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
 
-	contractVm, cleanups, err := InitiateWasm(context, filePath, nil, systemDeps)
+	contractVm, _cleanups, err := InitiateWasm(context, filePath, nil, systemDeps)
+	cleanups = append(cleanups, _cleanups...)
 	if err != nil {
 		runCleanups(cleanups)
 		return types.ContractResponse{}, err
@@ -300,19 +313,19 @@ func ExecuteWasm(
 
 	_, err = contractVm.Execute(funcName)
 	if err != nil {
-		runCleanups(cleanups)
 		wrapErr := sdkerrors.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
-		return types.ContractResponse{Data: context.ReturnData}, wrapErr
+		if isdebug {
+			resp := handleContractErrorResponse(contractVm, funcName, context.ReturnData, isdebug, wrapErr)
+			runCleanups(cleanups)
+			return resp, nil
+		}
+		runCleanups(cleanups)
+		return types.ContractResponse{}, err
 	}
+
+	response := handleContractResponse(contractVm, funcName, context.ReturnData, context.Logs, isdebug)
+
 	runCleanups(cleanups)
-	conf.Release()
-	contractVm.Release()
-
-	response := handleContractResponse(funcName, context.ReturnData, context.Logs)
-	if err != nil {
-		return response, err
-	}
-
 	return response, nil
 }
 
@@ -377,7 +390,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	}
 }
 
-func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types.ContractResponse {
+func handleContractResponse(contractVm *wasmedge.VM, funcName string, data []byte, logs []WasmxLog, isdebug bool) types.ContractResponse {
 	var events []types.Event
 	// module and contract address for the main transaction are added later
 	for i, log := range logs {
@@ -412,9 +425,43 @@ func handleContractResponse(funcName string, data []byte, logs []WasmxLog) types
 			Attributes: attributes,
 		})
 	}
+	var mem []byte
+	if isdebug {
+		mem = getMemory(contractVm)
+	}
 
 	return types.ContractResponse{
-		Data:   data,
-		Events: events,
+		Data:           data,
+		Events:         events,
+		MemorySnapshot: mem,
 	}
+}
+
+func handleContractErrorResponse(contractVm *wasmedge.VM, funcName string, data []byte, isdebug bool, err error) types.ContractResponse {
+	var mem []byte
+	if isdebug {
+		mem = getMemory(contractVm)
+	}
+
+	return types.ContractResponse{
+		Data:           data,
+		MemorySnapshot: mem,
+		ErrorMessage:   err.Error(),
+	}
+}
+
+const MEM_PAGE_SIZE = 64 * 1024 // 64KiB
+func getMemory(contractVm *wasmedge.VM) []byte {
+	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
+	if activeMemory == nil {
+		return nil
+	}
+	pageSize := activeMemory.GetPageSize()
+	membz, err := activeMemory.GetData(uint(0), uint(pageSize*MEM_PAGE_SIZE))
+	if err != nil {
+		return nil
+	}
+	dst := make([]byte, len(membz))
+	copy(dst, membz)
+	return dst
 }

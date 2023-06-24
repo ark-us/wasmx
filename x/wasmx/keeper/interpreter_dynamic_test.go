@@ -3,6 +3,7 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
@@ -65,4 +66,82 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", hex.EncodeToString(queryres))
 
+}
+
+func (suite *KeeperTestSuite) TestWasmxDebug() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
+	s.Require().NoError(err)
+	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
+	initvaluebz, err := hex.DecodeString(initvalue)
+	s.Require().NoError(err)
+	_, caddr := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage")
+	qres, memsnap, err := appA.WasmxQueryDebug(sender, caddr, types.WasmxExecutionMessage{Data: appA.Hex2bz("6d4ce63c")}, nil, nil)
+	s.Require().NoError(err)
+	moduleMem := parseMem(memsnap)
+	s.Require().Equal(int32(117), moduleMem.Pc, "wrong pc")
+	s.Require().Equal(byte(0x5b), moduleMem.PcOpcode, "wrong opcode")
+	s.Require().Equal(initvalue, qres)
+}
+
+type EWasmMemory struct {
+	Stack             []byte
+	WordCount         int64
+	InterpreterMemory []byte
+	ContractMemory    []byte
+	Pc                int32
+	PcOpcode          byte
+	BytecodeOffset    int64
+	PcOffset          int64
+}
+
+func parseMem(mem []byte) EWasmMemory {
+	start := 0
+	stackSize := 1024 * 32 // 1024 slots - 32768 bytes
+	stack := mem[start:stackSize]
+	start = stackSize
+	// how many 32 byte words are stored in memory
+	wordCount := big.NewInt(0).SetBytes(mem[start : start+4]).Int64()
+	if wordCount == 0 {
+		wordCount = 2000
+	}
+
+	// mem cost, scratch space, keccak, bytecode, actual used memory
+	// start += 4 + 4 + 32 + 1024 + 28800
+	start = 62632
+	interpreterMemory := mem[start:(int64(start) + wordCount*32)]
+	// interpreter-specific
+	memOffset := 0x140
+	pcOffset := 0x160
+	bytecodeOffset := 0x100
+
+	memPtrBz := mloadEwasmMem(interpreterMemory, memOffset)
+	pcPtrBz := mloadEwasmMem(interpreterMemory, pcOffset)
+	bytecodePtrBz := mloadEwasmMem(interpreterMemory, bytecodeOffset)
+	memPtr := big.NewInt(0).SetBytes(memPtrBz).Int64()
+	pcPtr := big.NewInt(0).SetBytes(pcPtrBz).Int64()
+	bytecodePtr := big.NewInt(0).SetBytes(bytecodePtrBz).Int64()
+
+	truepc := pcPtr - bytecodePtr
+	pc := mloadEwasmMem(interpreterMemory, int(pcPtr))
+	return EWasmMemory{
+		Stack:             stack,
+		WordCount:         wordCount,
+		InterpreterMemory: interpreterMemory,
+		ContractMemory:    interpreterMemory[memPtr:],
+		Pc:                int32(truepc),
+		PcOpcode:          pc[0],
+		BytecodeOffset:    bytecodePtr,
+		PcOffset:          pcPtr,
+	}
+}
+
+func mloadEwasmMem(mem []byte, offset int) []byte {
+	return mem[offset : offset+32]
 }

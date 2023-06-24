@@ -12,16 +12,8 @@ type WasmxExecutionMessage struct {
 	Data []byte `json:"data"`
 }
 
-// ContractResult is the raw response from the instantiate/execute/migrate calls.
-// This is mirrors Rust's ContractResult<Response>.
-type ContractResult struct {
-	Ok  *ContractResponse `json:"ok,omitempty"`
-	Err string            `json:"error,omitempty"`
-}
-
 // ContractResponse defines the return value on a successful instantiate/execute/migrate.
 type ContractResponse struct {
-	// Messages []SubMsg `json:"messages"`
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface
@@ -29,6 +21,9 @@ type ContractResponse struct {
 	// custom events (separate from the main one that contains the attributes
 	// above)
 	Events []Event `json:"events"`
+	// only for debug
+	MemorySnapshot []byte
+	ErrorMessage   string
 }
 
 // Events must encode empty array as []
