@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
@@ -89,10 +90,12 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 	s.Require().Equal(int32(117), moduleMem.Pc, "wrong pc")
 	s.Require().Equal(byte(0x5b), moduleMem.PcOpcode, "wrong opcode")
 	s.Require().Equal(initvalue, qres)
+	// fmt.Println(moduleMem.Stack.ToString())
 }
 
+type EWasmStack [][32]byte
 type EWasmMemory struct {
-	Stack             []byte
+	Stack             EWasmStack
 	WordCount         int64
 	InterpreterMemory []byte
 	ContractMemory    []byte
@@ -100,6 +103,14 @@ type EWasmMemory struct {
 	PcOpcode          byte
 	BytecodeOffset    int64
 	PcOffset          int64
+}
+
+func (s EWasmStack) ToString() string {
+	strs := make([]string, len(s))
+	for i, item := range s {
+		strs[i] = hex.EncodeToString(item[:])
+	}
+	return strings.Join(strs, "\n")
 }
 
 func parseMem(mem []byte) EWasmMemory {
@@ -126,7 +137,6 @@ func parseMem(mem []byte) EWasmMemory {
 	interpreterMemory := mem[start:(int64(start) + wordCount*32)]
 
 	// interpreterMemory = mem[start:(start + 60000)]
-	fmt.Println("--interpreterMemory", hex.EncodeToString(interpreterMemory))
 
 	// interpreter-specific
 	memOffset := 0x140
@@ -155,7 +165,7 @@ func parseMem(mem []byte) EWasmMemory {
 	fmt.Println("--pcPtr-", pc, hex.EncodeToString(pc))
 
 	return EWasmMemory{
-		Stack:             stack,
+		Stack:             parseStack(stack),
 		WordCount:         wordCount,
 		InterpreterMemory: interpreterMemory,
 		ContractMemory:    interpreterMemory[memPtr:],
@@ -164,6 +174,23 @@ func parseMem(mem []byte) EWasmMemory {
 		BytecodeOffset:    bytecodePtr,
 		PcOffset:          pcPtr,
 	}
+}
+
+func parseStack(data []byte) [][32]byte {
+	chunkSize := 32
+	numChunks := len(data) / chunkSize
+	chunks := make([][32]byte, numChunks)
+
+	for i := 0; i < numChunks; i++ {
+		start := i * chunkSize
+		end := (i + 1) * chunkSize
+		chunk := make([]byte, 32)
+		for j, x := range data[start:end] {
+			chunk[31-j] = x
+		}
+		copy(chunks[i][:], chunk)
+	}
+	return chunks
 }
 
 func mloadEwasmMem(mem []byte, offset int) []byte {
