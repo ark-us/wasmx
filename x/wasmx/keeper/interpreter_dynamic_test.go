@@ -3,6 +3,7 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -104,10 +105,17 @@ type EWasmMemory struct {
 func parseMem(mem []byte) EWasmMemory {
 	start := 0
 	stackSize := 1024 * 32 // 1024 slots - 32768 bytes
+	fmt.Println("stackSize", len(mem), stackSize)
+	// stack := make([]byte, stackSize)
+	// copy(stack, mem[start: stackSize])
 	stack := mem[start:stackSize]
+	fmt.Println("stack", len(stack))
+
 	start = stackSize
+	fmt.Println(hex.EncodeToString(mem[start : start+32]))
 	// how many 32 byte words are stored in memory
 	wordCount := big.NewInt(0).SetBytes(mem[start : start+4]).Int64()
+	fmt.Println("wordCount", wordCount)
 	if wordCount == 0 {
 		wordCount = 2000
 	}
@@ -116,6 +124,10 @@ func parseMem(mem []byte) EWasmMemory {
 	// start += 4 + 4 + 32 + 1024 + 28800
 	start = 62632
 	interpreterMemory := mem[start:(int64(start) + wordCount*32)]
+
+	// interpreterMemory = mem[start:(start + 60000)]
+	fmt.Println("--interpreterMemory", hex.EncodeToString(interpreterMemory))
+
 	// interpreter-specific
 	memOffset := 0x140
 	pcOffset := 0x160
@@ -124,12 +136,24 @@ func parseMem(mem []byte) EWasmMemory {
 	memPtrBz := mloadEwasmMem(interpreterMemory, memOffset)
 	pcPtrBz := mloadEwasmMem(interpreterMemory, pcOffset)
 	bytecodePtrBz := mloadEwasmMem(interpreterMemory, bytecodeOffset)
+
+	fmt.Println("--memPtrBz-", memPtrBz)
+	fmt.Println("--pcPtrBz-", pcPtrBz)
+	fmt.Println("--bytecodePtrBz-", bytecodePtrBz)
 	memPtr := big.NewInt(0).SetBytes(memPtrBz).Int64()
 	pcPtr := big.NewInt(0).SetBytes(pcPtrBz).Int64()
 	bytecodePtr := big.NewInt(0).SetBytes(bytecodePtrBz).Int64()
 
 	truepc := pcPtr - bytecodePtr
+
+	fmt.Println("--memPtr-", memPtr)
+	fmt.Println("--pcPtr-", pcPtr)
+	fmt.Println("--bytecodePtr-", bytecodePtr)
+	fmt.Println("--truepc-", truepc)
+
 	pc := mloadEwasmMem(interpreterMemory, int(pcPtr))
+	fmt.Println("--pcPtr-", pc, hex.EncodeToString(pc))
+
 	return EWasmMemory{
 		Stack:             stack,
 		WordCount:         wordCount,
