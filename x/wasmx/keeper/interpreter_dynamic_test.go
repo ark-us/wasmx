@@ -135,7 +135,7 @@ func (s EWasmStack) ToString() string {
 
 func parseMem(mem []byte) EWasmMemory {
 	start := 0
-	stackSize := 1024 * 32 // 1024 slots - 32768 bytes
+	stackSize := 2048 * 32 // 2048 slots - 65536 bytes
 	fmt.Println("stackSize", len(mem), stackSize)
 	// stack := make([]byte, stackSize)
 	// copy(stack, mem[start: stackSize])
@@ -152,11 +152,9 @@ func parseMem(mem []byte) EWasmMemory {
 	}
 
 	// mem cost, scratch space, keccak, bytecode, actual used memory
-	// start += 4 + 4 + 32 + 1024 + 28800
-	start = 62632
+	// start += 4 + 4 + 32 + 1024 + 40960
+	start = 107560
 	interpreterMemory := mem[start:(int64(start) + wordCount*32)]
-
-	// interpreterMemory = mem[start:(start + 60000)]
 
 	// interpreter-specific
 	memOffset := 0x140
