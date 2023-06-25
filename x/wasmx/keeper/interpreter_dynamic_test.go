@@ -93,6 +93,26 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 	// fmt.Println(moduleMem.Stack.ToString())
 }
 
+func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	evmcode, err := hex.DecodeString("6019600d60003960196000f3fe6fc84a6e6ec1e7f30f5c812eeba420f76960005260206000f3")
+	s.Require().NoError(err)
+	_, caddr := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "push16")
+	qres, memsnap, err := appA.WasmxQueryDebug(sender, caddr, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil)
+	s.Require().NoError(err)
+	moduleMem := parseMem(memsnap)
+
+	s.Require().Equal("00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769", qres)
+	s.Require().Equal(int32(25), moduleMem.Pc, "wrong pc")
+	s.Require().Equal(byte(0x00), moduleMem.PcOpcode, "wrong opcode")
+}
+
 type EWasmStack [][32]byte
 type EWasmMemory struct {
 	Stack             EWasmStack
