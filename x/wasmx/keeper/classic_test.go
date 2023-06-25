@@ -198,6 +198,34 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", qres)
 
+	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000110c84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", qres)
+
+	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000080c84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769", qres)
+
+	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000100c84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", qres)
+
+	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000040c84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("0000000000000000c84a6e6ec1e7f30f5c812eeba420f7690000000000000000", qres)
+
+	calld = shrhex + "0000000000000000000000000000000000000000000000000000000000000081c84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("000000000000000000000000000000006425373760f3f987ae409775d2107bb4", qres)
+
+	calld = shrhex + "00000000000000000000000000000000000000000000000000000000000000fb983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000013", qres)
+
+	calld = shrhex + "00000000000000000000000000000000000000000000000000000000000000aa983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("000000000000000000000000000000000000000000260f6fa86bffb7bb894f56", qres)
+
 	calld = shlhex + "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000c"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000030", qres)
@@ -205,6 +233,30 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	calld = shlhex + "0000000000000000000000000000000000000000000000000000000000000000aa0000000000000000000000000000000000000000000000000000000000000c"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", qres)
+
+	calld = shlhex + "000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("c84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000", qres)
+
+	calld = shlhex + "000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", qres)
+
+	calld = shlhex + "000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("0000000000000000c84a6e6ec1e7f30f5c812eeba420f7690000000000000000", qres)
+
+	calld = shlhex + "00000000000000000000000000000000000000000000000000000000000000fb983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("a800000000000000000000000000000000000000000000000000000000000000", qres)
+
+	calld = shlhex + "00000000000000000000000000000000000000000000000000000000000000aa983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("ce5eb700bda45880968354000000000000000000000000000000000000000000", qres)
+
+	calld = shlhex + "0000000000000000000000000000000000000000000000000000000000000080983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("119058ba35f397adc02f69162025a0d500000000000000000000000000000000", qres)
 
 	calld = sarhex + "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000c"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -217,6 +269,18 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	calld = sarhex + "0000000000000000000000000000000000000000000000000000000000000002fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", qres)
+
+	calld = sarhex + "00000000000000000000000000000000000000000000000000000000000000fb983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3", qres)
+
+	calld = sarhex + "00000000000000000000000000000000000000000000000000000000000000aa983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("ffffffffffffffffffffffffffffffffffffffffffe60f6fa86bffb7bb894f56", qres)
+
+	calld = sarhex + "0000000000000000000000000000000000000000000000000000000000000080983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("ffffffffffffffffffffffffffffffff983dbea1affedeee253d5921804d11ce", qres)
 
 	calld = calldataloadhex + "0000000000000000000000000000000000000000000000000000000000000024123456789abcdef111111111111111111111111111111111111fffffffffffff"
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
