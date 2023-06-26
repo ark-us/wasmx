@@ -322,10 +322,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 	// test_cadd
 	calldata := "38e3a7eb0000000000000000000000000000000058df4b4c45b7d92e15838cc2ec62e63d26a7a65903a36031844d06d753766895e2ebf62f2d593d88f797f25a39a72c9800000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769b78d377301367565d6c4579d1bd222dbf64ea76464731482fd32a61ebde2643200000000000000000000000000000000aa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760ab7000000000000000000000000000000003617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5f"
 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
-	// qres, memsnap, err := appA.WasmxQueryDebug(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, deps)
-	// fmt.Println("=**======================")
-	// fmt.Println(hex.EncodeToString(memsnap))
-	// fmt.Println("=====================**==")
 	xhi, ok := sdk.NewIntFromString("269429570830637862272946976383477993217")
 	s.Require().True(ok)
 	xlo, ok := sdk.NewIntFromString("33164330947121508193438466374545365582299057006401131236103295757451220504030")
@@ -369,6 +365,13 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 
 	// test_fadd()
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("0492770c")}, nil, deps)
+
+	// fadd
+	fsig := "6422c13f"
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("0x%s%s%s%s%s", fsig, PkxHi_1, PkxLo_1, PkyHi_1, PkyLo_1))}, nil, nil)
+	hi := "00000000000000000000000000000000d5580bbe4b82f354c197e5336a0aaf56"
+	lo := "ba52704a88c4d94eb0ca5ad6871ee0708b22d6cd75b50e65e2c52317488e7095"
+	s.Require().Equal(hi+lo, qres)
 
 	// test_finv
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("eb69ead0")}, nil, deps)
