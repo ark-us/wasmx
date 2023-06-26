@@ -3,7 +3,6 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -91,6 +90,7 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 	s.Require().Equal(byte(0x5b), moduleMem.PcOpcode, "wrong opcode")
 	s.Require().Equal(initvalue, qres)
 	// fmt.Println(moduleMem.Stack.ToString())
+	// fmt.Println("--pc", hex.EncodeToString(moduleMem.InterpreterMemory[moduleMem.PcOffset:moduleMem.PcOffset+64]))
 }
 
 func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
@@ -134,19 +134,15 @@ func (s EWasmStack) ToString() string {
 }
 
 func parseMem(mem []byte) EWasmMemory {
+	if len(mem) == 0 {
+		return EWasmMemory{}
+	}
 	start := 0
 	stackSize := 2048 * 32 // 2048 slots - 65536 bytes
-	fmt.Println("stackSize", len(mem), stackSize)
-	// stack := make([]byte, stackSize)
-	// copy(stack, mem[start: stackSize])
 	stack := mem[start:stackSize]
-	fmt.Println("stack", len(stack))
-
 	start = stackSize
-	fmt.Println(hex.EncodeToString(mem[start : start+32]))
 	// how many 32 byte words are stored in memory
 	wordCount := big.NewInt(0).SetBytes(mem[start : start+4]).Int64()
-	fmt.Println("wordCount", wordCount)
 	if wordCount == 0 {
 		wordCount = 2000
 	}
@@ -164,23 +160,11 @@ func parseMem(mem []byte) EWasmMemory {
 	memPtrBz := mloadEwasmMem(interpreterMemory, memOffset)
 	pcPtrBz := mloadEwasmMem(interpreterMemory, pcOffset)
 	bytecodePtrBz := mloadEwasmMem(interpreterMemory, bytecodeOffset)
-
-	fmt.Println("--memPtrBz-", memPtrBz)
-	fmt.Println("--pcPtrBz-", pcPtrBz)
-	fmt.Println("--bytecodePtrBz-", bytecodePtrBz)
 	memPtr := big.NewInt(0).SetBytes(memPtrBz).Int64()
 	pcPtr := big.NewInt(0).SetBytes(pcPtrBz).Int64()
 	bytecodePtr := big.NewInt(0).SetBytes(bytecodePtrBz).Int64()
-
 	truepc := pcPtr - bytecodePtr
-
-	fmt.Println("--memPtr-", memPtr)
-	fmt.Println("--pcPtr-", pcPtr)
-	fmt.Println("--bytecodePtr-", bytecodePtr)
-	fmt.Println("--truepc-", truepc)
-
 	pc := mloadEwasmMem(interpreterMemory, int(pcPtr))
-	fmt.Println("--pcPtr-", pc, hex.EncodeToString(pc))
 
 	return EWasmMemory{
 		Stack:             parseStack(stack),

@@ -56,10 +56,10 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 
 	_, err = contractVm.Execute("main")
 	if err != nil {
+		runCleanups(cleanups)
 		return nil, err
 	}
 	runCleanups(cleanups)
-	contractVm.Release()
 	return newctx.ReturnData, nil
 }
 

@@ -155,10 +155,9 @@ func (k WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) err
 	if compiledFolderPath != "" {
 		compiledPath := k.build_path(compiledFolderPath, checksum) + ".so"
 		err := copyFile(compiledPath, pinnedPath)
-		if err != nil {
+		if err == nil {
 			return nil
 		}
-		return nil
 	}
 	return k.pin_code(k.build_path(k.DataDir, checksum), pinnedPath)
 }

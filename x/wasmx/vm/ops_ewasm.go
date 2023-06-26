@@ -358,7 +358,6 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-
 	var success int32
 	var returnData []byte
 
@@ -880,6 +879,9 @@ func readMem(callframe *wasmedge.CallingFrame, pointer interface{}, size interfa
 func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}) error {
 	ptr := pointer.(int32)
 	length := len(data)
+	if length == 0 {
+		return nil
+	}
 	mem := callframe.GetMemoryByIndex(0)
 	if mem == nil {
 		return fmt.Errorf("no memory found")

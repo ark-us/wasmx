@@ -83,9 +83,10 @@ func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []ty
 	return cleanups, nil
 }
 
+// run in inverse order
 func runCleanups(cleanups []func()) {
-	for _, cleanup := range cleanups {
-		cleanup()
+	for i := len(cleanups) - 1; i >= 0; i-- {
+		cleanups[i]()
 	}
 }
 
@@ -227,6 +228,7 @@ func ExecuteWasmInterpreted(
 	selfContext.CodeHash = context.Env.Contract.CodeHash
 
 	_, err = contractVm.Execute("main")
+	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		if isdebug {
 			resp := handleContractErrorResponse(contractVm, funcName, context.ReturnData, isdebug, err)
