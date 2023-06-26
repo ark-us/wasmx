@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -268,6 +269,37 @@ func (s AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAd
 	err = json.Unmarshal(resp.Data, &data)
 	s.S.Require().NoError(err, abcires)
 	return data.Data
+}
+
+func (s AppContext) WasmxQueryDebug(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (string, []byte, error) {
+	result, memorySnapshot, err := s.WasmxQueryDebugRaw(account, contract, executeMsg, funds, dependencies)
+	return hex.EncodeToString(result), memorySnapshot, err
+}
+
+func (s AppContext) WasmxQueryDebugRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) ([]byte, []byte, error) {
+	msgbz, err := json.Marshal(executeMsg)
+	s.S.Require().NoError(err)
+	query := types.QueryDebugContractCallRequest{
+		Sender:       account.Address.String(),
+		Address:      contract.String(),
+		QueryData:    msgbz,
+		Funds:        funds,
+		Dependencies: dependencies,
+	}
+	bz, err := query.Marshal()
+	s.S.Require().NoError(err)
+
+	req := abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/DebugContractCall"}
+	abcires := s.App.BaseApp.Query(req)
+	var resp types.QueryDebugContractCallResponse
+	err = resp.Unmarshal(abcires.Value)
+	if err != nil {
+		fmt.Println("abcires", abcires)
+		return resp.Data, resp.MemorySnapshot, err
+	}
+	var data types.WasmxQueryResponse
+	err = json.Unmarshal(resp.Data, &data)
+	return data.Data, resp.MemorySnapshot, err
 }
 
 func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1.Content, deposit sdk.Coins) abci.ResponseDeliverTx {

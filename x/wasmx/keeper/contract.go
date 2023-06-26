@@ -65,7 +65,24 @@ func (k Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, code
 }
 
 func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error) {
-	return k.query(ctx, contractAddr, senderAddr, msg, funds, deps)
+	res, err := k.query(ctx, contractAddr, senderAddr, msg, funds, deps, false)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&types.WasmxQueryResponse{Data: res.Data})
+}
+
+func (k Keeper) QueryDebug(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, []byte, string) {
+	res, err := k.query(ctx, contractAddr, senderAddr, msg, funds, deps, true)
+	if err != nil {
+		errmsg := res.ErrorMessage
+		if errmsg == "" {
+			errmsg = err.Error()
+		}
+		return nil, res.MemorySnapshot, errmsg
+	}
+	data, err := json.Marshal(&types.WasmxQueryResponse{Data: res.Data})
+	return data, res.MemorySnapshot, res.ErrorMessage
 }
 
 // QueryRaw returns the contract's state for give key. Returns `nil` when key is `nil`.
@@ -415,6 +432,11 @@ func (k Keeper) instantiateInternal(
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)),
 	))
 
+	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	if err != nil {
+		return nil, nil, sdkerrors.Wrap(err, "instantiate dispatch")
+	}
+
 	return contractAddress, res.Data, nil
 }
 
@@ -523,12 +545,12 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 	))
 
-	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "dispatch")
 	}
 
-	return data, nil
+	return res.Data, nil
 }
 
 // executeWithOrigin executes the contract instance
@@ -578,16 +600,16 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 	))
 
-	data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "dispatch")
 	}
 
-	return data, nil
+	return res.Data, nil
 }
 
 // Execute executes the contract instance
-func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
+func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string, isdebug bool) (*types.ContractResponse, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
@@ -633,7 +655,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -651,18 +673,17 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	// 	return nil, sdkerrors.Wrap(err, "dispatch")
 	// }
 
-	return json.Marshal(res)
+	return &res, nil
 }
 
-// handleContractResponse processes the contract response data by emitting events and sending sub-/messages.
-func (k *Keeper) handleContractResponse(
+// handleResponseEvents processes the contract response data by emitting events
+func (k *Keeper) handleResponseEvents(
 	ctx sdk.Context,
 	contractAddr sdk.AccAddress,
 	ibcPort string,
 	attrs []types.EventAttribute,
-	data []byte,
 	evts types.Events,
-) ([]byte, error) {
+) error {
 	attributeGasCost := k.gasRegister.EventCosts(attrs, evts)
 	ctx.GasMeter().ConsumeGas(attributeGasCost, "Custom contract event attributes")
 	// emit all events from this contract itself
@@ -670,19 +691,19 @@ func (k *Keeper) handleContractResponse(
 	if len(attrs) != 0 {
 		wasmEvents, err := newWasmModuleEvent(attrs, contractAddr)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ctx.EventManager().EmitEvents(wasmEvents)
 	}
 	if len(evts) > 0 {
 		customEvents, err := newCustomEvents(evts, contractAddr)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ctx.EventManager().EmitEvents(customEvents)
 	}
 
-	return data, nil
+	return nil
 }
 
 // Calculate how much gas can we use for the wasmx execution

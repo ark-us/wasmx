@@ -41,6 +41,12 @@ service Query {
     option (google.api.http).get =
         "/wasmx/v1/contract/{address}/call/{query_data}";
   }
+  // DebugContractCall get query result from the contract
+  rpc DebugContractCall(QueryDebugContractCallRequest)
+      returns (QueryDebugContractCallResponse) {
+    option (google.api.http).get =
+        "/wasmx/v1/contract/{address}/debug/{query_data}";
+  }
   // Code gets the binary code and metadata for a singe wasm code
   rpc Code(QueryCodeRequest) returns (QueryCodeResponse) {
     option (google.api.http).get = "/wasmx/v1/code/{code_id}";
@@ -159,6 +165,34 @@ message QuerySmartContractCallRequest {
 message QuerySmartContractCallResponse {
   // Data contains the json data returned from the smart contract
   bytes data = 1 [ (gogoproto.casttype) = "RawContractMessage" ];
+}
+
+// QueryDebugContractCallRequest is the request type for the
+// Query/DebugContractCall RPC method
+message QueryDebugContractCallRequest {
+  // Sender is the that actor that signed the messages
+  string sender = 1;
+  // Address is the address of the smart contract
+  string address = 2;
+  bytes query_data = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
+  // Funds coins that are transferred to the contract on execution
+  repeated cosmos.base.v1beta1.Coin funds = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+  // Array of either hex-encoded contract addresses or contract labels
+  // on which the execution of this message depends on
+  repeated string dependencies = 5;
+}
+
+// QueryDebugContractCallResponse is the response type for the
+// Query/DebugContractCall RPC method
+message QueryDebugContractCallResponse {
+  // Data contains the json data returned from the smart contract
+  bytes data = 1 [ (gogoproto.casttype) = "RawContractMessage" ];
+  // wasm memory at the time of execution end
+  bytes memory_snapshot = 2;
+  string error_message = 3;
 }
 
 // QueryCodeRequest is the request type for the Query/Code RPC method
