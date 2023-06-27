@@ -1,7 +1,10 @@
 package backend
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -13,6 +16,10 @@ func (b *Backend) ChainID() (*hexutil.Big, error) {
 		panic(err)
 	}
 	return (*hexutil.Big)(eip155ChainID), nil
+}
+
+func (b *Backend) BaseFee(blockRes *tmrpctypes.ResultBlockResults) (*big.Int, error) {
+	return nil, nil
 }
 
 // // ChainConfig returns the latest ethereum chain configuration

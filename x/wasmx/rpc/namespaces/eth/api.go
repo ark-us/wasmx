@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"mythos/v1/x/wasmx/rpc/backend"
+	rpctypes "mythos/v1/x/wasmx/rpc/types"
 )
 
 // The Ethereum API allows applications to connect to an Evmos node that is
@@ -18,11 +19,11 @@ import (
 // otherwise specified, the interface is derived from the Alchemy Ethereum API:
 // https://docs.alchemy.com/alchemy/apis/ethereum
 type EthereumAPI interface {
-	// // Getting Blocks
-	// //
-	// // Retrieves information from a particular block in the blockchain.
-	// BlockNumber() (hexutil.Uint64, error)
-	// GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
+	// Getting Blocks
+	//
+	// Retrieves information from a particular block in the blockchain.
+	BlockNumber() (hexutil.Uint64, error)
+	GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
 	// GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
 	// GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint
 	// GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint
@@ -51,7 +52,7 @@ type EthereumAPI interface {
 	//
 	// Returns information regarding an address's stored on-chain data.
 	Accounts() ([]common.Address, error)
-	// GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error)
+	GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error)
 	// GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 	// GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 	// GetProof(address common.Address, storageKeys []string, blockNrOrHash rpctypes.BlockNumberOrHash) (*rpctypes.AccountResult, error)
@@ -123,21 +124,21 @@ func NewPublicAPI(logger log.Logger, backend backend.EVMBackend) *PublicAPI {
 	return api
 }
 
-// ///////////////////////////////////////////////////////////////////////////////
-// ///                           Blocks						                            ///
-// ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///                           Blocks						                            ///
+///////////////////////////////////////////////////////////////////////////////
 
-// // BlockNumber returns the current block number.
-// func (e *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
-// 	e.logger.Debug("eth_blockNumber")
-// 	return e.backend.BlockNumber()
-// }
+// BlockNumber returns the current block number.
+func (e *PublicAPI) BlockNumber() (hexutil.Uint64, error) {
+	e.logger.Debug("eth_blockNumber")
+	return e.backend.BlockNumber()
+}
 
-// // GetBlockByNumber returns the block identified by number.
-// func (e *PublicAPI) GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error) {
-// 	e.logger.Debug("eth_getBlockByNumber", "number", ethBlockNum, "full", fullTx)
-// 	return e.backend.GetBlockByNumber(ethBlockNum, fullTx)
-// }
+// GetBlockByNumber returns the block identified by number.
+func (e *PublicAPI) GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+	e.logger.Debug("eth_getBlockByNumber", "number", ethBlockNum, "full", fullTx)
+	return e.backend.GetBlockByNumber(ethBlockNum, fullTx)
+}
 
 // // GetBlockByHash returns the block identified by hash.
 // func (e *PublicAPI) GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error) {
@@ -222,11 +223,11 @@ func (e *PublicAPI) Accounts() ([]common.Address, error) {
 	return e.backend.Accounts()
 }
 
-// // GetBalance returns the provided account's balance up to the provided block number.
-// func (e *PublicAPI) GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error) {
-// 	e.logger.Debug("eth_getBalance", "address", address.String(), "block number or hash", blockNrOrHash)
-// 	return e.backend.GetBalance(address, blockNrOrHash)
-// }
+// GetBalance returns the provided account's balance up to the provided block number.
+func (e *PublicAPI) GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error) {
+	e.logger.Debug("eth_getBalance", "address", address.String(), "block number or hash", blockNrOrHash)
+	return e.backend.GetBalance(address, blockNrOrHash)
+}
 
 // // GetStorageAt returns the contract storage at the given address, block number, and key.
 // func (e *PublicAPI) GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
@@ -277,9 +278,9 @@ func (e *PublicAPI) Accounts() ([]common.Address, error) {
 // ///////////////////////////////////////////////////////////////////////////////
 // // FILTER API at ./filters/api.go
 
-// ///////////////////////////////////////////////////////////////////////////////
-// ///                           Chain Information										          ///
-// ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///                           Chain Information										          ///
+///////////////////////////////////////////////////////////////////////////////
 
 // // ProtocolVersion returns the supported Ethereum protocol version.
 // func (e *PublicAPI) ProtocolVersion() hexutil.Uint {
@@ -287,11 +288,11 @@ func (e *PublicAPI) Accounts() ([]common.Address, error) {
 // 	return hexutil.Uint(types.ProtocolVersion)
 // }
 
-// // GasPrice returns the current gas price based on Ethermint's gas price oracle.
-// func (e *PublicAPI) GasPrice() (*hexutil.Big, error) {
-// 	e.logger.Debug("eth_gasPrice")
-// 	return e.backend.GasPrice()
-// }
+// GasPrice returns the current gas price based on Ethermint's gas price oracle.
+func (e *PublicAPI) GasPrice() (*hexutil.Big, error) {
+	e.logger.Debug("eth_gasPrice")
+	return e.backend.GasPrice()
+}
 
 // // EstimateGas returns an estimate of gas usage for the given smart contract call.
 // func (e *PublicAPI) EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {

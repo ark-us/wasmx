@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -14,6 +15,7 @@ import (
 type QueryClient struct {
 	tx.ServiceClient
 	wasmxtypes.QueryClient
+	Bank banktypes.QueryClient
 }
 
 // NewQueryClient creates a new gRPC query client
@@ -21,5 +23,6 @@ func NewQueryClient(clientCtx client.Context) *QueryClient {
 	return &QueryClient{
 		ServiceClient: tx.NewServiceClient(clientCtx),
 		QueryClient:   wasmxtypes.NewQueryClient(clientCtx),
+		Bank:          banktypes.NewQueryClient(clientCtx),
 	}
 }

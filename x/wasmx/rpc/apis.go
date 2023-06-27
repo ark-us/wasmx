@@ -12,6 +12,7 @@ import (
 
 	"mythos/v1/x/wasmx/rpc/backend"
 	"mythos/v1/x/wasmx/rpc/namespaces/eth"
+	"mythos/v1/x/wasmx/rpc/namespaces/net"
 )
 
 // RPC namespaces and API version
@@ -77,16 +78,16 @@ func init() {
 		// 		},
 		// 	}
 		// },
-		// NetNamespace: func(_ *server.Context, clientCtx client.Context, _ *rpcclient.WSClient, _ bool, _ types.EVMTxIndexer) []rpc.API {
-		// 	return []rpc.API{
-		// 		{
-		// 			Namespace: NetNamespace,
-		// 			Version:   apiVersion,
-		// 			Service:   net.NewPublicAPI(clientCtx),
-		// 			Public:    true,
-		// 		},
-		// 	}
-		// },
+		NetNamespace: func(_ *server.Context, clientCtx client.Context, _ *rpcclient.WSClient, _ bool) []rpc.API {
+			return []rpc.API{
+				{
+					Namespace: NetNamespace,
+					Version:   apiVersion,
+					Service:   net.NewPublicAPI(clientCtx),
+					Public:    true,
+				},
+			}
+		},
 		// PersonalNamespace: func(ctx *server.Context,
 		// 	clientCtx client.Context,
 		// 	_ *rpcclient.WSClient,

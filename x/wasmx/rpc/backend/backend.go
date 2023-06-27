@@ -65,8 +65,8 @@ type EVMBackend interface {
 	// SignTypedData(address common.Address, typedData apitypes.TypedData) (hexutil.Bytes, error)
 
 	// Blocks Info
-	// BlockNumber() (hexutil.Uint64, error)
-	// GetBlockByNumber(blockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
+	BlockNumber() (hexutil.Uint64, error)
+	GetBlockByNumber(blockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
 	// GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
 	// GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint
 	// GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint
@@ -83,9 +83,9 @@ type EVMBackend interface {
 	// EthBlockByNumber(blockNum rpctypes.BlockNumber) (*ethtypes.Block, error)
 	// EthBlockFromTendermintBlock(resBlock *tmrpctypes.ResultBlock, blockRes *tmrpctypes.ResultBlockResults) (*ethtypes.Block, error)
 
-	// // Account Info
+	// Account Info
 	// GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
-	// GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error)
+	GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error)
 	// GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 	// GetProof(address common.Address, storageKeys []string, blockNrOrHash rpctypes.BlockNumberOrHash) (*rpctypes.AccountResult, error)
 	// GetTransactionCount(address common.Address, blockNum rpctypes.BlockNumber) (*hexutil.Uint64, error)
@@ -116,7 +116,7 @@ type EVMBackend interface {
 	// SetTxDefaults(args evmtypes.TransactionArgs) (evmtypes.TransactionArgs, error)
 	// EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
 	// DoCall(args evmtypes.TransactionArgs, blockNr rpctypes.BlockNumber) (*evmtypes.MsgEthereumTxResponse, error)
-	// GasPrice() (*hexutil.Big, error)
+	GasPrice() (*hexutil.Big, error)
 
 	// // Filter API
 	// GetLogs(hash common.Hash) ([][]*ethtypes.Log, error)

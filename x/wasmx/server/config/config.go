@@ -53,12 +53,12 @@ type JsonRpcConfig struct {
 
 // GetDefaultAPINamespaces returns the default list of JSON-RPC namespaces that should be enabled
 func GetDefaultAPINamespaces() []string {
-	return []string{"eth"}
+	return []string{"eth", "net"}
 }
 
 // GetAPINamespaces returns the all the available JSON-RPC API namespaces.
 func GetAPINamespaces() []string {
-	return []string{"eth"}
+	return []string{"eth", "net"}
 	// return []string{"web3", "eth", "personal", "net", "txpool", "debug", "miner"}
 }
 
