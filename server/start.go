@@ -47,6 +47,10 @@ import (
 	websrv "mythos/v1/x/websrv/server"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 	websrvflags "mythos/v1/x/websrv/server/flags"
+
+	jsonrpc "mythos/v1/x/wasmx/server"
+	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
+	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -168,6 +172,16 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().StringSlice(websrvflags.WebsrvCORSAllowedOrigins, websrvconfig.DefaultCORSAllowedOrigins, "Sets the allowed origins for the server listener")
 	cmd.Flags().StringSlice(websrvflags.WebsrvCORSAllowedMethods, websrvconfig.DefaultCORSAllowedMethods, "Sets the allowed methods for the server listener")
 	cmd.Flags().StringSlice(websrvflags.WebsrvCORSAllowedHeaders, websrvconfig.DefaultCORSAllowedHeaders, "Sets the allowed headers for the server listener")
+
+	cmd.Flags().Bool(jsonrpcflags.JsonRpcEnable, true, "Define if the json-rpc server should be enabled")
+	cmd.Flags().StringSlice(jsonrpcflags.JsonRpcApi, jsonrpcconfig.GetDefaultAPINamespaces(), "Defines a list of JSON-RPC namespaces that should be enabled")
+	cmd.Flags().String(jsonrpcflags.JsonRpcAddress, jsonrpcconfig.DefaultJsonRpcAddress, "the json-rpc server address to listen on")
+	cmd.Flags().String(jsonrpcflags.JsonRpcWsAddress, jsonrpcconfig.DefaultJsonRpcWsAddress, "the json-rpc websocket server address to listen on")
+	cmd.Flags().Duration(jsonrpcflags.JsonRpcEVMTimeout, jsonrpcconfig.DefaultEVMTimeout, "Sets a timeout used for eth_call (0=infinite)")
+	cmd.Flags().Duration(jsonrpcflags.JsonRpcHTTPTimeout, jsonrpcconfig.DefaultHTTPTimeout, "Sets a read/write timeout for json-rpc http server (0=infinite)")
+	cmd.Flags().Duration(jsonrpcflags.JsonRpcHTTPIdleTimeout, jsonrpcconfig.DefaultHTTPIdleTimeout, "Sets a idle timeout for json-rpc http server (0=infinite)")
+	cmd.Flags().Bool(jsonrpcflags.JsonRpcAllowUnprotectedTxs, jsonrpcconfig.DefaultAllowUnprotectedTxs, "Allow for unprotected (non EIP155 signed) transactions to be submitted via the node's RPC when the global parameter is disabled")
+	cmd.Flags().Int(jsonrpcflags.JsonRpcMaxOpenConnections, jsonrpcconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener")
 
 	cmd.Flags().String(srvflags.TLSCertPath, "", "the cert.pem file path for the server TLS configuration")
 	cmd.Flags().String(srvflags.TLSKeyPath, "", "the key.pem file path for the server TLS configuration")
@@ -329,7 +343,7 @@ func startInProcess(ctx *server.Context, clientCtx client.Context, appCreator ty
 	// Add the tx service to the gRPC router. We only need to register this
 	// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
 	// case, because it spawns a new local tendermint RPC client.
-	if (config.API.Enable || config.GRPC.Enable || config.Websrv.Enable) && tmNode != nil {
+	if (config.API.Enable || config.GRPC.Enable || config.Websrv.Enable || config.JsonRpc.Enable) && tmNode != nil {
 		clientCtx = clientCtx.WithClient(local.New(tmNode))
 
 		app.RegisterTxService(clientCtx)
@@ -340,7 +354,7 @@ func startInProcess(ctx *server.Context, clientCtx client.Context, appCreator ty
 		}
 	}
 
-	if config.API.Enable || config.Websrv.Enable {
+	if config.API.Enable || config.Websrv.Enable || config.JsonRpc.Enable {
 		genDoc, err := genDocProvider()
 		if err != nil {
 			return err
@@ -436,6 +450,35 @@ func startInProcess(ctx *server.Context, clientCtx client.Context, appCreator ty
 		httpSrv     *http.Server
 		httpSrvDone chan struct{}
 	)
+
+	if config.JsonRpc.Enable {
+		genDoc, err := genDocProvider()
+		if err != nil {
+			return err
+		}
+
+		clientCtx := clientCtx.WithChainID(genDoc.ChainID)
+
+		tmEndpoint := "/websocket"
+		tmRPCAddr := cfg.RPC.ListenAddress
+		httpSrv, httpSrvDone, err = jsonrpc.StartJsonRpc(ctx, clientCtx, tmRPCAddr, tmEndpoint, &config)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancelFn()
+			if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+				logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
+			} else {
+				logger.Info("HTTP server shut down, waiting 5 sec")
+				select {
+				case <-time.Tick(5 * time.Second):
+				case <-httpSrvDone:
+				}
+			}
+		}()
+	}
 
 	if config.Websrv.Enable {
 		genDoc, err := genDocProvider()
