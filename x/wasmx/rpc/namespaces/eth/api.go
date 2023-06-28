@@ -61,7 +61,7 @@ type EthereumAPI interface {
 	// //
 	// // Allows developers to read data from the blockchain which includes executing
 	// // smart contracts. However, no data is published to the Ethereum network.
-	// Call(args evmtypes.TransactionArgs, blockNrOrHash rpctypes.BlockNumberOrHash, _ *rpctypes.StateOverride) (hexutil.Bytes, error)
+	Call(args rpctypes.TransactionArgs, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 
 	// // Chain Information
 	// //
@@ -250,28 +250,28 @@ func (e *PublicAPI) GetBalance(address common.Address, blockNrOrHash rpctypes.Bl
 // 	return e.backend.GetProof(address, storageKeys, blockNrOrHash)
 // }
 
-// ///////////////////////////////////////////////////////////////////////////////
-// ///                           EVM/Smart Contract Execution				          ///
-// ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///                           EVM/Smart Contract Execution				          ///
+///////////////////////////////////////////////////////////////////////////////
 
-// // Call performs a raw contract call.
-// func (e *PublicAPI) Call(args evmtypes.TransactionArgs,
-// 	blockNrOrHash rpctypes.BlockNumberOrHash,
-// 	_ *rpctypes.StateOverride,
-// ) (hexutil.Bytes, error) {
-// 	e.logger.Debug("eth_call", "args", args.String(), "block number or hash", blockNrOrHash)
+// Call performs a raw contract call.
+func (e *PublicAPI) Call(args rpctypes.TransactionArgs,
+	blockNrOrHash rpctypes.BlockNumberOrHash,
+	// _ *rpctypes.StateOverride,
+) (hexutil.Bytes, error) {
+	e.logger.Debug("eth_call", "args", args.String(), "block number or hash", blockNrOrHash)
 
-// 	blockNum, err := e.backend.BlockNumberFromTendermint(blockNrOrHash)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	data, err := e.backend.DoCall(args, blockNum)
-// 	if err != nil {
-// 		return []byte{}, err
-// 	}
+	blockNum, err := e.backend.BlockNumberFromTendermint(blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+	data, err := e.backend.DoCall(args, blockNum)
+	if err != nil {
+		return []byte{}, err
+	}
 
-// 	return (hexutil.Bytes)(data.Ret), nil
-// }
+	return (hexutil.Bytes)(data), nil
+}
 
 // ///////////////////////////////////////////////////////////////////////////////
 // ///                           Event Logs													          ///

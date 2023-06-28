@@ -73,8 +73,8 @@ type EVMBackend interface {
 	// TendermintBlockByNumber(blockNum rpctypes.BlockNumber) (*tmrpctypes.ResultBlock, error)
 	// TendermintBlockResultByNumber(height *int64) (*tmrpctypes.ResultBlockResults, error)
 	// TendermintBlockByHash(blockHash common.Hash) (*tmrpctypes.ResultBlock, error)
-	// BlockNumberFromTendermint(blockNrOrHash rpctypes.BlockNumberOrHash) (rpctypes.BlockNumber, error)
-	// BlockNumberFromTendermintByHash(blockHash common.Hash) (*big.Int, error)
+	BlockNumberFromTendermint(blockNrOrHash rpctypes.BlockNumberOrHash) (rpctypes.BlockNumber, error)
+	BlockNumberFromTendermintByHash(blockHash common.Hash) (*big.Int, error)
 	// EthMsgsFromTendermintBlock(block *tmrpctypes.ResultBlock, blockRes *tmrpctypes.ResultBlockResults) []*evmtypes.MsgEthereumTx
 	// BlockBloom(blockRes *tmrpctypes.ResultBlockResults) (ethtypes.Bloom, error)
 	// HeaderByNumber(blockNum rpctypes.BlockNumber) (*ethtypes.Header, error)
@@ -115,7 +115,7 @@ type EVMBackend interface {
 	// SendRawTransaction(data hexutil.Bytes) (common.Hash, error)
 	// SetTxDefaults(args evmtypes.TransactionArgs) (evmtypes.TransactionArgs, error)
 	// EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
-	// DoCall(args evmtypes.TransactionArgs, blockNr rpctypes.BlockNumber) (*evmtypes.MsgEthereumTxResponse, error)
+	DoCall(args rpctypes.TransactionArgs, blockNr rpctypes.BlockNumber) ([]byte, error)
 	GasPrice() (*hexutil.Big, error)
 
 	// // Filter API

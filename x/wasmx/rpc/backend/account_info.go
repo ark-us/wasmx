@@ -15,12 +15,13 @@ import (
 )
 
 // GetCode returns the contract code at the given address and block number.
-func (b *Backend) GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (b *Backend) GetCode(_address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
 	blockNum, err := b.BlockNumberFromTendermint(blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
 
+	address := wasmxvm.AccAddressFromEvm(_address)
 	req := &wasmxtypes.QueryContractInfoRequest{
 		Address: address.String(),
 	}
@@ -47,7 +48,7 @@ func (b *Backend) GetCode(address common.Address, blockNrOrHash rpctypes.BlockNu
 }
 
 // GetStorageAt returns the contract storage at the given address, block number, and key.
-func (b *Backend) GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (b *Backend) GetStorageAt(_address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
 	blockNum, err := b.BlockNumberFromTendermint(blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -58,6 +59,7 @@ func (b *Backend) GetStorageAt(address common.Address, key string, blockNrOrHash
 		return nil, err
 	}
 
+	address := wasmxvm.AccAddressFromEvm(_address)
 	req := &wasmxtypes.QueryRawContractStateRequest{
 		Address:   address.String(),
 		QueryData: keybz,
@@ -73,16 +75,15 @@ func (b *Backend) GetStorageAt(address common.Address, key string, blockNrOrHash
 }
 
 // GetBalance returns the provided account's balance up to the provided block number.
-func (b *Backend) GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error) {
+func (b *Backend) GetBalance(_address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error) {
 	blockNum, err := b.BlockNumberFromTendermint(blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
 
-	addr := wasmxvm.AccAddressFromEvm(address)
-
+	address := wasmxvm.AccAddressFromEvm(_address)
 	req := &banktypes.QueryBalanceRequest{
-		Address: addr.String(),
+		Address: address.String(),
 		// TODO
 		Denom: app.BondDenom,
 	}
