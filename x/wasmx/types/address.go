@@ -1,4 +1,4 @@
-package vm
+package types
 
 import (
 	"bytes"
@@ -6,20 +6,18 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"mythos/v1/x/wasmx/types"
 )
 
 // Address represents the 20 byte address of an Ethereum account.
-type AddressCW [types.AddressLengthWasmx]byte
+type AddressCW [AddressLengthWasmx]byte
 
 // SetBytes sets the address to the value of b.
 // If b is larger than len(a), b will be cropped from the left.
 func (a *AddressCW) SetBytes(b []byte) {
 	if len(b) > len(a) {
-		b = b[len(b)-types.AddressLengthWasmx:]
+		b = b[len(b)-AddressLengthWasmx:]
 	}
-	copy(a[types.AddressLengthWasmx-len(b):], b)
+	copy(a[AddressLengthWasmx-len(b):], b)
 }
 
 // BytesToAddress returns Address with value b.

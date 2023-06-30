@@ -10,7 +10,6 @@ import (
 
 	"mythos/v1/x/wasmx/keeper/testutil"
 	wasmxtypes "mythos/v1/x/wasmx/types"
-	wasmeth "mythos/v1/x/wasmx/vm"
 	"mythos/v1/x/websrv/types"
 )
 
@@ -91,7 +90,7 @@ func (suite *KeeperTestSuite) TestWebServer() {
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
-	contractAddressHex := strings.ToLower(wasmeth.EvmAddressFromAcc(contractAddress).Hex())
+	contractAddressHex := strings.ToLower(wasmxtypes.EvmAddressFromAcc(contractAddress).Hex())
 
 	wasmbinRoot := webserverwasm
 	codeIdRoot := appA.StoreCode(sender, wasmbinRoot, nil)

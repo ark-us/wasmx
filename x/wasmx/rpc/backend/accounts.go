@@ -8,11 +8,6 @@ import (
 	// rpctypes "mythos/v1/x/wasmx/rpc/types"
 )
 
-// // GetCode returns the contract code at the given address and block number.
-// func (b *Backend) GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
-// 	return nil, nil
-// }
-
 // Accounts returns the list of accounts available to this node.
 func (b *Backend) Accounts() ([]common.Address, error) {
 	addresses := make([]common.Address, 0) // return [] instead of nil if empty

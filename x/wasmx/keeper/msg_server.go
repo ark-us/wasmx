@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -20,6 +21,53 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 }
 
 var _ types.MsgServer = msgServer{}
+
+func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (*types.MsgExecuteEthResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	tx := msg.AsTransaction()
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "ExecuteEth could not parse sender address")
+	}
+	// TODO denom
+	funds := sdk.NewCoins(sdk.NewCoin(m.Keeper.denom, sdk.NewIntFromBigInt(tx.Value())))
+
+	to := tx.To()
+	var data []byte
+	if to == nil {
+		deps := []string{types.INTERPRETER_EVM_SHANGHAI}
+		msg := types.WasmxExecutionMessage{Data: []byte{}}
+		msgbz, err := json.Marshal(msg)
+		if err != nil {
+			sdkerrors.Wrap(err, "ExecuteEth could not marshal data")
+		}
+		_, _, address, err := m.Keeper.Deploy(ctx, senderAddr, tx.Data(), deps, types.CodeMetadata{}, msgbz, funds, "")
+		if err != nil {
+			return nil, err
+		}
+		data = address.Bytes()
+	} else {
+		contractAddr := types.AccAddressFromEvm(*to)
+		if err != nil {
+			sdkerrors.Wrap(err, "ExecuteEth could not parse contract address")
+		}
+		msg := types.WasmxExecutionMessage{Data: tx.Data()}
+		msgbz, err := json.Marshal(msg)
+		if err != nil {
+			sdkerrors.Wrap(err, "ExecuteEth could not marshal data")
+		}
+		data, err = m.Keeper.Execute(ctx, contractAddr, senderAddr, msgbz, funds, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(types.EventTypeExecuteEth))
+
+	return &types.MsgExecuteEthResponse{
+		Data: data,
+	}, nil
+}
 
 func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*types.MsgStoreCodeResponse, error) {
 	if err := msg.ValidateBasic(); err != nil {

@@ -2,6 +2,7 @@ package precompiles
 
 import (
 	_ "embed"
+
 	"mythos/v1/x/wasmx/types"
 )
 

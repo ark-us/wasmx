@@ -8,7 +8,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm"
 	"mythos/v1/x/wasmx/vm/precompiles"
 )
 
@@ -67,7 +66,7 @@ func (k Keeper) ActivateSystemContract(
 		}
 	}
 
-	contractAddress := vm.AccAddressFromHex(contract.Address)
+	contractAddress := types.AccAddressFromHex(contract.Address)
 	if contract.Native {
 		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, []byte{}, contract.Label)
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
@@ -101,7 +100,7 @@ func (k Keeper) ActivateSystemContract(
 
 // SetSystemContract
 func (k Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract) {
-	addr := vm.AccAddressFromHex(contract.Address)
+	addr := types.AccAddressFromHex(contract.Address)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
 	bz := k.cdc.MustMarshal(&contract)
 	prefixStore.Set(addr.Bytes(), bz)

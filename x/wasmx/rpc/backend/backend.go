@@ -18,12 +18,12 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	// tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 
+	etherminttypes "github.com/evmos/ethermint/types"
+
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	// "mythos/v1/x/wasmx/server/config"
-	// evmostypes "github.com/evmos/evmos/v13/types"
-	// evmtypes "github.com/evmos/evmos/v13/x/evm/types"
 )
 
 // BackendI implements the Cosmos and EVM backend.
@@ -59,15 +59,15 @@ type EVMBackend interface {
 	// RPCTxFeeCap() float64         // RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for send-transaction variants. The unit is ether.
 	// RPCMinGasPrice() int64
 
-	// // Sign Tx
+	// Sign Tx
 	// Sign(address common.Address, data hexutil.Bytes) (hexutil.Bytes, error)
-	// SendTransaction(args evmtypes.TransactionArgs) (common.Hash, error)
+	// SendTransaction(args rpctypes.TransactionArgs) (common.Hash, error)
 	// SignTypedData(address common.Address, typedData apitypes.TypedData) (hexutil.Bytes, error)
 
 	// Blocks Info
 	BlockNumber() (hexutil.Uint64, error)
 	GetBlockByNumber(blockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
-	// GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
+	GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
 	// GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint
 	// GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint
 	// TendermintBlockByNumber(blockNum rpctypes.BlockNumber) (*tmrpctypes.ResultBlock, error)
@@ -84,11 +84,11 @@ type EVMBackend interface {
 	// EthBlockFromTendermintBlock(resBlock *tmrpctypes.ResultBlock, blockRes *tmrpctypes.ResultBlockResults) (*ethtypes.Block, error)
 
 	// Account Info
-	// GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
+	GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 	GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error)
-	// GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
+	GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 	// GetProof(address common.Address, storageKeys []string, blockNrOrHash rpctypes.BlockNumberOrHash) (*rpctypes.AccountResult, error)
-	// GetTransactionCount(address common.Address, blockNum rpctypes.BlockNumber) (*hexutil.Uint64, error)
+	GetTransactionCount(address common.Address, blockNum rpctypes.BlockNumber) (*hexutil.Uint64, error)
 
 	// Chain Info
 	ChainID() (*hexutil.Big, error)
@@ -102,19 +102,19 @@ type EVMBackend interface {
 	// SuggestGasTipCap(baseFee *big.Int) (*big.Int, error)
 
 	// // Tx Info
-	// GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransaction, error)
-	// GetTxByEthHash(txHash common.Hash) (*evmostypes.TxResult, error)
+	GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransaction, error)
+	GetTxByEthHash(txHash common.Hash) (*etherminttypes.TxResult, error)
 	// GetTxByTxIndex(height int64, txIndex uint) (*evmostypes.TxResult, error)
 	// GetTransactionByBlockAndIndex(block *tmrpctypes.ResultBlock, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
-	// GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error)
+	GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error)
 	// GetTransactionByBlockHashAndIndex(hash common.Hash, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
 	// GetTransactionByBlockNumberAndIndex(blockNum rpctypes.BlockNumber, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
 
 	// // Send Transaction
 	// Resend(args evmtypes.TransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error)
-	// SendRawTransaction(data hexutil.Bytes) (common.Hash, error)
+	SendRawTransaction(data hexutil.Bytes) (common.Hash, error)
 	// SetTxDefaults(args evmtypes.TransactionArgs) (evmtypes.TransactionArgs, error)
-	// EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
+	EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
 	DoCall(args rpctypes.TransactionArgs, blockNr rpctypes.BlockNumber) ([]byte, error)
 	GasPrice() (*hexutil.Big, error)
 

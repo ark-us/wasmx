@@ -1,5 +1,3 @@
-// Copyright Tharsis Labs Ltd.(Evmos)
-// SPDX-License-Identifier:ENCL-1.0(https://github.com/evmos/evmos/blob/main/LICENSE)
 package types
 
 import (
@@ -8,15 +6,20 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/evmos/ethermint/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
+
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // ExceedBlockGasLimitError defines the error message when tx execution exceeds the block gas limit.
@@ -135,18 +138,18 @@ func FormatBlock(
 	return result
 }
 
-// // NewTransactionFromMsg returns a transaction that will serialize to the RPC
-// // representation, with the given location metadata set (if available).
-// func NewTransactionFromMsg(
-// 	msg *evmtypes.MsgEthereumTx,
-// 	blockHash common.Hash,
-// 	blockNumber, index uint64,
-// 	baseFee *big.Int,
-// 	chainID *big.Int,
-// ) (*RPCTransaction, error) {
-// 	tx := msg.AsTransaction()
-// 	return NewRPCTransaction(tx, blockHash, blockNumber, index, baseFee, chainID)
-// }
+// NewTransactionFromMsg returns a transaction that will serialize to the RPC
+// representation, with the given location metadata set (if available).
+func NewTransactionFromMsg(
+	msg *wasmxtypes.MsgExecuteEth,
+	blockHash common.Hash,
+	blockNumber, index uint64,
+	baseFee *big.Int,
+	chainID *big.Int,
+) (*RPCTransaction, error) {
+	tx := msg.AsTransaction()
+	return NewRPCTransaction(tx, blockHash, blockNumber, index, baseFee, chainID)
+}
 
 // // NewTransactionFromData returns a transaction that will serialize to the RPC
 // // representation, with the given location metadata set (if available).
@@ -238,7 +241,7 @@ func CheckTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 		return nil
 	}
 	totalfee := new(big.Float).SetInt(new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas)))
-	// 1 evmos in 10^18 aevmos
+	// 1 token in 10^18 atoken
 	oneToken := new(big.Float).SetInt(big.NewInt(params.Ether))
 	// quo = rounded(x/y)
 	feeEth := new(big.Float).Quo(totalfee, oneToken)
@@ -259,4 +262,73 @@ func TxExceedBlockGasLimit(res *abci.ResponseDeliverTx) bool {
 // or if it failed with an ExceedBlockGasLimit error
 func TxSuccessOrExceedsBlockGasLimit(res *abci.ResponseDeliverTx) bool {
 	return res.Code == 0 || TxExceedBlockGasLimit(res)
+}
+
+// ParseTxIndexerResult parse tm tx result to a format compatible with Ethereum.
+func ParseTxIndexerResult(txResult *tmrpctypes.ResultTx, tx sdk.Tx) (*types.TxResult, error) {
+	// txs, err := ParseTxResult(&txResult.TxResult, tx)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to parse tx events: block %d, index %d, %v", txResult.Height, txResult.Index, err)
+	// }
+
+	// index := uint32(parsedTx.MsgIndex) // #nosec G701
+	return &types.TxResult{
+		Height:  txResult.Height,
+		TxIndex: txResult.Index,
+		// MsgIndex:          index,
+		EthTxIndex:        int32(txResult.Index),
+		Failed:            txResult.TxResult.IsErr(),
+		GasUsed:           uint64(txResult.TxResult.GasUsed),
+		CumulativeGasUsed: uint64(txResult.TxResult.GasUsed),
+	}, nil
+}
+
+// ParsedTx is the tx infos parsed from events.
+type ParsedTx struct {
+	MsgIndex int
+
+	// the following fields are parsed from events
+
+	Hash common.Hash
+	// -1 means uninitialized
+	EthTxIndex int32
+	GasUsed    uint64
+	Failed     bool
+}
+
+// NewParsedTx initialize a ParsedTx
+func NewParsedTx(msgIndex int) ParsedTx {
+	return ParsedTx{MsgIndex: msgIndex, EthTxIndex: -1}
+}
+
+// ParseTxResult parse eth tx infos from cosmos-sdk events.
+// It supports two event formats, the formats are described in the comments of the format constants.
+func ParseTxResult(result *abci.ResponseDeliverTx, tx sdk.Tx) (*ParsedTx, error) {
+	var ethtx *ParsedTx
+
+	// for _, event := range result.Events {
+	// 	switch event.Type {
+	// 	case wasmxtypes.EventTypeExecute:
+	// 		// ethtx.
+	// 	case wasmxtypes.EventTypeDeploy:
+	// 	default:
+	// 		continue
+	// 	}
+	// }
+
+	// // some old versions miss some events, fill it with tx result
+	// gasUsed := uint64(result.GasUsed) // #nosec G701
+	// if len(p.Txs) == 1 {
+	// 	p.Txs[0].GasUsed = gasUsed
+	// }
+
+	// this could only happen if tx exceeds block gas limit
+	if result.Code != 0 && tx != nil {
+		ethtx.Failed = true
+		// replace gasUsed with gasLimit because that's what's actually deducted.
+		gasLimit := tx.GetMsgs()[0].(*wasmxtypes.MsgExecuteEth).AsTransaction().Gas()
+		ethtx.GasUsed = gasLimit
+
+	}
+	return ethtx, nil
 }

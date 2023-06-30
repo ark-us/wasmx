@@ -3,15 +3,19 @@ package backend
 import (
 	"encoding/hex"
 
+	"github.com/pkg/errors"
+
+	sdkerr "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 
 	app "mythos/v1/app"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
-	wasmxvm "mythos/v1/x/wasmx/vm"
 )
 
 // GetCode returns the contract code at the given address and block number.
@@ -21,7 +25,7 @@ func (b *Backend) GetCode(_address common.Address, blockNrOrHash rpctypes.BlockN
 		return nil, err
 	}
 
-	address := wasmxvm.AccAddressFromEvm(_address)
+	address := wasmxtypes.AccAddressFromEvm(_address)
 	req := &wasmxtypes.QueryContractInfoRequest{
 		Address: address.String(),
 	}
@@ -31,17 +35,17 @@ func (b *Backend) GetCode(_address common.Address, blockNrOrHash rpctypes.BlockN
 		return nil, err
 	}
 
-	reqCode := &wasmxtypes.QueryCodeRequest{
+	reqCode := &wasmxtypes.QueryCodeInfoRequest{
 		CodeId: res.CodeId,
 	}
 
-	resCode, err := b.queryClient.Code(rpctypes.ContextWithHeight(blockNum.Int64()), reqCode)
-	if err != nil {
+	resCode, err := b.queryClient.CodeInfo(rpctypes.ContextWithHeight(blockNum.Int64()), reqCode)
+	if err != nil || resCode == nil {
 		return nil, err
 	}
 
-	if len(resCode.InterpretedBytecodeRuntime) > 0 {
-		return resCode.InterpretedBytecodeRuntime, nil
+	if len(resCode.CodeInfo.InterpretedBytecodeRuntime) > 0 {
+		return resCode.CodeInfo.InterpretedBytecodeRuntime, nil
 	}
 
 	return nil, nil
@@ -59,7 +63,7 @@ func (b *Backend) GetStorageAt(_address common.Address, key string, blockNrOrHas
 		return nil, err
 	}
 
-	address := wasmxvm.AccAddressFromEvm(_address)
+	address := wasmxtypes.AccAddressFromEvm(_address)
 	req := &wasmxtypes.QueryRawContractStateRequest{
 		Address:   address.String(),
 		QueryData: keybz,
@@ -81,7 +85,7 @@ func (b *Backend) GetBalance(_address common.Address, blockNrOrHash rpctypes.Blo
 		return nil, err
 	}
 
-	address := wasmxvm.AccAddressFromEvm(_address)
+	address := wasmxtypes.AccAddressFromEvm(_address)
 	req := &banktypes.QueryBalanceRequest{
 		Address: address.String(),
 		// TODO
@@ -108,39 +112,39 @@ func (b *Backend) GetBalance(_address common.Address, blockNrOrHash rpctypes.Blo
 	return (*hexutil.Big)(val.BigInt()), nil
 }
 
-// // GetTransactionCount returns the number of transactions at the given address up to the given block number.
-// func (b *Backend) GetTransactionCount(address common.Address, blockNum rpctypes.BlockNumber) (*hexutil.Uint64, error) {
-// 	n := hexutil.Uint64(0)
-// 	bn, err := b.BlockNumber()
-// 	if err != nil {
-// 		return &n, err
-// 	}
-// 	height := blockNum.Int64()
+// GetTransactionCount returns the number of transactions at the given address up to the given block number.
+func (b *Backend) GetTransactionCount(address common.Address, blockNum rpctypes.BlockNumber) (*hexutil.Uint64, error) {
+	n := hexutil.Uint64(0)
+	bn, err := b.BlockNumber()
+	if err != nil {
+		return &n, err
+	}
+	height := blockNum.Int64()
 
-// 	currentHeight := int64(bn) //#nosec G701 -- checked for int overflow already
-// 	if height > currentHeight {
-// 		return &n, errorsmod.Wrapf(
-// 			sdkerrors.ErrInvalidHeight,
-// 			"cannot query with height in the future (current: %d, queried: %d); please provide a valid height",
-// 			currentHeight, height,
-// 		)
-// 	}
-// 	// Get nonce (sequence) from account
-// 	from := sdk.AccAddress(address.Bytes())
-// 	accRet := b.clientCtx.AccountRetriever
+	currentHeight := int64(bn) //#nosec G701 -- checked for int overflow already
+	if height > currentHeight {
+		return &n, sdkerr.Wrapf(
+			sdkerrors.ErrInvalidHeight,
+			"cannot query with height in the future (current: %d, queried: %d); please provide a valid height",
+			currentHeight, height,
+		)
+	}
+	// Get nonce (sequence) from account
+	from := sdk.AccAddress(address.Bytes())
+	accRet := b.clientCtx.AccountRetriever
 
-// 	err = accRet.EnsureExists(b.clientCtx, from)
-// 	if err != nil {
-// 		// account doesn't exist yet, return 0
-// 		return &n, nil
-// 	}
+	err = accRet.EnsureExists(b.clientCtx, from)
+	if err != nil {
+		// account doesn't exist yet, return 0
+		return &n, nil
+	}
 
-// 	includePending := blockNum == rpctypes.EthPendingBlockNumber
-// 	nonce, err := b.getAccountNonce(address, includePending, blockNum.Int64(), b.logger)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	includePending := blockNum == rpctypes.EthPendingBlockNumber
+	nonce, err := b.getAccountNonce(address, includePending, blockNum.Int64(), b.logger)
+	if err != nil {
+		return nil, err
+	}
 
-// 	n = hexutil.Uint64(nonce)
-// 	return &n, nil
-// }
+	n = hexutil.Uint64(nonce)
+	return &n, nil
+}

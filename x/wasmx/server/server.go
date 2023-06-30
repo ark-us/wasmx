@@ -72,11 +72,6 @@ func StartJsonRpc(
 		handlerWithCors = cors.AllowAll()
 	}
 
-	// server := NewJsonRpcServer(ctx, ctx.Logger, clientCtx, &cfg)
-	// router := http.NewServeMux()
-	// router.HandleFunc("/", server.ServeHTTP)
-	// handlerWithCors := cors.AllowAll()
-
 	httpSrv := &http.Server{
 		Addr:              cfg.Address,
 		Handler:           handlerWithCors.Handler(router),

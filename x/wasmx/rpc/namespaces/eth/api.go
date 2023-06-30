@@ -12,80 +12,65 @@ import (
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 )
 
-// The Ethereum API allows applications to connect to an Evmos node that is
-// part of the Evmos blockchain. Developers can interact with on-chain EVM data
-// and send different types of transactions to the network by utilizing the
-// endpoints provided by the API. The API follows a JSON-RPC standard. If not
-// otherwise specified, the interface is derived from the Alchemy Ethereum API:
-// https://docs.alchemy.com/alchemy/apis/ethereum
+// The Ethereum JSON-RPC API
 type EthereumAPI interface {
 	// Getting Blocks
 	//
-	// Retrieves information from a particular block in the blockchain.
 	BlockNumber() (hexutil.Uint64, error)
 	GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
-	// GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
+	GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
 	// GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint
 	// GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint
 
-	// // Reading Transactions
-	// //
-	// // Retrieves information on the state data for addresses regardless of whether
-	// // it is a user or a smart contract.
-	// GetTransactionByHash(hash common.Hash) (*rpctypes.RPCTransaction, error)
-	// GetTransactionCount(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Uint64, error)
-	// GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error)
+	// Reading Transactions
+	//
+	GetTransactionByHash(hash common.Hash) (*rpctypes.RPCTransaction, error)
+	GetTransactionCount(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Uint64, error)
+	GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error)
 	// GetTransactionByBlockHashAndIndex(hash common.Hash, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
 	// GetTransactionByBlockNumberAndIndex(blockNum rpctypes.BlockNumber, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
 	// // eth_getBlockReceipts
 
-	// // Writing Transactions
-	// //
-	// // Allows developers to both send ETH from one address to another, write data
-	// // on-chain, and interact with smart contracts.
-	// SendRawTransaction(data hexutil.Bytes) (common.Hash, error)
+	// Writing Transactions
+	//
+	SendRawTransaction(data hexutil.Bytes) (common.Hash, error)
 	// SendTransaction(args evmtypes.TransactionArgs) (common.Hash, error)
 	// // eth_sendPrivateTransaction
 	// // eth_cancel	PrivateTransaction
 
 	// Account Information
 	//
-	// Returns information regarding an address's stored on-chain data.
 	Accounts() ([]common.Address, error)
 	GetBalance(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Big, error)
-	// GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
-	// GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
+	GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
+	GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 	// GetProof(address common.Address, storageKeys []string, blockNrOrHash rpctypes.BlockNumberOrHash) (*rpctypes.AccountResult, error)
 
-	// // EVM/Smart Contract Execution
-	// //
-	// // Allows developers to read data from the blockchain which includes executing
-	// // smart contracts. However, no data is published to the Ethereum network.
+	// EVM/Smart Contract Execution
+	//
 	Call(args rpctypes.TransactionArgs, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error)
 
-	// // Chain Information
-	// //
-	// // Returns information on the Ethereum network and internal settings.
+	// Chain Information
+	//
 	// ProtocolVersion() hexutil.Uint
 	// GasPrice() (*hexutil.Big, error)
-	// EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
+	EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
 	// FeeHistory(blockCount rpc.DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*rpctypes.FeeHistoryResult, error)
 	// MaxPriorityFeePerGas() (*hexutil.Big, error)
 	ChainId() (*hexutil.Big, error)
 
-	// // Getting Uncles
-	// //
-	// // Returns information on uncle blocks are which are network rejected blocks and replaced by a canonical block instead.
+	// Getting Uncles
+	//
 	// GetUncleByBlockHashAndIndex(hash common.Hash, idx hexutil.Uint) map[string]interface{}
 	// GetUncleByBlockNumberAndIndex(number, idx hexutil.Uint) map[string]interface{}
 	// GetUncleCountByBlockHash(hash common.Hash) hexutil.Uint
 	// GetUncleCountByBlockNumber(blockNum rpctypes.BlockNumber) hexutil.Uint
 
-	// // Proof of Work
+	// Proof of Work
 	// Hashrate() hexutil.Uint64
 	// Mining() bool
 
-	// // Other
+	// Other
 	// Syncing() (interface{}, error)
 	// Coinbase() (string, error)
 	// Sign(address common.Address, data hexutil.Bytes) (hexutil.Bytes, error)
@@ -140,38 +125,38 @@ func (e *PublicAPI) GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bo
 	return e.backend.GetBlockByNumber(ethBlockNum, fullTx)
 }
 
-// // GetBlockByHash returns the block identified by hash.
-// func (e *PublicAPI) GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error) {
-// 	e.logger.Debug("eth_getBlockByHash", "hash", hash.Hex(), "full", fullTx)
-// 	return e.backend.GetBlockByHash(hash, fullTx)
-// }
+// GetBlockByHash returns the block identified by hash.
+func (e *PublicAPI) GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error) {
+	e.logger.Debug("eth_getBlockByHash", "hash", hash.Hex(), "full", fullTx)
+	return e.backend.GetBlockByHash(hash, fullTx)
+}
 
 // ///////////////////////////////////////////////////////////////////////////////
 // ///                           Read Txs					                            ///
 // ///////////////////////////////////////////////////////////////////////////////
 
-// // GetTransactionByHash returns the transaction identified by hash.
-// func (e *PublicAPI) GetTransactionByHash(hash common.Hash) (*rpctypes.RPCTransaction, error) {
-// 	e.logger.Debug("eth_getTransactionByHash", "hash", hash.Hex())
-// 	return e.backend.GetTransactionByHash(hash)
-// }
+// GetTransactionByHash returns the transaction identified by hash.
+func (e *PublicAPI) GetTransactionByHash(hash common.Hash) (*rpctypes.RPCTransaction, error) {
+	e.logger.Debug("eth_getTransactionByHash", "hash", hash.Hex())
+	return e.backend.GetTransactionByHash(hash)
+}
 
-// // GetTransactionCount returns the number of transactions at the given address up to the given block number.
-// func (e *PublicAPI) GetTransactionCount(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Uint64, error) {
-// 	e.logger.Debug("eth_getTransactionCount", "address", address.Hex(), "block number or hash", blockNrOrHash)
-// 	blockNum, err := e.backend.BlockNumberFromTendermint(blockNrOrHash)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return e.backend.GetTransactionCount(address, blockNum)
-// }
+// GetTransactionCount returns the number of transactions at the given address up to the given block number.
+func (e *PublicAPI) GetTransactionCount(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (*hexutil.Uint64, error) {
+	e.logger.Debug("eth_getTransactionCount", "address", address.Hex(), "block number or hash", blockNrOrHash)
+	blockNum, err := e.backend.BlockNumberFromTendermint(blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+	return e.backend.GetTransactionCount(address, blockNum)
+}
 
-// // GetTransactionReceipt returns the transaction receipt identified by hash.
-// func (e *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
-// 	hexTx := hash.Hex()
-// 	e.logger.Debug("eth_getTransactionReceipt", "hash", hexTx)
-// 	return e.backend.GetTransactionReceipt(hash)
-// }
+// GetTransactionReceipt returns the transaction receipt identified by hash.
+func (e *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error) {
+	hexTx := hash.Hex()
+	e.logger.Debug("eth_getTransactionReceipt", "hash", hexTx)
+	return e.backend.GetTransactionReceipt(hash)
+}
 
 // // GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
 // func (e *PublicAPI) GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint {
@@ -197,15 +182,15 @@ func (e *PublicAPI) GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bo
 // 	return e.backend.GetTransactionByBlockNumberAndIndex(blockNum, idx)
 // }
 
-// ///////////////////////////////////////////////////////////////////////////////
-// ///                           Write Txs					                            ///
-// ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///                           Write Txs					                            ///
+///////////////////////////////////////////////////////////////////////////////
 
-// // SendRawTransaction send a raw Ethereum transaction.
-// func (e *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
-// 	e.logger.Debug("eth_sendRawTransaction", "length", len(data))
-// 	return e.backend.SendRawTransaction(data)
-// }
+// SendRawTransaction send a raw Ethereum transaction.
+func (e *PublicAPI) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
+	e.logger.Debug("eth_sendRawTransaction", "length", len(data))
+	return e.backend.SendRawTransaction(data)
+}
 
 // // SendTransaction sends an Ethereum transaction.
 // func (e *PublicAPI) SendTransaction(args evmtypes.TransactionArgs) (common.Hash, error) {
@@ -229,17 +214,17 @@ func (e *PublicAPI) GetBalance(address common.Address, blockNrOrHash rpctypes.Bl
 	return e.backend.GetBalance(address, blockNrOrHash)
 }
 
-// // GetStorageAt returns the contract storage at the given address, block number, and key.
-// func (e *PublicAPI) GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
-// 	e.logger.Debug("eth_getStorageAt", "address", address.Hex(), "key", key, "block number or hash", blockNrOrHash)
-// 	return e.backend.GetStorageAt(address, key, blockNrOrHash)
-// }
+// GetStorageAt returns the contract storage at the given address, block number, and key.
+func (e *PublicAPI) GetStorageAt(address common.Address, key string, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
+	e.logger.Debug("eth_getStorageAt", "address", address.Hex(), "key", key, "block number or hash", blockNrOrHash)
+	return e.backend.GetStorageAt(address, key, blockNrOrHash)
+}
 
-// // GetCode returns the contract code at the given address and block number.
-// func (e *PublicAPI) GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
-// 	e.logger.Debug("eth_getCode", "address", address.Hex(), "block number or hash", blockNrOrHash)
-// 	return e.backend.GetCode(address, blockNrOrHash)
-// }
+// GetCode returns the contract code at the given address and block number.
+func (e *PublicAPI) GetCode(address common.Address, blockNrOrHash rpctypes.BlockNumberOrHash) (hexutil.Bytes, error) {
+	e.logger.Debug("eth_getCode", "address", address.Hex(), "block number or hash", blockNrOrHash)
+	return e.backend.GetCode(address, blockNrOrHash)
+}
 
 // // GetProof returns an account object with proof and any storage proofs
 // func (e *PublicAPI) GetProof(address common.Address,
@@ -294,11 +279,11 @@ func (e *PublicAPI) GasPrice() (*hexutil.Big, error) {
 	return e.backend.GasPrice()
 }
 
-// // EstimateGas returns an estimate of gas usage for the given smart contract call.
-// func (e *PublicAPI) EstimateGas(args evmtypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {
-// 	e.logger.Debug("eth_estimateGas")
-// 	return e.backend.EstimateGas(args, blockNrOptional)
-// }
+// EstimateGas returns an estimate of gas usage for the given smart contract call.
+func (e *PublicAPI) EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {
+	e.logger.Debug("eth_estimateGas")
+	return e.backend.EstimateGas(args, blockNrOptional)
+}
 
 // func (e *PublicAPI) FeeHistory(blockCount rpc.DecimalOrHex,
 // 	lastBlock rpc.BlockNumber,

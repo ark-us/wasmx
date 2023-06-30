@@ -97,7 +97,7 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := Evm32AddressFromAcc(ctx.Env.Contract.Address)
+	addr := types.Evm32AddressFromAcc(ctx.Env.Contract.Address)
 	err := writeMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -109,7 +109,7 @@ func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []
 func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender)
+	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender)
 	err := writeMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -233,7 +233,7 @@ func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params
 func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin)
+	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin)
 	err := writeMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -253,7 +253,7 @@ func getBlockNumber(context interface{}, callframe *wasmedge.CallingFrame, param
 func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := Evm32AddressFromAcc(ctx.Env.Block.Proposer)
+	addr := types.Evm32AddressFromAcc(ctx.Env.Block.Proposer)
 	err := writeMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -948,12 +948,12 @@ func readAndFillWithZero(data []byte, start int32, length int32) []byte {
 	return value
 }
 
-func isEvmAddress(addr AddressCW) bool {
+func isEvmAddress(addr types.AddressCW) bool {
 	return hex.EncodeToString(addr.Bytes()[:12]) == hex.EncodeToString(make([]byte, 12))
 }
 
 func cleanupAddress(addr []byte) []byte {
-	if isEvmAddress(BytesToAddressCW(addr)) {
+	if isEvmAddress(types.BytesToAddressCW(addr)) {
 		return addr[12:]
 	}
 	return addr
