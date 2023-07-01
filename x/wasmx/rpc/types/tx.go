@@ -84,6 +84,7 @@ type RPCTransaction struct {
 // NewTransactionFromData returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func NewRPCTransaction(
+	txHash common.Hash,
 	tx *ethtypes.Transaction, blockHash common.Hash, blockNumber, index uint64, baseFee *big.Int,
 	chainID *big.Int,
 ) (*RPCTransaction, error) {
@@ -104,15 +105,17 @@ func NewRPCTransaction(
 		From:     from,
 		Gas:      hexutil.Uint64(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
-		ChainID:  (*hexutil.Big)(chainID),
+		// we use the cosmos hash
+		// Hash:     tx.Hash(),
+		Hash:    txHash,
+		Input:   hexutil.Bytes(tx.Data()),
+		Nonce:   hexutil.Uint64(tx.Nonce()),
+		To:      tx.To(),
+		Value:   (*hexutil.Big)(tx.Value()),
+		V:       (*hexutil.Big)(v),
+		R:       (*hexutil.Big)(r),
+		S:       (*hexutil.Big)(s),
+		ChainID: (*hexutil.Big)(chainID),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = &blockHash

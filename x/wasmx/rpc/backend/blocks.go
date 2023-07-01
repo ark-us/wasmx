@@ -234,46 +234,54 @@ func (b *Backend) BlockNumberFromTendermintByHash(blockHash common.Hash) (*big.I
 	return big.NewInt(resBlock.Block.Height), nil
 }
 
-// // EthMsgsFromTendermintBlock returns all real MsgEthereumTxs from a
-// // Tendermint block. It also ensures consistency over the correct txs indexes
-// // across RPC endpoints
-// func (b *Backend) EthMsgsFromTendermintBlock(
-// 	resBlock *tmrpctypes.ResultBlock,
-// 	blockRes *tmrpctypes.ResultBlockResults,
-// ) []*wasmxtypes.MsgEthereumTx {
-// 	var result []*wasmxtypes.MsgEthereumTx
-// 	block := resBlock.Block
+// EthMsgsFromTendermintBlock returns all real MsgEthereumTxs from a
+// Tendermint block. It also ensures consistency over the correct txs indexes
+// across RPC endpoints
+func (b *Backend) EthMsgsFromTendermintBlock(
+	resBlock *tmrpctypes.ResultBlock,
+	blockRes *tmrpctypes.ResultBlockResults,
+) ([]*ethtypes.Transaction, []common.Hash) {
+	var result []*ethtypes.Transaction
+	var hashes []common.Hash
+	block := resBlock.Block
 
-// 	txResults := blockRes.TxsResults
+	txResults := blockRes.TxsResults
 
-// 	for i, tx := range block.Txs {
-// 		// Check if tx exists on EVM by cross checking with blockResults:
-// 		//  - Include unsuccessful tx that exceeds block gas limit
-// 		//  - Exclude unsuccessful tx with any other error but ExceedBlockGasLimit
-// 		if !rpctypes.TxSuccessOrExceedsBlockGasLimit(txResults[i]) {
-// 			b.logger.Debug("invalid tx result code", "cosmos-hash", hexutil.Encode(tx.Hash()))
-// 			continue
-// 		}
+	for i, tx := range block.Txs {
+		// Check if tx exists on EVM by cross checking with blockResults:
+		//  - Include unsuccessful tx that exceeds block gas limit
+		//  - Exclude unsuccessful tx with any other error but ExceedBlockGasLimit
+		if !rpctypes.TxSuccessOrExceedsBlockGasLimit(txResults[i]) {
+			b.logger.Debug("invalid tx result code", "cosmos-hash", hexutil.Encode(tx.Hash()))
+			continue
+		}
 
-// 		tx, err := b.clientCtx.TxConfig.TxDecoder()(tx)
-// 		if err != nil {
-// 			b.logger.Debug("failed to decode transaction in block", "height", block.Height, "error", err.Error())
-// 			continue
-// 		}
+		txHash := tx.Hash()
 
-// 		for _, msg := range tx.GetMsgs() {
-// 			ethMsg, ok := msg.(*wasmxtypes.MsgEthereumTx)
-// 			if !ok {
-// 				continue
-// 			}
+		tx, err := b.clientCtx.TxConfig.TxDecoder()(tx)
+		if err != nil {
+			b.logger.Debug("failed to decode transaction in block", "height", block.Height, "error", err.Error())
+			continue
+		}
 
-// 			ethMsg.Hash = ethMsg.AsTransaction().Hash().Hex()
-// 			result = append(result, ethMsg)
-// 		}
-// 	}
+		for _, msg := range tx.GetMsgs() {
+			ethMsg, ok := msg.(*wasmxtypes.MsgExecuteEth)
+			if !ok {
+				continue
+			}
+			txData, err := wasmxtypes.UnpackTxData(ethMsg.Data)
+			if err != nil {
+				continue
+			}
 
-// 	return result
-// }
+			// ethMsg.Hash = ethMsg.AsTransaction().Hash().Hex()
+			result = append(result, txData)
+			hashes = append(hashes, common.BytesToHash(txHash))
+		}
+	}
+
+	return result, hashes
+}
 
 // // HeaderByNumber returns the block header identified by height.
 // func (b *Backend) HeaderByNumber(blockNum rpctypes.BlockNumber) (*ethtypes.Header, error) {
@@ -370,31 +378,32 @@ func (b *Backend) RPCBlockFromTendermintBlock(
 		b.logger.Error("failed to fetch Base Fee from prunned block. Check node prunning configuration", "height", block.Height, "error", err)
 	}
 
-	// msgs := b.EthMsgsFromTendermintBlock(resBlock, blockRes)
-	// for txIndex, ethMsg := range msgs {
-	// 	if !fullTx {
-	// 		hash := common.HexToHash(ethMsg.Hash)
-	// 		ethRPCTxs = append(ethRPCTxs, hash)
-	// 		continue
-	// 	}
+	ethTxs, txHashes := b.EthMsgsFromTendermintBlock(resBlock, blockRes)
+	for txIndex, tx := range ethTxs {
+		if !fullTx {
+			// hash := common.HexToHash(ethMsg.Hash)
+			ethRPCTxs = append(ethRPCTxs, txHashes[txIndex])
+			continue
+		}
 
-	// 	tx := ethMsg.AsTransaction()
-	// 	height := uint64(block.Height) //#nosec G701 -- checked for int overflow already
-	// 	index := uint64(txIndex)       //#nosec G701 -- checked for int overflow already
-	// 	rpcTx, err := rpctypes.NewRPCTransaction(
-	// 		tx,
-	// 		common.BytesToHash(block.Hash()),
-	// 		height,
-	// 		index,
-	// 		baseFee,
-	// 		b.chainID,
-	// 	)
-	// 	if err != nil {
-	// 		b.logger.Debug("NewTransactionFromData for receipt failed", "hash", tx.Hash().Hex(), "error", err.Error())
-	// 		continue
-	// 	}
-	// 	ethRPCTxs = append(ethRPCTxs, rpcTx)
-	// }
+		// tx := ethMsg.AsTransaction()
+		height := uint64(block.Height) //#nosec G701 -- checked for int overflow already
+		index := uint64(txIndex)       //#nosec G701 -- checked for int overflow already
+		rpcTx, err := rpctypes.NewRPCTransaction(
+			txHashes[txIndex],
+			tx,
+			common.BytesToHash(block.Hash()),
+			height,
+			index,
+			baseFee,
+			b.chainID,
+		)
+		if err != nil {
+			b.logger.Debug("NewTransactionFromData for receipt failed", "hash", tx.Hash().Hex(), "error", err.Error())
+			continue
+		}
+		ethRPCTxs = append(ethRPCTxs, rpcTx)
+	}
 
 	bloom, err := b.BlockBloom(blockRes)
 	if err != nil {

@@ -141,6 +141,7 @@ func FormatBlock(
 // NewTransactionFromMsg returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
 func NewTransactionFromMsg(
+	txHash common.Hash,
 	msg *wasmxtypes.MsgExecuteEth,
 	blockHash common.Hash,
 	blockNumber, index uint64,
@@ -148,7 +149,7 @@ func NewTransactionFromMsg(
 	chainID *big.Int,
 ) (*RPCTransaction, error) {
 	tx := msg.AsTransaction()
-	return NewRPCTransaction(tx, blockHash, blockNumber, index, baseFee, chainID)
+	return NewRPCTransaction(txHash, tx, blockHash, blockNumber, index, baseFee, chainID)
 }
 
 // // NewTransactionFromData returns a transaction that will serialize to the RPC

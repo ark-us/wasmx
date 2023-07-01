@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -76,6 +75,7 @@ func (b *Backend) GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransac
 	}
 
 	return rpctypes.NewTransactionFromMsg(
+		txHash,
 		msg,
 		common.BytesToHash(block.BlockID.Hash.Bytes()),
 		uint64(res.Height),
@@ -132,9 +132,16 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 	sender := types.EvmAddressFromAcc(sdk.MustAccAddressFromBech32(ethMsg.Sender))
 
 	// parse tx logs from events
+	// sets contract address, data, topics, log index
 	logs, err := TxLogsFromEvents(blockRes.TxsResults[res.TxIndex].Events)
 	if err != nil {
 		b.logger.Debug("failed to parse logs", "hash", hexTx, "error", err.Error())
+	}
+	for i := range logs {
+		logs[i].BlockNumber = uint64(res.Height)
+		logs[i].BlockHash = common.BytesToHash(resBlock.Block.Header.Hash())
+		logs[i].TxHash = hash
+		logs[i].TxIndex = uint(res.EthTxIndex)
 	}
 
 	// if res.EthTxIndex == -1 {
@@ -185,7 +192,9 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if txData.To() == nil {
-		receipt["contractAddress"] = crypto.CreateAddress(sender, txData.Nonce())
+		// get the contract address from the logs
+		newContractAddress := ContractAddressFromEvents(blockRes.TxsResults[res.TxIndex].Events)
+		receipt["contractAddress"] = newContractAddress
 	}
 
 	// if dynamicTx, ok := txData.(*evmtypes.DynamicFeeTx); ok {

@@ -67,6 +67,26 @@ func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
 	return &log, nil
 }
 
+// ContractAddressFromEvents returns a deployed contract address from cosmos events
+func ContractAddressFromEvents(events []abci.Event) *common.Address {
+	for _, event := range events {
+		if event.Type != wasmxtypes.EventTypeDeploy {
+			continue
+		}
+		for _, attr := range event.Attributes {
+			if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyContractAddr)) {
+				contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
+				if err != nil {
+					return nil
+				}
+				ethAddress := wasmxtypes.EvmAddressFromAcc(contractAddress)
+				return &ethAddress
+			}
+		}
+	}
+	return nil
+}
+
 // getAccountNonce returns the account nonce for the given account address.
 // If the pending value is true, it will iterate over the mempool (pending)
 // txs in order to compute and return the pending tx sequence.
