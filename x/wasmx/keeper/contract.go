@@ -16,7 +16,6 @@ import (
 
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
-	wasmeth "mythos/v1/x/wasmx/vm"
 )
 
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {
@@ -234,6 +233,12 @@ func (k Keeper) CreateInterpreted(
 		evt.AppendAttributes(sdk.NewAttribute(types.AttributeKeyRequiredCapability, d))
 	}
 	ctx.EventManager().EmitEvent(evt)
+
+	evt2 := sdk.NewEvent(
+		types.EventTypeDeploy,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	)
+	ctx.EventManager().EmitEvent(evt2)
 
 	return codeID, checksum, contractAddress, nil
 }
@@ -506,7 +511,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		if hexaddr[0:2] != "0x" {
 			continue
 		}
-		addr := wasmeth.AccAddressFromHex(hexaddr)
+		addr := types.AccAddressFromHex(hexaddr)
 		contractDep, err := k.GetContractDependency(ctx, addr)
 		if err != nil {
 			return nil, err
@@ -637,7 +642,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 		if hexaddr[0:2] != "0x" {
 			continue
 		}
-		addr := wasmeth.AccAddressFromHex(hexaddr)
+		addr := types.AccAddressFromHex(hexaddr)
 		contractDep, err := k.GetContractDependency(ctx, addr)
 		if err != nil {
 			return nil, err

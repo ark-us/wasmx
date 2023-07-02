@@ -42,6 +42,9 @@ import (
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 	websrvflags "mythos/v1/x/websrv/server/flags"
+
+	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
+	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 	// "mythos/v1/testutil/network"
 )
 
@@ -83,6 +86,10 @@ type startArgs struct {
 	websrvEnable      bool
 	WebsrvEnableOAuth bool
 	websrvAddress     string
+
+	jsonRpcEnable    bool
+	jsonRpcAddress   string
+	jsonRpcWsAddress string
 }
 
 func addTestnetFlagsToCmd(cmd *cobra.Command) {
@@ -184,6 +191,9 @@ Example:
 			args.websrvEnable, _ = cmd.Flags().GetBool(websrvflags.WebsrvEnable)
 			args.WebsrvEnableOAuth, _ = cmd.Flags().GetBool(websrvflags.WebsrvEnableOAuth)
 			args.websrvAddress, _ = cmd.Flags().GetString(websrvflags.WebsrvAddress)
+			args.jsonRpcEnable, _ = cmd.Flags().GetBool(jsonrpcflags.JsonRpcEnable)
+			args.jsonRpcAddress, _ = cmd.Flags().GetString(jsonrpcflags.JsonRpcAddress)
+			args.jsonRpcWsAddress, _ = cmd.Flags().GetString(jsonrpcflags.JsonRpcWsAddress)
 
 			return startTestnet(cmd, args)
 		},
@@ -197,6 +207,15 @@ Example:
 	cmd.Flags().Bool(websrvflags.WebsrvEnable, true, "Define if the websrv web server should be enabled")
 	cmd.Flags().Bool(websrvflags.WebsrvEnableOAuth, true, "Define if the websrv oauth server should be enabled")
 	cmd.Flags().String(websrvflags.WebsrvAddress, websrvconfig.DefaultWebsrvAddress, "the websrv web server address to listen on")
+
+	cmd.Flags().Bool(jsonrpcflags.JsonRpcEnable, true, "Define if the json-rpc server should be enabled")
+	cmd.Flags().String(jsonrpcflags.JsonRpcAddress, jsonrpcconfig.DefaultJsonRpcAddress, "the json-rpc server address to listen on")
+	cmd.Flags().String(jsonrpcflags.JsonRpcWsAddress, jsonrpcconfig.DefaultJsonRpcWsAddress, "the json-rpc websocket server address to listen on")
+	cmd.Flags().Duration(jsonrpcflags.JsonRpcEVMTimeout, jsonrpcconfig.DefaultEVMTimeout, "Sets a timeout used for eth_call (0=infinite)")
+	cmd.Flags().Duration(jsonrpcflags.JsonRpcHTTPTimeout, jsonrpcconfig.DefaultHTTPTimeout, "Sets a read/write timeout for json-rpc http server (0=infinite)")
+	cmd.Flags().Duration(jsonrpcflags.JsonRpcHTTPIdleTimeout, jsonrpcconfig.DefaultHTTPIdleTimeout, "Sets a idle timeout for json-rpc http server (0=infinite)")
+	cmd.Flags().Bool(jsonrpcflags.JsonRpcAllowUnprotectedTxs, jsonrpcconfig.DefaultAllowUnprotectedTxs, "Allow for unprotected (non EIP155 signed) transactions to be submitted via the node's RPC when the global parameter is disabled")
+	cmd.Flags().Int(jsonrpcflags.JsonRpcMaxOpenConnections, jsonrpcconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener")
 	return cmd
 }
 

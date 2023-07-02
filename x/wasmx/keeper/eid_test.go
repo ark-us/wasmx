@@ -10,7 +10,6 @@ import (
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
-	wasmeth "mythos/v1/x/wasmx/vm"
 )
 
 var (
@@ -435,7 +434,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
 	deps := []string{"0x0000000000000000000000000000000000000005"}
-	senderHex := wasmeth.EvmAddressFromAcc(sender.Address).Hex()
+	senderHex := types.EvmAddressFromAcc(sender.Address).Hex()
 
 	// RENEWAL_TIMESTAMP_DELTA := 604800; // 1 week in seconds
 
@@ -535,7 +534,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
 	deps := []string{"0x0000000000000000000000000000000000000005"}
-	senderHex := wasmeth.EvmAddressFromAcc(sender.Address).Hex()
+	senderHex := types.EvmAddressFromAcc(sender.Address).Hex()
 
 	// RENEWAL_TIMESTAMP_DELTA := 604800; // 1 week in seconds
 
@@ -583,7 +582,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 	evmcode, err := hex.DecodeString(testdata.WalletRegistry)
 	s.Require().NoError(err)
 	_, registryAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "create")
-	fmt.Println("--registryAddress--", wasmeth.Evm32AddressFromAcc(registryAddress).Hex())
+	fmt.Println("--registryAddress--", types.Evm32AddressFromAcc(registryAddress).Hex())
 
 	fmt.Println("--register--")
 	start := time.Now()

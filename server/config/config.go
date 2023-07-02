@@ -6,9 +6,11 @@ import (
 
 	"github.com/spf13/viper"
 
+	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 )
 
@@ -25,8 +27,9 @@ const (
 // from the SDK as well as the EVM configuration to enable the JSON-RPC APIs.
 type Config struct {
 	config.Config
-	Websrv websrvconfig.WebsrvConfig `mapstructure:"websrv"`
-	TLS    TLSConfig                 `mapstructure:"tls"`
+	Websrv  websrvconfig.WebsrvConfig   `mapstructure:"websrv"`
+	JsonRpc jsonrpcconfig.JsonRpcConfig `mapstructure:"json-rpc"`
+	TLS     TLSConfig                   `mapstructure:"tls"`
 }
 
 // TLSConfig defines the certificate and matching private key for the server.
@@ -45,9 +48,10 @@ func AppConfig() (string, interface{}) {
 	srvCfg := config.DefaultConfig()
 
 	customAppConfig := Config{
-		Config: *srvCfg,
-		Websrv: *websrvconfig.DefaultWebsrvConfigConfig(),
-		TLS:    *DefaultTLSConfig(),
+		Config:  *srvCfg,
+		Websrv:  *websrvconfig.DefaultWebsrvConfigConfig(),
+		JsonRpc: *jsonrpcconfig.DefaultJsonRpcConfigConfig(),
+		TLS:     *DefaultTLSConfig(),
 	}
 
 	// The SDK's default minimum gas price is set to "" (empty value) inside
@@ -72,9 +76,10 @@ func AppConfig() (string, interface{}) {
 // DefaultConfig returns server's default configuration.
 func DefaultConfig() *Config {
 	return &Config{
-		Config: *config.DefaultConfig(),
-		Websrv: *websrvconfig.DefaultWebsrvConfigConfig(),
-		TLS:    *DefaultTLSConfig(),
+		Config:  *config.DefaultConfig(),
+		Websrv:  *websrvconfig.DefaultWebsrvConfigConfig(),
+		JsonRpc: *jsonrpcconfig.DefaultJsonRpcConfigConfig(),
+		TLS:     *DefaultTLSConfig(),
 	}
 }
 
@@ -118,10 +123,21 @@ func GetConfig(v *viper.Viper) (Config, error) {
 		CORSAllowedHeaders: v.GetStringSlice("websrv.cors-allowed-headers"),
 		MaxOpenConnections: v.GetInt("websrv.max-open-connections"),
 	}
+	jsonRpcConf := jsonrpcconfig.JsonRpcConfig{
+		Enable:             v.GetBool("json-rpc.enable"),
+		API:                v.GetStringSlice("json-rpc.api"),
+		Address:            v.GetString("json-rpc.address"),
+		WsAddress:          v.GetString("json-rpc.ws-address"),
+		EVMTimeout:         v.GetDuration("json-rpc.evm-timeout"),
+		HTTPTimeout:        v.GetDuration("json-rpc.http-timeout"),
+		HTTPIdleTimeout:    v.GetDuration("json-rpc.http-idle-timeout"),
+		MaxOpenConnections: v.GetInt("json-rpc.max-open-connections"),
+	}
 
 	return Config{
-		Config: cfg,
-		Websrv: websrvConf,
+		Config:  cfg,
+		Websrv:  websrvConf,
+		JsonRpc: jsonRpcConf,
 	}, nil
 }
 
@@ -138,6 +154,10 @@ func ParseConfig(v *viper.Viper) (*Config, error) {
 func (c Config) ValidateBasic() error {
 	if err := c.Websrv.Validate(); err != nil {
 		return sdkerrors.Wrapf(sdkerrors.ErrAppConfig, "invalid evm config value: %s", err.Error())
+	}
+
+	if err := c.JsonRpc.Validate(); err != nil {
+		return errorsmod.Wrapf(sdkerrors.ErrAppConfig, "invalid json-rpc config value: %s", err.Error())
 	}
 
 	return c.Config.ValidateBasic()

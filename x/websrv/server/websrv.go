@@ -67,7 +67,7 @@ func NewWebsrvServer(
 		ctx:         context.Background(),
 		clientCtx:   clientCtx,
 		queryClient: types.NewQueryClient(clientCtx),
-		logger:      logger.With("module", "backend"),
+		logger:      logger.With("module", "websrv"),
 		chainID:     chainID,
 		longChainID: clientCtx.ChainID,
 		cfg:         config,

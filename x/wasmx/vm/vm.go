@@ -266,7 +266,7 @@ func ExecuteWasm(
 	}
 
 	// native implementations
-	hexaddr := EvmAddressFromAcc(env.Contract.Address).Hex()
+	hexaddr := types.EvmAddressFromAcc(env.Contract.Address).Hex()
 	nativePrecompile, found := native.NativeMap[hexaddr]
 	if found {
 		data := nativePrecompile(ethMsg.Data)
@@ -398,32 +398,32 @@ func handleContractResponse(contractVm *wasmedge.VM, funcName string, data []byt
 	for i, log := range logs {
 		var attributes []types.EventAttribute
 		attributes = append(attributes, types.EventAttribute{
-			Key:   AttributeKeyIndex,
+			Key:   types.AttributeKeyIndex,
 			Value: fmt.Sprint(i),
 		})
 		attributes = append(attributes, types.EventAttribute{
-			Key:   AttributeKeyData,
+			Key:   types.AttributeKeyData,
 			Value: "0x" + hex.EncodeToString(log.Data),
 		})
 		attributes = append(attributes, types.EventAttribute{
-			Key:   AttributeKeyEventType,
+			Key:   types.AttributeKeyEventType,
 			Value: log.Type,
 		})
 		// logs can be from nested calls to other contracts
 		attributes = append(attributes, types.EventAttribute{
-			Key:   AttributeKeyCallContractAddress,
+			Key:   types.AttributeKeyCallContractAddress,
 			Value: log.ContractAddress.String(),
 		})
 		for _, topic := range log.Topics {
 			attributes = append(attributes, types.EventAttribute{
 				// the topic is the indexed key
-				Key:   "topic",
+				Key:   types.AttributeKeyTopic,
 				Value: "0x" + hex.EncodeToString(topic[:]),
 			})
 		}
 
 		events = append(events, types.Event{
-			Type:       EventTypeWasmxLog,
+			Type:       types.EventTypeWasmxLog,
 			Attributes: attributes,
 		})
 	}

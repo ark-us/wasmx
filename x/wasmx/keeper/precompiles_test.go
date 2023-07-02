@@ -17,7 +17,6 @@ import (
 	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm"
 	"mythos/v1/x/wasmx/vm/native"
 )
 
@@ -29,7 +28,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	contractAddress := vm.AccAddressFromHex("0x0000000000000000000000000000000000000004")
+	contractAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000004")
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "aa0000000000000000000000000000000000000000000000000000000077")
@@ -47,7 +46,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverEthDirect() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	contractAddress := vm.AccAddressFromHex("0x000000000000000000000000000000000000001f")
+	contractAddress := types.AccAddressFromHex("0x000000000000000000000000000000000000001f")
 
 	inputhex := "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02"
 
@@ -128,7 +127,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	contractAddress := vm.AccAddressFromHex("0x0000000000000000000000000000000000000001")
+	contractAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000001")
 
 	message := []byte("This is a test message")
 	msgHash_ := sha256.Sum256(message)
@@ -147,7 +146,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	s.Require().True(verified)
 
 	inputbz := append(msgHash, signature...)
-	senderhex := strings.ToLower(vm.EvmAddressFromAcc(sender.Address).Hex())
+	senderhex := strings.ToLower(types.EvmAddressFromAcc(sender.Address).Hex())
 
 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: inputbz}, nil, nil)
 	s.Require().Equal(senderhex[2:], qres)
@@ -161,7 +160,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	contractAddress := vm.AccAddressFromHex("0x0000000000000000000000000000000000000005")
+	contractAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000005")
 
 	// <length_of_BASE> <length_of_EXPONENT> <length_of_MODULUS> <BASE> <EXPONENT> <MODULUS>
 	// https://eips.ethereum.org/EIPS/eip-198
@@ -224,7 +223,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	contractAddress := vm.AccAddressFromHex("0x0000000000000000000000000000000000000022")
+	contractAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000022")
 
 	args1 := native.InputShamirSplit{
 		Secret:    "this is a secret",

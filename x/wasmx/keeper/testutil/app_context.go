@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -12,18 +13,25 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	sdkerr "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	icatypes "github.com/cosmos/ibc-go/v6/modules/apps/27-interchain-accounts/types"
 	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
 	app "mythos/v1/app"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
@@ -136,6 +144,110 @@ func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, 
 	bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
 	s.S.Require().NoError(err)
 	return bz
+}
+
+func (s AppContext) getNonce(addr sdk.AccAddress) uint64 {
+	nonce, err := s.App.AccountKeeper.GetSequence(s.Context(), addr)
+	s.S.Require().NoError(err)
+	return nonce
+}
+
+func (s AppContext) BuildEthTx(
+	priv *ethsecp256k1.PrivKey,
+	to *common.Address,
+	data []byte,
+	gasLimit uint64,
+	gasPrice *big.Int,
+	accesses *ethtypes.AccessList,
+) (*types.MsgExecuteEth, sdk.Coins, uint64) {
+	chainID, err := types.ParseChainID(s.Context().ChainID())
+	s.S.Require().NoError(err)
+	ethSigner := ethtypes.LatestSignerForChainID(chainID)
+	from := common.BytesToAddress(priv.PubKey().Address().Bytes())
+	nonce := s.getNonce(from.Bytes())
+	tx := &ethtypes.LegacyTx{
+		To:       to,
+		Nonce:    nonce,
+		Gas:      gasLimit,
+		GasPrice: gasPrice,
+		Data:     data,
+	}
+	fees := sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdk.NewIntFromBigInt(getFee(gasPrice, gasLimit))))
+	ppriv, err := priv.ToECDSA()
+	s.S.Require().NoError(err)
+	ethTx, err := ethtypes.SignNewTx(ppriv, ethSigner, tx)
+	s.S.Require().NoError(err)
+	bz, err := ethTx.MarshalBinary()
+	s.S.Require().NoError(err)
+	return &types.MsgExecuteEth{Data: bz, Sender: string(types.AccAddressFromEvm(from).String())}, fees, gasLimit
+}
+
+func getFee(gasPrice *big.Int, gas uint64) *big.Int {
+	gasLimit := new(big.Int).SetUint64(gas)
+	return new(big.Int).Mul(gasPrice, gasLimit)
+}
+
+func (s AppContext) prepareEthTx(
+	priv cryptotypes.PrivKey,
+	msg sdk.Msg,
+	txFee sdk.Coins,
+	gasLimit uint64,
+) ([]byte, error) {
+	encodingConfig := app.MakeEncodingConfig()
+	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+
+	err := txBuilder.SetMsgs(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the extension
+	option, err := codectypes.NewAnyWithValue(&types.ExtensionOptionEthereumTx{})
+	if err != nil {
+		return nil, err
+	}
+
+	builder, ok := txBuilder.(authtx.ExtensionOptionsTxBuilder)
+	if !ok {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not set extensions for Ethereum tx")
+	}
+
+	builder.SetExtensionOptions(option)
+	txBuilder.SetGasLimit(gasLimit)
+	txBuilder.SetFeeAmount(txFee)
+
+	// bz are bytes to be broadcasted over the network
+	bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+	s.S.Require().NoError(err)
+	return bz, nil
+}
+
+func (s AppContext) DeliverEthTx(priv cryptotypes.PrivKey, msg sdk.Msg, txFee sdk.Coins, gasLimit uint64) abci.ResponseDeliverTx {
+	bz, err := s.prepareEthTx(priv, msg, txFee, gasLimit)
+	s.S.Require().NoError(err)
+	req := abci.RequestDeliverTx{Tx: bz}
+	res := s.App.BaseApp.DeliverTx(req)
+	return res
+}
+
+func (s AppContext) SendEthTx(
+	priv *ethsecp256k1.PrivKey,
+	to *common.Address,
+	data []byte,
+	gasLimit uint64,
+	gasPrice *big.Int,
+	accesses *ethtypes.AccessList,
+) abci.ResponseDeliverTx {
+	msg, txFee, gasLimit := s.BuildEthTx(priv, to, data, gasLimit, gasPrice, accesses)
+	bz, err := s.prepareEthTx(priv, msg, txFee, gasLimit)
+	s.S.Require().NoError(err)
+	req := abci.RequestDeliverTx{Tx: bz}
+	res := s.App.BaseApp.DeliverTx(req)
+
+	s.S.Require().True(res.IsOK(), res.GetLog())
+	s.S.Commit()
+
+	return res
 }
 
 func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) abci.ResponseDeliverTx {
@@ -451,3 +563,41 @@ func GetSdkEvents(events []abci.Event, evtype string) []sdk.Event {
 	}
 	return sdkEvents
 }
+
+// func signEthTx() {
+// 	privkey, _ := ethsecp256k1.GenerateKey()
+// 	ethPriv, err := privkey.ToECDSA()
+
+// 	tx := ethtypes.NewTx(&ethtypes.AccessListTx{
+// 		Nonce:    0,
+// 		Data:     nil,
+// 		To:       &suite.to,
+// 		Value:    big.NewInt(10),
+// 		GasPrice: big.NewInt(1),
+// 		Gas:      21000,
+// 	})
+// 	tx, err := ethtypes.SignTx(tx, ethtypes.NewEIP2930Signer(suite.chainID), ethPriv)
+// }
+
+// // "github.com/cosmos/cosmos-sdk/crypto/keyring"
+// func (msg *MsgEthereumTx) Sign(ethSigner ethtypes.Signer, keyringSigner keyring.Signer) error {
+// 	from := msg.GetFrom()
+// 	if from.Empty() {
+// 		return fmt.Errorf("sender address not defined for message")
+// 	}
+
+// 	tx := msg.AsTransaction()
+// 	txHash := ethSigner.Hash(tx)
+
+// 	sig, _, err := keyringSigner.SignByAddress(from, txHash.Bytes())
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	tx, err = tx.WithSignature(ethSigner, sig)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	return msg.FromEthereumTx(tx)
+// }

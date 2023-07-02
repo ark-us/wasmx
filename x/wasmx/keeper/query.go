@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 	"runtime/debug"
 
 	"google.golang.org/grpc/codes"
@@ -207,6 +208,79 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 		return nil, types.ErrNotFound
 	}
 	return &types.QuerySmartContractCallResponse{Data: bz}, nil
+}
+
+func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp *types.QueryCallEthResponse, err error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	if err := req.QueryData.ValidateBasic(); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid query data")
+	}
+	senderBech32 := req.Sender
+	if senderBech32 == "" {
+		senderBech32 = "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvvnu6d"
+	}
+	sender, err := sdk.AccAddressFromBech32(senderBech32)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO validate deps
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	// recover from out-of-gas panic
+	defer func() {
+		if r := recover(); r != nil {
+			switch rType := r.(type) {
+			case sdk.ErrorOutOfGas:
+				err = sdkerrors.Wrapf(sdkerrors.ErrOutOfGas,
+					"out of gas in location: %v; gasWanted: %d, gasUsed: %d",
+					rType.Descriptor, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed(),
+				)
+			default:
+				err = sdkerrors.ErrPanic
+			}
+			rsp = nil
+			k.Logger(ctx).
+				Debug("smart query contract",
+					"error", "recovering panic",
+					"contract-address", req.Address,
+					"stacktrace", string(debug.Stack()))
+		}
+	}()
+
+	if req.Address == "" {
+		deps := []string{types.INTERPRETER_EVM_SHANGHAI}
+		msg := types.WasmxExecutionMessage{Data: []byte{}}
+		msgbz, err := json.Marshal(msg)
+		if err != nil {
+			sdkerrors.Wrap(err, "ExecuteEth could not marshal data")
+		}
+		tempCtx, _ := ctx.CacheContext()
+
+		_, _, _, err = k.Deploy(tempCtx, sender, req.QueryData, deps, types.CodeMetadata{}, msgbz, req.Funds, "")
+		if err != nil {
+			return nil, err
+		}
+
+		return &types.QueryCallEthResponse{Data: []byte{}, GasUsed: ctx.GasMeter().GasConsumed()}, nil
+	}
+
+	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
+		return nil, sdkerrors.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
+	}
+	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
+	switch {
+	case err != nil:
+		return nil, err
+	case bz == nil:
+		return nil, types.ErrNotFound
+	}
+	return &types.QueryCallEthResponse{Data: bz, GasUsed: ctx.GasMeter().GasConsumed()}, nil
 }
 
 func (k Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContractCallRequest) (rsp *types.QueryDebugContractCallResponse, err error) {

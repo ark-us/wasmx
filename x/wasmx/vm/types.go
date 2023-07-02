@@ -16,15 +16,6 @@ var (
 	LOG_TYPE_WASMX = "wasmx"
 )
 
-var (
-	// this is prefixed with types CustomContractEventPrefix
-	EventTypeWasmxLog               = "log"
-	AttributeKeyEventType           = "type"
-	AttributeKeyIndex               = "index"
-	AttributeKeyData                = "data"
-	AttributeKeyCallContractAddress = "contract_address_call"
-)
-
 type ContractContext struct {
 	FilePath         string
 	Vm               *wasmedge.VM
@@ -38,7 +29,7 @@ type ContractContext struct {
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
-	hexaddr := EvmAddressFromAcc(newctx.Env.Contract.Address).Hex()
+	hexaddr := types.EvmAddressFromAcc(newctx.Env.Contract.Address).Hex()
 	nativePrecompile, found := native.NativeMap[hexaddr]
 	if found {
 		data := nativePrecompile(newctx.Env.CurrentCall.CallData)

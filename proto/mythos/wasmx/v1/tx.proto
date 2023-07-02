@@ -23,13 +23,16 @@ service Msg {
         returns (MsgInstantiateContract2Response);
     // Execute submits the given message data to a smart contract
     rpc ExecuteContract(MsgExecuteContract) returns (MsgExecuteContractResponse);
+    // CompileContract submits a smart contract to be precompiled
+    rpc CompileContract(MsgCompileContract) returns (MsgCompileContractResponse);
+    // ExecuteEth to submit Wasm code to the system
+    rpc ExecuteEth(MsgExecuteEth) returns (MsgExecuteEthResponse);
+
+    // TODO Remove
     // ExecuteWithOrigin submits the given message data to a smart contract
     rpc ExecuteWithOriginContract(MsgExecuteWithOriginContract) returns (MsgExecuteContractResponse);
     // ExecuteDelegate submits the given message data to a smart contract
     rpc ExecuteDelegateContract(MsgExecuteDelegateContract) returns (MsgExecuteDelegateContractResponse);
-
-    // CompileContract submits a smart contract to be precompiled
-    rpc CompileContract(MsgCompileContract) returns (MsgCompileContractResponse);
 }
 
 // MsgStoreCode submit Wasm code to the system
@@ -163,6 +166,27 @@ message MsgExecuteContract {
 message MsgExecuteContractResponse {
     // Data contains bytes to returned from the contract
     bytes data = 1;
+}
+
+// MsgExecuteEth submits an Ethereum-like RLP-encoded transaction
+message MsgExecuteEth {
+    // data is RLP-encoded transaction data of the Ethereum transaction
+    // we use Any for its caching feature
+    // google.protobuf.Any data = 1;
+    bytes data = 1;
+    // from is a bech32 address decoded from the transaction signature
+    string sender = 2;
+}
+
+// MsgExecuteEthResponse returns execution result data.
+message MsgExecuteEthResponse {
+    // Data contains bytes to returned from the contract
+    bytes data = 1;
+}
+
+// ExtensionOptionEthereumTx is an extension option for ethereum transactions
+message ExtensionOptionEthereumTx {
+    option (gogoproto.goproto_getters) = false;
 }
 
 // MsgExecuteWithOriginContract forwards a message data from a smart contract

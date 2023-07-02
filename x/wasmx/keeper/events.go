@@ -56,7 +56,6 @@ func contractSDKEventAttributes(customAttributes []types.EventAttribute, contrac
 			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
 		}
 		value := strings.TrimSpace(l.Value)
-		// TODO: check if this is legal in the SDK - if it is, we can remove this check
 		if len(value) == 0 {
 			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
 		}

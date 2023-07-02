@@ -18,7 +18,7 @@ import (
 
 var dirname = "oauth"
 
-// StartJSONRPC starts the JSON-RPC server
+// StartWebsrv starts the web server
 func StartWebsrv(
 	ctx *server.Context,
 	clientCtx client.Context,
