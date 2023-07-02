@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 
@@ -14,18 +15,16 @@ import (
 	etherminttypes "github.com/evmos/ethermint/types"
 
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
-	"mythos/v1/x/wasmx/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
-	// wasmxvm "mythos/v1/x/wasmx/vm"
 )
 
 // GetTransactionByHash returns the Ethereum format transaction identified by Ethereum transaction hash
 func (b *Backend) GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransaction, error) {
 	res, err := b.GetTxByEthHash(txHash)
 
-	// if err != nil {
-	// 	return b.getTransactionByHashPending(txHash)
-	// }
+	if err != nil {
+		return b.getTransactionByHashPending(txHash)
+	}
 
 	if err != nil {
 		return nil, errors.New("tx does not exist")
@@ -74,14 +73,13 @@ func (b *Backend) GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransac
 		b.logger.Error("failed to fetch Base Fee from prunned block. Check node prunning configuration", "height", blockRes.Height, "error", err)
 	}
 
-	return rpctypes.NewTransactionFromMsg(
+	return b.NewTransactionFromMsg(
 		txHash,
 		msg,
 		common.BytesToHash(block.BlockID.Hash.Bytes()),
 		uint64(res.Height),
 		uint64(res.EthTxIndex),
 		baseFee,
-		b.chainID,
 	)
 }
 
@@ -129,7 +127,7 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 	} else {
 		status = hexutil.Uint(ethtypes.ReceiptStatusSuccessful)
 	}
-	sender := types.EvmAddressFromAcc(sdk.MustAccAddressFromBech32(ethMsg.Sender))
+	sender := wasmxtypes.EvmAddressFromAcc(sdk.MustAccAddressFromBech32(ethMsg.Sender))
 
 	// parse tx logs from events
 	// sets contract address, data, topics, log index
@@ -262,4 +260,61 @@ func (b *Backend) queryTendermintTxIndexer(query string) (*etherminttypes.TxResu
 	}
 
 	return rpctypes.ParseTxIndexerResult(txResult, tx)
+}
+
+// getTransactionByHashPending find pending tx from mempool
+func (b *Backend) getTransactionByHashPending(txHash common.Hash) (*rpctypes.RPCTransaction, error) {
+	hexTx := txHash.Hex()
+	// try to find tx in mempool
+
+	res, err := b.clientCtx.Client.UnconfirmedTxs(b.ctx, nil)
+	if err != nil {
+		b.logger.Debug("tx not found", "hash", hexTx, "error", err.Error())
+		return nil, nil
+	}
+
+	for _, txBz := range res.Txs {
+		if common.BytesToHash(txBz.Hash()).Hex() == hexTx {
+			tx, err := b.clientCtx.TxConfig.TxDecoder()(txBz)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, msg := range (tx).GetMsgs() {
+				ethMsg, ok := msg.(*wasmxtypes.MsgExecuteEth)
+				if !ok {
+					continue
+				}
+				// use zero block values since it's not included in a block yet
+				rpctx, err := b.NewTransactionFromMsg(
+					txHash,
+					ethMsg,
+					common.Hash{},
+					uint64(0),
+					uint64(0),
+					nil,
+				)
+				if err != nil {
+					return nil, err
+				}
+				return rpctx, nil
+			}
+		}
+	}
+
+	b.logger.Debug("tx not found", "hash", hexTx)
+	return nil, nil
+}
+
+// getTransactionByHashPending find pending tx from mempool
+func (b *Backend) NewTransactionFromMsg(txHash common.Hash, msg *wasmxtypes.MsgExecuteEth, blockHash common.Hash, blockNumber uint64, index uint64, baseFee *big.Int) (*rpctypes.RPCTransaction, error) {
+	return rpctypes.NewTransactionFromMsg(
+		txHash,
+		msg,
+		blockHash,
+		blockNumber,
+		index,
+		baseFee,
+		b.chainID,
+	)
 }

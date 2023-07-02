@@ -109,52 +109,52 @@ func (b *Backend) GetBlockByHash(hash common.Hash, fullTx bool) (map[string]inte
 	return res, nil
 }
 
-// // GetBlockTransactionCountByHash returns the number of Ethereum transactions in
-// // the block identified by hash.
-// func (b *Backend) GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint {
-// 	block, err := b.clientCtx.Client.BlockByHash(b.ctx, hash.Bytes())
-// 	if err != nil {
-// 		b.logger.Debug("block not found", "hash", hash.Hex(), "error", err.Error())
-// 		return nil
-// 	}
+// GetBlockTransactionCountByHash returns the number of Ethereum transactions in
+// the block identified by hash.
+func (b *Backend) GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint {
+	block, err := b.clientCtx.Client.BlockByHash(b.ctx, hash.Bytes())
+	if err != nil {
+		b.logger.Debug("block not found", "hash", hash.Hex(), "error", err.Error())
+		return nil
+	}
 
-// 	if block.Block == nil {
-// 		b.logger.Debug("block not found", "hash", hash.Hex())
-// 		return nil
-// 	}
+	if block.Block == nil {
+		b.logger.Debug("block not found", "hash", hash.Hex())
+		return nil
+	}
 
-// 	return b.GetBlockTransactionCount(block)
-// }
+	return b.GetBlockTransactionCount(block)
+}
 
-// // GetBlockTransactionCountByNumber returns the number of Ethereum transactions
-// // in the block identified by number.
-// func (b *Backend) GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint {
-// 	block, err := b.TendermintBlockByNumber(blockNum)
-// 	if err != nil {
-// 		b.logger.Debug("block not found", "height", blockNum.Int64(), "error", err.Error())
-// 		return nil
-// 	}
+// GetBlockTransactionCountByNumber returns the number of Ethereum transactions
+// in the block identified by number.
+func (b *Backend) GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint {
+	block, err := b.TendermintBlockByNumber(blockNum)
+	if err != nil {
+		b.logger.Debug("block not found", "height", blockNum.Int64(), "error", err.Error())
+		return nil
+	}
 
-// 	if block.Block == nil {
-// 		b.logger.Debug("block not found", "height", blockNum.Int64())
-// 		return nil
-// 	}
+	if block.Block == nil {
+		b.logger.Debug("block not found", "height", blockNum.Int64())
+		return nil
+	}
 
-// 	return b.GetBlockTransactionCount(block)
-// }
+	return b.GetBlockTransactionCount(block)
+}
 
-// // GetBlockTransactionCount returns the number of Ethereum transactions in a
-// // given block.
-// func (b *Backend) GetBlockTransactionCount(block *tmrpctypes.ResultBlock) *hexutil.Uint {
-// 	blockRes, err := b.TendermintBlockResultByNumber(&block.Block.Height)
-// 	if err != nil {
-// 		return nil
-// 	}
+// GetBlockTransactionCount returns the number of Ethereum transactions in a
+// given block.
+func (b *Backend) GetBlockTransactionCount(block *tmrpctypes.ResultBlock) *hexutil.Uint {
+	blockRes, err := b.TendermintBlockResultByNumber(&block.Block.Height)
+	if err != nil {
+		return nil
+	}
 
-// 	ethMsgs := b.EthMsgsFromTendermintBlock(block, blockRes)
-// 	n := hexutil.Uint(len(ethMsgs))
-// 	return &n
-// }
+	ethMsgs, _ := b.EthMsgsFromTendermintBlock(block, blockRes)
+	n := hexutil.Uint(len(ethMsgs))
+	return &n
+}
 
 // TendermintBlockByNumber returns a Tendermint-formatted block for a given
 // block number
@@ -503,16 +503,9 @@ func (b *Backend) EthBlockFromTendermintBlock(
 	}
 
 	ethHeader := rpctypes.EthHeaderFromTendermint(block.Header, bloom, baseFee)
-	// msgs := b.EthMsgsFromTendermintBlock(resBlock, blockRes)
-
-	// txs := make([]*ethtypes.Transaction, len(msgs))
-	// for i, ethMsg := range msgs {
-	// 	txs[i] = ethMsg.AsTransaction()
-	// }
-	// TODO
-	txs := make([]*ethtypes.Transaction, 0)
+	ethTxs, _ := b.EthMsgsFromTendermintBlock(resBlock, blockRes)
 
 	// TODO: add tx receipts
-	ethBlock := ethtypes.NewBlock(ethHeader, txs, nil, nil, trie.NewStackTrie(nil))
+	ethBlock := ethtypes.NewBlock(ethHeader, ethTxs, nil, nil, trie.NewStackTrie(nil))
 	return ethBlock, nil
 }

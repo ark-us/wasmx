@@ -16,10 +16,25 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
+	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
+
+// GetLogsFromBlockResults returns the list of event logs from the tendermint block result response
+func GetLogsFromBlockResults(blockRes *tmrpctypes.ResultBlockResults) ([][]*ethtypes.Log, error) {
+	blockLogs := [][]*ethtypes.Log{}
+	for _, txResult := range blockRes.TxsResults {
+		logs, err := TxLogsFromEvents(txResult.Events)
+		if err != nil {
+			return nil, err
+		}
+
+		blockLogs = append(blockLogs, logs)
+	}
+	return blockLogs, nil
+}
 
 // TxLogsFromEvents parses ethereum logs from cosmos events for specific msg index
 func TxLogsFromEvents(events []abci.Event) ([]*ethtypes.Log, error) {
@@ -90,7 +105,6 @@ func ContractAddressFromEvents(events []abci.Event) *common.Address {
 // getAccountNonce returns the account nonce for the given account address.
 // If the pending value is true, it will iterate over the mempool (pending)
 // txs in order to compute and return the pending tx sequence.
-// Todo: include the ability to specify a blockNumber
 func (b *Backend) getAccountNonce(accAddr common.Address, pending bool, height int64, logger log.Logger) (uint64, error) {
 	queryClient := authtypes.NewQueryClient(b.clientCtx)
 	adr := sdk.AccAddress(accAddr.Bytes()).String()
@@ -115,35 +129,15 @@ func (b *Backend) getAccountNonce(accAddr common.Address, pending bool, height i
 		return nonce, nil
 	}
 
-	// TODO
-
 	// the account retriever doesn't include the uncommitted transactions on the nonce so we need to
 	// to manually add them.
-	// pendingTxs, err := b.PendingTransactions()
-	// if err != nil {
-	// 	logger.Error("failed to fetch pending transactions", "error", err.Error())
-	// 	return nonce, nil
-	// }
+	pendingTxs, _, err := b.PendingTransactions()
+	if err != nil {
+		logger.Error("failed to fetch pending transactions", "error", err.Error())
+		return nonce, nil
+	}
 
-	// // add the uncommitted txs to the nonce counter
-	// // only supports `MsgEthereumTx` style tx
-	// for _, tx := range pendingTxs {
-	// 	for _, msg := range (*tx).GetMsgs() {
-	// 		ethMsg, ok := msg.(*wasmxtypes.MsgExecuteEth)
-	// 		if !ok {
-	// 			// not ethereum tx
-	// 			break
-	// 		}
-
-	// 		sender, err := ethMsg.GetSender(b.chainID)
-	// 		if err != nil {
-	// 			continue
-	// 		}
-	// 		if sender == accAddr {
-	// 			nonce++
-	// 		}
-	// 	}
-	// }
+	nonce += uint64(len(pendingTxs))
 
 	return nonce, nil
 }

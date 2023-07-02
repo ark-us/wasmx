@@ -20,32 +20,7 @@ import (
 
 // GasPrice returns the current gas price based on Ethermint's gas price oracle.
 func (b *Backend) GasPrice() (*hexutil.Big, error) {
-	var (
-		result *big.Int
-		// err    error
-	)
-	// if head := b.CurrentHeader(); head.BaseFee != nil {
-	// 	result, err = b.SuggestGasTipCap(head.BaseFee)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	result = result.Add(result, head.BaseFee)
-	// } else {
-	// 	result = big.NewInt(b.RPCMinGasPrice())
-	// }
-
-	// // return at least GlobalMinGasPrice from FeeMarket module
-	// minGasPrice, err := b.GlobalMinGasPrice()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// minGasPriceInt := minGasPrice.TruncateInt().BigInt()
-	// if result.Cmp(minGasPriceInt) < 0 {
-	// 	result = minGasPriceInt
-	// }
-
-	result = big.NewInt(1000000)
-
+	result := big.NewInt(1000000)
 	return (*hexutil.Big)(result), nil
 }
 
@@ -54,16 +29,6 @@ func (b *Backend) GasPrice() (*hexutil.Big, error) {
 func (b *Backend) DoCall(
 	args rpctypes.TransactionArgs, blockNr rpctypes.BlockNumber,
 ) ([]byte, error) {
-	// bz, err := json.Marshal(&args)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// header, err := b.TendermintBlockByNumber(blockNr)
-	// if err != nil {
-	// 	// the error message imitates geth behavior
-	// 	return nil, errors.New("header not found")
-	// }
-
 	to := wasmxtypes.AccAddressFromEvm(*args.To)
 	var from string
 	if args.From != nil {
@@ -188,8 +153,7 @@ func (b *Backend) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 
 // EstimateGas returns an estimate of gas usage for the given smart contract call.
 func (b *Backend) EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {
-	return hexutil.Uint64(500000), nil
-
+	return hexutil.Uint64(1000000), nil
 	// blockNr := rpctypes.EthPendingBlockNumber
 	// if blockNrOptional != nil {
 	// 	blockNr = *blockNrOptional

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	// rpctypes "mythos/v1/x/wasmx/rpc/types"
 )
 
 // Accounts returns the list of accounts available to this node.

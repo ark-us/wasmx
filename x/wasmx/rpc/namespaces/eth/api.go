@@ -7,9 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	"mythos/v1/x/wasmx/rpc/backend"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // The Ethereum JSON-RPC API
@@ -19,8 +21,8 @@ type EthereumAPI interface {
 	BlockNumber() (hexutil.Uint64, error)
 	GetBlockByNumber(ethBlockNum rpctypes.BlockNumber, fullTx bool) (map[string]interface{}, error)
 	GetBlockByHash(hash common.Hash, fullTx bool) (map[string]interface{}, error)
-	// GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint
-	// GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint
+	GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint
+	GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint
 
 	// Reading Transactions
 	//
@@ -53,7 +55,7 @@ type EthereumAPI interface {
 	// Chain Information
 	//
 	// ProtocolVersion() hexutil.Uint
-	// GasPrice() (*hexutil.Big, error)
+	GasPrice() (*hexutil.Big, error)
 	EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error)
 	// FeeHistory(blockCount rpc.DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*rpctypes.FeeHistoryResult, error)
 	// MaxPriorityFeePerGas() (*hexutil.Big, error)
@@ -74,11 +76,11 @@ type EthereumAPI interface {
 	// Syncing() (interface{}, error)
 	// Coinbase() (string, error)
 	// Sign(address common.Address, data hexutil.Bytes) (hexutil.Bytes, error)
-	// GetTransactionLogs(txHash common.Hash) ([]*ethtypes.Log, error)
+	GetTransactionLogs(txHash common.Hash) ([]*ethtypes.Log, error)
 	// SignTypedData(address common.Address, typedData apitypes.TypedData) (hexutil.Bytes, error)
 	// FillTransaction(args evmtypes.TransactionArgs) (*rpctypes.SignTransactionResult, error)
 	// Resend(ctx context.Context, args evmtypes.TransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error)
-	// GetPendingTransactions() ([]*rpctypes.RPCTransaction, error)
+	GetPendingTransactions() ([]*rpctypes.RPCTransaction, error)
 	// eth_signTransaction (on Ethereum.org)
 	// eth_getCompilers (on Ethereum.org)
 	// eth_compileSolidity (on Ethereum.org)
@@ -158,17 +160,17 @@ func (e *PublicAPI) GetTransactionReceipt(hash common.Hash) (map[string]interfac
 	return e.backend.GetTransactionReceipt(hash)
 }
 
-// // GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
-// func (e *PublicAPI) GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint {
-// 	e.logger.Debug("eth_getBlockTransactionCountByHash", "hash", hash.Hex())
-// 	return e.backend.GetBlockTransactionCountByHash(hash)
-// }
+// GetBlockTransactionCountByHash returns the number of transactions in the block identified by hash.
+func (e *PublicAPI) GetBlockTransactionCountByHash(hash common.Hash) *hexutil.Uint {
+	e.logger.Debug("eth_getBlockTransactionCountByHash", "hash", hash.Hex())
+	return e.backend.GetBlockTransactionCountByHash(hash)
+}
 
-// // GetBlockTransactionCountByNumber returns the number of transactions in the block identified by number.
-// func (e *PublicAPI) GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint {
-// 	e.logger.Debug("eth_getBlockTransactionCountByNumber", "height", blockNum.Int64())
-// 	return e.backend.GetBlockTransactionCountByNumber(blockNum)
-// }
+// GetBlockTransactionCountByNumber returns the number of transactions in the block identified by number.
+func (e *PublicAPI) GetBlockTransactionCountByNumber(blockNum rpctypes.BlockNumber) *hexutil.Uint {
+	e.logger.Debug("eth_getBlockTransactionCountByNumber", "height", blockNum.Int64())
+	return e.backend.GetBlockTransactionCountByNumber(blockNum)
+}
 
 // // GetTransactionByBlockHashAndIndex returns the transaction identified by hash and index.
 // func (e *PublicAPI) GetTransactionByBlockHashAndIndex(hash common.Hash, idx hexutil.Uint) (*rpctypes.RPCTransaction, error) {
@@ -384,32 +386,32 @@ func (e *PublicAPI) Syncing() (interface{}, error) {
 // 	return e.backend.Sign(address, data)
 // }
 
-// // GetTransactionLogs returns the logs given a transaction hash.
-// func (e *PublicAPI) GetTransactionLogs(txHash common.Hash) ([]*ethtypes.Log, error) {
-// 	e.logger.Debug("eth_getTransactionLogs", "hash", txHash)
+// GetTransactionLogs returns the logs given a transaction hash.
+func (e *PublicAPI) GetTransactionLogs(txHash common.Hash) ([]*ethtypes.Log, error) {
+	e.logger.Debug("eth_getTransactionLogs", "hash", txHash)
 
-// 	hexTx := txHash.Hex()
-// 	res, err := e.backend.GetTxByEthHash(txHash)
-// 	if err != nil {
-// 		e.logger.Debug("tx not found", "hash", hexTx, "error", err.Error())
-// 		return nil, nil
-// 	}
+	hexTx := txHash.Hex()
+	res, err := e.backend.GetTxByEthHash(txHash)
+	if err != nil {
+		e.logger.Debug("tx not found", "hash", hexTx, "error", err.Error())
+		return nil, nil
+	}
 
-// 	if res.Failed {
-// 		// failed, return empty logs
-// 		return nil, nil
-// 	}
+	if res.Failed {
+		// failed, return empty logs
+		return nil, nil
+	}
 
-// 	resBlockResult, err := e.backend.TendermintBlockResultByNumber(&res.Height)
-// 	if err != nil {
-// 		e.logger.Debug("block result not found", "number", res.Height, "error", err.Error())
-// 		return nil, nil
-// 	}
+	resBlockResult, err := e.backend.TendermintBlockResultByNumber(&res.Height)
+	if err != nil {
+		e.logger.Debug("block result not found", "number", res.Height, "error", err.Error())
+		return nil, nil
+	}
 
-// 	// parse tx logs from events
-// 	index := int(res.MsgIndex) // #nosec G701
-// 	return backend.TxLogsFromEvents(resBlockResult.TxsResults[res.TxIndex].Events, index)
-// }
+	// parse tx logs from events
+	// index := int(res.MsgIndex)
+	return backend.TxLogsFromEvents(resBlockResult.TxsResults[res.TxIndex].Events)
+}
 
 // // SignTypedData signs EIP-712 conformant typed data
 // func (e *PublicAPI) SignTypedData(address common.Address, typedData apitypes.TypedData) (hexutil.Bytes, error) {
@@ -452,40 +454,41 @@ func (e *PublicAPI) Syncing() (interface{}, error) {
 // 	return e.backend.Resend(args, gasPrice, gasLimit)
 // }
 
-// // GetPendingTransactions returns the transactions that are in the transaction pool
-// // and have a from address that is one of the accounts this node manages.
-// func (e *PublicAPI) GetPendingTransactions() ([]*rpctypes.RPCTransaction, error) {
-// 	e.logger.Debug("eth_getPendingTransactions")
+// GetPendingTransactions returns the transactions that are in the transaction pool
+// and have a from address that is one of the accounts this node manages.
+func (e *PublicAPI) GetPendingTransactions() ([]*rpctypes.RPCTransaction, error) {
+	e.logger.Debug("eth_getPendingTransactions")
 
-// 	txs, err := e.backend.PendingTransactions()
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	txs, txHashes, err := e.backend.PendingTransactions()
+	if err != nil {
+		return nil, err
+	}
 
-// 	result := make([]*rpctypes.RPCTransaction, 0, len(txs))
-// 	for _, tx := range txs {
-// 		for _, msg := range (*tx).GetMsgs() {
-// 			ethMsg, ok := msg.(*evmtypes.MsgEthereumTx)
-// 			if !ok {
-// 				// not valid ethereum tx
-// 				break
-// 			}
+	result := make([]*rpctypes.RPCTransaction, 0, len(txs))
+	for i, tx := range txs {
+		for _, msg := range (*tx).GetMsgs() {
+			ethMsg, ok := msg.(*wasmxtypes.MsgExecuteEth)
+			if !ok {
+				// not valid ethereum tx
+				break
+			}
 
-// 			rpctx, err := rpctypes.NewTransactionFromMsg(
-// 				ethMsg,
-// 				common.Hash{},
-// 				uint64(0),
-// 				uint64(0),
-// 				nil,
-// 				e.backend.ChainConfig().ChainID,
-// 			)
-// 			if err != nil {
-// 				return nil, err
-// 			}
+			// transaction is not included in the block yet, so we use zero values
+			rpctx, err := e.backend.NewTransactionFromMsg(
+				txHashes[i],
+				ethMsg,
+				common.Hash{},
+				uint64(0),
+				uint64(0),
+				nil,
+			)
+			if err != nil {
+				return nil, err
+			}
 
-// 			result = append(result, rpctx)
-// 		}
-// 	}
+			result = append(result, rpctx)
+		}
+	}
 
-// 	return result, nil
-// }
+	return result, nil
+}
