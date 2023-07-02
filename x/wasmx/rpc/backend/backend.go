@@ -58,7 +58,7 @@ type EVMBackend interface {
 	// ListAccounts() ([]common.Address, error)
 	// NewMnemonic(uid string, language keyring.Language, hdPath, bip39Passphrase string, algo keyring.SignatureAlgo) (*keyring.Record, error)
 	// UnprotectedAllowed() bool
-	// RPCGasCap() uint64            // global gas cap for eth_call over rpc: DoS protection
+	// RPCGasCap() uint64 // global gas cap for eth_call over rpc: DoS protection
 	// RPCEVMTimeout() time.Duration // global timeout for eth_call over rpc: DoS protection
 	// RPCTxFeeCap() float64         // RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for send-transaction variants. The unit is ether.
 	// RPCMinGasPrice() int64

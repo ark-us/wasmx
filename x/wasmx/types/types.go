@@ -9,8 +9,9 @@ import (
 
 const (
 	defaultMemoryCacheSize    uint32 = 100 // in MiB
-	defaultSmartQueryGasLimit uint64 = 3_000_000
+	defaultSmartQueryGasLimit uint64 = 20_000_000
 	defaultContractDebugMode         = false
+	DefaultBlockGasLimit      uint64 = 20_000_000
 )
 
 // WasmConfig is the extra config required for wasm
@@ -66,7 +67,7 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 		panic("Block (unix) time must never be empty or negative ")
 	}
 
-	blockGasLimit := uint64(10_000_000)
+	blockGasLimit := DefaultBlockGasLimit
 	if ctx.BlockGasMeter() != nil {
 		blockGasLimit = ctx.BlockGasMeter().Limit()
 	}

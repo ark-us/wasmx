@@ -64,3 +64,8 @@ func (b Backend) UnprotectedAllowed() bool {
 func (b *Backend) RPCEVMTimeout() time.Duration {
 	return b.cfg.JsonRpc.EVMTimeout
 }
+
+// // RPCGasCap is the global gas cap for eth-call variants.
+// func (b *Backend) RPCGasCap() uint64 {
+// 	return b.cfg.JsonRpc.GasCap
+// }

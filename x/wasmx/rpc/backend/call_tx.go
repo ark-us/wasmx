@@ -153,36 +153,66 @@ func (b *Backend) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 
 // EstimateGas returns an estimate of gas usage for the given smart contract call.
 func (b *Backend) EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {
-	return hexutil.Uint64(1000000), nil
-	// blockNr := rpctypes.EthPendingBlockNumber
-	// if blockNrOptional != nil {
-	// 	blockNr = *blockNrOptional
-	// }
+	blockNr := rpctypes.EthPendingBlockNumber
+	if blockNrOptional != nil {
+		blockNr = *blockNrOptional
+	}
 
-	// bz, err := json.Marshal(&args)
-	// if err != nil {
-	// 	return 0, err
-	// }
+	var from string
+	if args.From != nil {
+		from = wasmxtypes.AccAddressFromEvm(*args.From).String()
+	} else {
+		from = "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvvnu6d"
+	}
 
-	// header, err := b.TendermintBlockByNumber(blockNr)
-	// if err != nil {
-	// 	// the error message imitates geth behavior
-	// 	return 0, errors.New("header not found")
-	// }
+	evmrq := wasmxtypes.WasmxExecutionMessage{
+		Data: wasmxtypes.RawContractMessage(*args.Data),
+	}
+	bz, err := json.Marshal(evmrq)
+	if err != nil {
+		return hexutil.Uint64(0), err
+	}
 
-	// req := evmtypes.EthCallRequest{
-	// 	Args:            bz,
-	// 	GasCap:          b.RPCGasCap(),
-	// 	ProposerAddress: sdk.ConsAddress(header.Block.ProposerAddress),
-	// 	ChainId:         b.chainID.Int64(),
-	// }
+	funds := sdk.Coins{}
+	if args.Value != nil {
+		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdk.NewIntFromBigInt((*big.Int)(args.Value))))
+	}
 
-	// // From ContextWithHeight: if the provided height is 0,
-	// // it will return an empty context and the gRPC query will use
-	// // the latest block height for querying.
-	// res, err := b.queryClient.EstimateGas(rpctypes.ContextWithHeight(blockNr.Int64()), &req)
-	// if err != nil {
-	// 	return 0, err
-	// }
-	// return hexutil.Uint64(res.Gas), nil
+	to := ""
+	if args.To != nil {
+		to = wasmxtypes.AccAddressFromEvm(*args.To).String()
+	}
+	req := wasmxtypes.QueryCallEthRequest{
+		Sender:    from,
+		Address:   to,
+		QueryData: bz,
+		Funds:     funds,
+	}
+
+	// From ContextWithHeight: if the provided height is 0,
+	// it will return an empty context and the gRPC query will use
+	// the latest block height for querying.
+	ctx := rpctypes.ContextWithHeight(blockNr.Int64())
+	timeout := b.RPCEVMTimeout()
+
+	// Setup context so it may be canceled the call has completed
+	// or, in case of unmetered gas, setup a context with a timeout.
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
+
+	// Make sure the context is canceled when the call has completed
+	// this makes sure resources are cleaned up.
+	defer cancel()
+
+	res, err := b.queryClient.CallEth(ctx, &req)
+	if err != nil {
+		return hexutil.Uint64(0), err
+	}
+	gasUsed := res.GasUsed
+	gasUsed += 31000
+	return hexutil.Uint64(gasUsed), nil
 }

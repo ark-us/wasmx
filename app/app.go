@@ -506,7 +506,6 @@ func New(
 	)
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
-	wasmconfig.SmartQueryGasLimit = 5_000_000
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],

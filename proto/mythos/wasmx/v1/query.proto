@@ -41,6 +41,12 @@ service Query {
     option (google.api.http).get =
         "/wasmx/v1/contract/{address}/call/{query_data}";
   }
+  // CallEth get query result from the contract
+  rpc CallEth(QueryCallEthRequest)
+      returns (QueryCallEthResponse) {
+    option (google.api.http).get =
+        "/wasmx/v1/contract/{address}/call/{query_data}";
+  }
   // DebugContractCall get query result from the contract
   rpc DebugContractCall(QueryDebugContractCallRequest)
       returns (QueryDebugContractCallResponse) {
@@ -165,6 +171,32 @@ message QuerySmartContractCallRequest {
 message QuerySmartContractCallResponse {
   // Data contains the json data returned from the smart contract
   bytes data = 1 [ (gogoproto.casttype) = "RawContractMessage" ];
+}
+
+// QueryCallEthRequest is the request type for the
+// Query/CallEth RPC method
+message QueryCallEthRequest {
+  // Sender is the that actor that signed the messages
+  string sender = 1;
+  // Address is the address of the smart contract
+  string address = 2;
+  bytes query_data = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
+  // Funds coins that are transferred to the contract on execution
+  repeated cosmos.base.v1beta1.Coin funds = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+  // Array of either hex-encoded contract addresses or contract labels
+  // on which the execution of this message depends on
+  repeated string dependencies = 5;
+}
+
+// QueryCallEthResponse is the response type for the
+// Query/CallEth RPC method
+message QueryCallEthResponse {
+  // Data contains the json data returned from the smart contract
+  bytes data = 1 [ (gogoproto.casttype) = "RawContractMessage" ];
+  uint64 gas_used = 2;
 }
 
 // QueryDebugContractCallRequest is the request type for the
