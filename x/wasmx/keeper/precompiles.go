@@ -85,14 +85,7 @@ func (k Keeper) ActivateSystemContract(
 		}
 	}
 	if contract.Role != "" {
-		role := &types.Role{
-			Label:           contract.Label,
-			Role:            contract.Role,
-			ContractAddress: contractAddress.String(),
-		}
-		k.SetRoleByLabel(ctx, role)
-		k.SetRoleLabelByContract(ctx, contractAddress, contract.Label)
-		// TODO set label by role?
+		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
 	}
 	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contract.Address, "code_id", codeID)
 	return nil

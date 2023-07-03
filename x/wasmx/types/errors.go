@@ -86,6 +86,8 @@ var (
 
 	ErrUnauthorizedAddress = sdkErrors.Register(DefaultCodespace, 30, "unauthorized address")
 
+	ErrInvalidCoreContractCall = sdkErrors.Register(DefaultCodespace, 31, "invalid core contract call")
+
 	// ErrInvalidCode error if an attribute/event from the contract is invalid
 	_ = sdkErrors.Register(DefaultCodespace, 45, "invalid code id")
 )

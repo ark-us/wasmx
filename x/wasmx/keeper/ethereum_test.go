@@ -1,0 +1,143 @@
+package keeper_test
+
+import (
+	_ "embed"
+	"encoding/hex"
+	"fmt"
+	"math/big"
+	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
+
+	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
+	"mythos/v1/x/wasmx/types"
+	cch "mythos/v1/x/wasmx/types/contract_handler"
+	"mythos/v1/x/wasmx/types/contract_handler/alias"
+	"mythos/v1/x/wasmx/vm/precompiles"
+)
+
+func (suite *KeeperTestSuite) TestSendEthTx() {
+	priv, err := ethsecp256k1.GenerateKey()
+	s.Require().NoError(err)
+	sender := sdk.AccAddress(priv.PubKey().Address().Bytes())
+	initBalance := sdk.NewInt(1000_000_000)
+	// getHex := `6d4ce63c`
+	setHex := `60fe47b1`
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
+	s.Require().NoError(err)
+
+	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
+	initvaluebz, err := hex.DecodeString(initvalue)
+	s.Require().NoError(err)
+
+	databz := append(evmcode, initvaluebz...)
+	res := appA.SendEthTx(priv, nil, databz, uint64(1000000), big.NewInt(10000), nil)
+
+	contractAddressStr := appA.GetContractAddressFromLog(res.GetLog())
+	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
+
+	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
+	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
+
+	initvalue = "0000000000000000000000000000000000000000000000000000000000000006"
+	databz = appA.Hex2bz(setHex + initvalue)
+	to := types.EvmAddressFromAcc(contractAddress)
+	res = appA.SendEthTx(priv, &to, databz, uint64(1000000), big.NewInt(10000), nil)
+
+	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
+	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
+}
+
+func (suite *KeeperTestSuite) TestAliasContract() {
+	wasmbin := precompiles.GetPrecompileByLabel("alias_eth")
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	priv, err := ethsecp256k1.GenerateKey()
+	s.Require().NoError(err)
+	senderEth := sdk.AccAddress(priv.PubKey().Address().Bytes())
+	senderEthHex := types.EvmAddressFromAcc(senderEth)
+	senderHex := types.EvmAddressFromAcc(sender.Address)
+
+	// "a074b0e1": "getCosmosAddress(address)",
+	// "337e8247": "getRegisterHash(address,address)",
+	// "2f6da104": "getRegisterMessage(address,address)",
+	// "24b8fbf6": "register(address,bytes)"
+	// registerHex := "24b8fbf6"
+	registerHex := "4420e486"
+	getCosmosAddressHex := "a074b0e1"
+	getRegisterHash := "337e8247"
+	// getRegisterMessage := "2f6da104"
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	aliasAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "alias", nil)
+
+	calld := getRegisterHash + senderHex.Hash().Hex()[2:] + senderEthHex.Hash().Hex()[2:]
+	qres := appA.WasmxQueryRaw(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	fmt.Println("--qres", len(qres), qres)
+
+	// calld = getRegisterMessage + senderHex.Hash().Hex()[2:] + senderEthHex.Hash().Hex()[2:]
+	// msgData := appA.WasmxQueryRaw(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	// msgHash := appA.SignHash191(msgData)
+	// s.Require().Equal(msgHash.Hex()[2:], hex.EncodeToString(qres))
+
+	signature := appA.SignEthMessage(priv, common.BytesToHash(qres))
+	registerCalld := registerHex + senderEthHex.Hash().Hex()[2:] + hex.EncodeToString(signature)
+	fmt.Println("--registerCalld", registerCalld)
+
+	appA.ExecuteContract(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(registerCalld)}, nil, nil)
+
+	calld = getCosmosAddressHex + senderEthHex.Hash().Hex()[2:]
+	res := appA.WasmxQuery(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	fmt.Println("--qres", len(qres), qres)
+	cosmosAddr := res[24:64]
+	s.Require().Equal(strings.ToLower(senderHex.Hex()[2:]), cosmosAddr)
+}
+
+func (suite *KeeperTestSuite) TestAliasContractHandler() {
+	sender := suite.GetRandomAccount()
+	priv, err := ethsecp256k1.GenerateKey()
+	s.Require().NoError(err)
+	senderEth := sdk.AccAddress(priv.PubKey().Address().Bytes())
+	senderEthHex := types.EvmAddressFromAcc(senderEth)
+	senderHex := types.EvmAddressFromAcc(sender.Address)
+
+	appA := s.GetAppContext(s.chainA)
+
+	handler := appA.App.WasmxKeeper.ContractHandler()
+
+	handler.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
+	msg := alias.RegisterRequest{EthAddress: senderEthHex, CoinType: uint32(60)}
+	_, err = handler.Execute(appA.Context(), cch.ContractHandlerMessage{
+		Role:   types.ROLE_ALIAS,
+		Method: "register",
+		Sender: sender.Address,
+		Msg:    msg,
+	})
+	s.Require().NoError(err)
+
+	querymsg := alias.GetCosmosAddressRequest{EthAddress: senderEthHex, CoinType: uint32(60)}
+	resp, err := handler.Query(appA.Context(), cch.ContractHandlerMessage{
+		Role:   types.ROLE_ALIAS,
+		Method: "getCosmosAddress",
+		Sender: sdk.AccAddress([]byte("modulename")),
+		Msg:    querymsg,
+	})
+	s.Require().NoError(err)
+
+	qres := resp.([]interface{})[0].(alias.GetCosmosAddressResponse)
+	s.Require().True(qres.Found)
+	s.Require().Equal(senderHex, qres.CosmAddress)
+}

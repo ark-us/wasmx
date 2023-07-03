@@ -31,6 +31,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	cryptoeth "github.com/ethereum/go-ethereum/crypto"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
 	app "mythos/v1/app"
@@ -180,6 +181,23 @@ func (s AppContext) BuildEthTx(
 	bz, err := ethTx.MarshalBinary()
 	s.S.Require().NoError(err)
 	return &types.MsgExecuteEth{Data: bz, Sender: string(types.AccAddressFromEvm(from).String())}, fees, gasLimit
+}
+
+func (s AppContext) SignEthMessage(
+	priv *ethsecp256k1.PrivKey,
+	msgHash common.Hash,
+) []byte {
+	ppriv, err := priv.ToECDSA()
+	s.S.Require().NoError(err)
+	sig, err := cryptoeth.Sign(msgHash.Bytes(), ppriv)
+	s.S.Require().NoError(err)
+	return sig
+}
+
+func (s AppContext) SignHash191(data []byte) common.Hash {
+	msg := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(data)))
+	msg = append(msg, data...)
+	return cryptoeth.Keccak256Hash([]byte(msg))
 }
 
 func getFee(gasPrice *big.Int, gas uint64) *big.Int {
