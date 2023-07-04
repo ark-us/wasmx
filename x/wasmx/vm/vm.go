@@ -122,6 +122,8 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			dep = parseDependency(fname, types.SYS_VM_EXPORT)
 		} else if fname == types.EWASM_ENV_0 {
 			dep = types.EWASM_ENV_1
+		} else if fname == types.CW_ENV_8 {
+			dep = parseDependency(fname, types.CW_VM_EXPORT)
 		}
 		if dep != "" {
 			err := VerifyEnv(dep, imports)

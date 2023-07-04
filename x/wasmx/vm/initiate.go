@@ -11,18 +11,10 @@ import (
 var (
 	REQUIRED_IBC_EXPORTS   = []string{}
 	REQUIRED_EWASM_EXPORTS = []string{"codesize", "main", "instantiate"}
-	// codesize_constructor
+	// TODO enable and check these
+	REQUIRED_CW8_EXPORTS = []string{"interface_version_8", "allocate", "deallocate", "instantiate"}
+	ALLOWED_CW8_EXPORTS  = []string{"interface_version_8", "allocate", "deallocate", "instantiate", "execute", "query", "migrate", "reply", "sudo", "ibc_channel_open", "ibc_channel_connect", "ibc_channel_close", "ibc_packet_receive", "ibc_packet_ack", "ibc_packet_timeout"}
 )
-
-// interface_version
-// interpreter_name / address
-
-// ewasm_env_1 // current ewasm interface
-// wasmx_env_1 // simplest wasmx version 1 interface
-// wasmx_env_2 // wasmx version 2 with env information
-
-// interpreter_evm_shanghai
-// interpreter_ewasm_shanghai
 
 func InitiateSysEnv1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	sys := BuildSysEnv(context)
@@ -101,6 +93,17 @@ func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.
 	return cleanups, nil
 }
 
+func InitiateCosmWasmEnv8(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	wasmx := BuildCosmWasm_8(context)
+	var cleanups []func()
+	cleanups = append(cleanups, wasmx.Release)
+	err := contractVm.RegisterModule(wasmx)
+	if err != nil {
+		return cleanups, err
+	}
+	return cleanups, nil
+}
+
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
 
 func init() {
@@ -108,6 +111,7 @@ func init() {
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
+	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 }
 

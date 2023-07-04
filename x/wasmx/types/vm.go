@@ -105,6 +105,7 @@ func LibWasmEdgeVersion() string {
 var EWASM_VM_EXPORT = "ewasm_env_"
 var WASMX_VM_EXPORT = "wasmx_env_"
 var SYS_VM_EXPORT = "sys_env_"
+var CW_VM_EXPORT = "interface_version_"
 
 // simplest wasmx version 1 interface
 var WASMX_ENV_1 = "wasmx_env_1"
@@ -122,10 +123,14 @@ var EWASM_ENV_0 = "ewasm_interface_version_1"
 // current ewasm interface
 var EWASM_ENV_1 = "ewasm_env_1"
 
+// current cosmwasm interface
+var CW_ENV_8 = "interface_version_8"
+
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_ENV_1: true,
 	WASMX_ENV_2: true,
 	EWASM_ENV_1: true,
+	CW_ENV_8:    true,
 }
 
 var ROLE_INTERPRETER = "interpreter"
