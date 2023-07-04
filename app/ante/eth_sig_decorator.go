@@ -10,11 +10,13 @@ import (
 )
 
 // EthSigVerificationDecorator validates an ethereum signatures
-type EthSigVerificationDecorator struct{}
+type EthSigVerificationDecorator struct {
+	wasmxKeeper WasmxKeeperI
+}
 
 // NewEthSigVerificationDecorator creates a new EthSigVerificationDecorator
-func NewEthSigVerificationDecorator() EthSigVerificationDecorator {
-	return EthSigVerificationDecorator{}
+func NewEthSigVerificationDecorator(wasmxKeeper WasmxKeeperI) EthSigVerificationDecorator {
+	return EthSigVerificationDecorator{wasmxKeeper: wasmxKeeper}
 }
 
 // AnteHandle validates checks that the registered chain id is the same as the one on the message, and
@@ -73,6 +75,11 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 				"eth transaction signer does not match with Sender : %s",
 				err.Error(),
 			)
+		}
+
+		aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, sender)
+		if found {
+			msgEthTx.Sender = aliasAddr.String()
 		}
 	}
 

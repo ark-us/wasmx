@@ -9,6 +9,12 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
+const (
+	CONTEXT_COIN_TYPE_KEY        = "wasmx.alias.coinType"
+	COIN_TYPE_COSMOS      uint32 = 118
+	COIN_TYPE_ETH         uint32 = 60
+)
+
 type ContractHandlerMessage struct {
 	Role   string
 	Method string

@@ -731,15 +731,6 @@ func New(
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 
-	// anteHandler, err := ante.NewAnteHandler(
-	// 	ante.HandlerOptions{
-	// 		AccountKeeper:   app.AccountKeeper,
-	// 		BankKeeper:      app.BankKeeper,
-	// 		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-	// 		FeegrantKeeper:  app.FeeGrantKeeper,
-	// 		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
-	// 	},
-	// )
 	anteHandler, err := ante.NewAnteHandler(
 		ante.HandlerOptions{
 			AccountKeeper:   app.AccountKeeper,
@@ -747,6 +738,7 @@ func New(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			FeegrantKeeper:  app.FeeGrantKeeper,
 			SigGasConsumer:  sdkante.DefaultSigVerificationGasConsumer,
+			WasmxKeeper:     app.WasmxKeeper,
 		},
 	)
 	if err != nil {

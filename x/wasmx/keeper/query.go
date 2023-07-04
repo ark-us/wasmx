@@ -12,6 +12,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
+	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
 
 var _ types.QueryServer = Keeper{}
@@ -228,6 +229,7 @@ func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp 
 
 	// TODO validate deps
 	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	ctx = ctx.WithValue(cchtypes.CONTEXT_COIN_TYPE_KEY, cchtypes.COIN_TYPE_ETH)
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -248,6 +250,11 @@ func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp 
 					"stacktrace", string(debug.Stack()))
 		}
 	}()
+
+	aliasAddr, found := k.GetAlias(ctx, sender)
+	if found {
+		sender = aliasAddr
+	}
 
 	if req.Address == "" {
 		deps := []string{types.INTERPRETER_EVM_SHANGHAI}

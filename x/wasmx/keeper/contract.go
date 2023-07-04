@@ -16,6 +16,7 @@ import (
 
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
+	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
 
 func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {
@@ -492,6 +493,16 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
+		// This can be just an ethcall sending value
+		key := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY).(uint32)
+		if key == cchtypes.COIN_TYPE_ETH && !coins.IsZero() {
+			aliasAddr, found := k.GetAlias(ctx, contractAddress)
+			if found {
+				contractAddress = aliasAddr
+			}
+			err = k.bank.SendCoins(ctx, caller, contractAddress, coins)
+			return nil, err
+		}
 		return nil, err
 	}
 	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
