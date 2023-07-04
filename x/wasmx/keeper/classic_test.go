@@ -299,7 +299,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gaslimithex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000989680", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000001312d00", qres)
 
 	calld = callvalue
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, sdk.Coins{sdk.NewCoin(appA.Denom, sdk.NewInt(99999999))}, nil)

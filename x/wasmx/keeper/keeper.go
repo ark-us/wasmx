@@ -16,6 +16,7 @@ import (
 
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
+	"mythos/v1/x/wasmx/types/contract_handler/alias"
 )
 
 // contractMemoryLimit is the memory limit of each contract execution (in MiB)
@@ -108,7 +109,10 @@ func NewKeeper(
 		tempDir:       tempDir,
 		binDir:        binDir,
 	}
+
+	// Register core contracts
 	cch := cchtypes.NewContractHandlerMap(*keeper)
+	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
 	keeper.cch = &cch
 	return keeper
 }
