@@ -27,6 +27,8 @@ type HandlerOptions struct {
 	SigGasConsumer         func(meter sdk.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
 	TxFeeChecker           sdkante.TxFeeChecker
 
+	WasmxKeeper WasmxKeeperI
+
 	// TODO needed?
 	IBCKeeper *ibckeeper.Keeper
 	// EvmKeeper              EVMKeeper
@@ -66,7 +68,7 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 		sdkante.NewSetPubKeyDecorator(options.AccountKeeper), // SetPubKeyDecorator must be called before all signature verification decorators
 		// NewValidateSigCountDecorator
 		sdkante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),
-		NewEthSigVerificationDecorator(),
+		NewEthSigVerificationDecorator(options.WasmxKeeper),
 		// sdkante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
 		// sdkante.NewIncrementSequenceDecorator(options.AccountKeeper),
 	}

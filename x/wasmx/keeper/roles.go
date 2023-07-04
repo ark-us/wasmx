@@ -20,10 +20,9 @@ func (k Keeper) RegisterRole(
 		Label:           label,
 		ContractAddress: contractAddress.String(),
 	}
+	k.SetContractAddressByRole(ctx, role, contractAddress)
 	k.SetRoleByLabel(ctx, roleObj)
 	k.SetRoleLabelByContract(ctx, contractAddress, label)
-	// cache the new value
-	k.SystemDepFromLabel(ctx, label)
 	return nil
 }
 
@@ -33,6 +32,22 @@ func (k Keeper) DeregisterRole(
 	contractAddress sdk.AccAddress,
 ) error {
 	return fmt.Errorf("DeregisterRole not implemented")
+}
+
+// GetContractAddressByRole
+func (k Keeper) GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool) {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.GetRolePrefix(role))
+	if bz == nil {
+		return nil, false
+	}
+	return sdk.AccAddress(bz), true
+}
+
+// SetContractAddressByRole
+func (k Keeper) SetContractAddressByRole(ctx sdk.Context, role string, contractAddress sdk.AccAddress) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.GetRolePrefix(role), contractAddress.Bytes())
 }
 
 // GetRoleByLabel

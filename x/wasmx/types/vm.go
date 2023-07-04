@@ -130,6 +130,7 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
+var ROLE_ALIAS = "alias"
 
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
 

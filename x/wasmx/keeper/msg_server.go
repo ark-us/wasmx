@@ -8,6 +8,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
+	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
 
 type msgServer struct {
@@ -24,11 +25,15 @@ var _ types.MsgServer = msgServer{}
 
 func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (*types.MsgExecuteEthResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	ctx = ctx.WithValue(cchtypes.CONTEXT_COIN_TYPE_KEY, cchtypes.COIN_TYPE_ETH)
 	tx := msg.AsTransaction()
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "ExecuteEth could not parse sender address")
 	}
+
+	// Alias may be set in the AnteHandler EthSigVerificationDecorator
+
 	// TODO denom
 	funds := sdk.NewCoins(sdk.NewCoin(m.Keeper.denom, sdk.NewIntFromBigInt(tx.Value())))
 

@@ -108,6 +108,13 @@ func DefaultSystemContracts() SystemContracts {
 			Role:        ROLE_INTERPRETER,
 		},
 		{
+			Address:     "0x0000000000000000000000000000000000000024",
+			Label:       "alias_eth",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_ALIAS,
+		},
+		{
 			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			Label:       "sys_proxy",
 			InitMessage: initMsg,

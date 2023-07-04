@@ -15,6 +15,8 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"mythos/v1/x/wasmx/types"
+	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
+	"mythos/v1/x/wasmx/types/contract_handler/alias"
 )
 
 // contractMemoryLimit is the memory limit of each contract execution (in MiB)
@@ -33,6 +35,7 @@ type (
 
 		accountKeeper types.AccountKeeper
 		bank          types.BankKeeper
+		cch           *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
 		queryGasLimit uint64
 		gasRegister   GasRegister
@@ -88,7 +91,7 @@ func NewKeeper(
 		ps = ps.WithKeyTable(types.ParamKeyTable())
 	}
 
-	return &Keeper{
+	keeper := &Keeper{
 		cdc:               cdc,
 		storeKey:          storeKey,
 		memKey:            memKey,
@@ -106,10 +109,20 @@ func NewKeeper(
 		tempDir:       tempDir,
 		binDir:        binDir,
 	}
+
+	// Register core contracts
+	cch := cchtypes.NewContractHandlerMap(*keeper)
+	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
+	keeper.cch = &cch
+	return keeper
 }
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+}
+
+func (k Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
+	return k.cch
 }
 
 // 0755 = User:rwx Group:r-x World:r-x

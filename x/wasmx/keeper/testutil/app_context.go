@@ -31,6 +31,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	cryptoeth "github.com/ethereum/go-ethereum/crypto"
 	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
 	app "mythos/v1/app"
@@ -78,7 +79,7 @@ func (suite *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint,
 	return nil
 }
 
-var DEFAULT_GAS_PRICE = "0.05amyt"
+var DEFAULT_GAS_PRICE = "10amyt"
 var DEFAULT_GAS_LIMIT = uint64(15_000_000)
 
 func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
@@ -148,7 +149,9 @@ func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, 
 
 func (s AppContext) getNonce(addr sdk.AccAddress) uint64 {
 	nonce, err := s.App.AccountKeeper.GetSequence(s.Context(), addr)
-	s.S.Require().NoError(err)
+	if err != nil {
+		return uint64(0)
+	}
 	return nonce
 }
 
@@ -156,6 +159,7 @@ func (s AppContext) BuildEthTx(
 	priv *ethsecp256k1.PrivKey,
 	to *common.Address,
 	data []byte,
+	value *big.Int,
 	gasLimit uint64,
 	gasPrice *big.Int,
 	accesses *ethtypes.AccessList,
@@ -171,6 +175,7 @@ func (s AppContext) BuildEthTx(
 		Gas:      gasLimit,
 		GasPrice: gasPrice,
 		Data:     data,
+		Value:    value,
 	}
 	fees := sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdk.NewIntFromBigInt(getFee(gasPrice, gasLimit))))
 	ppriv, err := priv.ToECDSA()
@@ -182,8 +187,28 @@ func (s AppContext) BuildEthTx(
 	return &types.MsgExecuteEth{Data: bz, Sender: string(types.AccAddressFromEvm(from).String())}, fees, gasLimit
 }
 
+func (s AppContext) SignEthMessage(
+	priv *ethsecp256k1.PrivKey,
+	msgHash common.Hash,
+) []byte {
+	ppriv, err := priv.ToECDSA()
+	s.S.Require().NoError(err)
+	sig, err := cryptoeth.Sign(msgHash.Bytes(), ppriv)
+	s.S.Require().NoError(err)
+	return sig
+}
+
+func (s AppContext) SignHash191(data []byte) common.Hash {
+	msg := []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d", len(data)))
+	msg = append(msg, data...)
+	return cryptoeth.Keccak256Hash([]byte(msg))
+}
+
 func getFee(gasPrice *big.Int, gas uint64) *big.Int {
 	gasLimit := new(big.Int).SetUint64(gas)
+	if gasPrice == nil {
+		gasPrice = big.NewInt(1)
+	}
 	return new(big.Int).Mul(gasPrice, gasLimit)
 }
 
@@ -234,11 +259,12 @@ func (s AppContext) SendEthTx(
 	priv *ethsecp256k1.PrivKey,
 	to *common.Address,
 	data []byte,
+	value *big.Int,
 	gasLimit uint64,
 	gasPrice *big.Int,
 	accesses *ethtypes.AccessList,
 ) abci.ResponseDeliverTx {
-	msg, txFee, gasLimit := s.BuildEthTx(priv, to, data, gasLimit, gasPrice, accesses)
+	msg, txFee, gasLimit := s.BuildEthTx(priv, to, data, value, gasLimit, gasPrice, accesses)
 	bz, err := s.prepareEthTx(priv, msg, txFee, gasLimit)
 	s.S.Require().NoError(err)
 	req := abci.RequestDeliverTx{Tx: bz}

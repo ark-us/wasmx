@@ -29,10 +29,18 @@ func (h *WasmxCosmosHandler) ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
 	return h.Keeper.ExecuteCosmosMsg(h.Ctx, any, h.ContractAddress)
 }
 func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
+	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
+	if found {
+		addr = aliasAddr
+	}
 	balance := h.Keeper.bank.GetBalance(h.Ctx, addr, h.Keeper.denom)
 	return balance.Amount.BigInt()
 }
 func (h *WasmxCosmosHandler) SendCoin(addr sdk.AccAddress, value *big.Int) error {
+	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
+	if found {
+		addr = aliasAddr
+	}
 	return h.Keeper.bank.SendCoins(h.Ctx, h.ContractAddress, addr, sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value))))
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
