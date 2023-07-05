@@ -315,7 +315,8 @@ func ExecuteWasm(
 	selfContext.Bytecode = context.Env.Contract.Bytecode
 	selfContext.CodeHash = context.Env.Contract.CodeHash
 
-	_, err = contractVm.Execute(funcName)
+	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	_, err = executeHandler(context, contractVm, funcName)
 	if err != nil {
 		wrapErr := sdkerrors.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		if isdebug {

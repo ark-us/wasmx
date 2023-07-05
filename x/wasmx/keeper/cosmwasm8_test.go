@@ -24,7 +24,6 @@ func (suite *KeeperTestSuite) TestWasmxSimpleContract() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-
 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 

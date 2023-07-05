@@ -106,6 +106,10 @@ func InitiateCosmWasmEnv8(context *Context, contractVm *wasmedge.VM, dep *types.
 
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
 
+type ExecuteFunctionInterface func(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error)
+
+var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
+
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
@@ -113,6 +117,28 @@ func init() {
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
+
+	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefault
+	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefault
+	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefault
+	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefault
+	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
+	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefault
+}
+
+func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
+	if len(systemDeps) > 0 {
+		depName := systemDeps[0].Label
+		executeFn, ok := ExecuteFunctionHandler[depName]
+		if ok {
+			return executeFn
+		}
+	}
+	return ExecuteDefault
+}
+
+func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	return contractVm.Execute(funcName)
 }
 
 func VerifyEnv(version string, imports []*wasmedge.ImportType) error {
