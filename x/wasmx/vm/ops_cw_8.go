@@ -7,8 +7,11 @@ import (
 	"math"
 
 	sdkerr "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	"mythos/v1/x/wasmx/vm/cw8"
 )
 
 // CosmWasm imports.
@@ -17,9 +20,8 @@ import (
 
 // db_read(key: u32) -> u32;
 func cw_8_db_read(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_read--", params)
 	ctx := context.(*Context)
-	keybz, err := readMemFromPtr(callframe, params[0])
+	keybz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -27,18 +29,28 @@ func cw_8_db_read(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if len(data) == 0 {
 		data = make([]byte, 32)
 	}
-	newptr, err := allocateWriteMem(ctx, callframe, data)
+	region, err := allocateWriteMemCw(ctx, callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = newptr
+	returns[0] = region.Pointer
 	return returns, wasmedge.Result_Success
 }
 
 // db_write(key: u32, value: u32);
 func cw_8_db_write(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_write--", params)
+	key, err := readMemFromPtrCw(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data, err := readMemFromPtrCw(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx := context.(*Context)
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmx")
+	ctx.ContractStore.Set(key, data)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -200,21 +212,38 @@ func BuildCosmWasm_8(context *Context) *wasmedge.Module {
 
 // instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
 func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	env := Env{
-		Block: BlockInfo{
+	if funcName == "main" {
+		funcName = "execute"
+	}
+	env := cw8.Env{
+		Block: cw8.BlockInfo{
 			Height:  context.Env.Block.Height,
 			Time:    context.Env.Block.Timestamp,
 			ChainID: context.Env.Chain.ChainIdFull,
 		},
-		Transaction: &TransactionInfo{
+		Transaction: &cw8.TransactionInfo{
 			Index: context.Env.Transaction.Index,
 		},
-		Contract: ContractInfo{
+		Contract: cw8.ContractInfo{
 			Address: context.Env.Contract.Address.String(),
 		},
 	}
-	info := MessageInfo{
+	env = cw8.Env{
+		Block: cw8.BlockInfo{
+			Height:  uint64(0),
+			Time:    uint64(1000000),
+			ChainID: "mythos",
+		},
+		Transaction: &cw8.TransactionInfo{
+			Index: uint32(0),
+		},
+		Contract: cw8.ContractInfo{
+			Address: context.Env.Contract.Address.String(),
+		},
+	}
+	info := cw8.MessageInfo{
 		Sender: context.Env.CurrentCall.Sender.String(),
+		Funds:  cw8.Coins{cw8.Coin{Denom: context.Env.Chain.Denom, Amount: sdk.NewIntFromBigInt(context.Env.CurrentCall.Funds).String()}},
 	}
 	msgBz := context.Env.CurrentCall.CallData
 	envBz, err := json.Marshal(env)
@@ -239,13 +268,47 @@ func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]i
 	if err != nil {
 		return nil, err
 	}
-	res, err := contractVm.Execute(funcName, envRegion.Pointer, infoRegion.Pointer, msgRegion.Pointer)
-	data, err := readMemCw(contractVm, activeMemory, res[0])
+	res, execErr := contractVm.Execute(funcName, envRegion.Pointer, infoRegion.Pointer, msgRegion.Pointer)
+	if len(res) == 0 {
+		return nil, execErr
+	}
+	data, err := readMemCw(activeMemory, res[0])
 	if err != nil {
+		if execErr != nil {
+			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
+		}
 		return nil, err
 	}
+
+	var result cw8.ContractResult
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		if execErr != nil {
+			return nil, sdkerr.Wrapf(execErr, "cannot unmarshal returned data: %s", err.Error())
+		}
+		return nil, err
+	}
+
 	context.ReturnData = data
-	return res, nil
+	// if result.Err != "" {
+	// 	return nil, sdkerr.Wrapf(sdkerr.Error{}, result.Err)
+	// }
+
+	// TODO deallocate
+	return res, execErr
+}
+
+func allocateWriteMemCw(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (*Region, error) {
+	addr := ctx.Env.Contract.Address
+	contractCtx, ok := ctx.ContractRouter[addr.String()]
+	if !ok {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
+	}
+	mem := callframe.GetMemoryByIndex(0)
+	if mem == nil {
+		return nil, fmt.Errorf("could not find memory")
+	}
+	return writeMemCw(contractCtx.Vm, mem, data)
 }
 
 func writeMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, data []byte) (*Region, error) {
@@ -265,7 +328,7 @@ func writeMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, data []byte) (*Region, er
 	return region, nil
 }
 
-func readMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, ptr interface{}) ([]byte, error) {
+func readMemCw(mem *wasmedge.Memory, ptr interface{}) ([]byte, error) {
 	region, err := NewRegion(mem, ptr)
 	if err != nil {
 		return nil, err
@@ -278,6 +341,14 @@ func readMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, ptr interface{}) ([]byte, 
 	dest := make([]byte, len(data))
 	copy(dest, data)
 	return dest, nil
+}
+
+func readMemFromPtrCw(callframe *wasmedge.CallingFrame, pointer interface{}) ([]byte, error) {
+	mem := callframe.GetMemoryByIndex(0)
+	if mem == nil {
+		return nil, fmt.Errorf("could not find memory")
+	}
+	return readMemCw(mem, pointer)
 }
 
 type Region struct {
@@ -347,10 +418,12 @@ func (r *Region) Write(mem *wasmedge.Memory, data []byte) error {
 	if err != nil {
 		return err
 	}
+
 	// Update the region reference
 	r.Length = uint32(len(data))
 	lengthBz := binary.LittleEndian.AppendUint32([]byte{}, r.Length)
-	return mem.SetData(lengthBz, uint(r.Pointer), 4)
+	err = mem.SetData(lengthBz, uint(r.Pointer)+8, 4)
+	return err
 }
 
 func (r *Region) Read(mem *wasmedge.Memory) ([]byte, error) {
@@ -358,58 +431,4 @@ func (r *Region) Read(mem *wasmedge.Memory) ([]byte, error) {
 		return nil, nil
 	}
 	return mem.GetData(uint(r.Offset), uint(r.Length))
-}
-
-// CosmWasm Types
-
-type HumanAddress = string
-
-// Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
-type Coin struct {
-	Denom  string `json:"denom"`  // type, eg. "ATOM"
-	Amount string `json:"amount"` // string encoing of decimal value, eg. "12.3456"
-}
-
-type Coins []Coin
-
-//---------- Env ---------
-
-// Env defines the state of the blockchain environment this contract is
-// running in. This must contain only trusted data - nothing from the Tx itself
-// that has not been verfied (like Signer).
-//
-// Env are json encoded to a byte slice before passing to the wasm contract.
-type Env struct {
-	Block       BlockInfo        `json:"block"`
-	Transaction *TransactionInfo `json:"transaction"`
-	Contract    ContractInfo     `json:"contract"`
-}
-
-type BlockInfo struct {
-	// block height this transaction is executed
-	Height uint64 `json:"height"`
-	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
-	Time    uint64 `json:"time,string"`
-	ChainID string `json:"chain_id"`
-}
-
-type ContractInfo struct {
-	// Bech32 encoded sdk.AccAddress of the contract, to be used when sending messages
-	Address HumanAddress `json:"address"`
-}
-
-type TransactionInfo struct {
-	// Position of this transaction in the block.
-	// The first transaction has index 0
-	//
-	// Along with BlockInfo.Height, this allows you to get a unique
-	// transaction identifier for the chain for future queries
-	Index uint32 `json:"index"`
-}
-
-type MessageInfo struct {
-	// Bech32 encoded sdk.AccAddress executing the contract
-	Sender HumanAddress `json:"sender"`
-	// Amount of funds send to the contract along with this message
-	Funds Coins `json:"funds"`
 }

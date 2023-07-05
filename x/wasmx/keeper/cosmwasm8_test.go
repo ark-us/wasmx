@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	_ "embed"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -27,15 +28,16 @@ func (suite *KeeperTestSuite) TestWasmxSimpleContract() {
 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "cwSimpleContract", nil)
+	value := 2
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "cwSimpleContract", nil)
 
 	data := []byte(`{"increase":{}}`)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	value += 1
 
-	value := 1
-	keybz := []byte("hello")
+	keybz := []byte("counter")
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
-	suite.Require().Equal(value, string(queryres))
+	suite.Require().Equal(fmt.Sprintf("%d", value), string(queryres))
 
 	data = []byte(`{"value":{}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
