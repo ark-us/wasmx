@@ -229,11 +229,12 @@ func ExecuteWasmInterpreted(
 	selfContext.Bytecode = context.Env.Contract.Bytecode
 	selfContext.CodeHash = context.Env.Contract.CodeHash
 
-	_, err = contractVm.Execute("main")
+	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	_, err = executeHandler(context, contractVm, types.ENTRY_POINT_EXECUTE)
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		if isdebug {
-			resp := handleContractErrorResponse(contractVm, funcName, context.ReturnData, isdebug, err)
+			resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, err)
 			runCleanups(cleanups)
 			return resp, nil
 		}
@@ -241,7 +242,7 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, err
 	}
 
-	response := handleContractResponse(contractVm, funcName, context.ReturnData, context.Logs, isdebug)
+	response := handleContractResponse(contractVm, context.ReturnData, context.Logs, isdebug)
 
 	runCleanups(cleanups)
 	return response, nil
@@ -320,7 +321,7 @@ func ExecuteWasm(
 	if err != nil {
 		wrapErr := sdkerrors.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		if isdebug {
-			resp := handleContractErrorResponse(contractVm, funcName, context.ReturnData, isdebug, wrapErr)
+			resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
 			runCleanups(cleanups)
 			return resp, nil
 		}
@@ -328,7 +329,7 @@ func ExecuteWasm(
 		return types.ContractResponse{}, err
 	}
 
-	response := handleContractResponse(contractVm, funcName, context.ReturnData, context.Logs, isdebug)
+	response := handleContractResponse(contractVm, context.ReturnData, context.Logs, isdebug)
 
 	runCleanups(cleanups)
 	return response, nil
@@ -341,7 +342,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	// for interpreted code
 	// TODO improve detection of interpreted code
 	if len(context.Env.Contract.Bytecode) > 0 {
-		if funcName == "instantiate" {
+		if funcName == types.ENTRY_POINT_INSTANTIATE {
 			context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
 		}
 
@@ -382,7 +383,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 			return
 		}
 
-		if funcName == "instantiate" {
+		if funcName == types.ENTRY_POINT_INSTANTIATE {
 			constructorBytecode, err := activeMemory.GetData(uint(memoffset), uint(constructorLength))
 			if err != nil {
 				return
@@ -395,7 +396,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	}
 }
 
-func handleContractResponse(contractVm *wasmedge.VM, funcName string, data []byte, logs []WasmxLog, isdebug bool) types.ContractResponse {
+func handleContractResponse(contractVm *wasmedge.VM, data []byte, logs []WasmxLog, isdebug bool) types.ContractResponse {
 	var events []types.Event
 	// module and contract address for the main transaction are added later
 	for i, log := range logs {
@@ -442,7 +443,7 @@ func handleContractResponse(contractVm *wasmedge.VM, funcName string, data []byt
 	}
 }
 
-func handleContractErrorResponse(contractVm *wasmedge.VM, funcName string, data []byte, isdebug bool, err error) types.ContractResponse {
+func handleContractErrorResponse(contractVm *wasmedge.VM, data []byte, isdebug bool, err error) types.ContractResponse {
 	var mem []byte
 	if isdebug {
 		mem = getMemory(contractVm)

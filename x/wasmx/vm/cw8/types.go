@@ -5,6 +5,28 @@ import (
 	"fmt"
 )
 
+//-------- Queries --------
+
+// QueryResponse is the Go counterpart of `ContractResult<Binary>`.
+// The JSON annotations are used for deserializing directly. There is a custom serializer below.
+type QueryResponse queryResponseImpl
+
+type queryResponseImpl struct {
+	Ok  []byte `json:"ok,omitempty"`
+	Err string `json:"error,omitempty"`
+}
+
+// A custom serializer that allows us to map QueryResponse instances to the Rust
+// enum `ContractResult<Binary>`
+func (q QueryResponse) MarshalJSON() ([]byte, error) {
+	// In case both Ok and Err are empty, this is interpreted and seralized
+	// as an Ok case with no data because errors must not be empty.
+	if len(q.Ok) == 0 && len(q.Err) == 0 {
+		return []byte(`{"ok":""}`), nil
+	}
+	return json.Marshal(queryResponseImpl(q))
+}
+
 //------- Results / Msgs -------------
 
 // ContractResult is the raw response from the instantiate/execute/migrate calls.

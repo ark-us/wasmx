@@ -182,7 +182,7 @@ func (msg MsgCompileContract) Route() string {
 }
 
 func (msg MsgCompileContract) Type() string {
-	return "instantiate"
+	return "compile"
 }
 
 func (msg MsgCompileContract) ValidateBasic() error {

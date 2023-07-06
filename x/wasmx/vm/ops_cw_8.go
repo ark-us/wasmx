@@ -11,6 +11,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/cw8"
 )
 
@@ -210,11 +211,7 @@ func BuildCosmWasm_8(context *Context) *wasmedge.Module {
 	return env
 }
 
-// instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	if funcName == "main" {
-		funcName = "execute"
-	}
+func BuildArgsCw(context *Context, contractVm *wasmedge.VM) ([]byte, []byte, []byte, error) {
 	env := cw8.Env{
 		Block: cw8.BlockInfo{
 			Height:  context.Env.Block.Height,
@@ -228,19 +225,6 @@ func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]i
 			Address: context.Env.Contract.Address.String(),
 		},
 	}
-	env = cw8.Env{
-		Block: cw8.BlockInfo{
-			Height:  uint64(0),
-			Time:    uint64(1000000),
-			ChainID: "mythos",
-		},
-		Transaction: &cw8.TransactionInfo{
-			Index: uint32(0),
-		},
-		Contract: cw8.ContractInfo{
-			Address: context.Env.Contract.Address.String(),
-		},
-	}
 	info := cw8.MessageInfo{
 		Sender: context.Env.CurrentCall.Sender.String(),
 		Funds:  cw8.Coins{cw8.Coin{Denom: context.Env.Chain.Denom, Amount: sdk.NewIntFromBigInt(context.Env.CurrentCall.Funds).String()}},
@@ -248,9 +232,18 @@ func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]i
 	msgBz := context.Env.CurrentCall.CallData
 	envBz, err := json.Marshal(env)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	infoBz, err := json.Marshal(info)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return envBz, infoBz, msgBz, nil
+}
+
+// instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
+func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	envBz, infoBz, msgBz, err := BuildArgsCw(context, contractVm)
 	if err != nil {
 		return nil, err
 	}
@@ -296,6 +289,62 @@ func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]i
 
 	// TODO deallocate
 	return res, execErr
+}
+
+func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	envBz, _, msgBz, err := BuildArgsCw(context, contractVm)
+	if err != nil {
+		return nil, err
+	}
+	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
+
+	envRegion, err := writeMemCw(contractVm, activeMemory, envBz)
+	if err != nil {
+		return nil, err
+	}
+	msgRegion, err := writeMemCw(contractVm, activeMemory, msgBz)
+	if err != nil {
+		return nil, err
+	}
+	res, execErr := contractVm.Execute(funcName, envRegion.Pointer, msgRegion.Pointer)
+	if len(res) == 0 {
+		return nil, execErr
+	}
+	data, err := readMemCw(activeMemory, res[0])
+	if err != nil {
+		if execErr != nil {
+			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
+		}
+		return nil, err
+	}
+
+	var result cw8.QueryResponse
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		if execErr != nil {
+			return nil, sdkerr.Wrapf(execErr, "cannot unmarshal returned data: %s", err.Error())
+		}
+		return nil, err
+	}
+
+	if result.Ok != nil {
+		context.ReturnData = result.Ok
+		return nil, nil
+	}
+
+	err = sdkerr.Wrapf(sdkerr.Error{}, result.Err)
+	if execErr != nil {
+		return nil, sdkerr.Wrapf(err, execErr.Error())
+	}
+	return nil, err
+}
+
+// instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
+func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	if funcName == types.ENTRY_POINT_QUERY {
+		return ExecuteCw8Query(context, contractVm, funcName)
+	}
+	return ExecuteCw8Execute(context, contractVm, funcName)
 }
 
 func allocateWriteMemCw(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (*Region, error) {

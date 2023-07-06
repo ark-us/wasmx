@@ -118,12 +118,12 @@ func init() {
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 
-	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefault
-	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefault
-	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefault
-	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefault
+	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultMain
 	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
-	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefault
+	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefaultMain
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
@@ -134,10 +134,17 @@ func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInte
 			return executeFn
 		}
 	}
-	return ExecuteDefault
+	return ExecuteDefaultMain
 }
 
 func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	return contractVm.Execute(funcName)
+}
+
+func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	if funcName != types.ENTRY_POINT_INSTANTIATE {
+		funcName = "main"
+	}
 	return contractVm.Execute(funcName)
 }
 

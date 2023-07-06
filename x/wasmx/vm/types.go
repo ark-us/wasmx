@@ -42,10 +42,11 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 		runCleanups(cleanups)
 		return nil, err
 	}
-	setExecutionBytecode(newctx, contractVm, "main")
+	setExecutionBytecode(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
-	_, err = contractVm.Execute("main")
+	executeHandler := GetExecuteFunctionHandler(c.SystemDeps)
+	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 	if err != nil {
 		runCleanups(cleanups)
 		return nil, err

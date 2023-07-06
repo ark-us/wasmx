@@ -41,5 +41,5 @@ func (suite *KeeperTestSuite) TestWasmxSimpleContract() {
 
 	data = []byte(`{"value":{}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	suite.Require().Equal(string(qres), value)
+	suite.Require().Equal(`{"value":3}`, string(qres))
 }
