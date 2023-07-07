@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	secp256k1VerifyCost uint64 = 21000
+	Secp256k1VerifyCost uint64 = 21000
 )
 
 // NewAnteHandler returns an ante handler responsible for attempting to route an
@@ -97,7 +97,7 @@ func DefaultSigVerificationGasConsumer(
 	pubkey := sig.PubKey
 	switch pubkey := pubkey.(type) {
 	case *ethsecp256k1.PubKey:
-		meter.ConsumeGas(secp256k1VerifyCost, "ante verify: eth_secp256k1")
+		meter.ConsumeGas(Secp256k1VerifyCost, "ante verify: eth_secp256k1")
 		return nil
 
 	case multisig.PubKey:

@@ -1,0 +1,3 @@
+package cw8
+
+var MAX_LENGTH_HUMAN_ADDRESS = 32
