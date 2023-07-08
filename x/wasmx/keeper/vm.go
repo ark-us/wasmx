@@ -3,6 +3,7 @@ package keeper
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path"
 
@@ -123,9 +124,14 @@ func (k WasmxEngine) Reply(
 	var err error
 	checksum := codeInfo.CodeHash
 	pinned := codeInfo.Pinned
+	wrappedMsg := types.WasmxExecutionMessage{Data: executeMsg}
+	wrappedMsgBz, err := json.Marshal(wrappedMsg)
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_REPLY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
 
 		var filepath string
@@ -134,7 +140,7 @@ func (k WasmxEngine) Reply(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_REPLY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	}
 
 	if err != nil {

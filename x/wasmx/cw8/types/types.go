@@ -198,7 +198,8 @@ type WeightedVoteOption struct {
 }
 
 const (
-	Yes voteOption = iota
+	UnsetVoteOption voteOption = iota // The default value. We never return this in any valid instance (see toVoteOption).
+	Yes
 	No
 	Abstain
 	NoWithVeto
@@ -283,6 +284,7 @@ type RedelegateMsg struct {
 type DistributionMsg struct {
 	SetWithdrawAddress      *SetWithdrawAddressMsg      `json:"set_withdraw_address,omitempty"`
 	WithdrawDelegatorReward *WithdrawDelegatorRewardMsg `json:"withdraw_delegator_reward,omitempty"`
+	FundCommunityPool       *FundCommunityPoolMsg       `json:"fund_community_pool",omitempty"`
 }
 
 // SetWithdrawAddressMsg is translated to a [MsgSetWithdrawAddress](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#L29-L37).
@@ -299,6 +301,13 @@ type WithdrawDelegatorRewardMsg struct {
 	Validator string `json:"validator"`
 }
 
+// FundCommunityPoolMsg is translated to a [MsgFundCommunityPool](https://github.com/cosmos/cosmos-sdk/blob/v0.42.4/proto/cosmos/distribution/v1beta1/tx.proto#LL69C1-L76C2).
+// `depositor` is automatically filled with the current contract's address
+type FundCommunityPoolMsg struct {
+	// Amount is the list of coins to be send to the community pool
+	Amount Coins `json:"amount"`
+}
+
 // StargateMsg is encoded the same way as a protobof [Any](https://github.com/protocolbuffers/protobuf/blob/master/src/google/protobuf/any.proto).
 // This is the same structure as messages in `TxBody` from [ADR-020](https://github.com/cosmos/cosmos-sdk/blob/master/docs/architecture/adr-020-protobuf-transaction-encoding.md)
 type StargateMsg struct {
@@ -307,14 +316,12 @@ type StargateMsg struct {
 }
 
 type WasmMsg struct {
-	Execute           *ExecuteMsg           `json:"execute,omitempty"`
-	Instantiate       *InstantiateMsg       `json:"instantiate,omitempty"`
-	Instantiate2      *Instantiate2Msg      `json:"instantiate2,omitempty"`
-	Migrate           *MigrateMsg           `json:"migrate,omitempty"`
-	UpdateAdmin       *UpdateAdminMsg       `json:"update_admin,omitempty"`
-	ClearAdmin        *ClearAdminMsg        `json:"clear_admin,omitempty"`
-	ExecuteWithOrigin *ExecuteWithOriginMsg `json:"execute_with_origin,omitempty"`
-	ExecuteDelegate   *ExecuteDelegateMsg   `json:"execute_delegate,omitempty"`
+	Execute      *ExecuteMsg      `json:"execute,omitempty"`
+	Instantiate  *InstantiateMsg  `json:"instantiate,omitempty"`
+	Instantiate2 *Instantiate2Msg `json:"instantiate2,omitempty"`
+	Migrate      *MigrateMsg      `json:"migrate,omitempty"`
+	UpdateAdmin  *UpdateAdminMsg  `json:"update_admin,omitempty"`
+	ClearAdmin   *ClearAdminMsg   `json:"clear_admin,omitempty"`
 }
 
 // ExecuteMsg is used to call another defined contract on this chain.
@@ -335,30 +342,10 @@ type ExecuteMsg struct {
 	Funds Coins `json:"funds"`
 }
 
-type ExecuteWithOriginMsg struct {
-	Origin string `json:"origin"`
-	// ContractAddr is the sdk.AccAddress of the contract, which uniquely defines
-	// the contract ID and instance ID. The sdk module should maintain a reverse lookup table.
-	ContractAddr string `json:"contract_addr"`
-	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Handle` on the above-defined contract
-	Msg []byte `json:"msg"`
-	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
+type CustomMsg struct {
+	Debug string `json:"debug"`
+	Raw   []byte `json:"raw"`
 }
-
-type ExecuteDelegateMsg struct {
-	Origin      string `json:"origin"`
-	Caller      string `json:"caller"`
-	CodeAddr    string `json:"code_addr"`
-	StorageAddr string `json:"storage_addr"`
-	// Msg is assumed to be a json-encoded message, which will be passed directly
-	// as `userMsg` when calling `Handle` on the above-defined contract
-	Msg []byte `json:"msg"`
-	// Send is an optional amount of coins this contract sends to the called contract
-	Funds Coins `json:"funds"`
-}
-
 // InstantiateMsg will create a new contract instance from a previously uploaded CodeID.
 // This allows one contract to spawn "sub-contracts".
 type InstantiateMsg struct {

@@ -355,12 +355,10 @@ func addr_canonicalize(addrUtf8 []byte) (sdk.AccAddress, error) {
 	if len(addrUtf8) == 0 {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "empty address")
 	}
-	fmt.Println("--cw_8_addr_validate-addrBz-str-", string(addrUtf8))
 	addr, err := sdk.AccAddressFromBech32(string(addrUtf8))
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "invalid address")
 	}
-	fmt.Println("--cw_8_addr_validate-addr-", addr, addr.String())
 	if len(addr.Bytes()) > cw8types.MAX_LENGTH_HUMAN_ADDRESS {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "address too long")
 	}
@@ -491,8 +489,60 @@ func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName strin
 		}
 		return nil, err
 	}
-	// context.ReturnData = data
-	fmt.Println("---executed", string(data))
+
+	if result.Ok != nil {
+		context.Messages = result.Ok.Messages
+		context.ReturnData = result.Ok.Data
+		// TODO make these wasmx logs, of type cosmwasm
+		// result.Ok.Attributes
+		// result.Ok.Events
+		// this Response data can be returned by Reply
+		return nil, nil
+	}
+
+	err = sdkerr.Wrapf(sdkerr.Error{}, result.Err)
+	if execErr != nil {
+		return nil, sdkerr.Wrapf(err, execErr.Error())
+	}
+	return nil, err
+}
+
+// reply(env_ptr: u32, msg_ptr: u32)
+func ExecuteCw8Reply(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	envBz, _, msgBz, err := BuildArgsCw(context, contractVm)
+	if err != nil {
+		return nil, err
+	}
+	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
+
+	envRegion, err := writeMemCw(contractVm, activeMemory, envBz)
+	if err != nil {
+		return nil, err
+	}
+	msgRegion, err := writeMemCw(contractVm, activeMemory, msgBz)
+	if err != nil {
+		return nil, err
+	}
+	res, execErr := contractVm.Execute(funcName, envRegion.Pointer, msgRegion.Pointer)
+	if len(res) == 0 {
+		return nil, execErr
+	}
+	data, err := readMemCw(activeMemory, res[0])
+	if err != nil {
+		if execErr != nil {
+			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
+		}
+		return nil, err
+	}
+
+	var result cw8types.ContractResult
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		if execErr != nil {
+			return nil, sdkerr.Wrapf(execErr, "cannot unmarshal returned data: %s", err.Error())
+		}
+		return nil, err
+	}
 
 	if result.Ok != nil {
 		context.Messages = result.Ok.Messages
@@ -560,9 +610,13 @@ func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string)
 
 // instantiate/execute(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
 func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	if funcName == types.ENTRY_POINT_QUERY {
+	switch funcName {
+	case types.ENTRY_POINT_QUERY:
 		return ExecuteCw8Query(context, contractVm, funcName)
+	case types.ENTRY_POINT_REPLY:
+		return ExecuteCw8Reply(context, contractVm, funcName)
 	}
+	// instantiate, execute
 	return ExecuteCw8Execute(context, contractVm, funcName)
 }
 

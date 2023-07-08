@@ -3,7 +3,6 @@
 package cw8
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -22,7 +21,7 @@ import (
 // replyer is a subset of keeper that can handle replies to submessages
 type replyer interface {
 	Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply types.Reply) ([]byte, error)
-	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]byte, error)
+	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error)
 	Logger(ctx sdk.Context) log.Logger
 }
 
@@ -51,26 +50,23 @@ func NewMessageDispatcher(
 
 // DispatchMessages sends all messages.
 func (d MessageDispatcher) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
-	fmt.Println("--DispatchMsg--", msg)
 	msgs, err := d.encoders.Encode(ctx, contractAddr, contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("--DispatchMsg-msgs-", msgs)
 	for _, msg := range msgs {
-		// TODO: return events here from ExecuteCosmosMsg, instead of emitting them??
-		res, err := d.keeper.ExecuteCosmosMsg(ctx, msg, contractAddr)
-		fmt.Println("-DispatchMsg--res-", res, err)
+		evts, res, err := d.keeper.ExecuteCosmosMsg(ctx, msg, contractAddr)
 		if err != nil {
 			return nil, nil, err
 		}
+		events = append(events, evts...)
+		data = append(data, res)
 	}
-	return nil, nil, nil
+	return events, data, nil
 }
 
 // Handle processes the data returned by a contract invocation.
 func (d MessageDispatcher) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, messages []types.SubMsg, origRspData []byte) ([]byte, error) {
-	fmt.Println("--Handle--", messages, origRspData)
 	result := origRspData
 	switch rsp, err := d.DispatchSubmessages(ctx, contractAddr, ibcPort, messages); {
 	case err != nil:
@@ -127,7 +123,6 @@ func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr
 func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []types.SubMsg) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
-		fmt.Println("--DispatchSubmessages-msg-", msg)
 		switch msg.ReplyOn {
 		case types.ReplySuccess, types.ReplyError, types.ReplyAlways, types.ReplyNever:
 		default:

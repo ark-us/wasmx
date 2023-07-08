@@ -563,10 +563,6 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 	))
 
-	fmt.Println("---execute-res-", res)
-	fmt.Println("---execute-data-", res.Data)
-	fmt.Println("---execute-messages-", res.Messages)
-
 	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "dispatch events")
@@ -576,14 +572,8 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "dispatch message")
 	}
-	fmt.Println("---data--", data)
-
-	// data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events)
-	// if err != nil {
-	// 	return nil, errorsmod.Wrap(err, "dispatch")
-	// }
-
-	return res.Data, nil
+	// TODO return data or res.Data
+	return data, nil
 }
 
 // For CosmWasm compatibility

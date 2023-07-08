@@ -87,7 +87,8 @@ type GasMeter interface {
 type WasmxCosmosHandler interface {
 	ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store
 	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
-	ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
+	ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error)
+	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum

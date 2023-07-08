@@ -8,11 +8,11 @@ import (
 type replyOn int
 
 const (
-	ReplyAlways replyOn = iota
+	UnsetReplyOn replyOn = iota // The default value. We never return this in any valid instance (see toReplyOn).
+	ReplyAlways
 	ReplySuccess
 	ReplyError
 	ReplyNever
-	ReplyDirect
 )
 
 var fromReplyOn = map[replyOn]string{
@@ -20,7 +20,6 @@ var fromReplyOn = map[replyOn]string{
 	ReplySuccess: "success",
 	ReplyError:   "error",
 	ReplyNever:   "never",
-	ReplyDirect:  "direct",
 }
 
 var toReplyOn = map[string]replyOn{
@@ -28,7 +27,6 @@ var toReplyOn = map[string]replyOn{
 	"success": ReplySuccess,
 	"error":   ReplyError,
 	"never":   ReplyNever,
-	"direct":  ReplyDirect,
 }
 
 func (r replyOn) String() string {
