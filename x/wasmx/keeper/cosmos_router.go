@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -26,7 +27,7 @@ func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]by
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
 func (h *WasmxCosmosHandler) ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error) {
-	return h.Keeper.ExecuteCosmosMsg(h.Ctx, any, h.ContractAddress)
+	return h.Keeper.ExecuteCosmosMsgAny(h.Ctx, any, h.ContractAddress)
 }
 func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
 	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
@@ -107,14 +108,17 @@ func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery abci.RequestQuery) (
 	return res.Value, nil
 }
 
-func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]byte, error) {
+func (k Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]byte, error) {
 	// sdk.Msg
 	var msg sdk.Msg
 	err := k.cdc.UnpackAny(any, &msg)
 	if err != nil {
 		return nil, err
 	}
+	return k.ExecuteCosmosMsg(ctx, msg, owner)
+}
 
+func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]byte, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
@@ -145,6 +149,7 @@ func (k Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]byte, error) {
 	}
 	// handler can panic with out of gas or other errors
 	res, err := safeHandler(ctx, msg, handler)
+	fmt.Println("--executeMsg--", res, err)
 	if err != nil {
 		return nil, err
 	}

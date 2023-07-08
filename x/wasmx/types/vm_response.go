@@ -1,6 +1,10 @@
 package types
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	cw8types "mythos/v1/x/wasmx/cw8/types"
+)
 
 //------- Results / Msgs -------------
 
@@ -14,6 +18,11 @@ type WasmxExecutionMessage struct {
 
 // ContractResponse defines the return value on a successful instantiate/execute/migrate.
 type ContractResponse struct {
+	// If the ReplyOn value matches the result, the runtime will invoke this
+	// contract's `reply` entry point after execution. Otherwise, this is all
+	// "fire and forget".
+	Messages []cw8types.SubMsg `json:"messages"`
+
 	// base64-encoded bytes to return as ABCI.Data field
 	Data []byte `json:"data"`
 	// attributes for a log event to return over abci interface

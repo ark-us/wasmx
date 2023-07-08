@@ -12,8 +12,8 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/cw8"
 	"mythos/v1/x/wasmx/vm/native"
 )
 
@@ -361,7 +361,7 @@ func addr_canonicalize(addrUtf8 []byte) (sdk.AccAddress, error) {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "invalid address")
 	}
 	fmt.Println("--cw_8_addr_validate-addr-", addr, addr.String())
-	if len(addr.Bytes()) > cw8.MAX_LENGTH_HUMAN_ADDRESS {
+	if len(addr.Bytes()) > cw8types.MAX_LENGTH_HUMAN_ADDRESS {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "address too long")
 	}
 	return addr, nil
@@ -422,22 +422,22 @@ func BuildCosmWasm_8(context *Context) *wasmedge.Module {
 }
 
 func BuildArgsCw(context *Context, contractVm *wasmedge.VM) ([]byte, []byte, []byte, error) {
-	env := cw8.Env{
-		Block: cw8.BlockInfo{
+	env := cw8types.Env{
+		Block: cw8types.BlockInfo{
 			Height:  context.Env.Block.Height,
 			Time:    context.Env.Block.Timestamp,
 			ChainID: context.Env.Chain.ChainIdFull,
 		},
-		Transaction: &cw8.TransactionInfo{
+		Transaction: &cw8types.TransactionInfo{
 			Index: context.Env.Transaction.Index,
 		},
-		Contract: cw8.ContractInfo{
+		Contract: cw8types.ContractInfo{
 			Address: context.Env.Contract.Address.String(),
 		},
 	}
-	info := cw8.MessageInfo{
+	info := cw8types.MessageInfo{
 		Sender: context.Env.CurrentCall.Sender.String(),
-		Funds:  cw8.Coins{cw8.Coin{Denom: context.Env.Chain.Denom, Amount: sdk.NewIntFromBigInt(context.Env.CurrentCall.Funds).String()}},
+		Funds:  cw8types.Coins{cw8types.Coin{Denom: context.Env.Chain.Denom, Amount: sdk.NewIntFromBigInt(context.Env.CurrentCall.Funds).String()}},
 	}
 	msgBz := context.Env.CurrentCall.CallData
 	envBz, err := json.Marshal(env)
@@ -483,7 +483,7 @@ func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName strin
 		return nil, err
 	}
 
-	var result cw8.ContractResult
+	var result cw8types.ContractResult
 	err = json.Unmarshal(data, &result)
 	if err != nil {
 		if execErr != nil {
@@ -495,11 +495,11 @@ func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName strin
 	fmt.Println("---executed", string(data))
 
 	if result.Ok != nil {
-		encodedResult, err := json.Marshal(result.Ok)
-		if err != nil {
-			return nil, sdkerr.Wrapf(err, "execution failed")
-		}
-		context.ReturnData = encodedResult
+		context.Messages = result.Ok.Messages
+		context.ReturnData = result.Ok.Data
+		// TODO make these wasmx logs, of type cosmwasm
+		// result.Ok.Attributes
+		// result.Ok.Events
 		return nil, nil
 	}
 
@@ -537,7 +537,7 @@ func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string)
 		return nil, err
 	}
 
-	var result cw8.QueryResponse
+	var result cw8types.QueryResponse
 	err = json.Unmarshal(data, &result)
 	if err != nil {
 		if execErr != nil {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"mythos/v1/x/wasmx/types"
 )
@@ -74,8 +75,43 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	hashBz := h.Sum(nil)
 	hashHex := hex.EncodeToString(hashBz)
 	coins := sdk.NewCoins(sdk.NewCoin(appA.Denom, sdk.NewInt(10000)))
+
+	balance1, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+
 	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
+
+	balance2, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+
+	balanceContract, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+
+	fmt.Println("--balance1--", balance1)
+	fmt.Println("--balance2--", balance2)
+
+	// s.Require().Equal(balance1.Balance.Sub(coins[0]), balance2.Balance)
+	s.Require().Equal(coins[0].Amount, balanceContract.Balance.Amount)
+
+	balance3, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: recipient.Address.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+	fmt.Println("--balance3--", balance3)
+
+	data = fmt.Sprintf(`{"release":{"id":"swap1","preimage":"%s"}}`, preimage)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
+
+	balanceContract, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+
+	balance3, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: recipient.Address.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+	fmt.Println("--balance3--", balance3)
+	fmt.Println("--balance contract--", balanceContract)
+	fmt.Println("--sender.Address--", sender.Address.String())
+	fmt.Println("--contractAddress--", contractAddress.String())
+	s.Require().Equal(balance2.Balance.Add(coins[0]), balance3.Balance)
+}
 
 	data = fmt.Sprintf(`{"release":{"id":"swap1","preimage":"%s"}}`, preimage)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)

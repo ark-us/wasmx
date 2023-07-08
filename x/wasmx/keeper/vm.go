@@ -107,6 +107,42 @@ func (k WasmxEngine) Execute(
 	return data, 0, nil
 }
 
+func (k WasmxEngine) Reply(
+	ctx sdk.Context,
+	codeInfo *types.CodeInfo,
+	env types.Env,
+	executeMsg []byte,
+	prefixStoreKey []byte,
+	store types.KVStore,
+	cosmosHandler types.WasmxCosmosHandler,
+	gasMeter types.GasMeter,
+	systemDeps []types.SystemDep,
+	dependencies []types.ContractDependency, // TODO remove
+) (types.ContractResponse, uint64, error) {
+	var data types.ContractResponse
+	var err error
+	checksum := codeInfo.CodeHash
+	pinned := codeInfo.Pinned
+
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_REPLY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+	} else {
+
+		var filepath string
+		if pinned {
+			filepath = k.build_path_pinned(k.DataDir, checksum)
+		} else {
+			filepath = k.build_path(k.DataDir, checksum)
+		}
+		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_REPLY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+	}
+
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
+	return data, 0, nil
+}
+
 func (k WasmxEngine) QueryExecute(
 	ctx sdk.Context,
 	codeInfo *types.CodeInfo,

@@ -1,4 +1,4 @@
-package cw8
+package types
 
 import (
 	"encoding/json"

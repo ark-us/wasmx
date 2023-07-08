@@ -1,4 +1,4 @@
-package cw8
+package types
 
 // taken from https://github.com/CosmWasm/wasmvm/blob/2b283aa3456082933cf9f55d0f3fbb43c654278e/types/env.go#L38
 // for cosmwasm version 8

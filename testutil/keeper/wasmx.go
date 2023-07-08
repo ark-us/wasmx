@@ -3,6 +3,8 @@ package keeper
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	app "mythos/v1/app"
 	"mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
@@ -19,7 +21,9 @@ import (
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/stretchr/testify/require"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v6/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
+
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
@@ -75,6 +79,18 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		subspace(banktypes.ModuleName),
 		make(map[string]bool),
 	)
+	transferKeeper := ibctransferkeeper.NewKeeper(
+		cdc,
+		sdk.NewKVStoreKey(ibctransfertypes.StoreKey),
+		subspace(ibctransfertypes.ModuleName),
+		// app.IBCKeeper.ChannelKeeper,
+		// app.IBCKeeper.ChannelKeeper,
+		// &app.IBCKeeper.PortKeeper,
+		nil, nil, nil,
+		accountKeeper,
+		bankKeeper,
+		nil, //scopedTransferKeeper,
+	)
 	k := keeper.NewKeeper(
 		cdc,
 		storeKey,
@@ -82,6 +98,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		paramsSubspace,
 		accountKeeper,
 		bankKeeper,
+		transferKeeper,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
 		app.BaseDenom,

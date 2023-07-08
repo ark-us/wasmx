@@ -242,7 +242,7 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, err
 	}
 
-	response := handleContractResponse(contractVm, context.ReturnData, context.Logs, isdebug)
+	response := handleContractResponse(context, contractVm, isdebug)
 
 	runCleanups(cleanups)
 	return response, nil
@@ -329,7 +329,7 @@ func ExecuteWasm(
 		return types.ContractResponse{}, err
 	}
 
-	response := handleContractResponse(contractVm, context.ReturnData, context.Logs, isdebug)
+	response := handleContractResponse(context, contractVm, isdebug)
 
 	runCleanups(cleanups)
 	return response, nil
@@ -396,7 +396,10 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	}
 }
 
-func handleContractResponse(contractVm *wasmedge.VM, data []byte, logs []WasmxLog, isdebug bool) types.ContractResponse {
+func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug bool) types.ContractResponse {
+	data := context.ReturnData
+	logs := context.Logs
+	messages := context.Messages
 	var events []types.Event
 	// module and contract address for the main transaction are added later
 	for i, log := range logs {
@@ -440,6 +443,7 @@ func handleContractResponse(contractVm *wasmedge.VM, data []byte, logs []WasmxLo
 		Data:           data,
 		Events:         events,
 		MemorySnapshot: mem,
+		Messages:       messages,
 	}
 }
 

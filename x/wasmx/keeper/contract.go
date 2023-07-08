@@ -9,11 +9,13 @@ import (
 	"strconv"
 	"time"
 
+	sdkerr "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
@@ -561,12 +563,78 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
 	))
 
+	fmt.Println("---execute-res-", res)
+	fmt.Println("---execute-data-", res.Data)
+	fmt.Println("---execute-messages-", res.Messages)
+
 	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "dispatch")
+		return nil, sdkerrors.Wrap(err, "dispatch events")
 	}
 
+	data, err := k.handleResponseMessages(ctx, contractAddress, contractInfo.IbcPortId, res.Messages, res.Data)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "dispatch message")
+	}
+	fmt.Println("---data--", data)
+
+	// data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IBCPortID, res.Messages, res.Attributes, res.Data, res.Events)
+	// if err != nil {
+	// 	return nil, errorsmod.Wrap(err, "dispatch")
+	// }
+
 	return res.Data, nil
+}
+
+// For CosmWasm compatibility
+// reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
+func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8types.Reply) ([]byte, error) {
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO
+	// always consider this pinned
+	// replyCosts := k.gasRegister.ReplyCosts(true, reply)
+	// ctx.GasMeter().ConsumeGas(replyCosts, "Loading CosmWasm module: reply")
+
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
+
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, types.MessageInfo{})
+
+	// prepare querier
+	handler := k.newCosmosHandler(ctx, contractAddress)
+	// gas := k.runtimeGasForContract(ctx)
+
+	replyBz, err := json.Marshal(reply)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "marshal reply failed")
+	}
+
+	// TODO costJSONDeserialization
+	res, gasUsed, execErr := k.wasmvm.Reply(ctx, &codeInfo, env, replyBz, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, nil)
+	k.consumeRuntimeGas(ctx, gasUsed)
+	if execErr != nil {
+		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		cw8types.EventTypeReply,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "dispatch events")
+	}
+
+	data, err := k.handleResponseMessages(ctx, contractAddress, contractInfo.IbcPortId, res.Messages, res.Data)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "dispatch message")
+	}
+
+	return data, nil
 }
 
 // executeWithOrigin executes the contract instance
@@ -718,8 +786,17 @@ func (k *Keeper) handleResponseEvents(
 		}
 		ctx.EventManager().EmitEvents(customEvents)
 	}
-
 	return nil
+}
+
+func (k *Keeper) handleResponseMessages(
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	ibcPort string,
+	msgs []cw8types.SubMsg,
+	data []byte,
+) ([]byte, error) {
+	return k.wasmVMResponseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data)
 }
 
 // Calculate how much gas can we use for the wasmx execution

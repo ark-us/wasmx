@@ -513,6 +513,7 @@ func New(
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
+		app.TransferKeeper,
 		wasmconfig,
 		homePath,
 		BaseDenom,

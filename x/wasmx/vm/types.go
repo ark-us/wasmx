@@ -5,6 +5,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/native"
 )
@@ -68,6 +69,7 @@ type Context struct {
 	ReturnData     []byte
 	CurrentCallId  uint32
 	Logs           []WasmxLog
+	Messages       []cw8types.SubMsg `json:"messages"`
 }
 
 type EwasmFunctionWrapper struct {

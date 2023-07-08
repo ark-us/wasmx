@@ -1,4 +1,4 @@
-package cw8
+package types
 
 type IBCEndpoint struct {
 	PortID    string `json:"port_id"`

@@ -14,6 +14,8 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/tendermint/tendermint/libs/log"
 
+	cw8 "mythos/v1/x/wasmx/cw8"
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 	"mythos/v1/x/wasmx/types/contract_handler/alias"
@@ -25,13 +27,14 @@ const contractMemoryLimit = 32
 
 type (
 	Keeper struct {
-		cdc               codec.Codec
-		storeKey          storetypes.StoreKey
-		memKey            storetypes.StoreKey
-		paramstore        paramtypes.Subspace
-		interfaceRegistry cdctypes.InterfaceRegistry
-		msgRouter         *baseapp.MsgServiceRouter
-		grpcQueryRouter   *baseapp.GRPCQueryRouter
+		cdc                   codec.Codec
+		storeKey              storetypes.StoreKey
+		memKey                storetypes.StoreKey
+		paramstore            paramtypes.Subspace
+		interfaceRegistry     cdctypes.InterfaceRegistry
+		msgRouter             *baseapp.MsgServiceRouter
+		grpcQueryRouter       *baseapp.GRPCQueryRouter
+		wasmVMResponseHandler cw8types.WasmVMResponseHandler
 
 		accountKeeper types.AccountKeeper
 		bank          types.BankKeeper
@@ -54,6 +57,7 @@ func NewKeeper(
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
+	portSource cw8types.ICS20TransferPortSource,
 	wasmConfig types.WasmConfig,
 	homeDir string,
 	denom string,
@@ -114,6 +118,10 @@ func NewKeeper(
 	cch := cchtypes.NewContractHandlerMap(*keeper)
 	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
 	keeper.cch = &cch
+
+	handler := cw8.NewMessageDispatcher(keeper, cdc, portSource)
+	keeper.wasmVMResponseHandler = handler
+
 	return keeper
 }
 
