@@ -10,6 +10,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -30,6 +31,9 @@ func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event
 }
 func (h *WasmxCosmosHandler) ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error) {
 	return h.Keeper.ExecuteCosmosMsg(h.Ctx, msg, h.ContractAddress)
+}
+func (h *WasmxCosmosHandler) WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error) {
+	return h.Keeper.wasmVMQueryHandler.HandleQuery(h.Ctx, caller, request)
 }
 func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
 	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)

@@ -326,10 +326,21 @@ func cw_8_query_chain(context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO MAX_LENGTH_QUERY_CHAIN_REQUEST
-	// do query
-	result := databz
-	region, err := allocateWriteMemCw(ctx, callframe, result)
+	if len(databz) > MAX_LENGTH_QUERY_CHAIN_REQUEST {
+		return nil, wasmedge.Result_Fail
+	}
+	var req cw8types.QueryRequest
+	err = json.Unmarshal(databz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	result, err := ctx.CosmosHandler.WasmVMQueryHandler(ctx.Env.Contract.Address, req)
+	response := cw8types.ToQuerierResult(result, err)
+	responseBz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	region, err := allocateWriteMemCw(ctx, callframe, responseBz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

@@ -12,6 +12,8 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 )
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
@@ -89,6 +91,7 @@ type WasmxCosmosHandler interface {
 	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
 	ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error)
 	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
+	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum

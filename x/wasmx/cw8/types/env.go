@@ -1,5 +1,10 @@
 package types
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 // taken from https://github.com/CosmWasm/wasmvm/blob/2b283aa3456082933cf9f55d0f3fbb43c654278e/types/env.go#L38
 // for cosmwasm version 8
 
@@ -53,4 +58,42 @@ type MessageInfo struct {
 	Sender HumanAddress `json:"sender"`
 	// Amount of funds send to the contract along with this message
 	Funds Coins `json:"funds"`
+}
+
+func NewCoin(amount uint64, denom string) Coin {
+	return Coin{
+		Denom:  denom,
+		Amount: strconv.FormatUint(amount, 10),
+	}
+}
+
+// MarshalJSON ensures that we get [] for empty arrays
+func (c Coins) MarshalJSON() ([]byte, error) {
+	if len(c) == 0 {
+		return []byte("[]"), nil
+	}
+	var d []Coin = c
+	return json.Marshal(d)
+}
+
+// UnmarshalJSON ensures that we get [] for empty arrays
+func (c *Coins) UnmarshalJSON(data []byte) error {
+	// make sure we deserialize [] back to null
+	if string(data) == "[]" || string(data) == "null" {
+		return nil
+	}
+	var d []Coin
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+	*c = d
+	return nil
+}
+
+type OutOfGasError struct{}
+
+var _ error = OutOfGasError{}
+
+func (o OutOfGasError) Error() string {
+	return "Out of gas"
 }

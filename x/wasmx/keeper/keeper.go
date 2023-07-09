@@ -35,6 +35,7 @@ type (
 		msgRouter             *baseapp.MsgServiceRouter
 		grpcQueryRouter       *baseapp.GRPCQueryRouter
 		wasmVMResponseHandler cw8types.WasmVMResponseHandler
+		wasmVMQueryHandler    cw8.WasmVMQueryHandler
 
 		accountKeeper types.AccountKeeper
 		bank          types.BankKeeper
@@ -58,6 +59,9 @@ func NewKeeper(
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
 	portSource cw8types.ICS20TransferPortSource,
+	stakingKeeper types.StakingKeeper,
+	distrKeeper types.DistributionKeeper,
+	channelKeeper types.ChannelKeeper,
 	wasmConfig types.WasmConfig,
 	homeDir string,
 	denom string,
@@ -119,8 +123,11 @@ func NewKeeper(
 	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
 	keeper.cch = &cch
 
+	// cosmwasm support
 	handler := cw8.NewMessageDispatcher(keeper, cdc, portSource)
 	keeper.wasmVMResponseHandler = handler
+	qhandler := cw8.DefaultQueryPlugins(bankKeeper, stakingKeeper, distrKeeper, channelKeeper, keeper)
+	keeper.wasmVMQueryHandler = qhandler
 
 	return keeper
 }

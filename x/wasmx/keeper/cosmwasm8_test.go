@@ -42,6 +42,28 @@ type ReflectExecuteMsg2 struct {
 	ReflectSubMsg ReflectSubMsg `json:"reflect_sub_msg,omitempty"`
 }
 
+type ChainQueryInner struct {
+	Request cw8types.QueryRequest `json:"request"`
+}
+type ChainQuery struct {
+	Chain ChainQueryInner `json:"chain"`
+}
+
+type RawQueryInner struct {
+	Contract string `json:"contract"`
+	Key      []byte `json:"key"`
+}
+type RawQuery struct {
+	Raw RawQueryInner `json:"raw"`
+}
+
+type SpecialQueryCapitalized struct {
+	Text string `json:"text"`
+}
+type SpecialQuery struct {
+	Capitalized SpecialQueryCapitalized `json:"capitalized"`
+}
+
 func (suite *KeeperTestSuite) TestWasmxSimpleContract() {
 	wasmbin := cwSimpleContract
 	sender := suite.GetRandomAccount()
@@ -220,6 +242,67 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	}
 	expectedReplyBz, err := json.Marshal(expectedReply)
 	s.Require().NoError(err)
-	// expectedRes := fmt.Sprintf(`{"id":2,"result":{"ok":{"events":[{"type":"execute","attributes":[{"key":"contract_address","value":"%s"}]}],"data":"CggAAAAAAAAABA=="}}}`, contractAddressCounter.String())
 	suite.Require().Equal(string(expectedReplyBz), string(qres))
+
+	// test chain query
+	query := ChainQuery{
+		Chain: ChainQueryInner{
+			Request: cw8types.QueryRequest{
+				Bank: &cw8types.BankQuery{
+					Balance: &cw8types.BalanceQuery{
+						Address: contractAddress.String(),
+						Denom:   appA.Denom,
+					},
+				},
+			},
+		},
+	}
+	queryBz, err := json.Marshal(query)
+	s.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: queryBz}, nil, nil)
+	var qresData cw8types.RawResponse
+	err = json.Unmarshal(qres, &qresData)
+	s.Require().NoError(err)
+	suite.Require().Equal(`{"amount":{"denom":"amyt","amount":"0"}}`, string(qresData.Data))
+
+	// test chain query WasmQuery
+	queryWasmx := types.WasmxExecutionMessage{
+		Data: []byte(`{"value":{}}`),
+	}
+	queryWasmxBz, err := json.Marshal(queryWasmx)
+	s.Require().NoError(err)
+	query = ChainQuery{
+		Chain: ChainQueryInner{
+			Request: cw8types.QueryRequest{
+				Wasm: &cw8types.WasmQuery{
+					Smart: &cw8types.SmartQuery{
+						ContractAddr: contractAddressCounter.String(),
+						Msg:          queryWasmxBz,
+					},
+				},
+			},
+		},
+	}
+	queryBz, err = json.Marshal(query)
+	s.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: queryBz}, nil, nil)
+	var qresData2 cw8types.RawResponse
+	err = json.Unmarshal(qres, &qresData2)
+	s.Require().NoError(err)
+	suite.Require().Equal(`{"value":4}`, string(qresData2.Data))
+
+	// test querying another contract
+	query2 := RawQuery{
+		Raw: RawQueryInner{
+			Contract: contractAddressCounter.String(),
+			Key:      []byte("counter"),
+		},
+	}
+	queryBz, err = json.Marshal(query2)
+	s.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: queryBz}, nil, nil)
+	var qresData3 cw8types.RawResponse
+	err = json.Unmarshal(qres, &qresData3)
+	s.Require().NoError(err)
+	suite.Require().Equal(`4`, string(qresData3.Data))
 }

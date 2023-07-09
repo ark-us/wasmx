@@ -98,6 +98,17 @@ func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []
 	return prefixStore.Get(key)
 }
 
+// QuerySmart queries the smart contract itself. cosmwasm compat.
+func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "query-smart")
+	senderAddr := contractAddr
+	res, err := k.query(ctx, contractAddr, senderAddr, req, nil, nil, false)
+	if err != nil {
+		return nil, err
+	}
+	return res.Data, nil
+}
+
 func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
 	_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
 	if err != nil {

@@ -18,9 +18,13 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v6/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
 
@@ -91,6 +95,22 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		bankKeeper,
 		nil, //scopedTransferKeeper,
 	)
+	stakingKeeper := stakingkeeper.NewKeeper(
+		cdc,
+		sdk.NewKVStoreKey(stakingtypes.StoreKey),
+		accountKeeper,
+		bankKeeper,
+		subspace(stakingtypes.ModuleName),
+	)
+	distrKeeper := distrkeeper.NewKeeper(
+		cdc,
+		sdk.NewKVStoreKey(distrtypes.StoreKey),
+		subspace(distrtypes.ModuleName),
+		accountKeeper,
+		bankKeeper,
+		&stakingKeeper,
+		authtypes.FeeCollectorName,
+	)
 	k := keeper.NewKeeper(
 		cdc,
 		storeKey,
@@ -99,6 +119,9 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		accountKeeper,
 		bankKeeper,
 		transferKeeper,
+		stakingKeeper,
+		distrKeeper,
+		nil,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
 		app.BaseDenom,
