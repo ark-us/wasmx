@@ -46,7 +46,7 @@ func Secp256k1Recover(hash, sig []byte) ([]byte, error) {
 
 func sigToPub(hash, sig []byte) (*btcec.PublicKey, error) {
 	if len(sig) != SignatureLength {
-		return nil, errors.New("invalid signature")
+		return nil, errors.New("invalid signature length")
 	}
 	// Convert to btcec input format with 'recovery id' v at the beginning.
 	btcsig := make([]byte, SignatureLength)

@@ -2,19 +2,21 @@ package vm
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
 
 	sdkerr "cosmossdk.io/errors"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	crypto "mythos/v1/app/crypto"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/native"
 )
 
 // A kibi (kilo binary)
@@ -45,6 +47,8 @@ var MAX_LENGTH_ED25519_SIGNATURE = 64
 // This is an arbitrary value, for performance / memory contraints. If you need to verify larger
 // messages, let us know.
 var MAX_LENGTH_ED25519_MESSAGE = 128 * 1024
+
+var EDDSA_PUBKEY_LEN = 32
 
 // Max number of batch Ed25519 messages / signatures / public_keys.
 // This is an arbitrary value, for performance / memory contraints. If you need to batch-verify a
@@ -237,7 +241,8 @@ func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
 
 	publicKey := secp256k1.PubKey{Key: publicKeyBz}
-	valid := publicKey.VerifySignature(msgHash, signature)
+	valid := crypto.VerifySignature(&publicKey, msgHash, signature)
+
 	returns := make([]interface{}, 1)
 	if valid {
 		returns[0] = SECP256K1_VERIFY_CODE_VALID
@@ -250,6 +255,9 @@ func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame
 // secp256k1_recover_pubkey(message_hash_ptr: u32, signature_ptr: u32, recovery_param: u32) -> u64;
 func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("--cw_8_secp256k1_recover_pubkey--", params)
+	// TODO
+	return nil, wasmedge.Result_Fail
+
 	ctx := context.(*Context)
 	msgHash, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -260,12 +268,11 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 		return nil, wasmedge.Result_Fail
 	}
 	// TODO use this
-	// recoveryParam, err := readMemFromPtrCw(callframe, params[2])
-	// if err != nil {
-	// 	return nil, wasmedge.Result_Fail
-	// }
+	recoveryParam := params[2].(int32)
+
+	signature = append(signature, byte(recoveryParam))
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
-	recoveredPublicKey, err := native.Secp256k1Recover(msgHash, signature)
+	recoveredPublicKey, err := crypto.Secp256k1Recover(msgHash, signature)
 	if err != nil {
 		return cwError(ctx, callframe, err.Error())
 	}
@@ -285,7 +292,40 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 // ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
 func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("--cw_8_ed25519_verify--", params)
-	returns := make([]interface{}, 0)
+	ctx := context.(*Context)
+	msg, err := readMemFromPtrCw(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	if len(msg) > MAX_LENGTH_ED25519_MESSAGE {
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+	}
+	signature, err := readMemFromPtrCw(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	if len(signature) != MAX_LENGTH_ED25519_SIGNATURE {
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+	}
+	publicKeyBz, err := readMemFromPtrCw(callframe, params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
+
+	publicKey := ed25519.PubKey{Key: publicKeyBz}
+	valid := publicKey.VerifySignature(msg, signature)
+
+	returns := make([]interface{}, 1)
+	if valid {
+		returns[0] = ED25519_VERIFY_CODE_VALID
+	} else {
+		returns[0] = ED25519_VERIFY_CODE_INVALID
+	}
 	return returns, wasmedge.Result_Success
 }
 
@@ -294,9 +334,60 @@ func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, 
 // / Returns 0 on verification success, 1 on verification failure, and values
 // / greater than 1 in case of error.
 // ed25519_batch_verify(messages_ptr: u32, signatures_ptr: u32, public_keys_ptr: u32) -> u32;
+// / Three Variants are suppported in the input for convenience:
+// /  - Equal number of messages, signatures, and public keys: Standard, generic functionality.
+// /  - One message, and an equal number of signatures and public keys: Multiple digital signature
+// / (multisig) verification of a single message.
+// /  - One public key, and an equal number of messages and signatures: Verification of multiple
+// / messages, all signed with the same private key.
+// /
+// / Any other variants of input vectors result in an error.
+// /
+// / Notes:
+// /  - The "one-message, with zero signatures and zero public keys" case, is considered the empty
+// / case.
+// /  - The "one-public key, with zero messages and zero signatures" case, is considered the empty
+// / case.
+// /  - The empty case (no messages, no signatures and no public keys) returns true.
 func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	fmt.Println("--cw_8_ed25519_batch_verify--", params)
-	returns := make([]interface{}, 0)
+	// TODO
+	return nil, wasmedge.Result_Fail
+
+	ctx := context.(*Context)
+	msgs, err := readMemFromPtrCw(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	signatures, err := readMemFromPtrCw(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	if len(signatures) == 0 {
+		return nil, wasmedge.Result_Fail
+	}
+	publicKeysBz, err := readMemFromPtrCw(callframe, params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	count := len(signatures) / MAX_LENGTH_ED25519_SIGNATURE
+	if count > MAX_COUNT_ED25519_BATCH {
+		return nil, wasmedge.Result_Fail
+	}
+	// countPublicKeys := len(publicKeysBz) / EDDSA_PUBKEY_LEN
+
+	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
+
+	publicKey := ed25519.PubKey{Key: publicKeysBz}
+	valid := publicKey.VerifySignature(msgs, signatures)
+
+	returns := make([]interface{}, 1)
+	if valid {
+		returns[0] = ED25519_VERIFY_CODE_VALID
+	} else {
+		returns[0] = ED25519_VERIFY_CODE_INVALID
+	}
 	return returns, wasmedge.Result_Success
 }
 
@@ -359,6 +450,7 @@ func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	returns := make([]interface{}, 0)
 	ctx.ReturnData = data
+	fmt.Println("--cw_8_abort--", string(data))
 	return returns, wasmedge.Result_Fail
 }
 
