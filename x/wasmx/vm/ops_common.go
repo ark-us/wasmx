@@ -2,6 +2,7 @@ package vm
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	dbm "github.com/tendermint/tm-db"
 
 	"mythos/v1/x/wasmx/types"
 )
@@ -51,6 +52,7 @@ func WasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
+		dbIterators:    map[int32]dbm.Iterator{},
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,

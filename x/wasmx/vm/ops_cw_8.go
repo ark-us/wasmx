@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -135,20 +136,64 @@ func cw_8_db_remove(context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+var (
+	OrderAscending  = 1
+	OrderDescending = 2
+)
+
 // scan creates an iterator, which can be read by consecutive next() calls
 // db_scan(start_ptr: u32, end_ptr: u32, order: i32) -> u32;
 func cw_8_db_scan(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_scan--", params)
-	// TODO
-	returns := make([]interface{}, 0)
+	ctx := context.(*Context)
+	startKey, err := readMemFromPtrCw(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	endKey, err := readMemFromPtrCw(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	order := params[2].(int32)
+
+	var iter dbm.Iterator
+	if order == int32(OrderAscending) {
+		iter = ctx.ContractStore.Iterator(startKey, endKey)
+	} else {
+		iter = ctx.ContractStore.ReverseIterator(startKey, endKey)
+	}
+	count := len(ctx.dbIterators)
+	ctx.dbIterators[int32(count)] = iter
+	returns := make([]interface{}, 1)
+	returns[0] = count
 	return returns, wasmedge.Result_Success
 }
 
 // db_next(iterator_id: u32) -> u32;
 func cw_8_db_next(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_next--", params)
-	// TODO
-	returns := make([]interface{}, 0)
+	ctx := context.(*Context)
+	iterid := params[0].(int32)
+	iterator, ok := ctx.dbIterators[iterid]
+	if !ok {
+		return nil, wasmedge.Result_Fail
+	}
+
+	values := make([][]byte, 2)
+	if iterator.Valid() {
+		values[0] = iterator.Key()
+		values[1] = ctx.ContractStore.Get(values[0])
+		iterator.Next()
+	} else {
+		iterator.Close()
+		delete(ctx.dbIterators, iterid)
+	}
+
+	out_data := encode_sections(values)
+	returns := make([]interface{}, 1)
+	region, err := allocateWriteMemCw(ctx, callframe, out_data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = region.Pointer
 	return returns, wasmedge.Result_Success
 }
 
@@ -270,12 +315,18 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 	// TODO use this
 	recoveryParam := params[2].(int32)
 
+	fmt.Println("--cw_8_secp256k1_recover_pubkey-msgHash-", hex.EncodeToString(msgHash))
+	fmt.Println("--cw_8_secp256k1_recover_pubkey-signature-", hex.EncodeToString(signature))
+	fmt.Println("--cw_8_secp256k1_recover_pubkey-recoveryParam-", recoveryParam)
 	signature = append(signature, byte(recoveryParam))
+	fmt.Println("--cw_8_secp256k1_recover_pubkey-signature-", hex.EncodeToString(signature))
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
 	recoveredPublicKey, err := crypto.Secp256k1Recover(msgHash, signature)
+	fmt.Println("--cw_8_secp256k1_recover_pubkey-recoveredPublicKey-", recoveredPublicKey, err)
 	if err != nil {
 		return cwError(ctx, callframe, err.Error())
 	}
+	fmt.Println("--cw_8_secp256k1_recover_pubkey-recoveredPublicKey-", hex.EncodeToString(recoveredPublicKey))
 	region, err := allocateWriteMemCw(ctx, callframe, recoveredPublicKey)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -872,4 +923,14 @@ func (r *Region) Read(mem *wasmedge.Memory) ([]byte, error) {
 		return nil, nil
 	}
 	return mem.GetData(uint(r.Offset), uint(r.Length))
+}
+
+func encode_sections(sections [][]byte) []byte {
+	out_data := []byte{}
+	for _, section := range sections {
+		lengthbz := binary.BigEndian.AppendUint32([]byte{}, uint32(len(section)))
+		out_data = append(out_data, section...)
+		out_data = append(out_data, lengthbz...)
+	}
+	return out_data
 }

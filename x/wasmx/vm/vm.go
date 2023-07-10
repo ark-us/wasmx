@@ -10,6 +10,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -203,6 +204,7 @@ func ExecuteWasmInterpreted(
 		ContractStore:  kvstore,
 		CosmosHandler:  cosmosHandler,
 		ContractRouter: contractRouter,
+		dbIterators:    map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -288,6 +290,7 @@ func ExecuteWasm(
 		ContractStore:  kvstore,
 		CosmosHandler:  cosmosHandler,
 		ContractRouter: contractRouter,
+		dbIterators:    map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {

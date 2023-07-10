@@ -219,9 +219,6 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	hashHex := hex.EncodeToString(hashBz)
 	coins := sdk.NewCoins(sdk.NewCoin(appA.Denom, sdk.NewInt(10000000)))
 
-	balance1, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
-	s.Require().NoError(err)
-
 	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
@@ -247,10 +244,19 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	s.Require().Equal(sdk.NewInt(0), balanceContract.Balance.Amount)
 
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{}}`)}, nil, nil)
-	suite.Require().Equal(``, string(qres))
+	suite.Require().Equal(`{"swaps":[]}`, string(qres))
+
+	data = fmt.Sprintf(`{"create":{"id":"swap2","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
+
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{}}`)}, nil, nil)
+	suite.Require().Equal(`{"swaps":["swap2"]}`, string(qres))
+
+	data = fmt.Sprintf(`{"create":{"id":"swap3","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{"start_after":"swap1","limit":2}}`)}, nil, nil)
-	suite.Require().Equal(`{"verification_schemes":["secp256k1","ed25519","ed25519_batch"]}`, string(qres))
+	suite.Require().Equal(`{"swaps":["swap2","swap3"]}`, string(qres))
 }
 
 func (suite *KeeperTestSuite) TestWasmxCwReflect() {
@@ -527,4 +533,30 @@ func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	// s.Require().NoError(err)
 	// qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: reqBz}, nil, nil)
 	// suite.Require().Equal(`{"verifies":true}`, string(qres))
+
+	reqList := ListVerificationSchemesWrap{
+		ListVerificationSchemes: ListVerificationSchemes{},
+	}
+	reqBz, err = json.Marshal(reqList)
+	s.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: reqBz}, nil, nil)
+	suite.Require().Equal(`{"verification_schemes":["secp256k1","ed25519","ed25519_batch"]}`, string(qres))
 }
+
+// func (suite *KeeperTestSuite) TestWasmxCwIterators() {
+// 	wasmbin := crypto_verify
+// 	sender := suite.GetRandomAccount()
+// 	initBalance := sdk.NewInt(1000_000_000)
+
+// 	appA := s.GetAppContext(s.chainA)
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
+// 	expectedDeps := []string{types.CW_ENV_8}
+
+// 	codeId := appA.StoreCode(sender, wasmbin, nil)
+// 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+// 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
+
+// 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "crypto_verify", nil)
+
+// }

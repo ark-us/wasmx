@@ -3,6 +3,8 @@ package vm
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	dbm "github.com/tendermint/tm-db"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
@@ -70,6 +72,7 @@ type Context struct {
 	CurrentCallId  uint32
 	Logs           []WasmxLog
 	Messages       []cw8types.SubMsg `json:"messages"`
+	dbIterators    map[int32]dbm.Iterator
 }
 
 type EwasmFunctionWrapper struct {
