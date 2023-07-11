@@ -2,7 +2,6 @@ package vm
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -83,7 +82,6 @@ const ED25519_VERIFY_CODE_INVALID = uint32(1)
 
 // db_read(key: u32) -> u32;
 func cw_8_db_read(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_read-", params)
 	returns := make([]interface{}, 1)
 	ctx := context.(*Context)
 	key, err := readMemFromPtrCw(callframe, params[0])
@@ -106,7 +104,6 @@ func cw_8_db_read(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 // db_write(key: u32, value: u32);
 func cw_8_db_write(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_write-", params)
 	// TODO env.is_storage_readonly
 	key, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -125,7 +122,6 @@ func cw_8_db_write(context interface{}, callframe *wasmedge.CallingFrame, params
 
 // db_remove(key: u32);
 func cw_8_db_remove(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_db_remove-", params)
 	ctx := context.(*Context)
 	key, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -199,7 +195,6 @@ func cw_8_db_next(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 // addr_validate(source_ptr: u32) -> u32;
 func cw_8_addr_validate(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_addr_validate--", params)
 	ctx := context.(*Context)
 	addrBz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -223,7 +218,6 @@ func cw_8_addr_validate(context interface{}, callframe *wasmedge.CallingFrame, p
 
 // addr_canonicalize(source_ptr: u32, destination_ptr: u32) -> u32;
 func cw_8_addr_canonicalize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_addr_canonicalize--", params)
 	ctx := context.(*Context)
 	addrBz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -244,7 +238,6 @@ func cw_8_addr_canonicalize(context interface{}, callframe *wasmedge.CallingFram
 
 // addr_humanize(source_ptr: u32, destination_ptr: u32) -> u32;
 func cw_8_addr_humanize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_addr_humanize--", params)
 	ctx := context.(*Context)
 	addrBz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -269,7 +262,6 @@ func cw_8_addr_humanize(context interface{}, callframe *wasmedge.CallingFrame, p
 // / greater than 1 in case of error.
 // secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
 func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_secp256k1_verify--", params)
 	ctx := context.(*Context)
 	msgHash, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -315,18 +307,12 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 	// TODO use this
 	recoveryParam := params[2].(int32)
 
-	fmt.Println("--cw_8_secp256k1_recover_pubkey-msgHash-", hex.EncodeToString(msgHash))
-	fmt.Println("--cw_8_secp256k1_recover_pubkey-signature-", hex.EncodeToString(signature))
-	fmt.Println("--cw_8_secp256k1_recover_pubkey-recoveryParam-", recoveryParam)
 	signature = append(signature, byte(recoveryParam))
-	fmt.Println("--cw_8_secp256k1_recover_pubkey-signature-", hex.EncodeToString(signature))
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
 	recoveredPublicKey, err := crypto.Secp256k1Recover(msgHash, signature)
-	fmt.Println("--cw_8_secp256k1_recover_pubkey-recoveredPublicKey-", recoveredPublicKey, err)
 	if err != nil {
 		return cwError(ctx, callframe, err.Error())
 	}
-	fmt.Println("--cw_8_secp256k1_recover_pubkey-recoveredPublicKey-", hex.EncodeToString(recoveredPublicKey))
 	region, err := allocateWriteMemCw(ctx, callframe, recoveredPublicKey)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -342,7 +328,6 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 // / greater than 1 in case of error.
 // ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
 func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_ed25519_verify--", params)
 	ctx := context.(*Context)
 	msg, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -447,7 +432,6 @@ func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingF
 // / In production environments it is expected that those messages are discarded.
 // debug(source_ptr: u32);
 func cw_8_debug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_debug--", params)
 	// TODO only print if in debug mode
 	msgBz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -493,7 +477,6 @@ func cw_8_query_chain(context interface{}, callframe *wasmedge.CallingFrame, par
 
 // abort(source_ptr: u32);
 func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_abort--", params)
 	ctx := context.(*Context)
 	data, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {

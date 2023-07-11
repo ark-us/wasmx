@@ -118,16 +118,16 @@ func NewKeeper(
 		binDir:        binDir,
 	}
 
-	// Register core contracts
-	cch := cchtypes.NewContractHandlerMap(*keeper)
-	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
-	keeper.cch = &cch
-
 	// cosmwasm support
 	handler := cw8.NewMessageDispatcher(keeper, cdc, portSource)
 	keeper.wasmVMResponseHandler = handler
 	qhandler := cw8.DefaultQueryPlugins(bankKeeper, stakingKeeper, distrKeeper, channelKeeper, keeper)
 	keeper.wasmVMQueryHandler = qhandler
+
+	// Register core contracts after the cw8 handlers are attached to the keeper
+	cch := cchtypes.NewContractHandlerMap(*keeper)
+	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
+	keeper.cch = &cch
 
 	return keeper
 }
@@ -138,6 +138,10 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 
 func (k Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
 	return k.cch
+}
+
+func (k Keeper) WasmVMResponseHandler() cw8types.WasmVMResponseHandler {
+	return k.wasmVMResponseHandler
 }
 
 // 0755 = User:rwx Group:r-x World:r-x

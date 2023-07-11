@@ -564,7 +564,6 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
-	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
 	if execErr != nil {
 		return nil, sdkerrors.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
@@ -797,6 +796,9 @@ func (k *Keeper) handleResponseMessages(
 	msgs []cw8types.SubMsg,
 	data []byte,
 ) ([]byte, error) {
+	if k.wasmVMResponseHandler == nil {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "no wasmVMResponseHandler found")
+	}
 	return k.wasmVMResponseHandler.Handle(ctx, contractAddr, ibcPort, msgs, data)
 }
 
