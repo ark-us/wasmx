@@ -546,7 +546,7 @@ func (s AppContext) GetCodeIdFromLog(logstr string) uint64 {
 }
 
 func (s AppContext) GetContractAddressFromLog(logstr string) string {
-	attrs := s.GetFromLog(logstr, "instantiate")
+	attrs := s.GetFromLog(logstr, types.EventTypeInstantiate)
 	s.S.Require().NotNil(attrs)
 	for _, attr := range *attrs {
 		if attr.Key == "contract_address" {

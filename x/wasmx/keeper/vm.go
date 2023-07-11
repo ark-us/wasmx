@@ -3,6 +3,7 @@ package keeper
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path"
 
@@ -54,7 +55,7 @@ func (k WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
+		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
 	} else {
 		// TODO gas
 		var filepath string
@@ -63,7 +64,7 @@ func (k WasmxEngine) Instantiate(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "instantiate", env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
+		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -89,7 +90,7 @@ func (k WasmxEngine) Execute(
 	pinned := codeInfo.Pinned
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
 
 		var filepath string
@@ -98,7 +99,48 @@ func (k WasmxEngine) Execute(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+	}
+
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
+	return data, 0, nil
+}
+
+func (k WasmxEngine) Reply(
+	ctx sdk.Context,
+	codeInfo *types.CodeInfo,
+	env types.Env,
+	executeMsg []byte,
+	prefixStoreKey []byte,
+	store types.KVStore,
+	cosmosHandler types.WasmxCosmosHandler,
+	gasMeter types.GasMeter,
+	systemDeps []types.SystemDep,
+	dependencies []types.ContractDependency, // TODO remove
+) (types.ContractResponse, uint64, error) {
+	var data types.ContractResponse
+	var err error
+	checksum := codeInfo.CodeHash
+	pinned := codeInfo.Pinned
+	wrappedMsg := types.WasmxExecutionMessage{Data: executeMsg}
+	wrappedMsgBz, err := json.Marshal(wrappedMsg)
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
+
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+	} else {
+
+		var filepath string
+		if pinned {
+			filepath = k.build_path_pinned(k.DataDir, checksum)
+		} else {
+			filepath = k.build_path(k.DataDir, checksum)
+		}
+		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	}
 
 	if err != nil {
@@ -125,7 +167,7 @@ func (k WasmxEngine) QueryExecute(
 	checksum := codeInfo.CodeHash
 	pinned := codeInfo.Pinned
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		data, err = vm.ExecuteWasmInterpreted(ctx, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
+		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	} else {
 		var filepath string
 		if pinned {
@@ -133,7 +175,7 @@ func (k WasmxEngine) QueryExecute(
 		} else {
 			filepath = k.build_path(k.DataDir, checksum)
 		}
-		data, err = vm.ExecuteWasm(ctx, filepath, "main", env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
+		data, err = vm.ExecuteWasm(ctx, filepath, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	}
 
 	if err != nil {

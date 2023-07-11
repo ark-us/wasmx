@@ -10,6 +10,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -25,8 +26,14 @@ func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
 func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error) {
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
-func (h *WasmxCosmosHandler) ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error) {
-	return h.Keeper.ExecuteCosmosMsg(h.Ctx, any, h.ContractAddress)
+func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error) {
+	return h.Keeper.ExecuteCosmosMsgAny(h.Ctx, any, h.ContractAddress)
+}
+func (h *WasmxCosmosHandler) ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error) {
+	return h.Keeper.ExecuteCosmosMsg(h.Ctx, msg, h.ContractAddress)
+}
+func (h *WasmxCosmosHandler) WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error) {
+	return h.Keeper.wasmVMQueryHandler.HandleQuery(h.Ctx, caller, request)
 }
 func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
 	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
@@ -107,52 +114,43 @@ func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery abci.RequestQuery) (
 	return res.Value, nil
 }
 
-func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]byte, error) {
+func (k Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
 	// sdk.Msg
 	var msg sdk.Msg
 	err := k.cdc.UnpackAny(any, &msg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	return k.ExecuteCosmosMsg(ctx, msg, owner)
+}
 
+func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
 	if err := msg.ValidateBasic(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	signers := msg.GetSigners()
 	if signers[0].String() != owner.String() {
-		return nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
 	}
 
-	msgResponse, err := k.executeMsg(ctx, msg)
-	if err != nil {
-		return nil, err
-	}
-
-	// &sdk.MsgData{
-	// 	MsgType: sdk.MsgTypeURL(msg),
-	// 	Data:    msgResponse,
-	// }
-	return msgResponse, nil
+	return k.executeMsg(ctx, msg)
 }
 
 // Attempts to get the message handler from the router and if found will then execute the message.
 // If the message execution is successful, the proto marshaled message response will be returned.
-func (k Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]byte, error) {
+func (k Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]sdk.Event, []byte, error) {
 	handler := k.msgRouter.Handler(msg)
 	if handler == nil {
-		return nil, types.ErrInvalidRoute
+		return nil, nil, types.ErrInvalidRoute
 	}
 	// handler can panic with out of gas or other errors
 	res, err := safeHandler(ctx, msg, handler)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// NOTE: The sdk msg handler creates a new EventManager, so events must be correctly propagated back to the current context
-	ctx.EventManager().EmitEvents(res.GetEvents())
-
-	return res.Data, nil
+	return res.GetEvents(), res.Data, nil
 }
 
 // func (k Keeper) newQueryHandler(ctx sdk.Context, contractAddress sdk.AccAddress) QueryHandler {

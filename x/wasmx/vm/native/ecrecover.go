@@ -14,14 +14,16 @@ import (
 )
 
 var EMPTY_ADDRESS = bytes.Repeat([]byte{0}, 20)
+var SignatureLength = 65
+var RecoveryIDOffset = 64
 
-func Secp256k1Recover(msg []byte) []byte {
+func Secp256k1RecoverNative(msg []byte) []byte {
 	msgHash := msg[0:32]
 	signature := msg[32:]
 	sig := make([]byte, SignatureLength)
 	copy(sig, signature[:])
 
-	pubKeyBz, err := Ecrecover(msgHash, sig)
+	pubKeyBz, err := Secp256k1Recover(msgHash, sig)
 	if err != nil {
 		fmt.Println("Secp256k1Recover err", err)
 		return EMPTY_ADDRESS
@@ -31,11 +33,8 @@ func Secp256k1Recover(msg []byte) []byte {
 	return pubKey.Address()
 }
 
-var SignatureLength = 65
-var RecoveryIDOffset = 64
-
-// Ecrecover returns the uncompressed public key that created the given signature.
-func Ecrecover(hash, sig []byte) ([]byte, error) {
+// Secp256k1Recover returns the uncompressed public key that created the given signature.
+func Secp256k1Recover(hash, sig []byte) ([]byte, error) {
 	pub, err := sigToPub(hash, sig)
 	if err != nil {
 		return nil, err
@@ -47,7 +46,7 @@ func Ecrecover(hash, sig []byte) ([]byte, error) {
 
 func sigToPub(hash, sig []byte) (*btcec.PublicKey, error) {
 	if len(sig) != SignatureLength {
-		return nil, errors.New("invalid signature")
+		return nil, errors.New("invalid signature length")
 	}
 	// Convert to btcec input format with 'recovery id' v at the beginning.
 	btcsig := make([]byte, SignatureLength)

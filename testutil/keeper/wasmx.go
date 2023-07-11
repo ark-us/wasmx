@@ -3,6 +3,8 @@ package keeper
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	app "mythos/v1/app"
 	"mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
@@ -16,10 +18,16 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/stretchr/testify/require"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v6/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v6/modules/apps/transfer/types"
+
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	tmdb "github.com/tendermint/tm-db"
@@ -75,6 +83,34 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		subspace(banktypes.ModuleName),
 		make(map[string]bool),
 	)
+	transferKeeper := ibctransferkeeper.NewKeeper(
+		cdc,
+		sdk.NewKVStoreKey(ibctransfertypes.StoreKey),
+		subspace(ibctransfertypes.ModuleName),
+		// app.IBCKeeper.ChannelKeeper,
+		// app.IBCKeeper.ChannelKeeper,
+		// &app.IBCKeeper.PortKeeper,
+		nil, nil, nil,
+		accountKeeper,
+		bankKeeper,
+		nil, //scopedTransferKeeper,
+	)
+	stakingKeeper := stakingkeeper.NewKeeper(
+		cdc,
+		sdk.NewKVStoreKey(stakingtypes.StoreKey),
+		accountKeeper,
+		bankKeeper,
+		subspace(stakingtypes.ModuleName),
+	)
+	distrKeeper := distrkeeper.NewKeeper(
+		cdc,
+		sdk.NewKVStoreKey(distrtypes.StoreKey),
+		subspace(distrtypes.ModuleName),
+		accountKeeper,
+		bankKeeper,
+		&stakingKeeper,
+		authtypes.FeeCollectorName,
+	)
 	k := keeper.NewKeeper(
 		cdc,
 		storeKey,
@@ -82,6 +118,10 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		paramsSubspace,
 		accountKeeper,
 		bankKeeper,
+		transferKeeper,
+		stakingKeeper,
+		distrKeeper,
+		nil,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
 		app.BaseDenom,

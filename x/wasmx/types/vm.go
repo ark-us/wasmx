@@ -12,6 +12,8 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 )
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries
@@ -36,6 +38,13 @@ var (
 
 	// 0x6000 must be minimum, to support Ethereum contracts
 	MaxInterpretedCodeSize = 0xf000
+)
+
+var (
+	ENTRY_POINT_INSTANTIATE = "instantiate"
+	ENTRY_POINT_EXECUTE     = "execute"
+	ENTRY_POINT_QUERY       = "query"
+	ENTRY_POINT_REPLY       = "reply"
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
@@ -80,7 +89,9 @@ type GasMeter interface {
 type WasmxCosmosHandler interface {
 	ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store
 	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
-	ExecuteCosmosMsg(any *cdctypes.Any) ([]byte, error)
+	ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error)
+	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
+	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
@@ -105,6 +116,7 @@ func LibWasmEdgeVersion() string {
 var EWASM_VM_EXPORT = "ewasm_env_"
 var WASMX_VM_EXPORT = "wasmx_env_"
 var SYS_VM_EXPORT = "sys_env_"
+var CW_VM_EXPORT = "interface_version_"
 
 // simplest wasmx version 1 interface
 var WASMX_ENV_1 = "wasmx_env_1"
@@ -122,10 +134,14 @@ var EWASM_ENV_0 = "ewasm_interface_version_1"
 // current ewasm interface
 var EWASM_ENV_1 = "ewasm_env_1"
 
+// current cosmwasm interface
+var CW_ENV_8 = "interface_version_8"
+
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_ENV_1: true,
 	WASMX_ENV_2: true,
 	EWASM_ENV_1: true,
+	CW_ENV_8:    true,
 }
 
 var ROLE_INTERPRETER = "interpreter"

@@ -24,6 +24,7 @@ func newWasmModuleEvent(customAttributes []types.EventAttribute, contractAddr sd
 
 const eventTypeMinLength = 2
 
+// Keep compatible with cosmwasm events
 // newCustomEvents converts wasmvm events from a contract response to sdk type events
 func newCustomEvents(evts types.Events, contractAddr sdk.AccAddress) (sdk.Events, error) {
 	events := make(sdk.Events, 0, len(evts))

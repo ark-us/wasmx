@@ -864,7 +864,7 @@ func readMem(callframe *wasmedge.CallingFrame, pointer interface{}, size interfa
 	length := size.(int32)
 	mem := callframe.GetMemoryByIndex(0)
 	if mem == nil {
-		return nil, fmt.Errorf("Could not find memory")
+		return nil, fmt.Errorf("could not find memory")
 	}
 
 	data, err := mem.GetData(uint(ptr), uint(length))

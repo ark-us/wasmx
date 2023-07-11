@@ -3,8 +3,11 @@ package vm
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	dbm "github.com/tendermint/tm-db"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/native"
 )
@@ -42,10 +45,11 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 		runCleanups(cleanups)
 		return nil, err
 	}
-	setExecutionBytecode(newctx, contractVm, "main")
+	setExecutionBytecode(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
-	_, err = contractVm.Execute("main")
+	executeHandler := GetExecuteFunctionHandler(c.SystemDeps)
+	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 	if err != nil {
 		runCleanups(cleanups)
 		return nil, err
@@ -67,6 +71,8 @@ type Context struct {
 	ReturnData     []byte
 	CurrentCallId  uint32
 	Logs           []WasmxLog
+	Messages       []cw8types.SubMsg `json:"messages"`
+	dbIterators    map[int32]dbm.Iterator
 }
 
 type EwasmFunctionWrapper struct {
