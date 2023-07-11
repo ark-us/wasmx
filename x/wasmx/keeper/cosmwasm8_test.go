@@ -28,6 +28,9 @@ var (
 	// taken from cosmwasm/contracts/crypto_verify
 	//go:embed testdata/cw8/crypto_verify-aarch64.wasm
 	crypto_verify []byte
+
+	//go:embed testdata/cw8/cw20_base-aarch64.wasm
+	cw20_base []byte
 )
 
 type ReflectMsg struct {
@@ -163,7 +166,7 @@ const ED25519_MESSAGE2_HEX = "72"
 const ED25519_SIGNATURE2_HEX = "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00"
 const ED25519_PUBLIC_KEY2_HEX = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c"
 
-func (suite *KeeperTestSuite) TestWasmxSimpleContract() {
+func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	wasmbin := cwSimpleContract
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
@@ -191,6 +194,69 @@ func (suite *KeeperTestSuite) TestWasmxSimpleContract() {
 	data = []byte(`{"value":{}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(`{"value":3}`, string(qres))
+}
+
+type Cw20Coin struct {
+	Address string `json:"address"`
+	Amount  string `json:"amount"`
+}
+
+type MinterResponse struct {
+}
+
+type InstantiateMarketingInfo struct {
+}
+
+type CW20InstantiateMsg struct {
+	Name            string                    `json:"name"`
+	Symbol          string                    `json:"symbol"`
+	Decimals        uint8                     `json:"decimals"`
+	InitialBalances []Cw20Coin                `json:"initial_balances"`
+	Mint            *MinterResponse           `json:"mint"`
+	Marketing       *InstantiateMarketingInfo `json:"marketing"`
+}
+
+func (suite *KeeperTestSuite) TestWasmxCW20() {
+	wasmbin := cw20_base
+	sender := suite.GetRandomAccount()
+	recipient := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+	expectedDeps := []string{types.CW_ENV_8}
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
+
+	instantiateMsg := CW20InstantiateMsg{
+		Name:     "cw20",
+		Symbol:   "TKN",
+		Decimals: 18,
+		InitialBalances: []Cw20Coin{
+			{Address: sender.Address.String(), Amount: "10000000000000000"},
+		},
+	}
+	calld, err := json.Marshal(instantiateMsg)
+	s.Require().NoError(err)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: calld}, "cwSimpleContract", nil)
+
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
+	suite.Require().Equal(`{"balance":"10000000000000000"}`, string(qres))
+
+	data := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, recipient.Address.String(), "2000000000000000"))
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, recipient.Address.String()))
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
+	suite.Require().Equal(`{"balance":"2000000000000000"}`, string(qres))
+
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
+	suite.Require().Equal(`{"balance":"8000000000000000"}`, string(qres))
 }
 
 func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
@@ -542,21 +608,3 @@ func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: reqBz}, nil, nil)
 	suite.Require().Equal(`{"verification_schemes":["secp256k1","ed25519","ed25519_batch"]}`, string(qres))
 }
-
-// func (suite *KeeperTestSuite) TestWasmxCwIterators() {
-// 	wasmbin := crypto_verify
-// 	sender := suite.GetRandomAccount()
-// 	initBalance := sdk.NewInt(1000_000_000)
-
-// 	appA := s.GetAppContext(s.chainA)
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-// 	suite.Commit()
-// 	expectedDeps := []string{types.CW_ENV_8}
-
-// 	codeId := appA.StoreCode(sender, wasmbin, nil)
-// 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
-// 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
-
-// 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "crypto_verify", nil)
-
-// }
