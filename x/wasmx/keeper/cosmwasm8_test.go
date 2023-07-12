@@ -6,9 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
@@ -194,6 +198,15 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	data = []byte(`{"value":{}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(`{"value":3}`, string(qres))
+
+	data = []byte(`{"increase":{}}`)
+	abcires := appA.WasmxQueryRawNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().True(abcires.IsErr())
+	s.Require().Contains(abcires.Log, cw8types.ERROR_FLAG_QUERY)
+
+	data = []byte(`{"increase":{}}`)
+	gas, res, err := appA.ExecuteContractSimulate(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().NoError(err)
 }
 
 type Cw20Coin struct {
@@ -256,6 +269,50 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 
 	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
+	suite.Require().Equal(`{"balance":"8000000000000000"}`, string(qres))
+}
+
+func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
+	wasmbin := cw20_base
+	deployer := suite.GetRandomAccount()
+	recipient := suite.GetRandomAccount()
+	priv, err := ethsecp256k1.GenerateKey()
+	s.Require().NoError(err)
+	senderAddress := sdk.AccAddress(priv.PubKey().Address().Bytes())
+	sender := simulation.Account{
+		Address: senderAddress,
+	}
+	initBalance := sdk.NewInt(1000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), deployer.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+	expectedDeps := []string{types.CW_ENV_8}
+
+	codeId := appA.StoreCode(deployer, wasmbin, nil)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
+
+	instantiateMsg := CW20InstantiateMsg{
+		Name:     "cw20",
+		Symbol:   "TKN",
+		Decimals: 18,
+		InitialBalances: []Cw20Coin{
+			{Address: deployer.Address.String(), Amount: "10000000000000000"},
+			{Address: sender.Address.String(), Amount: "10000000000000000"},
+		},
+	}
+	calld, err := json.Marshal(instantiateMsg)
+	s.Require().NoError(err)
+	contractAddress := appA.InstantiateCode(deployer, codeId, types.WasmxExecutionMessage{Data: calld}, "cwSimpleContract", nil)
+	contractEvmAddress := types.EvmAddressFromAcc(contractAddress)
+
+	databz := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, recipient.Address.String(), "2000000000000000"))
+
+	appA.SendEthTx(priv, &contractEvmAddress, databz, nil, uint64(1000000), big.NewInt(10000), nil)
+
+	databz = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: databz}, nil, nil)
 	suite.Require().Equal(`{"balance":"8000000000000000"}`, string(qres))
 }
 

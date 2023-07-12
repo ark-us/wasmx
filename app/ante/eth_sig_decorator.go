@@ -50,12 +50,26 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 
 		// TODO
 		// allowUnprotectedTxs := evmParams.GetAllowUnprotectedTxs()
-		allowUnprotectedTxs := false
+		allowUnprotectedTxs := true
 		ethTx := msgEthTx.AsTransaction()
 		if !allowUnprotectedTxs && !ethTx.Protected() {
 			return ctx, errorsmod.Wrapf(
 				errortypes.ErrNotSupported,
 				"rejected unprotected Ethereum transaction. Please EIP155 sign your transaction to protect it against replay-attacks")
+		}
+
+		// Don't check signature on a simulation, because it may be sent by JSON-RPC
+		// through the gas estimation endpoint
+		if simulate && msgEthTx.Sender != "" {
+			sender, err := sdk.AccAddressFromBech32(msgEthTx.Sender)
+			if err != nil {
+				return ctx, errorsmod.Wrapf(err, "simulate transaction has invalid sender")
+			}
+			aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, sender)
+			if found {
+				msgEthTx.Sender = aliasAddr.String()
+			}
+			continue
 		}
 
 		_ethSigner := ethSigner

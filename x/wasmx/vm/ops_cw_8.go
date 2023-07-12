@@ -637,7 +637,7 @@ func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName strin
 		return nil, nil
 	}
 
-	err = sdkerr.Wrapf(sdkerr.Error{}, result.Err)
+	err = sdkerr.Wrapf(sdkerr.Error{}, "%s %s", cw8types.ERROR_FLAG_EXECUTION, result.Err)
 	if execErr != nil {
 		return nil, sdkerr.Wrapf(err, execErr.Error())
 	}
@@ -690,7 +690,7 @@ func ExecuteCw8Reply(context *Context, contractVm *wasmedge.VM, funcName string)
 		return nil, nil
 	}
 
-	err = sdkerr.Wrapf(sdkerr.Error{}, result.Err)
+	err = sdkerr.Wrapf(sdkerr.Error{}, "%s %s", cw8types.ERROR_FLAG_REPLY, result.Err)
 	if execErr != nil {
 		return nil, sdkerr.Wrapf(err, execErr.Error())
 	}
@@ -737,8 +737,7 @@ func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string)
 		context.ReturnData = result.Ok
 		return nil, nil
 	}
-
-	err = sdkerr.Wrapf(sdkerr.Error{}, result.Err)
+	err = sdkerr.Wrapf(sdkerr.Error{}, "%s %s", cw8types.ERROR_FLAG_QUERY, result.Err)
 	if execErr != nil {
 		return nil, sdkerr.Wrapf(err, execErr.Error())
 	}

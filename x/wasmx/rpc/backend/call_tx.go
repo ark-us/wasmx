@@ -8,6 +8,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -151,6 +152,80 @@ func (b *Backend) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 	return txHash, nil
 }
 
+// SimulateTransaction send a raw Ethereum transaction.
+func (b *Backend) simulateTransaction(ctx context.Context, args rpctypes.TransactionArgs) (hexutil.Uint64, error) {
+	var err error
+	nonce := uint64(0)
+	if args.Nonce != nil {
+		nonce, err = hexutil.DecodeUint64(args.Nonce.String())
+		if err != nil {
+			b.logger.Error("nonce decoding failed", "error", err.Error())
+			return hexutil.Uint64(0), err
+		}
+	}
+	gasLimit := wasmxtypes.DefaultWasmConfig().SmartQueryGasLimit
+	if args.Gas != nil {
+		gasLimit, err = hexutil.DecodeUint64(args.Gas.String())
+		if err != nil {
+			b.logger.Error("gasLimit decoding failed", "error", err.Error())
+			return hexutil.Uint64(0), err
+		}
+	}
+	value := big.NewInt(0)
+	if args.Value != nil {
+		value = args.Value.ToInt()
+	}
+	minGasPrice := b.cfg.GetMinGasPrices()
+	gasPrice := minGasPrice.AmountOf(app.BaseDenom).BigInt()
+	// gasPrice := big.NewInt(10000)
+	if args.GasPrice != nil {
+		gasPrice = args.GasPrice.ToInt()
+	}
+
+	tx := ethtypes.NewTx(&ethtypes.LegacyTx{
+		Nonce:    nonce,
+		To:       args.To,
+		Value:    value,
+		Gas:      gasLimit,
+		GasPrice: gasPrice,
+		Data:     *args.Data,
+	})
+
+	data, err := tx.MarshalBinary()
+	if err != nil {
+		b.logger.Error("tx marshaling failed", "error", err.Error())
+		return hexutil.Uint64(0), err
+	}
+
+	// extract sender address from signature
+	ethereumTx := &wasmxtypes.MsgExecuteEth{Data: data}
+	ethereumTx.Sender = wasmxtypes.AccAddressFromEvm(*args.From).String()
+
+	// TODO denom from smart contract
+	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BondDenom)
+	if err != nil {
+		b.logger.Error("failed to build cosmos tx", "error", err.Error())
+		return hexutil.Uint64(0), err
+	}
+
+	txBytes, err := b.clientCtx.TxConfig.TxEncoder()(cosmosTx)
+	if err != nil {
+		b.logger.Error("failed to encode eth tx using default encoder", "error", err.Error())
+		return hexutil.Uint64(0), err
+	}
+
+	simreq := txtypes.SimulateRequest{
+		TxBytes: txBytes,
+	}
+	simResponse, err := b.queryClient.Simulate(ctx, &simreq)
+	if err != nil {
+		return hexutil.Uint64(0), err
+	}
+
+	gasInfo := simResponse.GasInfo
+	return hexutil.Uint64(gasInfo.GasUsed + 31000), nil
+}
+
 // EstimateGas returns an estimate of gas usage for the given smart contract call.
 func (b *Backend) EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rpctypes.BlockNumber) (hexutil.Uint64, error) {
 	blockNr := rpctypes.EthPendingBlockNumber
@@ -158,61 +233,13 @@ func (b *Backend) EstimateGas(args rpctypes.TransactionArgs, blockNrOptional *rp
 		blockNr = *blockNrOptional
 	}
 
-	var from string
-	if args.From != nil {
-		from = wasmxtypes.AccAddressFromEvm(*args.From).String()
-	} else {
-		from = "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvvnu6d"
-	}
-
-	evmrq := wasmxtypes.WasmxExecutionMessage{
-		Data: wasmxtypes.RawContractMessage(*args.Data),
-	}
-	bz, err := json.Marshal(evmrq)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-
-	funds := sdk.Coins{}
-	if args.Value != nil {
-		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdk.NewIntFromBigInt((*big.Int)(args.Value))))
-	}
-
-	to := ""
-	if args.To != nil {
-		to = wasmxtypes.AccAddressFromEvm(*args.To).String()
-	}
-	req := wasmxtypes.QueryCallEthRequest{
-		Sender:    from,
-		Address:   to,
-		QueryData: bz,
-		Funds:     funds,
-	}
-
 	// From ContextWithHeight: if the provided height is 0,
 	// it will return an empty context and the gRPC query will use
 	// the latest block height for querying.
 	ctx := rpctypes.ContextWithHeight(blockNr.Int64())
-	timeout := b.RPCEVMTimeout()
-
-	// Setup context so it may be canceled the call has completed
-	// or, in case of unmetered gas, setup a context with a timeout.
-	var cancel context.CancelFunc
-	if timeout > 0 {
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-	} else {
-		ctx, cancel = context.WithCancel(ctx)
+	if args.From == nil {
+		from := common.BigToAddress(big.NewInt(0))
+		args.From = &from
 	}
-
-	// Make sure the context is canceled when the call has completed
-	// this makes sure resources are cleaned up.
-	defer cancel()
-
-	res, err := b.queryClient.CallEth(ctx, &req)
-	if err != nil {
-		return hexutil.Uint64(0), err
-	}
-	gasUsed := res.GasUsed
-	gasUsed += 31000
-	return hexutil.Uint64(gasUsed), nil
+	return b.simulateTransaction(ctx, args)
 }

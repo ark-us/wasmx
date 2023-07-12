@@ -290,6 +290,11 @@ func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, g
 	return res
 }
 
+func (s AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result, error) {
+	bz := s.prepareCosmosTx(account, msgs, nil, nil)
+	return s.App.BaseApp.Simulate(bz)
+}
+
 func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []string) uint64 {
 	storeCodeMsg := &types.MsgStoreCode{
 		Sender:   sender.Address.String(),
@@ -379,12 +384,37 @@ func (s AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAd
 	return s.DeliverTxWithOpts(sender, executeContractMsg, gasLimit, gasPrice)
 }
 
+func (s AppContext) ExecuteContractSimulate(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (sdk.GasInfo, *sdk.Result, error) {
+	msgbz, err := json.Marshal(executeMsg)
+	s.S.Require().NoError(err)
+	executeContractMsg := &types.MsgExecuteContract{
+		Sender:       sender.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        funds,
+		Dependencies: dependencies,
+	}
+	return s.SimulateTx(sender, executeContractMsg)
+}
+
 func (s AppContext) WasmxQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
 	result := s.WasmxQueryRaw(account, contract, executeMsg, funds, dependencies)
 	return hex.EncodeToString(result)
 }
 
 func (s AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
+	abcires := s.WasmxQueryRawNoCheck(account, contract, executeMsg, funds, dependencies)
+	var resp types.QuerySmartContractCallResponse
+	err := resp.Unmarshal(abcires.Value)
+	s.S.Require().NoError(err)
+
+	var data types.WasmxQueryResponse
+	err = json.Unmarshal(resp.Data, &data)
+	s.S.Require().NoError(err, abcires)
+	return data.Data
+}
+
+func (s AppContext) WasmxQueryRawNoCheck(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) abci.ResponseQuery {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	query := types.QuerySmartContractCallRequest{
@@ -398,15 +428,7 @@ func (s AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAd
 	s.S.Require().NoError(err)
 
 	req := abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/SmartContractCall"}
-	abcires := s.App.BaseApp.Query(req)
-	var resp types.QuerySmartContractCallResponse
-	err = resp.Unmarshal(abcires.Value)
-	s.S.Require().NoError(err)
-
-	var data types.WasmxQueryResponse
-	err = json.Unmarshal(resp.Data, &data)
-	s.S.Require().NoError(err, abcires)
-	return data.Data
+	return s.App.BaseApp.Query(req)
 }
 
 func (s AppContext) WasmxQueryDebug(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (string, []byte, error) {

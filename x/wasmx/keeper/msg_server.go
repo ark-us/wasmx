@@ -23,6 +23,8 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 
 var _ types.MsgServer = msgServer{}
 
+// This is the entrypoint for transactions signed by Ethereum wallets
+// Works with both EVM & CosmWasm contracts, both interpreted and wasm-based
 func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (*types.MsgExecuteEthResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx = ctx.WithValue(cchtypes.CONTEXT_COIN_TYPE_KEY, cchtypes.COIN_TYPE_ETH)
