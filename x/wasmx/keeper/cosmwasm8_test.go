@@ -198,6 +198,15 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	data = []byte(`{"value":{}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(`{"value":3}`, string(qres))
+
+	data = []byte(`{"increase":{}}`)
+	abcires := appA.WasmxQueryRawNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().True(abcires.IsErr())
+	s.Require().Contains(abcires.Log, cw8types.ERROR_FLAG_QUERY)
+
+	data = []byte(`{"increase":{}}`)
+	gas, res, err := appA.ExecuteContractSimulate(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().NoError(err)
 }
 
 type Cw20Coin struct {

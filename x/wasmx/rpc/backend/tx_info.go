@@ -220,9 +220,12 @@ func (b *Backend) GetTxByEthHash(hash common.Hash) (*etherminttypes.TxResult, er
 	if txResult == nil {
 		return nil, errors.New("ethereum tx not found")
 	}
-	if !rpctypes.TxSuccessOrExceedsBlockGasLimit(&txResult.TxResult) {
-		return nil, errors.New("invalid ethereum tx")
-	}
+
+	// TODO the following is commented out because it prevents receipts being sent
+	// for transactions failing with out of gas errors
+	// if !rpctypes.TxSuccessOrExceedsBlockGasLimit(&txResult.TxResult) {
+	// 	return nil, errors.New("invalid ethereum tx")
+	// }
 
 	var tx sdk.Tx
 	if txResult.TxResult.Code != 0 {
