@@ -62,12 +62,21 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	)
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
+	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
+	paramsKeeper.Subspace(stakingtypes.ModuleName)
+	paramsKeeper.Subspace(distrtypes.ModuleName)
 	subspace := func(m string) paramstypes.Subspace {
 		r, ok := paramsKeeper.GetSubspace(m)
 		require.True(t, ok)
 		return r
 	}
-	maccPerms := map[string][]string{}
+	maccPerms := map[string][]string{
+		authtypes.FeeCollectorName:     nil,
+		distrtypes.ModuleName:          nil,
+		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+	}
 	accountKeeper := authkeeper.NewAccountKeeper(
 		cdc,
 		sdk.NewKVStoreKey(authtypes.StoreKey), // target store

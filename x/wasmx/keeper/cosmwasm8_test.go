@@ -205,7 +205,7 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	s.Require().Contains(abcires.Log, cw8types.ERROR_FLAG_QUERY)
 
 	data = []byte(`{"increase":{}}`)
-	gas, res, err := appA.ExecuteContractSimulate(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	_, _, err := appA.ExecuteContractSimulate(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().NoError(err)
 }
 
