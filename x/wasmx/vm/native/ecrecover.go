@@ -4,13 +4,14 @@ import (
 	"bytes"
 
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	btc_ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+
+	"mythos/v1/crypto"
 )
 
 var EMPTY_ADDRESS = bytes.Repeat([]byte{0}, 20)
@@ -23,7 +24,7 @@ func Secp256k1RecoverNative(msg []byte) []byte {
 	sig := make([]byte, SignatureLength)
 	copy(sig, signature[:])
 
-	pubKeyBz, err := Secp256k1Recover(msgHash, sig)
+	pubKeyBz, err := crypto.Secp256k1Recover(msgHash, sig)
 	if err != nil {
 		fmt.Println("Secp256k1Recover err", err)
 		return EMPTY_ADDRESS
@@ -31,39 +32,6 @@ func Secp256k1RecoverNative(msg []byte) []byte {
 
 	pubKey := secp256k1.PubKey{Key: pubKeyBz}
 	return pubKey.Address()
-}
-
-// Secp256k1Recover returns the uncompressed public key that created the given signature.
-func Secp256k1Recover(hash, sig []byte) ([]byte, error) {
-	pub, err := sigToPub(hash, sig)
-	if err != nil {
-		return nil, err
-	}
-	// bytes := pub.SerializeUncompressed()
-	bytes := pub.SerializeCompressed()
-	return bytes, err
-}
-
-func sigToPub(hash, sig []byte) (*btcec.PublicKey, error) {
-	if len(sig) != SignatureLength {
-		return nil, errors.New("invalid signature length")
-	}
-	// Convert to btcec input format with 'recovery id' v at the beginning.
-	btcsig := make([]byte, SignatureLength)
-	btcsig[0] = sig[RecoveryIDOffset] + 27
-	copy(btcsig[1:], sig)
-
-	pub, _, err := btc_ecdsa.RecoverCompact(btcsig, hash)
-	return pub, err
-}
-
-// SigToPub returns the public key that created the given signature.
-func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
-	pub, err := sigToPub(hash, sig)
-	if err != nil {
-		return nil, err
-	}
-	return pub.ToECDSA(), nil
 }
 
 // Sign calculates an ECDSA signature.

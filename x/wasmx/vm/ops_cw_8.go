@@ -14,7 +14,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	crypto "mythos/v1/app/crypto"
+	crypto "mythos/v1/crypto"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 )
