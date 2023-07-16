@@ -9,7 +9,6 @@ import (
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/native"
 )
 
 var (
@@ -18,6 +17,11 @@ var (
 
 	LOG_TYPE_WASMX = "wasmx"
 )
+
+type NativePrecompileHandler interface {
+	IsPrecompile(contractAddress sdk.AccAddress) bool
+	Execute(context *Context, contractAddress sdk.AccAddress, input []byte) ([]byte, error)
+}
 
 type ContractContext struct {
 	FilePath         string
@@ -32,10 +36,12 @@ type ContractContext struct {
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
-	hexaddr := types.EvmAddressFromAcc(newctx.Env.Contract.Address).Hex()
-	nativePrecompile, found := native.NativeMap[hexaddr]
+	found := newctx.NativeHandler.IsPrecompile(newctx.Env.Contract.Address)
 	if found {
-		data := nativePrecompile(newctx.Env.CurrentCall.CallData)
+		data, err := newctx.NativeHandler.Execute(newctx, newctx.Env.Contract.Address, newctx.Env.CurrentCall.CallData)
+		if err != nil {
+			return nil, err
+		}
 		newctx.ReturnData = data
 		return data, nil
 	}
@@ -68,11 +74,20 @@ type Context struct {
 	ContractRouter ContractRouter
 	ContractStore  types.KVStore
 	CosmosHandler  types.WasmxCosmosHandler
+	NativeHandler  NativePrecompileHandler
 	ReturnData     []byte
 	CurrentCallId  uint32
 	Logs           []WasmxLog
 	Messages       []cw8types.SubMsg `json:"messages"`
 	dbIterators    map[int32]dbm.Iterator
+}
+
+func (context *Context) GetCosmosHandler() types.WasmxCosmosHandler {
+	return context.CosmosHandler
+}
+
+func (context *Context) GetContext() sdk.Context {
+	return context.Ctx
 }
 
 type EwasmFunctionWrapper struct {

@@ -15,7 +15,6 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/native"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
@@ -204,6 +203,7 @@ func ExecuteWasmInterpreted(
 		ContractStore:  kvstore,
 		CosmosHandler:  cosmosHandler,
 		ContractRouter: contractRouter,
+		NativeHandler:  NativeMap,
 		dbIterators:    map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
@@ -270,14 +270,6 @@ func ExecuteWasm(
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not decode wasm execution message")
 	}
 
-	// native implementations
-	hexaddr := types.EvmAddressFromAcc(env.Contract.Address).Hex()
-	nativePrecompile, found := native.NativeMap[hexaddr]
-	if found {
-		data := nativePrecompile(ethMsg.Data)
-		return types.ContractResponse{Data: data}, nil
-	}
-
 	var cleanups []func()
 	conf := wasmedge.NewConfigure()
 	cleanups = append(cleanups, conf.Release)
@@ -290,9 +282,22 @@ func ExecuteWasm(
 		ContractStore:  kvstore,
 		CosmosHandler:  cosmosHandler,
 		ContractRouter: contractRouter,
+		NativeHandler:  NativeMap,
 		dbIterators:    map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
+
+	// native implementations
+	found := context.NativeHandler.IsPrecompile(env.Contract.Address)
+	if found {
+		data, err := context.NativeHandler.Execute(context, env.Contract.Address, ethMsg.Data)
+		if err != nil {
+			runCleanups(cleanups)
+			return types.ContractResponse{Data: data}, err
+		}
+		return types.ContractResponse{Data: data}, nil
+	}
+
 	for _, dep := range dependencies {
 		contractContext := buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, conf)
 		if err != nil {

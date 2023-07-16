@@ -115,6 +115,13 @@ func DefaultSystemContracts() SystemContracts {
 			Role:        ROLE_ALIAS,
 		},
 		{
+			Address:     "0x0000000000000000000000000000000000000025",
+			Label:       "proxy_interfaces",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Native:      true,
+		},
+		{
 			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			Label:       "sys_proxy",
 			InitMessage: initMsg,

@@ -5,6 +5,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"mythos/v1/x/wasmx/types"
+	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 // Returns nil if there is no contract
@@ -23,7 +24,8 @@ func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
 }
 
 // All WasmX, eWasm calls must go through here
-func WasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
+// Returns 0 on success, 1 on failure and 2 on revert
+func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	if types.IsSystemAddress(req.To) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From) {
 		return int32(1), nil
 	}
@@ -52,6 +54,7 @@ func WasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
+		NativeHandler:  ctx.NativeHandler,
 		dbIterators:    map[int32]dbm.Iterator{},
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
@@ -65,12 +68,12 @@ func WasmxCall(ctx *Context, req CallRequest) (int32, []byte) {
 			CurrentCall: callContext,
 		},
 	}
-
 	_, err := newctx.ContractRouter[req.To.String()].Execute(newctx)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
 		success = int32(2)
+		newctx.GetContext().Logger().Debug(err.Error())
 	} else {
 		success = int32(0)
 		if !req.IsQuery {

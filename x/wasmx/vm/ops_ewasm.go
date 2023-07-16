@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"mythos/v1/x/wasmx/types"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	"mythos/v1/x/wasmx/types"
+	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 var (
@@ -87,7 +89,7 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	balance := ctx.CosmosHandler.GetBalance(cleanupAddress(addressbz))
+	balance := ctx.CosmosHandler.GetBalance(vmtypes.CleanupAddress(addressbz))
 	writeBigInt(callframe, balance, params[1])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -213,7 +215,7 @@ func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	data := ctx.CosmosHandler.GetCodeHash(cleanupAddress(addressbz))
+	data := ctx.CosmosHandler.GetCodeHash(vmtypes.CleanupAddress(addressbz))
 	err = writeMem(callframe, data, params[1])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -347,7 +349,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(cleanupAddress(addrbz))
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
 	value, err := readBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -373,7 +375,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
-			req := CallRequest{
+			req := vmtypes.CallRequest{
 				To:       addr,
 				From:     ctx.Env.Contract.Address,
 				Value:    value,
@@ -387,7 +389,6 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		}
 	}
 	returns[0] = success
-
 	err = writeMemBoundBySize(callframe, returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
@@ -407,7 +408,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(cleanupAddress(addrbz))
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
 	value, err := readBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -428,7 +429,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := CallRequest{
+		req := vmtypes.CallRequest{
 			To:       ctx.Env.Contract.Address,
 			From:     ctx.Env.Contract.Address,
 			Value:    value,
@@ -461,7 +462,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(cleanupAddress(addrbz))
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
 	calldata, err := readMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
@@ -477,7 +478,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := CallRequest{
+		req := vmtypes.CallRequest{
 			To:       ctx.Env.Contract.Address,
 			From:     ctx.Env.CurrentCall.Sender,
 			Value:    ctx.Env.CurrentCall.Funds,
@@ -512,7 +513,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(cleanupAddress(addrbz))
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
 	calldata, err := readMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
@@ -526,7 +527,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := CallRequest{
+		req := vmtypes.CallRequest{
 			To:       addr,
 			From:     ctx.Env.Contract.Address,
 			Value:    big.NewInt(0),
@@ -717,7 +718,8 @@ func sendCosmosQuery(context interface{}, callframe *wasmedge.CallingFrame, para
 
 // value: i32
 func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("Go: debugPrinti32", params[0].(int32), params[1].(int32))
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("Go: debugPrinti32: %d, %d", params[0].(int32), params[1].(int32)))
 	returns := make([]interface{}, 1)
 	returns[0] = params[0]
 	return returns, wasmedge.Result_Success
@@ -725,7 +727,8 @@ func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params
 
 // value: i64
 func debugPrinti64(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("Go: debugPrinti64", params[0].(int64), params[1].(int32))
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("Go: debugPrinti64: %d, %d", params[0].(int64), params[1].(int32)))
 	returns := make([]interface{}, 1)
 	returns[0] = params[0]
 	return returns, wasmedge.Result_Success
@@ -737,7 +740,8 @@ func debugPrintMemHex(context interface{}, callframe *wasmedge.CallingFrame, par
 	size := params[1].(int32)
 	mem := callframe.GetMemoryByIndex(0)
 	data, _ := mem.GetData(uint(pointer), uint(size))
-	fmt.Println("Go: debugPrintMemHex", hex.EncodeToString(data))
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("Go: debugPrintMemHex: %s", hex.EncodeToString(data)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -892,6 +896,9 @@ func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}
 
 func writeMemBoundBySize(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}, size interface{}) error {
 	length := size.(int32)
+	if len(data) < int(length) {
+		length = int32(len(data))
+	}
 	return writeMem(callframe, data[0:length], pointer)
 }
 
@@ -946,17 +953,6 @@ func readAndFillWithZero(data []byte, start int32, length int32) []byte {
 		value = data[start:end]
 	}
 	return value
-}
-
-func isEvmAddress(addr types.AddressCW) bool {
-	return hex.EncodeToString(addr.Bytes()[:12]) == hex.EncodeToString(make([]byte, 12))
-}
-
-func cleanupAddress(addr []byte) []byte {
-	if isEvmAddress(types.BytesToAddressCW(addr)) {
-		return addr[12:]
-	}
-	return addr
 }
 
 func paddRightToMultiple32(data []byte) []byte {

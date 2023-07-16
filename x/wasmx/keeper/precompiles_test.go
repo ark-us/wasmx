@@ -17,7 +17,7 @@ import (
 	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/native"
+	"mythos/v1/x/wasmx/vm"
 )
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
@@ -225,13 +225,13 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 
 	contractAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000022")
 
-	args1 := native.InputShamirSplit{
+	args1 := vm.InputShamirSplit{
 		Secret:    "this is a secret",
 		Count:     4,
 		Threshold: 2,
 	}
 
-	fabi := native.SecretSharingAbi.Methods["shamirSplit"]
+	fabi := vm.SecretSharingAbi.Methods["shamirSplit"]
 	input, err := fabi.Inputs.Pack(args1.Secret, args1.Count, args1.Threshold)
 	s.Require().NoError(err)
 	input = append(fabi.ID, input...)
@@ -241,7 +241,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	unpacked, err := fabi.Outputs.Unpack(qres)
 	s.Require().NoError(err)
 
-	var tuple native.ResultShares
+	var tuple vm.ResultShares
 	err = fabi.Outputs.Copy(&tuple, unpacked)
 	s.Require().NoError(err)
 
@@ -250,7 +250,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 		tuple.Shares[2],
 	}
 
-	fabi = native.SecretSharingAbi.Methods["shamirRecover"]
+	fabi = vm.SecretSharingAbi.Methods["shamirRecover"]
 	input, err = fabi.Inputs.Pack(sampleShares)
 	s.Require().NoError(err)
 	input = append(fabi.ID, input...)
@@ -260,7 +260,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	unpacked, err = fabi.Outputs.Unpack(qres)
 	s.Require().NoError(err)
 
-	var result native.ResultSecret
+	var result vm.ResultSecret
 	err = fabi.Outputs.Copy(&result, unpacked)
 	s.Require().NoError(err)
 	s.Require().Equal(args1.Secret, result.Secret)

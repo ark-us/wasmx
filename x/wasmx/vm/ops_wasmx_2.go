@@ -3,10 +3,12 @@ package vm
 import (
 	"encoding/json"
 	"math/big"
-	"mythos/v1/x/wasmx/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	"mythos/v1/x/wasmx/types"
+	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 // getEnv(): ArrayBuffer
@@ -33,7 +35,7 @@ func getAccount(context interface{}, callframe *wasmedge.CallingFrame, params []
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	address := sdk.AccAddress(cleanupAddress(addr))
+	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
 	codeInfo := ctx.CosmosHandler.GetCodeInfo(address)
 	code := types.EnvContractInfo{
 		Address:  address,
@@ -102,7 +104,7 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req CallRequest
+	var req vmtypes.CallRequest
 	json.Unmarshal(requestbz, &req)
 
 	returns := make([]interface{}, 1)
@@ -119,7 +121,7 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 		success, returnData = WasmxCall(ctx, req)
 	}
 
-	response := CallResponse{
+	response := vmtypes.CallResponse{
 		Success: uint8(success),
 		Data:    returnData,
 	}
@@ -141,7 +143,7 @@ func wasmxGetBalance(context interface{}, callframe *wasmedge.CallingFrame, para
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	address := sdk.AccAddress(cleanupAddress(addr))
+	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
 	balance := ctx.CosmosHandler.GetBalance(address)
 	ptr, err := allocateWriteMem(ctx, callframe, balance.FillBytes(make([]byte, 32)))
 	if err != nil {
@@ -177,7 +179,7 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req CreateAccountRequest
+	var req vmtypes.CreateAccountRequest
 	json.Unmarshal(requestbz, &req)
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
@@ -221,7 +223,7 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req Create2AccountRequest
+	var req vmtypes.Create2AccountRequest
 	json.Unmarshal(requestbz, &req)
 
 	metadata := types.CodeMetadata{}

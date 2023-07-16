@@ -1,9 +1,11 @@
-package native
+package vm
 
 import (
 	"encoding/binary"
 	"encoding/json"
 	"strings"
+
+	sdkerr "cosmossdk.io/errors"
 
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -42,75 +44,75 @@ func init() {
 	}
 }
 
-func SecretSharing(input []byte) []byte {
-	emtpyResult := make([]byte, 0)
+func SecretSharing(context *Context, input []byte) ([]byte, error) {
 	wasmbin := precompiles.GetPrecompileByLabel("secret_sharing")
 	wasmedge.SetLogErrorLevel()
 	conf := wasmedge.NewConfigure(wasmedge.WASI)
 	vm := wasmedge.NewVMWithConfig(conf)
 	err := wasmutils.InstantiateWasm(vm, "", wasmbin)
 	if err != nil {
-		return emtpyResult
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: invalid wasm")
 	}
 
 	fabi, err := SecretSharingAbi.MethodById(input[0:4])
 	if err != nil {
-		return emtpyResult
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: abi method not found")
 	}
 
 	switch fabi.RawName {
 	case "shamirSplit": // "shamirSplit(string,uint32,uint32)"
 		unpacked, err := fabi.Inputs.Unpack(input[4:])
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot unpack input")
 		}
 
 		var args InputShamirSplit
 		err = fabi.Inputs.Copy(&args, unpacked)
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot unpack input")
 		}
 
 		shares, err := ShamirSplit(vm, []byte(args.Secret), args.Count, args.Threshold)
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot split")
 		}
 		result, err := fabi.Outputs.Pack(shares.Shares)
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot pack output")
 		}
-		return result
+		return result, nil
 	case "shamirRecover": // "shamirRecover(string[])"
 		unpacked, err := fabi.Inputs.Unpack(input[4:])
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret recover: cannot unpack input")
 		}
 
 		var args InputShamirRecover
 		err = fabi.Inputs.Copy(&args, unpacked)
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret recover: cannot unpack input")
 		}
 		bz, err := json.Marshal(args)
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret recover: marshaling failed")
 		}
 
 		secret, err := ShamirRecover(vm, bz)
 		if err != nil {
-			return emtpyResult
+			// TODO return error? or just empty result
+			return nil, nil
 		}
 		result, err := fabi.Outputs.Pack(secret.Secret)
 		if err != nil {
-			return emtpyResult
+			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret recover: cannot unpack output")
 		}
-		return result
+		return result, nil
 	}
 
 	vm.Release()
 	conf.Release()
 
-	return emtpyResult
+	return nil, nil
 }
 
 func ShamirSplit(vm *wasmedge.VM, secret []byte, count uint32, threshold uint32) (*ResultShares, error) {
