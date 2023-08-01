@@ -1,4 +1,4 @@
-package native
+package vm
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ var EMPTY_ADDRESS = bytes.Repeat([]byte{0}, 20)
 var SignatureLength = 65
 var RecoveryIDOffset = 64
 
-func Secp256k1RecoverNative(msg []byte) []byte {
+func Secp256k1RecoverNative(context *Context, msg []byte) ([]byte, error) {
 	msgHash := msg[0:32]
 	signature := msg[32:]
 	sig := make([]byte, SignatureLength)
@@ -27,11 +27,11 @@ func Secp256k1RecoverNative(msg []byte) []byte {
 	pubKeyBz, err := crypto.Secp256k1Recover(msgHash, sig)
 	if err != nil {
 		fmt.Println("Secp256k1Recover err", err)
-		return EMPTY_ADDRESS
+		return EMPTY_ADDRESS, nil
 	}
 
 	pubKey := secp256k1.PubKey{Key: pubKeyBz}
-	return pubKey.Address()
+	return pubKey.Address(), nil
 }
 
 // Sign calculates an ECDSA signature.

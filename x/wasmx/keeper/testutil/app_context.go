@@ -314,6 +314,26 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []
 	return codeId
 }
 
+func (s AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []byte, deps []string, metadata types.CodeMetadata) uint64 {
+	storeCodeMsg := &types.MsgStoreCode{
+		Sender:   sender.Address.String(),
+		ByteCode: wasmbin,
+		Deps:     deps,
+		Metadata: metadata,
+	}
+
+	res := s.DeliverTx(sender, storeCodeMsg)
+	s.S.Require().True(res.IsOK(), res.GetLog())
+	s.S.Commit()
+
+	codeId := s.GetCodeIdFromLog(res.GetLog())
+
+	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
+	s.S.Require().NoError(err)
+	s.S.Require().Equal(bytecode, wasmbin)
+	return codeId
+}
+
 func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.S.Require().NoError(err)

@@ -138,13 +138,15 @@ func wasmxRevert(context interface{}, callframe *wasmedge.CallingFrame, params [
 func asAbort(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
 	fileName, _ := readMemFromPtr(callframe, params[1])
-	fmt.Println("--ABORT--", readJsString(message), readJsString(fileName), ", line: ", params[2], ", column: ", params[3])
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", readJsString(message), readJsString(fileName), params[2], params[3]))
 	return wasmxRevert(context, callframe, params)
 }
 
 func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
-	fmt.Println("--console.log--", readJsString(message))
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx_env_1: console.log: %s", readJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

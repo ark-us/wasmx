@@ -1,6 +1,7 @@
-package vm
+package types
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
 
@@ -8,6 +9,10 @@ import (
 
 	"mythos/v1/x/wasmx/types"
 )
+
+type ContextI interface {
+	GetCosmosHandler() types.WasmxCosmosHandler
+}
 
 type CallRequest struct {
 	To       sdk.AccAddress `json:"to"`
@@ -84,8 +89,8 @@ func (m *CallRequest) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &d); err != nil {
 		return err
 	}
-	m.To = sdk.AccAddress(cleanupAddress(d.To))
-	m.From = sdk.AccAddress(cleanupAddress(d.From))
+	m.To = sdk.AccAddress(CleanupAddress(d.To))
+	m.From = sdk.AccAddress(CleanupAddress(d.From))
 	m.Value = big.NewInt(0).SetBytes(d.Value)
 	m.GasLimit = big.NewInt(0).SetBytes(d.GasLimit)
 	m.Calldata = d.Calldata
@@ -122,4 +127,15 @@ func (m *Create2AccountRequest) UnmarshalJSON(data []byte) error {
 	m.Bytecode = d.Bytecode
 	m.Salt = big.NewInt(0).SetBytes(d.Salt)
 	return nil
+}
+
+func CleanupAddress(addr []byte) []byte {
+	if IsEvmAddress(types.BytesToAddressCW(addr)) {
+		return addr[12:]
+	}
+	return addr
+}
+
+func IsEvmAddress(addr types.AddressCW) bool {
+	return hex.EncodeToString(addr.Bytes()[:12]) == hex.EncodeToString(make([]byte, 12))
 }

@@ -291,11 +291,10 @@ func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame
 
 // secp256k1_recover_pubkey(message_hash_ptr: u32, signature_ptr: u32, recovery_param: u32) -> u64;
 func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_secp256k1_recover_pubkey--", params)
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Error("cosmwasm8: secp256k1_recover_pubkey: Not implemented")
 	// TODO
 	return nil, wasmedge.Result_Fail
-
-	ctx := context.(*Context)
 	msgHash, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -386,11 +385,11 @@ func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, 
 // / case.
 // /  - The empty case (no messages, no signatures and no public keys) returns true.
 func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_ed25519_batch_verify--", params)
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Error("cosmwasm8: ed25519_batch_verify: Not implemented")
 	// TODO
 	return nil, wasmedge.Result_Fail
 
-	ctx := context.(*Context)
 	msgs, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -432,12 +431,12 @@ func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingF
 // / In production environments it is expected that those messages are discarded.
 // debug(source_ptr: u32);
 func cw_8_debug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	// TODO only print if in debug mode
+	ctx := context.(*Context)
 	msgBz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println(string(msgBz))
+	ctx.GetContext().Logger().Debug("cosmwasm8: debug: " + string(msgBz))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -446,7 +445,6 @@ func cw_8_debug(context interface{}, callframe *wasmedge.CallingFrame, params []
 // / query export, which queries the state of the contract.
 // query_chain(request: u32) -> u32;
 func cw_8_query_chain(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--cw_8_query_chain--", params)
 	ctx := context.(*Context)
 	databz, err := readMemFromPtrCw(callframe, params[0])
 	if err != nil {
@@ -484,7 +482,7 @@ func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	returns := make([]interface{}, 0)
 	ctx.ReturnData = data
-	fmt.Println("--cw_8_abort--", string(data))
+	ctx.GetContext().Logger().Debug("cosmwasm8: abort: " + string(data))
 	return returns, wasmedge.Result_Fail
 }
 

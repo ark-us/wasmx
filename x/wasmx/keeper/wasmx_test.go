@@ -11,8 +11,8 @@ import (
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm"
 	"mythos/v1/x/wasmx/vm/precompiles"
+	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 var (
@@ -25,8 +25,8 @@ type SysContract struct {
 }
 
 type BenchmarkRequest struct {
-	Request   vm.CallRequest `json:"request"`
-	Magnitude int32          `json:"magnitude"`
+	Request   vmtypes.CallRequest `json:"request"`
+	Magnitude int32               `json:"magnitude"`
 }
 
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
@@ -58,7 +58,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	req := &SysContract{
 		Benchmark: &BenchmarkRequest{
 			Magnitude: 3,
-			Request: vm.CallRequest{
+			Request: vmtypes.CallRequest{
 				To:       contractAddress2,
 				From:     sender.Address,
 				Value:    big.NewInt(0),
