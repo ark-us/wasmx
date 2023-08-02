@@ -110,6 +110,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	}
 	imports := ast.ListImports()
 	exports := ast.ListExports()
+	uniqueDeps := make(map[string]bool)
 
 	for _, mexport := range exports {
 		fname := mexport.GetExternalName()
@@ -130,7 +131,10 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			if err != nil {
 				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
 			}
-			report.Dependencies = append(report.Dependencies, dep)
+			if _, found := uniqueDeps[dep]; !found {
+				report.Dependencies = append(report.Dependencies, dep)
+				uniqueDeps[dep] = true
+			}
 		}
 	}
 
@@ -147,7 +151,10 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			if err != nil {
 				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
 			}
-			report.Dependencies = append(report.Dependencies, dep)
+			if _, found := uniqueDeps[dep]; !found {
+				report.Dependencies = append(report.Dependencies, dep)
+				uniqueDeps[dep] = true
+			}
 		}
 	}
 
