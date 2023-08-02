@@ -134,6 +134,23 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 		}
 	}
 
+	for _, mimport := range imports {
+		fname := mimport.GetModuleName()
+		var dep string
+
+		if strings.Contains(fname, types.WASI_VM_EXPORT) {
+			dep = parseDependency(fname, types.WASI_VM_EXPORT)
+		}
+
+		if dep != "" {
+			err := VerifyEnv(dep, imports)
+			if err != nil {
+				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
+			}
+			report.Dependencies = append(report.Dependencies, dep)
+		}
+	}
+
 	ast.Release()
 	loader.Release()
 	return report, nil

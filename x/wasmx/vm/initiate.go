@@ -82,6 +82,28 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 	return cleanups, nil
 }
 
+func InitiateWasiSnapshotPreview1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	env := BuildWasiSnapshotPreview1(context)
+	var cleanups []func()
+	cleanups = append(cleanups, env.Release)
+	err := contractVm.RegisterModule(env)
+	if err != nil {
+		return cleanups, err
+	}
+	return cleanups, nil
+}
+
+func InitiateWasiUnstable(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	env := BuildWasiUnstable(context)
+	var cleanups []func()
+	cleanups = append(cleanups, env.Release)
+	err := contractVm.RegisterModule(env)
+	if err != nil {
+		return cleanups, err
+	}
+	return cleanups, nil
+}
+
 func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
@@ -114,6 +136,8 @@ func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
+	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasiSnapshotPreview1
+	SystemDepHandler[types.WASI_UNSTABLE] = InitiateWasiUnstable
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
@@ -121,6 +145,8 @@ func init() {
 	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultMain
 	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultMain
 	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasi
+	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasi
 	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultMain
 	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
 	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefaultMain

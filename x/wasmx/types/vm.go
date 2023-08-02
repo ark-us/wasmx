@@ -117,6 +117,7 @@ var EWASM_VM_EXPORT = "ewasm_env_"
 var WASMX_VM_EXPORT = "wasmx_env_"
 var SYS_VM_EXPORT = "sys_env_"
 var CW_VM_EXPORT = "interface_version_"
+var WASI_VM_EXPORT = "wasi_"
 
 // simplest wasmx version 1 interface
 var WASMX_ENV_1 = "wasmx_env_1"
@@ -126,6 +127,10 @@ var WASMX_ENV_2 = "wasmx_env_2"
 
 // non-deterministic system operations, only as queries
 var SYS_ENV_1 = "sys_env_1"
+
+// wasi
+var WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
+var WASI_UNSTABLE = "wasi_unstable"
 
 // initial interface use in precompiles 1 -> 9
 // TODO replace & remove
