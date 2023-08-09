@@ -32,11 +32,12 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
 	wasmedge.SetLogErrorLevel()
 	// wasmedge.SetLogDebugLevel()
-	// conf := wasmedge.NewConfigure()
+	conf := wasmedge.NewConfigure()
 	// conf.SetStatisticsInstructionCounting(true)
 	// conf.SetStatisticsTimeMeasuring(true)
-	// contractVm := wasmedge.NewVMWithConfig(conf)
-	contractVm := wasmedge.NewVM()
+	conf.AddConfig(wasmedge.WASI)
+	contractVm := wasmedge.NewVMWithConfig(conf)
+	// contractVm := wasmedge.NewVM()
 	var cleanups []func()
 	var err error
 

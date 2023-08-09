@@ -82,25 +82,17 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 	return cleanups, nil
 }
 
-func InitiateWasiSnapshotPreview1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	env := BuildWasiSnapshotPreview1(context)
+func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
-	cleanups = append(cleanups, env.Release)
-	err := contractVm.RegisterModule(env)
-	if err != nil {
-		return cleanups, err
-	}
-	return cleanups, nil
-}
 
-func InitiateWasiUnstable(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	env := BuildWasiUnstable(context)
-	var cleanups []func()
-	cleanups = append(cleanups, env.Release)
-	err := contractVm.RegisterModule(env)
+	// TODO better
+	env1 := BuildWasiWasmxEnv(context)
+	cleanups = append(cleanups, env1.Release)
+	err := contractVm.RegisterModule(env1)
 	if err != nil {
 		return cleanups, err
 	}
+
 	return cleanups, nil
 }
 
@@ -136,8 +128,8 @@ func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
-	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasiSnapshotPreview1
-	SystemDepHandler[types.WASI_UNSTABLE] = InitiateWasiUnstable
+	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasi
+	SystemDepHandler[types.WASI_UNSTABLE] = InitiateWasi
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter

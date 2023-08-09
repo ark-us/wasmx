@@ -154,6 +154,8 @@ var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
 
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
+var INTERPRETER_PYTHON = "interpreter_python"
+var INTERPRETER_JS = "interpreter_javascript"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 

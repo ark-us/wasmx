@@ -22,6 +22,8 @@ const (
 	TempDir = "temp"
 
 	BinDir = "bin"
+
+	SourceCodeDir = "sources"
 )
 
 const (

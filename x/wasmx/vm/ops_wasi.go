@@ -1,223 +1,177 @@
 package vm
 
 import (
+	"encoding/binary"
+	"fmt"
 	"mythos/v1/x/wasmx/types"
 
+	sdkerr "cosmossdk.io/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
-func wasiFdWrite(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
+func wasiStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	fmt.Println("--wasiStorageStore--", params)
+
+	ctx := context.(*Context)
+	keybz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--keybz--", keybz)
+	valuebz, err := readMem(callframe, params[2], params[3])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--valuebz--", valuebz)
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "ewasm")
+	ctx.ContractStore.Set(keybz, valuebz)
+
+	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
 
-func wasiFdClose(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	fmt.Println("--wasiStorageLoad--", params)
+
+	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = 0
+	keybz, err := readMem(callframe, params[0], params[1])
+	fmt.Println("--keybz--", keybz, string(keybz), err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := ctx.ContractStore.Get(keybz)
+	fmt.Println("--data--", data, string(data), err)
+	if len(data) == 0 {
+		data = types.EMPTY_BYTES32
+	}
+
+	lenData := int32(len(data))
+	ptr, err := wasiAllocateMem(ctx, lenData+4) // add 4 bytes for length
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	initdata, err := readMem(callframe, ptr, lenData)
+	fmt.Println("--emptydata0--", initdata, string(initdata), err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	initdata, err = readMem(callframe, ptr-int32(4), int32(32))
+	fmt.Println("--emptydata2--", initdata, string(initdata), err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	// add length in 4 bytes
+	data = append(binary.BigEndian.AppendUint32([]byte{}, uint32(lenData)), data...)
+	fmt.Println("--data2--", data)
+
+	err = writeMem(callframe, data, ptr)
+	fmt.Println("--writeMem--", err)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	initdata, err = readMem(callframe, ptr, lenData+4)
+	fmt.Println("--writtendata--", initdata, string(initdata), err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
 	return returns, wasmedge.Result_Success
 }
 
-func wasiFdFdstatGet(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
-	return returns, wasmedge.Result_Success
-}
+func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
+	env := wasmedge.NewModule("wasmx")
 
-func wasiFdSeek(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
-	return returns, wasmedge.Result_Success
-}
-
-func wasiProcExit(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
-	return returns, wasmedge.Result_Success
-	// process.exit(code);
-	// or
-	// throw 'trying to exit with code ' + code;
-}
-
-// bufPtr, bufLen
-func wasiRandomGet(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
-	return returns, wasmedge.Result_Success
-	// crypto.getRandomValues(loadSlice(bufPtr, bufLen));
-	// return 0;
-}
-
-func wasiClockTimeGet(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
-	return returns, wasmedge.Result_Success
-}
-
-func wasiDefaultFn(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	returns := make([]interface{}, 1)
-	returns[0] = 0
-	return returns, wasmedge.Result_Success
-}
-
-func BuildWasiSnapshotPreview1(context *Context) *wasmedge.Module {
-	env := wasmedge.NewModule("wasi_snapshot_preview1")
-	functype__i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32_i32 := wasmedge.NewFunctionType(
+	functype_i32i32i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i64_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i64i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i64i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i64i64i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i64i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i32i64i64i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i64i64i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-
-	env.AddFunction("proc_exit", wasmedge.NewFunction(functype_i32_, wasiProcExit, context, 0))
-	env.AddFunction("random_get", wasmedge.NewFunction(functype_i32i32_i32, wasiRandomGet, context, 0))
-	env.AddFunction("clock_time_get", wasmedge.NewFunction(functype_i32i64i32_i32, wasiClockTimeGet, context, 0))
-	env.AddFunction("sched_yield", wasmedge.NewFunction(functype__i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_read", wasmedge.NewFunction(functype_i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_filestat_set_size", wasmedge.NewFunction(functype_i32i64_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("poll_oneoff", wasmedge.NewFunction(functype_i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("args_sizes_get", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("args_get", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_filestat_get", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_readdir", wasmedge.NewFunction(functype_i32i32i32i64i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_write", wasmedge.NewFunction(functype_i32i32i32i32_i32, wasiFdWrite, context, 0))
-	env.AddFunction("fd_close", wasmedge.NewFunction(functype_i32_i32, wasiFdClose, context, 0))
-	env.AddFunction("fd_fdstat_get", wasmedge.NewFunction(functype_i32i32_i32, wasiFdFdstatGet, context, 0))
-	env.AddFunction("fd_seek", wasmedge.NewFunction(functype_i32i64i32i32_i32, wasiFdSeek, context, 0))
-	env.AddFunction("fd_fdstat_set_flags", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_prestat_get", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_prestat_dir_name", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_sync", wasmedge.NewFunction(functype_i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_create_directory", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_unlink_file", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_rename", wasmedge.NewFunction(functype_i32i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_remove_directory", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_filestat_get", wasmedge.NewFunction(functype_i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_readlink", wasmedge.NewFunction(functype_i32i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_link", wasmedge.NewFunction(functype_i32i32i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_open", wasmedge.NewFunction(functype_i32i32i32i32i32i64i64i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_symlink", wasmedge.NewFunction(functype_i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("environ_get", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("environ_sizes_get", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("path_filestat_set_times", wasmedge.NewFunction(functype_i32i32i32i32i64i64i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_filestat_set_times", wasmedge.NewFunction(functype_i32i64i64i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_datasync", wasmedge.NewFunction(functype_i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("fd_pread", wasmedge.NewFunction(functype_i32i32i32i64i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_shutdown", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_open", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_send", wasmedge.NewFunction(functype_i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_recv", wasmedge.NewFunction(functype_i32i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_connect", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_setsockopt", wasmedge.NewFunction(functype_i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_bind", wasmedge.NewFunction(functype_i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_listen", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_accept", wasmedge.NewFunction(functype_i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_getlocaladdr", wasmedge.NewFunction(functype_i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_getpeeraddr", wasmedge.NewFunction(functype_i32i32i32i32_i32, wasiDefaultFn, context, 0))
-	env.AddFunction("sock_getaddrinfo", wasmedge.NewFunction(functype_i32i32i32i32i32i32i32i32_i32, wasiDefaultFn, context, 0))
-
-	return env
-}
-
-func BuildWasiUnstable(context *Context) *wasmedge.Module {
-	env := wasmedge.NewModule("wasi_unstable")
-	functype__i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
 	functype_i32i32_i32 := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
-	functype_i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i64i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
 
-	env.AddFunction("fd_write", wasmedge.NewFunction(functype_i32i32i32i32_i32, wasiFdWrite, context, 0))
-	env.AddFunction("fd_close", wasmedge.NewFunction(functype__i32, wasiFdClose, context, 0))
-	env.AddFunction("fd_fdstat_get", wasmedge.NewFunction(functype__i32, wasiFdFdstatGet, context, 0))
-	env.AddFunction("fd_seek", wasmedge.NewFunction(functype__i32, wasiFdSeek, context, 0))
-	env.AddFunction("proc_exit", wasmedge.NewFunction(functype_i32_, wasiProcExit, context, 0))
-	env.AddFunction("random_get", wasmedge.NewFunction(functype_i32i32_i32, wasiRandomGet, context, 0))
-	env.AddFunction("clock_time_get", wasmedge.NewFunction(functype_i32i64i32_i32, wasiClockTimeGet, context, 0))
+	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32i32i32_, wasiStorageStore, context, 0))
+	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32i32_i32, wasiStorageLoad, context, 0))
 
 	return env
 }
 
 func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	if funcName != types.ENTRY_POINT_INSTANTIATE {
-		funcName = "_start"
+	fmt.Println("--ExecuteWasi--", funcName)
+
+	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	wasimodule.InitWasi(
+		[]string{
+			``,
+			`./testdata/main.py`,
+			"222444",
+		},
+		// os.Environ(), // The envs
+		[]string{},
+		// The mapping preopens
+		[]string{
+			".:.",
+			// '/': __dirname
+		},
+	)
+
+	if funcName == types.ENTRY_POINT_INSTANTIATE {
+		funcName = "_initialize"
+		res, err := contractVm.Execute(funcName)
+		fmt.Println("--ExecuteWasi-_instantiate-", res, err)
+		// return res, err
+		return nil, nil
 	}
-	return nil, nil
+
+	// WASI standard - no args, no return
+	funcName = "_start" // tinygo main
+	res, err := contractVm.Execute(funcName)
+
+	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
+	bz, err := readMemSimple(activeMemory, int32(0), int32(32))
+	fmt.Println("--result mem--", bz, string(bz), err)
+
+	fmt.Println("--ExecuteWasi--", res, err)
+
+	// TODO bindings dependency? encoding of the JSON string
+
+	return res, err
+}
+
+func readMemSimple(mem *wasmedge.Memory, pointer interface{}, size interface{}) ([]byte, error) {
+	ptr := pointer.(int32)
+	length := size.(int32)
+
+	data, err := mem.GetData(uint(ptr), uint(length))
+	if err != nil {
+		return nil, err
+	}
+	result := make([]byte, length)
+	copy(result, data)
+	return result, nil
+}
+
+func wasiAllocateMem(ctx *Context, size int32) (int32, error) {
+	addr := ctx.Env.Contract.Address
+	contractCtx, ok := ctx.ContractRouter[addr.String()]
+	if !ok {
+		return int32(0), sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
+	}
+	return wasiAllocateMemVm(contractCtx.Vm, size)
+}
+
+func wasiAllocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
+	if vm == nil {
+		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
+	}
+	result, err := vm.Execute("alloc", size)
+	fmt.Println("==alloc==", result, err)
+	if err != nil {
+		return 0, err
+	}
+	return result[0].(int32), nil
 }

@@ -78,6 +78,14 @@ func NewKeeper(
 	if err != nil {
 		panic(err)
 	}
+
+	// for interpreted source codes (python)
+	sourcesDir := path.Join(contractsPath, types.SourceCodeDir)
+	err = createDirsIfNotExist(sourcesDir)
+	if err != nil {
+		panic(err)
+	}
+
 	tempDir := path.Join(homeDir, types.TempDir)
 	err = createDirsIfNotExist(tempDir)
 	if err != nil {

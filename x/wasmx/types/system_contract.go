@@ -122,6 +122,13 @@ func DefaultSystemContracts() SystemContracts {
 			Native:      true,
 		},
 		{
+			Address:     "0x0000000000000000000000000000000000000026",
+			Label:       INTERPRETER_PYTHON,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_INTERPRETER,
+		},
+		{
 			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			Label:       "sys_proxy",
 			InitMessage: initMsg,
