@@ -79,7 +79,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	// for interpreted source codes (python)
+	// for interpreted source codes (e.g. python)
 	sourcesDir := path.Join(contractsPath, types.SourceCodeDir)
 	err = createDirsIfNotExist(sourcesDir)
 	if err != nil {
@@ -97,7 +97,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(contractsPath, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	wasmvm, err := NewVM(contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
 	if err != nil {
 		panic(err)
 	}

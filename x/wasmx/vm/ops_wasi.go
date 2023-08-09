@@ -4,25 +4,24 @@ import (
 	"encoding/binary"
 	"fmt"
 	"mythos/v1/x/wasmx/types"
+	"os"
+	"path"
+	"path/filepath"
 
 	sdkerr "cosmossdk.io/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
 func wasiStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--wasiStorageStore--", params)
-
 	ctx := context.(*Context)
 	keybz, err := readMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--keybz--", keybz)
 	valuebz, err := readMem(callframe, params[2], params[3])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--valuebz--", valuebz)
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "ewasm")
 	ctx.ContractStore.Set(keybz, valuebz)
 
@@ -31,17 +30,13 @@ func wasiStorageStore(context interface{}, callframe *wasmedge.CallingFrame, par
 }
 
 func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--wasiStorageLoad--", params)
-
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 	keybz, err := readMem(callframe, params[0], params[1])
-	fmt.Println("--keybz--", keybz, string(keybz), err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	data := ctx.ContractStore.Get(keybz)
-	fmt.Println("--data--", data, string(data), err)
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
@@ -52,31 +47,12 @@ func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, para
 		return returns, wasmedge.Result_Fail
 	}
 
-	initdata, err := readMem(callframe, ptr, lenData)
-	fmt.Println("--emptydata0--", initdata, string(initdata), err)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	initdata, err = readMem(callframe, ptr-int32(4), int32(32))
-	fmt.Println("--emptydata2--", initdata, string(initdata), err)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-
 	// add length in 4 bytes
 	data = append(binary.BigEndian.AppendUint32([]byte{}, uint32(lenData)), data...)
-	fmt.Println("--data2--", data)
 
 	err = writeMem(callframe, data, ptr)
-	fmt.Println("--writeMem--", err)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
-	}
-
-	initdata, err = readMem(callframe, ptr, lenData+4)
-	fmt.Println("--writtendata--", initdata, string(initdata), err)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
 	}
 	returns[0] = ptr
 	return returns, wasmedge.Result_Success
@@ -101,43 +77,79 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 }
 
 func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	fmt.Println("--ExecuteWasi--", funcName)
+	if funcName == "execute" || funcName == "query" {
+		funcName = "main"
+	}
 
 	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	dir := filepath.Dir(context.Env.Contract.FilePath)
+	inputFile := path.Join(dir, "main.py")
+	resultFile := path.Join(dir, "result.txt")
+
+	content, err := os.ReadFile(context.Env.Contract.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	strcontent := fmt.Sprintf(`
+import sys
+
+%s
+
+res = %s(*sys.argv[1:])
+print("----res", res)
+
+resfilepath = "result.txt"
+
+file1 = open(resfilepath, "w")
+file1.write(res or "")
+file1.close()
+
+	`, string(content), funcName)
+
+	err = os.WriteFile(inputFile, []byte(strcontent), 0644)
+	if err != nil {
+		return nil, err
+	}
+
 	wasimodule.InitWasi(
 		[]string{
 			``,
-			`./testdata/main.py`,
-			"222444",
+			"main.py",
+			string(context.Env.CurrentCall.CallData),
 		},
 		// os.Environ(), // The envs
 		[]string{},
 		// The mapping preopens
 		[]string{
-			".:.",
-			// '/': __dirname
+			// ".:.",
+			// fmt.Sprintf(`%s:.`, dir),
+			// fmt.Sprintf(`%s:%s`, dir, dir),
+			fmt.Sprintf(`.:%s`, dir),
+			// fmt.Sprintf(`/:%s`, dir),
 		},
 	)
 
 	if funcName == types.ENTRY_POINT_INSTANTIATE {
-		funcName = "_initialize"
-		res, err := contractVm.Execute(funcName)
-		fmt.Println("--ExecuteWasi-_instantiate-", res, err)
-		// return res, err
+		// funcName = "_initialize"
+		// res, err := contractVm.Execute(funcName)
+		// fmt.Println("--ExecuteWasi-_instantiate-", res, err)
+		// // return res, err
 		return nil, nil
 	}
 
 	// WASI standard - no args, no return
 	funcName = "_start" // tinygo main
 	res, err := contractVm.Execute(funcName)
+	if err != nil {
+		return nil, err
+	}
 
-	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
-	bz, err := readMemSimple(activeMemory, int32(0), int32(32))
-	fmt.Println("--result mem--", bz, string(bz), err)
-
-	fmt.Println("--ExecuteWasi--", res, err)
-
-	// TODO bindings dependency? encoding of the JSON string
+	result, err := os.ReadFile(resultFile)
+	if err != nil {
+		return nil, err
+	}
+	context.ReturnData = result
 
 	return res, err
 }
@@ -169,7 +181,6 @@ func wasiAllocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
 	}
 	result, err := vm.Execute("alloc", size)
-	fmt.Println("==alloc==", result, err)
 	if err != nil {
 		return 0, err
 	}

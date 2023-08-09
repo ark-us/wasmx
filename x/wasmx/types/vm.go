@@ -149,18 +149,36 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	CW_ENV_8:    true,
 }
 
+var ROLE_STORAGE = "storage"
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
+var ROLE_INTERPRETER_PYTHON = "interpreter_python"
 
+// interpreter_<code type>_<encoding>_<version>
+// code type = "solidity" | "evm" | "python" | "pythonbz"
+// encoding = ""
+
+// hex -> stored as interpreted bytecode
+// utf8 -> stored as a file
+// wasm -> stored in the filesystem
+
+// TODO "interpreter_evm_hex_shanghai" ?
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
-var INTERPRETER_PYTHON = "interpreter_python"
-var INTERPRETER_JS = "interpreter_javascript"
+
+// https://github.com/RustPython/RustPython version
+var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 
+var FILE_EXTENSIONS = map[string]string{
+	ROLE_INTERPRETER_PYTHON: "py",
+	INTERPRETER_PYTHON:      "py",
+}
+
 // var SUPPORTED_INTERPRETERS = map[string]bool{
 // 	INTERPRETER_EVM_SHANGHAI: true,
+// 	INTERPRETER_PYTHON:       true,
 // }
 
 type SystemDep struct {

@@ -180,7 +180,7 @@ func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 		return nil, nil
 	}
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
-	return k.wasmvm.GetCode(codeInfo.CodeHash)
+	return k.wasmvm.GetCode(codeInfo.CodeHash, codeInfo.Deps)
 }
 
 // TransferCoins transfers coins from source to destination account when coin send was enabled for them and the recipient

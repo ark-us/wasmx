@@ -256,8 +256,15 @@ func ExecuteWasmInterpreted(
 	selfContext.Bytecode = context.Env.Contract.Bytecode
 	selfContext.CodeHash = context.Env.Contract.CodeHash
 
-	executeHandler := GetExecuteFunctionHandler(systemDeps)
-	_, err = executeHandler(context, contractVm, types.ENTRY_POINT_EXECUTE)
+	// TODO should just use the inner system dep, because this is an interpreter
+	var executeHandler ExecuteFunctionInterface
+	if len(systemDeps) > 0 && len(systemDeps[0].Deps) > 0 {
+		executeHandler = GetExecuteFunctionHandler(systemDeps[0].Deps)
+	} else {
+		executeHandler = GetExecuteFunctionHandler(systemDeps)
+	}
+
+	_, err = executeHandler(context, contractVm, funcName)
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		if isdebug {
@@ -277,7 +284,6 @@ func ExecuteWasmInterpreted(
 
 func ExecuteWasm(
 	ctx sdk.Context,
-	filePath string,
 	funcName string,
 	env types.Env,
 	msg []byte,
@@ -331,13 +337,13 @@ func ExecuteWasm(
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(filePath, []byte{}, []byte{}, storeKey, systemDeps, conf)
+	selfContext := buildExecutionContextClassic(env.Contract.FilePath, []byte{}, []byte{}, storeKey, systemDeps, conf)
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
 
-	contractVm, _cleanups, err := InitiateWasm(context, filePath, nil, systemDeps)
+	contractVm, _cleanups, err := InitiateWasm(context, env.Contract.FilePath, nil, systemDeps)
 	cleanups = append(cleanups, _cleanups...)
 	if err != nil {
 		runCleanups(cleanups)
