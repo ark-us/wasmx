@@ -85,6 +85,12 @@ func NewKeeper(
 	if err != nil {
 		panic(err)
 	}
+	// response file for wasi
+	responseFile := path.Join(sourcesDir, types.WasiResultFile)
+	err = createFileIfNotExist(responseFile)
+	if err != nil {
+		panic(err)
+	}
 
 	tempDir := path.Join(homeDir, types.TempDir)
 	err = createDirsIfNotExist(tempDir)
@@ -159,4 +165,8 @@ const nodeDirPerm = 0o755
 
 func createDirsIfNotExist(dirpath string) error {
 	return os.MkdirAll(dirpath, nodeDirPerm)
+}
+
+func createFileIfNotExist(filepath string) error {
+	return os.WriteFile(filepath, []byte{}, 0644)
 }

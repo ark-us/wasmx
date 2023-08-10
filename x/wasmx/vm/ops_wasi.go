@@ -84,7 +84,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	inputFile := path.Join(dir, "main.py")
-	resultFile := path.Join(dir, "result.txt")
+	resultFile := path.Join(dir, types.WasiResultFile)
 
 	content, err := os.ReadFile(context.Env.Contract.FilePath)
 	if err != nil {
@@ -99,13 +99,13 @@ import sys
 res = %s(*sys.argv[1:])
 print("----res", res)
 
-resfilepath = "result.txt"
+resfilepath = "%s"
 
 file1 = open(resfilepath, "w")
 file1.write(res or "")
 file1.close()
 
-	`, string(content), funcName)
+	`, string(content), funcName, types.WasiResultFile)
 
 	err = os.WriteFile(inputFile, []byte(strcontent), 0644)
 	if err != nil {
