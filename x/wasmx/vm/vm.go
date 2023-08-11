@@ -35,6 +35,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	conf := wasmedge.NewConfigure()
 	// conf.SetStatisticsInstructionCounting(true)
 	// conf.SetStatisticsTimeMeasuring(true)
+	// TODO allow wasi only for core contracts
 	conf.AddConfig(wasmedge.WASI)
 	contractVm := wasmedge.NewVMWithConfig(conf)
 	// contractVm := wasmedge.NewVM()
@@ -256,14 +257,7 @@ func ExecuteWasmInterpreted(
 	selfContext.Bytecode = context.Env.Contract.Bytecode
 	selfContext.CodeHash = context.Env.Contract.CodeHash
 
-	// TODO should just use the inner system dep, because this is an interpreter
-	var executeHandler ExecuteFunctionInterface
-	if len(systemDeps) > 0 && len(systemDeps[0].Deps) > 0 {
-		executeHandler = GetExecuteFunctionHandler(systemDeps[0].Deps)
-	} else {
-		executeHandler = GetExecuteFunctionHandler(systemDeps)
-	}
-
+	executeHandler := GetExecuteFunctionHandler(systemDeps)
 	_, err = executeHandler(context, contractVm, funcName)
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {

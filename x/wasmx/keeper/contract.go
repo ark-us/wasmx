@@ -116,15 +116,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 		return types.ContractDependency{}, err
 	}
 	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-	var filepath string
-	if codeInfo.Pinned {
-		filepath = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
-	} else {
-		filepath = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
-	}
-	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		filepath = ""
-	}
+	filepath := k.wasmvm.GetFilePath(codeInfo)
 
 	return types.ContractDependency{
 		Address:    addr,
@@ -442,7 +434,7 @@ func (k Keeper) instantiateInternal(
 	// prepare params for contract instantiate call
 	info := types.NewInfo(creator, creator, deposit)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, info)
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo.CodeHash, codeInfo.Pinned, codeInfo.Deps)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
 
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
@@ -594,7 +586,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo.CodeHash, codeInfo.Pinned, codeInfo.Deps)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -639,7 +631,7 @@ func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, types.MessageInfo{})
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo.CodeHash, codeInfo.Pinned, codeInfo.Deps)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -705,7 +697,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 
 	info := types.NewInfo(origin, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo.CodeHash, codeInfo.Pinned, codeInfo.Deps)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
@@ -778,7 +770,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo.CodeHash, codeInfo.Pinned, codeInfo.Deps)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps, isdebug)
@@ -895,16 +887,11 @@ func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemD
 	if err != nil {
 		return types.SystemDep{}, err
 	}
-	var path string
-	if codeInfo.Pinned {
-		path = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
-	} else {
-		path = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
-	}
+	filepath := k.wasmvm.GetFilePath(codeInfo)
 	dep := types.SystemDep{
 		Role:     role.Role,
 		Label:    label,
-		FilePath: path,
+		FilePath: filepath,
 		Deps:     k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps),
 	}
 	return dep, nil

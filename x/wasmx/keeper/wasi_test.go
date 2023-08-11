@@ -43,13 +43,16 @@ func (suite *KeeperTestSuite) TestInterpreterPythonSimpleStorage() {
 	deps := []string{types.INTERPRETER_PYTHON}
 	codeId := appA.StoreCode(sender, simpleStoragePy, deps)
 
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`["123"]`)}, "SimpleContractPy", nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "SimpleContractPy", nil)
+
+	key := []byte("pystore")
+	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
+	s.Require().Equal([]byte("123"), value)
 
 	data := []byte(`{"store":["234"]}`)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	key := []byte("pystore")
-	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
+	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("234"), value)
 
 	data = []byte(`{"load":[]}`)

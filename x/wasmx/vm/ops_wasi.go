@@ -77,6 +77,30 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 }
 
 func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	dir := filepath.Dir(context.Env.Contract.FilePath)
+	resultFile := path.Join(dir, types.WasiResultFile)
+
+	// WASI does not have instantiate
+	if funcName == types.ENTRY_POINT_INSTANTIATE {
+		return nil, nil
+	}
+
+	// WASI standard - no args, no return
+	res, err := contractVm.Execute("_start") // tinygo main
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := os.ReadFile(resultFile)
+	if err != nil {
+		return nil, err
+	}
+	context.ReturnData = result
+
+	return res, err
+}
+
+func ExecutePythonInterpreter(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
@@ -84,20 +108,21 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	inputFile := path.Join(dir, "main.py")
-	resultFile := path.Join(dir, types.WasiResultFile)
-
 	content, err := os.ReadFile(context.Env.Contract.FilePath)
 	if err != nil {
 		return nil, err
 	}
-
+	// TODO import the module or make sure json & sys are not imported one more time
 	strcontent := fmt.Sprintf(`
 import sys
+import json
 
 %s
 
-res = %s(*sys.argv[1:])
-print("----res", res)
+inputObject = sys.argv[1]
+input = json.loads(inputObject)
+
+res = %s(input)
 
 resfilepath = "%s"
 
@@ -129,29 +154,7 @@ file1.close()
 			// fmt.Sprintf(`/:%s`, dir),
 		},
 	)
-
-	if funcName == types.ENTRY_POINT_INSTANTIATE {
-		// funcName = "_initialize"
-		// res, err := contractVm.Execute(funcName)
-		// fmt.Println("--ExecuteWasi-_instantiate-", res, err)
-		// // return res, err
-		return nil, nil
-	}
-
-	// WASI standard - no args, no return
-	funcName = "_start" // tinygo main
-	res, err := contractVm.Execute(funcName)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := os.ReadFile(resultFile)
-	if err != nil {
-		return nil, err
-	}
-	context.ReturnData = result
-
-	return res, err
+	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
 }
 
 func readMemSimple(mem *wasmedge.Memory, pointer interface{}, size interface{}) ([]byte, error) {

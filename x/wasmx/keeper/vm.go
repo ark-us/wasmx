@@ -236,16 +236,20 @@ func (k WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, ex
 	return path.Join(dataDir, fmt.Sprintf("%s_%s.%s", extension, hex.EncodeToString(checksum), extension))
 }
 
-func (k WasmxEngine) GetFilePath(checksum types.Checksum, pinned bool, deps []string) string {
-	var filepath string
-	if pinned {
-		filepath = k.build_path_pinned(k.DataDir, checksum)
+func (k WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
+	filepath := ""
+	if codeInfo.Pinned {
+		filepath = k.build_path_pinned(k.DataDir, codeInfo.CodeHash)
 	} else {
-		if HasUtf8Dep(deps) {
-			extension := GetExtensionFromDeps(deps)
-			filepath = k.build_path_utf8(k.SourcesDir, checksum, extension)
+		if HasUtf8Dep(codeInfo.Deps) {
+			extension := GetExtensionFromDeps(codeInfo.Deps)
+			filepath = k.build_path_utf8(k.SourcesDir, codeInfo.CodeHash, extension)
 		} else {
-			filepath = k.build_path(k.DataDir, checksum)
+			if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+				filepath = ""
+			} else {
+				filepath = k.build_path(k.DataDir, codeInfo.CodeHash)
+			}
 		}
 	}
 	return filepath
