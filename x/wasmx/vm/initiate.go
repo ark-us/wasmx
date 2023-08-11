@@ -82,6 +82,20 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 	return cleanups, nil
 }
 
+func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	var cleanups []func()
+
+	// TODO better
+	env1 := BuildWasiWasmxEnv(context)
+	cleanups = append(cleanups, env1.Release)
+	err := contractVm.RegisterModule(env1)
+	if err != nil {
+		return cleanups, err
+	}
+
+	return cleanups, nil
+}
+
 func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
@@ -114,16 +128,23 @@ func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
+	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasi
+	SystemDepHandler[types.WASI_UNSTABLE] = InitiateWasi
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 
-	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultMain
-	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultMain
-	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultMain
-	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasi
+	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasi
+	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
 	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefaultMain
+
+	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
@@ -141,11 +162,15 @@ func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) 
 	return contractVm.Execute(funcName)
 }
 
-func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
 	if funcName != types.ENTRY_POINT_INSTANTIATE {
 		funcName = "main"
 	}
 	return contractVm.Execute(funcName)
+}
+
+func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	return contractVm.Execute("main")
 }
 
 func VerifyEnv(version string, imports []*wasmedge.ImportType) error {

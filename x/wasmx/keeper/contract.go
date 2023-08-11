@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
@@ -115,15 +116,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 		return types.ContractDependency{}, err
 	}
 	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-	var filepath string
-	if codeInfo.Pinned {
-		filepath = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
-	} else {
-		filepath = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
-	}
-	if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
-		filepath = ""
-	}
+	filepath := k.wasmvm.GetFilePath(codeInfo)
 
 	return types.ContractDependency{
 		Address:    addr,
@@ -135,6 +128,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 	}, nil
 }
 
+// TODO remove deps. they are extracted from the wasm module
 func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
@@ -148,7 +142,20 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 		}
 	}
 
-	if !ioutils.IsWasm(wasmCode) {
+	var reportDeps []string
+
+	if ioutils.IsWasm(wasmCode) {
+		checksum, reportDeps, err = k.createWasm(ctx, wasmCode)
+	} else {
+		if len(deps) > 0 && HasUtf8Dep(deps) {
+			checksum, reportDeps, err = k.createSourceInterpreted(ctx, wasmCode, deps)
+		}
+	}
+	if err != nil {
+		return 0, checksum, err
+	}
+
+	if len(checksum) == 0 {
 		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")
 	}
 
@@ -157,19 +164,9 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	// 	return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, "incorrect deps")
 	// }
 
-	ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
-	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
-	if err != nil {
-		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
-	}
-
-	checksum, err = k.wasmvm.Create(wasmCode)
-	if err != nil {
-		return 0, checksum, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
-	}
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
-	k.Logger(ctx).Debug("storing new contract", "deps", report.Dependencies, "code_id", codeID, "checksum", checksum)
-	codeInfo := types.NewCodeInfo(checksum, creator, report.Dependencies, metadata)
+	k.Logger(ctx).Debug("storing new contract", "deps", reportDeps, "code_id", codeID, "checksum", checksum)
+	codeInfo := types.NewCodeInfo(checksum, creator, reportDeps, metadata)
 	k.storeCodeInfo(ctx, codeID, codeInfo)
 
 	evt := sdk.NewEvent(
@@ -177,7 +174,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(checksum)),
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)), // last element to be compatible with scripts
 	)
-	for _, d := range report.Dependencies {
+	for _, d := range reportDeps {
 		evt.AppendAttributes(sdk.NewAttribute(types.AttributeKeyRequiredCapability, d))
 	}
 	ctx.EventManager().EmitEvent(evt)
@@ -185,6 +182,37 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, checksum, nil
 }
 
+func (k Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, reportDeps []string, err error) {
+	ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
+	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
+	if err != nil {
+		return checksum, nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+	}
+
+	checksum, err = k.wasmvm.Create(wasmCode)
+	if err != nil {
+		return checksum, report.Dependencies, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+	}
+	return checksum, report.Dependencies, nil
+}
+
+func (k Keeper) createSourceInterpreted(ctx sdk.Context, sourceCode []byte, deps []string) (checksum []byte, reportDeps []string, err error) {
+	// TODO actually run the source code in the compiler
+	// and verify that it is valid
+	// maybe store the compiled bytecode
+
+	// maybe check deps for supported interpreters (this can even be a contract address)
+
+	extension := GetExtensionFromDeps(deps)
+	checksum, err = k.wasmvm.CreateUtf8(sourceCode, extension)
+	if err != nil {
+		return checksum, deps, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+	}
+
+	return checksum, deps, nil
+}
+
+// this is for bytecode interpreters (e.g. for EVM)
 func (k Keeper) CreateInterpreted(
 	ctx sdk.Context,
 	creator sdk.AccAddress,
@@ -403,10 +431,10 @@ func (k Keeper) instantiateInternal(
 			return nil, nil, err
 		}
 	}
-
 	// prepare params for contract instantiate call
 	info := types.NewInfo(creator, creator, deposit)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, info)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
 
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
@@ -558,6 +586,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -602,6 +631,7 @@ func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, types.MessageInfo{})
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -667,6 +697,8 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 
 	info := types.NewInfo(origin, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
+
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
@@ -738,6 +770,8 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
+
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)
@@ -853,16 +887,11 @@ func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemD
 	if err != nil {
 		return types.SystemDep{}, err
 	}
-	var path string
-	if codeInfo.Pinned {
-		path = k.wasmvm.build_path_pinned(k.wasmvm.DataDir, codeInfo.CodeHash)
-	} else {
-		path = k.wasmvm.build_path(k.wasmvm.DataDir, codeInfo.CodeHash)
-	}
+	filepath := k.wasmvm.GetFilePath(codeInfo)
 	dep := types.SystemDep{
 		Role:     role.Role,
 		Label:    label,
-		FilePath: path,
+		FilePath: filepath,
 		Deps:     k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps),
 	}
 	return dep, nil
@@ -894,4 +923,24 @@ func (m MultipliedGasMeter) ConsumeGas(gas sdk.Gas, descriptor string) {
 
 func (k Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {
 	return NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
+}
+
+func HasUtf8Dep(deps []string) bool {
+	for _, dep := range deps {
+		if strings.Contains(dep, "utf8") {
+			return true
+		}
+	}
+	return false
+}
+
+func GetExtensionFromDeps(deps []string) string {
+	extension := ""
+	for _, dep := range deps {
+		ext, found := types.FILE_EXTENSIONS[dep]
+		if found {
+			extension = ext
+		}
+	}
+	return extension
 }

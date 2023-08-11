@@ -78,6 +78,20 @@ func NewKeeper(
 	if err != nil {
 		panic(err)
 	}
+
+	// for interpreted source codes (e.g. python)
+	sourcesDir := path.Join(contractsPath, types.SourceCodeDir)
+	err = createDirsIfNotExist(sourcesDir)
+	if err != nil {
+		panic(err)
+	}
+	// response file for wasi
+	responseFile := path.Join(sourcesDir, types.WasiResultFile)
+	err = createFileIfNotExist(responseFile)
+	if err != nil {
+		panic(err)
+	}
+
 	tempDir := path.Join(homeDir, types.TempDir)
 	err = createDirsIfNotExist(tempDir)
 	if err != nil {
@@ -89,7 +103,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(contractsPath, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	wasmvm, err := NewVM(contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
 	if err != nil {
 		panic(err)
 	}
@@ -151,4 +165,8 @@ const nodeDirPerm = 0o755
 
 func createDirsIfNotExist(dirpath string) error {
 	return os.MkdirAll(dirpath, nodeDirPerm)
+}
+
+func createFileIfNotExist(filepath string) error {
+	return os.WriteFile(filepath, []byte{}, 0644)
 }

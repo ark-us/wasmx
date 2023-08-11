@@ -117,6 +117,7 @@ var EWASM_VM_EXPORT = "ewasm_env_"
 var WASMX_VM_EXPORT = "wasmx_env_"
 var SYS_VM_EXPORT = "sys_env_"
 var CW_VM_EXPORT = "interface_version_"
+var WASI_VM_EXPORT = "wasi_"
 
 // simplest wasmx version 1 interface
 var WASMX_ENV_1 = "wasmx_env_1"
@@ -126,6 +127,10 @@ var WASMX_ENV_2 = "wasmx_env_2"
 
 // non-deterministic system operations, only as queries
 var SYS_ENV_1 = "sys_env_1"
+
+// wasi
+var WASI_SNAPSHOT_PREVIEW1 = "wasi_snapshot_preview1"
+var WASI_UNSTABLE = "wasi_unstable"
 
 // initial interface use in precompiles 1 -> 9
 // TODO replace & remove
@@ -144,16 +149,36 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	CW_ENV_8:    true,
 }
 
+var ROLE_STORAGE = "storage"
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
+var ROLE_INTERPRETER_PYTHON = "interpreter_python"
 
+// interpreter_<code type>_<encoding>_<version>
+// code type = "solidity" | "evm" | "python" | "pythonbz"
+// encoding = ""
+
+// hex -> stored as interpreted bytecode
+// utf8 -> stored as a file
+// wasm -> stored in the filesystem
+
+// TODO "interpreter_evm_hex_shanghai" ?
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
+
+// https://github.com/RustPython/RustPython version
+var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 
+var FILE_EXTENSIONS = map[string]string{
+	ROLE_INTERPRETER_PYTHON: "py",
+	INTERPRETER_PYTHON:      "py",
+}
+
 // var SUPPORTED_INTERPRETERS = map[string]bool{
 // 	INTERPRETER_EVM_SHANGHAI: true,
+// 	INTERPRETER_PYTHON:       true,
 // }
 
 type SystemDep struct {

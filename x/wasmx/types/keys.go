@@ -22,6 +22,10 @@ const (
 	TempDir = "temp"
 
 	BinDir = "bin"
+
+	SourceCodeDir = "sources"
+
+	WasiResultFile = "result.txt"
 )
 
 const (

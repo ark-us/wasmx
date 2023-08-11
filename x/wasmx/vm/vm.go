@@ -32,11 +32,13 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
 	wasmedge.SetLogErrorLevel()
 	// wasmedge.SetLogDebugLevel()
-	// conf := wasmedge.NewConfigure()
+	conf := wasmedge.NewConfigure()
 	// conf.SetStatisticsInstructionCounting(true)
 	// conf.SetStatisticsTimeMeasuring(true)
-	// contractVm := wasmedge.NewVMWithConfig(conf)
-	contractVm := wasmedge.NewVM()
+	// TODO allow wasi only for core contracts
+	conf.AddConfig(wasmedge.WASI)
+	contractVm := wasmedge.NewVMWithConfig(conf)
+	// contractVm := wasmedge.NewVM()
 	var cleanups []func()
 	var err error
 
@@ -110,6 +112,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	}
 	imports := ast.ListImports()
 	exports := ast.ListExports()
+	uniqueDeps := make(map[string]bool)
 
 	for _, mexport := range exports {
 		fname := mexport.GetExternalName()
@@ -130,7 +133,30 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			if err != nil {
 				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
 			}
-			report.Dependencies = append(report.Dependencies, dep)
+			if _, found := uniqueDeps[dep]; !found {
+				report.Dependencies = append(report.Dependencies, dep)
+				uniqueDeps[dep] = true
+			}
+		}
+	}
+
+	for _, mimport := range imports {
+		fname := mimport.GetModuleName()
+		var dep string
+
+		if strings.Contains(fname, types.WASI_VM_EXPORT) {
+			dep = parseDependency(fname, types.WASI_VM_EXPORT)
+		}
+
+		if dep != "" {
+			err := VerifyEnv(dep, imports)
+			if err != nil {
+				return report, sdkerrors.Wrapf(types.ErrCreateFailed, "wasm module requires imports not supported by the %s version: %s", fname, err.Error())
+			}
+			if _, found := uniqueDeps[dep]; !found {
+				report.Dependencies = append(report.Dependencies, dep)
+				uniqueDeps[dep] = true
+			}
 		}
 	}
 
@@ -232,7 +258,7 @@ func ExecuteWasmInterpreted(
 	selfContext.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
-	_, err = executeHandler(context, contractVm, types.ENTRY_POINT_EXECUTE)
+	_, err = executeHandler(context, contractVm, funcName)
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		if isdebug {
@@ -252,7 +278,6 @@ func ExecuteWasmInterpreted(
 
 func ExecuteWasm(
 	ctx sdk.Context,
-	filePath string,
 	funcName string,
 	env types.Env,
 	msg []byte,
@@ -306,13 +331,13 @@ func ExecuteWasm(
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(filePath, []byte{}, []byte{}, storeKey, systemDeps, conf)
+	selfContext := buildExecutionContextClassic(env.Contract.FilePath, []byte{}, []byte{}, storeKey, systemDeps, conf)
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
 
-	contractVm, _cleanups, err := InitiateWasm(context, filePath, nil, systemDeps)
+	contractVm, _cleanups, err := InitiateWasm(context, env.Contract.FilePath, nil, systemDeps)
 	cleanups = append(cleanups, _cleanups...)
 	if err != nil {
 		runCleanups(cleanups)

@@ -49,6 +49,9 @@ var (
 	//go:embed 24.alias_eth.wasm
 	alias_eth []byte
 
+	//go:embed 26.rustpython.wasm
+	rustpython []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -84,6 +87,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = interpreter_evm_shanghai
 	case "alias_eth":
 		wasmbin = alias_eth
+	case types.INTERPRETER_PYTHON:
+		wasmbin = rustpython
 	case "sys_proxy":
 		wasmbin = sys_proxy
 	}

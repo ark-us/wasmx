@@ -92,6 +92,8 @@ type EnvContractInfo struct {
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
 	Bytecode RawBytes `json:"bytecode"`
+	// used for source code interpreters (e.g. python)
+	FilePath string `json:"filepath"`
 }
 
 type BlockInfo struct {
