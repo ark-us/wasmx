@@ -80,7 +80,7 @@ func (suite *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint,
 }
 
 var DEFAULT_GAS_PRICE = "10amyt"
-var DEFAULT_GAS_LIMIT = uint64(15_000_000)
+var DEFAULT_GAS_LIMIT = uint64(20_000_000)
 
 func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
 	encodingConfig := app.MakeEncodingConfig()

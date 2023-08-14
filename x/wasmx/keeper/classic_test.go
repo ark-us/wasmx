@@ -889,7 +889,7 @@ func (suite *KeeperTestSuite) TestEwasmOrigin() {
 
 func (suite *KeeperTestSuite) TestEwasmErc20() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(10000_000_000)
 	getDecimalsHex := `313ce567`
 	getNameHex := `06fdde03`
 	getSymbolHex := `95d89b41`

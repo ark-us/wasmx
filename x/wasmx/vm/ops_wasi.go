@@ -12,7 +12,7 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
-func wasiStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasiPythonStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	keybz, err := readMem(callframe, params[0], params[1])
 	if err != nil {
@@ -29,7 +29,7 @@ func wasiStorageStore(context interface{}, callframe *wasmedge.CallingFrame, par
 	return returns, wasmedge.Result_Success
 }
 
-func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasiPythonStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 	keybz, err := readMem(callframe, params[0], params[1])
@@ -58,9 +58,98 @@ func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, para
 	return returns, wasmedge.Result_Success
 }
 
+func wasiTinygoStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	keybz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	valuebz, err := readMem(callframe, params[2], params[3])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasmx")
+	ctx.ContractStore.Set(keybz, valuebz)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func wasiTinygoStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+	keybz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := ctx.ContractStore.Get(keybz)
+	if len(data) == 0 {
+		data = types.EMPTY_BYTES32
+	}
+	datalen := int32(len(data))
+	ptr, err := tinygoAllocateMem(ctx, datalen)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, data, ptr)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	returns[0] = (uint64(ptr) << uint64(32)) | uint64(datalen)
+	return returns, wasmedge.Result_Success
+}
+
+// getCallData(ptr): ArrayBuffer
+func getCallData2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 1)
+	ctx := context.(*Context)
+	datalen := len(ctx.Env.CurrentCall.CallData)
+	ptr, err := tinygoAllocateMem(ctx, int32(datalen))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, ctx.Env.CurrentCall.CallData, ptr)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	newptr := (uint64(ptr) << uint64(32)) | uint64(datalen)
+	returns[0] = newptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasiSetReturnData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	ctx := context.(*Context)
+	data, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.ReturnData = data
+	return returns, wasmedge.Result_Success
+}
+
+func wasiTinygoLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	keybz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO only in debug mode
+
+	fmt.Println("LOG: ", string(keybz))
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 
+	functype__i64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{},
+		[]wasmedge.ValType{wasmedge.ValType_I64},
+	)
+	functype_i32i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
 	functype_i32i32i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
@@ -69,33 +158,63 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+	functype_i32i32_i64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I64},
+	)
 
-	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32i32i32_, wasiStorageStore, context, 0))
-	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32i32_i32, wasiStorageLoad, context, 0))
+	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32i32i32_, wasiPythonStorageStore, context, 0))
+	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32i32_i32, wasiPythonStorageLoad, context, 0))
+	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i64, getCallData2, context, 0))
+	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32i32_, wasiSetReturnData, context, 0))
+
+	env.AddFunction("storageStore2", wasmedge.NewFunction(functype_i32i32i32i32_, wasiTinygoStorageStore, context, 0))
+	env.AddFunction("storageLoad2", wasmedge.NewFunction(functype_i32i32_i64, wasiTinygoStorageLoad, context, 0))
+
+	env.AddFunction("log", wasmedge.NewFunction(functype_i32i32_, wasiTinygoLog, context, 0))
 
 	return env
 }
 
 func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	var res []interface{}
+	var err error
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	resultFile := path.Join(dir, types.WasiResultFile)
 
-	// WASI does not have instantiate
+	// WASI standard does not have instantiate
+	// this is only for wasmx contracts (e.g. with tinygo)
+	// TODO consider extracting this in a dependency
 	if funcName == types.ENTRY_POINT_INSTANTIATE {
-		return nil, nil
+		fnNames, _ := contractVm.GetFunctionList()
+		found := false
+		for _, name := range fnNames {
+			// note that custom entries do not have access to WASI endpoints at this time
+			if name == "main.instantiate" {
+				found = true
+				res, err = contractVm.Execute("main.instantiate")
+			}
+		}
+		if !found {
+			return nil, nil
+		}
+	} else {
+		// WASI standard - no args, no return
+		res, err = contractVm.Execute("_start") // tinygo main
 	}
 
-	// WASI standard - no args, no return
-	res, err := contractVm.Execute("_start") // tinygo main
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := os.ReadFile(resultFile)
-	if err != nil {
-		return nil, err
+	// if returndata is set, we use this
+	if len(context.ReturnData) == 0 {
+		result, err := os.ReadFile(resultFile)
+		if err != nil {
+			return nil, err
+		}
+		context.ReturnData = result
 	}
-	context.ReturnData = result
 
 	return res, err
 }
@@ -184,6 +303,26 @@ func wasiAllocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
 	}
 	result, err := vm.Execute("alloc", size)
+	if err != nil {
+		return 0, err
+	}
+	return result[0].(int32), nil
+}
+
+func tinygoAllocateMem(ctx *Context, size int32) (int32, error) {
+	addr := ctx.Env.Contract.Address
+	contractCtx, ok := ctx.ContractRouter[addr.String()]
+	if !ok {
+		return int32(0), sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
+	}
+	return tinygoAllocateMemVm(contractCtx.Vm, size)
+}
+
+func tinygoAllocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
+	if vm == nil {
+		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
+	}
+	result, err := vm.Execute("malloc", size)
 	if err != nil {
 		return 0, err
 	}

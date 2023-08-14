@@ -85,9 +85,16 @@ func NewKeeper(
 	if err != nil {
 		panic(err)
 	}
-	// response file for wasi
+	// response file for wasi for utf8 source code contracts (e.g. python)
 	responseFile := path.Join(sourcesDir, types.WasiResultFile)
 	err = createFileIfNotExist(responseFile)
+	if err != nil {
+		panic(err)
+	}
+	// response file for wasi for wasm contracts (e.g. built with tinygo)
+	// response file needs to be in the same folder root as the contract file
+	responseFile2 := path.Join(contractsPath, types.WasiResultFile)
+	err = createFileIfNotExist(responseFile2)
 	if err != nil {
 		panic(err)
 	}
