@@ -10,11 +10,11 @@ function fib(n)
         return fib(n - 1) + fib(n - 2);
 }
 
-function instantiate(dataObj) {
+export function instantiate(dataObj) {
     return store(dataObj);
 }
 
-function main(dataObj) {
+export function main(dataObj) {
     if (dataObj.store) {
         return store(...dataObj.store);
     } else if (dataObj.load) {

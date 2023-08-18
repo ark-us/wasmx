@@ -326,37 +326,27 @@ func ExecuteJsInterpreter(context *Context, contractVm *wasmedge.VM, funcName st
 
 	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	dir := filepath.Dir(context.Env.Contract.FilePath)
-	inputFile := path.Join(dir, "main.js")
-	content, err := os.ReadFile(context.Env.Contract.FilePath)
-	if err != nil {
-		return nil, err
-	}
-	// TODO import the module or make sure json & sys are not imported one more time
+	fileName := filepath.Base(context.Env.Contract.FilePath)
+	inputFileName := "main.js"
+	inputFile := path.Join(dir, inputFileName)
 	strcontent := fmt.Sprintf(`
 import * as std from "std";
 import * as os from "os";
-
-%s
+import * as contract from "./%s";
 
 const inputData = std.parseExtJSON(scriptArgs[1]);
-const res = %s(inputData);
+const res = contract.%s(inputData);
 
 const filename = "./%s"
 const fd = os.open(filename, "rw");
-
-let buf = new Uint8Array([104, 101, 108, 108, 111]);
-const written = os.write(fd, buf.buffer, 0, buf.length);
-if (written == 0) {
-	console.log("JS interpreter could not write result");
-}
 
 const f = std.open(filename, "w");
 f.puts(res);
 f.close();
 
-	`, string(content), funcName, types.WasiResultFile)
+	`, fileName, funcName, types.WasiResultFile)
 
-	err = os.WriteFile(inputFile, []byte(strcontent), 0644)
+	err := os.WriteFile(inputFile, []byte(strcontent), 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +354,7 @@ f.close();
 	wasimodule.InitWasi(
 		[]string{
 			``,
-			"main.js",
+			inputFileName,
 			string(context.Env.CurrentCall.CallData),
 		},
 		[]string{},
