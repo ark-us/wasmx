@@ -338,8 +338,6 @@ import * as os from "os";
 
 %s
 
-console.log(scriptArgs);
-
 const inputData = std.parseExtJSON(scriptArgs[1]);
 const res = %s(inputData);
 

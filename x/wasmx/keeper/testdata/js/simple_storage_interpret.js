@@ -11,14 +11,10 @@ function fib(n)
 }
 
 function instantiate(dataObj) {
-    console.log("--instantiate--", dataObj);
     return store(dataObj);
 }
 
 function main(dataObj) {
-    // console.log("Hello World mainnnn", dataObj);
-    console.log("dataObj", dataObj["store"]);
-    // console.log("-------**", "fib(10)=" + fib(10));
     if (dataObj.store) {
         return store(...dataObj.store);
     } else if (dataObj.load) {

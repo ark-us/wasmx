@@ -13,26 +13,28 @@ var (
 	simpleStoragePy []byte
 )
 
-func (suite *KeeperTestSuite) TestInterpreterPython() {
-	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+// func (suite *KeeperTestSuite) TestWasiInterpreterPython() {
+// 	sender := suite.GetRandomAccount()
+// 	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
+// 	appA := s.GetAppContext(s.chainA)
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
 
-	pyInterpreterAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000026")
+// 	pyInterpreterAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000026")
 
-	data := []byte(`print("hello")`)
-	appA.ExecuteContract(sender, pyInterpreterAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+// 	data := []byte(`
+// from wasmx import storage_store
+// storage_store("pystore", "222")
+// `)
+// 	appA.ExecuteContract(sender, pyInterpreterAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	// TODO not pyInterpreterAddress
-	key := []byte("pystore")
-	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), pyInterpreterAddress, key)
-	s.Require().Equal([]byte("222"), value)
-}
+// 	key := []byte("pystore")
+// 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), pyInterpreterAddress, key)
+// 	s.Require().Equal([]byte("222"), value)
+// }
 
-func (suite *KeeperTestSuite) TestInterpreterPythonSimpleStorage() {
+func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
 

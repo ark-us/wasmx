@@ -16,7 +16,7 @@ var (
 	simpleStorageJsInterpret []byte
 )
 
-func (suite *KeeperTestSuite) TestJavyJsSimpleStorage() {
+func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 	wasmbin := jsSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
@@ -32,7 +32,7 @@ func (suite *KeeperTestSuite) TestJavyJsSimpleStorage() {
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 }
 
-func (suite *KeeperTestSuite) TestInterpreterJsSimpleStorage() {
+func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
 

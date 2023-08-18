@@ -48,7 +48,6 @@ func GetCallData() string {
 }
 
 func SetReturnData(data string) {
-	Log(fmt.Sprintf("setReturnData %s", data))
 	keyPtr, keyLength := StringToLeakedPtr(data)
 	SetReturnData_(keyPtr, keyLength)
 }

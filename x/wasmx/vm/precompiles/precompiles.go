@@ -52,7 +52,7 @@ var (
 	//go:embed 26.rustpython.wasm
 	rustpython []byte
 
-	//go:embed 27.qjs-wasmx.wasm
+	//go:embed 27.quickjs.wasm
 	quickjs []byte
 
 	//go:embed ff.sys_proxy.wasm

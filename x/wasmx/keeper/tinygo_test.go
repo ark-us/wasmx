@@ -16,7 +16,7 @@ var (
 	tinygoSimpleStorage []byte
 )
 
-func (suite *KeeperTestSuite) TestTinygoWasiAdd() {
+func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 	wasmbin := tinygoAdd
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
@@ -32,7 +32,7 @@ func (suite *KeeperTestSuite) TestTinygoWasiAdd() {
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 }
 
-func (suite *KeeperTestSuite) TestTinygoWasiSimpleStorage() {
+func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	wasmbin := tinygoSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1000_000_000)
