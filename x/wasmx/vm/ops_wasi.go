@@ -98,6 +98,47 @@ func wasiTinygoStorageLoad(context interface{}, callframe *wasmedge.CallingFrame
 	return returns, wasmedge.Result_Success
 }
 
+func wasiQuickjsStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	keybz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	valuebz, err := readMem(callframe, params[2], params[3])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasmx")
+	ctx.ContractStore.Set(keybz, valuebz)
+	returns := make([]interface{}, 1)
+	returns[0] = 0
+	return returns, wasmedge.Result_Success
+}
+
+func wasiQuickjsStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+	keybz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := ctx.ContractStore.Get(keybz)
+	if len(data) == 0 {
+		data = types.EMPTY_BYTES32
+	}
+	datalen := int32(len(data))
+	ptr, err := quickjsAllocateMem(ctx, datalen)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, data, ptr)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 // getCallData(ptr): ArrayBuffer
 func getCallData2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 1)
@@ -171,6 +212,9 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 	env.AddFunction("storageStore2", wasmedge.NewFunction(functype_i32i32i32i32_, wasiTinygoStorageStore, context, 0))
 	env.AddFunction("storageLoad2", wasmedge.NewFunction(functype_i32i32_i64, wasiTinygoStorageLoad, context, 0))
 
+	env.AddFunction("storageStore3", wasmedge.NewFunction(functype_i32i32i32i32_, wasiQuickjsStorageStore, context, 0))
+	env.AddFunction("storageLoad3", wasmedge.NewFunction(functype_i32i32_i32, wasiQuickjsStorageLoad, context, 0))
+
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32i32_, wasiTinygoLog, context, 0))
 
 	return env
@@ -183,7 +227,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 	resultFile := path.Join(dir, types.WasiResultFile)
 
 	// WASI standard does not have instantiate
-	// this is only for wasmx contracts (e.g. with tinygo)
+	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
 	// TODO consider extracting this in a dependency
 	if funcName == types.ENTRY_POINT_INSTANTIATE {
 		fnNames, _ := contractVm.GetFunctionList()
@@ -202,7 +246,6 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 		// WASI standard - no args, no return
 		res, err = contractVm.Execute("_start") // tinygo main
 	}
-
 	if err != nil {
 		return nil, err
 	}
@@ -276,6 +319,64 @@ file1.close()
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
 }
 
+func ExecuteJsInterpreter(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	if funcName == "execute" || funcName == "query" {
+		funcName = "main"
+	}
+
+	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	dir := filepath.Dir(context.Env.Contract.FilePath)
+	inputFile := path.Join(dir, "main.js")
+	content, err := os.ReadFile(context.Env.Contract.FilePath)
+	if err != nil {
+		return nil, err
+	}
+	// TODO import the module or make sure json & sys are not imported one more time
+	strcontent := fmt.Sprintf(`
+import * as std from "std";
+import * as os from "os";
+
+%s
+
+console.log(scriptArgs);
+
+const inputData = std.parseExtJSON(scriptArgs[1]);
+const res = %s(inputData);
+
+const filename = "./%s"
+const fd = os.open(filename, "rw");
+
+let buf = new Uint8Array([104, 101, 108, 108, 111]);
+const written = os.write(fd, buf.buffer, 0, buf.length);
+if (written == 0) {
+	console.log("JS interpreter could not write result");
+}
+
+const f = std.open(filename, "w");
+f.puts(res);
+f.close();
+
+	`, string(content), funcName, types.WasiResultFile)
+
+	err = os.WriteFile(inputFile, []byte(strcontent), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	wasimodule.InitWasi(
+		[]string{
+			``,
+			"main.js",
+			string(context.Env.CurrentCall.CallData),
+		},
+		[]string{},
+		[]string{
+			fmt.Sprintf(`.:%s`, dir),
+		},
+	)
+	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
+}
+
 func readMemSimple(mem *wasmedge.Memory, pointer interface{}, size interface{}) ([]byte, error) {
 	ptr := pointer.(int32)
 	length := size.(int32)
@@ -327,4 +428,73 @@ func tinygoAllocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 		return 0, err
 	}
 	return result[0].(int32), nil
+}
+
+func quickjsAllocateMem(ctx *Context, size int32) (int32, error) {
+	addr := ctx.Env.Contract.Address
+	contractCtx, ok := ctx.ContractRouter[addr.String()]
+	if !ok {
+		return int32(0), sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
+	}
+	return quickjsAllocateMemVm(contractCtx.Vm, size)
+}
+
+func quickjsAllocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
+	if vm == nil {
+		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
+	}
+	result, err := vm.Execute("malloc", size)
+	if err != nil {
+		return 0, err
+	}
+	return result[0].(int32), nil
+}
+
+func allocateInputNear(vm *wasmedge.VM, input []byte) (int32, error) {
+	inputLen := len(input)
+
+	// Allocate memory for the input, and get a pointer to it.
+	// Include a byte for the NULL terminator we add below.
+	allocateResult, err := vm.Execute("malloc", int32(inputLen+1))
+	if err != nil {
+		return 0, err
+	}
+	inputPointer := allocateResult[0].(int32)
+
+	// Write the subject into the memory.
+	mod := vm.GetActiveModule()
+	mem := mod.FindMemory("memory")
+	// C-string terminates by NULL.
+	input = append(input, []byte{0}...)
+	err = mem.SetData(input, uint(inputPointer), uint(inputLen+1))
+	if err != nil {
+		return 0, err
+	}
+	return inputPointer, nil
+}
+
+func allocateInputJs(vm *wasmedge.VM, input []byte) (int32, error) {
+	inputLen := len(input)
+
+	// Allocate memory for the input, and get a pointer to it.
+	// Include a byte for the NULL terminator we add below.
+	allocateResult, err := vm.Execute("stackAlloc", int32(inputLen+1))
+	if err != nil {
+		return 0, err
+	}
+	inputPointer := allocateResult[0].(int32)
+
+	// Write the subject into the memory.
+	mod := vm.GetActiveModule()
+	mem := mod.FindMemory("memory")
+	memData, err := mem.GetData(uint(inputPointer), uint(inputLen+1))
+	if err != nil {
+		return 0, err
+	}
+	copy(memData, input)
+
+	// C-string terminates by NULL.
+	memData[inputLen] = 0
+
+	return inputPointer, nil
 }

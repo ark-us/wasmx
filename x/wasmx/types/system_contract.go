@@ -129,6 +129,13 @@ func DefaultSystemContracts() SystemContracts {
 			Role:        ROLE_INTERPRETER,
 		},
 		{
+			Address:     "0x0000000000000000000000000000000000000027",
+			Label:       INTERPRETER_JS,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_INTERPRETER,
+		},
+		{
 			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			Label:       "sys_proxy",
 			InitMessage: initMsg,
