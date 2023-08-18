@@ -154,6 +154,7 @@ var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
 var ROLE_INTERPRETER_PYTHON = "interpreter_python"
+var ROLE_INTERPRETER_JS = "interpreter_javascript"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -169,11 +170,15 @@ var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
 // https://github.com/RustPython/RustPython version
 var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 
+var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
+
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 
 var FILE_EXTENSIONS = map[string]string{
 	ROLE_INTERPRETER_PYTHON: "py",
 	INTERPRETER_PYTHON:      "py",
+	ROLE_INTERPRETER_JS:     "js",
+	INTERPRETER_JS:          "js",
 }
 
 // var SUPPORTED_INTERPRETERS = map[string]bool{

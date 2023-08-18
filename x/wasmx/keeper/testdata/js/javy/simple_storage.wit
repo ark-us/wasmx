@@ -1,0 +1,6 @@
+package local:main
+
+world index-world {
+  export instantiate: func()
+  export main: func()
+}
