@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	_ "embed"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -11,6 +12,9 @@ import (
 var (
 	//go:embed testdata/python/simple_storage.py
 	simpleStoragePy []byte
+
+	//go:embed testdata/python/call.py
+	callSimpleStoragePy []byte
 )
 
 // func (suite *KeeperTestSuite) TestWasiInterpreterPython() {
@@ -60,4 +64,31 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	data = []byte(`{"load":[]}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal([]byte("234"), resp)
+}
+
+func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	deps := []string{types.INTERPRETER_PYTHON}
+	codeId := appA.StoreCode(sender, simpleStoragePy, deps)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "SimpleContractPy", nil)
+
+	codeId2 := appA.StoreCode(sender, callSimpleStoragePy, deps)
+	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "callSimpleStoragePy", nil)
+
+	key := []byte("pystore")
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str1"]}`, contractAddress.String()))
+	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
+	s.Require().Equal([]byte("str1"), value)
+
+	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
+	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal([]byte("str1"), resp)
 }

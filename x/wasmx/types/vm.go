@@ -204,6 +204,24 @@ func GetMaxCodeSize(sdeps []string) int {
 	return MaxWasmSize
 }
 
+func HasUtf8Dep(deps []string) bool {
+	for _, dep := range deps {
+		if strings.Contains(dep, "utf8") {
+			return true
+		}
+	}
+	return false
+}
+
+func HasUtf8SystemDep(sysDeps []SystemDep) bool {
+	for _, dep := range sysDeps {
+		if strings.Contains(dep.Label, "utf8") {
+			return true
+		}
+	}
+	return false
+}
+
 // func IsWasmDeps(sdeps []string) bool {
 // 	for _, dep := range sdeps {
 // 		_, found := SUPPORTED_INTERPRETERS[dep]

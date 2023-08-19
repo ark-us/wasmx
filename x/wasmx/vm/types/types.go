@@ -22,6 +22,7 @@ type CallRequest struct {
 	Calldata types.RawBytes `json:"calldata"`
 	Bytecode types.RawBytes `json:"bytecode"`
 	CodeHash types.RawBytes `json:"codeHash"`
+	FilePath string         `json:"filePath"`
 	IsQuery  bool           `json:"isQuery"`
 }
 

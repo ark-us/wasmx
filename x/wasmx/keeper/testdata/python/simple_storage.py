@@ -1,4 +1,3 @@
-import json
 from wasmx import storage_store, storage_load
 
 def instantiate(initvalue: str):

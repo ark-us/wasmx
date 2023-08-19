@@ -45,8 +45,11 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 		newctx.ReturnData = data
 		return data, nil
 	}
-
-	contractVm, cleanups, err := InitiateWasm(newctx, c.FilePath, nil, c.SystemDeps)
+	filepath := c.FilePath
+	if types.HasUtf8SystemDep(c.SystemDeps) {
+		filepath = ""
+	}
+	contractVm, cleanups, err := InitiateWasm(newctx, filepath, nil, c.SystemDeps)
 	if err != nil {
 		runCleanups(cleanups)
 		return nil, err
