@@ -2,6 +2,7 @@ package vm
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -316,6 +317,160 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+func wasiCallClassicQuickjs(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+
+	gasLimit := params[0].(int64)
+	addrbz, err := readMem(callframe, params[1], params[2])
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	addr, err := sdk.AccAddressFromBech32(string(addrbz))
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	value := big.NewInt(params[3].(int64))
+	calldata, err := readMem(callframe, params[4], params[5])
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	// TODO better
+	if string(calldata)[0:2] == "0x" {
+		calldata, err = hex.DecodeString(string(calldata)[2:])
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+	}
+
+	var success int32
+	var returnData []byte
+
+	// Send funds
+	if value.BitLen() > 0 {
+		err = ctx.CosmosHandler.SendCoin(addr, value)
+	}
+	if err != nil {
+		success = int32(2)
+	} else {
+		contractContext := GetContractContext(ctx, addr)
+		if contractContext == nil {
+			// ! we return success here in case the contract does not exist
+			success = int32(0)
+		} else {
+			req := vmtypes.CallRequest{
+				To:       addr,
+				From:     ctx.Env.Contract.Address,
+				Value:    value,
+				GasLimit: big.NewInt(gasLimit),
+				Calldata: calldata,
+				Bytecode: contractContext.Bytecode,
+				CodeHash: contractContext.CodeHash,
+				FilePath: contractContext.FilePath,
+				IsQuery:  false,
+			}
+			success, returnData = WasmxCall(ctx, req)
+		}
+	}
+
+	response := vmtypes.CallResponse{
+		Success: uint8(success),
+		Data:    returnData,
+	}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	datalen := int32(len(responsebz))
+	ptr, err := quickjsAllocateMem(ctx, datalen)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, responsebz, ptr)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasiCallStaticQuickjs(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+
+	gasLimit := params[0].(int64)
+	addrbz, err := readMem(callframe, params[1], params[2])
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	addr, err := sdk.AccAddressFromBech32(string(addrbz))
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	calldata, err := readMem(callframe, params[3], params[4])
+	if err != nil {
+		returns[0] = int32(1)
+		return returns, wasmedge.Result_Success
+	}
+	// TODO better
+	if string(calldata)[0:2] == "0x" {
+		calldata, err = hex.DecodeString(string(calldata)[2:])
+		if err != nil {
+			returns[0] = int32(1)
+			return returns, wasmedge.Result_Success
+		}
+	}
+
+	var success int32
+	var returnData []byte
+
+	contractContext := GetContractContext(ctx, addr)
+	if contractContext == nil {
+		// ! we return success here in case the contract does not exist
+		success = int32(0)
+	} else {
+		req := vmtypes.CallRequest{
+			To:       addr,
+			From:     ctx.Env.Contract.Address,
+			Value:    big.NewInt(0),
+			GasLimit: big.NewInt(gasLimit),
+			Calldata: calldata,
+			Bytecode: contractContext.Bytecode,
+			CodeHash: contractContext.CodeHash,
+			FilePath: contractContext.FilePath,
+			IsQuery:  true,
+		}
+		success, returnData = WasmxCall(ctx, req)
+	}
+
+	response := vmtypes.CallResponse{
+		Success: uint8(success),
+		Data:    returnData,
+	}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	datalen := int32(len(responsebz))
+	ptr, err := quickjsAllocateMem(ctx, datalen)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	err = writeMem(callframe, responsebz, ptr)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func wasiTinygoLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	keybz, err := readMem(callframe, params[0], params[1])
 	if err != nil {
@@ -359,6 +514,14 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+	functype_i64i32i32i64i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
+	functype_i64i32i32i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
 
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32i32i32_, wasiPythonStorageStore, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32i32_i32, wasiPythonStorageLoad, context, 0))
@@ -374,6 +537,9 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 	env.AddFunction("callClassic", wasmedge.NewFunction(functype_i64i32i64i32i32_i32, wasiCallClassic, context, 0))
 	env.AddFunction("callStatic", wasmedge.NewFunction(functype_i64i32i32i32_i32, wasiCallStatic, context, 0))
 
+	env.AddFunction("callClassic2", wasmedge.NewFunction(functype_i64i32i32i64i32i32_i32, wasiCallClassicQuickjs, context, 0))
+	env.AddFunction("callStatic2", wasmedge.NewFunction(functype_i64i32i32i32i32_i32, wasiCallStaticQuickjs, context, 0))
+
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32i32_, wasiTinygoLog, context, 0))
 	return env
 }
@@ -383,6 +549,10 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 	var err error
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	resultFile := path.Join(dir, types.WasiResultFile)
+	err = os.WriteFile(resultFile, []byte{}, 0644)
+	if err != nil {
+		return nil, err
+	}
 
 	// WASI standard does not have instantiate
 	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
@@ -496,7 +666,10 @@ import * as std from "std";
 import * as os from "os";
 import * as contract from "./%s";
 
-const inputData = std.parseExtJSON(scriptArgs[1]);
+let inputData;
+if (scriptArgs.length > 1 && scriptArgs[1] != "") {
+	inputData = std.parseExtJSON(scriptArgs[1]);
+}
 const res = contract.%s(inputData);
 
 const filename = "./%s"
