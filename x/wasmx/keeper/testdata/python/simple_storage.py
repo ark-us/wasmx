@@ -11,15 +11,11 @@ def main(input):
     raise ValueError('Invalid function')
 
 def store(a: str):
-    # value = a.encode()
-    # key = "pystore".encode()
-    # storage_store(key, value)
-    # print("store value", a)
-    storage_store("pystore", a)
+    value = a.encode()
+    key = "pystore".encode()
+    storage_store(key, value)
 
 def load() -> str:
-    # key = "pystore".encode()
-    # return bytearray.decode(value)
-    value = storage_load("pystore")
-    # print("---load value", value)
+    key = "pystore".encode()
+    value = storage_load(key)
     return value

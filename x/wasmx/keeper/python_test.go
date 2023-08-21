@@ -82,13 +82,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "callSimpleStoragePy", nil)
 
 	key := []byte("pystore")
-	data := []byte(fmt.Sprintf(`{"store":["%s", "str1"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str111"]}`, contractAddress.String()))
 	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
-	s.Require().Equal([]byte("str1"), value)
+	s.Require().Equal([]byte("str111"), value)
 
 	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal([]byte("str1"), resp)
+	s.Require().Equal([]byte("str11123"), resp)
 }

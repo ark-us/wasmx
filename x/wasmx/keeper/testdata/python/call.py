@@ -13,16 +13,13 @@ def main(input):
 
 def wrapStore(address, value):
     calldata = json.dumps({"store":[value]})
-    res = call(1000000, address, 0, calldata)
-    print("-wrapStore-res", res)
+    res = call(1000000, address, 0, calldata.encode())
+    response = json.loads(res.decode())
+    return response["data"]
 
 def wrapLoad(address):
     calldata = json.dumps({"load":[]})
-    res = call_static(1000000, address, calldata)
-    print("-wrapLoad-res", res)
+    res = call_static(1000000, address, calldata.encode())
     response = json.loads(res)
     data = response["data"]
-    print("-wrapLoad-data", data)
-    datastr = ''.join(map(chr, data))
-    print("-wrapLoad-datastr", datastr)
-    return datastr
+    return bytes(data) + b'23'

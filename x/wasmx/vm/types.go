@@ -1,6 +1,7 @@
 package vm
 
 import (
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	dbm "github.com/tendermint/tm-db"
@@ -91,6 +92,23 @@ func (context *Context) GetCosmosHandler() types.WasmxCosmosHandler {
 
 func (context *Context) GetContext() sdk.Context {
 	return context.Ctx
+}
+
+func (context *Context) GetVmFromContext() (*wasmedge.VM, error) {
+	addr := context.Env.Contract.Address
+	contractCtx, ok := context.ContractRouter[addr.String()]
+	if !ok {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
+	}
+	return contractCtx.Vm, nil
+}
+
+func (context *Context) MustGetVmFromContext() *wasmedge.VM {
+	vm, err := context.GetVmFromContext()
+	if err != nil {
+		panic(err.Error())
+	}
+	return vm
 }
 
 type EwasmFunctionWrapper struct {

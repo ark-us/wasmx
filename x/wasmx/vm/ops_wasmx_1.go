@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdkerr "cosmossdk.io/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
@@ -247,17 +246,8 @@ func allocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 	return result[0].(int32), nil
 }
 
-func allocateMem(ctx *Context, size int32) (int32, error) {
-	addr := ctx.Env.Contract.Address
-	contractCtx, ok := ctx.ContractRouter[addr.String()]
-	if !ok {
-		return int32(0), sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
-	}
-	return allocateMemVm(contractCtx.Vm, size)
-}
-
 func allocateWriteMem(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
-	ptr, err := allocateMem(ctx, int32(len(data)))
+	ptr, err := allocateMemVm(ctx.MustGetVmFromContext(), int32(len(data)))
 	if err != nil {
 		return ptr, err
 	}
