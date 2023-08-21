@@ -12,28 +12,26 @@ export function main(dataObj) {
 }
 
 function wrapStore(address, value) {
-    let calldata = "0x60fe47b10000000000000000000000000000000000000000000000000000000000000007"
-    return wasmx.call(1000000, address, 0, calldata)
+    let calldata = "60fe47b10000000000000000000000000000000000000000000000000000000000000007"
+    return wasmx.call(1000000, address, new ArrayBuffer(32), hexStringToArrayBuffer(calldata))
 }
 
 function wrapLoad(address) {
-    let calldata = "0x6d4ce63c"
-    let res = wasmx.callStatic(1000000, address, calldata)
-    console.log("---wrapLoad-res", typeof res, res)
-    console.log("---jjjj", JSON.parse('{"success":0,"data":[115,116,114,49]}'))
-    let response = JSON.parse(res)
-    console.log("-wrapLoad-response", response)
-    let data = Object.values(response.data)
-    console.log("-wrapLoad-data", typeof data, data)
-    let datastr = bin2String(data)
-    console.log("-wrapLoad-datastr", datastr)
-    return datastr
+    let calldata = "6d4ce63c"
+    let res = wasmx.callStatic(1000000, address, hexStringToArrayBuffer(calldata))
+    let response = JSON.parse(arrayBufferToString(res))
+    let data = new Uint8Array(Object.values(response.data));
+    return data.buffer;
 }
 
-function bin2String(array) {
-    var result = "";
-    for (var i = 0; i < array.length; i++) {
-      result += String.fromCharCode(array[i]);
+const hexStringToArrayBuffer = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16))).buffer;
+
+function arrayBufferToString(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    let result = "";
+    for (let i = 0; i < bytes.length; i++) {
+        result += String.fromCharCode(bytes[i]);
     }
     return result;
 }
+

@@ -381,6 +381,7 @@ func ExecuteJsInterpreter(context *Context, contractVm *wasmedge.VM, funcName st
 	strcontent := fmt.Sprintf(`
 import * as std from "std";
 import * as os from "os";
+import * as wasmx from "wasmx";
 import * as contract from "./%s";
 
 let inputData;
@@ -388,15 +389,9 @@ if (scriptArgs.length > 1 && scriptArgs[1] != "") {
 	inputData = std.parseExtJSON(scriptArgs[1]);
 }
 const res = contract.%s(inputData);
+wasmx.setReturnData(res || new ArrayBuffer(0));
 
-const filename = "./%s"
-const fd = os.open(filename, "rw");
-
-const f = std.open(filename, "w");
-f.puts(res);
-f.close();
-
-	`, fileName, funcName, types.WasiResultFile)
+	`, fileName, funcName)
 
 	err := os.WriteFile(inputFile, []byte(strcontent), 0644)
 	if err != nil {

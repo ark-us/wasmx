@@ -1,15 +1,5 @@
 import * as wasmx from 'wasmx';
 
-function fib(n)
-{
-    if (n <= 0)
-        return 0;
-    else if (n == 1)
-        return 1;
-    else
-        return fib(n - 1) + fib(n - 2);
-}
-
 export function instantiate(dataObj) {
     return store(dataObj);
 }
@@ -23,10 +13,21 @@ export function main(dataObj) {
     throw new Error("no valid function");
 }
 
-function store(value) {
-    wasmx.storageStore("jsstore", value);
+function store(value_) {
+    const key = stringToArrayBuffer("jsstore");
+    const value = stringToArrayBuffer(value_);
+    wasmx.storageStore(key, value);
 }
 
 function load() {
-    return wasmx.storageLoad("jsstore");
+    const key = stringToArrayBuffer("jsstore");
+    return wasmx.storageLoad(key);
+}
+
+function stringToArrayBuffer(inputString) {
+    const bytes = new Uint8Array(inputString.length);
+    for (let i = 0; i < inputString.length; i++) {
+        bytes[i] = inputString.charCodeAt(i) & 0xFF;
+    }
+    return bytes.buffer;
 }

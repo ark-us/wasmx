@@ -13,27 +13,30 @@ export function main(dataObj) {
 
 function wrapStore(address, value) {
     let calldata = JSON.stringify({"store":[value]})
-    return wasmx.call(1000000, address, 0, calldata)
+    return wasmx.call(1000000, address, new ArrayBuffer(32), stringToArrayBuffer(calldata))
 }
 
 function wrapLoad(address) {
     let calldata = JSON.stringify({"load":[]})
-    let res = wasmx.callStatic(1000000, address, calldata)
-    console.log("---wrapLoad-res", typeof res, res)
-    console.log("---jjjj", JSON.parse('{"success":0,"data":[115,116,114,49]}'))
-    let response = JSON.parse(res)
-    console.log("-wrapLoad-response", response)
-    let data = Object.values(response.data)
-    console.log("-wrapLoad-data", typeof data, data)
-    let datastr = bin2String(data)
-    console.log("-wrapLoad-datastr", datastr)
-    return datastr
+    let res = wasmx.callStatic(1000000, address, stringToArrayBuffer(calldata))
+    let response = JSON.parse(arrayBufferToString(res))
+    let data = new Uint8Array(Object.values(response.data));
+    return data.buffer;
 }
 
-function bin2String(array) {
-    var result = "";
-    for (var i = 0; i < array.length; i++) {
-      result += String.fromCharCode(array[i]);
+function stringToArrayBuffer(inputString) {
+    const bytes = new Uint8Array(inputString.length);
+    for (let i = 0; i < inputString.length; i++) {
+        bytes[i] = inputString.charCodeAt(i) & 0xFF;
+    }
+    return bytes.buffer;
+}
+
+function arrayBufferToString(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    let result = "";
+    for (let i = 0; i < bytes.length; i++) {
+        result += String.fromCharCode(bytes[i]);
     }
     return result;
 }
