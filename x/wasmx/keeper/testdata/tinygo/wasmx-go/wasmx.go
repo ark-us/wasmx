@@ -5,14 +5,15 @@ import "C"
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 	"unsafe"
 )
 
-//go:wasmimport wasmx storageStore2
+//go:wasmimport wasmx storageStore
 func StorageStore_(keyPtr, keyLen, valuePtr, valueLen uint32)
 
-//go:wasmimport wasmx storageLoad2
+//go:wasmimport wasmx storageLoad
 func StorageLoad_(keyPtr, keyLen uint32) uint64
 
 //go:wasmimport wasmx getCallData
@@ -21,34 +22,40 @@ func GetCallData_() uint64
 //go:wasmimport wasmx setReturnData
 func SetReturnData_(dataPtr, dataLen uint32)
 
+//go:wasmimport wasmx callClassic
+func callClassic_(gasLimit uint64, addressPtr, addressLen, valuePtr, calldPtr, calldLen uint32) uint64
+
+//go:wasmimport wasmx callStatic
+func callStatic_(gasLimit uint64, addressPtr, addressLen, calldPtr, calldLen uint32) uint64
+
 //go:wasmimport wasmx log
 func Log_(ptr, size uint32)
 
-func StorageStore(key, value string) {
+func StorageStore(key, value []byte) {
 	Log(fmt.Sprintf("tinygo!! storageStore %s, %s", key, value))
-	keyPtr, keyLength := StringToLeakedPtr(key)
-	valuePtr, valueLength := StringToLeakedPtr(value)
+	keyPtr, keyLength := BytesToLeakedPtr(key)
+	valuePtr, valueLength := BytesToLeakedPtr(value)
 	StorageStore_(keyPtr, keyLength, valuePtr, valueLength)
 }
 
-func StorageLoad(key string) string {
-	keyPtr, keyLength := StringToLeakedPtr(key)
+func StorageLoad(key []byte) []byte {
+	keyPtr, keyLength := BytesToLeakedPtr(key)
 	ptr := StorageLoad_(keyPtr, keyLength)
 	dataPtr := uint32(ptr >> 32)
 	dataSize := uint32(ptr)
-	return PtrToString(dataPtr, dataSize)
+	return PtrToBytes(dataPtr, dataSize)
 }
 
-func GetCallData() string {
+func GetCallData() []byte {
 	ptr := GetCallData_()
 	dataPtr := uint32(ptr >> 32)
 	dataSize := uint32(ptr)
-	data := PtrToString(dataPtr, dataSize)
+	data := PtrToBytes(dataPtr, dataSize)
 	return data
 }
 
-func SetReturnData(data string) {
-	keyPtr, keyLength := StringToLeakedPtr(data)
+func SetReturnData(data []byte) {
+	keyPtr, keyLength := BytesToLeakedPtr(data)
 	SetReturnData_(keyPtr, keyLength)
 }
 
@@ -76,10 +83,25 @@ func StringToPtr(s string) (uint32, uint32) {
 
 // StringToLeakedPtr returns a pointer and size pair for the given string in a way
 // compatible with WebAssembly numeric types.
-// The pointer is not automatically managed by TinyGo hence it must be freed by the host.
+// The pointer is not automatically managed by TinyGo hence it must be freed by the host (TODO)
 func StringToLeakedPtr(s string) (uint32, uint32) {
 	size := C.ulong(len(s))
 	ptr := unsafe.Pointer(C.malloc(size))
 	copy(unsafe.Slice((*byte)(ptr), size), s)
 	return uint32(uintptr(ptr)), uint32(size)
+}
+
+func BytesToLeakedPtr(data []byte) (uint32, uint32) {
+	size := C.ulong(len(data))
+	ptr := unsafe.Pointer(C.malloc(size))
+	copy(unsafe.Slice((*byte)(ptr), size), data)
+	return uint32(uintptr(ptr)), uint32(size)
+}
+
+func PtrToBytes(ptr uint32, size uint32) []byte {
+	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(ptr),
+		Len:  uintptr(size),
+		Cap:  uintptr(size),
+	}))
 }

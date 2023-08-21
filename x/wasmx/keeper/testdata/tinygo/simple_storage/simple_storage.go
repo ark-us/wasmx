@@ -6,36 +6,36 @@ import (
 	wasmx "github.com/wasmx/wasmx-go"
 )
 
-//go:wasm-module myadd
+//go:wasm-module simplestorage
 //export instantiate
 func instantiate() {
 	data := wasmx.GetCallData()
-	key := "storagekey"
+	key := []byte("storagekey")
 	wasmx.StorageStore(key, data)
 }
 
-// type Calldata struct {
-// 	Store []string `json:"store,omitempty"`
-// 	Load  []string `json:"load,omitempty"`
-// }
+type Calldata struct {
+	Store []string `json:"store,omitempty"`
+	Load  []string `json:"load,omitempty"`
+}
 
 func main() {
-	data := wasmx.GetCallData()
+	data := string(wasmx.GetCallData())
 	if gjson.Get(data, "store").Exists() {
 		value := gjson.Get(data, "store|0")
-		storageStore(value.String())
+		storageStore([]byte(value.String()))
 	} else if gjson.Get(data, "load").Exists() {
 		resp := storageLoad()
 		wasmx.SetReturnData(resp)
 	}
 }
 
-func storageStore(value string) {
-	key := "storagekey"
+func storageStore(value []byte) {
+	key := []byte("storagekey")
 	wasmx.StorageStore(key, value)
 }
 
-func storageLoad() string {
-	key := "storagekey"
+func storageLoad() []byte {
+	key := []byte("storagekey")
 	return wasmx.StorageLoad(key)
 }
