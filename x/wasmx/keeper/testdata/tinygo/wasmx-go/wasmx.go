@@ -4,7 +4,7 @@ package wasmx
 import "C"
 
 import (
-	"fmt"
+	"encoding/json"
 	"reflect"
 	"runtime"
 	"unsafe"
@@ -23,16 +23,21 @@ func GetCallData_() uint64
 func SetReturnData_(dataPtr, dataLen uint32)
 
 //go:wasmimport wasmx callClassic
-func callClassic_(gasLimit uint64, addressPtr, addressLen, valuePtr, calldPtr, calldLen uint32) uint64
+func CallClassic_(gasLimit uint64, addressPtr, addressLen, valuePtr, calldPtr, calldLen uint32) uint64
 
 //go:wasmimport wasmx callStatic
-func callStatic_(gasLimit uint64, addressPtr, addressLen, calldPtr, calldLen uint32) uint64
+func CallStatic_(gasLimit uint64, addressPtr, addressLen, calldPtr, calldLen uint32) uint64
 
 //go:wasmimport wasmx log
 func Log_(ptr, size uint32)
 
+type CallResult struct {
+	Success int    `json:"success"`
+	Data    []byte `json:"data"`
+}
+
 func StorageStore(key, value []byte) {
-	Log(fmt.Sprintf("tinygo!! storageStore %s, %s", key, value))
+	// Log(fmt.Sprintf("tinygo!! storageStore %s, %s", key, value))
 	keyPtr, keyLength := BytesToLeakedPtr(key)
 	valuePtr, valueLength := BytesToLeakedPtr(value)
 	StorageStore_(keyPtr, keyLength, valuePtr, valueLength)
@@ -57,6 +62,41 @@ func GetCallData() []byte {
 func SetReturnData(data []byte) {
 	keyPtr, keyLength := BytesToLeakedPtr(data)
 	SetReturnData_(keyPtr, keyLength)
+}
+
+func Call(gasLimit uint64, addrBech32 string, value []byte, calldata []byte) (bool, []byte) {
+	addrPtr, addrLen := StringToLeakedPtr(addrBech32)
+	valuePtr, _ := BytesToLeakedPtr(value)
+	calldPtr, calldLength := BytesToLeakedPtr(calldata)
+
+	ptr := CallClassic_(gasLimit, addrPtr, addrLen, valuePtr, calldPtr, calldLength)
+	dataPtr := uint32(ptr >> 32)
+	dataSize := uint32(ptr)
+	res := PtrToBytes(dataPtr, dataSize)
+
+	var calld CallResult
+	err := json.Unmarshal(res, &calld)
+	if err != nil {
+		panic("Cannot decode json")
+	}
+	return calld.Success == 0, calld.Data
+}
+
+func CallStatic(gasLimit uint64, addrBech32 string, calldata []byte) (bool, []byte) {
+	addrPtr, addrLen := StringToLeakedPtr(addrBech32)
+	calldPtr, calldLength := BytesToLeakedPtr(calldata)
+
+	ptr := CallStatic_(gasLimit, addrPtr, addrLen, calldPtr, calldLength)
+	dataPtr := uint32(ptr >> 32)
+	dataSize := uint32(ptr)
+	res := PtrToBytes(dataPtr, dataSize)
+
+	var calld CallResult
+	err := json.Unmarshal(res, &calld)
+	if err != nil {
+		panic("Cannot decode json")
+	}
+	return calld.Success == 0, calld.Data
 }
 
 // log a message to the console using _log.

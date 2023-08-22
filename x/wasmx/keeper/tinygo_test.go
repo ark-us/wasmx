@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	_ "embed"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -60,4 +61,34 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 
 	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("goodbye"), value)
+}
+
+func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
+	wasmbin := tinygoSimpleStorage
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1000_000_000)
+	depsPy := []string{types.INTERPRETER_PYTHON}
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, simpleStoragePy, depsPy)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "simpleContractPy", nil)
+
+	codeId2 := appA.StoreCode(sender, wasmbin, nil)
+	contractAddressWrap := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte("hello")}, "tinygoSimpleStorage", nil)
+
+	key := []byte("pystore")
+	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
+	s.Require().Equal([]byte("123"), value)
+
+	data := []byte(fmt.Sprintf(`{"wrapStore":["%s", "goodbye"]}`, contractAddress.String()))
+	appA.ExecuteContract(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
+	s.Require().Equal([]byte(`goodbye`), value)
+
+	resp := appA.WasmxQueryRaw(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"wrapLoad":["%s"]}`, contractAddress.String()))}, nil, nil)
+	s.Require().Equal([]byte("goodbye23"), resp)
 }
