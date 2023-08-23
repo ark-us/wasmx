@@ -233,7 +233,8 @@ func (k WasmxEngine) build_path_pinned(dataDir string, checksum types.Checksum) 
 }
 
 func (k WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, extension string) string {
-	return path.Join(dataDir, fmt.Sprintf("%s_%s.%s", extension, hex.EncodeToString(checksum), extension))
+	filename := fmt.Sprintf("%s_%s.%s", extension, hex.EncodeToString(checksum), extension)
+	return path.Join(dataDir, extension, filename)
 }
 
 func (k WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {

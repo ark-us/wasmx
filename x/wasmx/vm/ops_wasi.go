@@ -85,6 +85,21 @@ func wasiSetReturnData(context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
+func wasiSetExitCode(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	code := params[0].(int32)
+	if code == 0 {
+		return returns, wasmedge.Result_Success
+	}
+	errorMsg, err := readMem(callframe, params[1], params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO only in debug mode
+	fmt.Println("--wasiSetExitCode-errorMsg--", string(errorMsg))
+	return returns, wasmedge.Result_Fail
+}
+
 func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
@@ -249,6 +264,10 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
+	functype_i32i32i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
+	)
 	functype_i32i32i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
@@ -273,6 +292,7 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i64, wasiGetCallData, context, 0))
 	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32i32_, wasiSetReturnData, context, 0))
+	env.AddFunction("setExitCode", wasmedge.NewFunction(functype_i32i32i32_, wasiSetExitCode, context, 0))
 
 	env.AddFunction("callClassic", wasmedge.NewFunction(functype_i64i32i32i32i32i32_i64, wasiCallClassic, context, 0))
 	env.AddFunction("callStatic", wasmedge.NewFunction(functype_i64i32i32i32i32_i64, wasiCallStatic, context, 0))
@@ -353,6 +373,7 @@ set_returndata(res or b'')
 			``,
 			"main.py",
 			string(context.Env.CurrentCall.CallData),
+			// --quiet
 		},
 		// os.Environ(), // The envs
 		[]string{},
