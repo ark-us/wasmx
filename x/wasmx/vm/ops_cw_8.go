@@ -784,7 +784,7 @@ func allocateWriteMemCw(ctx *Context, callframe *wasmedge.CallingFrame, data []b
 }
 
 func writeMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, data []byte) (*Region, error) {
-	res, err := vm.Execute("allocate", int32(len(data)))
+	res, err := vm.Execute(types.MEMORY_EXPORT_ALLOCATE, int32(len(data)))
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -23,6 +24,9 @@ var (
 
 	//go:embed testdata/js/call_evm.js
 	callEvmSimpleStorageJsInterpret []byte
+
+	//go:embed testdata/js/blockchain.js
+	blockchainJsInterpret []byte
 )
 
 func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
@@ -166,4 +170,28 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000007", hex.EncodeToString(resp))
+}
+
+func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
+	return
+	sender := suite.GetRandomAccount()
+	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	deps := []string{types.INTERPRETER_JS}
+	codeId := appA.StoreCode(sender, blockchainJsInterpret, deps)
+
+	datainst := []types.RawBytes{[]byte("jsstore"), []byte("hello")}
+	data, err := json.Marshal(datainst)
+	s.Require().NoError(err)
+
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "blockchainJsInterpret", nil)
+
+	data = []byte(`{"getEnv":[]}`)
+	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal([]byte("goodbye"), resp)
+
 }

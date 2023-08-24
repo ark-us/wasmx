@@ -172,6 +172,16 @@ var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 
 var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
 
+// var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
+// var ALLOC_DEFAULT = "alloc_default"
+var MEMORY_EXPORT_MALLOC = "malloc"
+var MEMORY_EXPORT_ALLOCATE = "allocate"
+var MEMORY_EXPORT_AS = "__new"
+
+// TODO
+var WASMX_MEMORY_DEFAULT = "memory_default_1"
+var WASMX_MEMORY_ASSEMBLYSCRIPT = "memory_assemblyscript_1"
+
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 
 var FILE_EXTENSIONS = map[string]string{

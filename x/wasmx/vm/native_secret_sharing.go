@@ -10,6 +10,7 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/precompiles"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
@@ -198,7 +199,7 @@ func allocateInput(vm *wasmedge.VM, input []byte) (int32, error) {
 
 	// Allocate memory for the input, and get a pointer to it.
 	// Include a byte for the NULL terminator we add below.
-	allocateResult, err := vm.Execute("malloc", int32(inputLen+1))
+	allocateResult, err := vm.Execute(types.MEMORY_EXPORT_MALLOC, int32(inputLen+1))
 	if err != nil {
 		return 0, err
 	}

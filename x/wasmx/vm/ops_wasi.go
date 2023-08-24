@@ -15,6 +15,22 @@ import (
 	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
+// getEnv(): ArrayBuffer
+func wasi_getEnv(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+	data, err := json.Marshal(ctx.Env)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	returns[0] = buildPtr64(ptr, int32(len(data)))
+	return returns, wasmedge.Result_Success
+}
+
 func wasiStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	keybz, err := readMem(callframe, params[0], params[1])
@@ -43,17 +59,11 @@ func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, para
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
-
-	datalen := int32(len(data))
-	ptr, err := allocateMemDefaultMalloc(ctx.MustGetVmFromContext(), datalen)
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	err = writeMem(callframe, data, ptr)
-	if err != nil {
-		return returns, wasmedge.Result_Fail
-	}
-	returns[0] = buildPtr64(ptr, datalen)
+	returns[0] = buildPtr64(ptr, int32(len(data)))
 	return returns, wasmedge.Result_Success
 }
 
@@ -61,16 +71,11 @@ func wasiStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, para
 func wasiGetCallData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 1)
 	ctx := context.(*Context)
-	datalen := len(ctx.Env.CurrentCall.CallData)
-	ptr, err := allocateMemDefaultMalloc(ctx.MustGetVmFromContext(), int32(datalen))
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	err = writeMem(callframe, ctx.Env.CurrentCall.CallData, ptr)
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, ctx.Env.CurrentCall.CallData)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	returns[0] = buildPtr64(ptr, int32(datalen))
+	returns[0] = buildPtr64(ptr, int32(len(ctx.Env.CurrentCall.CallData)))
 	return returns, wasmedge.Result_Success
 }
 
@@ -87,6 +92,7 @@ func wasiSetReturnData(context interface{}, callframe *wasmedge.CallingFrame, pa
 
 func wasiSetExitCode(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 0)
+	ctx := context.(*Context)
 	code := params[0].(int32)
 	if code == 0 {
 		return returns, wasmedge.Result_Success
@@ -97,6 +103,7 @@ func wasiSetExitCode(context interface{}, callframe *wasmedge.CallingFrame, para
 	}
 	// TODO only in debug mode
 	fmt.Println("--wasiSetExitCode-errorMsg--", string(errorMsg))
+	ctx.ReturnData = errorMsg
 	return returns, wasmedge.Result_Fail
 }
 
@@ -105,22 +112,18 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := readMem(callframe, params[1], params[2])
+	addrbz, err := readMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr, err := sdk.AccAddressFromBech32(string(addrbz))
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	value, err := readBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	value, err := readBigInt(callframe, params[3], int32(32))
-	if err != nil {
-		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
-	}
-	calldata, err := readMem(callframe, params[4], params[5])
+	calldata, err := readMem(callframe, params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -165,16 +168,11 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 		return nil, wasmedge.Result_Fail
 	}
 
-	datalen := int32(len(responsebz))
-	ptr, err := allocateMemDefaultMalloc(ctx.MustGetVmFromContext(), datalen)
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, responsebz)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	err = writeMem(callframe, responsebz, ptr)
-	if err != nil {
-		return returns, wasmedge.Result_Fail
-	}
-	returns[0] = buildPtr64(ptr, datalen)
+	returns[0] = buildPtr64(ptr, int32(len(responsebz)))
 	return returns, wasmedge.Result_Success
 }
 
@@ -183,17 +181,13 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := readMem(callframe, params[1], params[2])
+	addrbz, err := readMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr, err := sdk.AccAddressFromBech32(string(addrbz))
-	if err != nil {
-		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
-	}
-	calldata, err := readMem(callframe, params[3], params[4])
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	calldata, err := readMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -229,16 +223,284 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	datalen := int32(len(responsebz))
-	ptr, err := allocateMemDefaultMalloc(ctx.MustGetVmFromContext(), datalen)
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, responsebz)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	err = writeMem(callframe, responsebz, ptr)
+	returns[0] = buildPtr64(ptr, int32(len(responsebz)))
+	return returns, wasmedge.Result_Success
+}
+
+// address -> account
+func wasi_getAccount(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addr, err := readMem(callframe, params[0], int32(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
+	codeInfo := ctx.CosmosHandler.GetCodeInfo(address)
+	code := types.EnvContractInfo{
+		Address:  address,
+		CodeHash: codeInfo.CodeHash,
+		Bytecode: codeInfo.InterpretedBytecodeRuntime,
+	}
+
+	codebz, err := json.Marshal(code)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, codebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = buildPtr64(ptr, int32(len(codebz)))
+	return returns, wasmedge.Result_Success
+}
+
+func wasi_keccak256(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	data, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	if ctx.ContractRouter["keccak256"] == nil {
+		return nil, wasmedge.Result_Fail
+	}
+	keccakVm := ctx.ContractRouter["keccak256"].Vm
+	input_offset := int32(0)
+	input_length := int32(len(data))
+	output_offset := input_length
+	context_offset := output_offset + int32(32)
+
+	keccakMem := keccakVm.GetActiveModule().FindMemory("memory")
+	if keccakMem == nil {
+		return nil, wasmedge.Result_Fail
+	}
+	err = keccakMem.SetData(data, uint(input_offset), uint(input_length))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	_, err = keccakVm.Execute("keccak", context_offset, input_offset, input_length, output_offset)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	result, err := keccakMem.GetData(uint(output_offset), uint(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, result)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = buildPtr64(ptr, int32(len(result)))
+	return returns, wasmedge.Result_Success
+}
+
+// getBalance(address): i256
+func wasi_getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addr, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
+	balance := ctx.CosmosHandler.GetBalance(address)
+	balancebz := balance.FillBytes(make([]byte, 32))
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, balancebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = buildPtr64(ptr, int32(len(balancebz)))
+	return returns, wasmedge.Result_Success
+}
+
+// getBlockHash(i64): bytes32
+func wasi_getBlockHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	blockNumber := params[0].(int64)
+	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = buildPtr64(ptr, int32(len(data)))
+	return returns, wasmedge.Result_Success
+}
+
+// createFromCodeId(address, bytes): address ?
+// create(address, bytes): address
+func wasi_createAccount(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+	requestbz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req vmtypes.CreateAccountRequest
+	json.Unmarshal(requestbz, &req)
+	metadata := types.CodeMetadata{}
+	// TODO info from provenance ?
+	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	returns[0] = buildPtr64(ptr, datalen)
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
+	}
+	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
+		req.Bytecode,
+		ctx.Env.CurrentCall.Origin,
+		ctx.Env.Contract.Address,
+		initMsg,
+		req.Balance,
+		sdeps,
+		metadata,
+		"", // TODO label?
+		[]byte{},
+	)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	contractbz := paddLeftTo32(contractAddress.Bytes())
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, contractbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = buildPtr64(ptr, int32(len(contractbz)))
+	return returns, wasmedge.Result_Success
+}
+
+// create2(address, salt, bytes): address
+func wasi_createAccount2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+
+	requestbz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req vmtypes.Create2AccountRequest
+	json.Unmarshal(requestbz, &req)
+
+	metadata := types.CodeMetadata{}
+	// TODO info from provenance ?
+	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	var sdeps []string
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+		sdeps = append(sdeps, dep.Label)
+	}
+
+	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
+		req.Bytecode,
+		ctx.Env.CurrentCall.Origin,
+		ctx.Env.Contract.Address,
+		initMsg,
+		req.Balance,
+		sdeps,
+		metadata,
+		"", // TODO label?
+		req.Salt.FillBytes(make([]byte, 32)),
+	)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	contractbz := paddLeftTo32(contractAddress.Bytes())
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, contractbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = buildPtr64(ptr, int32(len(contractbz)))
+	return returns, wasmedge.Result_Success
+}
+
+// getCodeHash(address): bytes32
+func wasi_getCodeHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addr, err := readMem(callframe, params[0], int32(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
+	checksum := ctx.CosmosHandler.GetCodeHash(address)
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, checksum)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = buildPtr64(ptr, int32(len(checksum)))
+	return returns, wasmedge.Result_Success
+}
+
+// sendCosmosMsg(req): bytes
+func wasi_sendCosmosMsg(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	// TODO
+	return returns, wasmedge.Result_Fail
+}
+
+// sendCosmosQuery(req): bytes
+func wasi_sendCosmosQuery(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	// TODO
+	return returns, wasmedge.Result_Fail
+}
+
+// getGasLeft(): i64
+func wasi_getGasLeft(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 0)
+	returns[0] = 0
+	return returns, wasmedge.Result_Success
+}
+
+// bech32StringToBytes(ptr, len): i64
+func wasi_bech32StringToBytes(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrbz, err := readMem(callframe, params[0], params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr, err := sdk.AccAddressFromBech32(string(addrbz))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data := types.PaddLeftTo32(addr.Bytes())
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	// all addresses are 32 bytes
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+// bech32BytesToString(ptr): i64
+func wasi_bech32BytesToString(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrbz, err := readMem(callframe, params[0], int32(32))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr := sdk.AccAddress(addrbz)
+	data := []byte(addr.String())
+	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = buildPtr64(ptr, int32(len(data)))
 	return returns, wasmedge.Result_Success
 }
 
@@ -264,6 +526,14 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
+	functype_i32_i64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I64},
+	)
+	functype_i64_i64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64},
+		[]wasmedge.ValType{wasmedge.ValType_I64},
+	)
 	functype_i32i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
@@ -272,12 +542,16 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
+	functype_i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
 	functype_i32i32_i64 := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I64},
 	)
-	functype_i64i32i32i32i32i32_i64 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
+	functype_i64i32i32i32_i64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I64},
 	)
 	functype_i64i32i32i32i32_i64 := wasmedge.NewFunctionType(
@@ -287,6 +561,8 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 
 	// TODO support any 32 bytes address, not only bech32 strings
 
+	env.AddFunction("getEnv", wasmedge.NewFunction(functype__i64, wasi_getEnv, context, 0))
+
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32i32i32_, wasiStorageStore, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32i32_i64, wasiStorageLoad, context, 0))
 
@@ -294,10 +570,26 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32i32_, wasiSetReturnData, context, 0))
 	env.AddFunction("setExitCode", wasmedge.NewFunction(functype_i32i32i32_, wasiSetExitCode, context, 0))
 
-	env.AddFunction("callClassic", wasmedge.NewFunction(functype_i64i32i32i32i32i32_i64, wasiCallClassic, context, 0))
-	env.AddFunction("callStatic", wasmedge.NewFunction(functype_i64i32i32i32i32_i64, wasiCallStatic, context, 0))
+	env.AddFunction("callClassic", wasmedge.NewFunction(functype_i64i32i32i32i32_i64, wasiCallClassic, context, 0))
+	env.AddFunction("callStatic", wasmedge.NewFunction(functype_i64i32i32i32_i64, wasiCallStatic, context, 0))
+
+	env.AddFunction("getBlockHash", wasmedge.NewFunction(functype_i64_i64, wasi_getBlockHash, context, 0))
+	env.AddFunction("getAccount", wasmedge.NewFunction(functype_i32_i64, wasi_getAccount, context, 0))
+	env.AddFunction("getBalance", wasmedge.NewFunction(functype_i32_i64, wasi_getBalance, context, 0))
+	env.AddFunction("getCodeHash", wasmedge.NewFunction(functype_i32_i64, wasi_getCodeHash, context, 0))
+	env.AddFunction("keccak256", wasmedge.NewFunction(functype_i32i32_i64, wasi_keccak256, context, 0))
+
+	env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32i32_i64, wasi_createAccount, context, 0))
+	env.AddFunction("createAccount2", wasmedge.NewFunction(functype_i32i32_i64, wasi_createAccount2, context, 0))
+
+	env.AddFunction("sendCosmosMsg", wasmedge.NewFunction(functype_i32i32_i64, wasi_sendCosmosMsg, context, 0))
+	env.AddFunction("sendCosmosQuery", wasmedge.NewFunction(functype_i32i32_i64, wasi_sendCosmosQuery, context, 0))
+	env.AddFunction("getGasLeft", wasmedge.NewFunction(functype__i64, wasi_getGasLeft, context, 0))
+	env.AddFunction("bech32StringToBytes", wasmedge.NewFunction(functype_i32i32_i32, wasi_bech32StringToBytes, context, 0))
+	env.AddFunction("bech32BytesToString", wasmedge.NewFunction(functype_i32_i64, wasi_bech32BytesToString, context, 0))
 
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32i32_, wasiLog, context, 0))
+
 	return env
 }
 
@@ -431,6 +723,19 @@ wasmx.setReturnData(res || new ArrayBuffer(0));
 		},
 	)
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
+}
+
+func writeMemDefaultMalloc(vm *wasmedge.VM, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
+	datalen := int32(len(data))
+	ptr, err := allocateMemDefaultMalloc(vm, datalen)
+	if err != nil {
+		return 0, err
+	}
+	err = writeMem(callframe, data, ptr)
+	if err != nil {
+		return 0, err
+	}
+	return ptr, nil
 }
 
 func allocateMemDefaultMalloc(vm *wasmedge.VM, size int32) (int32, error) {

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"mythos/v1/x/wasmx/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
@@ -239,7 +240,7 @@ func allocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 	if vm == nil {
 		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
 	}
-	result, err := vm.Execute("__new", size, AS_ARRAY_BUFFER_TYPE)
+	result, err := vm.Execute(types.MEMORY_EXPORT_AS, size, AS_ARRAY_BUFFER_TYPE)
 	if err != nil {
 		return 0, err
 	}
