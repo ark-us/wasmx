@@ -11,13 +11,15 @@ export function main(dataObj) {
     throw new Error("invalid function");
 }
 
-function wrapStore(address, value) {
+function wrapStore(addressbech32, value) {
     let calldata = "60fe47b10000000000000000000000000000000000000000000000000000000000000007"
+    let address = wasmx.bech32StringToBytes(addressbech32)
     return wasmx.call(1000000, address, new ArrayBuffer(32), hexStringToArrayBuffer(calldata))
 }
 
-function wrapLoad(address) {
+function wrapLoad(addressbech32) {
     let calldata = "6d4ce63c"
+    let address = wasmx.bech32StringToBytes(addressbech32)
     let res = wasmx.callStatic(1000000, address, hexStringToArrayBuffer(calldata))
     let response = JSON.parse(arrayBufferToString(res))
     let data = new Uint8Array(Object.values(response.data));
