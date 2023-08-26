@@ -320,7 +320,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	wasmbin := cw20_atomic_swap
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -385,7 +385,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	wasmbin := wasm_reflect
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

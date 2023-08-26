@@ -151,7 +151,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(1000_000_000_000)
 	var calldata string
 	var qres string
 
@@ -306,7 +306,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestInterpreted")
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdk.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
