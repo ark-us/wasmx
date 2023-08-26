@@ -76,7 +76,7 @@ func (k WasmxEngine) Instantiate(
 	var data types.ContractResponse
 	var err error
 
-	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || HasUtf8Dep(codeInfo.Deps) {
+	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
 		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, nil, false)
 	} else {
 		// TODO gas
@@ -103,7 +103,7 @@ func (k WasmxEngine) Execute(
 	var data types.ContractResponse
 	var err error
 
-	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || HasUtf8Dep(codeInfo.Deps) {
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
 		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
 		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
@@ -135,7 +135,7 @@ func (k WasmxEngine) Reply(
 		return types.ContractResponse{}, 0, err
 	}
 
-	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || HasUtf8Dep(codeInfo.Deps) {
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
 		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
 		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, false)
@@ -162,7 +162,7 @@ func (k WasmxEngine) QueryExecute(
 ) (types.ContractResponse, uint64, error) {
 	var data types.ContractResponse
 	var err error
-	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || HasUtf8Dep(codeInfo.Deps) {
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
 		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	} else {
 		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
@@ -175,7 +175,7 @@ func (k WasmxEngine) QueryExecute(
 }
 
 func (k WasmxEngine) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
-	if HasUtf8Dep(deps) {
+	if types.HasUtf8Dep(deps) {
 		extension := GetExtensionFromDeps(deps)
 		return k.load_utf8(extension, checksum)
 	}
@@ -233,7 +233,8 @@ func (k WasmxEngine) build_path_pinned(dataDir string, checksum types.Checksum) 
 }
 
 func (k WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, extension string) string {
-	return path.Join(dataDir, fmt.Sprintf("%s_%s.%s", extension, hex.EncodeToString(checksum), extension))
+	filename := fmt.Sprintf("%s_%s.%s", extension, hex.EncodeToString(checksum), extension)
+	return path.Join(dataDir, extension, filename)
 }
 
 func (k WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
@@ -241,7 +242,7 @@ func (k WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
 	if codeInfo.Pinned {
 		filepath = k.build_path_pinned(k.DataDir, codeInfo.CodeHash)
 	} else {
-		if HasUtf8Dep(codeInfo.Deps) {
+		if types.HasUtf8Dep(codeInfo.Deps) {
 			extension := GetExtensionFromDeps(codeInfo.Deps)
 			filepath = k.build_path_utf8(k.SourcesDir, codeInfo.CodeHash, extension)
 		} else {

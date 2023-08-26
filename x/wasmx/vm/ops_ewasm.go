@@ -386,6 +386,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 				IsQuery:  false,
 			}
 			success, returnData = WasmxCall(ctx, req)
+			ctx.ReturnData = returnData
 		}
 	}
 	returns[0] = success
@@ -440,6 +441,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 			IsQuery:  false,
 		}
 		success, returnData = WasmxCall(ctx, req)
+		ctx.ReturnData = returnData
 	}
 	returns[0] = success
 
@@ -489,6 +491,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 			IsQuery:  false,
 		}
 		success, returnData = WasmxCall(ctx, req)
+		ctx.ReturnData = returnData
 	}
 	returns[0] = success
 
@@ -538,6 +541,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 			IsQuery:  true,
 		}
 		success, returnData = WasmxCall(ctx, req)
+		ctx.ReturnData = returnData
 	}
 	returns[0] = success
 

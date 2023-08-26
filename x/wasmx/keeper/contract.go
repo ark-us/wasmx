@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
@@ -147,7 +146,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	if ioutils.IsWasm(wasmCode) {
 		checksum, reportDeps, err = k.createWasm(ctx, wasmCode)
 	} else {
-		if len(deps) > 0 && HasUtf8Dep(deps) {
+		if len(deps) > 0 && types.HasUtf8Dep(deps) {
 			checksum, reportDeps, err = k.createSourceInterpreted(ctx, wasmCode, deps)
 		}
 	}
@@ -923,15 +922,6 @@ func (m MultipliedGasMeter) ConsumeGas(gas sdk.Gas, descriptor string) {
 
 func (k Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {
 	return NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
-}
-
-func HasUtf8Dep(deps []string) bool {
-	for _, dep := range deps {
-		if strings.Contains(dep, "utf8") {
-			return true
-		}
-	}
-	return false
 }
 
 func GetExtensionFromDeps(deps []string) string {

@@ -1,41 +1,69 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/tidwall/gjson"
 
 	wasmx "github.com/wasmx/wasmx-go"
 )
 
-//go:wasm-module myadd
+//go:wasm-module simplestorage
 //export instantiate
 func instantiate() {
 	data := wasmx.GetCallData()
-	key := "storagekey"
+	key := []byte("storagekey")
 	wasmx.StorageStore(key, data)
 }
 
-// type Calldata struct {
-// 	Store []string `json:"store,omitempty"`
-// 	Load  []string `json:"load,omitempty"`
-// }
+type Calldata struct {
+	Store []string `json:"store,omitempty"`
+	Load  []string `json:"load,omitempty"`
+}
 
 func main() {
-	data := wasmx.GetCallData()
+	data := string(wasmx.GetCallData())
+
 	if gjson.Get(data, "store").Exists() {
 		value := gjson.Get(data, "store|0")
-		storageStore(value.String())
+		storageStore([]byte(value.String()))
 	} else if gjson.Get(data, "load").Exists() {
 		resp := storageLoad()
+		wasmx.SetReturnData(resp)
+	} else if gjson.Get(data, "wrapStore").Exists() {
+		addr := gjson.Get(data, "wrapStore|0")
+		value := gjson.Get(data, "wrapStore|1")
+		wrapStore(addr.String(), value.String())
+	} else if gjson.Get(data, "wrapLoad").Exists() {
+		addr := gjson.Get(data, "wrapLoad|0")
+		resp := wrapLoad(addr.String())
 		wasmx.SetReturnData(resp)
 	}
 }
 
-func storageStore(value string) {
-	key := "storagekey"
+func storageStore(value []byte) {
+	key := []byte("storagekey")
 	wasmx.StorageStore(key, value)
 }
 
-func storageLoad() string {
-	key := "storagekey"
+func storageLoad() []byte {
+	key := []byte("storagekey")
 	return wasmx.StorageLoad(key)
+}
+
+func wrapStore(address string, value string) {
+	calldata := fmt.Sprintf(`{"store":["%s"]}`, value)
+	success, _ := wasmx.Call(1000000, address, make([]byte, 32), []byte(calldata))
+	if !success {
+		panic("call failed")
+	}
+}
+
+func wrapLoad(address string) []byte {
+	calldata := []byte(`{"load":[]}`)
+	success, data := wasmx.CallStatic(1000000, address, calldata)
+	if !success {
+		panic("call failed")
+	}
+	return append(data, []byte("23")...)
 }

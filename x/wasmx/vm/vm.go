@@ -261,13 +261,16 @@ func ExecuteWasmInterpreted(
 	_, err = executeHandler(context, contractVm, funcName)
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
+		wrapErr := sdkerrors.Wrapf(err, "%s", string(context.ReturnData))
+		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
+		runCleanups(cleanups)
 		if isdebug {
-			resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, err)
-			runCleanups(cleanups)
+			// we don't fail for debug/tracing transactions
 			return resp, nil
 		}
-		runCleanups(cleanups)
-		return types.ContractResponse{}, err
+		return resp, wrapErr
+		// runCleanups(cleanups)
+		// return types.ContractResponse{}, err
 	}
 
 	response := handleContractResponse(context, contractVm, isdebug)
@@ -353,17 +356,16 @@ func ExecuteWasm(
 	_, err = executeHandler(context, contractVm, funcName)
 	if err != nil {
 		wrapErr := sdkerrors.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
+		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
+		runCleanups(cleanups)
 		if isdebug {
-			resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
-			runCleanups(cleanups)
 			return resp, nil
 		}
-		runCleanups(cleanups)
-		return types.ContractResponse{}, err
+		return resp, wrapErr
+		// runCleanups(cleanups)
+		// return types.ContractResponse{}, err
 	}
-
 	response := handleContractResponse(context, contractVm, isdebug)
-
 	runCleanups(cleanups)
 	return response, nil
 }

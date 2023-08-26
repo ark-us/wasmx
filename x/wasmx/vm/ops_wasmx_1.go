@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"mythos/v1/x/wasmx/types"
 
-	sdkerr "cosmossdk.io/errors"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
 
@@ -240,24 +240,15 @@ func allocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 	if vm == nil {
 		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
 	}
-	result, err := vm.Execute("__new", size, AS_ARRAY_BUFFER_TYPE)
+	result, err := vm.Execute(types.MEMORY_EXPORT_AS, size, AS_ARRAY_BUFFER_TYPE)
 	if err != nil {
 		return 0, err
 	}
 	return result[0].(int32), nil
 }
 
-func allocateMem(ctx *Context, size int32) (int32, error) {
-	addr := ctx.Env.Contract.Address
-	contractCtx, ok := ctx.ContractRouter[addr.String()]
-	if !ok {
-		return int32(0), sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
-	}
-	return allocateMemVm(contractCtx.Vm, size)
-}
-
 func allocateWriteMem(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
-	ptr, err := allocateMem(ctx, int32(len(data)))
+	ptr, err := allocateMemVm(ctx.MustGetVmFromContext(), int32(len(data)))
 	if err != nil {
 		return ptr, err
 	}

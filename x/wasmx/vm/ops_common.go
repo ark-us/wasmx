@@ -64,6 +64,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 				Address:  req.To,
 				CodeHash: req.CodeHash,
 				Bytecode: req.Bytecode,
+				FilePath: req.FilePath,
 			},
 			CurrentCall: callContext,
 		},
@@ -83,6 +84,5 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 			ctx.Logs = append(ctx.Logs, newctx.Logs...)
 		}
 	}
-	ctx.ReturnData = newctx.ReturnData
 	return success, newctx.ReturnData
 }

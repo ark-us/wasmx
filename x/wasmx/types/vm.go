@@ -95,8 +95,10 @@ type WasmxCosmosHandler interface {
 	GetBalance(addr sdk.AccAddress) *big.Int
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
+	GetCode(contractAddress sdk.AccAddress) []byte
 	GetBlockHash(blockNumber uint64) Checksum
 	GetCodeInfo(addr sdk.AccAddress) CodeInfo
+	GetContractInstance(contractAddress sdk.AccAddress) (ContractInfo, CodeInfo, []byte, error)
 	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error)
 	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int) (sdk.AccAddress, error)
 	Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error)
@@ -172,6 +174,16 @@ var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 
 var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
 
+// var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
+// var ALLOC_DEFAULT = "alloc_default"
+var MEMORY_EXPORT_MALLOC = "malloc"
+var MEMORY_EXPORT_ALLOCATE = "allocate"
+var MEMORY_EXPORT_AS = "__new"
+
+// TODO
+var WASMX_MEMORY_DEFAULT = "memory_default_1"
+var WASMX_MEMORY_ASSEMBLYSCRIPT = "memory_assemblyscript_1"
+
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 
 var FILE_EXTENSIONS = map[string]string{
@@ -202,6 +214,24 @@ func GetMaxCodeSize(sdeps []string) int {
 		}
 	}
 	return MaxWasmSize
+}
+
+func HasUtf8Dep(deps []string) bool {
+	for _, dep := range deps {
+		if strings.Contains(dep, "utf8") {
+			return true
+		}
+	}
+	return false
+}
+
+func HasUtf8SystemDep(sysDeps []SystemDep) bool {
+	for _, dep := range sysDeps {
+		if strings.Contains(dep.Label, "utf8") {
+			return true
+		}
+	}
+	return false
 }
 
 // func IsWasmDeps(sdeps []string) bool {
