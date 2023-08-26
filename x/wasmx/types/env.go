@@ -89,6 +89,8 @@ type ChainInfo struct {
 type EnvContractInfo struct {
 	Address  sdk.AccAddress `json:"address"`
 	CodeHash RawBytes       `json:"codeHash"`
+	CodeId   uint64         `json:"codeId"`
+	Deps     []string       `json:"deps"`
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
 	Bytecode RawBytes `json:"bytecode"`
@@ -157,6 +159,20 @@ func (m ChainInfo) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// func (m *ChainInfo) UnmarshalJSON(data []byte) error {
+// 	var value map[string]interface{}
+
+// 	err := json.Unmarshal(data, &value)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	fmt.Println("-ChainId-", value["chainId"])
+// 	m.ChainId = big.NewInt(0).SetBytes(value["chainId"].([]byte))
+// 	m.ChainIdFull = value["chainIdFull"].(string)
+// 	m.Denom = value["denom"].(string)
+// 	return nil
+// }
+
 func (m BlockInfo) MarshalJSON() ([]byte, error) {
 	var height RawBytes = big.NewInt(int64(m.Height)).FillBytes(make([]byte, 32))
 	var timestamp RawBytes = big.NewInt(int64(m.Timestamp)).FillBytes(make([]byte, 32))
@@ -184,7 +200,9 @@ func (m EnvContractInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"address":  address,
 		"codeHash": m.CodeHash,
-		"bytecode": m.Bytecode,
+		// "bytecode": m.Bytecode,
+		"codeId": m.CodeId,
+		"deps":   m.Deps,
 	})
 }
 

@@ -48,6 +48,10 @@ func (k Keeper) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Sto
 	return prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
 }
 
+func (k Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
+	return k.wasmvm.GetCode(checksum, deps)
+}
+
 func (k Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
 	store := ctx.KVStore(k.storeKey)
 

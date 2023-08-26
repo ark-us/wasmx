@@ -95,8 +95,10 @@ type WasmxCosmosHandler interface {
 	GetBalance(addr sdk.AccAddress) *big.Int
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
+	GetCode(contractAddress sdk.AccAddress) []byte
 	GetBlockHash(blockNumber uint64) Checksum
 	GetCodeInfo(addr sdk.AccAddress) CodeInfo
+	GetContractInstance(contractAddress sdk.AccAddress) (ContractInfo, CodeInfo, []byte, error)
 	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error)
 	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int) (sdk.AccAddress, error)
 	Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error)

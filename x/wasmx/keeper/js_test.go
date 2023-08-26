@@ -7,9 +7,11 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
+	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 var (
@@ -173,7 +175,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
-	return
 	sender := suite.GetRandomAccount()
 	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
 
@@ -184,14 +185,80 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	deps := []string{types.INTERPRETER_JS}
 	codeId := appA.StoreCode(sender, blockchainJsInterpret, deps)
 
-	datainst := []types.RawBytes{[]byte("jsstore"), []byte("hello")}
-	data, err := json.Marshal(datainst)
-	s.Require().NoError(err)
-
+	data := []byte(`["jsstore","hello"]`)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "blockchainJsInterpret", nil)
 
 	data = []byte(`{"getEnv":[]}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal([]byte("goodbye"), resp)
+	s.Require().True(len(resp) > 0)
+	// TODO check env
+	// var env types.Env
+	// err = json.Unmarshal(resp, &env)
+	// s.Require().NoError(err)
+	// s.Require().Equal(env.Chain.ChainIdFull, appA.Chain.ChainID)
+	// s.Require().Equal(env.CurrentCall.Sender.String(), sender.Address.String())
+	// s.Require().Equal(env.Contract.Address.String(), contractAddress.String())
 
+	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	balance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	s.Require().NoError(err)
+	s.Require().Equal(balance.GetBalance().Amount.BigInt().FillBytes(make([]byte, 32)), resp)
+
+	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().True(len(resp) > 0)
+	// TODO check this
+	// var acc types.EnvContractInfo
+	// err = json.Unmarshal(resp, &acc)
+
+	data = []byte(`{"keccak256":["somedata"]}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("fb763c3da6141a6a1464a68583e30d9a77bb999b1f1c491992dcfac7738ecfb4", hex.EncodeToString(resp))
+
+	// TODO propagate the error properly
+	// initMsg := types.WasmxExecutionMessage{Data: []byte(`"hello"`)}
+	initMsg := types.WasmxExecutionMessage{Data: []byte(`["jsstore","hello"]`)}
+	initMsgBz, err := json.Marshal(initMsg)
+	s.Require().NoError(err)
+	data = []byte(fmt.Sprintf(`{"instantiateAccount":[%d,"%s","%s"]}`, codeId, hex.EncodeToString(initMsgBz), "0000000000000000000000000000000000000000000000000000000000000000"))
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(32, len(resp))
+	expectedContractAddress := sdk.AccAddress(vmtypes.CleanupAddress(resp))
+	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), expectedContractAddress)
+	s.Require().Nil(contractInfo)
+
+	// we actually execute the contract creation
+	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	createdContractAddressStr := appA.GetContractAddressFromLog(txresp.GetLog())
+	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
+	s.Require().NotNil(contractInfo)
+
+	// instantiate2
+	data = []byte(fmt.Sprintf(`{"instantiateAccount2":[%d, "%s", "%s","%s"]}`, codeId, "0000000000000000000000000000000000000000000000000000000000000011", hex.EncodeToString(initMsgBz), "0000000000000000000000000000000000000000000000000000000000000000"))
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(32, len(resp))
+	expectedContractAddress = sdk.AccAddress(vmtypes.CleanupAddress(resp))
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), expectedContractAddress)
+	s.Require().Nil(contractInfo)
+
+	// we actually execute the contract creation
+	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	createdContractAddressStr = appA.GetContractAddressFromLog(txresp.GetLog())
+	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
+	s.Require().NotNil(contractInfo)
+
+	data = []byte(`{"justError":[]}`)
+	txresp = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 2000000, nil)
+	s.Require().True(txresp.IsErr(), txresp.GetLog())
+	s.Require().Contains(txresp.GetLog(), "failed to execute message", txresp.GetLog())
+	s.Require().Contains(txresp.GetLog(), "just error", txresp.GetLog())
+	s.Commit()
+
+	// TODO proper getBlockHash
+	// data = []byte(`{"getBlockHash":[4]}`)
+	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	// s.Require().Equal(resp, appA.Context().HeaderHash().Bytes())
 }

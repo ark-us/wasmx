@@ -5,77 +5,76 @@ export function instantiate(dataObj) {
 }
 
 export function main(dataObj) {
-    // console.log("-***--main-dataObj-", dataObj)
-    console.log("-***--main-dataObj-");
-    console.log("-***--main-dataObj-keys-", Object.keys(dataObj));
-    if (dataObj.getEnv) return getEnv();
-    if (dataObj.getCallData) return getCallData();
+    if (dataObj.justError) return justError();
+    if (dataObj.getEnv) return getEnv_();
+    if (dataObj.getCallData) return getCallData_();
     if (dataObj.store) return store(...dataObj.store);
     if (dataObj.load) return load();
-    if (dataObj.getBlockHash) return getBlockHash(...dataObj.getBlockHash);
-    if (dataObj.getAccount) return getAccount(...dataObj.getAccount);
-    if (dataObj.getBalance) return getBalance(...dataObj.getBalance);
-    if (dataObj.keccak256) return keccak256(...dataObj.keccak256);
-    if (dataObj.createAccount) return createAccount(...dataObj.createAccount);
-    if (dataObj.createAccount2) return createAccount2(...dataObj.createAccount2);
+    if (dataObj.getBlockHash) return getBlockHash_(...dataObj.getBlockHash);
+    if (dataObj.getAccount) return getAccount_(...dataObj.getAccount);
+    if (dataObj.getBalance) return getBalance_(...dataObj.getBalance);
+    if (dataObj.keccak256) return keccak256_(...dataObj.keccak256);
+    if (dataObj.instantiateAccount) return instantiateAccount(...dataObj.instantiateAccount);
+    if (dataObj.instantiateAccount2) return instantiateAccount2(...dataObj.instantiateAccount2);
     throw new Error("no valid function");
 }
 
-function getEnv() {
-    console.log("-*****-getEnv");
+function justError() {
+    throw new Error("just error");
+}
+
+function getEnv_() {
     const envbuf = wasmx.getEnv();
-    console.log("--envbuf", envbuf);
-    const env = JSON.parse(arrayBufferToString(envbuf));
-    console.log("--env", env);
-    return stringToArrayBuffer(JSON.parse(env));
+    const envstr = arrayBufferToString(envbuf);
+    const env = JSON.parse(envstr);
+    return stringToArrayBuffer(JSON.stringify(env));
 }
 
-function getCallData() {
+function getCallData_() {
     const calldbuf = wasmx.getCallData();
-    console.log("--calldbuf", calldbuf);
-    const data = JSON.parse(arrayBufferToString(envbuf));
-    console.log("--data", data);
-    return stringToArrayBuffer(JSON.parse(data));
+    const data = JSON.parse(arrayBufferToString(calldbuf));
+    return stringToArrayBuffer(JSON.stringify(data));
 }
 
-function getBlockHash(address) {
-
+function getBlockHash_(blockNumber) {
+    return wasmx.getBlockHash(blockNumber);
 }
 
-function getAccount(address) {
-
+function getAccount_(address) {
+    const addrbuf = wasmx.bech32StringToBytes(address);
+    const accountbuf = wasmx.getAccount(addrbuf);
+    const account = JSON.parse(arrayBufferToString(accountbuf));
+    return stringToArrayBuffer(JSON.stringify(account))
 }
 
-function getBalance(address) {
+function getBalance_(address) {
     const bz = wasmx.bech32StringToBytes(address);
-    const balance = wasmx.getBalance(bz);
-    return balance;
+    return wasmx.getBalance(bz);
 }
 
-function keccak256(data) {
-
+function keccak256_(data) {
+    const databz = stringToArrayBuffer(data);
+    return wasmx.keccak256(databz);
 }
 
-function createAccount() {
-
+function instantiateAccount(codeId, initMsg, balance) {
+    const msgbuf = hexStringToArrayBuffer(initMsg);
+    const balancebuf = hexStringToArrayBuffer(balance);
+    return wasmx.instantiateAccount(codeId, msgbuf, balancebuf);
 }
 
-function createAccount2() {
-
+function instantiateAccount2(codeId, salt, initMsg, balance) {
+    return wasmx.instantiateAccount2(codeId, hexStringToArrayBuffer(salt), hexStringToArrayBuffer(initMsg), hexStringToArrayBuffer(balance));
 }
 
 function store(key_, value_) {
-    console.log("-store-dataObj-key_-", key_)
-    console.log("-store-dataObj-value_-", value_)
-    const key = new Uint8Array(key_);
-    const value = new Uint8Array(value_);
-    console.log("-store-dataObj-key-", key)
-    console.log("-store-dataObj-value-", value)
-    wasmx.storageStore(key.buffer, value.buffer);
+    const key = stringToArrayBuffer(key_);
+    const value = stringToArrayBuffer(value_);
+    wasmx.storageStore(key, value);
 }
 
 function load(key_) {
-    const key = new Uint8Array(key_);
+    const key = stringToArrayBuffer(key_);
     return wasmx.storageLoad(key);
 }
 
@@ -98,4 +97,8 @@ function arrayBufferToString(arrayBuffer) {
     return result;
 }
 
-const hexStringToArrayBuffer = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16))).buffer;
+// const hexStringToArrayBuffer = hexString => new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16))).buffer;
+
+const hexStringToArrayBuffer = hexString => new Uint8Array(hexString.match(/[\da-f]{2}/gi).map(function (h) {
+    return parseInt(h, 16)
+})).buffer;

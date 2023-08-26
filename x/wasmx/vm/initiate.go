@@ -45,15 +45,23 @@ func InitiateWasmxEnv1(context *Context, contractVm *wasmedge.VM, dep *types.Sys
 	return cleanups, nil
 }
 
-func InitiateWasmxEnv2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateKeccak256() (*wasmedge.VM, []func(), error) {
 	var cleanups []func()
 	var err error
 	keccakVm := wasmedge.NewVM()
 	err = wasmutils.InstantiateWasm(keccakVm, "", interpreters.Keccak256Util)
 	if err != nil {
-		return cleanups, err
+		return nil, cleanups, err
 	}
 	cleanups = append(cleanups, keccakVm.Release)
+	return keccakVm, cleanups, nil
+}
+
+func InitiateWasmxEnv2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	keccakVm, cleanups, err := InitiateKeccak256()
+	if err != nil {
+		return cleanups, err
+	}
 	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
 
 	wasmx := BuildWasmxEnv2(context)
@@ -92,6 +100,13 @@ func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDe
 	if err != nil {
 		return cleanups, err
 	}
+
+	keccakVm, cleanups2, err := InitiateKeccak256()
+	cleanups = append(cleanups, cleanups2...)
+	if err != nil {
+		return cleanups, err
+	}
+	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
 
 	return cleanups, nil
 }
