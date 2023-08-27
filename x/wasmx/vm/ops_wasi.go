@@ -486,7 +486,7 @@ func wasi_bech32BytesToString(context interface{}, callframe *wasmedge.CallingFr
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	addr := sdk.AccAddress(addrbz)
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
 	data := []byte(addr.String())
 	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
 	if err != nil {
