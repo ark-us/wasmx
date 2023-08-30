@@ -229,6 +229,10 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().True(len(resp) > 0)
 
+	data = []byte(fmt.Sprintf(`{"getCode":["%s"]}`, contractAddress.String()))
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(demoPyInterpret, resp)
+
 	initMsg := types.WasmxExecutionMessage{Data: []byte(``)}
 	initMsgBz, err := json.Marshal(initMsg)
 	s.Require().NoError(err)
