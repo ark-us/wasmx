@@ -334,17 +334,20 @@ func (s AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []b
 	return codeId
 }
 
-func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
+func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string, metadata *types.CodeMetadata) (uint64, sdk.AccAddress) {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.S.Require().NoError(err)
+	if metadata == nil {
+		metadata = &types.CodeMetadata{Name: "mycontract"}
+	}
 	storeCodeMsg := &types.MsgDeployCode{
 		Sender:   sender.Address.String(),
 		ByteCode: code,
 		Deps:     deps,
-		Metadata: types.CodeMetadata{Name: "mycontract"},
+		Metadata: *metadata,
 		Msg:      msgbz,
 		Funds:    funds,
-		// Label:    label,
+		Label:    label,
 	}
 
 	res := s.DeliverTx(sender, storeCodeMsg)
@@ -357,8 +360,8 @@ func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string
 	return codeId, contractAddress
 }
 
-func (s AppContext) DeployEvm(sender simulation.Account, evmcode []byte, initMsg types.WasmxExecutionMessage, funds sdk.Coins, label string) (uint64, sdk.AccAddress) {
-	return s.Deploy(sender, evmcode, []string{types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label)
+func (s AppContext) DeployEvm(sender simulation.Account, evmcode []byte, initMsg types.WasmxExecutionMessage, funds sdk.Coins, label string, metadata *types.CodeMetadata) (uint64, sdk.AccAddress) {
+	return s.Deploy(sender, evmcode, []string{types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label, metadata)
 }
 
 func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) sdk.AccAddress {

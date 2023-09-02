@@ -2,10 +2,13 @@ package keeper_test
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
+	interfacesTestdata "mythos/v1/x/wasmx/keeper/testdata/interfaces"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -41,6 +44,12 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	codeIdGo := appA.StoreCode(sender, forwardGo, nil)
 	contractAddressGo := appA.InstantiateCode(sender, codeIdGo, types.WasmxExecutionMessage{Data: []byte{}}, "forwardGo", nil)
 
+	evmcode, err := hex.DecodeString(testdata.ForwardContract)
+	s.Require().NoError(err)
+	_, contractAddressEvm := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "ForwardContract", &types.CodeMetadata{Abi: interfacesTestdata.ForwardEvmStr})
+	// forwardHex := "d5c4c85c" // "forward(string,address[])",
+	// forwardGetHex := "7f2f2ad8" // "forward_get(address[])"
+
 	// go
 	data := []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",[]}`))
 	resp := appA.ExecuteContract(sender, contractAddressGo, types.WasmxExecutionMessage{Data: data}, nil, nil)
@@ -64,6 +73,14 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s","%s"]]}`, contractAddressJs.String(), contractAddressGo.String()))
 	resp = appA.ExecuteContract(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	fmt.Println("-----GetLog--py -> js -> go-", resp.GetLog())
+	fmt.Println("-----data---", resp.GetData(), string(resp.GetData()))
+
+	// js -> evm
+	// contractAddressEvm
+	fmt.Println("====js -> evm=====")
+	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, contractAddressEvm.String()))
+	resp = appA.ExecuteContract(sender, contractAddressJs, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	fmt.Println("-----GetLog--js -> evm-", resp.GetLog())
 	fmt.Println("-----data---", resp.GetData(), string(resp.GetData()))
 
 	// get go

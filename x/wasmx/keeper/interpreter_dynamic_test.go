@@ -56,7 +56,7 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
 	initvaluebz, err := hex.DecodeString(initvalue)
 	s.Require().NoError(err)
-	_, contractAddress := appA.Deploy(sender, evmcode, []string{newlabel}, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage")
+	_, contractAddress := appA.Deploy(sender, evmcode, []string{newlabel}, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
@@ -82,7 +82,7 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
 	initvaluebz, err := hex.DecodeString(initvalue)
 	s.Require().NoError(err)
-	_, caddr := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage")
+	_, caddr := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
 	qres, memsnap, err := appA.WasmxQueryDebug(sender, caddr, types.WasmxExecutionMessage{Data: appA.Hex2bz("6d4ce63c")}, nil, nil)
 	s.Require().NoError(err)
 	moduleMem := parseMem(memsnap)
@@ -103,7 +103,7 @@ func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
 
 	evmcode, err := hex.DecodeString("6019600d60003960196000f3fe6fc84a6e6ec1e7f30f5c812eeba420f76960005260206000f3")
 	s.Require().NoError(err)
-	_, caddr := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "push16")
+	_, caddr := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "push16", nil)
 	qres, memsnap, err := appA.WasmxQueryDebug(sender, caddr, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil)
 	s.Require().NoError(err)
 	moduleMem := parseMem(memsnap)
