@@ -1,6 +1,8 @@
 import * as wasmx from 'wasmx';
 
-export function instantiate() {}
+export function instantiate() {
+    store("javascript");
+}
 
 export function main(dataObj) {
     console.log("--js-main", Object.keys(dataObj))
@@ -14,13 +16,13 @@ export function main(dataObj) {
 
 function forward(value, addresses) {
     console.log("--js-forward", value, addresses)
-    value = value + "javascript -> "
-    store(value)
-    doLog(stringToArrayBuffer(value), [])
+    value = value + arrayBufferToString(load())
+    doLog(stringToArrayBuffer(value), []);
 
     if (addresses.length == 0) {
         return stringToArrayBuffer(value);
     }
+    value = value + " -> "
     let addressbech32 = addresses.shift();
     let calldata = JSON.stringify({"forward":[value, addresses]})
     let address = wasmx.bech32StringToBytes(addressbech32)
@@ -45,7 +47,7 @@ function forward_get(addresses) {
     if (response.success != 0) {
         throw new Error("[js] call_static failed");
     }
-    let data = new Uint8Array([...response.data, ...new Uint8Array(load())]);
+    let data = new Uint8Array([...new Uint8Array(load()), ...new Uint8Array(stringToArrayBuffer(" -> ")), ...response.data]);
     return data.buffer;
 }
 

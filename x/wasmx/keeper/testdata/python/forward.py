@@ -2,7 +2,7 @@ import json
 from wasmx import call, call_static, bech32_string_to_bytes, log, storage_store, storage_load, log
 
 def instantiate():
-    pass
+    store("python")
 
 def main(input):
     print("--py-main", input)
@@ -13,13 +13,14 @@ def main(input):
     raise ValueError('Invalid function')
 
 def forward(value, addresses):
-    value = value + "python -> "
+    value = value + load().decode()
     print("--py-forward", value, addresses)
-    store(value)
     doLog(value.encode(), [])
 
     if len(addresses) == 0:
         return value.encode()
+
+    value = value + " -> "
     addressbech32 = addresses.pop(0)
     print("--py-forward call: ", addressbech32, addresses)
     calldata = json.dumps({"forward":[value, addresses]})
@@ -43,7 +44,7 @@ def forward_get(addresses):
     if response["success"] != 0:
         raise ValueError('[py] call_static failed')
     data = bytes(response["data"])
-    return data + load()
+    return load() + " -> ".encode() + data
 
 def store(a):
     value = a.encode()

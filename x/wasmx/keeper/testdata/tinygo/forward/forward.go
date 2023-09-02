@@ -10,7 +10,9 @@ import (
 
 //go:wasm-module forward
 //export instantiate
-func instantiate() {}
+func instantiate() {
+	storageStore("tinygo")
+}
 
 type Calldata struct {
 	Forward    []string `json:"forward,omitempty"`
@@ -49,13 +51,15 @@ func main() {
 }
 
 func forward(value string, addrs []string) []byte {
-	value = value + "golang -> "
-	storageStore(value)
+	value = value + string(storageLoad())
 	var topics [][32]byte
 	wasmx.Log([]byte(value), topics)
+
 	if len(addrs) == 0 {
 		return []byte(value)
 	}
+
+	value = value + " -> "
 	address, addrs := addrs[0], addrs[1:]
 	calldata, err := json.Marshal(ForwardCalldata{Value: value, Addresses: addrs})
 	if err != nil {
@@ -81,7 +85,9 @@ func forwardGet(addrs []string) []byte {
 	if !success {
 		panic("[go] call_static failed")
 	}
-	return append(data, storageLoad()...)
+	rdata := append(storageLoad(), []byte(" -> ")...)
+	rdata = append(rdata, data...)
+	return rdata
 }
 
 func storageStore(value string) {
