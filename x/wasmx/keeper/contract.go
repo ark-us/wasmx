@@ -110,7 +110,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 }
 
 func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
-	_, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
 	if err != nil {
 		return types.ContractDependency{}, err
 	}
@@ -118,12 +118,14 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 	filepath := k.wasmvm.GetFilePath(codeInfo)
 
 	return types.ContractDependency{
-		Address:    addr,
-		StoreKey:   prefixStoreKey,
-		FilePath:   filepath,
-		SystemDeps: sdeps,
-		Bytecode:   codeInfo.InterpretedBytecodeRuntime,
-		CodeHash:   codeInfo.CodeHash,
+		Address:       addr,
+		StoreKey:      prefixStoreKey,
+		FilePath:      filepath,
+		SystemDeps:    sdeps,
+		Bytecode:      codeInfo.InterpretedBytecodeRuntime,
+		CodeHash:      codeInfo.CodeHash,
+		CodeId:        contractInfo.CodeId,
+		SystemDepsRaw: codeInfo.Deps,
 	}, nil
 }
 
@@ -432,7 +434,7 @@ func (k Keeper) instantiateInternal(
 	}
 	// prepare params for contract instantiate call
 	info := types.NewInfo(creator, creator, deposit)
-	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, info)
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
 	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
 
 	// create prefixed data store
@@ -584,7 +586,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	}
 
 	info := types.NewInfo(caller, caller, coins)
-	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
@@ -629,7 +631,7 @@ func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8
 
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
-	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, types.MessageInfo{})
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, types.MessageInfo{})
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
@@ -695,7 +697,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	}
 
 	info := types.NewInfo(origin, caller, coins)
-	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -768,7 +770,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	}
 
 	info := types.NewInfo(caller, caller, coins)
-	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, info)
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)

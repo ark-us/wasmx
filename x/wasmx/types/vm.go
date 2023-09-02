@@ -144,6 +144,8 @@ var EWASM_ENV_1 = "ewasm_env_1"
 // current cosmwasm interface
 var CW_ENV_8 = "interface_version_8"
 
+var DEFAULT_SYS_DEP = EWASM_ENV_1
+
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_ENV_1: true,
 	WASMX_ENV_2: true,

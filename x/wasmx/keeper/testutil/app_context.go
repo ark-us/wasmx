@@ -614,7 +614,13 @@ func (s AppContext) GetProposalIdFromLog(logstr string) (uint64, error) {
 	return 0, errors.New("not found")
 }
 
-func GetSdkEvents(events []abci.Event, evtype string) []sdk.Event {
+func (s AppContext) PrintEvents(events []abci.Event) {
+	for i, ev := range events {
+		fmt.Println("-", i, "-", ev.String())
+	}
+}
+
+func (s AppContext) GetSdkEventsByType(events []abci.Event, evtype string) []sdk.Event {
 	sdkEvents := make([]sdk.Event, len(events))
 	for _, ev := range events {
 		if ev.GetType() != evtype {

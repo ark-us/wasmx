@@ -15,7 +15,7 @@ def store(a: str):
     key = "pystore".encode()
     storage_store(key, value)
 
-def load() -> str:
+def load() -> bytes:
     key = "pystore".encode()
     value = storage_load(key)
     return value

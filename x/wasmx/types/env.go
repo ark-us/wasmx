@@ -87,10 +87,10 @@ type ChainInfo struct {
 }
 
 type EnvContractInfo struct {
-	Address  sdk.AccAddress `json:"address"`
-	CodeHash RawBytes       `json:"codeHash"`
-	CodeId   uint64         `json:"codeId"`
-	Deps     []string       `json:"deps"`
+	Address    sdk.AccAddress `json:"address"`
+	CodeHash   RawBytes       `json:"codeHash"`
+	CodeId     uint64         `json:"codeId"`
+	SystemDeps []string       `json:"deps"`
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
 	Bytecode RawBytes `json:"bytecode"`
@@ -130,14 +130,16 @@ type MessageInfo struct {
 }
 
 type ContractDependency struct {
-	Address    sdk.AccAddress
-	Role       string
-	Label      string
-	StoreKey   []byte
-	FilePath   string
-	SystemDeps []SystemDep
-	Bytecode   []byte
-	CodeHash   []byte
+	Address       sdk.AccAddress
+	Role          string
+	Label         string
+	StoreKey      []byte
+	FilePath      string
+	SystemDeps    []SystemDep
+	Bytecode      []byte
+	CodeHash      []byte
+	CodeId        uint64
+	SystemDepsRaw []string
 }
 
 func (u RawBytes) MarshalJSON() ([]byte, error) {
@@ -202,7 +204,7 @@ func (m EnvContractInfo) MarshalJSON() ([]byte, error) {
 		"codeHash": m.CodeHash,
 		// "bytecode": m.Bytecode,
 		"codeId": m.CodeId,
-		"deps":   m.Deps,
+		"deps":   m.SystemDeps,
 	})
 }
 

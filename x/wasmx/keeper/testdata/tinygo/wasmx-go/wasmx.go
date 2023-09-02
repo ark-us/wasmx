@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
-	"runtime"
 	"unsafe"
 )
 
@@ -77,7 +76,6 @@ type CallResult struct {
 }
 
 func StorageStore(key, value []byte) {
-	// Log(fmt.Sprintf("tinygo!! storageStore %s, %s", key, value))
 	keyPtr, keyLength := BytesToLeakedPtr(key)
 	valuePtr, valueLength := BytesToLeakedPtr(value)
 	StorageStore_(keyPtr, keyLength, valuePtr, valueLength)
@@ -147,11 +145,16 @@ func CallStatic(gasLimit uint64, addrBech32 string, calldata []byte) (bool, []by
 	return calld.Success == 0, calld.Data
 }
 
+type WasmxLog struct {
+	Data   []byte
+	Topics [][32]byte
+}
+
 // log a message to the console using _log.
-func Log(message string) {
-	ptr, size := StringToPtr(message)
+func Log(data []byte, topics [][32]byte) {
+	encoded, _ := json.Marshal(WasmxLog{Data: data, Topics: topics})
+	ptr, size := BytesToLeakedPtr(encoded)
 	Log_(ptr, size)
-	runtime.KeepAlive(message) // keep message alive until ptr is no longer needed.
 }
 
 func splitPtr(ptr uint64) (uint32, uint32) {

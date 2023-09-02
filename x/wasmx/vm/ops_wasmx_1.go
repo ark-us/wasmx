@@ -86,11 +86,16 @@ func wasmxLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	if logtype == "" {
 		logtype = LOG_TYPE_WASMX
 	}
+	dependency := types.DEFAULT_SYS_DEP
+	if len(ctx.Env.Contract.SystemDeps) > 0 {
+		dependency = ctx.Env.Contract.SystemDeps[0]
+	}
 	log := WasmxLog{
-		Type:            logtype,
-		ContractAddress: ctx.Env.Contract.Address,
-		Data:            wlog.Data,
-		Topics:          wlog.Topics,
+		Type:             logtype,
+		ContractAddress:  ctx.Env.Contract.Address,
+		SystemDependency: dependency,
+		Data:             wlog.Data,
+		Topics:           wlog.Topics,
 	}
 	ctx.Logs = append(ctx.Logs, log)
 	returns := make([]interface{}, 0)
