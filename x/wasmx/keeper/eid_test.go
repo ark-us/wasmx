@@ -315,7 +315,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 	evmcode, err := hex.DecodeString(testdata.Curve384Test)
 	s.Require().NoError(err)
 
-	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin")
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin", nil)
 	deps := []string{"0x0000000000000000000000000000000000000005"}
 
 	// test_cadd
@@ -404,7 +404,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() 
 	evmcode, err := hex.DecodeString(testdata.Curve384Test)
 	s.Require().NoError(err)
 
-	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin")
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "curve384testbin", nil)
 
 	msgHash := "d093b45258f603020e15de2c058029ae30e73c794212b8c10f58180cb5ce0beb"
 	rhi := "0000000000000000000000000000000042359a721ee3f60efdb4096fd48c32e8"
@@ -581,7 +581,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 
 	evmcode, err := hex.DecodeString(testdata.WalletRegistry)
 	s.Require().NoError(err)
-	_, registryAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "create")
+	_, registryAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "create", nil)
 	fmt.Println("--registryAddress--", types.Evm32AddressFromAcc(registryAddress).Hex())
 
 	fmt.Println("--register--")

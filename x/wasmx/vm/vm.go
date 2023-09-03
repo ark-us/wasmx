@@ -47,7 +47,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 
 	// set default
 	if len(systemDeps) == 0 {
-		label := types.EWASM_VM_EXPORT + "1"
+		label := types.DEFAULT_SYS_DEP
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
 
@@ -92,13 +92,9 @@ func runCleanups(cleanups []func()) {
 	}
 }
 
-func buildExecutionContextClassic(filePath string, bytecode []byte, codeHash []byte, storeKey []byte, systemDeps []types.SystemDep, conf *wasmedge.Configure) *ContractContext {
+func buildExecutionContextClassic(info types.ContractDependency) *ContractContext {
 	contractCtx := &ContractContext{
-		FilePath:         filePath,
-		ContractStoreKey: storeKey,
-		SystemDeps:       systemDeps,
-		Bytecode:         bytecode,
-		CodeHash:         codeHash,
+		ContractInfo: info,
 	}
 	return contractCtx
 }
@@ -234,14 +230,14 @@ func ExecuteWasmInterpreted(
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
-		contractContext := buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, conf)
+		contractContext := buildExecutionContextClassic(dep)
 		if err != nil {
 			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic("", []byte{}, []byte{}, storeKey, systemDeps, conf)
+	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, SystemDeps: systemDeps})
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
@@ -254,8 +250,8 @@ func ExecuteWasmInterpreted(
 	}
 	selfContext.Vm = contractVm
 	setExecutionBytecode(context, contractVm, funcName)
-	selfContext.Bytecode = context.Env.Contract.Bytecode
-	selfContext.CodeHash = context.Env.Contract.CodeHash
+	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
+	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
 	_, err = executeHandler(context, contractVm, funcName)
@@ -327,14 +323,14 @@ func ExecuteWasm(
 	}
 
 	for _, dep := range dependencies {
-		contractContext := buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, conf)
+		contractContext := buildExecutionContextClassic(dep)
 		if err != nil {
 			return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(env.Contract.FilePath, []byte{}, []byte{}, storeKey, systemDeps, conf)
+	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, SystemDeps: systemDeps})
 	if err != nil {
 		return types.ContractResponse{}, sdkerrors.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
@@ -349,8 +345,8 @@ func ExecuteWasm(
 	selfContext.Vm = contractVm
 
 	setExecutionBytecode(context, contractVm, funcName)
-	selfContext.Bytecode = context.Env.Contract.Bytecode
-	selfContext.CodeHash = context.Env.Contract.CodeHash
+	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
+	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
 	_, err = executeHandler(context, contractVm, funcName)
@@ -455,6 +451,10 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 		attributes = append(attributes, types.EventAttribute{
 			Key:   types.AttributeKeyCallContractAddress,
 			Value: log.ContractAddress.String(),
+		})
+		attributes = append(attributes, types.EventAttribute{
+			Key:   types.AttributeKeyDependency,
+			Value: log.SystemDependency,
 		})
 		for _, topic := range log.Topics {
 			attributes = append(attributes, types.EventAttribute{

@@ -125,7 +125,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	s.Require().NoError(err)
 	initvaluebz, err := hex.DecodeString("000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000005746f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000")
 	s.Require().NoError(err)
-	_, contractAddressErc20 := appA.DeployEvm(sender, evmcodeErc20, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "ERC20")
+	_, contractAddressErc20 := appA.DeployEvm(sender, evmcodeErc20, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "ERC20", nil)
 	contractAddressErc20Evm := types.EvmAddressFromAcc(contractAddressErc20)
 
 	// Mint Erc20 for sender2
@@ -136,7 +136,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	// Deploy AtomicSwap
 	evmcodeSwap, err := hex.DecodeString(testdata.AtomicSwap)
 	s.Require().NoError(err)
-	_, contractAddressSwap := appA.DeployEvm(sender, evmcodeSwap, types.WasmxExecutionMessage{Data: []byte{}}, nil, "AtomicSwap")
+	_, contractAddressSwap := appA.DeployEvm(sender, evmcodeSwap, types.WasmxExecutionMessage{Data: []byte{}}, nil, "AtomicSwap", nil)
 	atomicSwapAbi, err := aabi.JSON(strings.NewReader(testdata.AtomicSwapAbiStr))
 	s.Require().NoError(err)
 

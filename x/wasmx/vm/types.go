@@ -25,15 +25,11 @@ type NativePrecompileHandler interface {
 }
 
 type ContractContext struct {
-	FilePath         string
-	Vm               *wasmedge.VM
-	VmAst            *wasmedge.AST
-	VmExecutor       *wasmedge.Executor
-	ContractStoreKey []byte
-	Context          *Context
-	SystemDeps       []types.SystemDep
-	Bytecode         []byte // runtime bytecode
-	CodeHash         []byte
+	Vm           *wasmedge.VM
+	VmAst        *wasmedge.AST
+	VmExecutor   *wasmedge.Executor
+	Context      *Context
+	ContractInfo types.ContractDependency
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
@@ -46,11 +42,11 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 		newctx.ReturnData = data
 		return data, nil
 	}
-	filepath := c.FilePath
-	if types.HasUtf8SystemDep(c.SystemDeps) {
+	filepath := c.ContractInfo.FilePath
+	if types.HasUtf8SystemDep(c.ContractInfo.SystemDeps) {
 		filepath = ""
 	}
-	contractVm, cleanups, err := InitiateWasm(newctx, filepath, nil, c.SystemDeps)
+	contractVm, cleanups, err := InitiateWasm(newctx, filepath, nil, c.ContractInfo.SystemDeps)
 	if err != nil {
 		runCleanups(cleanups)
 		return nil, err
@@ -58,7 +54,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	setExecutionBytecode(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
-	executeHandler := GetExecuteFunctionHandler(c.SystemDeps)
+	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
 	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 	if err != nil {
 		runCleanups(cleanups)
@@ -117,8 +113,9 @@ type EwasmFunctionWrapper struct {
 }
 
 type WasmxLog struct {
-	ContractAddress sdk.AccAddress
-	Data            []byte
-	Topics          [][32]byte
-	Type            string
+	ContractAddress  sdk.AccAddress
+	SystemDependency string
+	Data             []byte
+	Topics           [][32]byte
+	Type             string
 }

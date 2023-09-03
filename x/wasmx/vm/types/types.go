@@ -14,16 +14,19 @@ type ContextI interface {
 	GetCosmosHandler() types.WasmxCosmosHandler
 }
 
+// Internal call request
 type CallRequest struct {
-	To       sdk.AccAddress `json:"to"`
-	From     sdk.AccAddress `json:"from"`
-	Value    *big.Int       `json:"value"`
-	GasLimit *big.Int       `json:"gasLimit"`
-	Calldata types.RawBytes `json:"calldata"`
-	Bytecode types.RawBytes `json:"bytecode"`
-	CodeHash types.RawBytes `json:"codeHash"`
-	FilePath string         `json:"filePath"`
-	IsQuery  bool           `json:"isQuery"`
+	To         sdk.AccAddress `json:"to"`
+	From       sdk.AccAddress `json:"from"`
+	Value      *big.Int       `json:"value"`
+	GasLimit   *big.Int       `json:"gasLimit"`
+	Calldata   types.RawBytes `json:"calldata"`
+	Bytecode   types.RawBytes `json:"bytecode"`
+	CodeHash   types.RawBytes `json:"codeHash"`
+	FilePath   string         `json:"filePath"`
+	CodeId     uint64         `json:"codeId"`
+	SystemDeps []string       `json:"systemDeps"`
+	IsQuery    bool           `json:"isQuery"`
 }
 
 type CallRequestRaw struct {

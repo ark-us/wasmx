@@ -143,15 +143,17 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 			success = int32(0)
 		} else {
 			req := vmtypes.CallRequest{
-				To:       addr,
-				From:     ctx.Env.Contract.Address,
-				Value:    value,
-				GasLimit: big.NewInt(gasLimit),
-				Calldata: calldata,
-				Bytecode: contractContext.Bytecode,
-				CodeHash: contractContext.CodeHash,
-				FilePath: contractContext.FilePath,
-				IsQuery:  false,
+				To:         addr,
+				From:       ctx.Env.Contract.Address,
+				Value:      value,
+				GasLimit:   big.NewInt(gasLimit),
+				Calldata:   calldata,
+				Bytecode:   contractContext.ContractInfo.Bytecode,
+				CodeHash:   contractContext.ContractInfo.CodeHash,
+				FilePath:   contractContext.ContractInfo.FilePath,
+				CodeId:     contractContext.ContractInfo.CodeId,
+				SystemDeps: contractContext.ContractInfo.SystemDepsRaw,
+				IsQuery:    false,
 			}
 			success, returnData = WasmxCall(ctx, req)
 		}
@@ -200,15 +202,17 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 		success = int32(0)
 	} else {
 		req := vmtypes.CallRequest{
-			To:       addr,
-			From:     ctx.Env.Contract.Address,
-			Value:    big.NewInt(0),
-			GasLimit: big.NewInt(gasLimit),
-			Calldata: calldata,
-			Bytecode: contractContext.Bytecode,
-			CodeHash: contractContext.CodeHash,
-			FilePath: contractContext.FilePath,
-			IsQuery:  true,
+			To:         addr,
+			From:       ctx.Env.Contract.Address,
+			Value:      big.NewInt(0),
+			GasLimit:   big.NewInt(gasLimit),
+			Calldata:   calldata,
+			Bytecode:   contractContext.ContractInfo.Bytecode,
+			CodeHash:   contractContext.ContractInfo.CodeHash,
+			FilePath:   contractContext.ContractInfo.FilePath,
+			CodeId:     contractContext.ContractInfo.CodeId,
+			SystemDeps: contractContext.ContractInfo.SystemDepsRaw,
+			IsQuery:    true,
 		}
 		success, returnData = WasmxCall(ctx, req)
 	}
@@ -238,18 +242,18 @@ func wasi_getAccount(context interface{}, callframe *wasmedge.CallingFrame, para
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
 	code := types.EnvContractInfo{
-		Address:  address,
-		CodeHash: types.EMPTY_BYTES32,
-		CodeId:   0,
-		Deps:     []string{},
+		Address:    address,
+		CodeHash:   types.EMPTY_BYTES32,
+		CodeId:     0,
+		SystemDeps: []string{},
 	}
 	contractInfo, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address)
 	if err == nil {
 		code = types.EnvContractInfo{
-			Address:  address,
-			CodeHash: codeInfo.CodeHash,
-			CodeId:   contractInfo.CodeId,
-			Deps:     codeInfo.Deps,
+			Address:    address,
+			CodeHash:   codeInfo.CodeHash,
+			CodeId:     contractInfo.CodeId,
+			SystemDeps: codeInfo.Deps,
 		}
 	}
 
@@ -498,12 +502,32 @@ func wasi_bech32BytesToString(context interface{}, callframe *wasmedge.CallingFr
 }
 
 func wasiLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	keybz, err := readMem(callframe, params[0], params[1])
+	ctx := context.(*Context)
+	data, err := readMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO only in debug mode
-	fmt.Println("LOG: ", string(keybz))
+	// // TODO show in debug mode
+	// fmt.Println("LOG: ", string(data))
+	var wlog WasmxJsonLog
+	err = json.Unmarshal(data, &wlog)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// fmt.Println("LOG data: ", string(wlog.Data))
+	dependency := types.DEFAULT_SYS_DEP
+	if len(ctx.Env.Contract.SystemDeps) > 0 {
+		dependency = ctx.Env.Contract.SystemDeps[0]
+	}
+	log := WasmxLog{
+		Type:             LOG_TYPE_WASMX,
+		ContractAddress:  ctx.Env.Contract.Address,
+		SystemDependency: dependency,
+		Data:             wlog.Data,
+		Topics:           wlog.Topics,
+	}
+	ctx.Logs = append(ctx.Logs, log)
+
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -744,7 +768,7 @@ func writeDynMemDefaultMalloc(ctx *Context, callframe *wasmedge.CallingFrame, da
 }
 
 func allocateMemDefaultMalloc(vm *wasmedge.VM, size int32) (int32, error) {
-	result, err := vm.Execute("malloc", size)
+	result, err := vm.Execute(types.MEMORY_EXPORT_MALLOC, size)
 	if err != nil {
 		return 0, err
 	}

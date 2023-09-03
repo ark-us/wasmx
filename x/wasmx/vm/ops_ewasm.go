@@ -381,8 +381,8 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 				Value:    value,
 				GasLimit: big.NewInt(gasLimit),
 				Calldata: calldata,
-				Bytecode: contractContext.Bytecode,
-				CodeHash: contractContext.CodeHash,
+				Bytecode: contractContext.ContractInfo.Bytecode,
+				CodeHash: contractContext.ContractInfo.CodeHash,
 				IsQuery:  false,
 			}
 			success, returnData = WasmxCall(ctx, req)
@@ -436,8 +436,8 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 			Value:    value,
 			GasLimit: big.NewInt(gasLimit),
 			Calldata: calldata,
-			Bytecode: contractContext.Bytecode,
-			CodeHash: contractContext.CodeHash,
+			Bytecode: contractContext.ContractInfo.Bytecode,
+			CodeHash: contractContext.ContractInfo.CodeHash,
 			IsQuery:  false,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -486,8 +486,8 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 			Value:    ctx.Env.CurrentCall.Funds,
 			GasLimit: big.NewInt(gasLimit),
 			Calldata: calldata,
-			Bytecode: contractContext.Bytecode,
-			CodeHash: contractContext.CodeHash,
+			Bytecode: contractContext.ContractInfo.Bytecode,
+			CodeHash: contractContext.ContractInfo.CodeHash,
 			IsQuery:  false,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -536,8 +536,8 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 			Value:    big.NewInt(0),
 			GasLimit: big.NewInt(gasLimit),
 			Calldata: calldata,
-			Bytecode: contractContext.Bytecode,
-			CodeHash: contractContext.CodeHash,
+			Bytecode: contractContext.ContractInfo.Bytecode,
+			CodeHash: contractContext.ContractInfo.CodeHash,
 			IsQuery:  true,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -572,7 +572,7 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
@@ -619,7 +619,7 @@ func create2(context interface{}, callframe *wasmedge.CallingFrame, params []int
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
@@ -656,8 +656,12 @@ func log(context interface{}, callframe *wasmedge.CallingFrame, params []interfa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	dependency := types.DEFAULT_SYS_DEP
+	if len(ctx.Env.Contract.SystemDeps) > 0 {
+		dependency = ctx.Env.Contract.SystemDeps[0]
+	}
 
-	log := WasmxLog{Type: LOG_TYPE_EWASM, Data: data, ContractAddress: ctx.Env.Contract.Address}
+	log := WasmxLog{Type: LOG_TYPE_EWASM, Data: data, ContractAddress: ctx.Env.Contract.Address, SystemDependency: dependency}
 	topicCount := int(params[2].(int32))
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
 

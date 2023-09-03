@@ -206,7 +206,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	// "40dcae86": "sendCoins(address)"
 	evmcode, err := hex.DecodeString(testdata.MythosAliasTest)
 	s.Require().NoError(err)
-	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "MythosAliasTest")
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "MythosAliasTest", nil)
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 

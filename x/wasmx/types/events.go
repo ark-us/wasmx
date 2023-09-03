@@ -29,6 +29,8 @@ const (
 	AttributeKeyResultDataHex      = "result"
 	AttributeKeyRequiredCapability = "required_capability"
 
+	AttributeKeyDependency = "dependency"
+
 	AttributeKeyRole      = "role"
 	AttributeKeyRoleLabel = "role_label"
 )

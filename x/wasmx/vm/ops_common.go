@@ -18,7 +18,7 @@ func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
 	if err != nil {
 		return nil
 	}
-	depContext = buildExecutionContextClassic(dep.FilePath, dep.Bytecode, dep.CodeHash, dep.StoreKey, dep.SystemDeps, nil)
+	depContext = buildExecutionContextClassic(dep)
 	ctx.ContractRouter[addr.String()] = depContext
 	return depContext
 }
@@ -46,7 +46,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractStoreKey)
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractInfo.StoreKey)
 
 	newctx := &Context{
 		Ctx:            tempCtx,
@@ -61,10 +61,12 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 			Transaction: ctx.Env.Transaction,
 			Chain:       ctx.Env.Chain,
 			Contract: types.EnvContractInfo{
-				Address:  req.To,
-				CodeHash: req.CodeHash,
-				Bytecode: req.Bytecode,
-				FilePath: req.FilePath,
+				Address:    req.To,
+				CodeHash:   req.CodeHash,
+				Bytecode:   req.Bytecode,
+				FilePath:   req.FilePath,
+				CodeId:     req.CodeId,
+				SystemDeps: req.SystemDeps,
 			},
 			CurrentCall: callContext,
 		},

@@ -48,7 +48,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
 	initvaluebz, err := hex.DecodeString(initvalue)
 	s.Require().NoError(err)
-	codeId2, contractAddress2 := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage")
+	codeId2, contractAddress2 := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId2)
 	s.Require().NotNil(codeInfo)
 
@@ -83,7 +83,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	// a contract cannot make a system call
 	evmcode, err = hex.DecodeString(testdata.Call)
 	s.Require().NoError(err)
-	_, callAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm")
+	_, callAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm", nil)
 	msg := types.WasmxExecutionMessage{Data: append(sysAddress.Bytes(), data...)}
 	res = appA.ExecuteContractNoCheck(sender, callAddress, msg, nil, nil, 1000000, nil)
 	suite.Require().True(res.IsErr())

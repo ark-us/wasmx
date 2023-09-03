@@ -188,7 +188,7 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
@@ -233,7 +233,7 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].SystemDeps {
+	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 

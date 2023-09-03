@@ -176,8 +176,8 @@ func EvmToJsonCall(method *aabi.Method, context *Context, calld []byte) ([]byte,
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
-			req.Bytecode = contractContext.Bytecode
-			req.CodeHash = contractContext.CodeHash
+			req.Bytecode = contractContext.ContractInfo.Bytecode
+			req.CodeHash = contractContext.ContractInfo.CodeHash
 			success, returnData = WasmxCall(context, req)
 		}
 	}
