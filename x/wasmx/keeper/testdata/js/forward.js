@@ -5,7 +5,6 @@ export function instantiate() {
 }
 
 export function main(dataObj) {
-    console.log("--js-main", Object.keys(dataObj))
     if (dataObj.forward) {
         return forward(...dataObj.forward);
     } else if (dataObj.forward_get) {
@@ -15,7 +14,6 @@ export function main(dataObj) {
 }
 
 function forward(value, addresses) {
-    console.log("--js-forward", value, addresses)
     value = value + arrayBufferToString(load())
     doLog(stringToArrayBuffer(value), []);
 
@@ -83,8 +81,5 @@ function arrayBufferToString(arrayBuffer) {
 // data: ArrayBuffer, topics: []ArrayBuffer
 function doLog(databz, topics) {
     let logdata = JSON.stringify({"data": [...new Uint8Array(databz)],"topics":[]})
-
-    console.log("--js-forward logdata-", logdata)
-
     wasmx.log(stringToArrayBuffer(logdata))
 }
