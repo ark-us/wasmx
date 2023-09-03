@@ -452,7 +452,6 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 			Key:   types.AttributeKeyCallContractAddress,
 			Value: log.ContractAddress.String(),
 		})
-		fmt.Println("--AttributeKeyDependency--", log.SystemDependency)
 		attributes = append(attributes, types.EventAttribute{
 			Key:   types.AttributeKeyDependency,
 			Value: log.SystemDependency,
@@ -474,7 +473,6 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 	if isdebug {
 		mem = getMemory(contractVm)
 	}
-	fmt.Println("---events--", events)
 
 	return types.ContractResponse{
 		Data:           data,

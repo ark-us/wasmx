@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"fmt"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	dbm "github.com/tendermint/tm-db"
 
@@ -81,12 +79,10 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		newctx.GetContext().Logger().Debug(err.Error())
 	} else {
 		success = int32(0)
-		fmt.Println("---calll end", req.IsQuery)
 		if !req.IsQuery {
 			commit()
 			// Write events
 			ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
-			fmt.Println("---calll end newctx.Logs", len(newctx.Logs))
 			ctx.Logs = append(ctx.Logs, newctx.Logs...)
 		}
 	}

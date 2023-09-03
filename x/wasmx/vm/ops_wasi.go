@@ -102,12 +102,10 @@ func wasiSetExitCode(context interface{}, callframe *wasmedge.CallingFrame, para
 		return nil, wasmedge.Result_Fail
 	}
 	ctx.ReturnData = errorMsg
-	fmt.Println("--wasiSetExitCode", string(errorMsg))
 	return returns, wasmedge.Result_Fail
 }
 
 func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--wasiCallClassic--")
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 
@@ -160,7 +158,6 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 			success, returnData = WasmxCall(ctx, req)
 		}
 	}
-	fmt.Println("--wasiCallClassic-success, returnData-", success, returnData)
 
 	response := vmtypes.CallResponse{
 		Success: uint8(success),
@@ -180,7 +177,6 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 }
 
 func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--wasiCallStatic--")
 	ctx := context.(*Context)
 	returns := make([]interface{}, 1)
 
@@ -220,7 +216,6 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 		}
 		success, returnData = WasmxCall(ctx, req)
 	}
-	fmt.Println("--wasiCallStatic-success, returnData-", success, returnData)
 
 	response := vmtypes.CallResponse{
 		Success: uint8(success),
@@ -512,19 +507,18 @@ func wasiLog(context interface{}, callframe *wasmedge.CallingFrame, params []int
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// // TODO only in debug mode
-	fmt.Println("LOG: ", string(data))
+	// // TODO show in debug mode
+	// fmt.Println("LOG: ", string(data))
 	var wlog WasmxJsonLog
 	err = json.Unmarshal(data, &wlog)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("LOG data: ", string(wlog.Data))
+	// fmt.Println("LOG data: ", string(wlog.Data))
 	dependency := types.DEFAULT_SYS_DEP
 	if len(ctx.Env.Contract.SystemDeps) > 0 {
 		dependency = ctx.Env.Contract.SystemDeps[0]
 	}
-	fmt.Println("--WasmxLog--", ctx.Env.Contract.SystemDeps, dependency)
 	log := WasmxLog{
 		Type:             LOG_TYPE_WASMX,
 		ContractAddress:  ctx.Env.Contract.Address,
