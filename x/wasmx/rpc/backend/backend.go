@@ -17,10 +17,10 @@ import (
 	// "github.com/ethereum/go-ethereum/params"
 	// "github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/tendermint/tendermint/libs/log"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/cometbft/cometbft/libs/log"
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
-	// tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
+	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"

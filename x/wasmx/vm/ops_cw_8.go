@@ -7,10 +7,10 @@ import (
 	"math"
 
 	sdkerr "cosmossdk.io/errors"
+	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 

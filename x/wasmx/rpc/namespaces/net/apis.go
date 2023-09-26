@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )

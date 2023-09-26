@@ -3,8 +3,8 @@ package server
 import (
 	"time"
 
-	tmlog "github.com/tendermint/tendermint/libs/log"
-	rpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	tmlog "github.com/cometbft/cometbft/libs/log"
+	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 )
 
 func ConnectTmWS(tmRPCAddr, tmEndpoint string, logger tmlog.Logger) *rpcclient.WSClient {

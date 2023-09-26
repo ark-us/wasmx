@@ -21,12 +21,12 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/second-state/WasmEdge-go v0.13.4
+	github.com/cometbft/cometbft v0.37.2
+	github.com/cometbft/cometbft-db v0.8.0
 	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/tendermint/tendermint v0.34.24
-	github.com/tendermint/tm-db v0.6.7
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb
 	google.golang.org/grpc v1.58.2

@@ -9,7 +9,7 @@ option go_package = "mythos/v1/x/wasmx/types";
 message ContractStorage {
     // hex-encode key
     bytes key = 1 [ (gogoproto.casttype) =
-                        "github.com/tendermint/tendermint/libs/bytes.HexBytes" ];
+                        "github.com/cometbft/cometbft/libs/bytes.HexBytes" ];
     // raw value
     bytes value = 2;
 }

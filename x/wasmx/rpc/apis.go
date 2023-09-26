@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/rpc"
 
-	rpcclient "github.com/tendermint/tendermint/rpc/jsonrpc/client"
+	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
 	"mythos/v1/x/wasmx/rpc/backend"
 	"mythos/v1/x/wasmx/rpc/namespaces/eth"

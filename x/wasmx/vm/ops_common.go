@@ -1,8 +1,8 @@
 package vm
 
 import (
+	dbm "github.com/cometbft/cometbft-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm/types"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	tmlog "github.com/tendermint/tendermint/libs/log"
+	tmlog "github.com/cometbft/cometbft/libs/log"
 
 	errorsmod "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"

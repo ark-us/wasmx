@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/tendermint/tendermint/libs/log"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/server/config"

@@ -5,9 +5,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )

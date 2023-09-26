@@ -15,7 +15,7 @@ import (
 
 	// channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"

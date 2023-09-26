@@ -14,9 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/log"
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"

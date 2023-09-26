@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	// "github.com/evmos/ethermint/ethereum/eip712"
-	tmcrypto "github.com/tendermint/tendermint/crypto"
+	tmcrypto "github.com/cometbft/cometbft/crypto"
 )
 
 const (

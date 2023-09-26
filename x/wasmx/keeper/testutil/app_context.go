@@ -11,7 +11,7 @@ import (
 
 	//nolint
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	sdkerr "cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/client"

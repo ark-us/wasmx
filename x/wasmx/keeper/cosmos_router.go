@@ -5,10 +5,10 @@ import (
 	"math/big"
 
 	"cosmossdk.io/store/prefix"
+	abci "github.com/cometbft/cometbft/abci/types"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"

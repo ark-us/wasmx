@@ -8,9 +8,9 @@ import (
 
 	"golang.org/x/exp/slices"
 
+	dbm "github.com/cometbft/cometbft-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 

@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 
 	storetypes "cosmossdk.io/store/types"
+	"github.com/cometbft/cometbft/libs/log"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/tendermint/tendermint/libs/log"
 
 	cw8 "mythos/v1/x/wasmx/cw8"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
