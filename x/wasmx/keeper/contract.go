@@ -576,7 +576,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute")
 
 	// add more funds
 	if !coins.IsZero() {
@@ -625,9 +625,10 @@ func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8
 	}
 
 	// TODO
+	// for CosmWasm compat
 	// always consider this pinned
 	// replyCosts := k.gasRegister.ReplyCosts(true, reply)
-	// ctx.GasMeter().ConsumeGas(replyCosts, "Loading CosmWasm module: reply")
+	// ctx.GasMeter().ConsumeGas(replyCosts, "Loading WasmX module: reply")
 
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
