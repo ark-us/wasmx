@@ -5,8 +5,8 @@ import (
 	"errors"
 	"math/big"
 
-	secp256k1 "github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcec/v2"
+	secp256k1 "github.com/btcsuite/btcd/btcec/v2"
 	btc_ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	sdksecp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"

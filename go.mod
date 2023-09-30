@@ -34,7 +34,7 @@ require (
 )
 
 require (
-	github.com/btcsuite/btcd v0.22.1
+	github.com/btcsuite/btcd v0.23.4
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/rs/cors v1.10.0
