@@ -14,9 +14,9 @@ import (
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	// ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	// ibcclienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	// channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	// ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+	// ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	// channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 
 	"mythos/v1/x/wasmx/cw8/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"

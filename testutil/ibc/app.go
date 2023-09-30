@@ -23,7 +23,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
-	ibcgotesting "github.com/cosmos/ibc-go/v7/testing"
+	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
 	wasmxapp "mythos/v1/app"
 	wasmxtypes "mythos/v1/x/wasmx/types"

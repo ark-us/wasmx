@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	ibcgotesting "github.com/cosmos/ibc-go/v7/testing"
+	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 )
 
 var (

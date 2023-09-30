@@ -13,7 +13,7 @@ import (
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	// channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	// channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
