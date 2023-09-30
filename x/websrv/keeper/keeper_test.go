@@ -15,7 +15,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
+	ibcgotesting "github.com/cosmos/ibc-go/v7/testing"
 
 	app "mythos/v1/app"
 	ibctesting "mythos/v1/testutil/ibc"
