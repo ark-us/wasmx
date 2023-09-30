@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/evmos/ethermint/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -266,14 +265,14 @@ func TxSuccessOrExceedsBlockGasLimit(res *abci.ResponseDeliverTx) bool {
 }
 
 // ParseTxIndexerResult parse tm tx result to a format compatible with Ethereum.
-func ParseTxIndexerResult(txResult *tmrpctypes.ResultTx, tx sdk.Tx) (*types.TxResult, error) {
+func ParseTxIndexerResult(txResult *tmrpctypes.ResultTx, tx sdk.Tx) (*wasmxtypes.TxResult, error) {
 	// txs, err := ParseTxResult(&txResult.TxResult, tx)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to parse tx events: block %d, index %d, %v", txResult.Height, txResult.Index, err)
 	// }
 
 	// index := uint32(parsedTx.MsgIndex) // #nosec G701
-	return &types.TxResult{
+	return &wasmxtypes.TxResult{
 		Height:  txResult.Height,
 		TxIndex: txResult.Index,
 		// MsgIndex:          index,

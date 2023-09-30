@@ -9,7 +9,6 @@ require (
 	github.com/cosmos/gogoproto v1.4.3
 	github.com/cosmos/ibc-go/v6 v6.1.0
 	github.com/ethereum/go-ethereum v1.11.5
-	github.com/evmos/ethermint v0.21.0
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-session/session v3.1.2+incompatible
 	github.com/gogo/protobuf v1.3.3

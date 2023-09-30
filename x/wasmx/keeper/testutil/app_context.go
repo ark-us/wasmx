@@ -32,9 +32,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	cryptoeth "github.com/ethereum/go-ethereum/crypto"
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
 	app "mythos/v1/app"
+	"mythos/v1/crypto/ethsecp256k1"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
 )

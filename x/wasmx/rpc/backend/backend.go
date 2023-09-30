@@ -22,8 +22,6 @@ import (
 
 	// tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
 
-	etherminttypes "github.com/evmos/ethermint/types"
-
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -107,8 +105,8 @@ type EVMBackend interface {
 
 	// // Tx Info
 	GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransaction, error)
-	GetTxByEthHash(txHash common.Hash) (*etherminttypes.TxResult, error)
-	// GetTxByTxIndex(height int64, txIndex uint) (*etherminttypes.TxResult, error)
+	GetTxByEthHash(txHash common.Hash) (*wasmxtypes.TxResult, error)
+	// GetTxByTxIndex(height int64, txIndex uint) (*wasmxtypes.TxResult, error)
 	// GetTransactionByBlockAndIndex(block *tmrpctypes.ResultBlock, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
 	GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error)
 	// GetTransactionByBlockHashAndIndex(hash common.Hash, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)

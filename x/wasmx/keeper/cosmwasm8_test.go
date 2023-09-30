@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
+	"mythos/v1/crypto/ethsecp256k1"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"

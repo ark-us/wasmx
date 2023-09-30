@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 
+	"mythos/v1/crypto/ethsecp256k1"
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
 	cch "mythos/v1/x/wasmx/types/contract_handler"

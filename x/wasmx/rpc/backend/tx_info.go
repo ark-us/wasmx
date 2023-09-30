@@ -12,8 +12,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	etherminttypes "github.com/evmos/ethermint/types"
-
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -211,7 +209,7 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 // GetTxByEthHash uses `/tx_query` to find transaction by ethereum tx hash
 // TODO: Don't need to convert once hashing is fixed on Tendermint
 // https://github.com/tendermint/tendermint/issues/6539
-func (b *Backend) GetTxByEthHash(hash common.Hash) (*etherminttypes.TxResult, error) {
+func (b *Backend) GetTxByEthHash(hash common.Hash) (*wasmxtypes.TxResult, error) {
 	txHash := hash.Big().FillBytes(make([]byte, 32))
 	txResult, err := b.clientCtx.Client.Tx(b.ctx, txHash, false)
 	if err != nil {
@@ -240,7 +238,7 @@ func (b *Backend) GetTxByEthHash(hash common.Hash) (*etherminttypes.TxResult, er
 }
 
 // queryTendermintTxIndexer query tx in tendermint tx indexer
-func (b *Backend) queryTendermintTxIndexer(query string) (*etherminttypes.TxResult, error) {
+func (b *Backend) queryTendermintTxIndexer(query string) (*wasmxtypes.TxResult, error) {
 	resTxs, err := b.clientCtx.Client.TxSearch(b.ctx, query, false, nil, nil, "")
 	if err != nil {
 		return nil, err
