@@ -29,12 +29,12 @@ import (
 	"github.com/tendermint/tendermint/rpc/client/local"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/cosmos/cosmos-sdk/server/rosetta"
-	crgserver "github.com/cosmos/cosmos-sdk/server/rosetta/lib/server"
+	"github.com/cosmos/rosetta"
+	crgserver "github.com/cosmos/rosetta/lib/server"
 
+	pruningtypes "cosmossdk.io/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	pruningtypes "github.com/cosmos/cosmos-sdk/pruning/types"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	sdkserverconfig "github.com/cosmos/cosmos-sdk/server/config"
