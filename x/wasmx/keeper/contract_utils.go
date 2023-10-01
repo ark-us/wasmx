@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"cosmossdk.io/store
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 

@@ -7,14 +7,12 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/btcsuite/btcd/btcec/v2"
 
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
-
-	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"

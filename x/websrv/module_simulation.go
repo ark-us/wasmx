@@ -7,8 +7,8 @@ import (
 	websrvsimulation "mythos/v1/x/websrv/simulation"
 	"mythos/v1/x/websrv/types"
 
-	simappparams "cosmossdk.io/simapp/params"
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
@@ -19,7 +19,7 @@ import (
 var (
 	_ = sample.AccAddress
 	_ = websrvsimulation.FindAccount
-	_ = simappparams.StakePerAccount
+	_ = simtestutil.StakePerAccount
 	_ = simulation.MsgEntryKind
 	_ = baseapp.Paramspace
 )
