@@ -84,7 +84,6 @@ import (
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	ibcclient "github.com/cosmos/ibc-go/v8/core/02-client"
 	ica "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
@@ -95,14 +94,16 @@ import (
 	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
-	ibcclientclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
+	ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client"
+
+	// ibcclientclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
+	icahostkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/keeper"
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcporttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibchost "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
-	icahostkeeper "githugithub.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/keeper"
 
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -135,8 +136,8 @@ func getGovProposalHandlers() []govclient.ProposalHandler {
 		// distrclient.ProposalHandler,
 		// upgradeclient.LegacyProposalHandler,
 		// upgradeclient.LegacyCancelProposalHandler,
-		ibcclientclient.UpdateClientProposalHandler,
-		ibcclientclient.UpgradeProposalHandler,
+		// ibcclientclient.UpdateClientProposalHandler,
+		// ibcclientclient.UpgradeProposalHandler,
 		websrvclient.RegisterRouteProposalHandler,
 		websrvclient.DeregisterRouteProposalHandler,
 		// this line is used by starport scaffolding # stargate/app/govProposalHandler
