@@ -17,7 +17,7 @@ package keeper_test
 // func (suite *KeeperTestSuite) TestEwasmContract() {
 // 	wasmbin := contractcw
 // 	sender := suite.GetRandomAccount()
-// 	initBalance := sdk.NewInt(1000_000_000)
+// 	initBalance := sdkmath.NewInt(1000_000_000)
 
 // 	appA := s.GetAppContext(s.chainA)
 // 	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))

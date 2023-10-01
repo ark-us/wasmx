@@ -9,6 +9,7 @@ import (
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -71,7 +72,7 @@ func (msg MsgStoreCode) ValidateBasic() error {
 
 	maxSize := GetMaxCodeSize(msg.Deps)
 	if err := validateWasmCode(msg.ByteCode, maxSize); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
 	}
 
 	if msg.Metadata.Name == "" {
@@ -108,7 +109,7 @@ func (msg MsgDeployCode) ValidateBasic() error {
 
 	maxSize := GetMaxCodeSize(msg.Deps)
 	if err := validateCode(msg.ByteCode, maxSize); err != nil {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
 	}
 
 	if !msg.Funds.IsValid() {
@@ -116,7 +117,7 @@ func (msg MsgDeployCode) ValidateBasic() error {
 	}
 
 	if err := msg.Msg.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "payload msg")
+		return sdkerr.Wrap(err, "payload msg")
 	}
 
 	return nil
@@ -144,15 +145,15 @@ func (msg MsgInstantiateContract) Type() string {
 
 func (msg MsgInstantiateContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 
 	if msg.CodeId == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
 
 	if err := ValidateLabel(msg.Label); err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "label is required")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "label is required")
 	}
 
 	if !msg.Funds.IsValid() {
@@ -160,7 +161,7 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 	}
 
 	if err := msg.Msg.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "payload msg")
+		return sdkerr.Wrap(err, "payload msg")
 	}
 	return nil
 }
@@ -187,11 +188,11 @@ func (msg MsgCompileContract) Type() string {
 
 func (msg MsgCompileContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 
 	if msg.CodeId == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
 	return nil
 }
@@ -218,21 +219,21 @@ func (msg MsgExecuteContract) Type() string {
 
 func (msg MsgExecuteContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
 	if err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return sdkerr.Wrap(err, "contract")
 	}
 
 	if !msg.Funds.IsValid() {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "payload msg")
+		return sdkerr.Wrap(err, "payload msg")
 	}
 	if IsSystemAddress(contractAddress) {
-		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
+		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
 }
@@ -259,24 +260,24 @@ func (msg MsgExecuteWithOriginContract) Type() string {
 
 func (msg MsgExecuteWithOriginContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Origin); err != nil {
-		return sdkerrors.Wrap(err, "origin")
+		return sdkerr.Wrap(err, "origin")
 	}
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
 	if err != nil {
-		return sdkerrors.Wrap(err, "contract")
+		return sdkerr.Wrap(err, "contract")
 	}
 
 	if !msg.Funds.IsValid() {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "payload msg")
+		return sdkerr.Wrap(err, "payload msg")
 	}
 	if IsSystemAddress(contractAddress) {
-		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
+		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
 }
@@ -303,28 +304,28 @@ func (msg MsgExecuteDelegateContract) Type() string {
 
 func (msg MsgExecuteDelegateContract) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 	codeAddress, err := sdk.AccAddressFromBech32(msg.CodeContract)
 	if err != nil {
-		return sdkerrors.Wrap(err, "code_contract")
+		return sdkerr.Wrap(err, "code_contract")
 	}
 	storageAddress, err := sdk.AccAddressFromBech32(msg.StorageContract)
 	if err != nil {
-		return sdkerrors.Wrap(err, "storage_contract")
+		return sdkerr.Wrap(err, "storage_contract")
 	}
 
 	if !msg.Funds.IsValid() {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "payload msg")
+		return sdkerr.Wrap(err, "payload msg")
 	}
 	if IsSystemAddress(codeAddress) {
-		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
+		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	if IsSystemAddress(storageAddress) {
-		return sdkerrors.Wrap(ErrUnauthorizedAddress, "cannot call system address")
+		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
 }
@@ -353,15 +354,15 @@ func (msg MsgInstantiateContract2) Type() string {
 
 func (msg MsgInstantiateContract2) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 
 	if msg.CodeId == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
 
 	if err := ValidateLabel(msg.Label); err != nil {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "label is required")
+		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "label is required")
 	}
 
 	if !msg.Funds.IsValid() {
@@ -369,10 +370,10 @@ func (msg MsgInstantiateContract2) ValidateBasic() error {
 	}
 
 	if err := msg.Msg.ValidateBasic(); err != nil {
-		return sdkerrors.Wrap(err, "payload msg")
+		return sdkerr.Wrap(err, "payload msg")
 	}
 	if err := ValidateSalt(msg.Salt); err != nil {
-		return sdkerrors.Wrap(err, "salt")
+		return sdkerr.Wrap(err, "salt")
 	}
 	return nil
 }
@@ -400,7 +401,7 @@ func (msg MsgExecuteEth) Type() string {
 func (msg MsgExecuteEth) ValidateBasic() error {
 	// TODO UnpackTxData, any.GetCachedValue
 	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerrors.Wrap(err, "sender")
+		return sdkerr.Wrap(err, "sender")
 	}
 	// TODO validate tx arguments and signature
 	return nil
@@ -450,7 +451,7 @@ func (msg MsgExecuteEth) BuildTx(txBuilder client.TxBuilder, evmDenom string) (s
 	}
 
 	fees := make(sdk.Coins, 0)
-	feeAmt := sdk.NewIntFromBigInt(msg.GetFee(txData.GasPrice(), txData.Gas()))
+	feeAmt := sdkmath.NewIntFromBigInt(msg.GetFee(txData.GasPrice(), txData.Gas()))
 	if feeAmt.Sign() > 0 {
 		fees = append(fees, sdk.NewCoin(evmDenom, feeAmt))
 	}
@@ -483,18 +484,18 @@ func (msg MsgExecuteEth) GetSignerFromSignature(ethSigner ethtypes.Signer) (sdk.
 // client state can't be unpacked into a TxData.
 func UnpackTxData(data []byte) (*ethtypes.Transaction, error) {
 	if len(data) == 0 {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnpackAny, "transaction data cannot be nil")
+		return nil, sdkerr.Wrap(sdkerrors.ErrUnpackAny, "transaction data cannot be nil")
 	}
 
 	var tx ethtypes.Transaction
 	err := tx.UnmarshalBinary(data)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrUnpackAny, "cannot unpack data into Transaction %T", data)
+		return nil, sdkerr.Wrapf(sdkerrors.ErrUnpackAny, "cannot unpack data into Transaction %T", data)
 	}
 
 	// txData, ok := any.GetCachedValue().(TxData)
 	// if !ok {
-	// 	return nil, sdkerrors.Wrapf(sdkerrors.ErrUnpackAny, "cannot unpack Any into TxData %T", any)
+	// 	return nil, sdkerr.Wrapf(sdkerrors.ErrUnpackAny, "cannot unpack Any into TxData %T", any)
 	// }
 
 	return &tx, nil

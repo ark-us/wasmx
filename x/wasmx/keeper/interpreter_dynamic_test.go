@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
@@ -16,7 +17,7 @@ import (
 
 func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	valAccount := simulation.Account{
 		PrivKey: s.chainA.SenderPrivKey,
 		PubKey:  s.chainA.SenderPrivKey.PubKey(),
@@ -71,7 +72,7 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 
 func (suite *KeeperTestSuite) TestWasmxDebug() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -95,7 +96,7 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 
 func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

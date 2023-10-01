@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
@@ -32,7 +33,7 @@ type BenchmarkRequest struct {
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	wasmbin := precompiles.GetPrecompileByLabel("sys_proxy")
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -107,7 +108,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	wasmbin := wasmxSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

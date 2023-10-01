@@ -14,6 +14,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 
 	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -177,7 +178,7 @@ func (s AppContext) BuildEthTx(
 		Data:     data,
 		Value:    value,
 	}
-	fees := sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdk.NewIntFromBigInt(getFee(gasPrice, gasLimit))))
+	fees := sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdkmath.NewIntFromBigInt(getFee(gasPrice, gasLimit))))
 	ppriv, err := priv.ToECDSA()
 	s.S.Require().NoError(err)
 	ethTx, err := ethtypes.SignNewTx(ppriv, ethSigner, tx)
@@ -495,7 +496,7 @@ func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1
 }
 
 func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, content v1beta1.Content) {
-	deposit := sdk.NewCoins(sdk.NewCoin(s.Denom, sdk.NewInt(1_000_000_000_000)))
+	deposit := sdk.NewCoins(sdk.NewCoin(s.Denom, sdkmath.NewInt(1_000_000_000_000)))
 	resp := s.SubmitGovProposal(sender, content, deposit)
 
 	proposalId, err := s.GetProposalIdFromLog(resp.GetLog())

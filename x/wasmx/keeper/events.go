@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 )
@@ -31,7 +31,7 @@ func newCustomEvents(evts types.Events, contractAddr sdk.AccAddress) (sdk.Events
 	for _, e := range evts {
 		typ := strings.TrimSpace(e.Type)
 		if len(typ) <= eventTypeMinLength {
-			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
+			return nil, sdkerr.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
 		}
 		// also adds contract address as attribute
 		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddr)
@@ -54,15 +54,15 @@ func contractSDKEventAttributes(customAttributes []types.EventAttribute, contrac
 		// ensure key and value are non-empty (and trim what is there)
 		key := strings.TrimSpace(l.Key)
 		if len(key) == 0 {
-			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
+			return nil, sdkerr.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Empty attribute key. Value: %s", l.Value))
 		}
 		value := strings.TrimSpace(l.Value)
 		if len(value) == 0 {
-			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
+			return nil, sdkerr.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Empty attribute value. Key: %s", key))
 		}
 		// and reserve all _* keys for our use (not contract)
 		if strings.HasPrefix(key, types.AttributeReservedPrefix) {
-			return nil, sdkerrors.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Attribute key starts with reserved prefix %s: '%s'", types.AttributeReservedPrefix, key))
+			return nil, sdkerr.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Attribute key starts with reserved prefix %s: '%s'", types.AttributeReservedPrefix, key))
 		}
 		attrs = append(attrs, sdk.NewAttribute(key, value))
 	}

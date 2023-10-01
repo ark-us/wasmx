@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
+	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
@@ -31,13 +32,13 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 	tx := msg.AsTransaction()
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "ExecuteEth could not parse sender address")
+		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
 
 	// Alias may be set in the AnteHandler EthSigVerificationDecorator
 
 	// TODO denom
-	funds := sdk.NewCoins(sdk.NewCoin(m.Keeper.denom, sdk.NewIntFromBigInt(tx.Value())))
+	funds := sdk.NewCoins(sdk.NewCoin(m.Keeper.denom, sdkmath.NewIntFromBigInt(tx.Value())))
 
 	to := tx.To()
 	var data []byte
@@ -46,7 +47,7 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 		msg := types.WasmxExecutionMessage{Data: []byte{}}
 		msgbz, err := json.Marshal(msg)
 		if err != nil {
-			sdkerrors.Wrap(err, "ExecuteEth could not marshal data")
+			sdkerr.Wrap(err, "ExecuteEth could not marshal data")
 		}
 		_, _, address, err := m.Keeper.Deploy(ctx, senderAddr, tx.Data(), deps, types.CodeMetadata{}, msgbz, funds, "")
 		if err != nil {
@@ -56,12 +57,12 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 	} else {
 		contractAddr := types.AccAddressFromEvm(*to)
 		if err != nil {
-			sdkerrors.Wrap(err, "ExecuteEth could not parse contract address")
+			sdkerr.Wrap(err, "ExecuteEth could not parse contract address")
 		}
 		msg := types.WasmxExecutionMessage{Data: tx.Data()}
 		msgbz, err := json.Marshal(msg)
 		if err != nil {
-			sdkerrors.Wrap(err, "ExecuteEth could not marshal data")
+			sdkerr.Wrap(err, "ExecuteEth could not marshal data")
 		}
 		data, err = m.Keeper.Execute(ctx, contractAddr, senderAddr, msgbz, funds, nil)
 		if err != nil {
@@ -83,7 +84,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -110,7 +111,7 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -140,7 +141,7 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -169,7 +170,7 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -217,11 +218,11 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "contract")
+		return nil, sdkerr.Wrap(err, "contract")
 	}
 
 	// TODO make the dependencies unique - remove duplicates
@@ -250,15 +251,15 @@ func (m msgServer) ExecuteWithOriginContract(goCtx context.Context, msg *types.M
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	originAddr, err := sdk.AccAddressFromBech32(msg.Origin)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "origin")
+		return nil, sdkerr.Wrap(err, "origin")
 	}
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "contract")
+		return nil, sdkerr.Wrap(err, "contract")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -285,23 +286,23 @@ func (m msgServer) ExecuteDelegateContract(goCtx context.Context, msg *types.Msg
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	originAddr, err := sdk.AccAddressFromBech32(msg.Origin)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "origin")
+		return nil, sdkerr.Wrap(err, "origin")
 	}
 	callerAddr, err := sdk.AccAddressFromBech32(msg.Caller)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender")
 	}
 	codeContractAddr, err := sdk.AccAddressFromBech32(msg.CodeContract)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "code_contract")
+		return nil, sdkerr.Wrap(err, "code_contract")
 	}
 	storageContractAddr, err := sdk.AccAddressFromBech32(msg.StorageContract)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "storage_contract")
+		return nil, sdkerr.Wrap(err, "storage_contract")
 	}
 
 	if msg.Sender != msg.StorageContract {
-		return nil, sdkerrors.Wrapf(types.ErrInvalidMsg, "execute delegate must be called from the storage contract: %s; it was called from: %s", msg.StorageContract, msg.Sender)
+		return nil, sdkerr.Wrapf(types.ErrInvalidMsg, "execute delegate must be called from the storage contract: %s; it was called from: %s", msg.StorageContract, msg.Sender)
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(

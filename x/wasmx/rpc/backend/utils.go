@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"bytes"
 	"encoding/hex"
 	"strconv"
 
@@ -57,21 +56,21 @@ func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
 	var log ethtypes.Log
 	for _, attr := range event.Attributes {
 		// we now parse all wasmx logs, regardless of AttributeKeyEventType
-		if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyIndex)) {
+		if attr.Key == wasmxtypes.AttributeKeyIndex {
 			index, err := strconv.Atoi(string(attr.Value))
 			if err != nil {
 				return nil, err
 			}
 			log.Index = uint(index)
-		} else if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyContractAddr)) {
+		} else if attr.Key == wasmxtypes.AttributeKeyContractAddr {
 			contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
 			if err != nil {
 				return nil, err
 			}
 			log.Address = wasmxtypes.EvmAddressFromAcc(contractAddress)
-		} else if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyTopic)) {
+		} else if attr.Key == wasmxtypes.AttributeKeyTopic {
 			log.Topics = append(log.Topics, common.HexToHash(string(attr.Value)))
-		} else if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyData)) {
+		} else if attr.Key == wasmxtypes.AttributeKeyData {
 			data, err := hex.DecodeString(string(attr.Value[2:]))
 			if err != nil {
 				return nil, err
@@ -89,7 +88,7 @@ func ContractAddressFromEvents(events []abci.Event) *common.Address {
 			continue
 		}
 		for _, attr := range event.Attributes {
-			if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyContractAddr)) {
+			if attr.Key == wasmxtypes.AttributeKeyContractAddr {
 				contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
 				if err != nil {
 					return nil

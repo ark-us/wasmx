@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/websrv/types"
 )
@@ -30,12 +30,12 @@ func (m msgServer) RegisterOAuthClient(goCtx context.Context, msg *types.MsgRegi
 
 	owner, err := sdk.AccAddressFromBech32(msg.Owner)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "owner")
+		return nil, sdkerr.Wrap(err, "owner")
 	}
 
 	if m.Keeper.GetOauthClientRegistrationOnlyEId(ctx) {
 		if !m.Keeper.isEIdActive(ctx, owner) {
-			return nil, sdkerrors.Wrap(err, "action requires an active eID")
+			return nil, sdkerr.Wrap(err, "action requires an active eID")
 		}
 	}
 
@@ -69,7 +69,7 @@ func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAut
 
 	_, err := sdk.AccAddressFromBech32(msg.Owner)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "owner")
+		return nil, sdkerr.Wrap(err, "owner")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -81,10 +81,10 @@ func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAut
 
 	info, err := m.Keeper.GetClientIdToInfo(ctx, msg.ClientId)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "invalid client id")
+		return nil, sdkerr.Wrap(err, "invalid client id")
 	}
 	if info.Owner != msg.Owner {
-		return nil, sdkerrors.Wrap(err, "unauthorized")
+		return nil, sdkerr.Wrap(err, "unauthorized")
 	}
 
 	info.Domain = msg.Domain
@@ -104,7 +104,7 @@ func (m msgServer) DeregisterOAuthClient(goCtx context.Context, msg *types.MsgDe
 
 	owner, err := sdk.AccAddressFromBech32(msg.Owner)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "owner")
+		return nil, sdkerr.Wrap(err, "owner")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(

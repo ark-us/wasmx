@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	errorsmod "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -48,7 +49,7 @@ func (b *Backend) DoCall(
 
 	funds := sdk.Coins{}
 	if args.Value != nil {
-		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdk.NewIntFromBigInt((*big.Int)(args.Value))))
+		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
 	}
 
 	req := wasmxtypes.QuerySmartContractCallRequest{

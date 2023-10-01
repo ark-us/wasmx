@@ -3,8 +3,8 @@ package types
 import (
 	"math/big"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 const (
@@ -38,10 +38,10 @@ func DefaultWasmConfig() WasmConfig {
 
 func (c CodeInfo) ValidateBasic() error {
 	if len(c.CodeHash) == 0 {
-		return sdkerrors.Wrap(ErrEmpty, "code hash")
+		return sdkerr.Wrap(ErrEmpty, "code hash")
 	}
 	if _, err := sdk.AccAddressFromBech32(c.Creator); err != nil {
-		return sdkerrors.Wrap(err, "creator")
+		return sdkerr.Wrap(err, "creator")
 	}
 	return nil
 }
@@ -87,7 +87,7 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 			Height:    uint64(ctx.BlockHeight()),
 			Timestamp: uint64(nano),
 			GasLimit:  blockGasLimit,
-			Hash:      PaddLeftTo32(ctx.HeaderHash().Bytes()), // TODO fixme
+			Hash:      PaddLeftTo32(ctx.HeaderHash()), // TODO fixme
 			Proposer:  sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
 		},
 		Transaction: &TransactionInfo{
@@ -145,17 +145,17 @@ type validatable interface {
 // but also in the genesis import process.
 func (c *ContractInfo) ValidateBasic() error {
 	if c.CodeId == 0 {
-		return sdkerrors.Wrap(ErrEmpty, "code id")
+		return sdkerr.Wrap(ErrEmpty, "code id")
 	}
 	if _, err := sdk.AccAddressFromBech32(c.Creator); err != nil {
-		return sdkerrors.Wrap(err, "creator")
+		return sdkerr.Wrap(err, "creator")
 	}
 	if err := ValidateLabel(c.Label); err != nil {
-		return sdkerrors.Wrap(err, "label")
+		return sdkerr.Wrap(err, "label")
 	}
 	if c.Provenance != "" {
 		if _, err := sdk.AccAddressFromBech32(c.Provenance); err != nil {
-			return sdkerrors.Wrap(err, "creator")
+			return sdkerr.Wrap(err, "creator")
 		}
 	}
 	return nil

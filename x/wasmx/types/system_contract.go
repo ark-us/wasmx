@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -195,7 +196,7 @@ func IsZeroAddress(address string) bool {
 // ValidateAddress returns an error if the provided string is either not a hex formatted string address
 func ValidateAddress(address string) error {
 	if !IsHexAddress(address) {
-		return sdkerrors.Wrapf(
+		return sdkerr.Wrapf(
 			sdkerrors.ErrInvalidAddress, "address '%s' is not a valid ethereum hex address",
 			address,
 		)
@@ -239,7 +240,7 @@ func isHex(str string) bool {
 // formatted string address or is equal to zero
 func ValidateNonZeroAddress(address string) error {
 	if IsZeroAddress(address) {
-		return sdkerrors.Wrapf(
+		return sdkerr.Wrapf(
 			sdkerrors.ErrInvalidAddress, "address '%s' must not be zero",
 			address,
 		)

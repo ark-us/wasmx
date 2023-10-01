@@ -8,8 +8,8 @@ import (
 	"os"
 	"path"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"
@@ -37,7 +37,7 @@ func (k WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error)
 	// Read and write permissions for the owner and read-only permissions for everyone else
 	err := os.WriteFile(filepath, wasmBytecode, 0644)
 	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+		return nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
 
 	return checksum, nil
@@ -51,7 +51,7 @@ func (k WasmxEngine) CreateUtf8(sourceCode []byte, extension string) (types.Chec
 	// Read and write permissions for the owner and read-only permissions for everyone else
 	err := os.WriteFile(filepath, sourceCode, 0644)
 	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+		return nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
 
 	return checksum, nil

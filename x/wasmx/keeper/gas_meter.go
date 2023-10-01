@@ -1,8 +1,9 @@
 package keeper
 
 import (
+	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
@@ -59,42 +60,42 @@ const (
 // GasRegister abstract source for gas costs
 type GasRegister interface {
 	// NewContractInstanceCosts costs to crate a new contract instance from code
-	NewContractInstanceCosts(pinned bool, msgLen int) sdk.Gas
+	NewContractInstanceCosts(pinned bool, msgLen int) storetypes.Gas
 	// CompileCosts costs to persist and "compile" a new wasm contract
-	CompileCosts(byteLength int) sdk.Gas
+	CompileCosts(byteLength int) storetypes.Gas
 	// UncompressCosts costs to unpack a new wasm contract
-	UncompressCosts(byteLength int) sdk.Gas
+	UncompressCosts(byteLength int) storetypes.Gas
 	// InstantiateContractCosts costs when interacting with a wasm contract
-	InstantiateContractCosts(pinned bool, msgLen int) sdk.Gas
+	InstantiateContractCosts(pinned bool, msgLen int) storetypes.Gas
 	// EventCosts costs to persist an event
-	EventCosts(attrs []types.EventAttribute, events types.Events) sdk.Gas
+	EventCosts(attrs []types.EventAttribute, events types.Events) storetypes.Gas
 	// ToWasmVMGas converts from sdk gas to wasmvm gas
-	ToWasmVMGas(source sdk.Gas) uint64
+	ToWasmVMGas(source storetypes.Gas) uint64
 	// FromWasmVMGas converts from wasmvm gas to sdk gas
-	FromWasmVMGas(source uint64) sdk.Gas
+	FromWasmVMGas(source uint64) storetypes.Gas
 }
 
 // WasmGasRegisterConfig config type
 type WasmGasRegisterConfig struct {
 	// InstanceCost costs when interacting with a wasm contract
-	InstanceCost sdk.Gas
+	InstanceCost storetypes.Gas
 	// CompileCosts costs to persist and "compile" a new wasm contract
-	CompileCost sdk.Gas
+	CompileCost storetypes.Gas
 	// UncompressCost costs per byte to unpack a contract
-	UncompressCost sdk.Gas
+	UncompressCost storetypes.Gas
 	// GasMultiplier is how many wasm gas points = 1 sdk gas point
-	GasMultiplier sdk.Gas
+	GasMultiplier storetypes.Gas
 	// EventPerAttributeCost is how much SDK gas is charged *per byte* for attribute data in events.
 	// This is used with len(key) + len(value)
-	EventPerAttributeCost sdk.Gas
+	EventPerAttributeCost storetypes.Gas
 	// EventAttributeDataCost is how much SDK gas is charged *per byte* for attribute data in events.
 	// This is used with len(key) + len(value)
-	EventAttributeDataCost sdk.Gas
+	EventAttributeDataCost storetypes.Gas
 	// EventAttributeDataFreeTier number of bytes of total attribute data that is free of charge
 	EventAttributeDataFreeTier uint64
 	// ContractMessageDataCost SDK gas charged *per byte* of the message that goes to the contract
 	// This is used with len(msg)
-	ContractMessageDataCost sdk.Gas
+	ContractMessageDataCost storetypes.Gas
 	// CustomEventCost cost per custom event
 	CustomEventCost uint64
 }
@@ -127,7 +128,7 @@ func NewDefaultWasmGasRegister() WasmxGasRegister {
 // NewWasmGasRegister constructor
 func NewWasmGasRegister(c WasmGasRegisterConfig) WasmxGasRegister {
 	if c.GasMultiplier == 0 {
-		panic(sdkerrors.Wrap(sdkerrors.ErrLogic, "GasMultiplier can not be 0"))
+		panic(sdkerr.Wrap(sdkerrors.ErrLogic, "GasMultiplier can not be 0"))
 	}
 	return WasmxGasRegister{
 		c: c,
@@ -142,25 +143,25 @@ func (g WasmxGasRegister) NewContractInstanceCosts(pinned bool, msgLen int) stor
 // CompileCosts costs to persist and "compile" a new wasm contract
 func (g WasmxGasRegister) CompileCosts(byteLength int) storetypes.Gas {
 	if byteLength < 0 {
-		panic(sdkerrors.Wrap(types.ErrInvalid, "negative length"))
+		panic(sdkerr.Wrap(types.ErrInvalid, "negative length"))
 	}
 	return g.c.CompileCost * uint64(byteLength)
 }
 
 // UncompressCosts costs to unpack a new wasm contract
-func (g WasmxGasRegister) UncompressCosts(byteLength int) sdk.Gas {
+func (g WasmxGasRegister) UncompressCosts(byteLength int) storetypes.Gas {
 	if byteLength < 0 {
-		panic(sdkerrors.Wrap(types.ErrInvalid, "negative length"))
+		panic(sdkerr.Wrap(types.ErrInvalid, "negative length"))
 	}
 	return g.c.UncompressCost * (uint64(byteLength) / uint64(UncompressCostDivisor))
 }
 
 // InstantiateContractCosts costs when interacting with a wasm contract
-func (g WasmxGasRegister) InstantiateContractCosts(pinned bool, msgLen int) sdk.Gas {
+func (g WasmxGasRegister) InstantiateContractCosts(pinned bool, msgLen int) storetypes.Gas {
 	if msgLen < 0 {
-		panic(sdkerrors.Wrap(types.ErrInvalid, "negative length"))
+		panic(sdkerr.Wrap(types.ErrInvalid, "negative length"))
 	}
-	dataCosts := sdk.Gas(msgLen) * g.c.ContractMessageDataCost
+	dataCosts := storetypes.Gas(msgLen) * g.c.ContractMessageDataCost
 	if pinned {
 		return dataCosts
 	}
@@ -168,19 +169,19 @@ func (g WasmxGasRegister) InstantiateContractCosts(pinned bool, msgLen int) sdk.
 }
 
 // EventCosts costs to persist an event
-func (g WasmxGasRegister) EventCosts(attrs []types.EventAttribute, events types.Events) sdk.Gas {
+func (g WasmxGasRegister) EventCosts(attrs []types.EventAttribute, events types.Events) storetypes.Gas {
 	gas, remainingFreeTier := g.eventAttributeCosts(attrs, g.c.EventAttributeDataFreeTier)
 	for _, e := range events {
 		gas += g.c.CustomEventCost
-		gas += sdk.Gas(len(e.Type)) * g.c.EventAttributeDataCost // no free tier with event type
-		var attrCost sdk.Gas
+		gas += storetypes.Gas(len(e.Type)) * g.c.EventAttributeDataCost // no free tier with event type
+		var attrCost storetypes.Gas
 		attrCost, remainingFreeTier = g.eventAttributeCosts(e.Attributes, remainingFreeTier)
 		gas += attrCost
 	}
 	return gas
 }
 
-func (g WasmxGasRegister) eventAttributeCosts(attrs []types.EventAttribute, freeTier uint64) (sdk.Gas, uint64) {
+func (g WasmxGasRegister) eventAttributeCosts(attrs []types.EventAttribute, freeTier uint64) (storetypes.Gas, uint64) {
 	if len(attrs) == 0 {
 		return 0, freeTier
 	}
@@ -190,10 +191,10 @@ func (g WasmxGasRegister) eventAttributeCosts(attrs []types.EventAttribute, free
 	}
 	storedBytes, freeTier = calcWithFreeTier(storedBytes, freeTier)
 	// total Length * costs + attribute count * costs
-	r := sdk.NewIntFromUint64(g.c.EventAttributeDataCost).Mul(sdk.NewIntFromUint64(storedBytes)).
-		Add(sdk.NewIntFromUint64(g.c.EventPerAttributeCost).Mul(sdk.NewIntFromUint64(uint64(len(attrs)))))
+	r := sdkmath.NewIntFromUint64(g.c.EventAttributeDataCost).Mul(sdkmath.NewIntFromUint64(storedBytes)).
+		Add(sdkmath.NewIntFromUint64(g.c.EventPerAttributeCost).Mul(sdkmath.NewIntFromUint64(uint64(len(attrs)))))
 	if !r.IsUint64() {
-		panic(sdk.ErrorOutOfGas{Descriptor: "overflow"})
+		panic(storetypes.ErrorOutOfGas{Descriptor: "overflow"})
 	}
 	return r.Uint64(), freeTier
 }
@@ -211,12 +212,12 @@ func calcWithFreeTier(storedBytes uint64, freeTier uint64) (uint64, uint64) {
 func (g WasmxGasRegister) ToWasmVMGas(source storetypes.Gas) uint64 {
 	x := source * g.c.GasMultiplier
 	if x < source {
-		panic(sdk.ErrorOutOfGas{Descriptor: "overflow"})
+		panic(storetypes.ErrorOutOfGas{Descriptor: "overflow"})
 	}
 	return x
 }
 
 // FromWasmVMGas converts to SDK gas unit
-func (g WasmxGasRegister) FromWasmVMGas(source uint64) sdk.Gas {
+func (g WasmxGasRegister) FromWasmVMGas(source uint64) storetypes.Gas {
 	return source / g.c.GasMultiplier
 }

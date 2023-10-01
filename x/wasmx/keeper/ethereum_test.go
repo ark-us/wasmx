@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,7 +23,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 	priv, err := ethsecp256k1.GenerateKey()
 	s.Require().NoError(err)
 	sender := sdk.AccAddress(priv.PubKey().Address().Bytes())
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	// getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 
@@ -59,7 +60,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 func (suite *KeeperTestSuite) TestAliasContract() {
 	wasmbin := precompiles.GetPrecompileByLabel("alias_eth")
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	priv, err := ethsecp256k1.GenerateKey()
 	s.Require().NoError(err)
@@ -159,7 +160,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	// receiverEth := sdk.AccAddress(priv2.PubKey().Address().Bytes())
 	// receiverEthHex := types.EvmAddressFromAcc(receiverEth)
 
-	initBalance := sdk.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	aliasEthAddr := sdk.AccAddress(appA.Hex2bz("0x0000000000000000000000000000000000000024"))

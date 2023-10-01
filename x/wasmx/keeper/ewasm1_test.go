@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/wasmx/types"
@@ -23,7 +24,7 @@ var (
 func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 	wasmbin := simpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 	getHex1 := `054c1a75`
@@ -65,7 +66,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 	wasmbin := simpleStorageWC
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	getHex := `6d4ce63c`
 
 	appA := s.GetAppContext(s.chainA)
@@ -87,7 +88,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	wasmbin := simpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	setHex := `60fe47b1`
 
 	appA := s.GetAppContext(s.chainA)
@@ -114,7 +115,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 func (suite *KeeperTestSuite) TestConstructorTestBin() {
 	wasmbin := constructortestbin
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	fsig := "c1b4625e"
 	fsig2 := "4a53d41e"
 	strmap := "e71a136a"

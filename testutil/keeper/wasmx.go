@@ -34,7 +34,7 @@ import (
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
-	storeKey := sdk.NewKVStoreKey(types.StoreKey)
+	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
 
 	db := tmdb.NewMemDB()
@@ -57,8 +57,8 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	paramsKeeper := paramskeeper.NewKeeper(
 		cdc,
 		legacyAmino,
-		sdk.NewKVStoreKey(paramstypes.StoreKey),
-		sdk.NewTransientStoreKey(paramstypes.TStoreKey),
+		storetypes.NewKVStoreKey(paramstypes.StoreKey),
+		storetypes.NewTransientStoreKey(paramstypes.TStoreKey),
 	)
 	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(banktypes.ModuleName)
@@ -79,7 +79,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	}
 	accountKeeper := authkeeper.NewAccountKeeper(
 		cdc,
-		sdk.NewKVStoreKey(authtypes.StoreKey), // target store
+		storetypes.NewKVStoreKey(authtypes.StoreKey), // target store
 		subspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount, // prototype
 		maccPerms,
@@ -87,14 +87,14 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	)
 	bankKeeper := bankkeeper.NewBaseKeeper(
 		cdc,
-		sdk.NewKVStoreKey(banktypes.StoreKey),
+		storetypes.NewKVStoreKey(banktypes.StoreKey),
 		accountKeeper,
 		subspace(banktypes.ModuleName),
 		make(map[string]bool),
 	)
 	transferKeeper := ibctransferkeeper.NewKeeper(
 		cdc,
-		sdk.NewKVStoreKey(ibctransfertypes.StoreKey),
+		storetypes.NewKVStoreKey(ibctransfertypes.StoreKey),
 		subspace(ibctransfertypes.ModuleName),
 		// app.IBCKeeper.ChannelKeeper,
 		// app.IBCKeeper.ChannelKeeper,
@@ -106,14 +106,14 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	)
 	stakingKeeper := stakingkeeper.NewKeeper(
 		cdc,
-		sdk.NewKVStoreKey(stakingtypes.StoreKey),
+		storetypes.NewKVStoreKey(stakingtypes.StoreKey),
 		accountKeeper,
 		bankKeeper,
 		subspace(stakingtypes.ModuleName),
 	)
 	distrKeeper := distrkeeper.NewKeeper(
 		cdc,
-		sdk.NewKVStoreKey(distrtypes.StoreKey),
+		storetypes.NewKVStoreKey(distrtypes.StoreKey),
 		subspace(distrtypes.ModuleName),
 		accountKeeper,
 		bankKeeper,

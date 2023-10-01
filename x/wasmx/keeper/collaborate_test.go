@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/wasmx/keeper/testutil"
@@ -25,7 +26,7 @@ var (
 // Python -> JavaScript -> Tinygo wasm -> AssemblyScript -> EVM -> CosmWasm
 func (suite *KeeperTestSuite) TestVMCollaboration() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

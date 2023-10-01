@@ -1,6 +1,7 @@
 package types
 
 import (
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	v1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -46,15 +47,15 @@ func (*RegisterRouteProposal) ProposalType() string {
 // ValidateBasic performs a stateless check of the proposal fields
 func (p *RegisterRouteProposal) ValidateBasic() error {
 	if p.Path == "" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "empty route path")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty route path")
 	}
 
 	if string(p.Path[0]) != "/" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "path must start with /")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "path must start with /")
 	}
 
 	if len(p.Path) > 1 && string(p.Path[len(p.Path)-1]) == "/" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "path must not end with /")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "path must not end with /")
 	}
 
 	if _, err := sdk.AccAddressFromBech32(p.ContractAddress); err != nil {
@@ -85,15 +86,15 @@ func (*DeregisterRouteProposal) ProposalType() string {
 // ValidateBasic performs a stateless check of the proposal fields
 func (p *DeregisterRouteProposal) ValidateBasic() error {
 	if p.Path == "" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "empty route path")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty route path")
 	}
 
 	if string(p.Path[0]) != "/" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "path must start with /")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "path must start with /")
 	}
 
 	if len(p.Path) > 1 && string(p.Path[len(p.Path)-1]) == "/" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "path must not end with /")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "path must not end with /")
 	}
 
 	if _, err := sdk.AccAddressFromBech32(p.ContractAddress); err != nil {

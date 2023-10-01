@@ -3,11 +3,11 @@ package keeper
 import (
 	"github.com/pkg/errors"
 
+	sdkerr "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // MsgFromBz
@@ -63,12 +63,12 @@ func (k Keeper) ConvertProtoToJSONMarshal(protoResponse codec.ProtoMarshaler, bz
 	// unmarshal binary into stargate response data structure
 	err := k.cdc.Unmarshal(bz, protoResponse)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "to proto")
+		return nil, sdkerr.Wrap(err, "to proto")
 	}
 
 	bz, err = k.cdc.MarshalJSON(protoResponse)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "to json")
+		return nil, sdkerr.Wrap(err, "to json")
 	}
 
 	return bz, nil

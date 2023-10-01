@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
@@ -29,7 +30,7 @@ var (
 
 // func (suite *KeeperTestSuite) TestWasiInterpreterPython() {
 // 	sender := suite.GetRandomAccount()
-// 	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+// 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 // 	appA := s.GetAppContext(s.chainA)
 // 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -50,7 +51,7 @@ var (
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -78,7 +79,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -105,7 +106,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -195,7 +196,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

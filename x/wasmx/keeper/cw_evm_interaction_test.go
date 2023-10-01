@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
@@ -27,7 +28,7 @@ type AtomicSwapBalance struct {
 func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	wasmbin := cw20_base
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	proxyAddressBz, err := hex.DecodeString("0000000000000000000000000000000000000025")
 	s.Require().NoError(err)
 	proxyAddress := sdk.AccAddress(proxyAddressBz)
@@ -90,7 +91,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	sender2AddressEvm := types.EvmAddressFromAcc(sender2.Address)
-	initBalance := sdk.NewInt(1000_000_000).MulRaw(1000000)
+	initBalance := sdkmath.NewInt(1000_000_000).MulRaw(1000000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -131,7 +132,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	// Mint Erc20 for sender2
 	calld, err = interfacesTestdata.Erc20Abi.Pack("mint", sender2AddressEvm, big.NewInt(200))
 	s.Require().NoError(err)
-	appA.ExecuteContract(sender2, contractAddressErc20, types.WasmxExecutionMessage{Data: calld}, sdk.NewCoins(sdk.NewCoin(appA.Denom, sdk.NewInt(200))), nil)
+	appA.ExecuteContract(sender2, contractAddressErc20, types.WasmxExecutionMessage{Data: calld}, sdk.NewCoins(sdk.NewCoin(appA.Denom, sdkmath.NewInt(200))), nil)
 
 	// Deploy AtomicSwap
 	evmcodeSwap, err := hex.DecodeString(testdata.AtomicSwap)

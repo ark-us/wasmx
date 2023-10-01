@@ -7,6 +7,7 @@ import (
 	"math"
 
 	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -570,7 +571,7 @@ func BuildArgsCw(context *Context, contractVm *wasmedge.VM) ([]byte, []byte, []b
 	}
 	info := cw8types.MessageInfo{
 		Sender: context.Env.CurrentCall.Sender.String(),
-		Funds:  cw8types.Coins{cw8types.Coin{Denom: context.Env.Chain.Denom, Amount: sdk.NewIntFromBigInt(context.Env.CurrentCall.Funds).String()}},
+		Funds:  cw8types.Coins{cw8types.Coin{Denom: context.Env.Chain.Denom, Amount: sdkmath.NewIntFromBigInt(context.Env.CurrentCall.Funds).String()}},
 	}
 	msgBz := context.Env.CurrentCall.CallData
 	envBz, err := json.Marshal(env)

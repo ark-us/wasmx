@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 
+	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/types"
@@ -30,7 +30,7 @@ func (k Keeper) SetNewClientId(ctx sdk.Context, owner sdk.AccAddress, clientId u
 	store := ctx.KVStore(k.storeKey)
 	clientIds, _ := k.GetAddressToClients(ctx, owner)
 	if len(clientIds) > 100 {
-		return sdkerrors.Wrapf(types.ErrOAuthTooManyClientsRegistered, "%d already registered", len(clientIds))
+		return sdkerr.Wrapf(types.ErrOAuthTooManyClientsRegistered, "%d already registered", len(clientIds))
 	}
 	clientIds = append(clientIds, clientId)
 	bz, err := json.Marshal(clientIds)
@@ -118,7 +118,7 @@ func (k Keeper) PeekAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uin
 func (k Keeper) importAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte, val uint64) error {
 	store := ctx.KVStore(k.storeKey)
 	if store.Has(lastIdKey) {
-		return sdkerrors.Wrapf(wasmxtypes.ErrDuplicate, "autoincrement id: %s", string(lastIdKey))
+		return sdkerr.Wrapf(wasmxtypes.ErrDuplicate, "autoincrement id: %s", string(lastIdKey))
 	}
 	bz := sdk.Uint64ToBigEndian(val)
 	store.Set(lastIdKey, bz)

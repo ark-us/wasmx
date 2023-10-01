@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"strings"
 
+	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 )
@@ -37,7 +37,7 @@ func (k Keeper) PeekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uint64) error {
 	store := ctx.KVStore(k.storeKey)
 	if store.Has(lastIDKey) {
-		return sdkerrors.Wrapf(types.ErrDuplicate, "autoincrement id: %s", string(lastIDKey))
+		return sdkerr.Wrapf(types.ErrDuplicate, "autoincrement id: %s", string(lastIDKey))
 	}
 	bz := sdk.Uint64ToBigEndian(val)
 	store.Set(lastIDKey, bz)
@@ -57,14 +57,14 @@ func (k Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 
 	contractBz := store.Get(types.GetContractAddressKey(contractAddress))
 	if contractBz == nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, sdkerrors.Wrap(types.ErrNotFound, "contract")
+		return types.ContractInfo{}, types.CodeInfo{}, nil, sdkerr.Wrap(types.ErrNotFound, "contract")
 	}
 	var contractInfo types.ContractInfo
 	k.cdc.MustUnmarshal(contractBz, &contractInfo)
 
 	codeInfoBz := store.Get(types.GetCodeKey(contractInfo.CodeId))
 	if codeInfoBz == nil {
-		return contractInfo, types.CodeInfo{}, nil, sdkerrors.Wrap(types.ErrNotFound, "code info")
+		return contractInfo, types.CodeInfo{}, nil, sdkerr.Wrap(types.ErrNotFound, "code info")
 	}
 	var codeInfo types.CodeInfo
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
@@ -138,7 +138,7 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 			model.Value = []byte{}
 		}
 		if prefixStore.Has(model.Key) {
-			return sdkerrors.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
+			return sdkerr.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
 	}
@@ -197,7 +197,7 @@ func (k Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, to
 	// 	return err
 	// }
 	// if k.BlockedAddr(toAddr) {
-	// 	return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr.String())
+	// 	return sdkerr.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr.String())
 	// }
 
 	sdkerr := k.bank.SendCoins(ctx, fromAddr, toAddr, amount)
@@ -235,7 +235,7 @@ func (k Keeper) CanCallSystemContract(ctx sdk.Context, contractAddress sdk.AccAd
 func RequireNotSystemContract(contractAddress sdk.AccAddress, deps []string) error {
 	for _, dep := range deps {
 		if strings.Contains(dep, types.SYS_VM_EXPORT) && !types.IsSystemAddress(contractAddress) {
-			return sdkerrors.Wrap(types.ErrUnauthorizedAddress, "invalid address for system contracts")
+			return sdkerr.Wrap(types.ErrUnauthorizedAddress, "invalid address for system contracts")
 		}
 	}
 	return nil

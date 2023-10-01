@@ -3,9 +3,9 @@ package keeper
 import (
 	_ "embed"
 
+	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/precompiles"
@@ -20,7 +20,7 @@ func (k Keeper) BootstrapSystemContracts(
 	for _, contract := range contracts {
 		err := k.ActivateEmbeddedSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath)
 		if err != nil {
-			return sdkerrors.Wrap(err, "bootstrap")
+			return sdkerr.Wrap(err, "bootstrap")
 		}
 	}
 	return nil
@@ -56,13 +56,13 @@ func (k Keeper) ActivateSystemContract(
 	} else {
 		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, []string{}, contract.Metadata)
 		if err != nil {
-			return sdkerrors.Wrap(err, "store system contract: "+contract.Label)
+			return sdkerr.Wrap(err, "store system contract: "+contract.Label)
 		}
 	}
 
 	if contract.Pinned {
 		if err := k.PinCode(ctx, codeID, compiledFolderPath); err != nil {
-			return sdkerrors.Wrap(err, "pin system contract: "+contract.Label)
+			return sdkerr.Wrap(err, "pin system contract: "+contract.Label)
 		}
 	}
 
@@ -81,7 +81,7 @@ func (k Keeper) ActivateSystemContract(
 			contract.Label,
 		)
 		if err != nil {
-			return sdkerrors.Wrap(err, "instantiate system contract: "+contract.Label)
+			return sdkerr.Wrap(err, "instantiate system contract: "+contract.Label)
 		}
 	}
 	if contract.Role != "" {

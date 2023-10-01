@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	errorsmod "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -326,7 +327,7 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *types.GovMsg) ([]sdk.Msg, error) {
 	case msg.VoteWeighted != nil:
 		opts := make([]*v1.WeightedVoteOption, len(msg.VoteWeighted.Options))
 		for i, v := range msg.VoteWeighted.Options {
-			weight, err := sdk.NewDecFromStr(v.Weight)
+			weight, err := sdkmath.LegacyNewDecFromStr(v.Weight)
 			if err != nil {
 				return nil, errorsmod.Wrapf(err, "weight for vote %d", i+1)
 			}
@@ -384,7 +385,7 @@ func ConvertWasmCoinsToSdkCoins(coins []types.Coin) (sdk.Coins, error) {
 
 // ConvertWasmCoinToSdkCoin converts a wasm vm type coin to sdk type coin
 func ConvertWasmCoinToSdkCoin(coin types.Coin) (sdk.Coin, error) {
-	amount, ok := sdk.NewIntFromString(coin.Amount)
+	amount, ok := sdkmath.NewIntFromString(coin.Amount)
 	if !ok {
 		return sdk.Coin{}, errorsmod.Wrap(sdkerrors.ErrInvalidCoins, coin.Amount+coin.Denom)
 	}
