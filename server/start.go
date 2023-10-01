@@ -32,6 +32,7 @@ import (
 	"github.com/cosmos/rosetta"
 	crgserver "github.com/cosmos/rosetta/lib/server"
 
+	sdkerrors "cosmossdk.io/errors"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -40,7 +41,6 @@ import (
 	sdkserverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	sdkgrpc "github.com/cosmos/cosmos-sdk/server/grpc"
 	"github.com/cosmos/cosmos-sdk/server/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	config "mythos/v1/server/config"
 	srvflags "mythos/v1/server/flags"

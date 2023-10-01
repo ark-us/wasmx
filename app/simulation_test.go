@@ -24,10 +24,12 @@ func init() {
 // Running as go benchmark test:
 // `go test -benchmem -run=^$ -bench ^BenchmarkSimulation ./app -NumBlocks=200 -BlockSize 50 -Commit=true -Verbose=true -Enabled=true`
 func BenchmarkSimulation(b *testing.B) {
+	config := simcli.NewConfigFromFlags()
+	config.ChainID = "mythos_1000-1"
 	simcli.FlagEnabledValue = true
 	simcli.FlagCommitValue = true
 
-	config, db, dir, logger, _, err := simcli.SetupSimulation("goleveldb-app-sim", "Simulation")
+	db, dir, logger, _, err := simtestutil.SetupSimulation(config, "goleveldb-app-sim", "Simulation", simcli.FlagVerboseValue, simcli.FlagEnabledValue)
 	require.NoError(b, err, "simulation setup failed")
 
 	b.Cleanup(func() {

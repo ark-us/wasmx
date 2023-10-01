@@ -1,7 +1,7 @@
 package wasmutils
 
 import (
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdkerrors "cosmossdk.io/errors"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
