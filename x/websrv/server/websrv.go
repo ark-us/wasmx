@@ -31,9 +31,10 @@ type WebsrvServer struct {
 
 // NewBackend creates a new Backend instance for cosmos and ethereum namespaces
 func NewWebsrvServer(
-	ctx *server.Context,
+	svrCtx *server.Context,
 	logger log.Logger,
 	clientCtx client.Context,
+	ctx context.Context,
 	config *config.WebsrvConfig,
 ) *WebsrvServer {
 	chainID, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
@@ -64,7 +65,7 @@ func NewWebsrvServer(
 	// }
 
 	return &WebsrvServer{
-		ctx:         context.Background(),
+		ctx:         ctx,
 		clientCtx:   clientCtx,
 		queryClient: types.NewQueryClient(clientCtx),
 		logger:      logger.With("module", "websrv"),

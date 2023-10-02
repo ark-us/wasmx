@@ -116,7 +116,7 @@ func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, 
 	sigV2 := signing.SignatureV2{
 		PubKey: account.PubKey,
 		Data: &signing.SingleSignatureData{
-			SignMode:  encodingConfig.TxConfig.SignModeHandler().DefaultMode(),
+			SignMode:  signing.SignMode(encodingConfig.TxConfig.SignModeHandler().DefaultMode()),
 			Signature: nil,
 		},
 		Sequence: seq,
@@ -134,7 +134,7 @@ func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, 
 	}
 	sigV2, err = tx.SignWithPrivKey(
 		s.Context().Context(),
-		encodingConfig.TxConfig.SignModeHandler().DefaultMode(), signerData,
+		signing.SignMode(encodingConfig.TxConfig.SignModeHandler().DefaultMode()), signerData,
 		txBuilder, account.PrivKey, encodingConfig.TxConfig,
 		seq,
 	)
@@ -533,8 +533,8 @@ func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, conte
 
 	proposalId, err := s.GetProposalIdFromLog(resp.GetLog())
 	s.S.Require().NoError(err)
-	proposal, found := s.App.GovKeeper.GetProposal(s.Context(), proposalId)
-	s.S.Require().True(found)
+	proposal, err := s.App.GovKeeper.Proposals.Get(s.Context(), proposalId)
+	s.S.Require().NoError(err)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Status)
 
 	// msgs, err := s.ParseProposal(proposal)
@@ -552,7 +552,8 @@ func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, conte
 	s.S.Require().True(resp.IsOK(), resp.GetLog())
 	s.S.Commit()
 
-	votingParams := s.App.GovKeeper.GetVotingParams(s.Context())
+	votingParams, err := s.App.GovKeeper.Params.Get(s.Context())
+	s.S.Require().NoError(err)
 	voteEnd := *votingParams.VotingPeriod + time.Hour
 	s.S.CommitNBlocks(s.Chain, uint64(voteEnd.Seconds()/5))
 	s.S.Commit()

@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -36,8 +37,9 @@ const (
 
 // APICreator creates the JSON-RPC API implementations.
 type APICreator = func(
-	ctx *server.Context,
+	svrCtx *server.Context,
 	clientCtx client.Context,
+	ctx context.Context,
 	tendermintWebsocketClient *rpcclient.WSClient,
 	allowUnprotectedTxs bool,
 ) []rpc.API
@@ -47,17 +49,18 @@ var apiCreators map[string]APICreator
 
 func init() {
 	apiCreators = map[string]APICreator{
-		EthNamespace: func(ctx *server.Context,
+		EthNamespace: func(svrCtx *server.Context,
 			clientCtx client.Context,
+			ctx context.Context,
 			tmWSClient *rpcclient.WSClient,
 			allowUnprotectedTxs bool,
 		) []rpc.API {
-			evmBackend := backend.NewBackend(ctx, ctx.Logger, clientCtx, allowUnprotectedTxs)
+			evmBackend := backend.NewBackend(svrCtx, svrCtx.Logger, clientCtx, ctx, allowUnprotectedTxs)
 			return []rpc.API{
 				{
 					Namespace: EthNamespace,
 					Version:   apiVersion,
-					Service:   eth.NewPublicAPI(ctx.Logger, evmBackend),
+					Service:   eth.NewPublicAPI(svrCtx.Logger, evmBackend),
 					Public:    true,
 				},
 				// {
@@ -78,7 +81,7 @@ func init() {
 		// 		},
 		// 	}
 		// },
-		NetNamespace: func(_ *server.Context, clientCtx client.Context, _ *rpcclient.WSClient, _ bool) []rpc.API {
+		NetNamespace: func(_ *server.Context, clientCtx client.Context, _ context.Context, _ *rpcclient.WSClient, _ bool) []rpc.API {
 			return []rpc.API{
 				{
 					Namespace: NetNamespace,
@@ -150,8 +153,9 @@ func init() {
 }
 
 // GetRPCAPIs returns the list of all APIs
-func GetRPCAPIs(ctx *server.Context,
+func GetRPCAPIs(svrCtx *server.Context,
 	clientCtx client.Context,
+	ctx context.Context,
 	tmWSClient *rpcclient.WSClient,
 	allowUnprotectedTxs bool,
 	selectedAPIs []string,
@@ -160,9 +164,9 @@ func GetRPCAPIs(ctx *server.Context,
 
 	for _, ns := range selectedAPIs {
 		if creator, ok := apiCreators[ns]; ok {
-			apis = append(apis, creator(ctx, clientCtx, tmWSClient, allowUnprotectedTxs)...)
+			apis = append(apis, creator(svrCtx, clientCtx, ctx, tmWSClient, allowUnprotectedTxs)...)
 		} else {
-			ctx.Logger.Error("invalid namespace value", "namespace", ns)
+			svrCtx.Logger.Error("invalid namespace value", "namespace", ns)
 		}
 	}
 

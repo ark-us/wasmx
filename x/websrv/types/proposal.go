@@ -22,8 +22,9 @@ var (
 func init() {
 	v1beta1.RegisterProposalType(ProposalTypeRegisterRoute)
 	v1beta1.RegisterProposalType(ProposalTypeDeregisterRoute)
-	v1beta1.ModuleCdc.Amino.RegisterConcrete(&RegisterRouteProposal{}, "wasmx/RegisterRouteProposal", nil)
-	v1beta1.ModuleCdc.Amino.RegisterConcrete(&DeregisterRouteProposal{}, "wasmx/DeregisterRouteProposal", nil)
+	// TODO remove?
+	// v1beta1.ModuleCdc.Amino.RegisterConcrete(&RegisterRouteProposal{}, "wasmx/RegisterRouteProposal", nil)
+	// v1beta1.ModuleCdc.Amino.RegisterConcrete(&DeregisterRouteProposal{}, "wasmx/DeregisterRouteProposal", nil)
 }
 
 // NewRegisterRouteProposal returns new instance of RegisterRouteProposal

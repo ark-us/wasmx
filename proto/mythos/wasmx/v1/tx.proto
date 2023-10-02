@@ -4,6 +4,8 @@ package mythos.wasmx.v1;
 import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
 import "mythos/wasmx/v1/contract.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
 
 option go_package = "mythos/v1/x/wasmx/types";
 
@@ -37,6 +39,8 @@ service Msg {
 
 // MsgStoreCode submit Wasm code to the system
 message MsgStoreCode {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
     string sender = 1;
     // WASMByteCode can be raw or gzip compressed
@@ -59,6 +63,8 @@ message MsgStoreCodeResponse {
 
 // MsgStoreCode submit Wasm code to the system
 message MsgDeployCode {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
     string sender = 1;
     // WASMByteCode can be raw or gzip compressed
@@ -92,6 +98,8 @@ message MsgDeployCodeResponse {
 // MsgInstantiateContract create a new smart contract instance for the given
 // code id.
 message MsgInstantiateContract {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
     string sender = 1;
     // CodeID is the reference to the stored WASM code
@@ -109,6 +117,8 @@ message MsgInstantiateContract {
 // MsgInstantiateContract2 create a new smart contract instance for the given
 // code id with a predicable address.
 message MsgInstantiateContract2 {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
     string sender = 1;
     // Admin is an optional address that can execute migrations
@@ -146,6 +156,8 @@ message MsgInstantiateContract2Response {
 
 // MsgExecuteContract submits the given message data to a smart contract
 message MsgExecuteContract {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
     string sender = 1;
     // Contract is the address of the smart contract
@@ -170,6 +182,8 @@ message MsgExecuteContractResponse {
 
 // MsgExecuteEth submits an Ethereum-like RLP-encoded transaction
 message MsgExecuteEth {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // data is RLP-encoded transaction data of the Ethereum transaction
     // we use Any for its caching feature
     // google.protobuf.Any data = 1;
@@ -192,6 +206,8 @@ message ExtensionOptionEthereumTx {
 // MsgExecuteWithOriginContract forwards a message data from a smart contract
 // to another smart contract
 message MsgExecuteWithOriginContract {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Origin is the actor that originally signed the message
     string origin = 1;
     // Sender is the the smart contract that sent the messages
@@ -209,6 +225,8 @@ message MsgExecuteWithOriginContract {
 
 // MsgExecuteDelegateContract submits the given message data to a smart contract
 message MsgExecuteDelegateContract {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Origin is the actor that originally signed the message
     string origin = 1;
     // Sender is the storage contract, equivalent to the address that triggers the message (signer)
@@ -235,6 +253,8 @@ message MsgExecuteDelegateContractResponse {
 }
 
 message MsgCompileContract {
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
     string sender = 1;
     // Contract is the address of the smart contract

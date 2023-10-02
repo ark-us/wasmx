@@ -150,9 +150,10 @@ type Backend struct {
 
 // NewBackend creates a new Backend instance for cosmos and ethereum namespaces
 func NewBackend(
-	ctx *server.Context,
+	svrCtx *server.Context,
 	logger log.Logger,
 	clientCtx client.Context,
+	ctx context.Context,
 	allowUnprotectedTxs bool,
 ) *Backend {
 	chainID, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
@@ -160,13 +161,13 @@ func NewBackend(
 		panic(err)
 	}
 
-	appConf, err := config.GetConfig(ctx.Viper)
+	appConf, err := config.GetConfig(svrCtx.Viper)
 	if err != nil {
 		panic(err)
 	}
 
 	return &Backend{
-		ctx:                 context.Background(),
+		ctx:                 ctx,
 		clientCtx:           clientCtx,
 		queryClient:         rpctypes.NewQueryClient(clientCtx),
 		logger:              logger.With("module", "backend"),

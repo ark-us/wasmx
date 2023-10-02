@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
 
@@ -25,7 +26,7 @@ type WasmxCosmosHandler struct {
 func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
 	h.Ctx = newctx
 }
-func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error) {
+func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
 func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error) {
@@ -129,7 +130,7 @@ func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress
 	}
 }
 
-func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery abci.RequestQuery) ([]byte, error) {
+func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) ([]byte, error) {
 	// TODO if we allow historical queries, at a certain block
 	// use app.Query(queryReq)
 	queryFn := k.grpcQueryRouter.Route(reqQuery.Path)
@@ -151,14 +152,21 @@ func (k Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sd
 }
 
 func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
-	if err := msg.ValidateBasic(); err != nil {
-		return nil, nil, err
+	anymsg, err := cdctypes.NewAnyWithValue(msg)
+	if err != nil {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message any")
 	}
-
-	signers := msg.GetSigners()
-	if signers[0].String() != owner.String() {
-		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+	signers, _, err := k.cdc.GetMsgAnySigners(anymsg)
+	if err != nil {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer missing")
 	}
+	if !bytes.Equal(signers[0], owner.Bytes()) {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", sdk.AccAddress(signers[0]).String(), owner.String())
+	}
+	// signers := msg.GetSigners()
+	// if signers[0].String() != owner.String() {
+	// 	return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+	// }
 
 	return k.executeMsg(ctx, msg)
 }
@@ -209,8 +217,8 @@ func safeHandler(ctx sdk.Context, msg sdk.Msg, handler func(ctx sdk.Context, req
 
 func safeQuery(
 	ctx sdk.Context,
-	msg abci.RequestQuery,
-	handler func(ctx sdk.Context, req abci.RequestQuery) (abci.ResponseQuery, error),
+	msg *abci.RequestQuery,
+	handler func(ctx sdk.Context, req *abci.RequestQuery) (*abci.ResponseQuery, error),
 ) (res *abci.ResponseQuery, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -230,5 +238,5 @@ func safeQuery(
 	}()
 
 	resp, err := handler(ctx, msg)
-	return &resp, err
+	return resp, err
 }

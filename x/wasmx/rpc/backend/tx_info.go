@@ -12,6 +12,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	tndtypes "github.com/cometbft/cometbft/rpc/core/types"
+
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -268,11 +270,13 @@ func (b *Backend) getTransactionByHashPending(txHash common.Hash) (*rpctypes.RPC
 	hexTx := txHash.Hex()
 	// try to find tx in mempool
 
-	res, err := b.clientCtx.Client.UnconfirmedTxs(b.ctx, nil)
-	if err != nil {
-		b.logger.Debug("tx not found", "hash", hexTx, "error", err.Error())
-		return nil, nil
-	}
+	// TODO
+	// res, err := b.clientCtx.Client.UnconfirmedTxs(b.ctx, nil)
+	// if err != nil {
+	// 	b.logger.Debug("tx not found", "hash", hexTx, "error", err.Error())
+	// 	return nil, nil
+	// }
+	res := tndtypes.ResultUnconfirmedTxs{}
 
 	for _, txBz := range res.Txs {
 		if common.BytesToHash(txBz.Hash()).Hex() == hexTx {

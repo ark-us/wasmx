@@ -1,8 +1,6 @@
 package wasmx
 
 import (
-	"math/rand"
-
 	"mythos/v1/testutil/sample"
 	wasmxsimulation "mythos/v1/x/wasmx/simulation"
 	"mythos/v1/x/wasmx/types"
@@ -41,15 +39,13 @@ func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 }
 
 // ProposalContents doesn't return any content functions for governance proposals
-func (AppModule) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
+func (AppModule) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalMsg {
 	return nil
 }
 
-// RandomizedParams creates randomized  param changes for the simulator
-func (am AppModule) RandomizedParams(_ *rand.Rand) []simtypes.LegacyParamChange {
-
-	return []simtypes.LegacyParamChange{}
-}
+// func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
+// 	return nil
+// }
 
 // RegisterStoreDecoder registers a decoder
 func (am AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
