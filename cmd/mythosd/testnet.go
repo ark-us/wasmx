@@ -10,12 +10,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
+
 	tmconfig "github.com/cometbft/cometbft/config"
 	tmos "github.com/cometbft/cometbft/libs/os"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
-	"github.com/spf13/cobra"
+
+	"cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -23,6 +26,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	srvconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/testutil"
@@ -152,7 +156,7 @@ Example:
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 
-			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
+			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
 		},
 	}
 
@@ -228,6 +232,7 @@ func initTestnetFiles(
 	nodeConfig *tmconfig.Config,
 	mbm module.BasicManager,
 	genBalIterator banktypes.GenesisBalancesIterator,
+	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 ) error {
 	if args.chainID == "" {
@@ -320,14 +325,18 @@ func initTestnetFiles(
 		genBalances = append(genBalances, banktypes.Balance{Address: addr.String(), Coins: coins.Sort()})
 		genAccounts = append(genAccounts, authtypes.NewBaseAccount(addr, nil, 0, 0))
 
+		valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addr))
+		if err != nil {
+			return err
+		}
 		valTokens := sdk.TokensFromConsensusPower(100, app.PowerReduction)
 		createValMsg, err := stakingtypes.NewMsgCreateValidator(
-			sdk.ValAddress(addr),
+			valStr,
 			valPubKeys[i],
 			sdk.NewCoin(app.BaseDenom, valTokens),
 			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
-			stakingtypes.NewCommissionRates(sdk.OneDec(), sdk.OneDec(), sdk.OneDec()),
-			sdk.OneInt(),
+			stakingtypes.NewCommissionRates(math.LegacyOneDec(), math.LegacyOneDec(), math.LegacyOneDec()),
+			math.OneInt(),
 		)
 		if err != nil {
 			return err
@@ -347,7 +356,7 @@ func initTestnetFiles(
 			WithKeybase(kb).
 			WithTxConfig(clientCtx.TxConfig)
 
-		if err := tx.Sign(txFactory, nodeDirName, txBuilder, true); err != nil {
+		if err := tx.Sign(cmd.Context(), txFactory, nodeDirName, txBuilder, true); err != nil {
 			return err
 		}
 
@@ -374,7 +383,7 @@ func initTestnetFiles(
 
 	err := collectGenFiles(
 		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
-		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator,
+		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec,
 	)
 	if err != nil {
 		return err
@@ -461,7 +470,7 @@ func initGenFiles(
 func collectGenFiles(
 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator,
+	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec,
 ) error {
 	var appState json.RawMessage
 	genTime := tmtime.Now()
@@ -477,12 +486,12 @@ func collectGenFiles(
 		nodeID, valPubKey := nodeIDs[i], valPubKeys[i]
 		initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)
 
-		genDoc, err := types.GenesisDocFromFile(nodeConfig.GenesisFile())
+		appGenesis, err := genutiltypes.AppGenesisFromFile(nodeConfig.GenesisFile())
 		if err != nil {
 			return err
 		}
 
-		nodeAppState, err := genutil.GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, *genDoc, genBalIterator)
+		nodeAppState, err := genutil.GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, appGenesis, genBalIterator, genutiltypes.DefaultMessageValidator, valAddrCodec)
 		if err != nil {
 			return err
 		}
@@ -546,7 +555,7 @@ func writeFile(name string, dir string, contents []byte) error {
 
 // startTestnet starts an in-process testnet
 func startTestnet(cmd *cobra.Command, args startArgs) error {
-	networkConfig := network.DefaultConfig()
+	networkConfig := network.DefaultConfig(app.NewTestNetworkFixture)
 
 	// Default networkConfig.ChainID is random, and we should only override it if chainID provided
 	// is non-empty
@@ -556,7 +565,7 @@ func startTestnet(cmd *cobra.Command, args startArgs) error {
 	networkConfig.SigningAlgo = args.algo
 	networkConfig.MinGasPrices = args.minGasPrices
 	networkConfig.NumValidators = args.numValidators
-	networkConfig.EnableTMLogging = args.enableLogging
+	networkConfig.EnableLogging = args.enableLogging
 	networkConfig.RPCAddress = args.rpcAddress
 	networkConfig.APIAddress = args.apiAddress
 	networkConfig.GRPCAddress = args.grpcAddress

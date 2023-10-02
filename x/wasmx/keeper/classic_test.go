@@ -515,7 +515,8 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	res = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil, 500_000, nil)
+	res, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil, 500_000, nil)
+	s.Require().Error(err)
 	s.Require().True(res.IsErr(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "failed to execute message", res.GetLog())
 
@@ -662,7 +663,8 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
 
-	res := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 100_000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 100_000, nil)
+	s.Require().Error(err)
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
 	s.Commit()

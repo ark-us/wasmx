@@ -133,6 +133,7 @@ func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, 
 		Sequence:      seq,
 	}
 	sigV2, err = tx.SignWithPrivKey(
+		s.Context().Context(),
 		encodingConfig.TxConfig.SignModeHandler().DefaultMode(), signerData,
 		txBuilder, account.PrivKey, encodingConfig.TxConfig,
 		seq,
@@ -248,12 +249,18 @@ func (s AppContext) prepareEthTx(
 	return bz, nil
 }
 
-func (s AppContext) DeliverEthTx(priv cryptotypes.PrivKey, msg sdk.Msg, txFee sdk.Coins, gasLimit uint64) abci.ResponseDeliverTx {
+func (s AppContext) DeliverEthTx(priv cryptotypes.PrivKey, msg sdk.Msg, txFee sdk.Coins, gasLimit uint64) (*abci.ExecTxResult, error) {
 	bz, err := s.prepareEthTx(priv, msg, txFee, gasLimit)
 	s.S.Require().NoError(err)
-	req := abci.RequestDeliverTx{Tx: bz}
-	res := s.App.BaseApp.DeliverTx(req)
-	return res
+	txs := [][]byte{}
+	txs = append(txs, bz)
+	req := &abci.RequestFinalizeBlock{Txs: txs}
+	res, err := s.App.BaseApp.FinalizeBlock(req)
+	if err != nil {
+		return nil, err
+	}
+	s.S.Require().Equal(len(res.TxResults), 1)
+	return res.TxResults[0], nil
 }
 
 func (s AppContext) SendEthTx(
@@ -264,31 +271,46 @@ func (s AppContext) SendEthTx(
 	gasLimit uint64,
 	gasPrice *big.Int,
 	accesses *ethtypes.AccessList,
-) abci.ResponseDeliverTx {
+) *abci.ExecTxResult {
 	msg, txFee, gasLimit := s.BuildEthTx(priv, to, data, value, gasLimit, gasPrice, accesses)
 	bz, err := s.prepareEthTx(priv, msg, txFee, gasLimit)
 	s.S.Require().NoError(err)
-	req := abci.RequestDeliverTx{Tx: bz}
-	res := s.App.BaseApp.DeliverTx(req)
-
+	txs := [][]byte{}
+	txs = append(txs, bz)
+	req := &abci.RequestFinalizeBlock{Txs: txs}
+	resFin, err := s.App.BaseApp.FinalizeBlock(req)
+	s.S.Require().NoError(err)
+	s.S.Require().Equal(len(resFin.TxResults), 1)
+	res := resFin.TxResults[0]
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
-
 	return res
 }
 
-func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) abci.ResponseDeliverTx {
+func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*abci.ExecTxResult, error) {
 	bz := s.prepareCosmosTx(account, msgs, nil, nil)
-	req := abci.RequestDeliverTx{Tx: bz}
-	res := s.App.BaseApp.DeliverTx(req)
-	return res
+	txs := [][]byte{}
+	txs = append(txs, bz)
+	req := &abci.RequestFinalizeBlock{Txs: txs}
+	res, err := s.App.BaseApp.FinalizeBlock(req)
+	if err != nil {
+		return nil, err
+	}
+	s.S.Require().Equal(len(res.TxResults), 1)
+	return res.TxResults[0], nil
 }
 
-func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
+func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
 	bz := s.prepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
-	req := abci.RequestDeliverTx{Tx: bz}
-	res := s.App.BaseApp.DeliverTx(req)
-	return res
+	txs := [][]byte{}
+	txs = append(txs, bz)
+	req := &abci.RequestFinalizeBlock{Txs: txs}
+	res, err := s.App.BaseApp.FinalizeBlock(req)
+	if err != nil {
+		return nil, err
+	}
+	s.S.Require().Equal(len(res.TxResults), 1)
+	return res.TxResults[0], nil
 }
 
 func (s AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result, error) {
@@ -302,8 +324,8 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []
 		ByteCode: wasmbin,
 		Deps:     deps,
 	}
-
-	res := s.DeliverTx(sender, storeCodeMsg)
+	res, err := s.DeliverTx(sender, storeCodeMsg)
+	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 
@@ -323,7 +345,8 @@ func (s AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []b
 		Metadata: metadata,
 	}
 
-	res := s.DeliverTx(sender, storeCodeMsg)
+	res, err := s.DeliverTx(sender, storeCodeMsg)
+	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 
@@ -351,7 +374,8 @@ func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string
 		Label:    label,
 	}
 
-	res := s.DeliverTx(sender, storeCodeMsg)
+	res, err := s.DeliverTx(sender, storeCodeMsg)
+	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 
@@ -375,7 +399,8 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 		Msg:    msgbz,
 		Funds:  funds,
 	}
-	res := s.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 	contractAddressStr := s.GetContractAddressFromLog(res.GetLog())
@@ -383,19 +408,20 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 	return contractAddress
 }
 
-func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) abci.ResponseDeliverTx {
+func (s AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {
 	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 1500000, nil)
 }
 
-func (s AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
-	res := s.ExecuteContractNoCheck(sender, contractAddress, executeMsg, funds, dependencies, gasLimit, gasPrice)
+func (s AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) *abci.ExecTxResult {
+	res, err := s.ExecuteContractNoCheck(sender, contractAddress, executeMsg, funds, dependencies, gasLimit, gasPrice)
+	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Require().NotContains(res.GetLog(), "failed to execute message", res.GetLog())
 	s.S.Commit()
 	return res
 }
 
-func (s AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) abci.ResponseDeliverTx {
+func (s AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{
@@ -427,9 +453,10 @@ func (s AppContext) WasmxQuery(account simulation.Account, contract sdk.AccAddre
 }
 
 func (s AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
-	abcires := s.WasmxQueryRawNoCheck(account, contract, executeMsg, funds, dependencies)
+	abcires, err := s.WasmxQueryRawNoCheck(account, contract, executeMsg, funds, dependencies)
+	s.S.Require().NoError(err)
 	var resp types.QuerySmartContractCallResponse
-	err := resp.Unmarshal(abcires.Value)
+	err = resp.Unmarshal(abcires.Value)
 	s.S.Require().NoError(err)
 
 	var data types.WasmxQueryResponse
@@ -438,7 +465,7 @@ func (s AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAd
 	return data.Data
 }
 
-func (s AppContext) WasmxQueryRawNoCheck(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) abci.ResponseQuery {
+func (s AppContext) WasmxQueryRawNoCheck(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (*abci.ResponseQuery, error) {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	query := types.QuerySmartContractCallRequest{
@@ -451,8 +478,8 @@ func (s AppContext) WasmxQueryRawNoCheck(account simulation.Account, contract sd
 	bz, err := query.Marshal()
 	s.S.Require().NoError(err)
 
-	req := abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/SmartContractCall"}
-	return s.App.BaseApp.Query(req)
+	req := &abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/SmartContractCall"}
+	return s.App.BaseApp.Query(s.Context().Context(), req)
 }
 
 func (s AppContext) WasmxQueryDebug(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (string, []byte, error) {
@@ -473,8 +500,12 @@ func (s AppContext) WasmxQueryDebugRaw(account simulation.Account, contract sdk.
 	bz, err := query.Marshal()
 	s.S.Require().NoError(err)
 
-	req := abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/DebugContractCall"}
-	abcires := s.App.BaseApp.Query(req)
+	req := &abci.RequestQuery{Data: bz, Path: "/mythos.wasmx.v1.Query/DebugContractCall"}
+	abcires, err := s.App.BaseApp.Query(s.Context().Context(), req)
+	if err != nil {
+		fmt.Println("abcires", abcires)
+		return nil, nil, err
+	}
 	var resp types.QueryDebugContractCallResponse
 	err = resp.Unmarshal(abcires.Value)
 	if err != nil {
@@ -486,10 +517,11 @@ func (s AppContext) WasmxQueryDebugRaw(account simulation.Account, contract sdk.
 	return data.Data, resp.MemorySnapshot, err
 }
 
-func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1.Content, deposit sdk.Coins) abci.ResponseDeliverTx {
+func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1.Content, deposit sdk.Coins) *abci.ExecTxResult {
 	proposalMsg, err := v1beta1.NewMsgSubmitProposal(content, deposit, sender.Address)
 	s.S.Require().NoError(err)
-	resp := s.DeliverTx(sender, proposalMsg)
+	resp, err := s.DeliverTx(sender, proposalMsg)
+	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetLog())
 	s.S.Commit()
 	return resp
@@ -515,7 +547,8 @@ func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, conte
 	// s.S.Require().Equal(content.GetDescription(), textProp.Description)
 
 	voteMsg := v1beta1.NewMsgVote(valAccount.Address, proposalId, v1beta1.OptionYes)
-	resp = s.DeliverTx(valAccount, voteMsg)
+	resp, err = s.DeliverTx(valAccount, voteMsg)
+	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetLog())
 	s.S.Commit()
 

@@ -336,14 +336,20 @@ func AcceptListStargateQuerier(acceptList AcceptedStargateQueries, queryRouter G
 func StakingQuerier(keeper cw8types.StakingKeeper, distKeeper cw8types.DistributionKeeper) func(ctx sdk.Context, request *cw8types.StakingQuery) ([]byte, error) {
 	return func(ctx sdk.Context, request *cw8types.StakingQuery) ([]byte, error) {
 		if request.BondedDenom != nil {
-			denom := keeper.BondDenom(ctx)
+			denom, err := keeper.BondDenom(ctx.Context())
+			if err != nil {
+				return nil, err
+			}
 			res := cw8types.BondedDenomResponse{
 				Denom: denom,
 			}
 			return json.Marshal(res)
 		}
 		if request.AllValidators != nil {
-			validators := keeper.GetBondedValidatorsByPower(ctx)
+			validators, err := keeper.GetBondedValidatorsByPower(ctx.Context())
+			if err != nil {
+				return nil, err
+			}
 			// validators := keeper.GetAllValidators(ctx)
 			wasmVals := make([]cw8types.Validator, len(validators))
 			for i, v := range validators {
@@ -364,15 +370,16 @@ func StakingQuerier(keeper cw8types.StakingKeeper, distKeeper cw8types.Distribut
 			if err != nil {
 				return nil, err
 			}
-			v, found := keeper.GetValidator(ctx, valAddr)
+			v, err := keeper.GetValidator(ctx, valAddr)
+			if err != nil {
+				return nil, err
+			}
 			res := cw8types.ValidatorResponse{}
-			if found {
-				res.Validator = &cw8types.Validator{
-					Address:       v.OperatorAddress,
-					Commission:    v.Commission.Rate.String(),
-					MaxCommission: v.Commission.MaxRate.String(),
-					MaxChangeRate: v.Commission.MaxChangeRate.String(),
-				}
+			res.Validator = &cw8types.Validator{
+				Address:       v.OperatorAddress,
+				Commission:    v.Commission.Rate.String(),
+				MaxCommission: v.Commission.MaxRate.String(),
+				MaxChangeRate: v.Commission.MaxChangeRate.String(),
 			}
 			return json.Marshal(res)
 		}
@@ -381,7 +388,10 @@ func StakingQuerier(keeper cw8types.StakingKeeper, distKeeper cw8types.Distribut
 			if err != nil {
 				return nil, errorsmod.Wrap(sdkerrors.ErrInvalidAddress, request.AllDelegations.Delegator)
 			}
-			sdkDels := keeper.GetAllDelegatorDelegations(ctx, delegator)
+			sdkDels, err := keeper.GetAllDelegatorDelegations(ctx.Context(), delegator)
+			if err != nil {
+				return nil, err
+			}
 			delegations, err := sdkToDelegations(ctx, keeper, sdkDels)
 			if err != nil {
 				return nil, err
@@ -402,12 +412,13 @@ func StakingQuerier(keeper cw8types.StakingKeeper, distKeeper cw8types.Distribut
 			}
 
 			var res cw8types.DelegationResponse
-			d, found := keeper.GetDelegation(ctx, delegator, validator)
-			if found {
-				res.Delegation, err = sdkToFullDelegation(ctx, keeper, distKeeper, d)
-				if err != nil {
-					return nil, err
-				}
+			d, err := keeper.GetDelegation(ctx.Context(), delegator, validator)
+			if err != nil {
+				return nil, err
+			}
+			res.Delegation, err = sdkToFullDelegation(ctx, keeper, distKeeper, d)
+			if err != nil {
+				return nil, err
 			}
 			return json.Marshal(res)
 		}
@@ -417,7 +428,10 @@ func StakingQuerier(keeper cw8types.StakingKeeper, distKeeper cw8types.Distribut
 
 func sdkToDelegations(ctx sdk.Context, keeper cw8types.StakingKeeper, delegations []stakingtypes.Delegation) (cw8types.Delegations, error) {
 	result := make([]cw8types.Delegation, len(delegations))
-	bondDenom := keeper.BondDenom(ctx)
+	bondDenom, err := keeper.BondDenom(ctx.Context())
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "bond denom")
+	}
 
 	for i, d := range delegations {
 		delAddr, err := sdk.AccAddressFromBech32(d.DelegatorAddress)
@@ -431,9 +445,9 @@ func sdkToDelegations(ctx sdk.Context, keeper cw8types.StakingKeeper, delegation
 
 		// shares to amount logic comes from here:
 		// https://github.com/cosmos/cosmos-sdk/blob/v0.38.3/x/staking/keeper/querier.go#L404
-		val, found := keeper.GetValidator(ctx, valAddr)
-		if !found {
-			return nil, errorsmod.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
+		val, err := keeper.GetValidator(ctx.Context(), valAddr)
+		if err != nil {
+			return nil, errorsmod.Wrap(err, "can't load validator for delegation")
 		}
 		amount := sdk.NewCoin(bondDenom, val.TokensFromShares(d.Shares).TruncateInt())
 
@@ -455,11 +469,14 @@ func sdkToFullDelegation(ctx sdk.Context, keeper cw8types.StakingKeeper, distKee
 	if err != nil {
 		return nil, errorsmod.Wrap(err, "validator address")
 	}
-	val, found := keeper.GetValidator(ctx, valAddr)
-	if !found {
-		return nil, errorsmod.Wrap(stakingtypes.ErrNoValidatorFound, "can't load validator for delegation")
+	val, err := keeper.GetValidator(ctx.Context(), valAddr)
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "can't load validator for delegation")
 	}
-	bondDenom := keeper.BondDenom(ctx)
+	bondDenom, err := keeper.BondDenom(ctx.Context())
+	if err != nil {
+		return nil, errorsmod.Wrap(err, "bond denom")
+	}
 	amount := sdk.NewCoin(bondDenom, val.TokensFromShares(delegation.Shares).TruncateInt())
 
 	delegationCoins := ConvertSdkCoinToWasmCoin(amount)
@@ -470,7 +487,11 @@ func sdkToFullDelegation(ctx sdk.Context, keeper cw8types.StakingKeeper, distKee
 	// otherwise, it can redelegate the full amount
 	// (there are cases of partial funds redelegated, but this is a start)
 	redelegateCoins := cw8types.NewCoin(0, bondDenom)
-	if !keeper.HasReceivingRedelegation(ctx, delAddr, valAddr) {
+	hasReceived, err := keeper.HasReceivingRedelegation(ctx.Context(), delAddr, valAddr)
+	if err != nil {
+		return nil, err
+	}
+	if !hasReceived {
 		redelegateCoins = delegationCoins
 	}
 

@@ -9,6 +9,7 @@ import (
 	"path"
 
 	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/wasmx/types"
@@ -67,7 +68,7 @@ func (k WasmxEngine) Instantiate(
 	env types.Env,
 	initMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -94,7 +95,7 @@ func (k WasmxEngine) Execute(
 	env types.Env,
 	executeMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -121,7 +122,7 @@ func (k WasmxEngine) Reply(
 	env types.Env,
 	executeMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -153,7 +154,7 @@ func (k WasmxEngine) QueryExecute(
 	env types.Env,
 	executeMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,

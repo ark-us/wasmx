@@ -6,8 +6,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
-	"github.com/cometbft/cometbft/libs/log"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"

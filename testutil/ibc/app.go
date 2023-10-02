@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 
 	sdkmath "cosmossdk.io/math"
@@ -66,7 +65,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 			MinSelfDelegation: sdkmath.ZeroInt(),
 		}
 		validators = append(validators, validator)
-		delegations = append(delegations, stakingtypes.NewDelegation(genAccs[0].GetAddress(), val.Address.Bytes(), sdkmath.LegacyOneDec()))
+		delegations = append(delegations, stakingtypes.NewDelegation(genAccs[0].GetAddress().String(), val.Address.String(), sdkmath.LegacyOneDec()))
 	}
 
 	// set validators and delegations
@@ -113,7 +112,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	// init chain will set the validator set and initialize the genesis accounts
 	app.InitChain(
-		abci.RequestInitChain{
+		&abci.RequestInitChain{
 			ChainId:         chainID,
 			Time:            time.Now().UTC(),
 			Validators:      []abci.ValidatorUpdate{},
@@ -124,13 +123,14 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	// commit genesis changes
 	app.Commit()
-	app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{
-		ChainID:            chainID,
-		Height:             app.LastBlockHeight() + 1,
-		AppHash:            app.LastCommitID().Hash,
-		ValidatorsHash:     valSet.Hash(),
-		NextValidatorsHash: valSet.Hash(),
-	}})
+	// TODO remove - outdated in cosmos-sdk v0.50
+	// app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{
+	// 	ChainID:            chainID,
+	// 	Height:             app.LastBlockHeight() + 1,
+	// 	AppHash:            app.LastCommitID().Hash,
+	// 	ValidatorsHash:     valSet.Hash(),
+	// 	NextValidatorsHash: valSet.Hash(),
+	// }})
 
 	return app
 }

@@ -134,7 +134,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 
 	// Signature must be compatible with Ethereum
 	privKeyBtcec := (sender.PrivKey).(*secp256k1.PrivKey)
-	btcecPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBtcec.Key)
+	btcecPrivKey, _ := btcec.PrivKeyFromBytes(privKeyBtcec.Key)
 	signature, err := btcec.SignCompact(btcec.S256(), btcecPrivKey, msgHash, false)
 	s.Require().NoError(err)
 	v := signature[0] - 27
@@ -187,7 +187,8 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	s.Require().Equal(expected, qres)
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd"
-	res := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 1500000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 1500000, nil)
+	s.Require().Error(err)
 	s.Require().True(res.IsErr(), res.GetLog())
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004003fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2efffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"

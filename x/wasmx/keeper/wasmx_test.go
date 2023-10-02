@@ -78,7 +78,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	suite.Require().True(elapsed.Cmp(big.NewInt(5)) == 1)
 
 	// an EOA cannot make a system call by tx
-	res := appA.ExecuteContractNoCheck(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1000000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1000000, nil)
+	s.Require().Error(err)
 	suite.Require().True(res.IsErr())
 
 	// a contract cannot make a system call
@@ -86,7 +87,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	s.Require().NoError(err)
 	_, callAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm", nil)
 	msg := types.WasmxExecutionMessage{Data: append(sysAddress.Bytes(), data...)}
-	res = appA.ExecuteContractNoCheck(sender, callAddress, msg, nil, nil, 1000000, nil)
+	res, err = appA.ExecuteContractNoCheck(sender, callAddress, msg, nil, nil, 1000000, nil)
+	s.Require().Error(err)
 	suite.Require().True(res.IsErr())
 
 	// cannot deploy a system contract
@@ -100,7 +102,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 		Msg:    msgbz,
 		Funds:  nil,
 	}
-	res = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	res, err = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	s.Require().NoError(err)
 	suite.Require().True(res.IsErr(), res.GetLog())
 	suite.Require().Contains(res.GetLog(), "invalid address for system contracts")
 }

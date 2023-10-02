@@ -100,7 +100,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 
 	// create an account to send transactions from
 	chain := &ibcgotesting.TestChain{
-		T:             t,
+		// T:             t,
 		Coordinator:   coord,
 		ChainID:       chainID,
 		App:           app,
@@ -120,11 +120,15 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 	ctx := chain.GetContext()
 	mapp.AccountKeeper.SetAccount(ctx, acc)
 
+	valAddrCodec := txConfig.SigningContext().ValidatorAddressCodec()
 	valAddr := sdk.ValAddress(senderAddress.Bytes())
-	_validator, err := stakingtypes.NewValidator(valAddr, senderPrivKey.PubKey(), stakingtypes.Description{})
+	valStr, err := valAddrCodec.BytesToString(valAddr)
+	require.NoError(t, err)
+	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
 	_validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
-	mapp.StakingKeeper.AfterValidatorCreated(ctx, _validator.GetOperator())
+
+	mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx.Context(), valAddr)
 
 	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
 	require.NoError(t, err)

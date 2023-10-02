@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 
 	cryptocodec "mythos/v1/crypto/codec"
-	enccodec "mythos/v1/encoding/codec"
+	enccodec "mythos/v1/crypto/codec"
 )
 
 var TestCodec amino.Codec

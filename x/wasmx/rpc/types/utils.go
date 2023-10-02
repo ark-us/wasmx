@@ -254,13 +254,13 @@ func CheckTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 }
 
 // TxExceedBlockGasLimit returns true if the tx exceeds block gas limit.
-func TxExceedBlockGasLimit(res *abci.ResponseDeliverTx) bool {
+func TxExceedBlockGasLimit(res *abci.ExecTxResult) bool {
 	return strings.Contains(res.Log, ExceedBlockGasLimitError)
 }
 
 // TxSuccessOrExceedsBlockGasLimit returns true if the transaction was successful
 // or if it failed with an ExceedBlockGasLimit error
-func TxSuccessOrExceedsBlockGasLimit(res *abci.ResponseDeliverTx) bool {
+func TxSuccessOrExceedsBlockGasLimit(res *abci.ExecTxResult) bool {
 	return res.Code == 0 || TxExceedBlockGasLimit(res)
 }
 
@@ -303,7 +303,7 @@ func NewParsedTx(msgIndex int) ParsedTx {
 
 // ParseTxResult parse eth tx infos from cosmos-sdk events.
 // It supports two event formats, the formats are described in the comments of the format constants.
-func ParseTxResult(result *abci.ResponseDeliverTx, tx sdk.Tx) (*ParsedTx, error) {
+func ParseTxResult(result *abci.ExecTxResult, tx sdk.Tx) (*ParsedTx, error) {
 	var ethtx *ParsedTx
 
 	// for _, event := range result.Events {

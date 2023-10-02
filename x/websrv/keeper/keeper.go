@@ -1,11 +1,12 @@
 package keeper
 
 import (
+	"context"
 	"fmt"
 
+	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -20,7 +21,7 @@ type (
 		memKey     storetypes.StoreKey
 		paramstore paramtypes.Subspace
 		wasmx      types.WasmxKeeper
-		query      func(req abci.RequestQuery) (res abci.ResponseQuery)
+		query      func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error)
 	}
 )
 
@@ -30,7 +31,7 @@ func NewKeeper(
 	memKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	wasmx types.WasmxKeeper,
-	query func(req abci.RequestQuery) (res abci.ResponseQuery),
+	query func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error),
 
 ) *Keeper {
 	// set KeyTable if it has not already been set

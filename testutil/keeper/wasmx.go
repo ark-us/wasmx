@@ -9,17 +9,23 @@ import (
 	"mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
 
+	"cosmossdk.io/log"
 	"cosmossdk.io/store"
+	"cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -28,8 +34,6 @@ import (
 	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 
-	tmdb "github.com/cometbft/cometbft-db"
-	"github.com/cometbft/cometbft/libs/log"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 )
 
@@ -37,8 +41,9 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
 
-	db := tmdb.NewMemDB()
-	stateStore := store.NewCommitMultiStore(db)
+	db := dbm.NewMemDB()
+	logger := log.NewNopLogger()
+	stateStore := store.NewCommitMultiStore(db, logger, metrics.NewNoOpMetrics())
 	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
 	stateStore.MountStoreWithDB(memStoreKey, storetypes.StoreTypeMemory, nil)
 	require.NoError(t, stateStore.LoadLatestVersion())
@@ -79,18 +84,22 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	}
 	accountKeeper := authkeeper.NewAccountKeeper(
 		cdc,
-		storetypes.NewKVStoreKey(authtypes.StoreKey), // target store
-		subspace(authtypes.ModuleName),
+		runtime.NewKVStoreService(storetypes.NewKVStoreKey(authtypes.StoreKey)), // target store
+		// subspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount, // prototype
 		maccPerms,
+		authcodec.NewBech32Codec(app.Bech32PrefixAccAddr),
 		app.Bech32PrefixAccAddr,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	bankKeeper := bankkeeper.NewBaseKeeper(
 		cdc,
-		storetypes.NewKVStoreKey(banktypes.StoreKey),
+		runtime.NewKVStoreService(storetypes.NewKVStoreKey(banktypes.StoreKey)),
 		accountKeeper,
-		subspace(banktypes.ModuleName),
+		// subspace(banktypes.ModuleName),
 		make(map[string]bool),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		logger,
 	)
 	transferKeeper := ibctransferkeeper.NewKeeper(
 		cdc,
@@ -103,22 +112,27 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		accountKeeper,
 		bankKeeper,
 		nil, //scopedTransferKeeper,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	stakingKeeper := stakingkeeper.NewKeeper(
 		cdc,
-		storetypes.NewKVStoreKey(stakingtypes.StoreKey),
+		runtime.NewKVStoreService(storetypes.NewKVStoreKey(stakingtypes.StoreKey)),
 		accountKeeper,
 		bankKeeper,
-		subspace(stakingtypes.ModuleName),
+		// subspace(stakingtypes.ModuleName),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authcodec.NewBech32Codec(app.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(app.Bech32PrefixConsAddr),
 	)
 	distrKeeper := distrkeeper.NewKeeper(
 		cdc,
-		storetypes.NewKVStoreKey(distrtypes.StoreKey),
-		subspace(distrtypes.ModuleName),
+		runtime.NewKVStoreService(storetypes.NewKVStoreKey(distrtypes.StoreKey)),
+		// subspace(distrtypes.ModuleName),
 		accountKeeper,
 		bankKeeper,
-		&stakingKeeper,
+		stakingKeeper,
 		authtypes.FeeCollectorName,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	k := keeper.NewKeeper(
 		cdc,
@@ -129,7 +143,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		bankKeeper,
 		transferKeeper,
 		stakingKeeper,
-		distrKeeper,
+		distrkeeper.NewQuerier(distrKeeper),
 		nil,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,

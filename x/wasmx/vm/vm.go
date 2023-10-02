@@ -11,6 +11,7 @@ import (
 	dbm "github.com/cometbft/cometbft-db"
 
 	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -200,7 +201,7 @@ func ExecuteWasmInterpreted(
 	funcName string,
 	env types.Env,
 	msg []byte,
-	storeKey []byte, kvstore types.KVStore,
+	storeKey []byte, kvstore prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -281,7 +282,7 @@ func ExecuteWasm(
 	funcName string,
 	env types.Env,
 	msg []byte,
-	storeKey []byte, kvstore types.KVStore,
+	storeKey []byte, kvstore prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,

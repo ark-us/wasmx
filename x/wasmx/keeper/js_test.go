@@ -252,7 +252,8 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	s.Require().NotNil(contractInfo)
 
 	data = []byte(`{"justError":[]}`)
-	txresp = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 2000000, nil)
+	txresp, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 2000000, nil)
+	s.Require().Error(err)
 	s.Require().True(txresp.IsErr(), txresp.GetLog())
 	s.Require().Contains(txresp.GetLog(), "failed to execute message", txresp.GetLog())
 	s.Require().Contains(txresp.GetLog(), "just error", txresp.GetLog())

@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/libs/log"
 
 	"mythos/v1/x/wasmx/cw8/types"
 )

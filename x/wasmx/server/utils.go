@@ -3,11 +3,12 @@ package server
 import (
 	"time"
 
-	tmlog "github.com/cometbft/cometbft/libs/log"
+	"cosmossdk.io/log"
+
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 )
 
-func ConnectTmWS(tmRPCAddr, tmEndpoint string, logger tmlog.Logger) *rpcclient.WSClient {
+func ConnectTmWS(tmRPCAddr, tmEndpoint string, logger log.Logger) *rpcclient.WSClient {
 	tmWsClient, err := rpcclient.NewWS(tmRPCAddr, tmEndpoint,
 		rpcclient.MaxReconnectAttempts(256),
 		rpcclient.ReadWait(120*time.Second),

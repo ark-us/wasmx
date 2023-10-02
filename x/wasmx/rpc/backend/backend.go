@@ -4,6 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	"cosmossdk.io/log"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -17,7 +19,6 @@ import (
 	// "github.com/ethereum/go-ethereum/params"
 	// "github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/cometbft/cometbft/libs/log"
 	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"

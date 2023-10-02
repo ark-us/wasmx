@@ -57,7 +57,7 @@ func BenchmarkSimulation(b *testing.B) {
 		b,
 		os.Stdout,
 		app.BaseApp,
-		simtestutil.AppStateFn(app.AppCodec(), app.SimulationManager()),
+		simtestutil.AppStateFn(app.AppCodec(), app.SimulationManager(), app.DefaultGenesis()),
 		simulationtypes.RandomAccounts,
 		simtestutil.SimulationOperations(app, app.AppCodec(), config),
 		app.ModuleAccountAddrs(),

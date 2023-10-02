@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cometbft/cometbft/libs/log"
-
 	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 

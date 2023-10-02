@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	// "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	circuitante "cosmossdk.io/x/circuit/ante"
 	sdkante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -27,6 +28,7 @@ type HandlerOptions struct {
 	SignModeHandler        *txsigning.HandlerMap
 	SigGasConsumer         func(meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
 	TxFeeChecker           sdkante.TxFeeChecker
+	CircuitKeeper          circuitante.CircuitBreaker
 
 	WasmxKeeper WasmxKeeperI
 
@@ -46,6 +48,9 @@ func (options HandlerOptions) validate() error {
 	}
 	if options.SignModeHandler == nil {
 		return errorsmod.Wrap(errortypes.ErrLogic, "sign mode handler is required for ante builder")
+	}
+	if options.CircuitKeeper == nil {
+		return errorsmod.Wrap(errortypes.ErrLogic, "circuit keeper is required for AnteHandler")
 	}
 	// if options.FeeMarketKeeper == nil {
 	// 	return errorsmod.Wrap(errortypes.ErrLogic, "fee market keeper is required for AnteHandler")
@@ -88,6 +93,7 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 func newCosmosAnteHandler(options HandlerOptions) sdk.AnteHandler {
 	anteDecorators := []sdk.AnteDecorator{
 		sdkante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
+		circuitante.NewCircuitBreakerDecorator(options.CircuitKeeper),
 		sdkante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
 		sdkante.NewValidateBasicDecorator(),
 		sdkante.NewTxTimeoutHeightDecorator(),
