@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx"
@@ -12,7 +13,12 @@ import (
 )
 
 func RegisterCodec(cdc *codec.LegacyAmino) {
-	// this line is used by starport scaffolding # 2
+	legacy.RegisterAminoMsg(cdc, &MsgStoreCode{}, "wasmx/MsgStoreCode")
+	legacy.RegisterAminoMsg(cdc, &MsgInstantiateContract{}, "wasmx/MsgInstantiateContract")
+	legacy.RegisterAminoMsg(cdc, &MsgInstantiateContract2{}, "wasmx/MsgInstantiateContract2")
+	legacy.RegisterAminoMsg(cdc, &MsgExecuteContract{}, "wasmx/MsgExecuteContract")
+	legacy.RegisterAminoMsg(cdc, &MsgCompileContract{}, "wasmx/MsgCompileContract")
+	legacy.RegisterAminoMsg(cdc, &MsgExecuteEth{}, "wasmx/MsgExecuteEth")
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {

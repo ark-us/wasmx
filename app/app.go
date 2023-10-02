@@ -250,7 +250,7 @@ func New(
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
-	std.RegisterLegacyAminoCodec(cdc)
+	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
 	bApp := baseapp.NewBaseApp(

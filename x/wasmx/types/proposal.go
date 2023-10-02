@@ -22,9 +22,6 @@ var (
 func init() {
 	v1beta1.RegisterProposalType(ProposalTypeRegisterRole)
 	v1beta1.RegisterProposalType(ProposalTypeDeregisterRole)
-	// TODO remove?
-	// v1beta1.ModuleCdc.Amino.RegisterConcrete(&RegisterRoleProposal{}, "wasmx/RegisterRoleProposal", nil)
-	// v1beta1.ModuleCdc.Amino.RegisterConcrete(&DeregisterRoleProposal{}, "wasmx/DeregisterRoleProposal", nil)
 }
 
 // NewRegisterRoleProposal returns new instance of RegisterRoleProposal

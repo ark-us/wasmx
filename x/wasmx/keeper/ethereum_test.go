@@ -85,7 +85,7 @@ func (suite *KeeperTestSuite) TestAliasContract() {
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	aliasAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "alias", nil)
 
-	calld := getRegisterHash + senderHex.Hash().Hex()[2:] + senderEthHex.Hash().Hex()[2:]
+	calld := getRegisterHash + senderHex.Hex()[2:] + senderEthHex.Hex()[2:]
 	qres := appA.WasmxQueryRaw(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 
 	// calld = getRegisterMessage + senderHex.Hash().Hex()[2:] + senderEthHex.Hash().Hex()[2:]
@@ -94,13 +94,13 @@ func (suite *KeeperTestSuite) TestAliasContract() {
 	// s.Require().Equal(msgHash.Hex()[2:], hex.EncodeToString(qres))
 
 	signature := appA.SignEthMessage(priv, common.BytesToHash(qres))
-	registerCalld := registerHex + senderEthHex.Hash().Hex()[2:] + hex.EncodeToString(signature)
+	registerCalld := registerHex + senderEthHex.Hex()[2:] + hex.EncodeToString(signature)
 
 	return // TODO
 
 	appA.ExecuteContract(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(registerCalld)}, nil, nil)
 
-	calld = getCosmosAddressHex + senderEthHex.Hash().Hex()[2:]
+	calld = getCosmosAddressHex + senderEthHex.Hex()[2:]
 	res := appA.WasmxQuery(sender, aliasAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	cosmosAddr := res[24:64]
 	s.Require().Equal(strings.ToLower(senderHex.Hex()[2:]), cosmosAddr)
@@ -216,7 +216,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 
 	return // TODO
 
-	calld := sendCoinsHex + receiverHex.Hash().Hex()[2:]
+	calld := sendCoinsHex + receiverHex.Hex()[2:]
 	appA.SendEthTx(priv, nil, appA.Hex2bz(calld), big.NewInt(10), uint64(1000000), big.NewInt(10000), nil)
 	valueSent := big.NewInt(10)
 

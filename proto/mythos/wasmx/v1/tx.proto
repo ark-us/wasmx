@@ -6,11 +6,15 @@ import "cosmos/base/v1beta1/coin.proto";
 import "mythos/wasmx/v1/contract.proto";
 import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
+import "amino/amino.proto";
 
 option go_package = "mythos/v1/x/wasmx/types";
+option (gogoproto.messagename_all) = true;
 
 // Msg defines the wasm Msg service.
 service Msg {
+    option (cosmos.msg.v1.service) = true;
+
     // StoreCode to submit Wasm code to the system
     rpc StoreCode(MsgStoreCode) returns (MsgStoreCodeResponse);
     // DeployCode stores and instantiates
@@ -39,6 +43,7 @@ service Msg {
 
 // MsgStoreCode submit Wasm code to the system
 message MsgStoreCode {
+    option (amino.name) = "wasmx/MsgStoreCode";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Sender is the that actor that signed the messages
@@ -63,6 +68,7 @@ message MsgStoreCodeResponse {
 
 // MsgStoreCode submit Wasm code to the system
 message MsgDeployCode {
+    option (amino.name) = "wasmx/MsgDeployCode";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Sender is the that actor that signed the messages
@@ -98,6 +104,7 @@ message MsgDeployCodeResponse {
 // MsgInstantiateContract create a new smart contract instance for the given
 // code id.
 message MsgInstantiateContract {
+    option (amino.name) = "wasmx/MsgInstantiateContract";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Sender is the that actor that signed the messages
@@ -117,6 +124,7 @@ message MsgInstantiateContract {
 // MsgInstantiateContract2 create a new smart contract instance for the given
 // code id with a predicable address.
 message MsgInstantiateContract2 {
+    option (amino.name) = "wasmx/MsgInstantiateContract2";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Sender is the that actor that signed the messages
@@ -156,6 +164,7 @@ message MsgInstantiateContract2Response {
 
 // MsgExecuteContract submits the given message data to a smart contract
 message MsgExecuteContract {
+    option (amino.name) = "wasmx/MsgExecuteContract";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Sender is the that actor that signed the messages
@@ -182,6 +191,7 @@ message MsgExecuteContractResponse {
 
 // MsgExecuteEth submits an Ethereum-like RLP-encoded transaction
 message MsgExecuteEth {
+    option (amino.name) = "wasmx/MsgExecuteEth";
     option (cosmos.msg.v1.signer) = "sender";
 
     // data is RLP-encoded transaction data of the Ethereum transaction
@@ -206,6 +216,7 @@ message ExtensionOptionEthereumTx {
 // MsgExecuteWithOriginContract forwards a message data from a smart contract
 // to another smart contract
 message MsgExecuteWithOriginContract {
+    option (amino.name) = "wasmx/MsgExecuteWithOriginContract";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Origin is the actor that originally signed the message
@@ -225,6 +236,7 @@ message MsgExecuteWithOriginContract {
 
 // MsgExecuteDelegateContract submits the given message data to a smart contract
 message MsgExecuteDelegateContract {
+    option (amino.name) = "wasmx/MsgExecuteDelegateContract";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Origin is the actor that originally signed the message
@@ -253,6 +265,7 @@ message MsgExecuteDelegateContractResponse {
 }
 
 message MsgCompileContract {
+    option (amino.name) = "wasmx/MsgCompileContract";
     option (cosmos.msg.v1.signer) = "sender";
 
     // Sender is the that actor that signed the messages

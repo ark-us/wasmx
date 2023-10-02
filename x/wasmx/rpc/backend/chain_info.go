@@ -6,6 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	tndtypes "github.com/cometbft/cometbft/rpc/core/types"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -38,10 +40,12 @@ func (b *Backend) BaseFee(blockRes *tmrpctypes.ResultBlockResults) (*big.Int, er
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
 func (b *Backend) PendingTransactions() ([]*sdk.Tx, []common.Hash, error) {
-	res, err := b.clientCtx.Client.UnconfirmedTxs(b.ctx, nil)
-	if err != nil {
-		return nil, nil, err
-	}
+	// TODO
+	res := tndtypes.ResultUnconfirmedTxs{}
+	// res, err := b.clientCtx.Client.UnconfirmedTxs(b.ctx, nil)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	result := make([]*sdk.Tx, 0, len(res.Txs))
 	hashes := make([]common.Hash, 0, len(res.Txs))

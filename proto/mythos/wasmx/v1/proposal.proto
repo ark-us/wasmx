@@ -2,11 +2,15 @@ syntax = "proto3";
 package mythos.wasmx.v1;
 
 import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "amino/amino.proto";
 
 option go_package = "mythos/v1/x/wasmx/types";
+option (gogoproto.messagename_all) = true;
 
 // RegisterRouteProposal is a gov Content type to register a web server route
 message RegisterRoleProposal {
+  option (amino.name) = "wasmx/RegisterRoleProposal";
   option (gogoproto.equal) = false;
   // title of the proposal
   string title = 1;
@@ -23,11 +27,12 @@ message RegisterRoleProposal {
 // DisallowCosmosMessagesProposal is a gov Content type to remove a previously
 // allowed Cosmos message or query to be called from the EVM
 message DeregisterRoleProposal {
-    option (gogoproto.equal) = false;
-    // title of the proposal
-    string title = 1;
-    // description of the proposal
-    string description = 2;
-    // Contract address in bech32 format
-    string contract_address = 3;
+  option (amino.name) = "wasmx/DeregisterRoleProposal";
+  option (gogoproto.equal) = false;
+  // title of the proposal
+  string title = 1;
+  // description of the proposal
+  string description = 2;
+  // Contract address in bech32 format
+  string contract_address = 3;
 }

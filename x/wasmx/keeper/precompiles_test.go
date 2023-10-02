@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2"
+	btc_ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -135,7 +136,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	// Signature must be compatible with Ethereum
 	privKeyBtcec := (sender.PrivKey).(*secp256k1.PrivKey)
 	btcecPrivKey, _ := btcec.PrivKeyFromBytes(privKeyBtcec.Key)
-	signature, err := btcec.SignCompact(btcec.S256(), btcecPrivKey, msgHash, false)
+	signature, err := btc_ecdsa.SignCompact(btcecPrivKey, msgHash, false)
 	s.Require().NoError(err)
 	v := signature[0] - 27
 	copy(signature, signature[1:])

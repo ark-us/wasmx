@@ -974,7 +974,7 @@ func (suite *KeeperTestSuite) TestContractTransfer() {
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s", sendETH, value, receiver.Hash().Hex()[2:]))}, nil, nil)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s", sendETH, value, receiver.Hex()[2:]))}, nil, nil)
 
 	realBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: types.AccAddressFromEvm(receiver).String(), Denom: appA.Denom})
 	s.Require().NoError(err)
