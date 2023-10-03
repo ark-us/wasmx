@@ -6,6 +6,7 @@ import (
 
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/websrv/types"
 )
@@ -118,4 +119,60 @@ func (m msgServer) DeregisterOAuthClient(goCtx context.Context, msg *types.MsgDe
 	m.Keeper.DeleteClientIdToInfo(ctx, msg.ClientId)
 
 	return &types.MsgDeregisterOAuthClientResponse{}, nil
+}
+
+func (m msgServer) RegisterRoute(goCtx context.Context, msg *types.MsgRegisterRoute) (*types.MsgRegisterRouteResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	authority := m.Keeper.GetAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	}
+
+	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract address")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeRegisterRoute,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(types.AttributeKeyContract, msg.ContractAddress),
+		sdk.NewAttribute(types.AttributePath, msg.Path),
+	))
+
+	m.Keeper.RegisterRoute(ctx, msg.Path, contractAddress)
+
+	return &types.MsgRegisterRouteResponse{}, nil
+}
+
+func (m msgServer) DeregisterRoute(goCtx context.Context, msg *types.MsgDeregisterRoute) (*types.MsgDeregisterRouteResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	authority := m.Keeper.GetAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	}
+
+	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract address")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeDeregisterRoute,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(types.AttributeKeyContract, msg.ContractAddress),
+		sdk.NewAttribute(types.AttributePath, msg.Path),
+	))
+
+	m.Keeper.DeregisterRoute(ctx, msg.Path, contractAddress)
+
+	return &types.MsgDeregisterRouteResponse{}, nil
 }

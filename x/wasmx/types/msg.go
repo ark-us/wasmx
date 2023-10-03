@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"time"
@@ -82,10 +83,6 @@ func (msg MsgStoreCode) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgStoreCode) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
-}
-
 func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil { // should never happen as valid basic rejects invalid addresses
@@ -121,10 +118,6 @@ func (msg MsgDeployCode) ValidateBasic() error {
 	}
 
 	return nil
-}
-
-func (msg MsgDeployCode) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 func (msg MsgDeployCode) GetSigners() []sdk.AccAddress {
@@ -166,10 +159,6 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgInstantiateContract) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
-}
-
 func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil { // should never happen as valid basic rejects invalid addresses
@@ -195,10 +184,6 @@ func (msg MsgCompileContract) ValidateBasic() error {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
 	return nil
-}
-
-func (msg MsgCompileContract) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 func (msg MsgCompileContract) GetSigners() []sdk.AccAddress {
@@ -236,10 +221,6 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
-}
-
-func (msg MsgExecuteContract) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 func (msg MsgExecuteContract) GetSigners() []sdk.AccAddress {
@@ -280,10 +261,6 @@ func (msg MsgExecuteWithOriginContract) ValidateBasic() error {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
-}
-
-func (msg MsgExecuteWithOriginContract) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 func (msg MsgExecuteWithOriginContract) GetSigners() []sdk.AccAddress {
@@ -330,10 +307,6 @@ func (msg MsgExecuteDelegateContract) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgExecuteDelegateContract) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
-}
-
 func (msg MsgExecuteDelegateContract) GetSigners() []sdk.AccAddress {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil { // should never happen as valid basic rejects invalid addresses
@@ -376,10 +349,6 @@ func (msg MsgInstantiateContract2) ValidateBasic() error {
 		return sdkerr.Wrap(err, "salt")
 	}
 	return nil
-}
-
-func (msg MsgInstantiateContract2) GetSignBytes() []byte {
-	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(&msg))
 }
 
 func (msg MsgInstantiateContract2) GetSigners() []sdk.AccAddress {
@@ -517,3 +486,97 @@ func UnpackTxData(data []byte) (*ethtypes.Transaction, error) {
 
 // 	return anyTxData, nil
 // }
+
+func (msg MsgRegisterRole) Route() string {
+	return RouterKey
+}
+
+func (msg MsgRegisterRole) Type() string {
+	return "register-role"
+}
+
+func (msg MsgRegisterRole) GetSigners() []sdk.AccAddress {
+	authority, err := sdk.AccAddressFromBech32(msg.Authority)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{authority}
+}
+
+func (msg MsgRegisterRole) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
+		return sdkerr.Wrap(err, "authority")
+	}
+
+	if err := validateStringNonEmpty(msg.Title); err != nil {
+		return sdkerr.Wrap(err, "title")
+	}
+
+	if err := validateStringNonEmpty(msg.Description); err != nil {
+		return sdkerr.Wrap(err, "description")
+	}
+
+	if err := validateStringNonEmpty(msg.Role); err != nil {
+		return sdkerr.Wrap(err, "role")
+	}
+
+	if err := validateStringNonEmpty(msg.Label); err != nil {
+		return sdkerr.Wrap(err, "label")
+	}
+
+	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+		return sdkerr.Wrap(err, "contract address")
+	}
+	return nil
+}
+
+func (msg MsgDeregisterRole) Route() string {
+	return RouterKey
+}
+
+func (msg MsgDeregisterRole) Type() string {
+	return "deregister-role"
+}
+
+func (msg MsgDeregisterRole) GetSigners() []sdk.AccAddress {
+	authority, err := sdk.AccAddressFromBech32(msg.Authority)
+	if err != nil { // should never happen as valid basic rejects invalid addresses
+		panic(err.Error())
+	}
+	return []sdk.AccAddress{authority}
+}
+
+func (msg MsgDeregisterRole) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
+		return sdkerr.Wrap(err, "authority")
+	}
+
+	if err := validateStringNonEmpty(msg.Title); err != nil {
+		return sdkerr.Wrap(err, "title")
+	}
+
+	if err := validateStringNonEmpty(msg.Description); err != nil {
+		return sdkerr.Wrap(err, "description")
+	}
+
+	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+		return sdkerr.Wrap(err, "contract address")
+	}
+	return nil
+}
+
+func validateUint64(i interface{}) error {
+	_, ok := i.(uint64)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+
+	return nil
+}
+
+func validateStringNonEmpty(i interface{}) error {
+	if i == "" {
+		return fmt.Errorf("empty string")
+	}
+	return validateString(i)
+}

@@ -275,7 +275,7 @@ func (e *PublicAPI) Call(args rpctypes.TransactionArgs,
 // 	return hexutil.Uint(types.ProtocolVersion)
 // }
 
-// GasPrice returns the current gas price based on Ethermint's gas price oracle.
+// GasPrice returns the current gas price
 func (e *PublicAPI) GasPrice() (*hexutil.Big, error) {
 	e.logger.Debug("eth_gasPrice")
 	return e.backend.GasPrice()

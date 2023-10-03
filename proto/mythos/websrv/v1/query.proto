@@ -7,6 +7,8 @@ import "cosmos/base/query/v1beta1/pagination.proto";
 import "mythos/websrv/v1/params.proto";
 
 option go_package = "mythos/v1/x/websrv/types";
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.equal_all) = false;
 
 // Query defines the gRPC querier service.
 service Query {

@@ -12,4 +12,5 @@ const (
 	AttributeKeyRoute         = "route"
 	AttributeKeyContract      = "contract_address"
 	AttributeKeyOauthClientId = "oauth_client_id"
+	AttributePath             = "path"
 )

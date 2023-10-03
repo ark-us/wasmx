@@ -7,6 +7,7 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
@@ -319,4 +320,60 @@ func (m msgServer) ExecuteDelegateContract(goCtx context.Context, msg *types.Msg
 	return &types.MsgExecuteDelegateContractResponse{
 		Data: data,
 	}, nil
+}
+
+func (m msgServer) RegisterRole(goCtx context.Context, msg *types.MsgRegisterRole) (*types.MsgRegisterRoleResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	authority := m.Keeper.GetAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	}
+
+	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract address")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeRegisterRole,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
+		sdk.NewAttribute(types.AttributeKeyRole, msg.Role),
+		sdk.NewAttribute(types.AttributeKeyRoleLabel, msg.Label),
+	))
+
+	m.Keeper.RegisterRole(ctx, msg.Role, msg.Label, contractAddress)
+
+	return &types.MsgRegisterRoleResponse{}, nil
+}
+
+func (m msgServer) DeregisterRole(goCtx context.Context, msg *types.MsgDeregisterRole) (*types.MsgDeregisterRoleResponse, error) {
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	authority := m.Keeper.GetAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	}
+
+	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract address")
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeDeregisterRole,
+		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
+	))
+
+	m.Keeper.DeregisterRole(ctx, contractAddress)
+
+	return &types.MsgDeregisterRoleResponse{}, nil
 }

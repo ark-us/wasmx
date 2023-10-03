@@ -22,6 +22,9 @@ type (
 		paramstore paramtypes.Subspace
 		wasmx      types.WasmxKeeper
 		query      func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error)
+		// the address capable of executing messages through governance. Typically, this
+		// should be the x/gov module account.
+		authority string
 	}
 )
 
@@ -32,6 +35,7 @@ func NewKeeper(
 	ps paramtypes.Subspace,
 	wasmx types.WasmxKeeper,
 	query func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error),
+	authority string,
 
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -46,9 +50,15 @@ func NewKeeper(
 		paramstore: ps,
 		wasmx:      wasmx,
 		query:      query,
+		authority:  authority,
 	}
 }
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+}
+
+// GetAuthority returns the module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }

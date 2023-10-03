@@ -9,8 +9,9 @@ import (
 	_ "github.com/cosmos/cosmos-proto"
 	_ "github.com/cosmos/cosmos-sdk/types/msgservice"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
-	grpc1 "github.com/gogo/protobuf/grpc"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/cosmos/gogoproto/gogoproto"
+	grpc1 "github.com/cosmos/gogoproto/grpc"
+	proto "github.com/cosmos/gogoproto/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -31,7 +32,6 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type MsgRegisterOAuthClient struct {
-	// bech32 address
 	Owner  string `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	Domain string `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
 }
@@ -68,20 +68,6 @@ func (m *MsgRegisterOAuthClient) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_MsgRegisterOAuthClient proto.InternalMessageInfo
-
-func (m *MsgRegisterOAuthClient) GetOwner() string {
-	if m != nil {
-		return m.Owner
-	}
-	return ""
-}
-
-func (m *MsgRegisterOAuthClient) GetDomain() string {
-	if m != nil {
-		return m.Domain
-	}
-	return ""
-}
 
 type MsgRegisterOAuthClientResponse struct {
 	ClientId uint64 `protobuf:"varint,1,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
@@ -120,15 +106,7 @@ func (m *MsgRegisterOAuthClientResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgRegisterOAuthClientResponse proto.InternalMessageInfo
 
-func (m *MsgRegisterOAuthClientResponse) GetClientId() uint64 {
-	if m != nil {
-		return m.ClientId
-	}
-	return 0
-}
-
 type MsgEditOAuthClient struct {
-	// bech32 address
 	Owner    string `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	ClientId uint64 `protobuf:"varint,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
 	Domain   string `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
@@ -167,27 +145,6 @@ func (m *MsgEditOAuthClient) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgEditOAuthClient proto.InternalMessageInfo
 
-func (m *MsgEditOAuthClient) GetOwner() string {
-	if m != nil {
-		return m.Owner
-	}
-	return ""
-}
-
-func (m *MsgEditOAuthClient) GetClientId() uint64 {
-	if m != nil {
-		return m.ClientId
-	}
-	return 0
-}
-
-func (m *MsgEditOAuthClient) GetDomain() string {
-	if m != nil {
-		return m.Domain
-	}
-	return ""
-}
-
 type MsgEditOAuthClientResponse struct {
 }
 
@@ -225,7 +182,6 @@ func (m *MsgEditOAuthClientResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_MsgEditOAuthClientResponse proto.InternalMessageInfo
 
 type MsgDeregisterOAuthClient struct {
-	// bech32 address
 	Owner    string `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	ClientId uint64 `protobuf:"varint,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
 }
@@ -263,20 +219,6 @@ func (m *MsgDeregisterOAuthClient) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgDeregisterOAuthClient proto.InternalMessageInfo
 
-func (m *MsgDeregisterOAuthClient) GetOwner() string {
-	if m != nil {
-		return m.Owner
-	}
-	return ""
-}
-
-func (m *MsgDeregisterOAuthClient) GetClientId() uint64 {
-	if m != nil {
-		return m.ClientId
-	}
-	return 0
-}
-
 type MsgDeregisterOAuthClientResponse struct {
 }
 
@@ -313,6 +255,171 @@ func (m *MsgDeregisterOAuthClientResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgDeregisterOAuthClientResponse proto.InternalMessageInfo
 
+// Register a web server route
+type MsgRegisterRoute struct {
+	// authority is the address that controls the module.
+	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	// title of the proposal
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// description of the proposal
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Route path
+	Path string `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	// Contract address in bech32 format
+	ContractAddress string `protobuf:"bytes,5,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+}
+
+func (m *MsgRegisterRoute) Reset()         { *m = MsgRegisterRoute{} }
+func (m *MsgRegisterRoute) String() string { return proto.CompactTextString(m) }
+func (*MsgRegisterRoute) ProtoMessage()    {}
+func (*MsgRegisterRoute) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5197198e1e32f310, []int{6}
+}
+func (m *MsgRegisterRoute) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgRegisterRoute) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgRegisterRoute.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgRegisterRoute) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgRegisterRoute.Merge(m, src)
+}
+func (m *MsgRegisterRoute) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgRegisterRoute) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgRegisterRoute.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgRegisterRoute proto.InternalMessageInfo
+
+type MsgRegisterRouteResponse struct {
+}
+
+func (m *MsgRegisterRouteResponse) Reset()         { *m = MsgRegisterRouteResponse{} }
+func (m *MsgRegisterRouteResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgRegisterRouteResponse) ProtoMessage()    {}
+func (*MsgRegisterRouteResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5197198e1e32f310, []int{7}
+}
+func (m *MsgRegisterRouteResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgRegisterRouteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgRegisterRouteResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgRegisterRouteResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgRegisterRouteResponse.Merge(m, src)
+}
+func (m *MsgRegisterRouteResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgRegisterRouteResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgRegisterRouteResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgRegisterRouteResponse proto.InternalMessageInfo
+
+type MsgDeregisterRoute struct {
+	// authority is the address that controls the module.
+	Authority string `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	// title of the proposal
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// description of the proposal
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Route path
+	Path string `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	// Contract address in bech32 format
+	ContractAddress string `protobuf:"bytes,5,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+}
+
+func (m *MsgDeregisterRoute) Reset()         { *m = MsgDeregisterRoute{} }
+func (m *MsgDeregisterRoute) String() string { return proto.CompactTextString(m) }
+func (*MsgDeregisterRoute) ProtoMessage()    {}
+func (*MsgDeregisterRoute) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5197198e1e32f310, []int{8}
+}
+func (m *MsgDeregisterRoute) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgDeregisterRoute) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgDeregisterRoute.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgDeregisterRoute) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgDeregisterRoute.Merge(m, src)
+}
+func (m *MsgDeregisterRoute) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgDeregisterRoute) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgDeregisterRoute.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgDeregisterRoute proto.InternalMessageInfo
+
+type MsgDeregisterRouteResponse struct {
+}
+
+func (m *MsgDeregisterRouteResponse) Reset()         { *m = MsgDeregisterRouteResponse{} }
+func (m *MsgDeregisterRouteResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgDeregisterRouteResponse) ProtoMessage()    {}
+func (*MsgDeregisterRouteResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5197198e1e32f310, []int{9}
+}
+func (m *MsgDeregisterRouteResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgDeregisterRouteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgDeregisterRouteResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgDeregisterRouteResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgDeregisterRouteResponse.Merge(m, src)
+}
+func (m *MsgDeregisterRouteResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgDeregisterRouteResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgDeregisterRouteResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgDeregisterRouteResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*MsgRegisterOAuthClient)(nil), "mythos.websrv.v1.MsgRegisterOAuthClient")
 	proto.RegisterType((*MsgRegisterOAuthClientResponse)(nil), "mythos.websrv.v1.MsgRegisterOAuthClientResponse")
@@ -320,38 +427,55 @@ func init() {
 	proto.RegisterType((*MsgEditOAuthClientResponse)(nil), "mythos.websrv.v1.MsgEditOAuthClientResponse")
 	proto.RegisterType((*MsgDeregisterOAuthClient)(nil), "mythos.websrv.v1.MsgDeregisterOAuthClient")
 	proto.RegisterType((*MsgDeregisterOAuthClientResponse)(nil), "mythos.websrv.v1.MsgDeregisterOAuthClientResponse")
+	proto.RegisterType((*MsgRegisterRoute)(nil), "mythos.websrv.v1.MsgRegisterRoute")
+	proto.RegisterType((*MsgRegisterRouteResponse)(nil), "mythos.websrv.v1.MsgRegisterRouteResponse")
+	proto.RegisterType((*MsgDeregisterRoute)(nil), "mythos.websrv.v1.MsgDeregisterRoute")
+	proto.RegisterType((*MsgDeregisterRouteResponse)(nil), "mythos.websrv.v1.MsgDeregisterRouteResponse")
 }
 
 func init() { proto.RegisterFile("mythos/websrv/v1/tx.proto", fileDescriptor_5197198e1e32f310) }
 
 var fileDescriptor_5197198e1e32f310 = []byte{
-	// 403 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0xcc, 0xad, 0x2c, 0xc9,
-	0xc8, 0x2f, 0xd6, 0x2f, 0x4f, 0x4d, 0x2a, 0x2e, 0x2a, 0xd3, 0x2f, 0x33, 0xd4, 0x2f, 0xa9, 0xd0,
-	0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x12, 0x80, 0x48, 0xe9, 0x41, 0xa4, 0xf4, 0xca, 0x0c, 0xa5,
-	0x24, 0x93, 0xf3, 0x8b, 0x73, 0xf3, 0x8b, 0xe3, 0xc1, 0xf2, 0xfa, 0x10, 0x0e, 0x44, 0xb1, 0x94,
-	0x60, 0x62, 0x6e, 0x66, 0x5e, 0xbe, 0x3e, 0x98, 0x84, 0x0a, 0x89, 0x43, 0x14, 0xe8, 0xe7, 0x16,
-	0xa7, 0x83, 0xcc, 0xcd, 0x2d, 0x4e, 0x87, 0x48, 0x28, 0x65, 0x71, 0x89, 0xf9, 0x16, 0xa7, 0x07,
-	0xa5, 0xa6, 0x67, 0x16, 0x97, 0xa4, 0x16, 0xf9, 0x3b, 0x96, 0x96, 0x64, 0x38, 0xe7, 0x64, 0xa6,
-	0xe6, 0x95, 0x08, 0x89, 0x70, 0xb1, 0xe6, 0x97, 0xe7, 0xa5, 0x16, 0x49, 0x30, 0x2a, 0x30, 0x6a,
-	0x70, 0x06, 0x41, 0x38, 0x42, 0x62, 0x5c, 0x6c, 0x29, 0xf9, 0xb9, 0x89, 0x99, 0x79, 0x12, 0x4c,
-	0x60, 0x61, 0x28, 0xcf, 0x4a, 0xa9, 0xeb, 0xf9, 0x06, 0x2d, 0x59, 0xa8, 0xcb, 0xb1, 0x9b, 0xa8,
-	0x64, 0xcb, 0x25, 0x87, 0x5d, 0x26, 0x28, 0xb5, 0xb8, 0x20, 0x3f, 0xaf, 0x38, 0x55, 0x48, 0x9a,
-	0x8b, 0x33, 0x19, 0x2c, 0x12, 0x9f, 0x99, 0x02, 0xb6, 0x97, 0x25, 0x88, 0x03, 0x22, 0xe0, 0x99,
-	0xa2, 0x54, 0xcf, 0x25, 0xe4, 0x5b, 0x9c, 0xee, 0x9a, 0x92, 0x59, 0x42, 0xd8, 0x99, 0x28, 0x06,
-	0x31, 0xa1, 0x1a, 0x84, 0xe4, 0x07, 0x66, 0x14, 0x3f, 0xc8, 0x81, 0xfc, 0x20, 0x89, 0xf0, 0x03,
-	0x9a, 0x55, 0x4a, 0x32, 0x5c, 0x52, 0x98, 0xa2, 0x30, 0xb7, 0x2b, 0x15, 0x73, 0x49, 0xf8, 0x16,
-	0xa7, 0xbb, 0xa4, 0x16, 0x11, 0x1d, 0x96, 0xf8, 0x1c, 0x69, 0xa5, 0x02, 0x72, 0x8c, 0x3c, 0xc2,
-	0x31, 0x58, 0x0d, 0x56, 0x52, 0xe2, 0x52, 0xc0, 0x25, 0x07, 0x73, 0x98, 0xd1, 0x7d, 0x26, 0x2e,
-	0x66, 0xdf, 0xe2, 0x74, 0xa1, 0x42, 0x2e, 0x61, 0x6c, 0xf1, 0xac, 0xa1, 0x87, 0x9e, 0xb6, 0xf4,
-	0xb0, 0xc7, 0x92, 0x94, 0x01, 0xb1, 0x2a, 0xe1, 0xf1, 0x99, 0xca, 0xc5, 0x8f, 0x1e, 0x5f, 0x2a,
-	0x58, 0x0d, 0x41, 0x53, 0x25, 0xa5, 0x43, 0x8c, 0x2a, 0xb8, 0x35, 0xe5, 0x5c, 0xa2, 0xd8, 0xc3,
-	0x5d, 0x0b, 0xab, 0x31, 0x58, 0xd5, 0x4a, 0x19, 0x11, 0xaf, 0x16, 0x66, 0xb1, 0x14, 0x6b, 0xc3,
-	0xf3, 0x0d, 0x5a, 0x8c, 0x4e, 0x46, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0,
-	0x91, 0x1c, 0xe3, 0x84, 0xc7, 0x72, 0x0c, 0x17, 0x1e, 0xcb, 0x31, 0xdc, 0x78, 0x2c, 0xc7, 0x10,
-	0x25, 0x01, 0xcd, 0xd2, 0x65, 0x86, 0xfa, 0x15, 0xb0, 0x7c, 0x5d, 0x52, 0x59, 0x90, 0x5a, 0x9c,
-	0xc4, 0x06, 0xce, 0x7f, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x3a, 0x07, 0x54, 0x42, 0xf5,
-	0x03, 0x00, 0x00,
+	// 624 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x55, 0xb1, 0x6f, 0xd3, 0x4e,
+	0x14, 0x8e, 0xd3, 0xa4, 0xfa, 0xf5, 0x7e, 0x42, 0x2d, 0x47, 0x68, 0x1d, 0x03, 0x6e, 0x64, 0x75,
+	0x88, 0xa2, 0x60, 0x37, 0x45, 0xea, 0x10, 0x89, 0xa1, 0x2d, 0x0c, 0x0c, 0x11, 0x92, 0xd9, 0x58,
+	0x22, 0x37, 0x3e, 0x39, 0x27, 0xd5, 0xbe, 0xe0, 0xbb, 0x24, 0xcd, 0x86, 0x18, 0x41, 0x02, 0x36,
+	0x56, 0x24, 0x06, 0xd6, 0x0c, 0xfc, 0x11, 0x1d, 0x2b, 0x26, 0x46, 0x48, 0x86, 0xf0, 0x67, 0xa0,
+	0xdc, 0xd9, 0x49, 0xec, 0x1e, 0x4d, 0x24, 0x98, 0x58, 0xa2, 0xdc, 0xf7, 0xbe, 0xf3, 0xf7, 0xde,
+	0x77, 0xef, 0xde, 0x81, 0xa2, 0x3f, 0x60, 0x6d, 0x42, 0xad, 0x3e, 0x3a, 0xa5, 0x61, 0xcf, 0xea,
+	0xd5, 0x2c, 0x76, 0x6e, 0x76, 0x42, 0xc2, 0x08, 0xdc, 0x12, 0x21, 0x53, 0x84, 0xcc, 0x5e, 0x4d,
+	0x2b, 0xb6, 0x08, 0xf5, 0x09, 0x6d, 0xf2, 0xb8, 0x25, 0x16, 0x82, 0xac, 0x15, 0x3c, 0xe2, 0x11,
+	0x81, 0x4f, 0xff, 0x45, 0xe8, 0x4d, 0xc7, 0xc7, 0x01, 0xb1, 0xf8, 0x6f, 0x04, 0xed, 0x88, 0x6d,
+	0x96, 0x4f, 0xbd, 0xa9, 0x9a, 0x4f, 0x3d, 0x11, 0x30, 0xde, 0x2a, 0x60, 0xbb, 0x41, 0x3d, 0x1b,
+	0x79, 0x98, 0x32, 0x14, 0x3e, 0x3d, 0xea, 0xb2, 0xf6, 0xc9, 0x19, 0x46, 0x01, 0x83, 0x26, 0xc8,
+	0x93, 0x7e, 0x80, 0x42, 0x55, 0x29, 0x29, 0xe5, 0x8d, 0x63, 0xf5, 0xeb, 0x97, 0xfb, 0x85, 0x48,
+	0xfd, 0xc8, 0x75, 0x43, 0x44, 0xe9, 0x33, 0x16, 0xe2, 0xc0, 0xb3, 0x05, 0x0d, 0x6e, 0x83, 0x75,
+	0x97, 0xf8, 0x0e, 0x0e, 0xd4, 0xec, 0x74, 0x83, 0x1d, 0xad, 0xea, 0xd5, 0x57, 0x93, 0x61, 0x45,
+	0x70, 0x5e, 0x4f, 0x86, 0x95, 0x7b, 0x51, 0xd1, 0x72, 0x55, 0xe3, 0x21, 0xd0, 0xe5, 0x11, 0x1b,
+	0xd1, 0x0e, 0x09, 0x28, 0x82, 0x77, 0xc0, 0x46, 0x8b, 0x23, 0x4d, 0xec, 0xf2, 0xdc, 0x72, 0xf6,
+	0x7f, 0x02, 0x78, 0xe2, 0x1a, 0x9f, 0x14, 0x00, 0x1b, 0xd4, 0x7b, 0xec, 0x62, 0xf6, 0x27, 0xb5,
+	0x24, 0x34, 0xb2, 0x49, 0x8d, 0x85, 0x42, 0xd7, 0x12, 0x85, 0x96, 0x93, 0x85, 0x16, 0xe7, 0x85,
+	0xa6, 0xd2, 0x31, 0xee, 0x02, 0xed, 0x2a, 0x1a, 0x17, 0x68, 0x7c, 0x50, 0x80, 0xda, 0xa0, 0xde,
+	0x23, 0x14, 0xfe, 0x85, 0x53, 0xb9, 0xae, 0x92, 0xba, 0x99, 0xcc, 0x78, 0x77, 0x9e, 0xb1, 0x54,
+	0xdc, 0x30, 0x40, 0xe9, 0x77, 0xb1, 0x59, 0xf6, 0x6f, 0xb2, 0x60, 0x6b, 0xe1, 0x04, 0x6d, 0xd2,
+	0x65, 0x08, 0x1e, 0x82, 0x0d, 0xa7, 0xcb, 0xda, 0x24, 0xc4, 0x6c, 0xb0, 0x34, 0xf3, 0x39, 0x15,
+	0x16, 0x40, 0x9e, 0x61, 0x76, 0x86, 0xa2, 0x96, 0x12, 0x0b, 0x58, 0x02, 0xff, 0xbb, 0x88, 0xb6,
+	0x42, 0xdc, 0x61, 0x98, 0xc4, 0xa7, 0xb0, 0x08, 0x41, 0x08, 0x72, 0x1d, 0x87, 0xb5, 0xd5, 0x1c,
+	0x0f, 0xf1, 0xff, 0xf0, 0x04, 0x6c, 0xb5, 0x48, 0xc0, 0x42, 0xa7, 0xc5, 0x9a, 0x8e, 0x10, 0x54,
+	0xf3, 0x4b, 0x52, 0xd9, 0x8c, 0x77, 0x44, 0x70, 0xdd, 0xfc, 0xf9, 0x71, 0x37, 0x33, 0x75, 0x6d,
+	0x9e, 0xe4, 0xd4, 0xb9, 0x9d, 0xab, 0x4d, 0xcd, 0x0b, 0x37, 0x34, 0x7e, 0x94, 0x09, 0x6c, 0xe6,
+	0xd4, 0xbb, 0x2c, 0xef, 0xd5, 0xb9, 0x9d, 0xff, 0x98, 0x57, 0xfb, 0x72, 0xaf, 0x8a, 0xb2, 0x2e,
+	0x13, 0x6e, 0x89, 0x7b, 0x91, 0x42, 0x63, 0xbf, 0x0e, 0x3e, 0xe7, 0xc0, 0x5a, 0x83, 0x7a, 0xf0,
+	0x05, 0xb8, 0x25, 0x9b, 0x57, 0x65, 0x33, 0x3d, 0x3a, 0x4d, 0xf9, 0x24, 0xd1, 0xf6, 0x57, 0x65,
+	0xce, 0x66, 0x0e, 0x02, 0x9b, 0xe9, 0x91, 0xb2, 0x27, 0xfd, 0x48, 0x8a, 0xa5, 0x55, 0x57, 0x61,
+	0xcd, 0x64, 0xfa, 0xe0, 0xb6, 0xfc, 0xd6, 0x57, 0xa4, 0x9f, 0x91, 0x72, 0xb5, 0x83, 0xd5, 0xb9,
+	0x33, 0xe1, 0x26, 0xb8, 0x91, 0xbc, 0xb0, 0xc6, 0xb5, 0x16, 0x71, 0x8e, 0x56, 0x59, 0xce, 0x59,
+	0x34, 0x30, 0xdd, 0xe7, 0x7b, 0x4b, 0xf2, 0x14, 0x22, 0xd5, 0x55, 0x58, 0xb1, 0x8c, 0x96, 0x7f,
+	0x39, 0x19, 0x56, 0x94, 0xe3, 0xc3, 0x8b, 0x1f, 0x7a, 0xe6, 0x62, 0xa4, 0x2b, 0x97, 0x23, 0x5d,
+	0xf9, 0x3e, 0xd2, 0x95, 0xf7, 0x63, 0x3d, 0x73, 0x39, 0xd6, 0x33, 0xdf, 0xc6, 0x7a, 0xe6, 0xb9,
+	0x1a, 0xbd, 0xbe, 0xbd, 0x9a, 0x75, 0x1e, 0x3f, 0xc1, 0x6c, 0xd0, 0x41, 0xf4, 0x74, 0x9d, 0x3f,
+	0x8a, 0x0f, 0x7e, 0x05, 0x00, 0x00, 0xff, 0xff, 0xcc, 0x8f, 0x8d, 0xb2, 0xa0, 0x07, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -372,6 +496,11 @@ type MsgClient interface {
 	EditOAuthClient(ctx context.Context, in *MsgEditOAuthClient, opts ...grpc.CallOption) (*MsgEditOAuthClientResponse, error)
 	// Deregister OAuth client
 	DeregisterOAuthClient(ctx context.Context, in *MsgDeregisterOAuthClient, opts ...grpc.CallOption) (*MsgDeregisterOAuthClientResponse, error)
+	// gov authorized
+	// register contract for http route
+	RegisterRoute(ctx context.Context, in *MsgRegisterRoute, opts ...grpc.CallOption) (*MsgRegisterRouteResponse, error)
+	// deregister http route
+	DeregisterRoute(ctx context.Context, in *MsgDeregisterRoute, opts ...grpc.CallOption) (*MsgDeregisterRouteResponse, error)
 }
 
 type msgClient struct {
@@ -409,6 +538,24 @@ func (c *msgClient) DeregisterOAuthClient(ctx context.Context, in *MsgDeregister
 	return out, nil
 }
 
+func (c *msgClient) RegisterRoute(ctx context.Context, in *MsgRegisterRoute, opts ...grpc.CallOption) (*MsgRegisterRouteResponse, error) {
+	out := new(MsgRegisterRouteResponse)
+	err := c.cc.Invoke(ctx, "/mythos.websrv.v1.Msg/RegisterRoute", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) DeregisterRoute(ctx context.Context, in *MsgDeregisterRoute, opts ...grpc.CallOption) (*MsgDeregisterRouteResponse, error) {
+	out := new(MsgDeregisterRouteResponse)
+	err := c.cc.Invoke(ctx, "/mythos.websrv.v1.Msg/DeregisterRoute", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
 	// Register OAuth client
@@ -417,6 +564,11 @@ type MsgServer interface {
 	EditOAuthClient(context.Context, *MsgEditOAuthClient) (*MsgEditOAuthClientResponse, error)
 	// Deregister OAuth client
 	DeregisterOAuthClient(context.Context, *MsgDeregisterOAuthClient) (*MsgDeregisterOAuthClientResponse, error)
+	// gov authorized
+	// register contract for http route
+	RegisterRoute(context.Context, *MsgRegisterRoute) (*MsgRegisterRouteResponse, error)
+	// deregister http route
+	DeregisterRoute(context.Context, *MsgDeregisterRoute) (*MsgDeregisterRouteResponse, error)
 }
 
 // UnimplementedMsgServer can be embedded to have forward compatible implementations.
@@ -431,6 +583,12 @@ func (*UnimplementedMsgServer) EditOAuthClient(ctx context.Context, req *MsgEdit
 }
 func (*UnimplementedMsgServer) DeregisterOAuthClient(ctx context.Context, req *MsgDeregisterOAuthClient) (*MsgDeregisterOAuthClientResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeregisterOAuthClient not implemented")
+}
+func (*UnimplementedMsgServer) RegisterRoute(ctx context.Context, req *MsgRegisterRoute) (*MsgRegisterRouteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterRoute not implemented")
+}
+func (*UnimplementedMsgServer) DeregisterRoute(ctx context.Context, req *MsgDeregisterRoute) (*MsgDeregisterRouteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeregisterRoute not implemented")
 }
 
 func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
@@ -491,6 +649,42 @@ func _Msg_DeregisterOAuthClient_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_RegisterRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRegisterRoute)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RegisterRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.websrv.v1.Msg/RegisterRoute",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RegisterRoute(ctx, req.(*MsgRegisterRoute))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_DeregisterRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgDeregisterRoute)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).DeregisterRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.websrv.v1.Msg/DeregisterRoute",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).DeregisterRoute(ctx, req.(*MsgDeregisterRoute))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Msg_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "mythos.websrv.v1.Msg",
 	HandlerType: (*MsgServer)(nil),
@@ -506,6 +700,14 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeregisterOAuthClient",
 			Handler:    _Msg_DeregisterOAuthClient_Handler,
+		},
+		{
+			MethodName: "RegisterRoute",
+			Handler:    _Msg_RegisterRoute_Handler,
+		},
+		{
+			MethodName: "DeregisterRoute",
+			Handler:    _Msg_DeregisterRoute_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -700,6 +902,168 @@ func (m *MsgDeregisterOAuthClientResponse) MarshalToSizedBuffer(dAtA []byte) (in
 	return len(dAtA) - i, nil
 }
 
+func (m *MsgRegisterRoute) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgRegisterRoute) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgRegisterRoute) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.ContractAddress)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Path) > 0 {
+		i -= len(m.Path)
+		copy(dAtA[i:], m.Path)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Path)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.Description) > 0 {
+		i -= len(m.Description)
+		copy(dAtA[i:], m.Description)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Description)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Title) > 0 {
+		i -= len(m.Title)
+		copy(dAtA[i:], m.Title)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Title)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Authority) > 0 {
+		i -= len(m.Authority)
+		copy(dAtA[i:], m.Authority)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Authority)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgRegisterRouteResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgRegisterRouteResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgRegisterRouteResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgDeregisterRoute) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgDeregisterRoute) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgDeregisterRoute) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.ContractAddress) > 0 {
+		i -= len(m.ContractAddress)
+		copy(dAtA[i:], m.ContractAddress)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.ContractAddress)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Path) > 0 {
+		i -= len(m.Path)
+		copy(dAtA[i:], m.Path)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Path)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.Description) > 0 {
+		i -= len(m.Description)
+		copy(dAtA[i:], m.Description)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Description)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Title) > 0 {
+		i -= len(m.Title)
+		copy(dAtA[i:], m.Title)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Title)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Authority) > 0 {
+		i -= len(m.Authority)
+		copy(dAtA[i:], m.Authority)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Authority)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgDeregisterRouteResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgDeregisterRouteResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgDeregisterRouteResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	offset -= sovTx(v)
 	base := offset
@@ -786,6 +1150,82 @@ func (m *MsgDeregisterOAuthClient) Size() (n int) {
 }
 
 func (m *MsgDeregisterOAuthClientResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgRegisterRoute) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Authority)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Title)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Path)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.ContractAddress)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgRegisterRouteResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgDeregisterRoute) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Authority)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Title)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Path)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.ContractAddress)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgDeregisterRouteResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1294,6 +1734,526 @@ func (m *MsgDeregisterOAuthClientResponse) Unmarshal(dAtA []byte) error {
 		}
 		if fieldNum <= 0 {
 			return fmt.Errorf("proto: MsgDeregisterOAuthClientResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgRegisterRoute) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgRegisterRoute: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgRegisterRoute: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Authority", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Authority = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Title", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Title = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Path", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Path = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgRegisterRouteResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgRegisterRouteResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgRegisterRouteResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgDeregisterRoute) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgDeregisterRoute: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgDeregisterRoute: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Authority", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Authority = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Title", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Title = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Path", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Path = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ContractAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgDeregisterRouteResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgDeregisterRouteResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgDeregisterRouteResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:

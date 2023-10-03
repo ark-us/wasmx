@@ -48,6 +48,10 @@ type (
 		wasmvm  WasmxEngine
 		tempDir string
 		binDir  string
+
+		// the address capable of executing messages through governance. Typically, this
+		// should be the x/gov module account.
+		authority string
 	}
 )
 
@@ -68,6 +72,7 @@ func NewKeeper(
 	interfaceRegistry cdctypes.InterfaceRegistry,
 	msgRouter *baseapp.MsgServiceRouter,
 	grpcQueryRouter *baseapp.GRPCQueryRouter,
+	authority string,
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
@@ -134,6 +139,7 @@ func NewKeeper(
 		wasmvm:        *wasmvm,
 		tempDir:       tempDir,
 		binDir:        binDir,
+		authority:     authority,
 	}
 
 	// cosmwasm support
@@ -152,6 +158,11 @@ func NewKeeper(
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+}
+
+// GetAuthority returns the module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }
 
 func (k Keeper) ContractHandler() *cchtypes.ContractHandlerMap {

@@ -20,7 +20,7 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
-// GasPrice returns the current gas price based on Ethermint's gas price oracle.
+// GasPrice returns the current gas price
 func (b *Backend) GasPrice() (*hexutil.Big, error) {
 	result := big.NewInt(1000000)
 	return (*hexutil.Big)(result), nil

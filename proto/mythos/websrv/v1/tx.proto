@@ -2,26 +2,35 @@ syntax = "proto3";
 package mythos.websrv.v1;
 
 import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
 import "amino/amino.proto";
 import "cosmos/msg/v1/msg.proto";
 
 option go_package = "mythos/v1/x/websrv/types";
+option (gogoproto.goproto_getters_all) = false;
 
 // Msg defines the Msg service.
 service Msg {
   option (cosmos.msg.v1.service) = true;
+
   // Register OAuth client
   rpc RegisterOAuthClient(MsgRegisterOAuthClient) returns (MsgRegisterOAuthClientResponse);
   // Edit OAuth client
   rpc EditOAuthClient(MsgEditOAuthClient) returns (MsgEditOAuthClientResponse);
   // Deregister OAuth client
   rpc DeregisterOAuthClient(MsgDeregisterOAuthClient) returns (MsgDeregisterOAuthClientResponse);
+
+  // gov authorized
+  // register contract for http route
+  rpc RegisterRoute(MsgRegisterRoute) returns (MsgRegisterRouteResponse);
+  // deregister http route
+  rpc DeregisterRoute(MsgDeregisterRoute) returns (MsgDeregisterRouteResponse);
 }
 
 message MsgRegisterOAuthClient {
     option (amino.name) = "websrv/MsgRegisterOAuthClient";
-    // bech32 address
-    string owner = 1;
+    option (cosmos.msg.v1.signer) = "owner";
+    string owner = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     string domain = 2;
 }
 
@@ -31,8 +40,8 @@ message MsgRegisterOAuthClientResponse {
 
 message MsgEditOAuthClient {
     option (amino.name) = "websrv/MsgEditOAuthClient";
-    // bech32 address
-    string owner = 1;
+    option (cosmos.msg.v1.signer) = "owner";
+    string owner = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     uint64 client_id = 2;
     string domain = 3;
 }
@@ -41,9 +50,47 @@ message MsgEditOAuthClientResponse {}
 
 message MsgDeregisterOAuthClient {
     option (amino.name) = "websrv/MsgDeregisterOAuthClient";
-    // bech32 address
-    string owner = 1;
+    option (cosmos.msg.v1.signer) = "owner";
+    string owner = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     uint64 client_id = 2;
 }
 
 message MsgDeregisterOAuthClientResponse {}
+
+// Register a web server route
+message MsgRegisterRoute {
+    option (cosmos.msg.v1.signer) = "authority";
+    option (amino.name) = "websrv/MsgRegisterRoute";
+    option (gogoproto.equal) = false;
+
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // title of the proposal
+    string title = 2;
+    // description of the proposal
+    string description = 3;
+    // Route path
+    string path = 4;
+    // Contract address in bech32 format
+    string contract_address = 5 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgRegisterRouteResponse {}
+
+message MsgDeregisterRoute {
+    option (cosmos.msg.v1.signer) = "authority";
+    option (amino.name) = "websrv/MsgDeregisterRoute";
+    option (gogoproto.equal) = false;
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // title of the proposal
+    string title = 2;
+    // description of the proposal
+    string description = 3;
+    // Route path
+    string path = 4;
+    // Contract address in bech32 format
+    string contract_address = 5 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgDeregisterRouteResponse {}

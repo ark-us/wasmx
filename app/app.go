@@ -250,7 +250,7 @@ func New(
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
-	// std.RegisterLegacyAminoCodec(cdc)
+	std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
 	bApp := baseapp.NewBaseApp(
@@ -532,6 +532,7 @@ func New(
 		app.interfaceRegistry,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 
@@ -542,6 +543,7 @@ func New(
 		app.GetSubspace(websrvmoduletypes.ModuleName),
 		app.WasmxKeeper,
 		app.Query,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 
@@ -814,6 +816,12 @@ func New(
 		if err := app.LoadLatestVersion(); err != nil {
 			tmos.Exit(err.Error())
 		}
+
+		// TODO
+		// // Initialize pinned codes in wasmvm as they are not persisted there
+		// if err := app.WasmKeeper.InitializePinnedCodes(ctx); err != nil {
+		// 	panic(fmt.Sprintf("failed initialize pinned codes %s", err))
+		// }
 	}
 
 	app.ScopedIBCKeeper = scopedIBCKeeper

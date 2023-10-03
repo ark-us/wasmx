@@ -24,4 +24,6 @@ var (
 	ErrOAuthClientInvalidDomain = sdkerr.Register(DefaultCodespace, 6, "websrv oauth invalid client domain")
 
 	ErrOAuthTooManyClientsRegistered = sdkerr.Register(DefaultCodespace, 7, "websrv oauth too many clients registered")
+
+	ErrInvalid = sdkerr.Register(DefaultCodespace, 8, "invalid")
 )
