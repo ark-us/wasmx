@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/wasmx/types"
@@ -20,7 +21,7 @@ var (
 func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 	wasmbin := tinygoAdd
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -36,7 +37,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	wasmbin := tinygoSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -66,7 +67,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
 	wasmbin := tinygoSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 	depsPy := []string{types.INTERPRETER_PYTHON}
 
 	appA := s.GetAppContext(s.chainA)

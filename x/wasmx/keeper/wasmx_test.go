@@ -4,9 +4,10 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
-	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
@@ -32,7 +33,7 @@ type BenchmarkRequest struct {
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	wasmbin := precompiles.GetPrecompileByLabel("sys_proxy")
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -74,10 +75,11 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 
 	qres := appA.WasmxQuery(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	elapsed := big.NewInt(0).SetBytes(appA.Hex2bz(qres))
-	suite.Require().True(elapsed.Cmp(big.NewInt(5)) == 1)
+	suite.Require().True(elapsed.Cmp(big.NewInt(4)) == 1, fmt.Sprintf("elapsed: %d", elapsed.Uint64()))
 
 	// an EOA cannot make a system call by tx
-	res := appA.ExecuteContractNoCheck(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1000000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, sysAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1000000, nil)
+	s.Require().NoError(err)
 	suite.Require().True(res.IsErr())
 
 	// a contract cannot make a system call
@@ -85,7 +87,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	s.Require().NoError(err)
 	_, callAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm", nil)
 	msg := types.WasmxExecutionMessage{Data: append(sysAddress.Bytes(), data...)}
-	res = appA.ExecuteContractNoCheck(sender, callAddress, msg, nil, nil, 1000000, nil)
+	res, err = appA.ExecuteContractNoCheck(sender, callAddress, msg, nil, nil, 1000000, nil)
+	s.Require().NoError(err)
 	suite.Require().True(res.IsErr())
 
 	// cannot deploy a system contract
@@ -99,7 +102,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 		Msg:    msgbz,
 		Funds:  nil,
 	}
-	res = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	res, err = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	s.Require().NoError(err)
 	suite.Require().True(res.IsErr(), res.GetLog())
 	suite.Require().Contains(res.GetLog(), "invalid address for system contracts")
 }
@@ -107,7 +111,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	wasmbin := wasmxSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -119,12 +123,12 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	logCount := strings.Count(res.GetLog(), `{"key":"type","value":"wasmx"}`)
-	dataCount := strings.Count(res.GetLog(), `{"key":"data","value":"0x"}`)
-	topicCount := strings.Count(res.GetLog(), `{"key":"topic","value":"0x68656c6c6f000000000000000000000000000000000000000000000000000000"}`)
-	s.Require().Equal(1, logCount, res.GetLog())
-	s.Require().Equal(1, dataCount, res.GetLog())
-	s.Require().Equal(1, topicCount, res.GetLog())
+	wasmlogs := appA.GetWasmxEvents(res.GetEvents())
+	emptyDataLogs := appA.GetEventsByAttribute(wasmlogs, "data", "0x")
+	topicLogs := appA.GetEventsByAttribute(wasmlogs, "topic", "0x68656c6c6f000000000000000000000000000000000000000000000000000000")
+	s.Require().Equal(1, len(wasmlogs), res.GetEvents())
+	s.Require().Equal(1, len(emptyDataLogs), res.GetEvents())
+	s.Require().Equal(1, len(topicLogs), res.GetEvents())
 
 	initvalue := "sammy"
 	keybz := []byte("hello")

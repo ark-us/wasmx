@@ -1,12 +1,13 @@
 package backend
 
 import (
-	"bytes"
 	"encoding/hex"
 	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"cosmossdk.io/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -14,9 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -52,26 +52,27 @@ func TxLogsFromEvents(events []abci.Event) ([]*ethtypes.Log, error) {
 	return logs, nil
 }
 
+// TODO only ewasm logs?
 // ParseTxLogsFromEvent parse tx logs from one event
 func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
 	var log ethtypes.Log
 	for _, attr := range event.Attributes {
 		// we now parse all wasmx logs, regardless of AttributeKeyEventType
-		if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyIndex)) {
+		if attr.Key == wasmxtypes.AttributeKeyIndex {
 			index, err := strconv.Atoi(string(attr.Value))
 			if err != nil {
 				return nil, err
 			}
 			log.Index = uint(index)
-		} else if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyContractAddr)) {
+		} else if attr.Key == wasmxtypes.AttributeKeyContractAddr {
 			contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
 			if err != nil {
 				return nil, err
 			}
 			log.Address = wasmxtypes.EvmAddressFromAcc(contractAddress)
-		} else if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyTopic)) {
+		} else if attr.Key == wasmxtypes.AttributeKeyTopic {
 			log.Topics = append(log.Topics, common.HexToHash(string(attr.Value)))
-		} else if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyData)) {
+		} else if attr.Key == wasmxtypes.AttributeKeyData {
 			data, err := hex.DecodeString(string(attr.Value[2:]))
 			if err != nil {
 				return nil, err
@@ -89,7 +90,7 @@ func ContractAddressFromEvents(events []abci.Event) *common.Address {
 			continue
 		}
 		for _, attr := range event.Attributes {
-			if bytes.Equal(attr.Key, []byte(wasmxtypes.AttributeKeyContractAddr)) {
+			if attr.Key == wasmxtypes.AttributeKeyContractAddr {
 				contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
 				if err != nil {
 					return nil

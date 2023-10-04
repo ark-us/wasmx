@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -26,7 +26,8 @@ func NewPublicAPI(clientCtx client.Context) *PublicAPI {
 
 	return &PublicAPI{
 		networkVersion: chainIDEpoch.Uint64(),
-		tmClient:       clientCtx.Client,
+		// TODO fixme
+		// tmClient:       clientCtx.Client,
 	}
 }
 
@@ -38,6 +39,9 @@ func (s *PublicAPI) Version() string {
 // Listening returns if client is actively listening for network connections.
 func (s *PublicAPI) Listening() bool {
 	ctx := context.Background()
+	if s.tmClient == nil {
+		return false
+	}
 	netInfo, err := s.tmClient.NetInfo(ctx)
 	if err != nil {
 		return false
@@ -48,6 +52,9 @@ func (s *PublicAPI) Listening() bool {
 // PeerCount returns the number of peers currently connected to the client.
 func (s *PublicAPI) PeerCount() int {
 	ctx := context.Background()
+	if s.tmClient == nil {
+		return 0
+	}
 	netInfo, err := s.tmClient.NetInfo(ctx)
 	if err != nil {
 		return 0

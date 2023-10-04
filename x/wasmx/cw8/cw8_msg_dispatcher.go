@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	"mythos/v1/x/wasmx/cw8/types"
 )
@@ -92,14 +93,14 @@ func (d MessageDispatcher) DispatchMessages(ctx sdk.Context, contractAddr sdk.Ac
 
 // dispatchMsgWithGasLimit sends a message with gas limit applied
 func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg types.CosmosMsg, gasLimit uint64) (events []sdk.Event, data [][]byte, err error) {
-	limitedMeter := sdk.NewGasMeter(gasLimit)
+	limitedMeter := storetypes.NewGasMeter(gasLimit)
 	subCtx := ctx.WithGasMeter(limitedMeter)
 
 	// catch out of gas panic and just charge the entire gas limit
 	defer func() {
 		if r := recover(); r != nil {
 			// if it's not an OutOfGas error, raise it again
-			if _, ok := r.(sdk.ErrorOutOfGas); !ok {
+			if _, ok := r.(storetypes.ErrorOutOfGas); !ok {
 				// TODO
 				// log it to get the original stack trace somewhere (as panic(r) keeps message but stacktrace to here
 				d.keeper.Logger(ctx).Info("SubMsg rethrowing panic: %#v", r)

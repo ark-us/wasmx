@@ -36,10 +36,14 @@
 - [mythos/websrv/v1/tx.proto](#mythos/websrv/v1/tx.proto)
     - [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient)
     - [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse)
+    - [MsgDeregisterRoute](#mythos.websrv.v1.MsgDeregisterRoute)
+    - [MsgDeregisterRouteResponse](#mythos.websrv.v1.MsgDeregisterRouteResponse)
     - [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient)
     - [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse)
     - [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient)
     - [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse)
+    - [MsgRegisterRoute](#mythos.websrv.v1.MsgRegisterRoute)
+    - [MsgRegisterRouteResponse](#mythos.websrv.v1.MsgRegisterRouteResponse)
   
     - [Msg](#mythos.websrv.v1.Msg)
   
@@ -445,7 +449,7 @@ Query defines the gRPC querier service.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  | bech32 address |
+| `owner` | [string](#string) |  |  |
 | `client_id` | [uint64](#uint64) |  |  |
 
 
@@ -463,6 +467,35 @@ Query defines the gRPC querier service.
 
 
 
+<a name="mythos.websrv.v1.MsgDeregisterRoute"></a>
+
+### MsgDeregisterRoute
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `authority` | [string](#string) |  | authority is the address that controls the module. |
+| `title` | [string](#string) |  | title of the proposal |
+| `description` | [string](#string) |  | description of the proposal |
+| `path` | [string](#string) |  | Route path |
+| `contract_address` | [string](#string) |  | Contract address in bech32 format |
+
+
+
+
+
+
+<a name="mythos.websrv.v1.MsgDeregisterRouteResponse"></a>
+
+### MsgDeregisterRouteResponse
+
+
+
+
+
+
+
 <a name="mythos.websrv.v1.MsgEditOAuthClient"></a>
 
 ### MsgEditOAuthClient
@@ -471,7 +504,7 @@ Query defines the gRPC querier service.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  | bech32 address |
+| `owner` | [string](#string) |  |  |
 | `client_id` | [uint64](#uint64) |  |  |
 | `domain` | [string](#string) |  |  |
 
@@ -498,7 +531,7 @@ Query defines the gRPC querier service.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  | bech32 address |
+| `owner` | [string](#string) |  |  |
 | `domain` | [string](#string) |  |  |
 
 
@@ -515,6 +548,35 @@ Query defines the gRPC querier service.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `client_id` | [uint64](#uint64) |  |  |
+
+
+
+
+
+
+<a name="mythos.websrv.v1.MsgRegisterRoute"></a>
+
+### MsgRegisterRoute
+Register a web server route
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `authority` | [string](#string) |  | authority is the address that controls the module. |
+| `title` | [string](#string) |  | title of the proposal |
+| `description` | [string](#string) |  | description of the proposal |
+| `path` | [string](#string) |  | Route path |
+| `contract_address` | [string](#string) |  | Contract address in bech32 format |
+
+
+
+
+
+
+<a name="mythos.websrv.v1.MsgRegisterRouteResponse"></a>
+
+### MsgRegisterRouteResponse
+
 
 
 
@@ -537,6 +599,8 @@ Msg defines the Msg service.
 | `RegisterOAuthClient` | [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse) | Register OAuth client | |
 | `EditOAuthClient` | [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient) | [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse) | Edit OAuth client | |
 | `DeregisterOAuthClient` | [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient) | [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse) | Deregister OAuth client | |
+| `RegisterRoute` | [MsgRegisterRoute](#mythos.websrv.v1.MsgRegisterRoute) | [MsgRegisterRouteResponse](#mythos.websrv.v1.MsgRegisterRouteResponse) | gov authorized register contract for http route | |
+| `DeregisterRoute` | [MsgDeregisterRoute](#mythos.websrv.v1.MsgDeregisterRoute) | [MsgDeregisterRouteResponse](#mythos.websrv.v1.MsgDeregisterRouteResponse) | deregister http route | |
 
  <!-- end services -->
 

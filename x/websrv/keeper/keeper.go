@@ -1,14 +1,15 @@
 package keeper
 
 import (
+	"context"
 	"fmt"
 
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/log"
 
 	"mythos/v1/x/websrv/types"
 )
@@ -20,7 +21,10 @@ type (
 		memKey     storetypes.StoreKey
 		paramstore paramtypes.Subspace
 		wasmx      types.WasmxKeeper
-		query      func(req abci.RequestQuery) (res abci.ResponseQuery)
+		query      func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error)
+		// the address capable of executing messages through governance. Typically, this
+		// should be the x/gov module account.
+		authority string
 	}
 )
 
@@ -30,7 +34,8 @@ func NewKeeper(
 	memKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	wasmx types.WasmxKeeper,
-	query func(req abci.RequestQuery) (res abci.ResponseQuery),
+	query func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error),
+	authority string,
 
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -45,9 +50,15 @@ func NewKeeper(
 		paramstore: ps,
 		wasmx:      wasmx,
 		query:      query,
+		authority:  authority,
 	}
 }
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+}
+
+// GetAuthority returns the module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }

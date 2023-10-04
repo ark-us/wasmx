@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	sdkerr "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
@@ -41,7 +43,7 @@ func (k Keeper) ContractsByCode(c context.Context, req *types.QueryContractsByCo
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }
 	// if req.CodeId == 0 {
-	// 	return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+	// 	return nil, sdkerr.Wrap(types.ErrInvalid, "code id")
 	// }
 	// ctx := sdk.UnwrapSDKContext(c)
 	// r := make([]string, 0)
@@ -132,8 +134,8 @@ func (k Keeper) RawContractState(c context.Context, req *types.QueryRawContractS
 // defer func() {
 // 	if r := recover(); r != nil {
 // 		switch rType := r.(type) {
-// 		case sdk.ErrorOutOfGas:
-// 			err = sdkerrors.Wrapf(sdkerrors.ErrOutOfGas,
+// 		case storetypes.ErrorOutOfGas:
+// 			err = sdkerr.Wrapf(sdkerrors.ErrOutOfGas,
 // 				"out of gas in location: %v; gasWanted: %d, gasUsed: %d",
 // 				rType.Descriptor, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed(),
 // 			)
@@ -175,13 +177,13 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 		return nil, err
 	}
 	// TODO validate deps
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {
 			switch rType := r.(type) {
-			case sdk.ErrorOutOfGas:
-				err = sdkerrors.Wrapf(sdkerrors.ErrOutOfGas,
+			case storetypes.ErrorOutOfGas:
+				err = sdkerr.Wrapf(sdkerrors.ErrOutOfGas,
 					"out of gas in location: %v; gasWanted: %d, gasUsed: %d",
 					rType.Descriptor, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed(),
 				)
@@ -198,7 +200,7 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 	}()
 
 	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
-		return nil, sdkerrors.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
 	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
@@ -228,14 +230,14 @@ func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp 
 	}
 
 	// TODO validate deps
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 	ctx = ctx.WithValue(cchtypes.CONTEXT_COIN_TYPE_KEY, cchtypes.COIN_TYPE_ETH)
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {
 			switch rType := r.(type) {
-			case sdk.ErrorOutOfGas:
-				err = sdkerrors.Wrapf(sdkerrors.ErrOutOfGas,
+			case storetypes.ErrorOutOfGas:
+				err = sdkerr.Wrapf(sdkerrors.ErrOutOfGas,
 					"out of gas in location: %v; gasWanted: %d, gasUsed: %d",
 					rType.Descriptor, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed(),
 				)
@@ -261,7 +263,7 @@ func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp 
 		msg := types.WasmxExecutionMessage{Data: []byte{}}
 		msgbz, err := json.Marshal(msg)
 		if err != nil {
-			sdkerrors.Wrap(err, "ExecuteEth could not marshal data")
+			sdkerr.Wrap(err, "ExecuteEth could not marshal data")
 		}
 		tempCtx, _ := ctx.CacheContext()
 
@@ -278,7 +280,7 @@ func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp 
 		return nil, err
 	}
 	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
-		return nil, sdkerrors.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
 	switch {
@@ -306,13 +308,13 @@ func (k Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContra
 		return nil, err
 	}
 	// TODO validate deps
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(sdk.NewGasMeter(k.queryGasLimit))
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {
 			switch rType := r.(type) {
-			case sdk.ErrorOutOfGas:
-				err = sdkerrors.Wrapf(sdkerrors.ErrOutOfGas,
+			case storetypes.ErrorOutOfGas:
+				err = sdkerr.Wrapf(sdkerrors.ErrOutOfGas,
 					"out of gas in location: %v; gasWanted: %d, gasUsed: %d",
 					rType.Descriptor, ctx.GasMeter().Limit(), ctx.GasMeter().GasConsumed(),
 				)
@@ -329,7 +331,7 @@ func (k Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContra
 	}()
 
 	if !k.CanCallSystemContract(ctx, sender) {
-		return nil, sdkerrors.Wrap(types.ErrUnauthorizedAddress, "debug is non-deterministic and cannot be called as part of a transaction")
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "debug is non-deterministic and cannot be called as part of a transaction")
 	}
 	bz, memsnapshot, errMsg := k.QueryDebug(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
 	return &types.QueryDebugContractCallResponse{Data: bz, MemorySnapshot: memsnapshot, ErrorMessage: errMsg}, nil
@@ -340,7 +342,7 @@ func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.Que
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 	if req.CodeId == 0 {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+		return nil, sdkerr.Wrap(types.ErrInvalid, "code id")
 	}
 	rsp, err := queryCode(sdk.UnwrapSDKContext(c), req.CodeId, k)
 	switch {
@@ -360,7 +362,7 @@ func (k Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*t
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 	if req.CodeId == 0 {
-		return nil, sdkerrors.Wrap(types.ErrInvalid, "code id")
+		return nil, sdkerr.Wrap(types.ErrInvalid, "code id")
 	}
 	res := k.GetCodeInfo(sdk.UnwrapSDKContext(c), req.CodeId)
 	if res == nil {
@@ -423,7 +425,7 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeR
 
 	code, err := keeper.GetByteCode(ctx, codeID)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "loading wasm code")
+		return nil, sdkerr.Wrap(err, "loading wasm code")
 	}
 
 	return &types.QueryCodeResponse{CodeInfo: res, Data: code}, nil

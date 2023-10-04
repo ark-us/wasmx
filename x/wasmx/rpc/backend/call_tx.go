@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	errorsmod "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -19,7 +20,7 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
-// GasPrice returns the current gas price based on Ethermint's gas price oracle.
+// GasPrice returns the current gas price
 func (b *Backend) GasPrice() (*hexutil.Big, error) {
 	result := big.NewInt(1000000)
 	return (*hexutil.Big)(result), nil
@@ -48,7 +49,7 @@ func (b *Backend) DoCall(
 
 	funds := sdk.Coins{}
 	if args.Value != nil {
-		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdk.NewIntFromBigInt((*big.Int)(args.Value))))
+		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
 	}
 
 	req := wasmxtypes.QuerySmartContractCallRequest{

@@ -4,6 +4,8 @@ import (
 	"context"
 	"math/big"
 
+	"cosmossdk.io/log"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -17,12 +19,9 @@ import (
 	// "github.com/ethereum/go-ethereum/params"
 	// "github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/tendermint/tendermint/libs/log"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
-	// tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
-
-	etherminttypes "github.com/evmos/ethermint/types"
+	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
@@ -107,8 +106,8 @@ type EVMBackend interface {
 
 	// // Tx Info
 	GetTransactionByHash(txHash common.Hash) (*rpctypes.RPCTransaction, error)
-	GetTxByEthHash(txHash common.Hash) (*etherminttypes.TxResult, error)
-	// GetTxByTxIndex(height int64, txIndex uint) (*etherminttypes.TxResult, error)
+	GetTxByEthHash(txHash common.Hash) (*wasmxtypes.TxResult, error)
+	// GetTxByTxIndex(height int64, txIndex uint) (*wasmxtypes.TxResult, error)
 	// GetTransactionByBlockAndIndex(block *tmrpctypes.ResultBlock, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
 	GetTransactionReceipt(hash common.Hash) (map[string]interface{}, error)
 	// GetTransactionByBlockHashAndIndex(hash common.Hash, idx hexutil.Uint) (*rpctypes.RPCTransaction, error)
@@ -151,9 +150,10 @@ type Backend struct {
 
 // NewBackend creates a new Backend instance for cosmos and ethereum namespaces
 func NewBackend(
-	ctx *server.Context,
+	svrCtx *server.Context,
 	logger log.Logger,
 	clientCtx client.Context,
+	ctx context.Context,
 	allowUnprotectedTxs bool,
 ) *Backend {
 	chainID, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
@@ -161,13 +161,13 @@ func NewBackend(
 		panic(err)
 	}
 
-	appConf, err := config.GetConfig(ctx.Viper)
+	appConf, err := config.GetConfig(svrCtx.Viper)
 	if err != nil {
 		panic(err)
 	}
 
 	return &Backend{
-		ctx:                 context.Background(),
+		ctx:                 ctx,
 		clientCtx:           clientCtx,
 		queryClient:         rpctypes.NewQueryClient(clientCtx),
 		logger:              logger.With("module", "backend"),

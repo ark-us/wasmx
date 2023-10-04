@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
@@ -93,16 +94,16 @@ func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*typ
 	// err := k.cdc.Unmarshal(req.HttpRequest, &request)
 	err := json.Unmarshal(req.HttpRequest, &request)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "could not unmarshal HttpRequest")
+		return nil, sdkerr.Wrapf(err, "could not unmarshal HttpRequest")
 	}
 
 	rsp, err := k.HttpGetInternal(sdk.UnwrapSDKContext(c), request)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "http get failed")
+		return nil, sdkerr.Wrapf(err, "http get failed")
 	}
 	rspbz, err := json.Marshal(rsp)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "could not marshal HttpResponse")
+		return nil, sdkerr.Wrapf(err, "could not marshal HttpResponse")
 	}
 	return &types.QueryHttpResponseGet{Data: rspbz}, nil
 }
@@ -112,31 +113,31 @@ func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.
 	path := headerMap[types.Path_Info]
 	contractAddress := k.GetMostSpecificRouteToContract(ctx, path)
 	if contractAddress == nil {
-		return nil, sdkerrors.Wrapf(types.ErrRouteNotFound, "request path %s", path)
+		return nil, sdkerr.Wrapf(types.ErrRouteNotFound, "request path %s", path)
 	}
 	msg, err := types.RequestGetEncodeAbi(req)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot encode abi for HttpRequestGet")
+		return nil, sdkerr.Wrapf(err, "cannot encode abi for HttpRequestGet")
 	}
 	msgExecute := wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgExecuteBz, err := json.Marshal(msgExecute)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot marshal WasmxExecutionMessage")
+		return nil, sdkerr.Wrapf(err, "cannot marshal WasmxExecutionMessage")
 	}
 	answ, err := k.wasmx.Query(ctx, contractAddress, types.ModuleAddress, msgExecuteBz, nil, nil)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "querying route contract failed")
+		return nil, sdkerr.Wrapf(err, "querying route contract failed")
 	}
 
 	var contractResponse wasmxtypes.WasmxQueryResponse
 	err = json.Unmarshal(answ, &contractResponse)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot unmarshal WasmxQueryResponse")
+		return nil, sdkerr.Wrapf(err, "cannot unmarshal WasmxQueryResponse")
 	}
 
 	resp, err := types.ResponseGetDecodeAbi(contractResponse.Data)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot abi decode WasmxQueryResponse")
+		return nil, sdkerr.Wrapf(err, "cannot abi decode WasmxQueryResponse")
 	}
 	return resp, nil
 }

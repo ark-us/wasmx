@@ -2,17 +2,19 @@ package ante
 
 import (
 	errorsmod "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
+	txsigning "cosmossdk.io/x/tx/signing"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 
 	// "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	circuitante "cosmossdk.io/x/circuit/ante"
 	sdkante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	// ibcante "github.com/cosmos/ibc-go/v6/modules/core/ante"
-	ibckeeper "github.com/cosmos/ibc-go/v6/modules/core/keeper"
+	// ibcante "github.com/cosmos/ibc-go/v8/modules/core/ante"
+	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
 )
 
 // HandlerOptions extend the SDK's AnteHandler options by requiring the IBC
@@ -23,9 +25,10 @@ type HandlerOptions struct {
 	BankKeeper             authtypes.BankKeeper
 	ExtensionOptionChecker sdkante.ExtensionOptionChecker
 	FeegrantKeeper         sdkante.FeegrantKeeper
-	SignModeHandler        authsigning.SignModeHandler
-	SigGasConsumer         func(meter sdk.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
+	SignModeHandler        *txsigning.HandlerMap
+	SigGasConsumer         func(meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
 	TxFeeChecker           sdkante.TxFeeChecker
+	CircuitKeeper          circuitante.CircuitBreaker
 
 	WasmxKeeper WasmxKeeperI
 
@@ -45,6 +48,9 @@ func (options HandlerOptions) validate() error {
 	}
 	if options.SignModeHandler == nil {
 		return errorsmod.Wrap(errortypes.ErrLogic, "sign mode handler is required for ante builder")
+	}
+	if options.CircuitKeeper == nil {
+		return errorsmod.Wrap(errortypes.ErrLogic, "circuit keeper is required for AnteHandler")
 	}
 	// if options.FeeMarketKeeper == nil {
 	// 	return errorsmod.Wrap(errortypes.ErrLogic, "fee market keeper is required for AnteHandler")
@@ -87,6 +93,7 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 func newCosmosAnteHandler(options HandlerOptions) sdk.AnteHandler {
 	anteDecorators := []sdk.AnteDecorator{
 		sdkante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
+		circuitante.NewCircuitBreakerDecorator(options.CircuitKeeper),
 		sdkante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
 		sdkante.NewValidateBasicDecorator(),
 		sdkante.NewTxTimeoutHeightDecorator(),

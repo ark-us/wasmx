@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strings"
 
+	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/tendermint/tendermint/libs/log"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/server/config"
@@ -31,9 +31,10 @@ type WebsrvServer struct {
 
 // NewBackend creates a new Backend instance for cosmos and ethereum namespaces
 func NewWebsrvServer(
-	ctx *server.Context,
+	svrCtx *server.Context,
 	logger log.Logger,
 	clientCtx client.Context,
+	ctx context.Context,
 	config *config.WebsrvConfig,
 ) *WebsrvServer {
 	chainID, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
@@ -64,7 +65,7 @@ func NewWebsrvServer(
 	// }
 
 	return &WebsrvServer{
-		ctx:         context.Background(),
+		ctx:         ctx,
 		clientCtx:   clientCtx,
 		queryClient: types.NewQueryClient(clientCtx),
 		logger:      logger.With("module", "websrv"),
@@ -134,7 +135,7 @@ func (k WebsrvServer) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, 
 	}
 	response, err := k.HandleContractRoute(req)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "RouteGET failed")
+		return nil, sdkerr.Wrapf(err, "RouteGET failed")
 	}
 	for _, header := range response.Header {
 		w.Header().Set(types.HeaderTypeToString[header.HeaderType], header.Value)
@@ -145,20 +146,20 @@ func (k WebsrvServer) RouteGET(w http.ResponseWriter, r *http.Request) ([]byte, 
 func (k WebsrvServer) HandleContractRoute(req types.HttpRequest) (*types.HttpResponse, error) {
 	httpReqBz, err := json.Marshal(req)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot marshal HttpRequestGet")
+		return nil, sdkerr.Wrapf(err, "cannot marshal HttpRequestGet")
 	}
 	websrvQuery := &types.QueryHttpRequestGet{
 		HttpRequest: httpReqBz,
 	}
 	respGet, err := k.queryClient.HttpGet(k.ctx, websrvQuery)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "Websrv HttpGet failed")
+		return nil, sdkerr.Wrapf(err, "Websrv HttpGet failed")
 	}
 
 	var requestResp types.HttpResponse
 	err = json.Unmarshal(respGet.Data, &requestResp)
 	if err != nil {
-		return nil, sdkerrors.Wrapf(err, "cannot unmarshal HttpResponse")
+		return nil, sdkerr.Wrapf(err, "cannot unmarshal HttpResponse")
 	}
 
 	return &requestResp, nil

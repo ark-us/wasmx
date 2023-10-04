@@ -5,8 +5,8 @@ import (
 	"errors"
 	"math/big"
 
-	secp256k1 "github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcec/v2"
+	secp256k1 "github.com/btcsuite/btcd/btcec/v2"
 	btc_ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	sdksecp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
@@ -20,10 +20,15 @@ import (
 //   - https://github.com/ethereum/go-ethereum/blob/f9401ae011ddf7f8d2d95020b7446c17f8d98dc1/crypto/crypto.go#L39
 var secp256k1halfN = new(big.Int).Rsh(secp256k1.S256().N, 1)
 
+type Signature struct {
+	R *big.Int
+	S *big.Int
+}
+
 // Read Signature struct from R || S. Caller needs to ensure
 // that len(sigStr) == 64.
-func SignatureFromBytes(sigStr []byte) *secp256k1.Signature {
-	return &secp256k1.Signature{
+func SignatureFromBytes(sigStr []byte) *Signature {
+	return &Signature{
 		R: new(big.Int).SetBytes(sigStr[:32]),
 		S: new(big.Int).SetBytes(sigStr[32:64]),
 	}
@@ -38,7 +43,7 @@ func VerifySignature(pubKey *sdksecp256k1.PubKey, msgHash []byte, sigStr []byte)
 	if len(msgHash) != 32 {
 		return false
 	}
-	pub, err := secp256k1.ParsePubKey(pubKey.Key, secp256k1.S256())
+	pub, err := secp256k1.ParsePubKey(pubKey.Key)
 	if err != nil {
 		return false
 	}
@@ -49,7 +54,11 @@ func VerifySignature(pubKey *sdksecp256k1.PubKey, msgHash []byte, sigStr []byte)
 	if signature.S.Cmp(secp256k1halfN) > 0 {
 		return false
 	}
-	return signature.Verify(msgHash, pub)
+	signature2, err := btc_ecdsa.ParseSignature(sigStr)
+	if err != nil {
+		return false
+	}
+	return signature2.Verify(msgHash, pub)
 }
 
 var SignatureLength = 65

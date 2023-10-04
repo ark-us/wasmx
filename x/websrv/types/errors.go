@@ -3,25 +3,27 @@ package types
 // DONTCOVER
 
 import (
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdkerr "cosmossdk.io/errors"
 )
 
 // x/websrv module sentinel errors
 var (
 	DefaultCodespace = ModuleName
 
-	// ErrSample = sdkerrors.Register(ModuleName, 1100, "sample error")
+	// ErrSample = sdkerr.Register(ModuleName, 1100, "sample error")
 
 	// ErrRouteNotFound error for wasm code that has already been uploaded or failed
-	ErrRouteNotFound = sdkerrors.Register(DefaultCodespace, 2, "route not found")
+	ErrRouteNotFound = sdkerr.Register(DefaultCodespace, 2, "route not found")
 
-	ErrRouteInternalError = sdkerrors.Register(DefaultCodespace, 3, "route internal error")
+	ErrRouteInternalError = sdkerr.Register(DefaultCodespace, 3, "route internal error")
 
-	ErrEmptyRoute = sdkerrors.Register(DefaultCodespace, 4, "empty route provided")
+	ErrEmptyRoute = sdkerr.Register(DefaultCodespace, 4, "empty route provided")
 
-	ErrWebsrvInternal = sdkerrors.Register(DefaultCodespace, 5, "websrv internal error")
+	ErrWebsrvInternal = sdkerr.Register(DefaultCodespace, 5, "websrv internal error")
 
-	ErrOAuthClientInvalidDomain = sdkerrors.Register(DefaultCodespace, 6, "websrv oauth invalid client domain")
+	ErrOAuthClientInvalidDomain = sdkerr.Register(DefaultCodespace, 6, "websrv oauth invalid client domain")
 
-	ErrOAuthTooManyClientsRegistered = sdkerrors.Register(DefaultCodespace, 7, "websrv oauth too many clients registered")
+	ErrOAuthTooManyClientsRegistered = sdkerr.Register(DefaultCodespace, 7, "websrv oauth too many clients registered")
+
+	ErrInvalid = sdkerr.Register(DefaultCodespace, 8, "invalid")
 )

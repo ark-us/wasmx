@@ -2,9 +2,10 @@ package vm
 
 import (
 	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -72,7 +73,7 @@ type Context struct {
 	GasMeter       types.GasMeter
 	Env            *types.Env
 	ContractRouter ContractRouter
-	ContractStore  types.KVStore
+	ContractStore  prefix.Store
 	CosmosHandler  types.WasmxCosmosHandler
 	NativeHandler  NativePrecompileHandler
 	ReturnData     []byte

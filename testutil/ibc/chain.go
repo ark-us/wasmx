@@ -14,15 +14,15 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	tmversion "github.com/tendermint/tendermint/proto/tendermint/version"
-	tmtypes "github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/version"
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
+	tmtypes "github.com/cometbft/cometbft/types"
+	"github.com/cometbft/cometbft/version"
 
-	channeltypes "github.com/cosmos/ibc-go/v6/modules/core/04-channel/types"
-	ibcgotesting "github.com/cosmos/ibc-go/v6/testing"
-	"github.com/cosmos/ibc-go/v6/testing/mock"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
+	"github.com/cosmos/ibc-go/v8/testing/mock"
 
 	wasmxapp "mythos/v1/app"
 )
@@ -100,7 +100,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 
 	// create an account to send transactions from
 	chain := &ibcgotesting.TestChain{
-		T:             t,
+		TB:            t,
 		Coordinator:   coord,
 		ChainID:       chainID,
 		App:           app,
@@ -120,11 +120,14 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 	ctx := chain.GetContext()
 	mapp.AccountKeeper.SetAccount(ctx, acc)
 
+	valAddrCodec := txConfig.SigningContext().ValidatorAddressCodec()
 	valAddr := sdk.ValAddress(senderAddress.Bytes())
-	_validator, err := stakingtypes.NewValidator(valAddr, senderPrivKey.PubKey(), stakingtypes.Description{})
+	valStr, err := valAddrCodec.BytesToString(valAddr)
+	require.NoError(t, err)
+	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
 	_validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
-	mapp.StakingKeeper.AfterValidatorCreated(ctx, _validator.GetOperator())
+	mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
 
 	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
 	require.NoError(t, err)

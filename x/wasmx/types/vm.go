@@ -5,11 +5,11 @@ import (
 	"math/big"
 	"strings"
 
+	"cosmossdk.io/store/prefix"
+	dbm "github.com/cometbft/cometbft-db"
+	abci "github.com/cometbft/cometbft/abci/types"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	dbm "github.com/tendermint/tm-db"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -88,7 +88,7 @@ type GasMeter interface {
 
 type WasmxCosmosHandler interface {
 	ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store
-	SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error)
+	SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error)
 	ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error)
 	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
 	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)

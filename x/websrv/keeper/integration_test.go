@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
@@ -24,7 +25,7 @@ var (
 func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	wasmbin := testserverwasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	valAccount := simulation.Account{
 		PrivKey: s.chainA.SenderPrivKey,
 		PubKey:  s.chainA.SenderPrivKey.PubKey(),
@@ -75,7 +76,7 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 func (suite *KeeperTestSuite) TestWebServer() {
 	wasmbin := testserverwasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(2_000_000_000_000)
+	initBalance := sdkmath.NewInt(2_000_000_000_000)
 	valAccount := simulation.Account{
 		PrivKey: s.chainA.SenderPrivKey,
 		PubKey:  s.chainA.SenderPrivKey.PubKey(),

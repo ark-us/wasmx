@@ -6,10 +6,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/evmos/ethermint/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmrpctypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmtypes "github.com/tendermint/tendermint/types"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -74,15 +73,20 @@ func EthHeaderFromTendermint(header tmtypes.Header, bloom ethtypes.Bloom, baseFe
 	}
 }
 
+// TODO
 // BlockMaxGasFromConsensusParams returns the gas limit for the current block from the chain consensus params.
 func BlockMaxGasFromConsensusParams(goCtx context.Context, clientCtx client.Context, blockHeight int64) (int64, error) {
-	resConsParams, err := clientCtx.Client.ConsensusParams(goCtx, &blockHeight)
+	var err error
+	// ctx := sdk.UnwrapSDKContext(goCtx)
+	// resConsParams, err := clientCtx.Client.ConsensusParams(goCtx, &blockHeight)
+	// gasLimit := ctx.ConsensusParams().Block.MaxGas
 	defaultGasLimit := int64(^uint32(0)) // #nosec G701
 	if err != nil {
 		return defaultGasLimit, err
 	}
-
-	gasLimit := resConsParams.ConsensusParams.Block.MaxGas
+	// gasLimit := resConsParams.ConsensusParams.Block.MaxGas
+	// TODO
+	gasLimit := int64(40_000_000)
 	if gasLimit == -1 {
 		// Sets gas limit to max uint32 to not error with javascript dev tooling
 		// This -1 value indicating no block gas limit is set to max uint64 with geth hexutils
@@ -255,25 +259,25 @@ func CheckTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 }
 
 // TxExceedBlockGasLimit returns true if the tx exceeds block gas limit.
-func TxExceedBlockGasLimit(res *abci.ResponseDeliverTx) bool {
+func TxExceedBlockGasLimit(res *abci.ExecTxResult) bool {
 	return strings.Contains(res.Log, ExceedBlockGasLimitError)
 }
 
 // TxSuccessOrExceedsBlockGasLimit returns true if the transaction was successful
 // or if it failed with an ExceedBlockGasLimit error
-func TxSuccessOrExceedsBlockGasLimit(res *abci.ResponseDeliverTx) bool {
+func TxSuccessOrExceedsBlockGasLimit(res *abci.ExecTxResult) bool {
 	return res.Code == 0 || TxExceedBlockGasLimit(res)
 }
 
 // ParseTxIndexerResult parse tm tx result to a format compatible with Ethereum.
-func ParseTxIndexerResult(txResult *tmrpctypes.ResultTx, tx sdk.Tx) (*types.TxResult, error) {
+func ParseTxIndexerResult(txResult *tmrpctypes.ResultTx, tx sdk.Tx) (*wasmxtypes.TxResult, error) {
 	// txs, err := ParseTxResult(&txResult.TxResult, tx)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to parse tx events: block %d, index %d, %v", txResult.Height, txResult.Index, err)
 	// }
 
 	// index := uint32(parsedTx.MsgIndex) // #nosec G701
-	return &types.TxResult{
+	return &wasmxtypes.TxResult{
 		Height:  txResult.Height,
 		TxIndex: txResult.Index,
 		// MsgIndex:          index,
@@ -304,7 +308,7 @@ func NewParsedTx(msgIndex int) ParsedTx {
 
 // ParseTxResult parse eth tx infos from cosmos-sdk events.
 // It supports two event formats, the formats are described in the comments of the format constants.
-func ParseTxResult(result *abci.ResponseDeliverTx, tx sdk.Tx) (*ParsedTx, error) {
+func ParseTxResult(result *abci.ExecTxResult, tx sdk.Tx) (*ParsedTx, error) {
 	var ethtx *ParsedTx
 
 	// for _, event := range result.Events {

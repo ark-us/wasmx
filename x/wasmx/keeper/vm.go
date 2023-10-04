@@ -8,8 +8,9 @@ import (
 	"os"
 	"path"
 
+	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"
@@ -37,7 +38,7 @@ func (k WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error)
 	// Read and write permissions for the owner and read-only permissions for everyone else
 	err := os.WriteFile(filepath, wasmBytecode, 0644)
 	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+		return nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
 
 	return checksum, nil
@@ -51,7 +52,7 @@ func (k WasmxEngine) CreateUtf8(sourceCode []byte, extension string) (types.Chec
 	// Read and write permissions for the owner and read-only permissions for everyone else
 	err := os.WriteFile(filepath, sourceCode, 0644)
 	if err != nil {
-		return nil, sdkerrors.Wrap(types.ErrCreateFailed, err.Error())
+		return nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
 
 	return checksum, nil
@@ -67,7 +68,7 @@ func (k WasmxEngine) Instantiate(
 	env types.Env,
 	initMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -94,7 +95,7 @@ func (k WasmxEngine) Execute(
 	env types.Env,
 	executeMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -121,7 +122,7 @@ func (k WasmxEngine) Reply(
 	env types.Env,
 	executeMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -153,7 +154,7 @@ func (k WasmxEngine) QueryExecute(
 	env types.Env,
 	executeMsg []byte,
 	prefixStoreKey []byte,
-	store types.KVStore,
+	store prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,

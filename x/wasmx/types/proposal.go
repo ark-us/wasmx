@@ -1,6 +1,7 @@
 package types
 
 import (
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	v1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -21,8 +22,6 @@ var (
 func init() {
 	v1beta1.RegisterProposalType(ProposalTypeRegisterRole)
 	v1beta1.RegisterProposalType(ProposalTypeDeregisterRole)
-	v1beta1.ModuleCdc.Amino.RegisterConcrete(&RegisterRoleProposal{}, "wasmx/RegisterRoleProposal", nil)
-	v1beta1.ModuleCdc.Amino.RegisterConcrete(&DeregisterRoleProposal{}, "wasmx/DeregisterRoleProposal", nil)
 }
 
 // NewRegisterRoleProposal returns new instance of RegisterRoleProposal
@@ -47,10 +46,10 @@ func (*RegisterRoleProposal) ProposalType() string {
 // ValidateBasic performs a stateless check of the proposal fields
 func (p *RegisterRoleProposal) ValidateBasic() error {
 	if p.Role == "" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "empty role")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty role")
 	}
 	if p.Label == "" {
-		return sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "empty label")
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty label")
 	}
 
 	if _, err := sdk.AccAddressFromBech32(p.ContractAddress); err != nil {

@@ -7,14 +7,14 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/btcsuite/btcd/btcec/v2"
+	btc_ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
+	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
-
-	// btecv2 "github.com/btcsuite/btcd/btcec/v2"
 
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"
@@ -22,7 +22,7 @@ import (
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -40,7 +40,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverEthDirect() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -121,7 +121,7 @@ func (suite *KeeperTestSuite) TestVerification() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -135,8 +135,8 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 
 	// Signature must be compatible with Ethereum
 	privKeyBtcec := (sender.PrivKey).(*secp256k1.PrivKey)
-	btcecPrivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBtcec.Key)
-	signature, err := btcec.SignCompact(btcec.S256(), btcecPrivKey, msgHash, false)
+	btcecPrivKey, _ := btcec.PrivKeyFromBytes(privKeyBtcec.Key)
+	signature, err := btc_ecdsa.SignCompact(btcecPrivKey, msgHash, false)
 	s.Require().NoError(err)
 	v := signature[0] - 27
 	copy(signature, signature[1:])
@@ -154,7 +154,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -188,7 +188,8 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	s.Require().Equal(expected, qres)
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd"
-	res := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 1500000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 1500000, nil)
+	s.Require().NoError(err)
 	s.Require().True(res.IsErr(), res.GetLog())
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004003fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2efffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"
@@ -217,7 +218,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

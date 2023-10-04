@@ -8,11 +8,12 @@ import (
 	"fmt"
 	"math/big"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	"github.com/evmos/ethermint/crypto/ethsecp256k1"
+	"mythos/v1/crypto/ethsecp256k1"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
@@ -173,7 +174,7 @@ const ED25519_PUBLIC_KEY2_HEX = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968
 func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	wasmbin := cwSimpleContract
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -200,12 +201,13 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	suite.Require().Equal(`{"value":3}`, string(qres))
 
 	data = []byte(`{"increase":{}}`)
-	abcires := appA.WasmxQueryRawNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	abcires, err := appA.WasmxQueryRawNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().NoError(err)
 	s.Require().True(abcires.IsErr())
 	s.Require().Contains(abcires.Log, cw8types.ERROR_FLAG_QUERY)
 
 	data = []byte(`{"increase":{}}`)
-	_, _, err := appA.ExecuteContractSimulate(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	_, _, err = appA.ExecuteContractSimulate(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().NoError(err)
 }
 
@@ -233,7 +235,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 	wasmbin := cw20_base
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -282,7 +284,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	sender := simulation.Account{
 		Address: senderAddress,
 	}
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), deployer.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -320,7 +322,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	wasmbin := cw20_atomic_swap
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -340,7 +342,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	h.Write(preimageBz)
 	hashBz := h.Sum(nil)
 	hashHex := hex.EncodeToString(hashBz)
-	coins := sdk.NewCoins(sdk.NewCoin(appA.Denom, sdk.NewInt(10000000)))
+	coins := sdk.NewCoins(sdk.NewCoin(appA.Denom, sdkmath.NewInt(10000000)))
 
 	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
@@ -352,7 +354,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	s.Require().NoError(err)
 
 	s.Require().Equal(coins[0].Amount, balanceContract.Balance.Amount)
-	s.Require().Equal(sdk.NewInt(0), balanceReceiver.Balance.Amount)
+	s.Require().Equal(sdkmath.NewInt(0), balanceReceiver.Balance.Amount)
 
 	data = fmt.Sprintf(`{"release":{"id":"swap1","preimage":"%s"}}`, preimage)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, nil, nil)
@@ -364,7 +366,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	s.Require().NoError(err)
 
 	s.Require().Equal(coins[0].Amount, balanceReceiver.Balance.Amount)
-	s.Require().Equal(sdk.NewInt(0), balanceContract.Balance.Amount)
+	s.Require().Equal(sdkmath.NewInt(0), balanceContract.Balance.Amount)
 
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{}}`)}, nil, nil)
 	suite.Require().Equal(`{"swaps":[]}`, string(qres))
@@ -385,7 +387,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	wasmbin := wasm_reflect
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -535,7 +537,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	wasmbin := crypto_verify
 	sender := suite.GetRandomAccount()
-	initBalance := sdk.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

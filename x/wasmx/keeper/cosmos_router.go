@@ -1,14 +1,17 @@
 package keeper
 
 import (
+	"bytes"
 	"errors"
 	"math/big"
 
+	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/store/prefix"
+	abci "github.com/cometbft/cometbft/abci/types"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
@@ -23,7 +26,7 @@ type WasmxCosmosHandler struct {
 func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
 	h.Ctx = newctx
 }
-func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery abci.RequestQuery) ([]byte, error) {
+func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
 func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error) {
@@ -48,7 +51,7 @@ func (h *WasmxCosmosHandler) SendCoin(addr sdk.AccAddress, value *big.Int) error
 	if found {
 		addr = aliasAddr
 	}
-	return h.Keeper.bank.SendCoins(h.Ctx, h.ContractAddress, addr, sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value))))
+	return h.Keeper.bank.SendCoins(h.Ctx, h.ContractAddress, addr, sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value))))
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
@@ -94,7 +97,7 @@ func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, prefixStoreKey []byt
 
 // TODO provenance
 func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error) {
-	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	address, _, err := h.Keeper.Instantiate(h.Ctx, codeId, creator, initMsg, funds, label)
 	if err != nil {
 		return nil, err
@@ -104,12 +107,12 @@ func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initM
 
 // TODO provenance
 func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt types.Checksum, label string, value *big.Int) (sdk.AccAddress, error) {
-	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, funds, salt, false, label)
 	return address, err
 }
 func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error) {
-	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdk.NewIntFromBigInt(value)))
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
 }
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
@@ -127,7 +130,7 @@ func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress
 	}
 }
 
-func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery abci.RequestQuery) ([]byte, error) {
+func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) ([]byte, error) {
 	// TODO if we allow historical queries, at a certain block
 	// use app.Query(queryReq)
 	queryFn := k.grpcQueryRouter.Route(reqQuery.Path)
@@ -149,14 +152,21 @@ func (k Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sd
 }
 
 func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
-	if err := msg.ValidateBasic(); err != nil {
-		return nil, nil, err
+	anymsg, err := cdctypes.NewAnyWithValue(msg)
+	if err != nil {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message any")
 	}
-
-	signers := msg.GetSigners()
-	if signers[0].String() != owner.String() {
-		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+	signers, _, err := k.cdc.GetMsgAnySigners(anymsg)
+	if err != nil {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer missing")
 	}
+	if !bytes.Equal(signers[0], owner.Bytes()) {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", sdk.AccAddress(signers[0]).String(), owner.String())
+	}
+	// signers := msg.GetSigners()
+	// if signers[0].String() != owner.String() {
+	// 	return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+	// }
 
 	return k.executeMsg(ctx, msg)
 }
@@ -190,10 +200,10 @@ func safeHandler(ctx sdk.Context, msg sdk.Msg, handler func(ctx sdk.Context, req
 			case string:
 				err = errors.New(x)
 			case error:
-				err = sdkerrors.Wrapf(x, "failed to execute Cosmos message")
+				err = sdkerr.Wrapf(x, "failed to execute Cosmos message")
 			default:
 				// Fallback err
-				err = sdkerrors.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
+				err = sdkerr.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
 
 			}
 			// invalidate rep
@@ -207,8 +217,8 @@ func safeHandler(ctx sdk.Context, msg sdk.Msg, handler func(ctx sdk.Context, req
 
 func safeQuery(
 	ctx sdk.Context,
-	msg abci.RequestQuery,
-	handler func(ctx sdk.Context, req abci.RequestQuery) (abci.ResponseQuery, error),
+	msg *abci.RequestQuery,
+	handler func(ctx sdk.Context, req *abci.RequestQuery) (*abci.ResponseQuery, error),
 ) (res *abci.ResponseQuery, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -216,10 +226,10 @@ func safeQuery(
 			case string:
 				err = errors.New(x)
 			case error:
-				err = sdkerrors.Wrapf(x, "failed to execute Cosmos message")
+				err = sdkerr.Wrapf(x, "failed to execute Cosmos message")
 			default:
 				// Fallback err
-				err = sdkerrors.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
+				err = sdkerr.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
 
 			}
 			// invalidate res
@@ -228,5 +238,5 @@ func safeQuery(
 	}()
 
 	resp, err := handler(ctx, msg)
-	return &resp, err
+	return resp, err
 }

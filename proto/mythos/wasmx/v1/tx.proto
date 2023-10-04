@@ -4,11 +4,17 @@ package mythos.wasmx.v1;
 import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
 import "mythos/wasmx/v1/contract.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "amino/amino.proto";
 
 option go_package = "mythos/v1/x/wasmx/types";
+option (gogoproto.goproto_getters_all) = false;
 
 // Msg defines the wasm Msg service.
 service Msg {
+    option (cosmos.msg.v1.service) = true;
+
     // StoreCode to submit Wasm code to the system
     rpc StoreCode(MsgStoreCode) returns (MsgStoreCodeResponse);
     // DeployCode stores and instantiates
@@ -33,12 +39,21 @@ service Msg {
     rpc ExecuteWithOriginContract(MsgExecuteWithOriginContract) returns (MsgExecuteContractResponse);
     // ExecuteDelegate submits the given message data to a smart contract
     rpc ExecuteDelegateContract(MsgExecuteDelegateContract) returns (MsgExecuteDelegateContractResponse);
+
+    // gov authorized
+    // Register contract address for system role
+    rpc RegisterRole(MsgRegisterRole) returns (MsgRegisterRoleResponse);
+    // Deregister contract address for system role
+    rpc DeregisterRole(MsgDeregisterRole) returns (MsgDeregisterRoleResponse);
 }
 
 // MsgStoreCode submit Wasm code to the system
 message MsgStoreCode {
+    option (amino.name) = "wasmx/MsgStoreCode";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
-    string sender = 1;
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // WASMByteCode can be raw or gzip compressed
     // can be interpreted bytecode
     // constructor + runtime
@@ -59,8 +74,11 @@ message MsgStoreCodeResponse {
 
 // MsgStoreCode submit Wasm code to the system
 message MsgDeployCode {
+    option (amino.name) = "wasmx/MsgDeployCode";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
-    string sender = 1;
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // WASMByteCode can be raw or gzip compressed
     // can be interpreted bytecode
     // constructor + runtime
@@ -92,8 +110,11 @@ message MsgDeployCodeResponse {
 // MsgInstantiateContract create a new smart contract instance for the given
 // code id.
 message MsgInstantiateContract {
+    option (amino.name) = "wasmx/MsgInstantiateContract";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
-    string sender = 1;
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // CodeID is the reference to the stored WASM code
     uint64 code_id = 2;
     // Msg json encoded message to be passed to the contract on instantiation
@@ -109,8 +130,11 @@ message MsgInstantiateContract {
 // MsgInstantiateContract2 create a new smart contract instance for the given
 // code id with a predicable address.
 message MsgInstantiateContract2 {
+    option (amino.name) = "wasmx/MsgInstantiateContract2";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
-    string sender = 1;
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Admin is an optional address that can execute migrations
     uint64 code_id = 2;
     // Msg json encoded message to be passed to the contract on instantiation
@@ -146,10 +170,13 @@ message MsgInstantiateContract2Response {
 
 // MsgExecuteContract submits the given message data to a smart contract
 message MsgExecuteContract {
+    option (amino.name) = "wasmx/MsgExecuteContract";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
-    string sender = 1;
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Contract is the address of the smart contract
-    string contract = 2;
+    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Msg json encoded message to be passed to the contract
     bytes msg = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
     // Funds coins that are transferred to the contract on execution
@@ -170,12 +197,15 @@ message MsgExecuteContractResponse {
 
 // MsgExecuteEth submits an Ethereum-like RLP-encoded transaction
 message MsgExecuteEth {
+    option (amino.name) = "wasmx/MsgExecuteEth";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // data is RLP-encoded transaction data of the Ethereum transaction
     // we use Any for its caching feature
     // google.protobuf.Any data = 1;
     bytes data = 1;
     // from is a bech32 address decoded from the transaction signature
-    string sender = 2;
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
 }
 
 // MsgExecuteEthResponse returns execution result data.
@@ -192,12 +222,15 @@ message ExtensionOptionEthereumTx {
 // MsgExecuteWithOriginContract forwards a message data from a smart contract
 // to another smart contract
 message MsgExecuteWithOriginContract {
+    option (amino.name) = "wasmx/MsgExecuteWithOriginContract";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Origin is the actor that originally signed the message
-    string origin = 1;
+    string origin = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Sender is the the smart contract that sent the messages
-    string sender = 2;
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Contract is the address of the smart contract that receives the message
-    string contract = 3;
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Msg json encoded message to be passed to the contract
     bytes msg = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
     // Funds coins that are transferred to the contract on execution
@@ -209,16 +242,19 @@ message MsgExecuteWithOriginContract {
 
 // MsgExecuteDelegateContract submits the given message data to a smart contract
 message MsgExecuteDelegateContract {
+    option (amino.name) = "wasmx/MsgExecuteDelegateContract";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Origin is the actor that originally signed the message
-    string origin = 1;
+    string origin = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Sender is the storage contract, equivalent to the address that triggers the message (signer)
-    string sender = 2;
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Caller is the address that will be used as sender
-    string caller = 3;
+    string caller = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // CodeContract is the address of the smart contract whose binary is used
-    string code_contract = 4;
+    string code_contract = 4 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // StorageContract is the address of the smart contract whose storage is used
-    string storage_contract = 5;
+    string storage_contract = 5 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Msg json encoded message to be passed to the contract
     bytes msg = 6 [ (gogoproto.casttype) = "RawContractMessage" ];
     // Funds coins that are transferred to the contract on execution
@@ -235,10 +271,54 @@ message MsgExecuteDelegateContractResponse {
 }
 
 message MsgCompileContract {
+    option (amino.name) = "wasmx/MsgCompileContract";
+    option (cosmos.msg.v1.signer) = "sender";
+
     // Sender is the that actor that signed the messages
-    string sender = 1;
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Contract is the address of the smart contract
     uint64 codeId = 2;
 }
 
 message MsgCompileContractResponse {}
+
+// Gov Authorized
+
+// RegisterRouteProposal is a gov Content type to register a web server route
+message MsgRegisterRole {
+    option (cosmos.msg.v1.signer) = "authority";
+    option (amino.name) = "wasmx/MsgRegisterRole";
+    option (gogoproto.equal) = false;
+
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // title of the proposal
+    string title = 2;
+    // description of the proposal
+    string description = 3;
+    // smart contract role
+    string role = 4;
+    // smart contract label
+    string label = 5;
+    // contract address in bech32 format
+    string contract_address = 6 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgRegisterRoleResponse {}
+
+message MsgDeregisterRole {
+    option (cosmos.msg.v1.signer) = "authority";
+    option (amino.name) = "wasmx/MsgDeregisterRole";
+    option (gogoproto.equal) = false;
+
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // title of the proposal
+    string title = 2;
+    // description of the proposal
+    string description = 3;
+    // Contract address in bech32 format
+    string contract_address = 4 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgDeregisterRoleResponse {}

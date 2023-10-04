@@ -1,17 +1,16 @@
 package server
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"path"
-	"time"
 
 	"github.com/rs/cors"
 	"golang.org/x/net/netutil"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/server/types"
 
 	"mythos/v1/x/websrv/server/config"
 )
@@ -20,16 +19,17 @@ var dirname = "oauth"
 
 // StartWebsrv starts the web server
 func StartWebsrv(
-	ctx *server.Context,
+	svrCtx *server.Context,
 	clientCtx client.Context,
+	ctx context.Context,
 	cfg *config.WebsrvConfig,
 ) (*http.Server, chan struct{}, error) {
-	ctx.Logger.Info("starting websrv web server ", cfg.Address)
-	websrvServer := NewWebsrvServer(ctx, ctx.Logger, clientCtx, cfg)
+	svrCtx.Logger.Info("starting websrv web server ", cfg.Address)
+	websrvServer := NewWebsrvServer(svrCtx, svrCtx.Logger, clientCtx, ctx, cfg)
 	mux := http.NewServeMux()
 
 	if cfg.EnableOAuth {
-		ctx.Logger.Info("starting websrv oauth2 server ", cfg.Address)
+		svrCtx.Logger.Info("starting websrv oauth2 server ", cfg.Address)
 		websrvServer.InitOauth2(mux, path.Join(clientCtx.HomeDir, dirname))
 	}
 	mux.HandleFunc("/", websrvServer.Route)
@@ -57,23 +57,28 @@ func StartWebsrv(
 
 	errCh := make(chan error)
 	go func() {
-		ctx.Logger.Info("Starting Websrv server", "address", cfg.Address)
+		svrCtx.Logger.Info("Starting Websrv server", "address", cfg.Address)
 		if err := httpSrv.Serve(ln); err != nil {
 			if err == http.ErrServerClosed {
 				close(httpSrvDone)
 				return
 			}
 
-			ctx.Logger.Error("failed to start Websrv server", "error", err.Error())
+			svrCtx.Logger.Error("failed to start Websrv server", "error", err.Error())
 			errCh <- err
 		}
 	}()
 
 	select {
+	case <-ctx.Done():
+		// The calling process canceled or closed the provided context, so we must
+		// gracefully stop the JSON-RPC server.
+		svrCtx.Logger.Info("stopping JSON-RPC server...", "address", cfg.Address)
+		httpSrv.Close()
+		return httpSrv, httpSrvDone, nil
 	case err := <-errCh:
-		ctx.Logger.Error("failed to boot Websrv server", "error", err.Error())
+		svrCtx.Logger.Error("failed to boot JSON-RPC server", "error", err.Error())
 		return nil, nil, err
-	case <-time.After(types.ServerStartTime): // assume JSON RPC server started successfully
 	}
 
 	return httpSrv, httpSrvDone, nil

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -66,7 +67,7 @@ func AbiMarshalJSON(iface interface{}) (string, error) {
 			case BigIntType:
 				// fmt.Println("----big.Int{}")
 				val := structFieldValue.Interface().(*big.Int)
-				encoded = fmt.Sprintf(`%s"%s"`, encoded, sdk.NewIntFromBigInt(val).String())
+				encoded = fmt.Sprintf(`%s"%s"`, encoded, sdkmath.NewIntFromBigInt(val).String())
 			default:
 				// fmt.Println("--default", structFieldValue.Kind(), structFieldValue.Type())
 				// common.Address is an array, so the following needs to be last
