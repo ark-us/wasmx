@@ -30,7 +30,7 @@ func init() {
 }
 
 // DefaultTestingAppInit defines the IBC application used for testing
-var DefaultTestingAppInit func() (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
+var DefaultTestingAppInit func(chainId string) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 
 // DefaultConsensusParams defines the default Tendermint consensus params used in
 // Mythos testing.
@@ -82,10 +82,15 @@ func Setup(
 }
 
 // SetupTestingApp initializes the IBC-go testing application
-func SetupTestingApp() (ibctesting.TestingApp, map[string]json.RawMessage) {
+func SetupTestingApp(chainID string) (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
 	cfg := MakeEncodingConfig()
-	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, cfg, simtestutil.EmptyAppOptions{})
+	app := New(
+		log.NewNopLogger(),
+		db, nil, true, map[int64]bool{},
+		DefaultNodeHome, 5, cfg, simtestutil.EmptyAppOptions{},
+		bam.SetChainID(chainID),
+	)
 	return app, app.DefaultGenesis()
 }
 

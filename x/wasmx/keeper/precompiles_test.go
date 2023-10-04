@@ -189,7 +189,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd"
 	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 1500000, nil)
-	s.Require().Error(err)
+	s.Require().NoError(err)
 	s.Require().True(res.IsErr(), res.GetLog())
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004003fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2efffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"

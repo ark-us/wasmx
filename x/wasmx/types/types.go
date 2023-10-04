@@ -87,8 +87,8 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 			Height:    uint64(ctx.BlockHeight()),
 			Timestamp: uint64(nano),
 			GasLimit:  blockGasLimit,
-			Hash:      PaddLeftTo32(ctx.HeaderHash()), // TODO fixme
-			Proposer:  sdk.AccAddress(ctx.BlockHeader().ProposerAddress),
+			Hash:      PaddLeftTo32(ctx.HeaderHash()),                    // TODO fixme
+			Proposer:  sdk.AccAddress(ctx.BlockHeader().ProposerAddress), // TODO fixme
 		},
 		Transaction: &TransactionInfo{
 			GasPrice: big.NewInt(1), // TODO

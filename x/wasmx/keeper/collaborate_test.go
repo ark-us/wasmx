@@ -8,6 +8,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+
 	"mythos/v1/x/wasmx/keeper/testutil"
 	"mythos/v1/x/wasmx/types"
 )
@@ -56,9 +58,9 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	resp := appA.ExecuteContract(sender, contractAddressGo, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected := "multi-vm transaction: tinygo"
 	s.Require().Contains(string(resp.GetData()), expected)
-	attrs := appA.GetFromLog(resp.GetLog(), "wasmxlog")
-	s.Require().NotNil(attrs)
-	for _, attr := range *attrs {
+	evs := appA.GetWasmxEvents(resp.GetEvents())
+	s.Require().Equal(1, len(evs))
+	for _, attr := range evs[0].GetAttributes() {
 		if attr.Key == types.AttributeKeyDependency {
 			s.Require().Equal(types.WASI_SNAPSHOT_PREVIEW1, attr.Value)
 		}
@@ -72,21 +74,21 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	resp = appA.ExecuteContract(sender, contractAddressJs, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected = "multi-vm transaction: javascript -> python"
 	s.Require().Contains(string(resp.GetData()), expected)
-	checkLogs(appA, resp.GetLog(), []string{types.INTERPRETER_JS, types.INTERPRETER_PYTHON}, []string{"multi-vm transaction: javascript", expected})
+	checkLogs(appA, resp.GetEvents(), []string{types.INTERPRETER_JS, types.INTERPRETER_PYTHON}, []string{"multi-vm transaction: javascript", expected})
 
 	// py -> js
 	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, contractAddressJs.String()))
 	resp = appA.ExecuteContract(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected = "multi-vm transaction: python -> javascript"
 	s.Require().Contains(string(resp.GetData()), expected)
-	checkLogs(appA, resp.GetLog(), []string{types.INTERPRETER_PYTHON, types.INTERPRETER_JS}, []string{"multi-vm transaction: python", expected})
+	checkLogs(appA, resp.GetEvents(), []string{types.INTERPRETER_PYTHON, types.INTERPRETER_JS}, []string{"multi-vm transaction: python", expected})
 
 	// py -> js -> go
 	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s","%s"]]}`, contractAddressJs.String(), contractAddressGo.String()))
 	resp = appA.ExecuteContract(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected = "multi-vm transaction: python -> javascript -> tinygo"
 	s.Require().Contains(string(resp.GetData()), expected)
-	checkLogs(appA, resp.GetLog(), []string{types.INTERPRETER_PYTHON, types.INTERPRETER_JS, types.WASI_SNAPSHOT_PREVIEW1}, []string{"multi-vm transaction: python", "multi-vm transaction: python -> javascript", expected})
+	checkLogs(appA, resp.GetEvents(), []string{types.INTERPRETER_PYTHON, types.INTERPRETER_JS, types.WASI_SNAPSHOT_PREVIEW1}, []string{"multi-vm transaction: python", "multi-vm transaction: python -> javascript", expected})
 
 	// TODO
 	// // js -> evm
@@ -116,12 +118,12 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	s.Require().Equal("python -> javascript -> tinygo", string(qres))
 }
 
-func checkLogs(appA testutil.AppContext, logstr string, deps []string, data []string) {
+func checkLogs(appA testutil.AppContext, events []abci.Event, deps []string, data []string) {
 	var err error
-	attrs := appA.GetFromLog(logstr, "wasmxlog")
-	s.Require().NotNil(attrs)
+	evs := appA.GetWasmxEvents(events)
+	s.Require().Equal(len(deps), len(evs))
 	logindex := int64(0)
-	for _, attr := range *attrs {
+	for _, attr := range evs[0].GetAttributes() {
 		if attr.Key == types.AttributeKeyIndex {
 			logindex, err = strconv.ParseInt(attr.Value, 10, 64)
 			s.Require().NoError(err)

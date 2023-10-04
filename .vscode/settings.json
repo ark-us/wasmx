@@ -5,5 +5,9 @@
           "--proto_path=${workspaceRoot}/third_party/proto"
         ]
     },
-    "go.gopath": "/Users/user/.gvm/gos/go1.21/bin/go"
+    "go.gopath": "/Users/user/.gvm/gos/go1.21/bin/go",
+    "go.goroot" : "/Users/user/.gvm/gos/go1.21/bin/go",
+    "go.testEnvVars": {
+      "CGO_LDFLAGS": "-Wl,-rpath,/Users/user/.wasmedge/lib",
+    },
 }

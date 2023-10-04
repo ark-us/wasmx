@@ -100,7 +100,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 
 	// create an account to send transactions from
 	chain := &ibcgotesting.TestChain{
-		// T:             t,
+		TB:            t,
 		Coordinator:   coord,
 		ChainID:       chainID,
 		App:           app,
@@ -127,8 +127,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
 	_validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
-
-	mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx.Context(), valAddr)
+	mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
 
 	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
 	require.NoError(t, err)

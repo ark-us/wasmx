@@ -77,7 +77,9 @@ func EthHeaderFromTendermint(header tmtypes.Header, bloom ethtypes.Bloom, baseFe
 // BlockMaxGasFromConsensusParams returns the gas limit for the current block from the chain consensus params.
 func BlockMaxGasFromConsensusParams(goCtx context.Context, clientCtx client.Context, blockHeight int64) (int64, error) {
 	var err error
+	// ctx := sdk.UnwrapSDKContext(goCtx)
 	// resConsParams, err := clientCtx.Client.ConsensusParams(goCtx, &blockHeight)
+	// gasLimit := ctx.ConsensusParams().Block.MaxGas
 	defaultGasLimit := int64(^uint32(0)) // #nosec G701
 	if err != nil {
 		return defaultGasLimit, err

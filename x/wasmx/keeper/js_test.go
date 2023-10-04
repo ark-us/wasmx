@@ -231,7 +231,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 
 	// we actually execute the contract creation
 	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	createdContractAddressStr := appA.GetContractAddressFromLog(txresp.GetLog())
+	createdContractAddressStr := appA.GetContractAddressFromEvents(txresp.GetEvents())
 	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
@@ -246,14 +246,14 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 
 	// we actually execute the contract creation
 	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	createdContractAddressStr = appA.GetContractAddressFromLog(txresp.GetLog())
+	createdContractAddressStr = appA.GetContractAddressFromEvents(txresp.GetEvents())
 	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
 	data = []byte(`{"justError":[]}`)
 	txresp, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 2000000, nil)
-	s.Require().Error(err)
+	s.Require().NoError(err)
 	s.Require().True(txresp.IsErr(), txresp.GetLog())
 	s.Require().Contains(txresp.GetLog(), "failed to execute message", txresp.GetLog())
 	s.Require().Contains(txresp.GetLog(), "just error", txresp.GetLog())

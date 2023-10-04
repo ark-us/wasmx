@@ -21,7 +21,9 @@
                 "WASMEDGE_LIB_DIR": "/Users/user/.wasmedge/lib",
                 "C_INCLUDE_PATH": "/Users/user/.wasmedge/include",
                 "CPLUS_INCLUDE_PATH": "/Users/user/.wasmedge/include",
-                "CGO_LDFLAGS": "-Wl,-rpath,/Users/user/.wasmedge/lib"
+                "CGO_LDFLAGS": "-Wl,-rpath,/Users/user/.wasmedge/lib",
+                "GOROOT": "/Users/user/.gvm/gos/go1.21",
+                "GOPATH": "/Users/user/.gvm/pkgsets/go1.21/global",
             }
         }
     ]

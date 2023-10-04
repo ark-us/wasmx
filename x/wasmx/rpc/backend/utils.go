@@ -52,6 +52,7 @@ func TxLogsFromEvents(events []abci.Event) ([]*ethtypes.Log, error) {
 	return logs, nil
 }
 
+// TODO only ewasm logs?
 // ParseTxLogsFromEvent parse tx logs from one event
 func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
 	var log ethtypes.Log

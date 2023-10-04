@@ -522,7 +522,7 @@ func getAccumulatedRewards(ctx sdk.Context, distKeeper cw8types.DistributionKeep
 		ValidatorAddress: delegation.ValidatorAddress,
 	}
 	cache, _ := ctx.CacheContext()
-	qres, err := distKeeper.DelegationRewards(sdk.WrapSDKContext(cache), &params)
+	qres, err := distKeeper.DelegationRewards(cache, &params)
 	if err != nil {
 		return nil, err
 	}

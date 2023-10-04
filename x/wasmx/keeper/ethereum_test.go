@@ -41,7 +41,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 	databz := append(evmcode, initvaluebz...)
 	res := appA.SendEthTx(priv, nil, databz, nil, uint64(1000000), big.NewInt(10000), nil)
 
-	contractAddressStr := appA.GetContractAddressFromLog(res.GetLog())
+	contractAddressStr := appA.GetContractAddressFromEvents(res.GetEvents())
 	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
