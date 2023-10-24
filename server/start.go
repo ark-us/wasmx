@@ -22,14 +22,10 @@ import (
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
 	"github.com/cometbft/cometbft/rpc/client/local"
-
-	dbm "github.com/cosmos/cosmos-db"
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
-	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
-	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
-	"github.com/cosmos/cosmos-sdk/telemetry"
+	cmttypes "github.com/cometbft/cometbft/types"
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -37,7 +33,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	sdkserverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
+	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	"github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/telemetry"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	config "mythos/v1/server/config"
 	srvflags "mythos/v1/server/flags"
@@ -294,17 +295,17 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
-	genDocProvider := node.DefaultGenesisDocProviderFunc(cfg)
+	genDocProvider := getGenDocProvider(cfg)
 	var (
 		tmNode    *node.Node
 		gRPCOnly  = svrCtx.Viper.GetBool(srvflags.GRPCOnly)
 		cleanupFn func()
 	)
 	if gRPCOnly {
-		svrCtx.Logger.Info("starting node in query only mode; Tendermint is disabled")
+		svrCtx.Logger.Info("starting node in query only mode; CometBFT is disabled")
 		config.GRPC.Enable = true
 	} else {
-		svrCtx.Logger.Info("starting node with ABCI Tendermint in-process")
+		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
 		tmNode, cleanupFn, err = startCmtNode(ctx, cfg, app, svrCtx)
 		if err != nil {
 			return err
@@ -476,14 +477,13 @@ func startCmtNode(
 	}
 
 	cmtApp := server.NewCometABCIWrapper(app)
-	genDocProvider := node.DefaultGenesisDocProviderFunc(cfg)
 	tmNode, err = node.NewNodeWithContext(
 		ctx,
 		cfg,
 		pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
 		nodeKey,
 		proxy.NewLocalClientCreator(cmtApp),
-		genDocProvider,
+		getGenDocProvider(cfg),
 		cmtcfg.DefaultDBProvider,
 		node.DefaultMetricsProvider(cfg.Instrumentation),
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
@@ -503,6 +503,18 @@ func startCmtNode(
 	}
 
 	return tmNode, cleanupFn, nil
+}
+
+// returns a function which returns the genesis doc from the genesis file.
+func getGenDocProvider(cfg *cmtcfg.Config) func() (*cmttypes.GenesisDoc, error) {
+	return func() (*cmttypes.GenesisDoc, error) {
+		appGenesis, err := genutiltypes.AppGenesisFromFile(cfg.GenesisFile())
+		if err != nil {
+			return nil, err
+		}
+
+		return appGenesis.ToGenesisDoc()
+	}
 }
 
 func startGrpcServer(

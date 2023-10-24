@@ -123,7 +123,6 @@ import (
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmos "github.com/cometbft/cometbft/libs/os"
 
 	ante "mythos/v1/app/ante"
@@ -904,7 +903,7 @@ func (a *App) Configurator() module.Configurator {
 // InitChainer application update at chain initialization
 func (app *App) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
 	var genesisState GenesisState
-	if err := tmjson.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
+	if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
 	app.UpgradeKeeper.SetModuleVersionMap(ctx, app.mm.GetVersionMap())
@@ -1054,8 +1053,6 @@ func (app *App) TxConfig() client.TxConfig {
 
 // GetTxConfig implements the TestingApp interface.
 func (app *App) GetTxConfig() client.TxConfig {
-	// cfg := MakeEncodingConfig()
-	// return cfg.TxConfig
 	return app.TxConfig()
 }
 
