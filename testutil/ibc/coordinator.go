@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	globalStartTime = time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC)
+	globalStartTime = time.Now().UTC()
 )
 
 // NewCoordinator initializes Coordinator with N TestChain's

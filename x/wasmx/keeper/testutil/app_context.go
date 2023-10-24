@@ -15,6 +15,7 @@ import (
 
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -255,7 +256,7 @@ func (s AppContext) finalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, er
 	req := &abci.RequestFinalizeBlock{
 		Txs:             txs,
 		Height:          s.App.LastBlockHeight() + 1,
-		Time:            time.Now(),
+		Time:            s.Chain.CurrentHeader.Time,
 		Hash:            s.App.LastCommitID().Hash,
 		ProposerAddress: s.Chain.CurrentHeader.ProposerAddress,
 		// NextValidatorsHash: valSet.Hash(),
@@ -537,6 +538,13 @@ func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1
 	resp, err := s.DeliverTx(sender, proposalMsg)
 	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetEvents())
+
+	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
+	s.S.Require().NoError(err)
+	proposal, err := s.App.GovKeeper.Proposals.Get(s.Context(), proposalId)
+	s.S.Require().NoError(err)
+	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Status)
+
 	s.S.Commit()
 	return resp
 }

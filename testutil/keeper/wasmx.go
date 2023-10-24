@@ -54,7 +54,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	paramsSubspace := typesparams.NewSubspace(cdc,
-		types.Amino,
+		codec.NewLegacyAmino(),
 		storeKey,
 		memStoreKey,
 		"WasmxParams",

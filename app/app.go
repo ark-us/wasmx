@@ -250,7 +250,8 @@ func New(
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
-	std.RegisterLegacyAminoCodec(cdc)
+	// TODO - do we need this?
+	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
 	bApp := baseapp.NewBaseApp(
@@ -649,7 +650,8 @@ func New(
 				},
 			),
 		})
-	app.BasicModuleManager.RegisterLegacyAminoCodec(cdc)
+	// TODO - do we need this?
+	// app.BasicModuleManager.RegisterLegacyAminoCodec(cdc)
 	app.BasicModuleManager.RegisterInterfaces(interfaceRegistry)
 
 	// upgrades should be run first
