@@ -147,6 +147,7 @@ func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params [
 		return nil, wasmedge.Result_Fail
 	}
 	ctx.ReturnData = data
+	// fmt.Println("---getCalwasmxFinishlData--", data)
 	returns := make([]interface{}, 0)
 	// terminate the WASM execution
 	// return returns, wasmedge.Result_Terminate
@@ -177,6 +178,7 @@ func asAbort(context interface{}, callframe *wasmedge.CallingFrame, params []int
 func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
+	fmt.Println("-asConsoleLog", readJsString(message))
 	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx_env_1: console.log: %s", readJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success

@@ -49,6 +49,10 @@ import (
 	jsonrpc "mythos/v1/x/wasmx/server"
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
+
+	networkgrpc "mythos/v1/x/network/keeper"
+	networkconfig "mythos/v1/x/network/server/config"
+	networkflags "mythos/v1/x/network/server/flags"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -173,6 +177,10 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Bool(jsonrpcflags.JsonRpcAllowUnprotectedTxs, jsonrpcconfig.DefaultAllowUnprotectedTxs, "Allow for unprotected (non EIP155 signed) transactions to be submitted via the node's RPC when the global parameter is disabled")
 	cmd.Flags().Int(jsonrpcflags.JsonRpcMaxOpenConnections, jsonrpcconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener")
 
+	cmd.Flags().Bool(networkflags.NetworkEnable, true, "Define if the network grpc server should be enabled")
+	cmd.Flags().String(networkflags.NetworkAddress, networkconfig.DefaultNetworkAddress, "the network grpc server address to listen on")
+	cmd.Flags().Int(networkflags.NetworkMaxOpenConnections, networkconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener") //nolint:lll
+
 	cmd.Flags().String(srvflags.TLSCertPath, "", "the cert.pem file path for the server TLS configuration")
 	cmd.Flags().String(srvflags.TLSKeyPath, "", "the key.pem file path for the server TLS configuration")
 
@@ -182,6 +190,20 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	// add support for all Tendermint-specific command line options
 	tcmd.AddNodeFlags(cmd)
 	return cmd
+}
+
+type MythosApp interface {
+	SetGoRoutineGroup(g *errgroup.Group)
+}
+
+// SetGoRoutineGroup sets the GoRoutineGroup in BaseApp.
+func SetGoRoutineGroup(app types.Application, g *errgroup.Group) error {
+	mythosapp, ok := app.(MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from BaseApp")
+	}
+	mythosapp.SetGoRoutineGroup(g)
+	return nil
 }
 
 func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error {
@@ -207,7 +229,12 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 		return err
 	}
 
+	svrCtx.Viper.Set("goroutineGroup", g)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
+	err = SetGoRoutineGroup(app, g)
+	if err != nil {
+		return err
+	}
 	cmtApp := server.NewCometABCIWrapper(app)
 	svr, err := abciserver.NewServer(addr, transport, cmtApp)
 	if err != nil {
@@ -288,7 +315,12 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
+	svrCtx.Viper.Set("goroutineGroup", g)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
+	err = SetGoRoutineGroup(app, g)
+	if err != nil {
+		return err
+	}
 
 	metrics, err := startTelemetry(config.Config)
 	if err != nil {
@@ -345,6 +377,23 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	if err != nil {
 		return err
 	}
+
+	genDoc, err := genDocProvider()
+	if err != nil {
+		return err
+	}
+	clientCtx = clientCtx.
+		WithHomeDir(home).
+		WithChainID(genDoc.ChainID)
+
+	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
+	// that the server is gracefully shut down.
+	g.Go(func() error {
+		// httpSrv, httpSrvDone, err
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, &config, app, tmNode)
+		return err
+	})
+	// ----end network
 
 	// var (
 	// 	httpSrv     *http.Server
@@ -488,6 +537,7 @@ func startCmtNode(
 		node.DefaultMetricsProvider(cfg.Instrumentation),
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
+
 	if err != nil {
 		return tmNode, cleanupFn, err
 	}

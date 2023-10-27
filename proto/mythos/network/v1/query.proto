@@ -1,0 +1,43 @@
+syntax = "proto3";
+package mythos.network.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "mythos/network/v1/params.proto";
+
+option go_package = "mythos/v1/x/network/types";
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.equal_all) = false;
+
+// Query provides defines the gRPC querier service
+service Query {
+  // Params gets the module params
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/network/v1/params";
+  }
+
+  // IsProposer gets the module params
+  rpc IsProposer(QueryIsProposerRequest) returns (QueryIsProposerResponse) {
+    option (google.api.http).get = "/network/v1/is_proposer";
+  }
+}
+
+// QueryParamsRequest is the request type for the Query/Params RPC method.
+message QueryParamsRequest {}
+
+// QueryParamsResponse is the response type for the Query/Params RPC method.
+message QueryParamsResponse {
+  // params defines the parameters of the module.
+  Params params = 1 [ (gogoproto.nullable) = false ];
+}
+
+// QueryIsProposerRequest is the request type for the Query/Params RPC method.
+message QueryIsProposerRequest {}
+
+// QueryIsProposerResponse is the response type for the Query/IsProposer RPC method.
+message QueryIsProposerResponse {
+  // params defines the parameters of the module.
+  bool is_proposer = 1;
+}

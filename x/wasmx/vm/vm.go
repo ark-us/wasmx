@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"golang.org/x/exp/slices"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -32,6 +33,7 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 }
 
 func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
+	// fmt.Println("-InitiateWasm--", filePath)
 	wasmedge.SetLogErrorLevel()
 	// wasmedge.SetLogDebugLevel()
 	conf := wasmedge.NewConfigure()
@@ -71,7 +73,7 @@ func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []ty
 		if err != nil {
 			return cleanups, err
 		}
-
+		// fmt.Println("--systemDep--", systemDep)
 		handler, found := SystemDepHandler[systemDep.Role]
 		if !found {
 			handler, found = SystemDepHandler[systemDep.Label]
@@ -197,11 +199,14 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
+	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
 	msg []byte,
 	storeKey []byte, kvstore prefix.Store,
+	storageType types.ContractStorageType,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -221,14 +226,18 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		ContractRouter: contractRouter,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
+		createGoRoutine: createGoRoutine,
+		goRoutineGroup:  goRoutineGroup,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		ContractRouter:  contractRouter,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
+		intervalsCount:  0,
+		intervals:       map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -239,7 +248,7 @@ func ExecuteWasmInterpreted(
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, SystemDeps: systemDeps})
+	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 	if err != nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
@@ -256,7 +265,7 @@ func ExecuteWasmInterpreted(
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
-	_, err = executeHandler(context, contractVm, funcName)
+	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "%s", string(context.ReturnData))
@@ -278,11 +287,14 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
+	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
 	msg []byte,
 	storeKey []byte, kvstore prefix.Store,
+	storageType types.ContractStorageType,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -302,14 +314,18 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		ContractRouter: contractRouter,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
+		createGoRoutine: createGoRoutine,
+		goRoutineGroup:  goRoutineGroup,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		ContractRouter:  contractRouter,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
+		intervalsCount:  0,
+		intervals:       map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
@@ -332,7 +348,7 @@ func ExecuteWasm(
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, SystemDeps: systemDeps})
+	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 	if err != nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
@@ -351,7 +367,8 @@ func ExecuteWasm(
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
-	_, err = executeHandler(context, contractVm, funcName)
+
+	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)

@@ -13,6 +13,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	"golang.org/x/sync/errgroup"
 
 	cw8 "mythos/v1/x/wasmx/cw8"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
@@ -27,9 +28,13 @@ const contractMemoryLimit = 32
 
 type (
 	Keeper struct {
+		goRoutineGroup        *errgroup.Group
+		createGoRoutine       func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
 		cdc                   codec.Codec
 		storeKey              storetypes.StoreKey
 		memKey                storetypes.StoreKey
+		tKey                  storetypes.StoreKey
+		clessKey              storetypes.StoreKey
 		paramstore            paramtypes.Subspace
 		interfaceRegistry     cdctypes.InterfaceRegistry
 		msgRouter             *baseapp.MsgServiceRouter
@@ -45,7 +50,7 @@ type (
 		gasRegister   GasRegister
 		denom         string
 
-		wasmvm  WasmxEngine
+		wasmvm  *WasmxEngine
 		tempDir string
 		binDir  string
 
@@ -56,9 +61,12 @@ type (
 )
 
 func NewKeeper(
+	goRoutineGroup *errgroup.Group,
 	cdc codec.Codec,
-	storeKey,
+	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
+	tKey storetypes.StoreKey,
+	clessKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
@@ -112,7 +120,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	wasmvm, err := NewVM(goRoutineGroup, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
 	if err != nil {
 		panic(err)
 	}
@@ -123,9 +131,12 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
+		goRoutineGroup:    goRoutineGroup,
 		cdc:               cdc,
 		storeKey:          storeKey,
 		memKey:            memKey,
+		tKey:              tKey,
+		clessKey:          clessKey,
 		paramstore:        ps,
 		interfaceRegistry: interfaceRegistry,
 		msgRouter:         msgRouter,
@@ -136,7 +147,7 @@ func NewKeeper(
 		bank:          bankKeeper,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		gasRegister:   NewDefaultWasmGasRegister(),
-		wasmvm:        *wasmvm,
+		wasmvm:        wasmvm,
 		tempDir:       tempDir,
 		binDir:        binDir,
 		authority:     authority,
@@ -156,21 +167,31 @@ func NewKeeper(
 	return keeper
 }
 
-func (k Keeper) Logger(ctx sdk.Context) log.Logger {
+func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
 // GetAuthority returns the module's authority.
-func (k Keeper) GetAuthority() string {
+func (k *Keeper) GetAuthority() string {
 	return k.authority
 }
 
-func (k Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
+func (k *Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
 	return k.cch
 }
 
-func (k Keeper) WasmVMResponseHandler() cw8types.WasmVMResponseHandler {
+func (k *Keeper) WasmVMResponseHandler() cw8types.WasmVMResponseHandler {
 	return k.wasmVMResponseHandler
+}
+
+func (k *Keeper) SetGoRoutineGroup(g *errgroup.Group) {
+	k.goRoutineGroup = g
+	k.wasmvm.SetGoRoutineGroup(g)
+}
+
+func (k *Keeper) SetGoRoutineCreate(createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)) {
+	k.createGoRoutine = createGoRoutine
+	k.wasmvm.SetGoRoutineCreate(createGoRoutine)
 }
 
 // 0755 = User:rwx Group:r-x World:r-x

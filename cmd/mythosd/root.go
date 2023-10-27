@@ -70,13 +70,18 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("")
 
+	logger := log.NewNopLogger()
+	appOpts := app.DefaultAppOptions{}
+	g, _, _ := app.GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
+	appOpts.Set(flags.FlagHome, tempDir())
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
 	tempApp := app.New(
-		log.NewNopLogger(),
+		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
 		cast.ToString(tempOpts.Get(flags.FlagHome)),
-		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, tempOpts)
+		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, appOpts)
 
 	rootCmd := &cobra.Command{
 		Use:   app.Name + "d",
@@ -291,6 +296,21 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 		overwriteFlagDefaults(c, defaults)
 	}
 }
+
+// type MythosApp interface {
+// 	SetGoRoutineGroup(g *errgroup.Group)
+// }
+
+// // SetChainID sets the chain ID in BaseApp.
+// func SetGoRoutineGroup(g *errgroup.Group) func(*baseapp.BaseApp) {
+// 	return func(app *baseapp.BaseApp) {
+// 		mythosapp, ok := app.(MythosApp)
+// 		if !ok {
+// 			return fmt.Errorf("failed to get MythosApp from BaseApp")
+// 		}
+// 		mythosapp.SetGoRoutineGroup(g)
+// 	}
+// }
 
 type appCreator struct {
 	encodingConfig appparams.EncodingConfig

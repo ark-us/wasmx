@@ -1,0 +1,213 @@
+syntax = "proto3";
+package mythos.network.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "amino/amino.proto";
+
+option go_package = "mythos/v1/x/network/types";
+option (gogoproto.goproto_getters_all) = false;
+
+// Msg defines the grpc server
+service Msg {
+    option (cosmos.msg.v1.service) = true;
+
+    // GrpcSendRequest
+    rpc GrpcSendRequest(MsgGrpcSendRequest) returns (MsgGrpcSendRequestResponse);
+
+    // GrpcReceiveRequest
+    rpc GrpcReceiveRequest(MsgGrpcReceiveRequest) returns (MsgGrpcReceiveRequestResponse);
+
+    // StartInterval
+    rpc StartInterval(MsgStartIntervalRequest) returns (MsgStartIntervalResponse);
+
+    // ExecuteContract
+    rpc ExecuteContract(MsgExecuteContract) returns (MsgExecuteContractResponse);
+
+    // QueryContract
+    rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
+
+    // Setup
+    rpc Setup(MsgSetup) returns (MsgSetupResponse);
+
+    // Ping
+    rpc Ping(MsgPing) returns (MsgPingResponse);
+
+    // MakeProposal
+    rpc MakeProposal(MsgMakeProposal) returns (MsgMakeProposalResponse);
+
+    // IsProposer // TODO this should be a query
+    rpc IsProposer(MsgIsProposer) returns (MsgIsProposerResponse);
+
+    // SetCurrentNode // TODO
+    rpc SetCurrentNode(MsgSetCurrentNode) returns (MsgSetCurrentNodeResponse);
+
+    // GetCurrentNode // TODO
+    rpc GetCurrentNode(MsgGetCurrentNode) returns (MsgGetCurrentNodeResponse);
+
+    // SetValidators // TODO remove
+    rpc SetValidators(MsgSetValidators) returns (MsgSetValidatorsResponse);
+
+    // GetValidators // TODO remove
+    rpc GetValidators(MsgGetValidators) returns (MsgGetValidatorsResponse);
+}
+
+message MsgGrpcSendRequest {
+    option (cosmos.msg.v1.signer) = "sender";
+    // this will always be the network module
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string address = 2;
+	bytes data = 3;
+    string encoding = 4; // evm, json, protobuf // ?
+}
+
+message MsgGrpcSendRequestResponse {
+	bytes data = 1;
+}
+
+message MsgGrpcReceiveRequest {
+    option (cosmos.msg.v1.signer) = "sender";
+    // this will always be the network module
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+	bytes data = 3;
+    string encoding = 4; // evm, json, protobuf // ?
+}
+
+message MsgGrpcReceiveRequestResponse {
+	bytes data = 1;
+}
+
+// MsgStartIntervalRequest
+message MsgStartIntervalRequest {
+    option (cosmos.msg.v1.signer) = "sender";
+    // this will always be the wasmx module // TODO authority
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // contract address
+    string address = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    int64 delay = 3;
+    int32 repeat = 4;
+    bytes args = 5;
+}
+
+// MsgStartIntervalResponse
+message MsgStartIntervalResponse {
+    int32 intervalId = 1;
+}
+
+// ExecuteContract
+message MsgExecuteContract {
+    option (amino.name) = "wasmx/MsgExecuteContract";
+    option (cosmos.msg.v1.signer) = "sender";
+    // Sender is the that actor that signed the messages
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // Contract is the address of the smart contract
+    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // Msg json encoded message to be passed to the contract
+    bytes msg = 3;
+    // Funds coins that are transferred to the contract on execution
+    // repeated cosmos.base.v1beta1.Coin funds = 4 [
+    //     (gogoproto.nullable) = false,
+    //     (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    // ];
+    // // Array of either hex-encoded contract addresses or contract labels
+    // // on which the execution of this message depends on
+    // repeated string dependencies = 5;
+}
+
+// ExecuteContractResponse
+message MsgExecuteContractResponse {
+    bytes data = 1;
+}
+
+// QueryContract
+message MsgQueryContract {
+    option (amino.name) = "wasmx/MsgQueryContract";
+    option (cosmos.msg.v1.signer) = "sender";
+    // Sender is the that actor that signed the messages
+    string sender = 1;
+    // Address is the address of the smart contract
+    string contract = 2;
+    bytes msg = 3;
+    // // Funds coins that are transferred to the contract on execution
+    // repeated cosmos.base.v1beta1.Coin funds = 4 [
+    //     (gogoproto.nullable) = false,
+    //     (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    // ];
+    // // Array of either hex-encoded contract addresses or contract labels
+    // // on which the execution of this message depends on
+    // repeated string dependencies = 5;
+}
+
+// QueryContractResponse
+message MsgQueryContractResponse {
+    bytes data = 1;
+}
+
+// MsgPing
+message MsgPing {
+    string data = 1;
+}
+
+// MsgPingResponse
+message MsgPingResponse {
+    string data = 1;
+}
+
+// MsgSetup
+message MsgSetup {
+    string data = 1;
+}
+
+// MsgSetupResponse
+message MsgSetupResponse {
+    string data = 1;
+}
+
+// MsgMakeProposal
+message MsgMakeProposal {
+    string data = 1;
+}
+
+// MsgMakeProposalResponse
+message MsgMakeProposalResponse {
+    string data = 1;
+}
+
+// MsgSetValidators
+message MsgSetValidators {}
+
+// MsgSetValidatorsResponse
+message MsgSetValidatorsResponse {}
+
+// MsgGetValidators
+message MsgGetValidators {}
+
+// MsgGetValidatorsResponse
+message MsgGetValidatorsResponse {
+    repeated string validators = 1;
+}
+
+// MsgIsProposer
+message MsgIsProposer {}
+
+// MsgIsProposerResponse is the response type for the Query/IsProposer RPC method.
+message MsgIsProposerResponse {
+  // params defines the parameters of the module.
+  bool is_proposer = 1;
+}
+
+// MsgSetCurrentNode
+message MsgSetCurrentNode {}
+
+// MsgSetCurrentNodeResponse
+message MsgSetCurrentNodeResponse {}
+
+// MsgGetCurrentNode
+message MsgGetCurrentNode {}
+
+// MsgGetCurrentNodeResponse
+message MsgGetCurrentNodeResponse {
+    string current_node = 1;
+}

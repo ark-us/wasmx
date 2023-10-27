@@ -1,19 +1,28 @@
 package vm
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
 
+	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/log"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
+
+	networktypes "mythos/v1/x/network/types"
 )
 
 // getEnv(): ArrayBuffer
-func getEnv(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getEnv(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	envbz, err := json.Marshal(ctx.Env)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -29,8 +38,8 @@ func getEnv(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 }
 
 // address -> account
-func getAccount(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getAccount(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	addr, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -56,8 +65,8 @@ func getAccount(context interface{}, callframe *wasmedge.CallingFrame, params []
 	return returns, wasmedge.Result_Success
 }
 
-func keccak256Util(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func keccak256Util(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	data, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -98,8 +107,8 @@ func keccak256Util(context interface{}, callframe *wasmedge.CallingFrame, params
 }
 
 // call request -> call response
-func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	requestbz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -140,8 +149,8 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxCall(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	requestbz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -203,8 +212,8 @@ func wasmxCall(context interface{}, callframe *wasmedge.CallingFrame, params []i
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxGetBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func wasmxGetBalance(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	addr, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -220,8 +229,8 @@ func wasmxGetBalance(context interface{}, callframe *wasmedge.CallingFrame, para
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxGetBlockHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func wasmxGetBlockHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	bz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -237,8 +246,8 @@ func wasmxGetBlockHash(context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
 	requestbz, err := readMemFromPtr(callframe, params[0])
@@ -284,8 +293,8 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
 	requestbz, err := readMemFromPtr(callframe, params[0])
@@ -333,6 +342,165 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 	return returns, wasmedge.Result_Success
 }
 
+type GrpcRequest struct {
+	Address string `json:"address"`
+	Data    []byte `json:"data"` // should be []byte (base64 encoded)
+}
+
+func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+	databz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--wasmxGrpcRequest-databz-", string(databz))
+	var data GrpcRequest
+	err = json.Unmarshal(databz, &data)
+	fmt.Println("--wasmxGrpcRequest-err-", err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--wasmxGrpcRequest-data-", data)
+	msg := &networktypes.MsgGrpcSendRequest{
+		Address: data.Address,
+		Data:    []byte(data.Data),
+		Sender:  ctx.Env.Contract.Address.String(),
+	}
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+	fmt.Println("--wasmxGrpcRequest-res, err-", res, err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO evs?
+	fmt.Println("--evs", evs)
+	ptr, err := allocateWriteMem(ctx, callframe, res)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+// func executeTimedAction(_context *Context, intervalId int32, argsPtr int32) error {
+// 	fmt.Println("executeTimedAction", intervalId, argsPtr)
+// 	contractCtx, ok := _context.ContractRouter[_context.Env.Contract.Address.String()]
+// 	if !ok {
+// 		return fmt.Errorf("timed action: contract context not found")
+// 	}
+// 	executeHandler := GetExecuteFunctionHandler(contractCtx.ContractInfo.SystemDeps)
+
+// 	args := []interface{}{intervalId, argsPtr}
+// 	_, err := executeHandler(_context, contractCtx.Vm, types.ENTRY_POINT_TIMED, args)
+// 	fmt.Println("--executeTimedAction--", err)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+// startInterval(repeat: i32, time: u64, args: ArrayBuffer): i32
+func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+	repeatCount := params[0].(int32)
+	timeDelay := params[1].(int64)
+	argsbz, err := readMemFromPtr(callframe, params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--wasmxStartInterval--", repeatCount, timeDelay, string(argsbz))
+
+	// g, ctx2, cancelFn := getCtx(ctx.GetContext().Logger(), true)
+	// g := ctx.goRoutineGroup
+	// fmt.Println("--ctx.goRoutineGroup--", g)
+	// cancelFn must be called to release resources when the process is done
+	// ctx2, cancelFn := context.WithCancel(ctx.Ctx)
+
+	// intervalId := ctx.intervalsCount
+	// fmt.Println("--intervalId--", intervalId)
+	// ctx.intervalsCount += 1
+	// ctx.intervals[intervalId] = &IntervalAction{
+	// 	Time:   timeDelay,
+	// 	Args:   argsbz,
+	// 	Cancel: cancelFn,
+	// }
+
+	msgtosend := &networktypes.MsgStartIntervalRequest{
+		// Sender:  sdk.AccAddress([]byte("network")).String(),
+		Sender:  ctx.Env.Contract.Address.String(),
+		Address: ctx.Env.Contract.Address.String(),
+		Delay:   timeDelay,
+		Repeat:  repeatCount,
+		Args:    argsbz,
+	}
+	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	fmt.Println("--ExecuteCosmosMsg--err-", err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var resp networktypes.MsgStartIntervalResponse
+	err = resp.Unmarshal(res)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	intervalId := resp.IntervalId
+	fmt.Println("---timer created intervalId", intervalId)
+
+	// description := fmt.Sprintf("timed action: id %s, delay %sms, repeat %s, args: %s ", intervalId, timeDelay, repeatCount, string(argsbz))
+	// action := func() error {
+	// 	_intervalId := big.NewInt(int64(intervalId))
+	// 	data := append(_intervalId.FillBytes(make([]byte, 4)), argsbz...)
+	// 	execmsg := types.WasmxExecutionMessage{Data: data}
+	// 	msgbz, err := json.Marshal(execmsg)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	// _, err := startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
+	// 	return err
+	// }
+	// gracefulStop := func() {
+
+	// }
+	// done, err := ctx.createGoRoutine(description, action, gracefulStop)
+
+	// g.Go(func() error {
+	// 	fmt.Println("--startTimedAction--")
+	// 	_, err = startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
+	// 	if err != nil {
+	// 		ctx.GetContext().Logger().Error("failed to start timed action", "err", err)
+	// 		return err
+	// 	}
+
+	// 	// Wait for the calling process to be canceled or close the provided context,
+	// 	// so we can gracefully stop the ABCI server.
+	// 	<-ctx2.Done()
+	// 	ctx.GetContext().Logger().Info("stopping the timed action...")
+	// 	cancelFn()
+	// 	return nil
+	// })
+
+	// err = g.Wait() // use the given wait
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+	returns[0] = intervalId
+	return returns, wasmedge.Result_Success
+}
+
+// stopInterval(intervalId: i32): void
+func wasmxStopInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	// ctx := _context.(*Context)
+	returns := make([]interface{}, 0)
+	// intervalId := params[0].(int32)
+	// fmt.Println("* stop interval: ", intervalId)
+	// // TODO errors if already stopped?
+	// // ctx.intervals[intervalId].Quit <- true
+	// ctx.intervals[intervalId].Cancel()
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
@@ -350,6 +518,10 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	functype_i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
+	)
+	functype_i32i64i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
 
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
@@ -372,5 +544,69 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32_i32, wasmxCreateAccount, context, 0))
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
+	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
+	env.AddFunction("startInterval", wasmedge.NewFunction(functype_i32i64i32_i32, wasmxStartInterval, context, 0))
+	env.AddFunction("stopInterval", wasmedge.NewFunction(functype_i32_, wasmxStopInterval, context, 0))
+
 	return env
 }
+
+func getCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
+	ctx, cancelFn := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+	// listen for quit signals so the calling parent process can gracefully exit
+	server.ListenForQuitSignals(g, block, cancelFn, logger)
+	return g, ctx, cancelFn
+}
+
+// func startTimedAction(ctx *Context, callframe *wasmedge.CallingFrame, goctx context.Context, logger log.Logger, intervalId int32, timeDelay int64, repeatCount int32, argsbz []byte) (chan struct{}, error) {
+// 	httpSrvDone := make(chan struct{}, 1)
+// 	errCh := make(chan error)
+// 	currentCount := int32(0)
+
+// 	go func() {
+// 		logger.Info("Starting new timed action", "intervalId", intervalId, "delay", timeDelay, "args", string(argsbz))
+// 		// if err := httpSrv.Serve(ln); err != nil {
+// 		// 	logger.Error("failed to serve Websrv", "error", err.Error())
+// 		// 	if err == http.ErrServerClosed {
+// 		// 		close(httpSrvDone)
+// 		// 		return
+// 		// 	}
+
+// 		// 	logger.Error("failed to start Websrv server", "error", err.Error())
+// 		// 	errCh <- err
+// 		// }
+// 		for {
+// 			if repeatCount > 0 && currentCount == repeatCount {
+// 				return
+// 			}
+// 			select {
+// 			case <-goctx.Done():
+// 				// The calling process canceled or closed the provided context
+// 				return
+// 			default:
+// 				argsptr, err := allocateWriteMem(ctx, callframe, argsbz)
+// 				if err != nil {
+// 					errCh <- err
+// 				}
+// 				fmt.Println("argsptr", argsptr)
+// 				err = executeTimedAction(ctx, intervalId, argsptr)
+// 				if err != nil {
+// 					errCh <- err
+// 				}
+// 			}
+// 			currentCount += 1
+// 			time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+// 		}
+// 	}()
+
+// 	select {
+// 	case <-goctx.Done():
+// 		// The calling process canceled or closed the provided context
+// 		logger.Info("stopping timed action", "args", string(argsbz))
+// 		return httpSrvDone, nil
+// 	case err := <-errCh:
+// 		logger.Error("failed to start timed action", "error", err.Error())
+// 		return nil, err
+// 	}
+// }

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
-	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -95,7 +94,8 @@ func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []
 		return nil
 	}
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	// TODO storage type in QueryRaw
+	prefixStore := k.ContractStore(ctx, types.ContractStorageType_CoreConsensus, prefixStoreKey)
 	return prefixStore.Get(key)
 }
 
@@ -127,6 +127,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 		CodeHash:      codeInfo.CodeHash,
 		CodeId:        contractInfo.CodeId,
 		SystemDepsRaw: codeInfo.Deps,
+		StorageType:   contractInfo.StorageType,
 	}, nil
 }
 
@@ -266,7 +267,7 @@ func (k Keeper) CreateInterpreted(
 		contractAddress = k.EwasmPredictableAddressGenerator(addressParent, salt, []byte{}, false)(ctx, codeID, codeInfo.CodeHash)
 	}
 
-	_, runtimeCode, err := k.instantiateInternal(ctx, codeID, creator, provenance, initMsg, deposit, contractAddress, &codeInfo, label)
+	_, runtimeCode, err := k.instantiateInternal(ctx, codeID, creator, provenance, types.ContractStorageType_CoreConsensus, initMsg, deposit, contractAddress, &codeInfo, label)
 	if err != nil {
 		return 0, checksum, contractAddress, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
@@ -331,6 +332,7 @@ func (k Keeper) instantiateWithAddress(
 	codeID uint64,
 	creator sdk.AccAddress,
 	contractAddress sdk.AccAddress,
+	storageType types.ContractStorageType,
 	initMsg []byte,
 	deposit sdk.Coins,
 	label string,
@@ -342,7 +344,7 @@ func (k Keeper) instantiateWithAddress(
 	if codeInfo == nil {
 		return nil, sdkerr.Wrap(types.ErrNotFound, "code")
 	}
-	_, data, err := k.instantiateInternal(ctx, codeID, creator, nil, initMsg, deposit, contractAddress, codeInfo, label)
+	_, data, err := k.instantiateInternal(ctx, codeID, creator, nil, storageType, initMsg, deposit, contractAddress, codeInfo, label)
 	return data, err
 }
 
@@ -363,7 +365,7 @@ func (k Keeper) instantiate(
 	}
 	// TODO deps: support multiple types of address generation
 	contractAddress := k.EwasmClassicAddressGenerator(creator)(ctx, codeID, codeInfo.CodeHash)
-	return k.instantiateInternal(ctx, codeID, creator, nil, initMsg, deposit, contractAddress, codeInfo, label)
+	return k.instantiateInternal(ctx, codeID, creator, nil, types.ContractStorageType_CoreConsensus, initMsg, deposit, contractAddress, codeInfo, label)
 }
 
 func (k Keeper) instantiate2(
@@ -386,7 +388,7 @@ func (k Keeper) instantiate2(
 	// TODO if we support multiple types of address generation
 	// the type should be saved in CodeInfo
 	contractAddress := k.EwasmPredictableAddressGenerator(creator, salt, initMsg, fixMsg)(ctx, codeID, codeInfo.CodeHash)
-	return k.instantiateInternal(ctx, codeID, creator, nil, initMsg, deposit, contractAddress, codeInfo, label)
+	return k.instantiateInternal(ctx, codeID, creator, nil, types.ContractStorageType_CoreConsensus, initMsg, deposit, contractAddress, codeInfo, label)
 }
 
 func (k Keeper) instantiateInternal(
@@ -394,6 +396,7 @@ func (k Keeper) instantiateInternal(
 	codeID uint64,
 	creator sdk.AccAddress,
 	provenance sdk.AccAddress,
+	storageType types.ContractStorageType,
 	initMsg []byte,
 	deposit sdk.Coins,
 	contractAddress sdk.AccAddress,
@@ -448,15 +451,18 @@ func (k Keeper) instantiateInternal(
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
+	// fmt.Println("---Instantiate--")
+
 	// instantiate wasm contract
-	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, handler, k.gasMeter(ctx), systemDeps)
+	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, storageType, handler, k.gasMeter(ctx), systemDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
+	// fmt.Println("---Instantiate- err-", err)
 
 	if err != nil {
 		return nil, nil, sdkerr.Wrap(types.ErrInstantiateFailed, err.Error())
@@ -464,6 +470,7 @@ func (k Keeper) instantiateInternal(
 
 	// persist instance first
 	contractInfo := types.NewContractInfo(codeID, creator, provenance, initMsg, label)
+	contractInfo.StorageType = storageType
 
 	// check for IBC flag - TODO use codeInfo.Dependencies
 	// report, err := k.wasmvm.AnalyzeWasm(codeInfo.CodeHash)
@@ -543,8 +550,12 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
+		coinType := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY)
+		if coinType == nil {
+			return nil, sdkerr.Wrap(types.ErrInvalid, "missing CONTEXT_COIN_TYPE_KEY")
+		}
 		// This can be just an ethcall sending value
-		key := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY).(uint32)
+		key := coinType.(uint32)
 		if key == cchtypes.COIN_TYPE_ETH && !coins.IsZero() {
 			aliasAddr, found := k.GetAlias(ctx, contractAddress)
 			if found {
@@ -555,6 +566,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 		return nil, err
 	}
+
 	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
 		return nil, err
 	}
@@ -599,7 +611,77 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	k.consumeRuntimeGas(ctx, gasUsed)
+
+	if execErr != nil {
+		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "dispatch events")
+	}
+
+	data, err := k.handleResponseMessages(ctx, contractAddress, contractInfo.IbcPortId, res.Messages, res.Data)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "dispatch message")
+	}
+	// TODO return data or res.Data
+	return data, nil
+}
+
+// Execute executes the contract instance
+func (k Keeper) ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "executeEventual")
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
+		return nil, err
+	}
+
+	// add known dependencies for that codeId
+	// TODO system deps in the form of smart contracts
+	// e.g. dep = {value, type}
+	// if we cannot just load all the modules in the same VM
+	allDeps := append(codeInfo.Deps, dependencies...)
+
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
+	var contractDeps []types.ContractDependency
+
+	for _, hexaddr := range allDeps {
+		if hexaddr[0:2] != "0x" {
+			continue
+		}
+		addr := types.AccAddressFromHex(hexaddr)
+		contractDep, err := k.GetContractDependency(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+		contractDeps = append(contractDeps, contractDep)
+	}
+
+	// TODO panic if coin is not the correct denomination
+	// add denom param for wasmx
+
+	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
+	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute eventual")
+
+	info := types.NewInfo(caller, caller, nil)
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
+
+	// prepare querier
+	handler := k.newCosmosHandler(ctx, contractAddress)
+	res, gasUsed, execErr := k.wasmvm.ExecuteEventual(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -653,7 +735,7 @@ func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8
 	}
 
 	// TODO costJSONDeserialization
-	res, gasUsed, execErr := k.wasmvm.Reply(ctx, &codeInfo, env, replyBz, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, nil)
+	res, gasUsed, execErr := k.wasmvm.Reply(ctx, &codeInfo, env, replyBz, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -712,7 +794,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, nil)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -783,7 +865,7 @@ func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sd
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps, isdebug)
+	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)

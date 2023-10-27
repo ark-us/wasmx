@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cast"
+	"golang.org/x/sync/errgroup"
 
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
@@ -128,6 +129,9 @@ import (
 	ante "mythos/v1/app/ante"
 	appparams "mythos/v1/app/params"
 	docs "mythos/v1/docs"
+	networkmodule "mythos/v1/x/network"
+	networkmodulekeeper "mythos/v1/x/network/keeper"
+	networkmoduletypes "mythos/v1/x/network/types"
 	wasmxmodule "mythos/v1/x/wasmx"
 	wasmxclient "mythos/v1/x/wasmx/client"
 	wasmxmodulekeeper "mythos/v1/x/wasmx/keeper"
@@ -179,6 +183,8 @@ func init() {
 type App struct {
 	*baseapp.BaseApp
 
+	goRoutineGroup *errgroup.Group
+
 	cdc               *codec.LegacyAmino
 	appCodec          codec.Codec
 	txConfig          client.TxConfig
@@ -187,9 +193,10 @@ type App struct {
 	invCheckPeriod uint
 
 	// keys to access the substores
-	keys    map[string]*storetypes.KVStoreKey
-	tkeys   map[string]*storetypes.TransientStoreKey
-	memKeys map[string]*storetypes.MemoryStoreKey
+	keys      map[string]*storetypes.KVStoreKey
+	tkeys     map[string]*storetypes.TransientStoreKey
+	memKeys   map[string]*storetypes.MemoryStoreKey
+	clessKeys map[string]*storetypes.ConsensuslessStoreKey
 
 	// keepers
 	AccountKeeper         authkeeper.AccountKeeper
@@ -222,6 +229,8 @@ type App struct {
 	WasmxKeeper wasmxmodulekeeper.Keeper
 
 	WebsrvKeeper websrvmodulekeeper.Keeper
+
+	NetworkKeeper networkmodulekeeper.Keeper
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
 
 	// mm is the module manager
@@ -249,6 +258,7 @@ func New(
 	appCodec := encodingConfig.Marshaler
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
+	goRoutineGroup := appOpts.Get("goroutineGroup").(*errgroup.Group)
 
 	// TODO - do we need this?
 	// std.RegisterLegacyAminoCodec(cdc)
@@ -274,10 +284,12 @@ func New(
 		icacontrollertypes.StoreKey,
 		wasmxmoduletypes.StoreKey,
 		websrvmoduletypes.StoreKey,
+		networkmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
-	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
-	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
+	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, wasmxmoduletypes.MemStoreKey)
+	clessKeys := storetypes.NewConsensuslessStoreKeys(networkmoduletypes.CLessStoreKey, wasmxmoduletypes.CLessStoreKey)
 
 	// register streaming services
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -294,6 +306,8 @@ func New(
 		keys:              keys,
 		tkeys:             tkeys,
 		memKeys:           memKeys,
+		goRoutineGroup:    goRoutineGroup,
+		clessKeys:         clessKeys,
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -523,10 +537,14 @@ func New(
 	app.GovKeeper.SetLegacyRouter(govRouter)
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
+
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
+		app.goRoutineGroup,
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
-		keys[wasmxmoduletypes.MemStoreKey],
+		memKeys[wasmxmoduletypes.MemStoreKey],
+		tkeys[wasmxmoduletypes.TStoreKey],
+		clessKeys[wasmxmoduletypes.CLessStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
@@ -547,13 +565,27 @@ func New(
 	app.WebsrvKeeper = *websrvmodulekeeper.NewKeeper(
 		appCodec,
 		keys[websrvmoduletypes.StoreKey],
-		keys[websrvmoduletypes.MemStoreKey],
+		memKeys[websrvmoduletypes.MemStoreKey],
 		app.GetSubspace(websrvmoduletypes.ModuleName),
 		app.WasmxKeeper,
 		app.Query,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
+
+	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
+		app.goRoutineGroup,
+		appCodec,
+		keys[networkmoduletypes.StoreKey],
+		memKeys[networkmoduletypes.MemStoreKey],
+		tkeys[networkmoduletypes.TStoreKey],
+		clessKeys[networkmoduletypes.CLessStoreKey],
+		app.GetSubspace(networkmoduletypes.ModuleName),
+		&app.WasmxKeeper,
+		// TODO remove authority?
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
@@ -627,6 +659,9 @@ func New(
 		// mythos modules
 		wasmxModule,
 		websrvModule,
+
+		// network TODO
+		networkModule,
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -750,6 +785,7 @@ func New(
 		// mythos
 		wasmxmoduletypes.ModuleName,
 		websrvmoduletypes.ModuleName,
+		networkmoduletypes.ModuleName,
 	}
 
 	app.mm.SetOrderInitGenesis(genesisModuleOrder...)
@@ -795,6 +831,7 @@ func New(
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
 	app.MountMemoryStores(memKeys)
+	app.MountConsensuslessStores(clessKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -974,6 +1011,16 @@ func (app *App) GetTKey(storeKey string) *storetypes.TransientStoreKey {
 	return app.tkeys[storeKey]
 }
 
+// Used by network module
+func (app *App) GetMKey(storeKey string) *storetypes.MemoryStoreKey {
+	return app.memKeys[storeKey]
+}
+
+// Used by network module
+func (app *App) GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey {
+	return app.clessKeys[storeKey]
+}
+
 // GetMemKey returns the MemStoreKey for the provided mem key.
 //
 // NOTE: This is solely used for testing purposes.
@@ -1112,6 +1159,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(wasmxmoduletypes.ModuleName)
 	paramsKeeper.Subspace(websrvmoduletypes.ModuleName)
+	paramsKeeper.Subspace(networkmoduletypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 
 	return paramsKeeper
@@ -1120,4 +1168,19 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 // SimulationManager implements the SimulationApp interface
 func (app *App) SimulationManager() *module.SimulationManager {
 	return app.sm
+}
+
+// For network grpc
+func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
+	return app.NetworkKeeper
+}
+
+// timed actions in wasmx
+func (app *App) SetGoRoutineGroup(g *errgroup.Group) {
+	app.goRoutineGroup = g
+	app.WasmxKeeper.SetGoRoutineGroup(g)
+}
+
+func (app *App) GetGoRoutineGroup() *errgroup.Group {
+	return app.goRoutineGroup
 }

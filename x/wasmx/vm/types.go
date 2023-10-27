@@ -1,9 +1,12 @@
 package vm
 
 import (
+	"context"
+
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -22,7 +25,7 @@ var (
 
 type NativePrecompileHandler interface {
 	IsPrecompile(contractAddress sdk.AccAddress) bool
-	Execute(context *Context, contractAddress sdk.AccAddress, input []byte) ([]byte, error)
+	Execute(ctx *Context, contractAddress sdk.AccAddress, input []byte) ([]byte, error)
 }
 
 type ContractContext struct {
@@ -56,7 +59,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
 	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
-	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
+	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 	if err != nil {
 		runCleanups(cleanups)
 		return nil, err
@@ -68,40 +71,51 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 // key is a bech32 string
 type ContractRouter = map[string]*ContractContext
 
+type IntervalAction struct {
+	Time       int64
+	CallbackId int32
+	Args       []byte
+	Cancel     context.CancelFunc
+}
+
 type Context struct {
-	Ctx            sdk.Context
-	GasMeter       types.GasMeter
-	Env            *types.Env
-	ContractRouter ContractRouter
-	ContractStore  prefix.Store
-	CosmosHandler  types.WasmxCosmosHandler
-	NativeHandler  NativePrecompileHandler
-	ReturnData     []byte
-	CurrentCallId  uint32
-	Logs           []WasmxLog
-	Messages       []cw8types.SubMsg `json:"messages"`
-	dbIterators    map[int32]dbm.Iterator
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
+	goRoutineGroup  *errgroup.Group
+	Ctx             sdk.Context
+	GasMeter        types.GasMeter
+	Env             *types.Env
+	ContractRouter  ContractRouter
+	ContractStore   prefix.Store
+	CosmosHandler   types.WasmxCosmosHandler
+	NativeHandler   NativePrecompileHandler
+	ReturnData      []byte
+	CurrentCallId   uint32
+	Logs            []WasmxLog
+	Messages        []cw8types.SubMsg `json:"messages"`
+	dbIterators     map[int32]dbm.Iterator
+	intervalsCount  int32
+	intervals       map[int32]*IntervalAction
 }
 
-func (context *Context) GetCosmosHandler() types.WasmxCosmosHandler {
-	return context.CosmosHandler
+func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {
+	return ctx.CosmosHandler
 }
 
-func (context *Context) GetContext() sdk.Context {
-	return context.Ctx
+func (ctx *Context) GetContext() sdk.Context {
+	return ctx.Ctx
 }
 
-func (context *Context) GetVmFromContext() (*wasmedge.VM, error) {
-	addr := context.Env.Contract.Address
-	contractCtx, ok := context.ContractRouter[addr.String()]
+func (ctx *Context) GetVmFromContext() (*wasmedge.VM, error) {
+	addr := ctx.Env.Contract.Address
+	contractCtx, ok := ctx.ContractRouter[addr.String()]
 	if !ok {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
 	}
 	return contractCtx.Vm, nil
 }
 
-func (context *Context) MustGetVmFromContext() *wasmedge.VM {
-	vm, err := context.GetVmFromContext()
+func (ctx *Context) MustGetVmFromContext() *wasmedge.VM {
+	vm, err := ctx.GetVmFromContext()
 	if err != nil {
 		panic(err.Error())
 	}
