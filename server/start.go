@@ -49,6 +49,8 @@ import (
 	jsonrpc "mythos/v1/x/wasmx/server"
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
+
+	networkgrpc "mythos/v1/x/network/server"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -345,6 +347,25 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	if err != nil {
 		return err
 	}
+
+	// network TODO
+	networkAdd := "localhost:9080"
+	genDoc, err := genDocProvider()
+	if err != nil {
+		return err
+	}
+	clientCtx = clientCtx.
+		WithHomeDir(home).
+		WithChainID(genDoc.ChainID)
+
+	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
+	// that the server is gracefully shut down.
+	g.Go(func() error {
+		// httpSrv, httpSrvDone, err
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config)
+		return err
+	})
+	// ----end network
 
 	// var (
 	// 	httpSrv     *http.Server
