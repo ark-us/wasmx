@@ -1,0 +1,28 @@
+syntax = "proto3";
+package mythos.network.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "amino/amino.proto";
+
+option go_package = "mythos/v1/x/network/types";
+option (gogoproto.goproto_getters_all) = false;
+
+// Msg defines the grpc server
+service Msg {
+    option (cosmos.msg.v1.service) = true;
+
+    // Ping
+    rpc Ping(MsgPing) returns (MsgPingResponse);
+}
+
+// MsgPing
+message MsgPing {
+    string message = 1;
+}
+
+// MsgPingResponse
+message MsgPingResponse {
+    string message = 1;
+}
