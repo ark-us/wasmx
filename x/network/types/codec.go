@@ -19,3 +19,6 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
 }
+
+// TODO better solution?
+var Network_Msg_serviceDesc = _Msg_serviceDesc

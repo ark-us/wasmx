@@ -19,10 +19,10 @@ service Msg {
 
 // MsgPing
 message MsgPing {
-    string message = 1;
+    string data = 1;
 }
 
 // MsgPingResponse
 message MsgPingResponse {
-    string message = 1;
+    string data = 1;
 }
