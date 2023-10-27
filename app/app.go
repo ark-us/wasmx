@@ -128,6 +128,9 @@ import (
 	ante "mythos/v1/app/ante"
 	appparams "mythos/v1/app/params"
 	docs "mythos/v1/docs"
+	networkmodule "mythos/v1/x/network"
+	networkmodulekeeper "mythos/v1/x/network/keeper"
+	networkmoduletypes "mythos/v1/x/network/types"
 	wasmxmodule "mythos/v1/x/wasmx"
 	wasmxclient "mythos/v1/x/wasmx/client"
 	wasmxmodulekeeper "mythos/v1/x/wasmx/keeper"
@@ -222,6 +225,8 @@ type App struct {
 	WasmxKeeper wasmxmodulekeeper.Keeper
 
 	WebsrvKeeper websrvmodulekeeper.Keeper
+
+	NetworkKeeper networkmodulekeeper.Keeper
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
 
 	// mm is the module manager
@@ -274,6 +279,7 @@ func New(
 		icacontrollertypes.StoreKey,
 		wasmxmoduletypes.StoreKey,
 		websrvmoduletypes.StoreKey,
+		networkmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -555,6 +561,17 @@ func New(
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 
+	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
+		appCodec,
+		keys[networkmoduletypes.StoreKey],
+		keys[networkmoduletypes.MemStoreKey],
+		app.GetSubspace(networkmoduletypes.ModuleName),
+		app.WasmxKeeper,
+		// TODO remove authority?
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper)
+
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
 	/**** IBC Routing ****/
@@ -627,6 +644,9 @@ func New(
 		// mythos modules
 		wasmxModule,
 		websrvModule,
+
+		// network TODO
+		networkModule,
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -750,6 +770,7 @@ func New(
 		// mythos
 		wasmxmoduletypes.ModuleName,
 		websrvmoduletypes.ModuleName,
+		networkmoduletypes.ModuleName,
 	}
 
 	app.mm.SetOrderInitGenesis(genesisModuleOrder...)
@@ -1112,6 +1133,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(wasmxmoduletypes.ModuleName)
 	paramsKeeper.Subspace(websrvmoduletypes.ModuleName)
+	paramsKeeper.Subspace(networkmoduletypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 
 	return paramsKeeper
@@ -1120,4 +1142,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 // SimulationManager implements the SimulationApp interface
 func (app *App) SimulationManager() *module.SimulationManager {
 	return app.sm
+}
+
+// For network grpc
+func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
+	return app.NetworkKeeper
 }

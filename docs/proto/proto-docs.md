@@ -4,71 +4,41 @@
 
 ## Table of Contents
 
-- [mythos/websrv/v1/params.proto](#mythos/websrv/v1/params.proto)
-    - [Params](#mythos.websrv.v1.Params)
+- [mythos/network/v1/params.proto](#mythos/network/v1/params.proto)
+    - [Params](#mythos.network.v1.Params)
   
-- [mythos/websrv/v1/genesis.proto](#mythos/websrv/v1/genesis.proto)
-    - [GenesisState](#mythos.websrv.v1.GenesisState)
+- [mythos/network/v1/genesis.proto](#mythos/network/v1/genesis.proto)
+    - [GenesisState](#mythos.network.v1.GenesisState)
   
-- [mythos/websrv/v1/proposal.proto](#mythos/websrv/v1/proposal.proto)
-    - [DeregisterRouteProposal](#mythos.websrv.v1.DeregisterRouteProposal)
-    - [RegisterRouteProposal](#mythos.websrv.v1.RegisterRouteProposal)
+- [mythos/network/v1/query.proto](#mythos/network/v1/query.proto)
+    - [QueryParamsRequest](#mythos.network.v1.QueryParamsRequest)
+    - [QueryParamsResponse](#mythos.network.v1.QueryParamsResponse)
   
-- [mythos/websrv/v1/query.proto](#mythos/websrv/v1/query.proto)
-    - [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo)
-    - [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest)
-    - [QueryContractByRouteResponse](#mythos.websrv.v1.QueryContractByRouteResponse)
-    - [QueryGetAllOauthClientsRequest](#mythos.websrv.v1.QueryGetAllOauthClientsRequest)
-    - [QueryGetAllOauthClientsResponse](#mythos.websrv.v1.QueryGetAllOauthClientsResponse)
-    - [QueryGetOauthClientRequest](#mythos.websrv.v1.QueryGetOauthClientRequest)
-    - [QueryGetOauthClientResponse](#mythos.websrv.v1.QueryGetOauthClientResponse)
-    - [QueryGetOauthClientsByOwnerRequest](#mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest)
-    - [QueryGetOauthClientsByOwnerResponse](#mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse)
-    - [QueryHttpRequestGet](#mythos.websrv.v1.QueryHttpRequestGet)
-    - [QueryHttpResponseGet](#mythos.websrv.v1.QueryHttpResponseGet)
-    - [QueryParamsRequest](#mythos.websrv.v1.QueryParamsRequest)
-    - [QueryParamsResponse](#mythos.websrv.v1.QueryParamsResponse)
-    - [QueryRouteByContractRequest](#mythos.websrv.v1.QueryRouteByContractRequest)
-    - [QueryRouteByContractResponse](#mythos.websrv.v1.QueryRouteByContractResponse)
+    - [Query](#mythos.network.v1.Query)
   
-    - [Query](#mythos.websrv.v1.Query)
+- [mythos/network/v1/server.proto](#mythos/network/v1/server.proto)
+    - [MsgPing](#mythos.network.v1.MsgPing)
+    - [MsgPingResponse](#mythos.network.v1.MsgPingResponse)
   
-- [mythos/websrv/v1/tx.proto](#mythos/websrv/v1/tx.proto)
-    - [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient)
-    - [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse)
-    - [MsgDeregisterRoute](#mythos.websrv.v1.MsgDeregisterRoute)
-    - [MsgDeregisterRouteResponse](#mythos.websrv.v1.MsgDeregisterRouteResponse)
-    - [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient)
-    - [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse)
-    - [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient)
-    - [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse)
-    - [MsgRegisterRoute](#mythos.websrv.v1.MsgRegisterRoute)
-    - [MsgRegisterRouteResponse](#mythos.websrv.v1.MsgRegisterRouteResponse)
-  
-    - [Msg](#mythos.websrv.v1.Msg)
+    - [Msg](#mythos.network.v1.Msg)
   
 - [Scalar Value Types](#scalar-value-types)
 
 
 
-<a name="mythos/websrv/v1/params.proto"></a>
+<a name="mythos/network/v1/params.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/params.proto
+## mythos/network/v1/params.proto
 
 
 
-<a name="mythos.websrv.v1.Params"></a>
+<a name="mythos.network.v1.Params"></a>
 
 ### Params
 Params defines the parameters for the module.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `oauth_client_registration_only_e_id` | [bool](#bool) |  |  |
-
-
 
 
 
@@ -82,22 +52,22 @@ Params defines the parameters for the module.
 
 
 
-<a name="mythos/websrv/v1/genesis.proto"></a>
+<a name="mythos/network/v1/genesis.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/genesis.proto
+## mythos/network/v1/genesis.proto
 
 
 
-<a name="mythos.websrv.v1.GenesisState"></a>
+<a name="mythos.network.v1.GenesisState"></a>
 
 ### GenesisState
-GenesisState defines the websrv module's genesis state.
+GenesisState defines the network module's genesis state.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `params` | [Params](#mythos.websrv.v1.Params) |  |  |
+| `params` | [Params](#mythos.network.v1.Params) |  |  |
 
 
 
@@ -113,296 +83,32 @@ GenesisState defines the websrv module's genesis state.
 
 
 
-<a name="mythos/websrv/v1/proposal.proto"></a>
+<a name="mythos/network/v1/query.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/proposal.proto
+## mythos/network/v1/query.proto
 
 
 
-<a name="mythos.websrv.v1.DeregisterRouteProposal"></a>
-
-### DeregisterRouteProposal
-DisallowCosmosMessagesProposal is a gov Content type to remove a previously
-allowed Cosmos message or query to be called from the EVM
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.RegisterRouteProposal"></a>
-
-### RegisterRouteProposal
-RegisterRouteProposal is a gov Content type to register a web server route
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
- <!-- end messages -->
-
- <!-- end enums -->
-
- <!-- end HasExtensions -->
-
- <!-- end services -->
-
-
-
-<a name="mythos/websrv/v1/query.proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## mythos/websrv/v1/query.proto
-
-
-
-<a name="mythos.websrv.v1.OauthClientInfo"></a>
-
-### OauthClientInfo
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_id` | [uint64](#uint64) |  |  |
-| `owner` | [string](#string) |  |  |
-| `domain` | [string](#string) |  |  |
-| `public` | [bool](#bool) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryContractByRouteRequest"></a>
-
-### QueryContractByRouteRequest
-QueryContractByRouteRequest is the request type for the
-Query/ContractByRoute RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `path` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryContractByRouteResponse"></a>
-
-### QueryContractByRouteResponse
-QueryContractByRouteResponse is the response type for the
-Query/ContractByRoute RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `contract_address` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetAllOauthClientsRequest"></a>
-
-### QueryGetAllOauthClientsRequest
-QueryGetAllOauthClientsRequest is the request type for the
-Query/GetAllOauthClients RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | pagination defines an optional pagination for the request. |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetAllOauthClientsResponse"></a>
-
-### QueryGetAllOauthClientsResponse
-QueryGetAllOauthClientsResponse is the response type for the
-Query/GetAllOauthClients RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `clients` | [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo) | repeated |  |
-| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientRequest"></a>
-
-### QueryGetOauthClientRequest
-QueryGetOauthClientRequest is the request type for the
-Query/GetOauthClient RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_id` | [uint64](#uint64) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientResponse"></a>
-
-### QueryGetOauthClientResponse
-QueryGetOauthClientResponse is the response type for the
-Query/GetOauthClient RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client` | [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest"></a>
-
-### QueryGetOauthClientsByOwnerRequest
-QueryGetAllOauthClientsRequest is the request type for the
-Query/GetOauthClientsByOwner RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  | bech32 address |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse"></a>
-
-### QueryGetOauthClientsByOwnerResponse
-QueryGetAllOauthClientsResponse is the response type for the
-Query/GetOauthClientsByOwner RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_ids` | [uint64](#uint64) | repeated |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryHttpRequestGet"></a>
-
-### QueryHttpRequestGet
-QueryHttpGetRequest is the request type for the
-Query/HttpGet RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `http_request` | [bytes](#bytes) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryHttpResponseGet"></a>
-
-### QueryHttpResponseGet
-QueryHttpResponseGet is the response type for the
-Query/HttpGet RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `data` | [bytes](#bytes) |  | HttpResponse data = 1; |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryParamsRequest"></a>
+<a name="mythos.network.v1.QueryParamsRequest"></a>
 
 ### QueryParamsRequest
-QueryParamsRequest is request type for the Query/Params RPC method.
+QueryParamsRequest is the request type for the Query/Params RPC method.
 
 
 
 
 
 
-<a name="mythos.websrv.v1.QueryParamsResponse"></a>
+<a name="mythos.network.v1.QueryParamsResponse"></a>
 
 ### QueryParamsResponse
-QueryParamsResponse is response type for the Query/Params RPC method.
+QueryParamsResponse is the response type for the Query/Params RPC method.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `params` | [Params](#mythos.websrv.v1.Params) |  | params holds all the parameters of this module. |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryRouteByContractRequest"></a>
-
-### QueryRouteByContractRequest
-QueryRouteByContractRequest is the request type for the
-Query/RouteByContract RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `contract_address` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryRouteByContractResponse"></a>
-
-### QueryRouteByContractResponse
-QueryRouteByContractResponse is the response type for the
-Query/RouteByContract RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `path` | [string](#string) |  |  |
+| `params` | [Params](#mythos.network.v1.Params) |  | params defines the parameters of the module. |
 
 
 
@@ -415,168 +121,50 @@ Query/RouteByContract RPC method.
  <!-- end HasExtensions -->
 
 
-<a name="mythos.websrv.v1.Query"></a>
+<a name="mythos.network.v1.Query"></a>
 
 ### Query
-Query defines the gRPC querier service.
+Query provides defines the gRPC querier service
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `HttpGet` | [QueryHttpRequestGet](#mythos.websrv.v1.QueryHttpRequestGet) | [QueryHttpResponseGet](#mythos.websrv.v1.QueryHttpResponseGet) | HttpGet makes a get request to the webserver | GET|/websrv/v1/get/{http_request}|
-| `ContractByRoute` | [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest) | [QueryContractByRouteResponse](#mythos.websrv.v1.QueryContractByRouteResponse) | ContractByRoute gets the contract controlling a given route | GET|/websrv/v1/route/{path}|
-| `RouteByContract` | [QueryRouteByContractRequest](#mythos.websrv.v1.QueryRouteByContractRequest) | [QueryRouteByContractResponse](#mythos.websrv.v1.QueryRouteByContractResponse) | RouteByContract gets the route controlled by a given contract | GET|/websrv/v1/contract/{contract_address}|
-| `Params` | [QueryParamsRequest](#mythos.websrv.v1.QueryParamsRequest) | [QueryParamsResponse](#mythos.websrv.v1.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/websrv/v1/params|
-| `GetAllOauthClients` | [QueryGetAllOauthClientsRequest](#mythos.websrv.v1.QueryGetAllOauthClientsRequest) | [QueryGetAllOauthClientsResponse](#mythos.websrv.v1.QueryGetAllOauthClientsResponse) | GetAllClients gets all the registered client apps for the oauth service | GET|/websrv/v1/oauth/clients|
-| `GetOauthClient` | [QueryGetOauthClientRequest](#mythos.websrv.v1.QueryGetOauthClientRequest) | [QueryGetOauthClientResponse](#mythos.websrv.v1.QueryGetOauthClientResponse) | GetOauthClient gets the registered oauth client by client id | GET|/websrv/v1/oauth/client/{client_id}|
-| `GetOauthClientsByOwner` | [QueryGetOauthClientsByOwnerRequest](#mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest) | [QueryGetOauthClientsByOwnerResponse](#mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse) | GetOauthClientsByOwner gets all the registered oauth client by an owner address | GET|/websrv/v1/oauth/clients/{owner}|
+| `Params` | [QueryParamsRequest](#mythos.network.v1.QueryParamsRequest) | [QueryParamsResponse](#mythos.network.v1.QueryParamsResponse) | Params gets the module params | GET|/network/v1/codes/params|
 
  <!-- end services -->
 
 
 
-<a name="mythos/websrv/v1/tx.proto"></a>
+<a name="mythos/network/v1/server.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/tx.proto
+## mythos/network/v1/server.proto
 
 
 
-<a name="mythos.websrv.v1.MsgDeregisterOAuthClient"></a>
+<a name="mythos.network.v1.MsgPing"></a>
 
-### MsgDeregisterOAuthClient
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  |  |
-| `client_id` | [uint64](#uint64) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgDeregisterOAuthClientResponse"></a>
-
-### MsgDeregisterOAuthClientResponse
-
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgDeregisterRoute"></a>
-
-### MsgDeregisterRoute
-
+### MsgPing
+MsgPing
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `authority` | [string](#string) |  | authority is the address that controls the module. |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
+| `message` | [string](#string) |  |  |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.MsgDeregisterRouteResponse"></a>
+<a name="mythos.network.v1.MsgPingResponse"></a>
 
-### MsgDeregisterRouteResponse
-
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgEditOAuthClient"></a>
-
-### MsgEditOAuthClient
-
+### MsgPingResponse
+MsgPingResponse
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  |  |
-| `client_id` | [uint64](#uint64) |  |  |
-| `domain` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgEditOAuthClientResponse"></a>
-
-### MsgEditOAuthClientResponse
-
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterOAuthClient"></a>
-
-### MsgRegisterOAuthClient
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  |  |
-| `domain` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterOAuthClientResponse"></a>
-
-### MsgRegisterOAuthClientResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_id` | [uint64](#uint64) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterRoute"></a>
-
-### MsgRegisterRoute
-Register a web server route
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `authority` | [string](#string) |  | authority is the address that controls the module. |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterRouteResponse"></a>
-
-### MsgRegisterRouteResponse
-
+| `message` | [string](#string) |  |  |
 
 
 
@@ -589,18 +177,14 @@ Register a web server route
  <!-- end HasExtensions -->
 
 
-<a name="mythos.websrv.v1.Msg"></a>
+<a name="mythos.network.v1.Msg"></a>
 
 ### Msg
-Msg defines the Msg service.
+Msg defines the grpc server
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `RegisterOAuthClient` | [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse) | Register OAuth client | |
-| `EditOAuthClient` | [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient) | [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse) | Edit OAuth client | |
-| `DeregisterOAuthClient` | [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient) | [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse) | Deregister OAuth client | |
-| `RegisterRoute` | [MsgRegisterRoute](#mythos.websrv.v1.MsgRegisterRoute) | [MsgRegisterRouteResponse](#mythos.websrv.v1.MsgRegisterRouteResponse) | gov authorized register contract for http route | |
-| `DeregisterRoute` | [MsgDeregisterRoute](#mythos.websrv.v1.MsgDeregisterRoute) | [MsgDeregisterRouteResponse](#mythos.websrv.v1.MsgDeregisterRouteResponse) | deregister http route | |
+| `Ping` | [MsgPing](#mythos.network.v1.MsgPing) | [MsgPingResponse](#mythos.network.v1.MsgPingResponse) | Ping | |
 
  <!-- end services -->
 
