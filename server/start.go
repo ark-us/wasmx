@@ -50,7 +50,7 @@ import (
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
-	networkgrpc "mythos/v1/x/network/server"
+	networkgrpc "mythos/v1/x/network/keeper"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -348,7 +348,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
-	// network TODO
+	// network TODO this must replace tendermint
 	networkAdd := "localhost:9080"
 	genDoc, err := genDocProvider()
 	if err != nil {
@@ -362,7 +362,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
-		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config)
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app)
 		return err
 	})
 	// ----end network

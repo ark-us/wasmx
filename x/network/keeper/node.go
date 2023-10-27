@@ -1,13 +1,15 @@
-package server
+package keeper
 
 import (
 	"context"
 	"net"
 	"net/http"
 
+	"google.golang.org/grpc"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
-	"google.golang.org/grpc"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
 	"mythos/v1/server/config"
 )
@@ -18,6 +20,7 @@ func StartGRPCServer(
 	ctx context.Context,
 	GRPCAddr string,
 	cfgAll *config.Config,
+	app servertypes.Application,
 ) (*grpc.Server, chan struct{}, error) {
 
 	ln, err := Listen(GRPCAddr)
@@ -27,8 +30,7 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	// grpcServer := GetGRPCServer()
-	grpcServer, err := NewGRPCServer(clientCtx, cfgAll.GRPC)
+	grpcServer, err := NewGRPCServer(clientCtx, cfgAll.GRPC, app)
 	if err != nil {
 		return nil, nil, err
 	}

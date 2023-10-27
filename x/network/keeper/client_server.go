@@ -1,4 +1,4 @@
-package server
+package keeper
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/grpc/gogoreflection"
 	reflection "github.com/cosmos/cosmos-sdk/server/grpc/reflection/v2alpha1"
 
-	// "github.com/cosmos/cosmos-sdk/server/types"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
@@ -30,6 +30,10 @@ import (
 // Deprecated: A new gRPC API will be introduced after v0.38.
 type Config struct {
 	MaxOpenConnections int
+}
+
+type MythosApp interface {
+	GetNetworkKeeper() Keeper
 }
 
 // // GetGRPCServer
@@ -46,7 +50,11 @@ type Config struct {
 // NewGRPCServer returns a correctly configured and initialized gRPC server.
 // Note, the caller is responsible for starting the server. See StartGRPCServer.
 // func NewGRPCServer(clientCtx client.Context, app types.Application, cfg config.GRPCConfig) (*grpc.Server, error) {
-func NewGRPCServer(clientCtx client.Context, cfg config.GRPCConfig) (*grpc.Server, error) {
+func NewGRPCServer(
+	clientCtx client.Context,
+	cfg config.GRPCConfig,
+	app servertypes.Application,
+) (*grpc.Server, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = config.DefaultGRPCMaxSendMsgSize
@@ -64,7 +72,11 @@ func NewGRPCServer(clientCtx client.Context, cfg config.GRPCConfig) (*grpc.Serve
 	)
 
 	// app.RegisterGRPCServer(grpcSrv)
-	types.RegisterMsgServer(grpcSrv, &msgServer{})
+	mythosapp, ok := app.(MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("failed to get MythosApp from server Application")
+	}
+	types.RegisterMsgServer(grpcSrv, &msgServer{Keeper: mythosapp.GetNetworkKeeper()})
 
 	// Reflection allows consumers to build dynamic clients that can write to any
 	// Cosmos SDK application without relying on application packages at compile
@@ -93,16 +105,6 @@ func NewGRPCServer(clientCtx client.Context, cfg config.GRPCConfig) (*grpc.Serve
 
 	return grpcSrv, nil
 }
-
-// // SetInterfaceRegistry sets the interface registry for the router. This will
-// // also register the interface reflection gRPC service.
-// func (qrt *GRPCQueryRouter) SetInterfaceRegistry(interfaceRegistry codectypes.InterfaceRegistry) {
-// 	// instantiate the codec
-// 	qrt.cdc = codec.NewProtoCodec(interfaceRegistry).GRPCCodec()
-// 	// Once we have an interface registry, we can register the interface
-// 	// registry reflection gRPC service.
-// 	reflection.RegisterReflectionServiceServer(qrt, reflection.NewReflectionServiceServer(interfaceRegistry))
-// }
 
 // StartGRPCClient dials the gRPC server using protoAddr and returns a new
 // BroadcastAPIClient.
