@@ -68,7 +68,9 @@ func (k Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, code
 }
 
 func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error) {
+	fmt.Println("---------wasmx Query", contractAddr.String(), msg)
 	res, err := k.query(ctx, contractAddr, senderAddr, msg, funds, deps, false)
+	fmt.Println("---------wasmx Query res", res, err)
 	if err != nil {
 		return nil, err
 	}
@@ -731,6 +733,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string, isdebug bool) (*types.ContractResponse, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
+	fmt.Println("---------wasmx Query data", contractInfo, codeInfo, prefixStoreKey, err)
 	if err != nil {
 		return nil, err
 	}
