@@ -16,7 +16,8 @@ type (
 	Keeper struct {
 		cdc         codec.Codec
 		storeKey    storetypes.StoreKey
-		memKey      storetypes.MemoryStoreKey
+		memKey      storetypes.StoreKey
+		tKey        storetypes.StoreKey
 		paramstore  paramtypes.Subspace
 		wasmxKeeper types.WasmxKeeper
 
@@ -29,7 +30,8 @@ type (
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
-	memKey storetypes.MemoryStoreKey,
+	memKey storetypes.StoreKey,
+	tKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	wasmxKeeper types.WasmxKeeper,
 	authority string,
@@ -43,9 +45,11 @@ func NewKeeper(
 		cdc:         cdc,
 		storeKey:    storeKey,
 		memKey:      memKey,
+		tKey:        tKey,
 		paramstore:  ps,
-		wasmxKeeper: wasmxKeeper,
-		authority:   authority,
+		wasmxKeeper: wasmxKeeper.CloneWithStoreKey(tKey, memKey),
+		// wasmxKeeper: wasmxKeeper,
+		authority: authority,
 	}
 	return keeper
 }

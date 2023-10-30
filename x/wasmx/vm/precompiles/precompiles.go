@@ -57,6 +57,10 @@ var (
 
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
+
+	// TODO move this to network; register api for precompiles
+	//go:embed 28.network.wasm
+	networkwasm []byte
 )
 
 func GetPrecompileByLabel(label string) []byte {
@@ -96,6 +100,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = quickjs
 	case "sys_proxy":
 		wasmbin = sys_proxy
+	case "network":
+		wasmbin = networkwasm
 	}
 	return wasmbin
 }

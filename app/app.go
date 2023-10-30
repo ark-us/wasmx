@@ -262,6 +262,12 @@ func New(
 	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
+	// database keys
+	// stateKey := []byte("stateKey")
+	// buf, err2 := db.Get(stateKey)
+	// fmt.Println("---db", err2, buf)
+	// fmt.Println("---db", string(buf))
+
 	bApp := baseapp.NewBaseApp(
 		Name,
 		logger,
@@ -285,7 +291,7 @@ func New(
 		networkmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
-	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
+	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, networkmoduletypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 
 	// register streaming services
@@ -569,6 +575,7 @@ func New(
 		appCodec,
 		keys[networkmoduletypes.StoreKey],
 		memKeys[networkmoduletypes.MemStoreKey],
+		tkeys[networkmoduletypes.TStoreKey],
 		app.GetSubspace(networkmoduletypes.ModuleName),
 		app.WasmxKeeper,
 		// TODO remove authority?

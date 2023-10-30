@@ -18,6 +18,9 @@ import (
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
 	errorsmod "cosmossdk.io/errors"
+	// store "cosmossdk.io/store"
+	// storemetrics "cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -34,8 +37,12 @@ import (
 
 	dbm "github.com/cosmos/cosmos-db"
 
+	cometdbm "github.com/cometbft/cometbft-db"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
+
+	// cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cometstore "github.com/cometbft/cometbft/store"
 
 	"mythos/v1/x/network/types"
 )
@@ -54,6 +61,9 @@ type MythosApp interface {
 
 type BaseApp interface {
 	CreateQueryContext(height int64, prove bool) (sdk.Context, error)
+	CommitMultiStore() storetypes.CommitMultiStore
+	GetContextForCheckTx(txBytes []byte) sdk.Context
+	GetContextForFinalizeBlock(txBytes []byte) sdk.Context
 }
 
 // // GetGRPCServer
@@ -76,6 +86,9 @@ func NewGRPCServer(
 	cfg config.GRPCConfig,
 	app servertypes.Application,
 	tmNode *node.Node,
+	blockStore *cometstore.BlockStore,
+	stateDB cometdbm.DB,
+	networkDB dbm.DB,
 ) (*grpc.Server, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
@@ -94,7 +107,7 @@ func NewGRPCServer(
 	)
 
 	// app.RegisterGRPCServer(grpcSrv)
-	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv)
+	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, blockStore, stateDB, networkDB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
@@ -149,8 +162,16 @@ func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
 }
 
 // RegisterGRPCServer registers gRPC services directly with the gRPC server.
-func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server) error {
+func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server,
+	blockStore *cometstore.BlockStore,
+	stateDB cometdbm.DB,
+	networkDB dbm.DB,
+) error {
 	app, ok := sapp.(BaseApp)
+	if !ok {
+		return fmt.Errorf("failed to get BaseApp from server Application")
+	}
+	mythosapp, ok := app.(MythosApp)
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}
@@ -178,12 +199,32 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 			}
 		}
 
+		// app.CommitMultiStore().CacheMultiStore()
+		// func (*BaseApp).GetContextForCheckTx(txBytes []byte) sdk.Context
+		// func (*BaseApp).GetContextForFinalizeBlock(txBytes []byte) sdk.Context
+
+		// ctx := app.getContextForTx(mode, txBytes)
+		// ms := ctx.MultiStore()
+		// ctx = ctx.WithConsensusParams(app.GetConsensusParams(ctx))
+
+		// TODO - use this for grpc queries
 		// Create the sdk.Context. Passing false as 2nd arg, as we can't
 		// actually support proofs with gRPC right now.
 		sdkCtx, err := app.CreateQueryContext(height, false)
 		if err != nil {
 			return nil, err
 		}
+		// sdkCtx, _ := sdkCtx_.CacheContext()
+
+		// newms := store.NewCommitMultiStore(mythosapp.GetDB(), svrCtx.Logger, storemetrics.NewNoOpMetrics())
+		// // newms := store.NewCommitMultiStore(networkDB, svrCtx.Logger, storemetrics.NewNoOpMetrics())
+		// sdkCtx = sdkCtx.WithMultiStore(newms)
+
+		// sdkCtx := app.GetContextForFinalizeBlock(make([]byte, 0))
+		//
+
+		// emptyHeader := cmtproto.Header{ChainID: clientCtx.ChainID}
+		// sdkCtx := sdk.NewContext(app.CommitMultiStore(), emptyHeader, false, svrCtx.Logger)
 
 		// Add relevant gRPC headers
 		if height == 0 {
@@ -198,14 +239,23 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 			svrCtx.Logger.Error("failed to set gRPC header", "err", err)
 		}
 
-		return handler(grpcCtx, req)
+		// return handler(grpcCtx, req)
+
+		hresp, err := handler(grpcCtx, req)
+		if err != nil {
+			return hresp, err
+		}
+		// commit changes
+		app.CommitMultiStore().Commit()
+
+		// newms.AddListeners()
+
+		// newms.Commit()
+
+		return hresp, nil
 	}
 
-	mythosapp, ok := app.(MythosApp)
-	if !ok {
-		return fmt.Errorf("failed to get MythosApp from server Application")
-	}
-	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), DB: mythosapp.GetDB(), ClientCtx: clientCtx, TmNode: tmNode}
+	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), DB: mythosapp.GetDB(), ClientCtx: clientCtx, TmNode: tmNode, BlockStore: blockStore, StateDB: stateDB}
 	fmt.Println("---before RegisterMsgServer")
 	// types.RegisterMsgServer(server, handler)
 	fmt.Println("---after RegisterMsgServer")
@@ -234,61 +284,6 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	}
 
 	server.RegisterService(newDesc, handler)
-
-	// infos := server.GetServiceInfo()
-	// fmt.Println("---infos", infos)
-
-	// for key, val := range infos {
-	// 	fmt.Println("--- key, val", key, val)
-	// 	// newDesc := &grpc.ServiceDesc{
-	// 	// 	ServiceName: key,
-	// 	// 	HandlerType: desc.HandlerType,
-	// 	// 	Methods:     newMethods,
-	// 	// 	Streams:     desc.Streams,
-	// 	// 	Metadata:    desc.Metadata,
-	// 	// }
-	// 	// server.RegisterService(newDesc, data.handler)
-	// }
-	// fmt.Println("--- interceptor", interceptor)
-
-	// newDesc := &grpc.ServiceDesc{
-	// 	ServiceName: desc.ServiceName,
-	// 	HandlerType: desc.HandlerType,
-	// 	Methods:     newMethods,
-	// 	Streams:     desc.Streams,
-	// 	Metadata:    desc.Metadata,
-	// }
-	// server.RegisterService(newDesc, data.handler)
-
-	// Loop through all services and methods, add the interceptor, and register
-	// the service.
-	// for _, data := range app.GRPCQueryRouter().serviceData {
-	// 	desc := data.serviceDesc
-	// 	newMethods := make([]grpc.MethodDesc, len(desc.Methods))
-
-	// 	for i, method := range desc.Methods {
-	// 		methodHandler := method.Handler
-	// 		newMethods[i] = grpc.MethodDesc{
-	// 			MethodName: method.MethodName,
-	// 			Handler: func(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
-	// 				return methodHandler(srv, ctx, dec, grpcmiddleware.ChainUnaryServer(
-	// 					grpcrecovery.UnaryServerInterceptor(),
-	// 					interceptor,
-	// 				))
-	// 			},
-	// 		}
-	// 	}
-
-	// 	newDesc := &grpc.ServiceDesc{
-	// 		ServiceName: desc.ServiceName,
-	// 		HandlerType: desc.HandlerType,
-	// 		Methods:     newMethods,
-	// 		Streams:     desc.Streams,
-	// 		Metadata:    desc.Metadata,
-	// 	}
-
-	// 	server.RegisterService(newDesc, data.handler)
-	// }
 	return nil
 }
 

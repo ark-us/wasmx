@@ -56,6 +56,7 @@ func (k Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccA
 }
 
 func (k Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error) {
+	fmt.Println("---------wasmx Execute", contractAddr, senderAddr, msg, funds, dependencies)
 	return k.execute(ctx, contractAddr, senderAddr, msg, funds, dependencies)
 }
 
@@ -535,11 +536,17 @@ func (k Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 
 // Execute executes the contract instance
 func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
+	fmt.Println("---------wasmx execute------")
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
+	fmt.Println("---------wasmx execute--ContractInstance----", err)
 	if err != nil {
+		coinType := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY)
+		if coinType == nil {
+			return nil, sdkerr.Wrap(types.ErrInvalid, "missing CONTEXT_COIN_TYPE_KEY")
+		}
 		// This can be just an ethcall sending value
-		key := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY).(uint32)
+		key := coinType.(uint32)
 		if key == cchtypes.COIN_TYPE_ETH && !coins.IsZero() {
 			aliasAddr, found := k.GetAlias(ctx, contractAddress)
 			if found {
@@ -550,9 +557,11 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 		return nil, err
 	}
+	fmt.Println("---------wasmx execute0")
 	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
 		return nil, err
 	}
+	fmt.Println("---------wasmx execute1")
 
 	// add known dependencies for that codeId
 	// TODO system deps in the form of smart contracts
@@ -578,6 +587,8 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	// TODO panic if coin is not the correct denomination
 	// add denom param for wasmx
 
+	fmt.Println("---------wasmx execute2")
+
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute")
 
@@ -588,13 +599,20 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 	}
 
+	fmt.Println("---------wasmx execute3")
+
 	info := types.NewInfo(caller, caller, coins)
+	fmt.Println("---------wasmx execute33")
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+
+	fmt.Println("---------wasmx execute4")
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
+	fmt.Println("---------wasmx execute5")
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, prefixStoreKey), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	fmt.Println("---------wasmx execute6", res, execErr)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {

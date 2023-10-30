@@ -107,31 +107,351 @@ func (m *MsgPingResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgPingResponse proto.InternalMessageInfo
 
+// MsgMakeProposal
+type MsgMakeProposal struct {
+	Data string `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *MsgMakeProposal) Reset()         { *m = MsgMakeProposal{} }
+func (m *MsgMakeProposal) String() string { return proto.CompactTextString(m) }
+func (*MsgMakeProposal) ProtoMessage()    {}
+func (*MsgMakeProposal) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{2}
+}
+func (m *MsgMakeProposal) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgMakeProposal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgMakeProposal.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgMakeProposal) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgMakeProposal.Merge(m, src)
+}
+func (m *MsgMakeProposal) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgMakeProposal) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgMakeProposal.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgMakeProposal proto.InternalMessageInfo
+
+// MsgMakeProposalResponse
+type MsgMakeProposalResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *MsgMakeProposalResponse) Reset()         { *m = MsgMakeProposalResponse{} }
+func (m *MsgMakeProposalResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgMakeProposalResponse) ProtoMessage()    {}
+func (*MsgMakeProposalResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{3}
+}
+func (m *MsgMakeProposalResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgMakeProposalResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgMakeProposalResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgMakeProposalResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgMakeProposalResponse.Merge(m, src)
+}
+func (m *MsgMakeProposalResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgMakeProposalResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgMakeProposalResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgMakeProposalResponse proto.InternalMessageInfo
+
+// MsgSetValidators
+type MsgSetValidators struct {
+}
+
+func (m *MsgSetValidators) Reset()         { *m = MsgSetValidators{} }
+func (m *MsgSetValidators) String() string { return proto.CompactTextString(m) }
+func (*MsgSetValidators) ProtoMessage()    {}
+func (*MsgSetValidators) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{4}
+}
+func (m *MsgSetValidators) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgSetValidators) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgSetValidators.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgSetValidators) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgSetValidators.Merge(m, src)
+}
+func (m *MsgSetValidators) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgSetValidators) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgSetValidators.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgSetValidators proto.InternalMessageInfo
+
+// MsgSetValidatorsResponse
+type MsgSetValidatorsResponse struct {
+}
+
+func (m *MsgSetValidatorsResponse) Reset()         { *m = MsgSetValidatorsResponse{} }
+func (m *MsgSetValidatorsResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgSetValidatorsResponse) ProtoMessage()    {}
+func (*MsgSetValidatorsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{5}
+}
+func (m *MsgSetValidatorsResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgSetValidatorsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgSetValidatorsResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgSetValidatorsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgSetValidatorsResponse.Merge(m, src)
+}
+func (m *MsgSetValidatorsResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgSetValidatorsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgSetValidatorsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgSetValidatorsResponse proto.InternalMessageInfo
+
+// MsgGetValidators
+type MsgGetValidators struct {
+}
+
+func (m *MsgGetValidators) Reset()         { *m = MsgGetValidators{} }
+func (m *MsgGetValidators) String() string { return proto.CompactTextString(m) }
+func (*MsgGetValidators) ProtoMessage()    {}
+func (*MsgGetValidators) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{6}
+}
+func (m *MsgGetValidators) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgGetValidators) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgGetValidators.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgGetValidators) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgGetValidators.Merge(m, src)
+}
+func (m *MsgGetValidators) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgGetValidators) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgGetValidators.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgGetValidators proto.InternalMessageInfo
+
+// MsgGetValidatorsResponse
+type MsgGetValidatorsResponse struct {
+	Validators []string `protobuf:"bytes,1,rep,name=validators,proto3" json:"validators,omitempty"`
+}
+
+func (m *MsgGetValidatorsResponse) Reset()         { *m = MsgGetValidatorsResponse{} }
+func (m *MsgGetValidatorsResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgGetValidatorsResponse) ProtoMessage()    {}
+func (*MsgGetValidatorsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{7}
+}
+func (m *MsgGetValidatorsResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgGetValidatorsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgGetValidatorsResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgGetValidatorsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgGetValidatorsResponse.Merge(m, src)
+}
+func (m *MsgGetValidatorsResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgGetValidatorsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgGetValidatorsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgGetValidatorsResponse proto.InternalMessageInfo
+
+// MsgIsProposer
+type MsgIsProposer struct {
+}
+
+func (m *MsgIsProposer) Reset()         { *m = MsgIsProposer{} }
+func (m *MsgIsProposer) String() string { return proto.CompactTextString(m) }
+func (*MsgIsProposer) ProtoMessage()    {}
+func (*MsgIsProposer) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{8}
+}
+func (m *MsgIsProposer) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgIsProposer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgIsProposer.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgIsProposer) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgIsProposer.Merge(m, src)
+}
+func (m *MsgIsProposer) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgIsProposer) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgIsProposer.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgIsProposer proto.InternalMessageInfo
+
+// MsgIsProposerResponse is the response type for the Query/IsProposer RPC method.
+type MsgIsProposerResponse struct {
+	// params defines the parameters of the module.
+	IsProposer bool `protobuf:"varint,1,opt,name=is_proposer,json=isProposer,proto3" json:"is_proposer,omitempty"`
+}
+
+func (m *MsgIsProposerResponse) Reset()         { *m = MsgIsProposerResponse{} }
+func (m *MsgIsProposerResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgIsProposerResponse) ProtoMessage()    {}
+func (*MsgIsProposerResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{9}
+}
+func (m *MsgIsProposerResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgIsProposerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgIsProposerResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgIsProposerResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgIsProposerResponse.Merge(m, src)
+}
+func (m *MsgIsProposerResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgIsProposerResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgIsProposerResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgIsProposerResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*MsgPing)(nil), "mythos.network.v1.MsgPing")
 	proto.RegisterType((*MsgPingResponse)(nil), "mythos.network.v1.MsgPingResponse")
+	proto.RegisterType((*MsgMakeProposal)(nil), "mythos.network.v1.MsgMakeProposal")
+	proto.RegisterType((*MsgMakeProposalResponse)(nil), "mythos.network.v1.MsgMakeProposalResponse")
+	proto.RegisterType((*MsgSetValidators)(nil), "mythos.network.v1.MsgSetValidators")
+	proto.RegisterType((*MsgSetValidatorsResponse)(nil), "mythos.network.v1.MsgSetValidatorsResponse")
+	proto.RegisterType((*MsgGetValidators)(nil), "mythos.network.v1.MsgGetValidators")
+	proto.RegisterType((*MsgGetValidatorsResponse)(nil), "mythos.network.v1.MsgGetValidatorsResponse")
+	proto.RegisterType((*MsgIsProposer)(nil), "mythos.network.v1.MsgIsProposer")
+	proto.RegisterType((*MsgIsProposerResponse)(nil), "mythos.network.v1.MsgIsProposerResponse")
 }
 
 func init() { proto.RegisterFile("mythos/network/v1/tx.proto", fileDescriptor_a2a856802fa4b5f0) }
 
 var fileDescriptor_a2a856802fa4b5f0 = []byte{
-	// 244 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0xca, 0xad, 0x2c, 0xc9,
-	0xc8, 0x2f, 0xd6, 0xcf, 0x4b, 0x2d, 0x29, 0xcf, 0x2f, 0xca, 0xd6, 0x2f, 0x33, 0xd4, 0x2f, 0xa9,
-	0xd0, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x12, 0x84, 0xc8, 0xe9, 0x41, 0xe5, 0xf4, 0xca, 0x0c,
-	0xa5, 0x44, 0xd2, 0xf3, 0xd3, 0xf3, 0xc1, 0xb2, 0xfa, 0x20, 0x16, 0x44, 0xa1, 0x94, 0x64, 0x72,
-	0x7e, 0x71, 0x6e, 0x7e, 0x71, 0x3c, 0x44, 0x02, 0xc2, 0x81, 0x4a, 0x89, 0x43, 0x78, 0xfa, 0xb9,
-	0xc5, 0xe9, 0x20, 0xb3, 0x73, 0x8b, 0xd3, 0xa1, 0x12, 0x82, 0x89, 0xb9, 0x99, 0x79, 0xf9, 0xfa,
-	0x60, 0x12, 0x22, 0xa4, 0x24, 0xcb, 0xc5, 0xee, 0x5b, 0x9c, 0x1e, 0x90, 0x99, 0x97, 0x2e, 0x24,
-	0xc4, 0xc5, 0x92, 0x92, 0x58, 0x92, 0x28, 0xc1, 0xa8, 0xc0, 0xa8, 0xc1, 0x19, 0x04, 0x66, 0x2b,
-	0xa9, 0x72, 0xf1, 0x43, 0xa5, 0x83, 0x52, 0x8b, 0x0b, 0xf2, 0xf3, 0x8a, 0x53, 0xb1, 0x29, 0x33,
-	0x0a, 0xe1, 0x62, 0xf6, 0x2d, 0x4e, 0x17, 0x72, 0xe3, 0x62, 0x01, 0x9b, 0x24, 0xa5, 0x87, 0xe1,
-	0x0b, 0x3d, 0xa8, 0x31, 0x52, 0x4a, 0xb8, 0xe5, 0x60, 0x56, 0x48, 0xb1, 0x36, 0x3c, 0xdf, 0xa0,
-	0xc5, 0xe8, 0x64, 0x7e, 0xe2, 0xa1, 0x1c, 0xc3, 0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e, 0xc9, 0x31,
-	0x3e, 0x78, 0x24, 0xc7, 0x38, 0xe1, 0xb1, 0x1c, 0xc3, 0x85, 0xc7, 0x72, 0x0c, 0x37, 0x1e, 0xcb,
-	0x31, 0x44, 0x49, 0x42, 0x43, 0xb1, 0xcc, 0x50, 0xbf, 0x02, 0x1e, 0x94, 0x25, 0x95, 0x05, 0xa9,
-	0xc5, 0x49, 0x6c, 0x60, 0xbf, 0x19, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x9e, 0x66, 0xe0, 0x7c,
-	0x69, 0x01, 0x00, 0x00,
+	// 422 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x93, 0x4f, 0x8f, 0xd2, 0x40,
+	0x18, 0xc6, 0xdb, 0x80, 0x7f, 0x78, 0x95, 0x20, 0x13, 0x0d, 0x30, 0x89, 0x23, 0xa9, 0x31, 0x21,
+	0x18, 0xdb, 0xa0, 0x07, 0x8d, 0x47, 0x0f, 0x36, 0x1e, 0x9a, 0x90, 0x9a, 0x18, 0xe3, 0x41, 0x33,
+	0x4a, 0x33, 0x36, 0xd0, 0x4e, 0xd3, 0x99, 0x54, 0xb8, 0xf9, 0x11, 0xfc, 0x28, 0x7e, 0x0c, 0x8e,
+	0x1c, 0xf6, 0xb0, 0xc7, 0x5d, 0x38, 0xec, 0xd7, 0xd8, 0x30, 0xed, 0x16, 0xca, 0x96, 0x3f, 0x17,
+	0x32, 0xf3, 0x3c, 0xbf, 0x79, 0x5e, 0x66, 0xde, 0xbe, 0x80, 0x83, 0x99, 0xfc, 0xcd, 0x85, 0x15,
+	0x7a, 0xf2, 0x0f, 0x8f, 0xc7, 0x56, 0x32, 0xb0, 0xe4, 0xd4, 0x8c, 0x62, 0x2e, 0x39, 0x6a, 0xa6,
+	0x9e, 0x99, 0x79, 0x66, 0x32, 0xc0, 0x8f, 0x19, 0x67, 0x5c, 0xb9, 0xd6, 0x7a, 0x95, 0x82, 0xb8,
+	0xf3, 0x8b, 0x8b, 0x80, 0x8b, 0x1f, 0xa9, 0x91, 0x6e, 0x32, 0xab, 0x95, 0xee, 0xac, 0x40, 0xb0,
+	0x75, 0x76, 0x20, 0x58, 0x66, 0x34, 0x69, 0xe0, 0x87, 0xdc, 0x52, 0xbf, 0xa9, 0x64, 0x3c, 0x85,
+	0x7b, 0x8e, 0x60, 0x43, 0x3f, 0x64, 0x08, 0x41, 0x75, 0x44, 0x25, 0x6d, 0xeb, 0x5d, 0xbd, 0x57,
+	0x73, 0xd5, 0xda, 0x78, 0x01, 0x8d, 0xcc, 0x76, 0x3d, 0x11, 0xf1, 0x50, 0x78, 0x07, 0x30, 0x87,
+	0x8e, 0xbd, 0x61, 0xcc, 0x23, 0x2e, 0xe8, 0xa4, 0x14, 0x7b, 0x05, 0xad, 0x1d, 0xec, 0x60, 0x2a,
+	0x82, 0x47, 0x8e, 0x60, 0x9f, 0x3d, 0xf9, 0x85, 0x4e, 0xfc, 0x11, 0x95, 0x3c, 0x16, 0x06, 0x86,
+	0xf6, 0xae, 0x76, 0x93, 0x91, 0xf1, 0x76, 0x81, 0x7f, 0xaf, 0x78, 0xbb, 0x8c, 0x47, 0x04, 0x20,
+	0xc9, 0xd5, 0xb6, 0xde, 0xad, 0xf4, 0x6a, 0xee, 0x96, 0x62, 0x34, 0xa0, 0xee, 0x08, 0xf6, 0x49,
+	0xa4, 0x7f, 0xd6, 0x8b, 0x8d, 0x77, 0xf0, 0xa4, 0x20, 0xe4, 0x49, 0xcf, 0xe0, 0x81, 0xaf, 0x5a,
+	0xa1, 0x64, 0x75, 0x89, 0xfb, 0x2e, 0xf8, 0x39, 0xf8, 0xfa, 0xac, 0x02, 0x15, 0x47, 0x30, 0xf4,
+	0x11, 0xaa, 0xea, 0xad, 0xb1, 0x79, 0xab, 0xcf, 0x66, 0xf6, 0xd0, 0xd8, 0xd8, 0xef, 0xe5, 0x05,
+	0xbf, 0xc3, 0xc3, 0xc2, 0x6b, 0xef, 0x39, 0xb3, 0xcd, 0xe0, 0xfe, 0x71, 0x26, 0xcf, 0xff, 0x0a,
+	0xb0, 0xb9, 0x26, 0xea, 0x96, 0x9f, 0xdc, 0x10, 0xb8, 0x77, 0x8c, 0xc8, 0x93, 0x29, 0xd4, 0x0b,
+	0xdd, 0x43, 0xcf, 0xcb, 0x8f, 0x16, 0x20, 0xfc, 0xf2, 0x04, 0x68, 0xbb, 0x84, 0x7d, 0x4a, 0x09,
+	0xfb, 0x94, 0x12, 0xa5, 0x9f, 0x0e, 0xbe, 0xf3, 0xf7, 0xea, 0x7f, 0x5f, 0xff, 0xf0, 0x76, 0x7e,
+	0x49, 0xb4, 0xf9, 0x92, 0xe8, 0x8b, 0x25, 0xd1, 0x2f, 0x96, 0x44, 0xff, 0xb7, 0x22, 0xda, 0x62,
+	0x45, 0xb4, 0xf3, 0x15, 0xd1, 0xbe, 0x75, 0xb2, 0x39, 0x4f, 0x06, 0xd6, 0x34, 0x1f, 0x76, 0x39,
+	0x8b, 0x3c, 0xf1, 0xf3, 0xae, 0x9a, 0xbe, 0x37, 0xd7, 0x01, 0x00, 0x00, 0xff, 0xff, 0x7f, 0xb5,
+	0x2e, 0xa9, 0x0b, 0x04, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -148,6 +468,14 @@ const _ = grpc.SupportPackageIsVersion4
 type MsgClient interface {
 	// Ping
 	Ping(ctx context.Context, in *MsgPing, opts ...grpc.CallOption) (*MsgPingResponse, error)
+	// MakeProposal
+	MakeProposal(ctx context.Context, in *MsgMakeProposal, opts ...grpc.CallOption) (*MsgMakeProposalResponse, error)
+	// IsProposer // TODO this should be a query
+	IsProposer(ctx context.Context, in *MsgIsProposer, opts ...grpc.CallOption) (*MsgIsProposerResponse, error)
+	// SetValidators // TODO remove
+	SetValidators(ctx context.Context, in *MsgSetValidators, opts ...grpc.CallOption) (*MsgSetValidatorsResponse, error)
+	// GetValidators // TODO remove
+	GetValidators(ctx context.Context, in *MsgGetValidators, opts ...grpc.CallOption) (*MsgGetValidatorsResponse, error)
 }
 
 type msgClient struct {
@@ -167,10 +495,54 @@ func (c *msgClient) Ping(ctx context.Context, in *MsgPing, opts ...grpc.CallOpti
 	return out, nil
 }
 
+func (c *msgClient) MakeProposal(ctx context.Context, in *MsgMakeProposal, opts ...grpc.CallOption) (*MsgMakeProposalResponse, error) {
+	out := new(MsgMakeProposalResponse)
+	err := c.cc.Invoke(ctx, "/mythos.network.v1.Msg/MakeProposal", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) IsProposer(ctx context.Context, in *MsgIsProposer, opts ...grpc.CallOption) (*MsgIsProposerResponse, error) {
+	out := new(MsgIsProposerResponse)
+	err := c.cc.Invoke(ctx, "/mythos.network.v1.Msg/IsProposer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) SetValidators(ctx context.Context, in *MsgSetValidators, opts ...grpc.CallOption) (*MsgSetValidatorsResponse, error) {
+	out := new(MsgSetValidatorsResponse)
+	err := c.cc.Invoke(ctx, "/mythos.network.v1.Msg/SetValidators", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) GetValidators(ctx context.Context, in *MsgGetValidators, opts ...grpc.CallOption) (*MsgGetValidatorsResponse, error) {
+	out := new(MsgGetValidatorsResponse)
+	err := c.cc.Invoke(ctx, "/mythos.network.v1.Msg/GetValidators", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 type MsgServer interface {
 	// Ping
 	Ping(context.Context, *MsgPing) (*MsgPingResponse, error)
+	// MakeProposal
+	MakeProposal(context.Context, *MsgMakeProposal) (*MsgMakeProposalResponse, error)
+	// IsProposer // TODO this should be a query
+	IsProposer(context.Context, *MsgIsProposer) (*MsgIsProposerResponse, error)
+	// SetValidators // TODO remove
+	SetValidators(context.Context, *MsgSetValidators) (*MsgSetValidatorsResponse, error)
+	// GetValidators // TODO remove
+	GetValidators(context.Context, *MsgGetValidators) (*MsgGetValidatorsResponse, error)
 }
 
 // UnimplementedMsgServer can be embedded to have forward compatible implementations.
@@ -179,6 +551,18 @@ type UnimplementedMsgServer struct {
 
 func (*UnimplementedMsgServer) Ping(ctx context.Context, req *MsgPing) (*MsgPingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (*UnimplementedMsgServer) MakeProposal(ctx context.Context, req *MsgMakeProposal) (*MsgMakeProposalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MakeProposal not implemented")
+}
+func (*UnimplementedMsgServer) IsProposer(ctx context.Context, req *MsgIsProposer) (*MsgIsProposerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsProposer not implemented")
+}
+func (*UnimplementedMsgServer) SetValidators(ctx context.Context, req *MsgSetValidators) (*MsgSetValidatorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetValidators not implemented")
+}
+func (*UnimplementedMsgServer) GetValidators(ctx context.Context, req *MsgGetValidators) (*MsgGetValidatorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidators not implemented")
 }
 
 func RegisterMsgServer(s grpc1.Server, srv MsgServer) {
@@ -203,6 +587,78 @@ func _Msg_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_MakeProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgMakeProposal)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).MakeProposal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.network.v1.Msg/MakeProposal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).MakeProposal(ctx, req.(*MsgMakeProposal))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_IsProposer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgIsProposer)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).IsProposer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.network.v1.Msg/IsProposer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).IsProposer(ctx, req.(*MsgIsProposer))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_SetValidators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSetValidators)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).SetValidators(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.network.v1.Msg/SetValidators",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).SetValidators(ctx, req.(*MsgSetValidators))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_GetValidators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgGetValidators)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).GetValidators(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.network.v1.Msg/GetValidators",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).GetValidators(ctx, req.(*MsgGetValidators))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Msg_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "mythos.network.v1.Msg",
 	HandlerType: (*MsgServer)(nil),
@@ -210,6 +666,22 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Ping",
 			Handler:    _Msg_Ping_Handler,
+		},
+		{
+			MethodName: "MakeProposal",
+			Handler:    _Msg_MakeProposal_Handler,
+		},
+		{
+			MethodName: "IsProposer",
+			Handler:    _Msg_IsProposer_Handler,
+		},
+		{
+			MethodName: "SetValidators",
+			Handler:    _Msg_SetValidators_Handler,
+		},
+		{
+			MethodName: "GetValidators",
+			Handler:    _Msg_GetValidators_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -276,6 +748,223 @@ func (m *MsgPingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *MsgMakeProposal) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgMakeProposal) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgMakeProposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Data)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgMakeProposalResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgMakeProposalResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgMakeProposalResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Data)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgSetValidators) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgSetValidators) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgSetValidators) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgSetValidatorsResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgSetValidatorsResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgSetValidatorsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgGetValidators) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgGetValidators) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgGetValidators) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgGetValidatorsResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgGetValidatorsResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgGetValidatorsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Validators) > 0 {
+		for iNdEx := len(m.Validators) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Validators[iNdEx])
+			copy(dAtA[i:], m.Validators[iNdEx])
+			i = encodeVarintTx(dAtA, i, uint64(len(m.Validators[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgIsProposer) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgIsProposer) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgIsProposer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgIsProposerResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgIsProposerResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgIsProposerResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.IsProposer {
+		i--
+		if m.IsProposer {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintTx(dAtA []byte, offset int, v uint64) int {
 	offset -= sovTx(v)
 	base := offset
@@ -309,6 +998,95 @@ func (m *MsgPingResponse) Size() (n int) {
 	l = len(m.Data)
 	if l > 0 {
 		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgMakeProposal) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgMakeProposalResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgSetValidators) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgSetValidatorsResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgGetValidators) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgGetValidatorsResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Validators) > 0 {
+		for _, s := range m.Validators {
+			l = len(s)
+			n += 1 + l + sovTx(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *MsgIsProposer) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgIsProposerResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.IsProposer {
+		n += 2
 	}
 	return n
 }
@@ -462,6 +1240,522 @@ func (m *MsgPingResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Data = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgMakeProposal) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgMakeProposal: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgMakeProposal: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgMakeProposalResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgMakeProposalResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgMakeProposalResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgSetValidators) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgSetValidators: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgSetValidators: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgSetValidatorsResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgSetValidatorsResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgSetValidatorsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgGetValidators) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgGetValidators: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgGetValidators: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgGetValidatorsResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgGetValidatorsResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgGetValidatorsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Validators", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Validators = append(m.Validators, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgIsProposer) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgIsProposer: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgIsProposer: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgIsProposerResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgIsProposerResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgIsProposerResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsProposer", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsProposer = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipTx(dAtA[iNdEx:])

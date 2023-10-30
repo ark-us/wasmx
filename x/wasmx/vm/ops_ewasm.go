@@ -45,7 +45,9 @@ func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params [
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	fmt.Println("--storageLoad-keybz-", hex.EncodeToString(keybz))
 	data := ctx.ContractStore.Get(keybz)
+	fmt.Println("--storageLoad-data-", hex.EncodeToString(data))
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
@@ -142,6 +144,7 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := readAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
+	fmt.Println("--callDataCopy-part-", hex.EncodeToString(part))
 	err := writeMem(callframe, part, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
