@@ -202,6 +202,7 @@ func ExecuteWasmInterpreted(
 	env types.Env,
 	msg []byte,
 	storeKey []byte, kvstore prefix.Store,
+	storageType types.ContractStorageType,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -239,7 +240,7 @@ func ExecuteWasmInterpreted(
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, SystemDeps: systemDeps})
+	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 	if err != nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
@@ -283,6 +284,7 @@ func ExecuteWasm(
 	env types.Env,
 	msg []byte,
 	storeKey []byte, kvstore prefix.Store,
+	storageType types.ContractStorageType,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
 	systemDeps []types.SystemDep,
@@ -333,7 +335,7 @@ func ExecuteWasm(
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, SystemDeps: systemDeps})
+	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 	if err != nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}

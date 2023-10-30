@@ -291,7 +291,7 @@ func New(
 		networkmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
-	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, networkmoduletypes.TStoreKey)
+	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, networkmoduletypes.TStoreKey, wasmxmoduletypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 
 	// register streaming services
@@ -543,6 +543,7 @@ func New(
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
+		tkeys[wasmxmoduletypes.TStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,

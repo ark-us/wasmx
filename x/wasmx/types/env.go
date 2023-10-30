@@ -140,6 +140,7 @@ type ContractDependency struct {
 	CodeHash      []byte
 	CodeId        uint64
 	SystemDepsRaw []string
+	StorageType   ContractStorageType
 }
 
 func (u RawBytes) MarshalJSON() ([]byte, error) {

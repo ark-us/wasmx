@@ -76,6 +76,7 @@ func (k Keeper) ActivateSystemContract(
 			codeID,
 			bootstrapAccountAddr,
 			contractAddress,
+			contract.StorageType,
 			contract.InitMessage,
 			nil,
 			contract.Label,

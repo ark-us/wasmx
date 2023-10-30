@@ -44,8 +44,13 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 	return nil
 }
 
-func (k Keeper) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store {
-	return prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+func (k Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store {
+	// default must be core consensus
+	storageKey := k.storeKey
+	if storageType == types.ContractStorageType_Transient {
+		storageKey = k.tKey
+	}
+	return prefix.NewStore(ctx.KVStore(storageKey), prefixStoreKey)
 }
 
 func (k Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {

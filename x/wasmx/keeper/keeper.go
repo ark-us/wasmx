@@ -30,6 +30,7 @@ type (
 		cdc                   codec.Codec
 		storeKey              storetypes.StoreKey
 		memKey                storetypes.StoreKey
+		tKey                  storetypes.StoreKey
 		paramstore            paramtypes.Subspace
 		interfaceRegistry     cdctypes.InterfaceRegistry
 		msgRouter             *baseapp.MsgServiceRouter
@@ -59,6 +60,7 @@ func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
+	tKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
@@ -126,6 +128,7 @@ func NewKeeper(
 		cdc:               cdc,
 		storeKey:          storeKey,
 		memKey:            memKey,
+		tKey:              tKey,
 		paramstore:        ps,
 		interfaceRegistry: interfaceRegistry,
 		msgRouter:         msgRouter,
@@ -156,12 +159,14 @@ func NewKeeper(
 	return keeper
 }
 
+// TODO remove
 // used in system contracts
 func (k Keeper) CloneWithStoreKey(storeKey storetypes.StoreKey, memKey storetypes.StoreKey) Keeper {
 	return Keeper{
 		cdc:               k.cdc,
 		storeKey:          storeKey,
 		memKey:            memKey,
+		tKey:              k.tKey,
 		paramstore:        k.paramstore,
 		interfaceRegistry: k.interfaceRegistry,
 		msgRouter:         k.msgRouter,
