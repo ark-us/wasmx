@@ -236,6 +236,9 @@ type App struct {
 	// sm is the simulation manager
 	sm           *module.SimulationManager
 	configurator module.Configurator
+
+	// we expose this for the network grpc module
+	db dbm.DB
 }
 
 // New returns a reference to an initialized blockchain app
@@ -300,6 +303,7 @@ func New(
 		keys:              keys,
 		tkeys:             tkeys,
 		memKeys:           memKeys,
+		db:                db,
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -1147,4 +1151,7 @@ func (app *App) SimulationManager() *module.SimulationManager {
 // For network grpc
 func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
 	return app.NetworkKeeper
+}
+func (app *App) GetDB() dbm.DB {
+	return app.db
 }

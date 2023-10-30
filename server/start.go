@@ -362,7 +362,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
-		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app)
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app, tmNode)
 		return err
 	})
 	// ----end network
@@ -509,6 +509,13 @@ func startCmtNode(
 		node.DefaultMetricsProvider(cfg.Instrumentation),
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
+
+	fmt.Println("==startCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
+	fmt.Println("==startCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
+
+	fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
+	fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
+
 	if err != nil {
 		return tmNode, cleanupFn, err
 	}
