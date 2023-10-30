@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/cometbft/cometbft/node"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -21,6 +22,7 @@ func StartGRPCServer(
 	GRPCAddr string,
 	cfgAll *config.Config,
 	app servertypes.Application,
+	tmNode *node.Node,
 ) (*grpc.Server, chan struct{}, error) {
 
 	ln, err := Listen(GRPCAddr)
@@ -30,7 +32,7 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app)
+	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app, tmNode)
 	if err != nil {
 		return nil, nil, err
 	}
