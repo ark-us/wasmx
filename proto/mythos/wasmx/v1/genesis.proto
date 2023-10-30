@@ -34,11 +34,12 @@ message GenesisState {
 message SystemContract {
   string address = 1;
   string label = 2;
-  bytes init_message = 3 [ (gogoproto.casttype) = "RawContractMessage" ];
-  bool pinned = 4;
-  bool native = 5;
-  string role = 6;
-  CodeMetadata metadata = 7 [(gogoproto.nullable) = false];
+  ContractStorageType storage_type = 3;
+  bytes init_message = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
+  bool pinned = 5;
+  bool native = 6;
+  string role = 7;
+  CodeMetadata metadata = 8 [(gogoproto.nullable) = false];
 }
 
 // Code - for importing and exporting code data

@@ -40,12 +40,14 @@ import (
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
+	tStoreKey := storetypes.NewTransientStoreKey(types.TStoreKey)
 
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	stateStore := store.NewCommitMultiStore(db, logger, metrics.NewNoOpMetrics())
 	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
 	stateStore.MountStoreWithDB(memStoreKey, storetypes.StoreTypeMemory, nil)
+	stateStore.MountStoreWithDB(tStoreKey, storetypes.StoreTypeTransient, db)
 	require.NoError(t, stateStore.LoadLatestVersion())
 
 	registry := codectypes.NewInterfaceRegistry()
@@ -138,6 +140,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		cdc,
 		storeKey,
 		memStoreKey,
+		tStoreKey,
 		paramsSubspace,
 		accountKeeper,
 		bankKeeper,

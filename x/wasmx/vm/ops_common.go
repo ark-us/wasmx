@@ -46,7 +46,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	}
 
 	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractInfo.StoreKey)
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractInfo.StorageType, ctx.ContractRouter[req.To.String()].ContractInfo.StoreKey)
 
 	newctx := &Context{
 		Ctx:            tempCtx,
