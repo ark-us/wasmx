@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	cometdbm "github.com/cometbft/cometbft-db"
 	abciserver "github.com/cometbft/cometbft/abci/server"
 	tcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
@@ -22,6 +23,8 @@ import (
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
 	"github.com/cometbft/cometbft/rpc/client/local"
+	"github.com/cometbft/cometbft/store"
+	cometstore "github.com/cometbft/cometbft/store"
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
@@ -358,11 +361,23 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		WithHomeDir(home).
 		WithChainID(genDoc.ChainID)
 
+	// network dbs
+	// startCmtNode(ctx, cfg, app, svrCtx)
+	blockStoreDB, stateDB, err := initDBs(cfg, cmtcfg.DefaultDBProvider)
+	if err != nil {
+		return err
+	}
+
+	dbnetwork, err := networkgrpc.OpenDBNetwork(home, server.GetAppDBBackend(svrCtx.Viper))
+	if err != nil {
+		return err
+	}
+
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
-		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app, tmNode)
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app, tmNode, blockStoreDB, stateDB, dbnetwork)
 		return err
 	})
 	// ----end network
@@ -510,11 +525,24 @@ func startCmtNode(
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
 
-	fmt.Println("==startCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
-	fmt.Println("==startCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
+	// fmt.Println("==startCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
+	// fmt.Println("==startCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
 
-	fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
-	fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
+	// fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
+	// fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
+
+	// blockStoreDB, stateDB, err := initDBs(cfg, cmtcfg.DefaultDBProvider)
+	// if err != nil {
+	// 	return tmNode, cleanupFn, err
+	// }
+	// fmt.Println("===blockStoreDB===", blockStoreDB)
+	// fmt.Println("===stateDB===", stateDB)
+
+	// // database keys
+	// stateKey := []byte("stateKey")
+	// buf, err := stateDB.Get(stateKey)
+	// fmt.Println("===buf===", buf, err)
+	// fmt.Println("===buf===", string(buf))
 
 	if err != nil {
 		return tmNode, cleanupFn, err
@@ -674,3 +702,44 @@ func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 		0o600,
 	)
 }
+
+// func initDBs(config *cmtcfg.Config, dbProvider cmtcfg.DBProvider) (blockStore *cometstore.BlockStore, stateDB cometdbm.DB, err error) {
+// 	var blockStoreDB cometdbm.DB
+// 	blockStoreDB, err = dbProvider(&cmtcfg.DBContext{ID: "blockstore", Config: config})
+// 	if err != nil {
+// 		return
+// 	}
+// 	blockStore = store.NewBlockStore(blockStoreDB)
+
+// 	stateDB, err = dbProvider(&cmtcfg.DBContext{ID: "state", Config: config})
+// 	if err != nil {
+// 		return
+// 	}
+
+// 	return
+// }
+
+func initDBs(config *cmtcfg.Config, dbProvider cmtcfg.DBProvider) (blockStore *cometstore.BlockStore, stateDB cometdbm.DB, err error) {
+	var blockStoreDB cometdbm.DB
+
+	fmt.Println("-initDBs--", config.DBDir())
+
+	dbType := cometdbm.BackendType(config.DBBackend)
+	blockStoreDB, err = cometdbm.NewDB("blockstore2", dbType, config.DBDir())
+	if err != nil {
+		return
+	}
+	blockStore = store.NewBlockStore(blockStoreDB)
+
+	stateDB, err = cometdbm.NewDB("state2", dbType, config.DBDir())
+	if err != nil {
+		return
+	}
+	return
+}
+
+// func DefaultDBProvider(ctx *DBContext) (dbm.DB, error) {
+// 	dbType := dbm.BackendType(ctx.Config.DBBackend)
+
+// 	return dbm.NewDB(ctx.ID, dbType, ctx.Config.DBDir())
+// }

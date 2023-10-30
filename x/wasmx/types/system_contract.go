@@ -142,6 +142,13 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 		},
+		// TODO move this to network; register api for precompiles
+		{
+			Address:     "0x0000000000000000000000000000000000000028",
+			Label:       "network",
+			InitMessage: initMsg,
+			Pinned:      false,
+		},
 	}
 }
 

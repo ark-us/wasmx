@@ -29,7 +29,7 @@ type (
 	Keeper struct {
 		cdc                   codec.Codec
 		storeKey              storetypes.StoreKey
-		memKey                storetypes.MemoryStoreKey
+		memKey                storetypes.StoreKey
 		paramstore            paramtypes.Subspace
 		interfaceRegistry     cdctypes.InterfaceRegistry
 		msgRouter             *baseapp.MsgServiceRouter
@@ -58,7 +58,7 @@ type (
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
-	memKey storetypes.MemoryStoreKey,
+	memKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
@@ -154,6 +154,32 @@ func NewKeeper(
 	keeper.cch = &cch
 
 	return keeper
+}
+
+// used in system contracts
+func (k Keeper) CloneWithStoreKey(storeKey storetypes.StoreKey, memKey storetypes.StoreKey) Keeper {
+	return Keeper{
+		cdc:               k.cdc,
+		storeKey:          storeKey,
+		memKey:            memKey,
+		paramstore:        k.paramstore,
+		interfaceRegistry: k.interfaceRegistry,
+		msgRouter:         k.msgRouter,
+		grpcQueryRouter:   k.grpcQueryRouter,
+		denom:             k.denom,
+
+		accountKeeper:         k.accountKeeper,
+		bank:                  k.bank,
+		queryGasLimit:         k.queryGasLimit,
+		gasRegister:           k.gasRegister,
+		wasmvm:                k.wasmvm,
+		tempDir:               k.tempDir,
+		binDir:                k.binDir,
+		authority:             k.authority,
+		wasmVMResponseHandler: k.wasmVMResponseHandler,
+		wasmVMQueryHandler:    k.wasmVMQueryHandler,
+		cch:                   k.cch,
+	}
 }
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
