@@ -15,6 +15,18 @@ service Msg {
 
     // Ping
     rpc Ping(MsgPing) returns (MsgPingResponse);
+
+    // MakeProposal
+    rpc MakeProposal(MsgMakeProposal) returns (MsgMakeProposalResponse);
+
+    // IsProposer // TODO this should be a query
+    rpc IsProposer(MsgIsProposer) returns (MsgIsProposerResponse);
+
+    // SetValidators // TODO remove
+    rpc SetValidators(MsgSetValidators) returns (MsgSetValidatorsResponse);
+
+    // GetValidators // TODO remove
+    rpc GetValidators(MsgGetValidators) returns (MsgGetValidatorsResponse);
 }
 
 // MsgPing
@@ -25,4 +37,37 @@ message MsgPing {
 // MsgPingResponse
 message MsgPingResponse {
     string data = 1;
+}
+
+// MsgMakeProposal
+message MsgMakeProposal {
+    string data = 1;
+}
+
+// MsgMakeProposalResponse
+message MsgMakeProposalResponse {
+    string data = 1;
+}
+
+// MsgSetValidators
+message MsgSetValidators {}
+
+// MsgSetValidatorsResponse
+message MsgSetValidatorsResponse {}
+
+// MsgGetValidators
+message MsgGetValidators {}
+
+// MsgGetValidatorsResponse
+message MsgGetValidatorsResponse {
+    repeated string validators = 1;
+}
+
+// MsgIsProposer
+message MsgIsProposer {}
+
+// MsgIsProposerResponse is the response type for the Query/IsProposer RPC method.
+message MsgIsProposerResponse {
+  // params defines the parameters of the module.
+  bool is_proposer = 1;
 }

@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -12,13 +11,13 @@ import (
 )
 
 // GetValidators set the params
-func (m msgServer) GetValidators(ctx sdk.Context) (validators []comettypes.ValidatorUpdate) {
+func (m msgServer) GetValidators_(ctx sdk.Context) (validators []comettypes.ValidatorUpdate) {
 	itr, err := m.DB.Iterator(nil, nil)
 	if err != nil {
 		panic(err)
 	}
 	for ; itr.Valid(); itr.Next() {
-		fmt.Println("-GetValidators-", itr.Key(), string(itr.Key()), itr.Value(), string(itr.Value()))
+		// fmt.Println("-GetValidators-", itr.Key(), string(itr.Key()), itr.Value(), string(itr.Value()))
 		if isValidatorTx(itr.Key()) {
 			validator := new(comettypes.ValidatorUpdate)
 			err := comettypes.ReadMessage(bytes.NewBuffer(itr.Value()), validator)
