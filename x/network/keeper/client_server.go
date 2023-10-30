@@ -32,7 +32,10 @@ import (
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
+	dbm "github.com/cosmos/cosmos-db"
+
 	cmtnet "github.com/cometbft/cometbft/libs/net"
+	"github.com/cometbft/cometbft/node"
 
 	"mythos/v1/x/network/types"
 )
@@ -46,6 +49,7 @@ type Config struct {
 
 type MythosApp interface {
 	GetNetworkKeeper() Keeper
+	GetDB() dbm.DB
 }
 
 type BaseApp interface {
@@ -71,6 +75,7 @@ func NewGRPCServer(
 	clientCtx client.Context,
 	cfg config.GRPCConfig,
 	app servertypes.Application,
+	tmNode *node.Node,
 ) (*grpc.Server, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
@@ -89,7 +94,7 @@ func NewGRPCServer(
 	)
 
 	// app.RegisterGRPCServer(grpcSrv)
-	err := RegisterGRPCServer(svrCtx, app, grpcSrv)
+	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
@@ -144,7 +149,7 @@ func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
 }
 
 // RegisterGRPCServer registers gRPC services directly with the gRPC server.
-func RegisterGRPCServer(svrCtx *server.Context, sapp servertypes.Application, server *grpc.Server) error {
+func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server) error {
 	app, ok := sapp.(BaseApp)
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
@@ -200,7 +205,7 @@ func RegisterGRPCServer(svrCtx *server.Context, sapp servertypes.Application, se
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}
-	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper()}
+	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), DB: mythosapp.GetDB(), ClientCtx: clientCtx, TmNode: tmNode}
 	fmt.Println("---before RegisterMsgServer")
 	// types.RegisterMsgServer(server, handler)
 	fmt.Println("---after RegisterMsgServer")
