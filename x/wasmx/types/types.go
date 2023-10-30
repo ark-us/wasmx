@@ -126,6 +126,7 @@ func NewContractInfo(CodeId uint64, creator sdk.AccAddress, provenance sdk.AccAd
 		Creator:     creator.String(),
 		Label:       label,
 		InitMessage: initMsg,
+		StorageType: ContractStorageType_CoreConsensus,
 		// Created: createdAt,
 		// TODO tx hash
 	}

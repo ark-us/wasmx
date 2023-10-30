@@ -26,6 +26,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Native:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		// Ethereum ecrecover
 		{
@@ -33,66 +34,77 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       "ecrecovereth",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000002",
 			Label:       "sha2-256",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000003",
 			Label:       "ripmd160",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000004",
 			Label:       "identity",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000005",
 			Label:       "modexp",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000006",
 			Label:       "ecadd",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000007",
 			Label:       "ecmul",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000008",
 			Label:       "ecpairings",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000009",
 			Label:       "blake2f",
 			InitMessage: initMsg,
 			Pinned:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000020",
 			Label:       "secp384r1",
 			InitMessage: initMsg,
 			Pinned:      false, //TODO
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000021",
 			Label:       "secp384r1_registry",
 			InitMessage: initMsg,
 			Pinned:      false, // TODO
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000022",
@@ -100,6 +112,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Native:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000023",
@@ -107,6 +120,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000024",
@@ -114,6 +128,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_ALIAS,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000025",
@@ -121,6 +136,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Native:      true,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000026",
@@ -128,6 +144,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000027",
@@ -135,12 +152,14 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		{
 			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			Label:       "sys_proxy",
 			InitMessage: initMsg,
 			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
 		},
 		// TODO move this to network; register api for precompiles
 		{
@@ -148,6 +167,7 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       "network",
 			InitMessage: initMsg,
 			Pinned:      false,
+			StorageType: ContractStorageType_Transient,
 		},
 	}
 }

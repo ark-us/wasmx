@@ -91,8 +91,8 @@ func (h *WasmxCosmosHandler) GetContractInstance(contractAddress sdk.AccAddress)
 func (h *WasmxCosmosHandler) GetBlockHash(blockNumber uint64) types.Checksum {
 	return types.EMPTY_BYTES32
 }
-func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, prefixStoreKey []byte) prefix.Store {
-	return h.Keeper.ContractStore(ctx, prefixStoreKey)
+func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store {
+	return h.Keeper.ContractStore(ctx, storageType, prefixStoreKey)
 }
 
 // TODO provenance
