@@ -16,7 +16,7 @@ type (
 	Keeper struct {
 		cdc         codec.Codec
 		storeKey    storetypes.StoreKey
-		memKey      storetypes.StoreKey
+		memKey      storetypes.MemoryStoreKey
 		paramstore  paramtypes.Subspace
 		wasmxKeeper types.WasmxKeeper
 
@@ -28,8 +28,8 @@ type (
 
 func NewKeeper(
 	cdc codec.Codec,
-	storeKey,
-	memKey storetypes.StoreKey,
+	storeKey storetypes.StoreKey,
+	memKey storetypes.MemoryStoreKey,
 	ps paramtypes.Subspace,
 	wasmxKeeper types.WasmxKeeper,
 	authority string,

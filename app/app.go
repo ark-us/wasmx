@@ -536,7 +536,7 @@ func New(
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
-		keys[wasmxmoduletypes.MemStoreKey],
+		memKeys[wasmxmoduletypes.MemStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
@@ -557,7 +557,7 @@ func New(
 	app.WebsrvKeeper = *websrvmodulekeeper.NewKeeper(
 		appCodec,
 		keys[websrvmoduletypes.StoreKey],
-		keys[websrvmoduletypes.MemStoreKey],
+		memKeys[websrvmoduletypes.MemStoreKey],
 		app.GetSubspace(websrvmoduletypes.ModuleName),
 		app.WasmxKeeper,
 		app.Query,
@@ -568,7 +568,7 @@ func New(
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
 		appCodec,
 		keys[networkmoduletypes.StoreKey],
-		keys[networkmoduletypes.MemStoreKey],
+		memKeys[networkmoduletypes.MemStoreKey],
 		app.GetSubspace(networkmoduletypes.ModuleName),
 		app.WasmxKeeper,
 		// TODO remove authority?
