@@ -262,12 +262,6 @@ func New(
 	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
-	// database keys
-	// stateKey := []byte("stateKey")
-	// buf, err2 := db.Get(stateKey)
-	// fmt.Println("---db", err2, buf)
-	// fmt.Println("---db", string(buf))
-
 	bApp := baseapp.NewBaseApp(
 		Name,
 		logger,
@@ -291,7 +285,7 @@ func New(
 		networkmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
-	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, networkmoduletypes.TStoreKey, wasmxmoduletypes.TStoreKey)
+	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, wasmxmoduletypes.MemStoreKey)
 
 	// register streaming services
@@ -1164,7 +1158,4 @@ func (app *App) SimulationManager() *module.SimulationManager {
 // For network grpc
 func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
 	return app.NetworkKeeper
-}
-func (app *App) GetDB() dbm.DB {
-	return app.db
 }
