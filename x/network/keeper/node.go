@@ -7,11 +7,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	cometdbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/node"
-	cometstore "github.com/cometbft/cometbft/store"
 
-	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -27,9 +24,6 @@ func StartGRPCServer(
 	cfgAll *config.Config,
 	app servertypes.Application,
 	tmNode *node.Node,
-	blockStore *cometstore.BlockStore,
-	stateDB cometdbm.DB,
-	networkDB dbm.DB,
 ) (*grpc.Server, chan struct{}, error) {
 
 	ln, err := Listen(GRPCAddr)
@@ -39,7 +33,7 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app, tmNode, blockStore, stateDB, networkDB)
+	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app, tmNode)
 	if err != nil {
 		return nil, nil, err
 	}
