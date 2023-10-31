@@ -7,10 +7,7 @@ import (
 	"net"
 	"strconv"
 
-	// "golang.org/x/net/context"
-
 	"google.golang.org/grpc"
-	// "google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -20,9 +17,6 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
-
-	// store "cosmossdk.io/store"
-	// storemetrics "cosmossdk.io/store/metrics"
 	"cosmossdk.io/store/rootmulti"
 	storetypes "cosmossdk.io/store/types"
 
@@ -39,14 +33,8 @@ import (
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
-	dbm "github.com/cosmos/cosmos-db"
-
-	cometdbm "github.com/cometbft/cometbft-db"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
-
-	// cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	cometstore "github.com/cometbft/cometbft/store"
 
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -55,15 +43,12 @@ import (
 var NETWORK_GAS_LIMIT = uint64(1000000000)
 
 // Config is an gRPC server configuration.
-//
-// Deprecated: A new gRPC API will be introduced after v0.38.
 type Config struct {
 	MaxOpenConnections int
 }
 
 type MythosApp interface {
 	GetNetworkKeeper() Keeper
-	GetDB() dbm.DB
 	GetTKey(storeKey string) *storetypes.TransientStoreKey
 	GetMKey(storeKey string) *storetypes.MemoryStoreKey
 }
@@ -76,31 +61,15 @@ type BaseApp interface {
 	GetContextForFinalizeBlock(txBytes []byte) sdk.Context
 }
 
-// // GetGRPCServer
-// func GetGRPCServer(
-// // env *core.Environment,
-// ) *grpc.Server {
-// 	grpcServer := grpc.NewServer()
-// 	types.RegisterMsgServer(grpcServer, &msgServer{})
-// 	// Register reflection service on gRPC server.
-// 	reflection.Register(grpcServer)
-// 	return grpcServer
-// }
-
 // NewGRPCServer returns a correctly configured and initialized gRPC server.
 // Note, the caller is responsible for starting the server. See StartGRPCServer.
-// func NewGRPCServer(clientCtx client.Context, app types.Application, cfg config.GRPCConfig) (*grpc.Server, error) {
 func NewGRPCServer(
 	svrCtx *server.Context,
 	clientCtx client.Context,
 	cfg config.GRPCConfig,
 	app servertypes.Application,
 	tmNode *node.Node,
-	blockStore *cometstore.BlockStore,
-	stateDB cometdbm.DB,
-	networkDB dbm.DB,
 ) (*grpc.Server, error) {
-	fmt.Println("--NewGRPCServer--")
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = config.DefaultGRPCMaxSendMsgSize
@@ -117,17 +86,10 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	// app.RegisterGRPCServer(grpcSrv)
-	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, blockStore, stateDB, networkDB)
-	fmt.Println("-END-RegisterGRPCServer--", err)
+	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
-	// mythosapp, ok := app.(MythosApp)
-	// if !ok {
-	// 	return nil, fmt.Errorf("failed to get MythosApp from server Application")
-	// }
-	// types.RegisterMsgServer(grpcSrv, &msgServer{Keeper: mythosapp.GetNetworkKeeper()})
 
 	// Reflection allows consumers to build dynamic clients that can write to any
 	// Cosmos SDK application without relying on application packages at compile
@@ -149,19 +111,15 @@ func NewGRPCServer(
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reflection service: %w", err)
 	}
-	fmt.Println("-reflection registered--", err)
 
 	// Reflection allows external clients to see what services and methods
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
-	fmt.Println("-END-NewGRPCServer--")
 	return grpcSrv, nil
 }
 
 // StartGRPCClient dials the gRPC server using protoAddr and returns a new
 // BroadcastAPIClient.
-//
-// Deprecated: A new gRPC API will be introduced after v0.38.
 func StartGRPCClient(protoAddr string) types.MsgClient {
 	conn, err := grpc.Dial(protoAddr, grpc.WithInsecure(), grpc.WithContextDialer(dialerFunc))
 	if err != nil {
@@ -178,12 +136,7 @@ var tstoreprefix = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 var bzkey = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 // RegisterGRPCServer registers gRPC services directly with the gRPC server.
-func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server,
-	blockStore *cometstore.BlockStore,
-	stateDB cometdbm.DB,
-	networkDB dbm.DB,
-) error {
-	fmt.Println("-----RegisterGRPCServer----")
+func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server) error {
 	app, ok := sapp.(BaseApp)
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
@@ -192,13 +145,6 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}
-
-	fmt.Println("-----storage before--register server--")
-	bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-	tstorer := app.CommitMultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-	fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
-	bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-	fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
 	// Define an interceptor for all gRPC queries: this interceptor will create
 	// a new sdk.Context, and pass it into the query handler.
@@ -230,37 +176,12 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
-		// app.CommitMultiStore().CacheMultiStore()
-		// func (*BaseApp).GetContextForCheckTx(txBytes []byte) sdk.Context
-		// func (*BaseApp).GetContextForFinalizeBlock(txBytes []byte) sdk.Context
-
-		// ctx := app.getContextForTx(mode, txBytes)
-		// ms := ctx.MultiStore()
-		// ctx = ctx.WithConsensusParams(app.GetConsensusParams(ctx))
-
 		// TODO - use this for grpc queries
-		// Create the sdk.Context. Passing false as 2nd arg, as we can't
-		// actually support proofs with gRPC right now.
-		// sdkCtx_, err := app.CreateQueryContext(height, false)
 		sdkCtx_, ctxcachems, err := CreateQueryContext(app, svrCtx.Logger, height, false)
-		// sdkCtx_ := app.GetContextForFinalizeBlock(make([]byte, 0))
 		if err != nil {
 			return nil, err
 		}
-		// TODO should not commit this; only the transient store
 		sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-
-		// sdkCtx.MultiStore().AddListeners([]types.StoreKey{testStoreKey1})
-
-		// newms := store.NewCommitMultiStore(mythosapp.GetDB(), svrCtx.Logger, storemetrics.NewNoOpMetrics())
-		// // newms := store.NewCommitMultiStore(networkDB, svrCtx.Logger, storemetrics.NewNoOpMetrics())
-		// sdkCtx = sdkCtx.WithMultiStore(newms)
-
-		// sdkCtx := app.GetContextForFinalizeBlock(make([]byte, 0))
-		//
-
-		// emptyHeader := cmtproto.Header{ChainID: clientCtx.ChainID}
-		// sdkCtx := sdk.NewContext(app.CommitMultiStore(), emptyHeader, false, svrCtx.Logger)
 
 		// Add relevant gRPC headers
 		if height == 0 {
@@ -275,17 +196,11 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 			svrCtx.Logger.Error("failed to set gRPC header", "err", err)
 		}
 
-		// return handler(grpcCtx, req)
-
 		hresp, err := handler(grpcCtx, req)
 		if err != nil {
 			return hresp, err
 		}
 		// commit changes
-		// app.CommitMultiStore().Commit()
-
-		// newms.AddListeners()
-		// tstore := newms.GetCommitStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
 
 		fmt.Println("----temp state")
 		fmt.Println("--ContractStore--storageKey--", wasmxtypes.MemStoreKey, mythosapp.GetMKey(wasmxtypes.MemStoreKey).Name())
@@ -312,20 +227,8 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstore0.Get(append(tstoreprefix, bz...)))
 
-		// ms := sdkCtx.MultiStore()
-		// cms := (ms).(sdk.CacheMultiStore)
-
-		// qms := sdkCtx.MultiStore()
-		// cms := qms.(storetypes.CommitMultiStore)
-		// cms.Commit()
-
-		// tstore := app.CommitMultiStore().GetCommitStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		// tstore.Commit()
-
 		// commit original context
 		origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		// origtstore.Write()
-		// origtstore.CacheWrap().Write()
 		origtstore.(storetypes.CacheWrap).Write()
 
 		fmt.Println("----app state")
@@ -335,17 +238,10 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
-		// sdkCtx_.TransientStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey)).
-
-		// newms.Commit()
-
 		return hresp, nil
 	}
 
-	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), DB: mythosapp.GetDB(), ClientCtx: clientCtx, TmNode: tmNode, BlockStore: blockStore, StateDB: stateDB}
-	// fmt.Println("---before RegisterMsgServer")
-	// types.RegisterMsgServer(server, handler)
-	fmt.Println("---pre handler registration")
+	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), ClientCtx: clientCtx, TmNode: tmNode}
 
 	desc := types.Network_Msg_serviceDesc
 	newMethods := make([]grpc.MethodDesc, len(desc.Methods))
@@ -371,7 +267,6 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	}
 
 	server.RegisterService(newDesc, handler)
-	fmt.Println("---END RegisterMsgServer")
 	return nil
 }
 
@@ -386,7 +281,6 @@ func checkNegativeHeight(height int64) error {
 // createQueryContext creates a new sdk.Context for a query, taking as args
 // the block height and whether the query needs a proof or not.
 func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool) (sdk.Context, storetypes.CacheMultiStore, error) {
-	fmt.Println("---CreateQueryContext--START")
 	if err := checkNegativeHeight(height); err != nil {
 		return sdk.Context{}, nil, err
 	}
@@ -449,6 +343,5 @@ func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool
 			}
 		}
 	}
-	fmt.Println("---CreateQueryContext--END")
 	return ctx, cacheMS, nil
 }

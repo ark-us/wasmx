@@ -78,8 +78,6 @@ func (k WasmxEngine) Instantiate(
 	var data types.ContractResponse
 	var err error
 
-	fmt.Println("--vm--instantiate--storageType", storageType)
-
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
 		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false)
 	} else {

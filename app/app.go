@@ -236,9 +236,6 @@ type App struct {
 	// sm is the simulation manager
 	sm           *module.SimulationManager
 	configurator module.Configurator
-
-	// we expose this for the network grpc module
-	db dbm.DB
 }
 
 // New returns a reference to an initialized blockchain app
@@ -261,12 +258,6 @@ func New(
 	// TODO - do we need this?
 	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
-
-	// database keys
-	// stateKey := []byte("stateKey")
-	// buf, err2 := db.Get(stateKey)
-	// fmt.Println("---db", err2, buf)
-	// fmt.Println("---db", string(buf))
 
 	bApp := baseapp.NewBaseApp(
 		Name,
@@ -291,7 +282,7 @@ func New(
 		networkmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
-	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, networkmoduletypes.TStoreKey, wasmxmoduletypes.TStoreKey)
+	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, wasmxmoduletypes.MemStoreKey)
 
 	// register streaming services
@@ -309,7 +300,6 @@ func New(
 		keys:              keys,
 		tkeys:             tkeys,
 		memKeys:           memKeys,
-		db:                db,
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -1164,7 +1154,4 @@ func (app *App) SimulationManager() *module.SimulationManager {
 // For network grpc
 func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
 	return app.NetworkKeeper
-}
-func (app *App) GetDB() dbm.DB {
-	return app.db
 }

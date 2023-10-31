@@ -7,9 +7,7 @@ import (
 	"net"
 	"testing"
 
-	cometdbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/node"
-	cometstore "github.com/cometbft/cometbft/store"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -21,7 +19,6 @@ import (
 	//nolint
 
 	sdkmath "cosmossdk.io/math"
-	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
@@ -110,10 +107,6 @@ func (suite *KeeperTestSuite) SetupTest() {
 	suite.GrpcSetup(suite.T(), mapp)
 }
 
-// func (suite *KeeperTestSuite) TearDownSuite() {
-// 	s.T().Log("tearing down integration test suite")
-// }
-
 func (suite *KeeperTestSuite) Commit() {
 	suite.coordinator.CommitBlock(suite.chainA)
 }
@@ -144,45 +137,15 @@ const bufSize = 1024 * 1024
 var lis *bufconn.Listener
 
 func (suite *KeeperTestSuite) GrpcSetup(t *testing.T, app servertypes.Application) {
-	fmt.Println("--grpcSetup--")
-	fmt.Println("--grpcSetup-0-")
-	// serverCtx := server.GetServerContextFromCmd(cmd)
 	serverCtx := server.NewDefaultContext()
-	fmt.Println("--grpcSetup-1-")
-	// fmt.Println("--grpcSetup-1-", cmd.Context())
-	// cmd.Context().Value(ClientContextKey)
-	// clientCtx, err := client.GetClientQueryContext(cmd)
-	// require.NoError(t, err)
-
-	// clientCtx := client.Context{}.WithHomeDir(home).
-	// 	WithViper("").
-	// 	WithCodec(codec.NewProtoCodec(codectypes.NewInterfaceRegistry())).
-	// 	WithChainID(chainID)
-
 	clientCtx := suite.GetAppContext(suite.chainA).ClientCtx
-
-	fmt.Println("--grpcSetup-2-")
-
 	config, err := config.GetConfig(serverCtx.Viper)
 	require.NoError(t, err)
 
-	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-
 	lis = bufconn.Listen(bufSize)
-
-	// g, ctx := mythosserver.GetCtx(serverCtx, true)
-	// ctx, _ := context.WithCancel(context.Background())
-	// tmNode, _, err := mythosserver.StartCmtNode(ctx, serverCtx.Config, app, serverCtx)
-	// require.NoError(t, err)
-	// defer cleanupFn()
-
-	// grpcServer, err := keeper.NewGRPCServer(serverCtx, clientCtx, config.GRPC, app, nil, nil, nil, nil)
-	grpcServer, err := NewGRPCServer(serverCtx, clientCtx, config.GRPC, app, nil, nil, nil, nil)
-	fmt.Println("--grpcSetup-END-")
+	grpcServer, err := NewGRPCServer(serverCtx, clientCtx, config.GRPC, app, nil)
 	require.NoError(t, err)
 
-	// s := grpc.NewServer()
-	// pb.RegisterGreeterServer(s, &server{})
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
 			log.Fatalf("Server exited with error: %v", err)
@@ -191,12 +154,10 @@ func (suite *KeeperTestSuite) GrpcSetup(t *testing.T, app servertypes.Applicatio
 }
 
 func grpcClient(t *testing.T, ctx context.Context) (types.MsgClient, *grpc.ClientConn) {
-	fmt.Println("--grpcClient--")
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
-	// defer conn.Close()
 	return types.NewMsgClient(conn), conn
 }
 
@@ -210,11 +171,7 @@ func NewGRPCServer(
 	cfg sdkconfig.GRPCConfig,
 	app servertypes.Application,
 	tmNode *node.Node,
-	blockStore *cometstore.BlockStore,
-	stateDB cometdbm.DB,
-	networkDB dbm.DB,
 ) (*grpc.Server, error) {
-	fmt.Println("--NewGRPCServer--")
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = sdkconfig.DefaultGRPCMaxSendMsgSize
@@ -231,11 +188,9 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	err := keeper.RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, blockStore, stateDB, networkDB)
-	fmt.Println("-END-RegisterGRPCServer--", err)
+	err := keeper.RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
-	fmt.Println("-END-NewGRPCServer--")
 	return grpcSrv, nil
 }
