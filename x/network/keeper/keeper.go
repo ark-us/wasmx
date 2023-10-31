@@ -42,12 +42,11 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
-		cdc:        cdc,
-		storeKey:   storeKey,
-		memKey:     memKey,
-		tKey:       tKey,
-		paramstore: ps,
-		// wasmxKeeper: wasmxKeeper.CloneWithStoreKey(tKey, memKey),
+		cdc:         cdc,
+		storeKey:    storeKey,
+		memKey:      memKey,
+		tKey:        tKey,
+		paramstore:  ps,
 		wasmxKeeper: wasmxKeeper,
 		authority:   authority,
 	}

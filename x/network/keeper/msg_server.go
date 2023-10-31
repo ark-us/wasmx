@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"math/big"
 
-	cometdbm "github.com/cometbft/cometbft-db"
 	"github.com/cometbft/cometbft/node"
-	cometstore "github.com/cometbft/cometbft/store"
 
-	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -23,16 +20,13 @@ var NETWORK_HEX_ADDRESS = "0x0000000000000000000000000000000000000028"
 
 type msgServer struct {
 	Keeper
-	DB         dbm.DB
-	ClientCtx  client.Context
-	TmNode     *node.Node
-	BlockStore *cometstore.BlockStore
-	StateDB    cometdbm.DB
+	ClientCtx client.Context
+	TmNode    *node.Node
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServerImpl(keeper Keeper, db dbm.DB, clientCtx client.Context) types.MsgServer {
-	return &msgServer{Keeper: keeper, DB: db, ClientCtx: clientCtx}
+func NewMsgServerImpl(keeper Keeper, clientCtx client.Context) types.MsgServer {
+	return &msgServer{Keeper: keeper, ClientCtx: clientCtx}
 }
 
 var _ types.MsgServer = msgServer{}
@@ -52,12 +46,6 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
 
 	fmt.Println("==Validators.Validators()===", tmNode.EvidencePool().State().Validators.Validators)
-
-	// cometbfttypes.NewValidatorSet()
-
-	m.StateDB.Set([]byte("isProposer"), []byte{1})
-	ispst, err := m.StateDB.Get([]byte("isProposer"))
-	fmt.Println("--get state", ispst, err)
 
 	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
 

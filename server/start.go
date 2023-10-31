@@ -525,25 +525,6 @@ func StartCmtNode(
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
 
-	// fmt.Println("==StartCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
-	// fmt.Println("==StartCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
-
-	// fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
-	// fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
-
-	// blockStoreDB, stateDB, err := initDBs(cfg, cmtcfg.DefaultDBProvider)
-	// if err != nil {
-	// 	return tmNode, cleanupFn, err
-	// }
-	// fmt.Println("===blockStoreDB===", blockStoreDB)
-	// fmt.Println("===stateDB===", stateDB)
-
-	// // database keys
-	// stateKey := []byte("stateKey")
-	// buf, err := stateDB.Get(stateKey)
-	// fmt.Println("===buf===", buf, err)
-	// fmt.Println("===buf===", string(buf))
-
 	if err != nil {
 		return tmNode, cleanupFn, err
 	}
