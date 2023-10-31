@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	cometdbm "github.com/cometbft/cometbft-db"
 	abciserver "github.com/cometbft/cometbft/abci/server"
 	tcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
@@ -23,8 +22,6 @@ import (
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
 	"github.com/cometbft/cometbft/rpc/client/local"
-	"github.com/cometbft/cometbft/store"
-	cometstore "github.com/cometbft/cometbft/store"
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
@@ -194,7 +191,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
 	home := svrCtx.Viper.GetString(flags.FlagHome)
 
-	g, ctx := GetCtx(svrCtx, true)
+	g, ctx := getCtx(svrCtx, true)
 
 	db, err := openDB(home, server.GetAppDBBackend(svrCtx.Viper))
 	if err != nil {
@@ -243,7 +240,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	home := cfg.RootDir
 	logger := svrCtx.Logger
 
-	g, ctx := GetCtx(svrCtx, true)
+	g, ctx := getCtx(svrCtx, true)
 
 	if cpuProfile := svrCtx.Viper.GetString(srvflags.CPUProfile); cpuProfile != "" {
 		f, err := os.Create(cpuProfile)
@@ -311,7 +308,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		config.GRPC.Enable = true
 	} else {
 		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
-		tmNode, cleanupFn, err = StartCmtNode(ctx, cfg, app, svrCtx)
+		tmNode, cleanupFn, err = startCmtNode(ctx, cfg, app, svrCtx)
 		if err != nil {
 			return err
 		}
@@ -489,7 +486,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 }
 
 // TODO: Move nodeKey into being created within the function.
-func StartCmtNode(
+func startCmtNode(
 	ctx context.Context,
 	cfg *cmtcfg.Config,
 	app types.Application,
@@ -640,7 +637,7 @@ func startTelemetry(cfg serverconfig.Config) (*telemetry.Metrics, error) {
 	return telemetry.New(cfg.Telemetry)
 }
 
-func GetCtx(svrCtx *server.Context, block bool) (*errgroup.Group, context.Context) {
+func getCtx(svrCtx *server.Context, block bool) (*errgroup.Group, context.Context) {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 	// listen for quit signals so the calling parent process can gracefully exit
@@ -671,44 +668,3 @@ func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 		0o600,
 	)
 }
-
-// func initDBs(config *cmtcfg.Config, dbProvider cmtcfg.DBProvider) (blockStore *cometstore.BlockStore, stateDB cometdbm.DB, err error) {
-// 	var blockStoreDB cometdbm.DB
-// 	blockStoreDB, err = dbProvider(&cmtcfg.DBContext{ID: "blockstore", Config: config})
-// 	if err != nil {
-// 		return
-// 	}
-// 	blockStore = store.NewBlockStore(blockStoreDB)
-
-// 	stateDB, err = dbProvider(&cmtcfg.DBContext{ID: "state", Config: config})
-// 	if err != nil {
-// 		return
-// 	}
-
-// 	return
-// }
-
-func initDBs(config *cmtcfg.Config, dbProvider cmtcfg.DBProvider) (blockStore *cometstore.BlockStore, stateDB cometdbm.DB, err error) {
-	var blockStoreDB cometdbm.DB
-
-	fmt.Println("-initDBs--", config.DBDir())
-
-	dbType := cometdbm.BackendType(config.DBBackend)
-	blockStoreDB, err = cometdbm.NewDB("blockstore2", dbType, config.DBDir())
-	if err != nil {
-		return
-	}
-	blockStore = store.NewBlockStore(blockStoreDB)
-
-	stateDB, err = cometdbm.NewDB("state2", dbType, config.DBDir())
-	if err != nil {
-		return
-	}
-	return
-}
-
-// func DefaultDBProvider(ctx *DBContext) (dbm.DB, error) {
-// 	dbType := dbm.BackendType(ctx.Config.DBBackend)
-
-// 	return dbm.NewDB(ctx.ID, dbType, ctx.Config.DBDir())
-// }
