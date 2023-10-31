@@ -45,8 +45,8 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	// fmt.Println("---------Ping validators", m.GetValidators(ctx))
 
 	tmNode := m.TmNode
-	fmt.Println("==startCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
-	fmt.Println("==startCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
+	fmt.Println("==Ping=peers===", tmNode.ConsensusReactor().Switch.Peers())
+	fmt.Println("==Ping=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
 
 	fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
 	fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
@@ -86,22 +86,27 @@ func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidat
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	fmt.Println("==SetValidators===")
 
-	tmNode := m.TmNode
-	validators := tmNode.EvidencePool().State().Validators.Validators
-	fmt.Println("=SetValidators=Validators.Validators()===", validators)
+	// tmNode := m.TmNode
+	// validators := tmNode.EvidencePool().State().Validators.Validators
+	// fmt.Println("=SetValidators=Validators.Validators()===", validators)
+
+	validatorAddresses := []sdk.AccAddress{
+		wasmxtypes.AccAddressFromHex("1111111111111111111111111111111111111111"),
+		wasmxtypes.AccAddressFromHex("2222222222222222222222222222222222222222"),
+	}
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
-	datalen := big.NewInt(int64(len(validators))).FillBytes(make([]byte, 32))
+	datalen := big.NewInt(int64(len(validatorAddresses))).FillBytes(make([]byte, 32))
 	bz, err := hex.DecodeString("9300c9260000000000000000000000000000000000000000000000000000000000000020")
 	if err != nil {
 		return nil, err
 	}
 	bz = append(bz, datalen...)
 
-	for _, valid := range validators {
+	for _, valid := range validatorAddresses {
 		fmt.Println("--SetValidators-bz-0-", hex.EncodeToString(bz))
 		bz = append(bz, make([]byte, 12)...)
-		bz = append(bz, valid.Address...)
+		bz = append(bz, valid.Bytes()...)
 		fmt.Println("--SetValidators-bz-1-", hex.EncodeToString(bz))
 	}
 	fmt.Println("--SetValidators-bz--", hex.EncodeToString(bz))
@@ -128,10 +133,6 @@ func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidat
 func (m msgServer) GetValidators(goCtx context.Context, msg *types.MsgGetValidators) (*types.MsgGetValidatorsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	fmt.Println("==GetValidators===")
-
-	tmNode := m.TmNode
-	validators := tmNode.EvidencePool().State().Validators.Validators
-	fmt.Println("=GetValidators=Validators.Validators()===", validators)
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
 	bz, err := hex.DecodeString("b7ab4db5")
