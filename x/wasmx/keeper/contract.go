@@ -335,6 +335,8 @@ func (k Keeper) instantiateWithAddress(
 ) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate_with_address")
 
+	fmt.Println("--instantiateWithAddress-storageType-", storageType)
+
 	// get contact info
 	codeInfo := k.GetCodeInfo(ctx, codeID)
 	if codeInfo == nil {
@@ -463,6 +465,7 @@ func (k Keeper) instantiateInternal(
 
 	// persist instance first
 	contractInfo := types.NewContractInfo(codeID, creator, provenance, initMsg, label)
+	contractInfo.StorageType = storageType
 
 	// check for IBC flag - TODO use codeInfo.Dependencies
 	// report, err := k.wasmvm.AnalyzeWasm(codeInfo.CodeHash)
@@ -560,7 +563,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 		}
 		return nil, err
 	}
-	fmt.Println("---------wasmx execute0")
+	fmt.Println("---------wasmx execute0 StorageType", contractInfo.StorageType)
 	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
 		return nil, err
 	}
@@ -613,7 +616,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	fmt.Println("---------wasmx execute5")
+	fmt.Println("---------wasmx execute5", contractInfo.GetStorageType())
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps)
 	fmt.Println("---------wasmx execute6", res, execErr)
 	k.consumeRuntimeGas(ctx, gasUsed)

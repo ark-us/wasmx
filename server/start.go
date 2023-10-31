@@ -194,7 +194,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
 	home := svrCtx.Viper.GetString(flags.FlagHome)
 
-	g, ctx := getCtx(svrCtx, true)
+	g, ctx := GetCtx(svrCtx, true)
 
 	db, err := openDB(home, server.GetAppDBBackend(svrCtx.Viper))
 	if err != nil {
@@ -243,7 +243,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	home := cfg.RootDir
 	logger := svrCtx.Logger
 
-	g, ctx := getCtx(svrCtx, true)
+	g, ctx := GetCtx(svrCtx, true)
 
 	if cpuProfile := svrCtx.Viper.GetString(srvflags.CPUProfile); cpuProfile != "" {
 		f, err := os.Create(cpuProfile)
@@ -311,7 +311,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		config.GRPC.Enable = true
 	} else {
 		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
-		tmNode, cleanupFn, err = startCmtNode(ctx, cfg, app, svrCtx)
+		tmNode, cleanupFn, err = StartCmtNode(ctx, cfg, app, svrCtx)
 		if err != nil {
 			return err
 		}
@@ -362,7 +362,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		WithChainID(genDoc.ChainID)
 
 	// network dbs
-	// startCmtNode(ctx, cfg, app, svrCtx)
+	// StartCmtNode(ctx, cfg, app, svrCtx)
 	blockStoreDB, stateDB, err := initDBs(cfg, cmtcfg.DefaultDBProvider)
 	if err != nil {
 		return err
@@ -501,7 +501,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 }
 
 // TODO: Move nodeKey into being created within the function.
-func startCmtNode(
+func StartCmtNode(
 	ctx context.Context,
 	cfg *cmtcfg.Config,
 	app types.Application,
@@ -525,8 +525,8 @@ func startCmtNode(
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
 
-	// fmt.Println("==startCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
-	// fmt.Println("==startCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
+	// fmt.Println("==StartCmtNode=peers===", tmNode.ConsensusReactor().Switch.Peers())
+	// fmt.Println("==StartCmtNode=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
 
 	// fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
 	// fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
@@ -671,7 +671,7 @@ func startTelemetry(cfg serverconfig.Config) (*telemetry.Metrics, error) {
 	return telemetry.New(cfg.Telemetry)
 }
 
-func getCtx(svrCtx *server.Context, block bool) (*errgroup.Group, context.Context) {
+func GetCtx(svrCtx *server.Context, block bool) (*errgroup.Group, context.Context) {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 	// listen for quit signals so the calling parent process can gracefully exit

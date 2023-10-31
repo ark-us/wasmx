@@ -47,7 +47,7 @@ func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params [
 	}
 	fmt.Println("--storageLoad-keybz-", hex.EncodeToString(keybz))
 	data := ctx.ContractStore.Get(keybz)
-	fmt.Println("--storageLoad-data-", hex.EncodeToString(data))
+	fmt.Println("--storageLoad-data-", hex.EncodeToString(data), ctx.ContractStore.GetStoreType())
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
@@ -70,6 +70,7 @@ func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params 
 		return nil, wasmedge.Result_Fail
 	}
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "ewasm")
+	fmt.Println("--storageStore-", hex.EncodeToString(keybz), hex.EncodeToString(valuebz), ctx.ContractStore.GetStoreType())
 	ctx.ContractStore.Set(keybz, valuebz)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -144,7 +145,7 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := readAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
-	fmt.Println("--callDataCopy-part-", hex.EncodeToString(part))
+	// fmt.Println("--callDataCopy-part-", hex.EncodeToString(part))
 	err := writeMem(callframe, part, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail

@@ -297,7 +297,7 @@ func ExecuteWasm(
 	if err != nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not decode wasm execution message")
 	}
-	fmt.Println("---------wasmx ExecuteWasm", ethMsg.Data)
+	fmt.Println("---------wasmx ExecuteWasm", ethMsg.Data, storageType, kvstore)
 
 	var cleanups []func()
 	conf := wasmedge.NewConfigure()

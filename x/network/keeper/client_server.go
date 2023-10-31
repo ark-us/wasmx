@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -18,8 +19,11 @@ import (
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
 	errorsmod "cosmossdk.io/errors"
+	"cosmossdk.io/log"
+
 	// store "cosmossdk.io/store"
 	// storemetrics "cosmossdk.io/store/metrics"
+	"cosmossdk.io/store/rootmulti"
 	storetypes "cosmossdk.io/store/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -45,7 +49,10 @@ import (
 	cometstore "github.com/cometbft/cometbft/store"
 
 	"mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
+
+var NETWORK_GAS_LIMIT = uint64(1000000000)
 
 // Config is an gRPC server configuration.
 //
@@ -57,9 +64,11 @@ type Config struct {
 type MythosApp interface {
 	GetNetworkKeeper() Keeper
 	GetDB() dbm.DB
+	GetTKey(storeKey string) *storetypes.TransientStoreKey
 }
 
 type BaseApp interface {
+	Name() string
 	CreateQueryContext(height int64, prove bool) (sdk.Context, error)
 	CommitMultiStore() storetypes.CommitMultiStore
 	GetContextForCheckTx(txBytes []byte) sdk.Context
@@ -90,6 +99,7 @@ func NewGRPCServer(
 	stateDB cometdbm.DB,
 	networkDB dbm.DB,
 ) (*grpc.Server, error) {
+	fmt.Println("--NewGRPCServer--")
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = config.DefaultGRPCMaxSendMsgSize
@@ -108,6 +118,7 @@ func NewGRPCServer(
 
 	// app.RegisterGRPCServer(grpcSrv)
 	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, blockStore, stateDB, networkDB)
+	fmt.Println("-END-RegisterGRPCServer--", err)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
@@ -137,11 +148,12 @@ func NewGRPCServer(
 	if err != nil {
 		return nil, fmt.Errorf("failed to register reflection service: %w", err)
 	}
+	fmt.Println("-reflection registered--", err)
 
 	// Reflection allows external clients to see what services and methods
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
-
+	fmt.Println("-END-NewGRPCServer--")
 	return grpcSrv, nil
 }
 
@@ -161,12 +173,16 @@ func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
 	return cmtnet.Connect(addr)
 }
 
+var tstoreprefix = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40}
+var bzkey = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+
 // RegisterGRPCServer registers gRPC services directly with the gRPC server.
 func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server,
 	blockStore *cometstore.BlockStore,
 	stateDB cometdbm.DB,
 	networkDB dbm.DB,
 ) error {
+	fmt.Println("-----RegisterGRPCServer----")
 	app, ok := sapp.(BaseApp)
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
@@ -175,6 +191,13 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}
+
+	fmt.Println("-----storage before----")
+	bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+	tstorer := app.CommitMultiStore().GetKVStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+	fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+	bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+	fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
 	// Define an interceptor for all gRPC queries: this interceptor will create
 	// a new sdk.Context, and pass it into the query handler.
@@ -199,6 +222,13 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 			}
 		}
 
+		fmt.Println("-----storage before----")
+		bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		tstorer := app.CommitMultiStore().GetKVStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+
 		// app.CommitMultiStore().CacheMultiStore()
 		// func (*BaseApp).GetContextForCheckTx(txBytes []byte) sdk.Context
 		// func (*BaseApp).GetContextForFinalizeBlock(txBytes []byte) sdk.Context
@@ -210,11 +240,16 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 		// TODO - use this for grpc queries
 		// Create the sdk.Context. Passing false as 2nd arg, as we can't
 		// actually support proofs with gRPC right now.
-		sdkCtx, err := app.CreateQueryContext(height, false)
+		// sdkCtx_, err := app.CreateQueryContext(height, false)
+		sdkCtx_, ctxcachems, err := CreateQueryContext(app, svrCtx.Logger, height, false)
+		// sdkCtx_ := app.GetContextForFinalizeBlock(make([]byte, 0))
 		if err != nil {
 			return nil, err
 		}
-		// sdkCtx, _ := sdkCtx_.CacheContext()
+		// TODO should not commit this; only the transient store
+		sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+
+		// sdkCtx.MultiStore().AddListeners([]types.StoreKey{testStoreKey1})
 
 		// newms := store.NewCommitMultiStore(mythosapp.GetDB(), svrCtx.Logger, storemetrics.NewNoOpMetrics())
 		// // newms := store.NewCommitMultiStore(networkDB, svrCtx.Logger, storemetrics.NewNoOpMetrics())
@@ -246,9 +281,60 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 			return hresp, err
 		}
 		// commit changes
-		app.CommitMultiStore().Commit()
+		// app.CommitMultiStore().Commit()
 
 		// newms.AddListeners()
+		// tstore := newms.GetCommitStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+
+		fmt.Println("----temp state")
+		fmt.Println("--ContractStore--storageKey--", wasmxtypes.TStoreKey, mythosapp.GetTKey(wasmxtypes.TStoreKey).Name())
+
+		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		tstorer = sdkCtx.TransientStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+
+		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		tstorer = sdkCtx.KVStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+
+		commitCacheCtx()
+
+		// we just committed to the query context
+		fmt.Println("----query context state")
+		tstore0 := sdkCtx_.MultiStore().GetKVStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstore0.Get(append(tstoreprefix, bz...)))
+		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstore0.Get(append(tstoreprefix, bz...)))
+
+		// ms := sdkCtx.MultiStore()
+		// cms := (ms).(sdk.CacheMultiStore)
+
+		// qms := sdkCtx.MultiStore()
+		// cms := qms.(storetypes.CommitMultiStore)
+		// cms.Commit()
+
+		// tstore := app.CommitMultiStore().GetCommitStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		// tstore.Commit()
+
+		// commit original context
+		origtstore := ctxcachems.GetStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		// origtstore.Write()
+		// origtstore.CacheWrap().Write()
+		origtstore.(storetypes.CacheWrap).Write()
+
+		fmt.Println("----app state")
+		tstorer = app.CommitMultiStore().GetKVStore(mythosapp.GetTKey(wasmxtypes.TStoreKey))
+		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+
+		// sdkCtx_.TransientStore(mythosapp.GetTKey(wasmxtypes.TStoreKey)).
 
 		// newms.Commit()
 
@@ -256,9 +342,9 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	}
 
 	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), DB: mythosapp.GetDB(), ClientCtx: clientCtx, TmNode: tmNode, BlockStore: blockStore, StateDB: stateDB}
-	fmt.Println("---before RegisterMsgServer")
+	// fmt.Println("---before RegisterMsgServer")
 	// types.RegisterMsgServer(server, handler)
-	fmt.Println("---after RegisterMsgServer")
+	fmt.Println("---pre handler registration")
 
 	desc := types.Network_Msg_serviceDesc
 	newMethods := make([]grpc.MethodDesc, len(desc.Methods))
@@ -284,6 +370,7 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	}
 
 	server.RegisterService(newDesc, handler)
+	fmt.Println("---END RegisterMsgServer")
 	return nil
 }
 
@@ -293,4 +380,74 @@ func checkNegativeHeight(height int64) error {
 	}
 
 	return nil
+}
+
+// createQueryContext creates a new sdk.Context for a query, taking as args
+// the block height and whether the query needs a proof or not.
+func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool) (sdk.Context, storetypes.CacheMultiStore, error) {
+	fmt.Println("---CreateQueryContext--START")
+	if err := checkNegativeHeight(height); err != nil {
+		return sdk.Context{}, nil, err
+	}
+
+	cms := app.CommitMultiStore()
+	qms := cms.(storetypes.MultiStore)
+
+	lastBlockHeight := qms.LatestVersion()
+	if lastBlockHeight == 0 {
+		return sdk.Context{}, nil, errorsmod.Wrapf(sdkerrors.ErrInvalidHeight, "%s is not ready; please wait for first block", app.Name())
+	}
+
+	if height > lastBlockHeight {
+		return sdk.Context{}, nil,
+			errorsmod.Wrap(
+				sdkerrors.ErrInvalidHeight,
+				"cannot query with height in the future; please provide a valid height",
+			)
+	}
+
+	// when a client did not provide a query height, manually inject the latest
+	if height == 0 {
+		height = lastBlockHeight
+	}
+
+	if height <= 1 && prove {
+		return sdk.Context{}, nil,
+			errorsmod.Wrap(
+				sdkerrors.ErrInvalidRequest,
+				"cannot query with proof when height <= 1; please provide a valid height",
+			)
+	}
+
+	cacheMS, err := qms.CacheMultiStoreWithVersion(height)
+	if err != nil {
+		return sdk.Context{}, nil,
+			errorsmod.Wrapf(
+				sdkerrors.ErrInvalidRequest,
+				"failed to load state at height %d; %s (latest height: %d)", height, err, lastBlockHeight,
+			)
+	}
+
+	tmpctx, err := app.CreateQueryContext(height, false)
+	if err != nil {
+		return sdk.Context{}, nil, err
+	}
+
+	// branch the commit multi-store for safety
+	ctx := sdk.NewContext(cacheMS, tmpctx.BlockHeader(), true, logger).
+		WithMinGasPrices(nil).
+		WithBlockHeight(height).
+		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
+
+	if height != lastBlockHeight {
+		rms, ok := app.CommitMultiStore().(*rootmulti.Store)
+		if ok {
+			cInfo, err := rms.GetCommitInfo(height)
+			if cInfo != nil && err == nil {
+				ctx = ctx.WithBlockTime(cInfo.Timestamp)
+			}
+		}
+	}
+	fmt.Println("---CreateQueryContext--END")
+	return ctx, cacheMS, nil
 }
