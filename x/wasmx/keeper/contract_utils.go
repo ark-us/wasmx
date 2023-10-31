@@ -50,6 +50,8 @@ func (k Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorage
 	storageKey := k.storeKey
 	if storageType == types.ContractStorageType_Transient {
 		storageKey = k.tKey
+	} else if storageType == types.ContractStorageType_Memory {
+		storageKey = k.memKey
 	}
 	fmt.Println("--ContractStore--storageKey--", storageKey.Name(), storageKey.String())
 	return prefix.NewStore(ctx.KVStore(storageKey), prefixStoreKey)
