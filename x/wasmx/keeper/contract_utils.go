@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strings"
 
 	sdkerr "cosmossdk.io/errors"
@@ -50,6 +51,7 @@ func (k Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorage
 	if storageType == types.ContractStorageType_Transient {
 		storageKey = k.tKey
 	}
+	fmt.Println("--ContractStore--storageKey--", storageKey.Name(), storageKey.String())
 	return prefix.NewStore(ctx.KVStore(storageKey), prefixStoreKey)
 }
 
