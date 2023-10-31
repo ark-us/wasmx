@@ -361,23 +361,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		WithHomeDir(home).
 		WithChainID(genDoc.ChainID)
 
-	// network dbs
-	// StartCmtNode(ctx, cfg, app, svrCtx)
-	blockStoreDB, stateDB, err := initDBs(cfg, cmtcfg.DefaultDBProvider)
-	if err != nil {
-		return err
-	}
-
-	dbnetwork, err := networkgrpc.OpenDBNetwork(home, server.GetAppDBBackend(svrCtx.Viper))
-	if err != nil {
-		return err
-	}
-
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
-		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app, tmNode, blockStoreDB, stateDB, dbnetwork)
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app, tmNode)
 		return err
 	})
 	// ----end network
