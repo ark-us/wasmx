@@ -19,6 +19,8 @@
     - [Query](#mythos.network.v1.Query)
   
 - [mythos/network/v1/tx.proto](#mythos/network/v1/tx.proto)
+    - [MsgGetCurrentNode](#mythos.network.v1.MsgGetCurrentNode)
+    - [MsgGetCurrentNodeResponse](#mythos.network.v1.MsgGetCurrentNodeResponse)
     - [MsgGetValidators](#mythos.network.v1.MsgGetValidators)
     - [MsgGetValidatorsResponse](#mythos.network.v1.MsgGetValidatorsResponse)
     - [MsgIsProposer](#mythos.network.v1.MsgIsProposer)
@@ -27,6 +29,8 @@
     - [MsgMakeProposalResponse](#mythos.network.v1.MsgMakeProposalResponse)
     - [MsgPing](#mythos.network.v1.MsgPing)
     - [MsgPingResponse](#mythos.network.v1.MsgPingResponse)
+    - [MsgSetCurrentNode](#mythos.network.v1.MsgSetCurrentNode)
+    - [MsgSetCurrentNodeResponse](#mythos.network.v1.MsgSetCurrentNodeResponse)
     - [MsgSetValidators](#mythos.network.v1.MsgSetValidators)
     - [MsgSetValidatorsResponse](#mythos.network.v1.MsgSetValidatorsResponse)
   
@@ -177,6 +181,31 @@ Query provides defines the gRPC querier service
 
 
 
+<a name="mythos.network.v1.MsgGetCurrentNode"></a>
+
+### MsgGetCurrentNode
+MsgGetCurrentNode
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgGetCurrentNodeResponse"></a>
+
+### MsgGetCurrentNodeResponse
+MsgGetCurrentNodeResponse
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `current_node` | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="mythos.network.v1.MsgGetValidators"></a>
 
 ### MsgGetValidators
@@ -287,6 +316,26 @@ MsgPingResponse
 
 
 
+<a name="mythos.network.v1.MsgSetCurrentNode"></a>
+
+### MsgSetCurrentNode
+MsgSetCurrentNode
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgSetCurrentNodeResponse"></a>
+
+### MsgSetCurrentNodeResponse
+MsgSetCurrentNodeResponse
+
+
+
+
+
+
 <a name="mythos.network.v1.MsgSetValidators"></a>
 
 ### MsgSetValidators
@@ -323,6 +372,8 @@ Msg defines the grpc server
 | `Ping` | [MsgPing](#mythos.network.v1.MsgPing) | [MsgPingResponse](#mythos.network.v1.MsgPingResponse) | Ping | |
 | `MakeProposal` | [MsgMakeProposal](#mythos.network.v1.MsgMakeProposal) | [MsgMakeProposalResponse](#mythos.network.v1.MsgMakeProposalResponse) | MakeProposal | |
 | `IsProposer` | [MsgIsProposer](#mythos.network.v1.MsgIsProposer) | [MsgIsProposerResponse](#mythos.network.v1.MsgIsProposerResponse) | IsProposer // TODO this should be a query | |
+| `SetCurrentNode` | [MsgSetCurrentNode](#mythos.network.v1.MsgSetCurrentNode) | [MsgSetCurrentNodeResponse](#mythos.network.v1.MsgSetCurrentNodeResponse) | SetCurrentNode // TODO | |
+| `GetCurrentNode` | [MsgGetCurrentNode](#mythos.network.v1.MsgGetCurrentNode) | [MsgGetCurrentNodeResponse](#mythos.network.v1.MsgGetCurrentNodeResponse) | GetCurrentNode // TODO | |
 | `SetValidators` | [MsgSetValidators](#mythos.network.v1.MsgSetValidators) | [MsgSetValidatorsResponse](#mythos.network.v1.MsgSetValidatorsResponse) | SetValidators // TODO remove | |
 | `GetValidators` | [MsgGetValidators](#mythos.network.v1.MsgGetValidators) | [MsgGetValidatorsResponse](#mythos.network.v1.MsgGetValidatorsResponse) | GetValidators // TODO remove | |
 

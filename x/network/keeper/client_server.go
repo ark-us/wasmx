@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -132,8 +131,8 @@ func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
 	return cmtnet.Connect(addr)
 }
 
-var tstoreprefix = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40}
-var bzkey = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+// var tstoreprefix = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40}
+// var bzkey = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 // RegisterGRPCServer registers gRPC services directly with the gRPC server.
 func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server) error {
@@ -169,12 +168,12 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 			}
 		}
 
-		fmt.Println("-----storage before-execution---")
-		bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-		tstorer := app.CommitMultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
-		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+		// fmt.Println("-----storage before-execution---")
+		// bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		// tstorer := app.CommitMultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+		// fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
 		// TODO - use this for grpc queries
 		sdkCtx_, ctxcachems, err := CreateQueryContext(app, svrCtx.Logger, height, false)
@@ -202,41 +201,41 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 		}
 		// commit changes
 
-		fmt.Println("----temp state")
-		fmt.Println("--ContractStore--storageKey--", wasmxtypes.MemStoreKey, mythosapp.GetMKey(wasmxtypes.MemStoreKey).Name())
+		// fmt.Println("----temp state")
+		// fmt.Println("--ContractStore--storageKey--", wasmxtypes.MemStoreKey, mythosapp.GetMKey(wasmxtypes.MemStoreKey).Name())
 
-		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-		tstorer = sdkCtx.TransientStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
-		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		// tstorer = sdkCtx.TransientStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+		// fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
-		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-		tstorer = sdkCtx.KVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
-		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		// tstorer = sdkCtx.KVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+		// fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
 		commitCacheCtx()
 
 		// we just committed to the query context
-		fmt.Println("----query context state")
-		tstore0 := sdkCtx_.MultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstore0.Get(append(tstoreprefix, bz...)))
-		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstore0.Get(append(tstoreprefix, bz...)))
+		// fmt.Println("----query context state")
+		// tstore0 := sdkCtx_.MultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+		// bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		// fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstore0.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstore0.Get(append(tstoreprefix, bz...)))
 
 		// commit original context
 		origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
 		origtstore.(storetypes.CacheWrap).Write()
 
-		fmt.Println("----app state")
-		tstorer = app.CommitMultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-		fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
-		bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-		fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
+		// fmt.Println("----app state")
+		// tstorer = app.CommitMultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+		// bz, _ = hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
+		// fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
+		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
+		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
 		return hresp, nil
 	}
