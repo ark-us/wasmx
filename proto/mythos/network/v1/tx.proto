@@ -22,6 +22,12 @@ service Msg {
     // IsProposer // TODO this should be a query
     rpc IsProposer(MsgIsProposer) returns (MsgIsProposerResponse);
 
+    // SetCurrentNode // TODO
+    rpc SetCurrentNode(MsgSetCurrentNode) returns (MsgSetCurrentNodeResponse);
+
+    // GetCurrentNode // TODO
+    rpc GetCurrentNode(MsgGetCurrentNode) returns (MsgGetCurrentNodeResponse);
+
     // SetValidators // TODO remove
     rpc SetValidators(MsgSetValidators) returns (MsgSetValidatorsResponse);
 
@@ -70,4 +76,18 @@ message MsgIsProposer {}
 message MsgIsProposerResponse {
   // params defines the parameters of the module.
   bool is_proposer = 1;
+}
+
+// MsgSetCurrentNode
+message MsgSetCurrentNode {}
+
+// MsgSetCurrentNodeResponse
+message MsgSetCurrentNodeResponse {}
+
+// MsgGetCurrentNode
+message MsgGetCurrentNode {}
+
+// MsgGetCurrentNodeResponse
+message MsgGetCurrentNodeResponse {
+    string current_node = 1;
 }

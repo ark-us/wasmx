@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/cometbft/cometbft/node"
+	cmttypes "github.com/cometbft/cometbft/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -72,16 +73,25 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 
 func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidators) (*types.MsgSetValidatorsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	fmt.Println("==SetValidators===")
+	// fmt.Println("==SetValidators===")
 
-	// tmNode := m.TmNode
-	// validators := tmNode.EvidencePool().State().Validators.Validators
-	// fmt.Println("=SetValidators=Validators.Validators()===", validators)
+	tmNode := m.TmNode
+	var validators []*cmttypes.Validator
+	validators = tmNode.EvidencePool().State().Validators.Validators
+	fmt.Println("=SetValidators=Validators.Validators()===", len(validators), validators)
 
-	validatorAddresses := []sdk.AccAddress{
-		wasmxtypes.AccAddressFromHex("1111111111111111111111111111111111111111"),
-		wasmxtypes.AccAddressFromHex("2222222222222222222222222222222222222222"),
+	validatorAddresses := make([]sdk.AccAddress, len(validators))
+	for i, valid := range validators {
+		fmt.Println("---validatorAddresses---", i, valid)
+		validatorAddresses[i] = sdk.AccAddress(valid.Address)
+		fmt.Println("---validatorAddresses---", i, validatorAddresses[i].String(), hex.EncodeToString(validatorAddresses[i]))
 	}
+	fmt.Println("---validatorAddresses---", validatorAddresses)
+
+	// validatorAddresses := []sdk.AccAddress{
+	// 	wasmxtypes.AccAddressFromHex("1111111111111111111111111111111111111111"),
+	// 	wasmxtypes.AccAddressFromHex("2222222222222222222222222222222222222222"),
+	// }
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
 	datalen := big.NewInt(int64(len(validatorAddresses))).FillBytes(make([]byte, 32))
@@ -92,25 +102,25 @@ func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidat
 	bz = append(bz, datalen...)
 
 	for _, valid := range validatorAddresses {
-		fmt.Println("--SetValidators-bz-0-", hex.EncodeToString(bz))
+		// fmt.Println("--SetValidators-bz-0-", hex.EncodeToString(bz))
 		bz = append(bz, make([]byte, 12)...)
 		bz = append(bz, valid.Bytes()...)
-		fmt.Println("--SetValidators-bz-1-", hex.EncodeToString(bz))
+		// fmt.Println("--SetValidators-bz-1-", hex.EncodeToString(bz))
 	}
-	fmt.Println("--SetValidators-bz--", hex.EncodeToString(bz))
+	// fmt.Println("--SetValidators-bz--", hex.EncodeToString(bz))
 
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--SetValidators-execmsgbz--", hex.EncodeToString(execmsgbz))
+	// fmt.Println("--SetValidators-execmsgbz--", hex.EncodeToString(execmsgbz))
 	// TODO have authority network + governance for these contracts
 	// TODO sender must be network module
 	// sender := sdk.AccAddress("network") // must have 20 bytes
 	sender := contractAddress
-	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, sender, execmsgbz, nil, nil)
-	fmt.Println("-SetValidators-resp---", resp, err)
+	_, err = m.wasmxKeeper.Execute(ctx, contractAddress, sender, execmsgbz, nil, nil)
+	// fmt.Println("-SetValidators-resp---", resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +130,7 @@ func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidat
 
 func (m msgServer) GetValidators(goCtx context.Context, msg *types.MsgGetValidators) (*types.MsgGetValidatorsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	fmt.Println("==GetValidators===")
+	// fmt.Println("==GetValidators===")
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
 	bz, err := hex.DecodeString("b7ab4db5")
@@ -133,13 +143,13 @@ func (m msgServer) GetValidators(goCtx context.Context, msg *types.MsgGetValidat
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--GetValidators-execmsgbz--", hex.EncodeToString(execmsgbz))
+	// fmt.Println("--GetValidators-execmsgbz--", hex.EncodeToString(execmsgbz))
 	// TODO have authority network + governance for these contracts
 	// TODO sender must be network module
 	// sender := sdk.AccAddress("network") // must have 20 bytes
 	sender := contractAddress
 	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, sender, execmsgbz, nil, nil)
-	fmt.Println("-GetValidators-resp---", resp, err)
+	// fmt.Println("-GetValidators-resp---", resp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +183,7 @@ func (m msgServer) MakeProposal(goCtx context.Context, msg *types.MsgMakeProposa
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--network-bz--", bz)
+	fmt.Println("--network-bz--", hex.EncodeToString(bz))
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
@@ -226,4 +236,52 @@ func (m msgServer) IsProposer(goCtx context.Context, msg *types.MsgIsProposer) (
 	return &types.MsgIsProposerResponse{
 		IsProposer: hex.EncodeToString(resp) == "0000000000000000000000000000000000000001",
 	}, nil
+}
+
+func (m msgServer) SetCurrentNode(goCtx context.Context, msg *types.MsgSetCurrentNode) (*types.MsgSetCurrentNodeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	tmNode := m.TmNode
+	currentValidator, err := tmNode.PrivValidator().GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+
+	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	bz, err := hex.DecodeString("9a25709f000000000000000000000000" + hex.EncodeToString(currentValidator.Address()))
+	if err != nil {
+		return nil, err
+	}
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+	_, err = m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgSetCurrentNodeResponse{}, nil
+}
+
+func (m msgServer) GetCurrentNode(goCtx context.Context, msg *types.MsgGetCurrentNode) (*types.MsgGetCurrentNodeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	bz, err := hex.DecodeString("14f26bc3")
+	if err != nil {
+		return nil, err
+	}
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgGetCurrentNodeResponse{CurrentNode: hex.EncodeToString(resp)}, nil
 }
