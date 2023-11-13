@@ -31,6 +31,19 @@ func getCallData(context interface{}, callframe *wasmedge.CallingFrame, params [
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxGetCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addr := types.PaddLeftTo32(ctx.Env.CurrentCall.Sender.Bytes())
+	ptr, err := allocateWriteMem(ctx, callframe, addr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 // storageStore(key: ArrayBuffer, value: ArrayBuffer)
 func wasmxStorageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	key, err := readMemFromPtr(callframe, params[0])
@@ -189,6 +202,7 @@ func BuildWasmxEnv1(context *Context) *wasmedge.Module {
 	)
 
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
+	env.AddFunction("getCaller", wasmedge.NewFunction(functype__i32, wasmxGetCaller, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
