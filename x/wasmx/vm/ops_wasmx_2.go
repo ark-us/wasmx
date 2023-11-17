@@ -1,7 +1,9 @@
 package vm
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -9,6 +11,8 @@ import (
 
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
+
+	networktypes "mythos/v1/x/network/types"
 )
 
 // getEnv(): ArrayBuffer
@@ -261,6 +265,46 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 	return returns, wasmedge.Result_Success
 }
 
+type GrpcRequest struct {
+	Address string `json:"address"`
+	Data    string `json:"data"` // should be []byte (base64 encoded)
+}
+
+func wasmxGrpcRequest(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+	databz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var data GrpcRequest
+	err = json.Unmarshal(databz, &data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	databzbz, err := hex.DecodeString(data.Data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	msg := &networktypes.MsgGrpcRequest{
+		Address: data.Address,
+		Data:    databzbz,
+	}
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO evs?
+	fmt.Println("--evs", evs)
+	ptr, err := allocateWriteMem(ctx, callframe, res)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
@@ -296,6 +340,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32_i32, wasmxCreateAccount, context, 0))
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
+
+	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
 
 	return env
 }
