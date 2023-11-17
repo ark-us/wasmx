@@ -14,6 +14,9 @@ service Msg {
     option (cosmos.msg.v1.service) = true;
 
     // Ping
+    rpc GrpcRequest(MsgGrpcRequest) returns (MsgGrpcRequestResponse);
+
+    // Ping
     rpc Ping(MsgPing) returns (MsgPingResponse);
 
     // MakeProposal
@@ -33,6 +36,16 @@ service Msg {
 
     // GetValidators // TODO remove
     rpc GetValidators(MsgGetValidators) returns (MsgGetValidatorsResponse);
+}
+
+message MsgGrpcRequest {
+    string address = 1;
+	bytes data = 2;
+    string encoding = 3; // evm, json, protobuf // ?
+}
+
+message MsgGrpcRequestResponse {
+	bytes data = 1;
 }
 
 // MsgPing

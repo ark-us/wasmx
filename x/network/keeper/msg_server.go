@@ -32,7 +32,48 @@ func NewMsgServerImpl(keeper Keeper, clientCtx client.Context) types.MsgServer {
 
 var _ types.MsgServer = msgServer{}
 
+func (m msgServer) GrpcRequest(goCtx context.Context, msg *types.MsgGrpcRequest) (*types.MsgGrpcRequestResponse, error) {
+	fmt.Println("---------GrpcRequest", msg.Data, goCtx)
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	ip := msg.Address
+	client := StartGRPCClient(ip)
+	res, err := client.GrpcRequest(ctx, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgGrpcRequestResponse{
+		Data: res.Data,
+	}, nil
+}
+
 func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
+	fmt.Println("---------Ping", msg.Data, goCtx)
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	data := []byte(fmt.Sprintf(`{run: {id: 0, event: {type: "sendRequest", params: [{key: "address", value: "%s"}, {key: "data", value: "hello"}]}`, msg.Data))
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("-network-resp---", string(resp))
+
+	response := msg.Data + hex.EncodeToString(resp)
+
+	return &types.MsgPingResponse{
+		Data: response,
+	}, nil
+}
+
+func (m msgServer) Ping2(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
 	fmt.Println("---------Ping", msg.Data, goCtx)
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	fmt.Println("---------Ping ctx", ctx)
@@ -51,6 +92,9 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
 
 	bz, err := hex.DecodeString("0000000000000000000000000000000000000005")
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println("--network-bz--", bz)
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
 	execmsgbz, err := json.Marshal(execmsg)

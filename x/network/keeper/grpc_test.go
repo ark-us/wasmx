@@ -52,3 +52,15 @@ func (suite *KeeperTestSuite) TestSetValidators2() {
 	log.Printf("Response: %+v", resp2)
 	conn.Close()
 }
+
+func (suite *KeeperTestSuite) TestStateMachineGrpc() {
+	ctx := context.Background()
+	client, conn := grpcClient(suite.T(), ctx)
+	// client.Start -> contract.run(sendRequest) -> log current state
+	// query - receive msg -> contract.run(receiveRequest) -> log current state
+	//
+	resp, err := client.Ping(ctx, &types.MsgPing{Data: "localhost:8090"})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+	conn.Close()
+}
