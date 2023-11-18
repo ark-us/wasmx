@@ -9,6 +9,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -58,6 +60,8 @@ var (
 	flagOutputDir         = "output-dir"
 	flagNodeDaemonHome    = "node-daemon-home"
 	flagStartingIPAddress = "starting-ip-address"
+	flagSameMachine       = "same-machine"
+	flagNoCors            = "nocors"
 	flagEnableLogging     = "enable-logging"
 	flagRPCAddress        = "rpc.address"
 	flagAPIAddress        = "api.address"
@@ -74,6 +78,8 @@ type initArgs struct {
 	numValidators     int
 	outputDir         string
 	startingIPAddress string
+	sameMachine       bool
+	noCors            bool
 }
 
 type startArgs struct {
@@ -153,6 +159,8 @@ Example:
 			args.nodeDirPrefix, _ = cmd.Flags().GetString(flagNodeDirPrefix)
 			args.nodeDaemonHome, _ = cmd.Flags().GetString(flagNodeDaemonHome)
 			args.startingIPAddress, _ = cmd.Flags().GetString(flagStartingIPAddress)
+			args.sameMachine, _ = cmd.Flags().GetBool(flagSameMachine)
+			args.noCors, _ = cmd.Flags().GetBool(flagNoCors)
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 
@@ -164,6 +172,8 @@ Example:
 	cmd.Flags().String(flagNodeDirPrefix, "node", "Prefix the directory name for each node with (node results in node0, node1, ...)")
 	cmd.Flags().String(flagNodeDaemonHome, "mythosd", "Home directory of the node's daemon configuration")
 	cmd.Flags().String(flagStartingIPAddress, "192.168.0.1", "Starting IP address (192.168.0.1 results in persistent peers list ID0@192.168.0.1:46656, ID1@192.168.0.2:46656, ...)")
+	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
+	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
 
 	return cmd
@@ -265,6 +275,9 @@ func initTestnetFiles(
 
 		nodeConfig.SetRoot(nodeDir)
 		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
+		if args.noCors {
+			nodeConfig.RPC.CORSAllowedOrigins = []string{"*"}
+		}
 
 		if err := os.MkdirAll(filepath.Join(nodeDir, "config"), nodeDirPerm); err != nil {
 			_ = os.RemoveAll(args.outputDir)
@@ -286,6 +299,9 @@ func initTestnetFiles(
 		}
 
 		memo := fmt.Sprintf("%s@%s:26656", nodeIDs[i], ip)
+		if args.sameMachine {
+			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(26756+i))
+		}
 		genFiles = append(genFiles, nodeConfig.GenesisFile())
 
 		kb, err := keyring.New(sdk.KeyringServiceName(), args.keyringBackend, nodeDir, inBuf, clientCtx.Codec)
@@ -371,6 +387,17 @@ func initTestnetFiles(
 
 		customAppTemplate, customAppConfig := config.AppConfig()
 		srvconfig.SetConfigTemplate(customAppTemplate)
+
+		conf := customAppConfig.(config.Config)
+		if args.sameMachine {
+			appConfig.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
+			appConfig.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
+			conf.JsonRpc.Address = strings.Replace(conf.JsonRpc.Address, "8545", strconv.Itoa(8555+i), 1)
+			conf.JsonRpc.WsAddress = strings.Replace(conf.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
+		}
+		if args.noCors {
+			appConfig.API.EnableUnsafeCORS = true
+		}
 		if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig()); err != nil {
 			return err
 		}
@@ -383,7 +410,7 @@ func initTestnetFiles(
 
 	err := collectGenFiles(
 		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
-		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec,
+		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine,
 	)
 	if err != nil {
 		return err
@@ -470,7 +497,7 @@ func initGenFiles(
 func collectGenFiles(
 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec,
+	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool,
 ) error {
 	var appState json.RawMessage
 	genTime := tmtime.Now()
@@ -480,6 +507,9 @@ func collectGenFiles(
 		nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
 		gentxsDir := filepath.Join(outputDir, "gentxs")
 		nodeConfig.Moniker = nodeDirName
+		if sameMachine {
+			nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26756+i)
+		}
 
 		nodeConfig.SetRoot(nodeDir)
 
