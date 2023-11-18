@@ -10,7 +10,6 @@ import (
 	"github.com/cometbft/cometbft/node"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/network/types"
@@ -21,13 +20,12 @@ var NETWORK_HEX_ADDRESS = "0x0000000000000000000000000000000000000028"
 
 type msgServer struct {
 	Keeper
-	ClientCtx client.Context
-	TmNode    *node.Node
+	TmNode *node.Node
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServerImpl(keeper Keeper, clientCtx client.Context) types.MsgServer {
-	return &msgServer{Keeper: keeper, ClientCtx: clientCtx}
+func NewMsgServerImpl(keeper Keeper) types.MsgServer {
+	return &msgServer{Keeper: keeper}
 }
 
 var _ types.MsgServer = msgServer{}
@@ -49,11 +47,11 @@ func (m msgServer) GrpcRequest(goCtx context.Context, msg *types.MsgGrpcRequest)
 }
 
 func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
-	fmt.Println("---------Ping", msg.Data, goCtx)
+	fmt.Println("---------Ping", msg.Data)
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
-	data := []byte(fmt.Sprintf(`{run: {id: 0, event: {type: "sendRequest", params: [{key: "address", value: "%s"}, {key: "data", value: "hello"}]}`, msg.Data))
+	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"sendRequest","params":[{"key":"address","value":"%s"},{"key":"data","value":"hello"}]}}}`, msg.Data))
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
