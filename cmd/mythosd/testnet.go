@@ -394,6 +394,7 @@ func initTestnetFiles(
 			appConfig.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
 			conf.JsonRpc.Address = strings.Replace(conf.JsonRpc.Address, "8545", strconv.Itoa(8555+i), 1)
 			conf.JsonRpc.WsAddress = strings.Replace(conf.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
+			conf.Websrv.Address = strings.Replace(conf.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
 		}
 		if args.noCors {
 			appConfig.API.EnableUnsafeCORS = true

@@ -12,6 +12,7 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 
 mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --nocors
 
+# same machine validators
 mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors
 
 mythosd start --home=./testnet/node0/mythosd --p2p.laddr tcp://127.0.0.1:26756
