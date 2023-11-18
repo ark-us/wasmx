@@ -30,20 +30,65 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 
 var _ types.MsgServer = msgServer{}
 
-func (m msgServer) GrpcRequest(goCtx context.Context, msg *types.MsgGrpcRequest) (*types.MsgGrpcRequestResponse, error) {
-	fmt.Println("---------GrpcRequest", msg.Address, msg.Data, string(msg.Data))
+func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
+	fmt.Println("---------GrpcSendRequest", msg.Address, msg.Data, string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	ip := msg.Address
 	client := StartGRPCClient(ip)
-	res, err := client.GrpcRequest(ctx, msg)
-	fmt.Println("---------GrpcRequest--err", err)
+	req := &types.MsgGrpcReceiveRequest{
+		Data: msg.Data,
+	}
+	res, err := client.GrpcReceiveRequest(ctx, req)
+	fmt.Println("---------GrpcReceiveRequest--err", err)
 	if err != nil {
 		return nil, err
 	}
 
-	return &types.MsgGrpcRequestResponse{
+	return &types.MsgGrpcSendRequestResponse{
 		Data: res.Data,
+	}, nil
+}
+
+func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
+	fmt.Println("---------GrpcReceiveRequest", msg.Data, string(msg.Data))
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveRequest","params":[]}}}`))
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("-GrpcReceiveRequest-network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("-GrpcReceiveRequest-network-resp---", string(resp))
+
+	// test state
+	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{"id":0}}`)}
+	qmsgbz, err := json.Marshal(qmsg)
+	if err != nil {
+		return nil, err
+	}
+	qres, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, qmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("-GrpcReceiveRequest-qres-", string(qres))
+	var qresbz wasmxtypes.WasmxQueryResponse
+	err = json.Unmarshal(qres, &qresbz)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("-GrpcReceiveRequest-qresbz-", string(qresbz.Data))
+
+	return &types.MsgGrpcReceiveRequestResponse{
+		Data: resp,
 	}, nil
 }
 
@@ -58,12 +103,31 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	fmt.Println("--Ping--network-execmsgbz--", hex.EncodeToString(execmsgbz))
 	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-network-resp---", string(resp))
+	fmt.Println("-Ping--network-resp---", string(resp))
+
+	// test state
+	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{"id":0}}`)}
+	qmsgbz, err := json.Marshal(qmsg)
+	if err != nil {
+		return nil, err
+	}
+	qres, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, qmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("-Ping-qres-", string(qres))
+	var qresbz wasmxtypes.WasmxQueryResponse
+	err = json.Unmarshal(qres, &qresbz)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("-Ping-qresbz-", string(qresbz.Data))
 
 	response := msg.Data + hex.EncodeToString(resp)
 

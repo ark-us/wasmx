@@ -9,14 +9,14 @@ import (
 
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgPing{}, "network/MsgPing", nil)
-	cdc.RegisterConcrete(&MsgGrpcRequest{}, "network/MsgGrpcRequest", nil)
+	cdc.RegisterConcrete(&MsgGrpcSendRequest{}, "network/MsgGrpcSendRequest", nil)
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations(
 		(*sdk.Msg)(nil),
 		&MsgPing{},
-		&MsgGrpcRequest{},
+		&MsgGrpcSendRequest{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
