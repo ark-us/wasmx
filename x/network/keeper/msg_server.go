@@ -31,7 +31,6 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 var _ types.MsgServer = msgServer{}
 
 func (m msgServer) GrpcRequest(goCtx context.Context, msg *types.MsgGrpcRequest) (*types.MsgGrpcRequestResponse, error) {
-	fmt.Println("---------GrpcRequest", msg.Data, goCtx)
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	ip := msg.Address

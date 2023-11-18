@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
+	networkconfig "mythos/v1/x/network/server/config"
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 )
@@ -30,6 +31,7 @@ type Config struct {
 	Websrv  websrvconfig.WebsrvConfig   `mapstructure:"websrv"`
 	JsonRpc jsonrpcconfig.JsonRpcConfig `mapstructure:"json-rpc"`
 	TLS     TLSConfig                   `mapstructure:"tls"`
+	Network networkconfig.NetworkConfig `mapstructure:"network"`
 }
 
 // TLSConfig defines the certificate and matching private key for the server.
@@ -52,6 +54,7 @@ func AppConfig() (string, interface{}) {
 		Websrv:  *websrvconfig.DefaultWebsrvConfigConfig(),
 		JsonRpc: *jsonrpcconfig.DefaultJsonRpcConfigConfig(),
 		TLS:     *DefaultTLSConfig(),
+		Network: *networkconfig.DefaultNetworkConfigConfig(),
 	}
 
 	// The SDK's default minimum gas price is set to "" (empty value) inside
@@ -80,6 +83,7 @@ func DefaultConfig() *Config {
 		Websrv:  *websrvconfig.DefaultWebsrvConfigConfig(),
 		JsonRpc: *jsonrpcconfig.DefaultJsonRpcConfigConfig(),
 		TLS:     *DefaultTLSConfig(),
+		Network: *networkconfig.DefaultNetworkConfigConfig(),
 	}
 }
 
@@ -133,11 +137,17 @@ func GetConfig(v *viper.Viper) (Config, error) {
 		HTTPIdleTimeout:    v.GetDuration("json-rpc.http-idle-timeout"),
 		MaxOpenConnections: v.GetInt("json-rpc.max-open-connections"),
 	}
+	networkConf := networkconfig.NetworkConfig{
+		Enable:             v.GetBool("network.enable"),
+		Address:            v.GetString("network.address"),
+		MaxOpenConnections: v.GetInt("network.max-open-connections"),
+	}
 
 	return Config{
 		Config:  cfg,
 		Websrv:  websrvConf,
 		JsonRpc: jsonRpcConf,
+		Network: networkConf,
 	}, nil
 }
 
@@ -153,11 +163,15 @@ func ParseConfig(v *viper.Viper) (*Config, error) {
 // ValidateBasic returns an error any of the application configuration fields are invalid
 func (c Config) ValidateBasic() error {
 	if err := c.Websrv.Validate(); err != nil {
-		return sdkerrors.Wrapf(errortypes.ErrAppConfig, "invalid evm config value: %s", err.Error())
+		return sdkerrors.Wrapf(errortypes.ErrAppConfig, "invalid websrv config value: %s", err.Error())
 	}
 
 	if err := c.JsonRpc.Validate(); err != nil {
 		return sdkerrors.Wrapf(errortypes.ErrAppConfig, "invalid json-rpc config value: %s", err.Error())
+	}
+
+	if err := c.Network.Validate(); err != nil {
+		return sdkerrors.Wrapf(errortypes.ErrAppConfig, "invalid network config value: %s", err.Error())
 	}
 
 	return c.Config.ValidateBasic()

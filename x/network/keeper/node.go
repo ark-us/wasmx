@@ -20,12 +20,11 @@ func StartGRPCServer(
 	svrCtx *server.Context,
 	clientCtx client.Context,
 	ctx context.Context,
-	GRPCAddr string,
 	cfgAll *config.Config,
 	app servertypes.Application,
 	tmNode *node.Node,
 ) (*grpc.Server, chan struct{}, error) {
-
+	GRPCAddr := cfgAll.Network.Address
 	ln, err := Listen(GRPCAddr)
 	if err != nil {
 		return nil, nil, err
@@ -45,11 +44,12 @@ func StartGRPCServer(
 		svrCtx.Logger.Info("Starting network server", "address", GRPCAddr)
 		if err := grpcServer.Serve(ln); err != nil {
 			if err == http.ErrServerClosed {
+				svrCtx.Logger.Error("Closing network server", "address", GRPCAddr, err.Error())
 				close(httpSrvDone)
 				return
 			}
 
-			svrCtx.Logger.Error("failed to start JSON-RPC server", "error", err.Error())
+			svrCtx.Logger.Error("failed to start network GRPC server", "error", err.Error())
 			errCh <- err
 		}
 	}()
@@ -57,13 +57,13 @@ func StartGRPCServer(
 	select {
 	case <-ctx.Done():
 		// The calling process canceled or closed the provided context, so we must
-		// gracefully stop the JSON-RPC server.
-		logger.Info("stopping JSON-RPC server...", "address", GRPCAddr)
+		// gracefully stop the GRPC server.
+		logger.Info("stopping network GRPC server...", "address", GRPCAddr)
 		grpcServer.GracefulStop()
 
 		return grpcServer, httpSrvDone, nil
 	case err := <-errCh:
-		svrCtx.Logger.Error("failed to boot JSON-RPC server", "error", err.Error())
+		svrCtx.Logger.Error("failed to bootnetwork GRPC server", "error", err.Error())
 		return nil, nil, err
 	}
 }

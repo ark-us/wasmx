@@ -1,0 +1,8 @@
+package flags
+
+// network-related flags.
+const (
+	NetworkEnable             = "network.enable"
+	NetworkAddress            = "network.address"
+	NetworkMaxOpenConnections = "network.max-open-connections"
+)
