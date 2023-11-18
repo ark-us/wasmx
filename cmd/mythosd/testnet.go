@@ -259,6 +259,9 @@ func initTestnetFiles(
 	appConfig.Telemetry.PrometheusRetentionTime = 60
 	appConfig.Telemetry.EnableHostnameLabel = false
 	appConfig.Telemetry.GlobalLabels = [][]string{{"chain_id", args.chainID}}
+	if args.noCors {
+		appConfig.API.EnableUnsafeCORS = true
+	}
 
 	var (
 		genAccounts []authtypes.GenesisAccount
@@ -388,21 +391,21 @@ func initTestnetFiles(
 		customAppTemplate, customAppConfig := config.AppConfig()
 		srvconfig.SetConfigTemplate(customAppTemplate)
 
-		conf := customAppConfig.(config.Config)
-		if args.sameMachine {
-			appConfig.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
-			appConfig.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
-			conf.JsonRpc.Address = strings.Replace(conf.JsonRpc.Address, "8545", strconv.Itoa(8555+i), 1)
-			conf.JsonRpc.WsAddress = strings.Replace(conf.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
-			conf.Websrv.Address = strings.Replace(conf.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
-		}
-		if args.noCors {
-			appConfig.API.EnableUnsafeCORS = true
-		}
 		if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig()); err != nil {
 			return err
 		}
-		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfig)
+
+		// value copy, not reference!
+		appConfigCopy := *appConfig
+		if args.sameMachine {
+			appConfigCopy.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
+			appConfigCopy.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
+			appConfigCopy.JsonRpc.Address = strings.Replace(appConfig.JsonRpc.Address, "8545", strconv.Itoa(8555+i), 1)
+			appConfigCopy.JsonRpc.WsAddress = strings.Replace(appConfig.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
+			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
+		}
+
+		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
 	}
 
 	if err := initGenFiles(clientCtx, mbm, args.chainID, app.BaseDenom, genAccounts, genBalances, genFiles, args.numValidators); err != nil {

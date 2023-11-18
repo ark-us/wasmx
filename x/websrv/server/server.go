@@ -24,12 +24,12 @@ func StartWebsrv(
 	ctx context.Context,
 	cfg *config.WebsrvConfig,
 ) (*http.Server, chan struct{}, error) {
-	svrCtx.Logger.Info("starting websrv web server ", cfg.Address)
+	svrCtx.Logger.Info("starting websrv web server " + cfg.Address)
 	websrvServer := NewWebsrvServer(svrCtx, svrCtx.Logger, clientCtx, ctx, cfg)
 	mux := http.NewServeMux()
 
 	if cfg.EnableOAuth {
-		svrCtx.Logger.Info("starting websrv oauth2 server ", cfg.Address)
+		svrCtx.Logger.Info("starting websrv oauth2 server " + cfg.Address)
 		websrvServer.InitOauth2(mux, path.Join(clientCtx.HomeDir, dirname))
 	}
 	mux.HandleFunc("/", websrvServer.Route)
@@ -59,6 +59,7 @@ func StartWebsrv(
 	go func() {
 		svrCtx.Logger.Info("Starting Websrv server", "address", cfg.Address)
 		if err := httpSrv.Serve(ln); err != nil {
+			svrCtx.Logger.Error("failed to serve Websrv", "error", err.Error())
 			if err == http.ErrServerClosed {
 				close(httpSrvDone)
 				return
@@ -72,12 +73,12 @@ func StartWebsrv(
 	select {
 	case <-ctx.Done():
 		// The calling process canceled or closed the provided context, so we must
-		// gracefully stop the JSON-RPC server.
-		svrCtx.Logger.Info("stopping JSON-RPC server...", "address", cfg.Address)
+		// gracefully stop the websrv server.
+		svrCtx.Logger.Info("stopping websrv web server...", "address", cfg.Address)
 		httpSrv.Close()
 		return httpSrv, httpSrvDone, nil
 	case err := <-errCh:
-		svrCtx.Logger.Error("failed to boot JSON-RPC server", "error", err.Error())
+		svrCtx.Logger.Error("failed to boot websrv server", "error", err.Error())
 		return nil, nil, err
 	}
 
