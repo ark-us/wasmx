@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -25,6 +26,7 @@ func StartGRPCServer(
 	tmNode *node.Node,
 ) (*grpc.Server, chan struct{}, error) {
 	GRPCAddr := cfgAll.Network.Address
+	fmt.Println("---GRPCAddr--", GRPCAddr)
 	ln, err := Listen(GRPCAddr)
 	if err != nil {
 		return nil, nil, err
@@ -43,6 +45,7 @@ func StartGRPCServer(
 	go func() {
 		svrCtx.Logger.Info("Starting network server", "address", GRPCAddr)
 		if err := grpcServer.Serve(ln); err != nil {
+			fmt.Println("---err--", err)
 			if err == http.ErrServerClosed {
 				svrCtx.Logger.Error("Closing network server", "address", GRPCAddr, err.Error())
 				close(httpSrvDone)
