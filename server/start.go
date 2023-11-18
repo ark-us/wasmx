@@ -51,6 +51,8 @@ import (
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
 	networkgrpc "mythos/v1/x/network/keeper"
+	networkconfig "mythos/v1/x/network/server/config"
+	networkflags "mythos/v1/x/network/server/flags"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -174,6 +176,10 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Duration(jsonrpcflags.JsonRpcHTTPIdleTimeout, jsonrpcconfig.DefaultHTTPIdleTimeout, "Sets a idle timeout for json-rpc http server (0=infinite)")
 	cmd.Flags().Bool(jsonrpcflags.JsonRpcAllowUnprotectedTxs, jsonrpcconfig.DefaultAllowUnprotectedTxs, "Allow for unprotected (non EIP155 signed) transactions to be submitted via the node's RPC when the global parameter is disabled")
 	cmd.Flags().Int(jsonrpcflags.JsonRpcMaxOpenConnections, jsonrpcconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener")
+
+	cmd.Flags().Bool(networkflags.NetworkEnable, true, "Define if the network grpc server should be enabled")
+	cmd.Flags().String(networkflags.NetworkAddress, networkconfig.DefaultNetworkAddress, "the network grpc server address to listen on")
+	cmd.Flags().Int(networkflags.NetworkMaxOpenConnections, networkconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener") //nolint:lll
 
 	cmd.Flags().String(srvflags.TLSCertPath, "", "the cert.pem file path for the server TLS configuration")
 	cmd.Flags().String(srvflags.TLSKeyPath, "", "the key.pem file path for the server TLS configuration")
@@ -348,8 +354,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
-	// network TODO this must replace tendermint
-	networkAdd := "localhost:9080"
 	genDoc, err := genDocProvider()
 	if err != nil {
 		return err
@@ -362,7 +366,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
-		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, networkAdd, &config, app, tmNode)
+		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, &config, app, tmNode)
 		return err
 	})
 	// ----end network
