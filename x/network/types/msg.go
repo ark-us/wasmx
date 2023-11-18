@@ -22,5 +22,5 @@ func (msg MsgGrpcRequest) ValidateBasic() error {
 }
 
 func (msg MsgGrpcRequest) GetSigners() []sdk.AccAddress {
-	return []sdk.AccAddress{}
+	return []sdk.AccAddress{sdk.AccAddress("network")}
 }

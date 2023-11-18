@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -282,14 +281,10 @@ func wasmxGrpcRequest(context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-
-	databzbz, err := hex.DecodeString(data.Data)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
 	msg := &networktypes.MsgGrpcRequest{
 		Address: data.Address,
-		Data:    databzbz,
+		Data:    []byte(data.Data),
+		Sender:  ctx.Env.Contract.Address.String(),
 	}
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
 	if err != nil {
