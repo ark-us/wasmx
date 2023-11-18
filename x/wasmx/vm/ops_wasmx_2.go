@@ -281,7 +281,7 @@ func wasmxGrpcRequest(context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	msg := &networktypes.MsgGrpcRequest{
+	msg := &networktypes.MsgGrpcSendRequest{
 		Address: data.Address,
 		Data:    []byte(data.Data),
 		Sender:  ctx.Env.Contract.Address.String(),

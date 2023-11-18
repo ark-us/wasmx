@@ -6,21 +6,21 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
-func (msg MsgGrpcRequest) Route() string {
+func (msg MsgGrpcSendRequest) Route() string {
 	return RouterKey
 }
 
-func (msg MsgGrpcRequest) Type() string {
+func (msg MsgGrpcSendRequest) Type() string {
 	return "grpc-request"
 }
 
-func (msg MsgGrpcRequest) ValidateBasic() error {
+func (msg MsgGrpcSendRequest) ValidateBasic() error {
 	if len(msg.Data) == 0 {
 		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty request")
 	}
 	return nil
 }
 
-func (msg MsgGrpcRequest) GetSigners() []sdk.AccAddress {
+func (msg MsgGrpcSendRequest) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{sdk.AccAddress("network")}
 }
