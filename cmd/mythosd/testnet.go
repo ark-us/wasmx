@@ -400,7 +400,7 @@ func initTestnetFiles(
 		if args.sameMachine {
 			appConfigCopy.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
 			appConfigCopy.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
-			appConfigCopy.JsonRpc.Address = strings.Replace(appConfig.JsonRpc.Address, "8545", strconv.Itoa(8555+i), 1)
+			appConfigCopy.JsonRpc.Address = strings.Replace(appConfig.JsonRpc.Address, "8545", strconv.Itoa(8555+i*2), 1)
 			appConfigCopy.JsonRpc.WsAddress = strings.Replace(appConfig.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
 			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
 		}
