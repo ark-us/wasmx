@@ -32,6 +32,7 @@ func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params
 }
 
 func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
+	// fmt.Println("-InitiateWasm--", filePath)
 	wasmedge.SetLogErrorLevel()
 	// wasmedge.SetLogDebugLevel()
 	conf := wasmedge.NewConfigure()
@@ -71,7 +72,7 @@ func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []ty
 		if err != nil {
 			return cleanups, err
 		}
-
+		// fmt.Println("--systemDep--", systemDep)
 		handler, found := SystemDepHandler[systemDep.Role]
 		if !found {
 			handler, found = SystemDepHandler[systemDep.Label]
@@ -291,6 +292,7 @@ func ExecuteWasm(
 	dependencies []types.ContractDependency,
 	isdebug bool,
 ) (types.ContractResponse, error) {
+	// fmt.Println("---ExecuteWasm---")
 	var err error
 	var ethMsg types.WasmxExecutionMessage
 	err = json.Unmarshal(msg, &ethMsg)
@@ -352,8 +354,11 @@ func ExecuteWasm(
 	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
+	// fmt.Println("---GetExecuteFunctionHandler---", systemDeps)
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	// fmt.Println("---executeHandler---")
 	_, err = executeHandler(context, contractVm, funcName)
+	// fmt.Println("---executeHandler-err--", err)
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)

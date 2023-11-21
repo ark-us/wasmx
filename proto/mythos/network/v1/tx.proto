@@ -19,6 +19,9 @@ service Msg {
     // GrpcReceiveRequest
     rpc GrpcReceiveRequest(MsgGrpcReceiveRequest) returns (MsgGrpcReceiveRequestResponse);
 
+    // Setup
+    rpc Setup(MsgSetup) returns (MsgSetupResponse);
+
     // Ping
     rpc Ping(MsgPing) returns (MsgPingResponse);
 
@@ -70,6 +73,16 @@ message MsgPing {
 
 // MsgPingResponse
 message MsgPingResponse {
+    string data = 1;
+}
+
+// MsgSetup
+message MsgSetup {
+    string data = 1;
+}
+
+// MsgSetupResponse
+message MsgSetupResponse {
     string data = 1;
 }
 

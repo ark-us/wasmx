@@ -301,6 +301,7 @@ func wasmxGrpcRequest(context interface{}, callframe *wasmedge.CallingFrame, par
 }
 
 func BuildWasmxEnv2(context *Context) *wasmedge.Module {
+	// fmt.Println("--BuildWasmxEnv2---")
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},

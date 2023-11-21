@@ -26,7 +26,7 @@ func StartGRPCServer(
 	tmNode *node.Node,
 ) (*grpc.Server, chan struct{}, error) {
 	GRPCAddr := cfgAll.Network.Address
-	fmt.Println("---GRPCAddr--", GRPCAddr)
+	// fmt.Println("---GRPCAddr--", GRPCAddr)
 	ln, err := Listen(GRPCAddr)
 	if err != nil {
 		return nil, nil, err

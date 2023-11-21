@@ -450,9 +450,12 @@ func (k Keeper) instantiateInternal(
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
+	// fmt.Println("---Instantiate--")
+
 	// instantiate wasm contract
 	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, storageType, handler, k.gasMeter(ctx), systemDeps)
 	k.consumeRuntimeGas(ctx, gasUsed)
+	// fmt.Println("---Instantiate- err-", err)
 
 	if err != nil {
 		return nil, nil, sdkerr.Wrap(types.ErrInstantiateFailed, err.Error())

@@ -114,7 +114,7 @@ func NewGRPCServer(
 	// Reflection allows external clients to see what services and methods
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
-	fmt.Println("---NewGRPCServer-END-")
+	// fmt.Println("---NewGRPCServer-END-")
 	return grpcSrv, nil
 }
 
