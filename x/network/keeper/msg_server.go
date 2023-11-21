@@ -31,7 +31,7 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 var _ types.MsgServer = msgServer{}
 
 func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
-	fmt.Println("---------GrpcSendRequest", msg.Address, msg.Data, string(msg.Data))
+	fmt.Println("Go - send grpc request", msg.Address, msg.Data, string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	ip := msg.Address
@@ -40,7 +40,7 @@ func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSend
 		Data: msg.Data,
 	}
 	res, err := client.GrpcReceiveRequest(ctx, req)
-	fmt.Println("---------GrpcReceiveRequest--err", err)
+	fmt.Println("Go - grpc request sent", err)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSend
 }
 
 func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
-	fmt.Println("---------GrpcReceiveRequest", msg.Data, string(msg.Data))
+	fmt.Println("Go - received grpc request", msg.Data, string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
@@ -61,12 +61,12 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-GrpcReceiveRequest-network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	// fmt.Println("-GrpcReceiveRequest-network-execmsgbz--", hex.EncodeToString(execmsgbz))
 	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-GrpcReceiveRequest-network-resp---", string(resp))
+	// fmt.Println("-GrpcReceiveRequest-network-resp---", string(resp))
 
 	// test state
 	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{"id":0}}`)}
@@ -78,37 +78,61 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-GrpcReceiveRequest-qres-", string(qres))
+	fmt.Println("Go - current state query: ", string(qres))
 	var qresbz wasmxtypes.WasmxQueryResponse
 	err = json.Unmarshal(qres, &qresbz)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("-GrpcReceiveRequest-qresbz-", string(qresbz.Data))
+	fmt.Println("Go - current state: ", string(qresbz.Data))
 
 	return &types.MsgGrpcReceiveRequestResponse{
 		Data: resp,
 	}, nil
 }
 
-func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
-	fmt.Println("---------Ping", msg.Data)
+func (m msgServer) Setup(goCtx context.Context, msg *types.MsgSetup) (*types.MsgSetupResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
-	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"sendRequest","params":[{"key":"address","value":"%s"},{"key":"data","value":"hello"}]}}}`, msg.Data))
+	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"sendRequest","params":[{"key":"address","value":"%s"},{"key":"data","value":"hello"}]}}}`, msg.Data))
+
+	data := []byte(`{"create":{"context":[{"key":"data","value":"hello"},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"received","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"received","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"5000","target":"#AB-Req-Res-timer.sending","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}}`)
+
+	var resp []byte
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--Ping--network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	resp, err = m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgSetupResponse{
+		Data: string(resp),
+	}, nil
+}
+
+func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+
+	data := []byte(`{"run":{"id":0,"event":{"type":"send","params":[]}}}`)
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+	// fmt.Println("--Ping--network-execmsgbz--", hex.EncodeToString(execmsgbz))
 	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-Ping--network-resp---", string(resp))
+	// fmt.Println("-Ping--network-resp---", string(resp))
 
 	// test state
 	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{"id":0}}`)}
@@ -120,14 +144,14 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-Ping-qres-", string(qres))
+	fmt.Println("Go - current state query: ", string(qres))
 	var qresbz wasmxtypes.WasmxQueryResponse
 	err = json.Unmarshal(qres, &qresbz)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("-Ping-qresbz-", string(qresbz.Data))
+	fmt.Println("Go - current state: ", string(qresbz.Data))
 
 	response := msg.Data + hex.EncodeToString(resp)
 

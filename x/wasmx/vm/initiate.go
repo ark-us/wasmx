@@ -91,12 +91,29 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 }
 
 func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	// fmt.Println("---InitiateWasi--")
 	var cleanups []func()
 
 	// TODO better
-	env1 := BuildWasiWasmxEnv(context)
-	cleanups = append(cleanups, env1.Release)
-	err := contractVm.RegisterModule(env1)
+	// env1 := BuildWasiWasmxEnv(context)
+	// fmt.Println("---InitiateWasi-1-")
+	// cleanups = append(cleanups, env1.Release)
+	// err := contractVm.RegisterModule(env1)
+	// fmt.Println("---InitiateWasi-2-")
+	// if err != nil {
+	// 	return cleanups, err
+	// }
+
+	wasmx := BuildWasmxEnv2(context)
+	env := BuildAssemblyScriptEnv(context)
+	cleanups = append(cleanups, wasmx.Release)
+
+	err := contractVm.RegisterModule(wasmx)
+	if err != nil {
+		return cleanups, err
+	}
+	cleanups = append(cleanups, env.Release)
+	err = contractVm.RegisterModule(env)
 	if err != nil {
 		return cleanups, err
 	}
@@ -152,8 +169,8 @@ func init() {
 	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasi
-	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasi
+	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasiWrap
+	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasiWrap
 	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
 	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefaultMain
@@ -179,6 +196,7 @@ func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) 
 }
 
 func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	// fmt.Println("--ExecuteDefaultContract---", funcName)
 	if funcName != types.ENTRY_POINT_INSTANTIATE {
 		funcName = "main"
 	}

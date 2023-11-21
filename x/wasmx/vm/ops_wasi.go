@@ -617,6 +617,7 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
 	var res []interface{}
 	var err error
+	// fmt.Println("--ExecuteWasi---")
 
 	// WASI standard does not have instantiate
 	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
@@ -625,6 +626,11 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 		fnNames, _ := contractVm.GetFunctionList()
 		found := false
 		for _, name := range fnNames {
+			// WASI reactor
+			if name == "_initialize" {
+				found = true
+				res, err = contractVm.Execute("_initialize")
+			}
 			// note that custom entries do not have access to WASI endpoints at this time
 			if name == "main.instantiate" {
 				found = true
@@ -635,8 +641,18 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 			return nil, nil
 		}
 	} else {
-		// WASI standard - no args, no return
+		// WASI command - no args, no return
 		res, err = contractVm.Execute("_start")
+		// fmt.Println("--ExecuteWasi-_start, err", res, err)
+
+		// res, err = contractVm.Execute("_initialize")
+		// fmt.Println("--testtime-main, err", res, err)
+
+		// res, err = contractVm.Execute("main")
+		// fmt.Println("--testtime-main, err", res, err)
+
+		// res, err = contractVm.Execute("testtime")
+		// fmt.Println("--testtime-res, err", res, err)
 	}
 	if err != nil {
 		return nil, err
@@ -744,6 +760,27 @@ wasmx.setReturnData(res || new ArrayBuffer(0));
 		},
 	)
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
+}
+
+func ExecuteWasiWrap(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+	// if funcName == "execute" || funcName == "query" {
+	// 	funcName = "main"
+	// }
+	// fmt.Println("--ExecuteWasiWrap--", funcName)
+
+	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	wasimodule.InitWasi(
+		[]string{
+			``,
+		},
+		// os.Environ(), // The envs
+		[]string{},
+		// The mapping preopens
+		[]string{
+			// fmt.Sprintf(`.:%s`, dir),
+		},
+	)
+	return ExecuteWasi(context, contractVm, funcName)
 }
 
 func writeMemDefaultMalloc(vm *wasmedge.VM, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
