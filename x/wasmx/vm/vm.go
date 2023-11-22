@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"golang.org/x/exp/slices"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -198,6 +199,7 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
+	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -223,6 +225,7 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
+		goRoutineGroup: goRoutineGroup,
 		Ctx:            ctx,
 		GasMeter:       gasMeter,
 		Env:            &env,
@@ -282,6 +285,7 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
+	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -294,7 +298,6 @@ func ExecuteWasm(
 	dependencies []types.ContractDependency,
 	isdebug bool,
 ) (types.ContractResponse, error) {
-	// fmt.Println("---ExecuteWasm---")
 	var err error
 	var ethMsg types.WasmxExecutionMessage
 	err = json.Unmarshal(msg, &ethMsg)
@@ -308,6 +311,7 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
+		goRoutineGroup: goRoutineGroup,
 		Ctx:            ctx,
 		GasMeter:       gasMeter,
 		Env:            &env,
@@ -358,11 +362,8 @@ func ExecuteWasm(
 	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
-	// fmt.Println("---GetExecuteFunctionHandler---", systemDeps)
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
-	// fmt.Println("---executeHandler---")
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
-	// fmt.Println("---executeHandler-err--", err)
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)

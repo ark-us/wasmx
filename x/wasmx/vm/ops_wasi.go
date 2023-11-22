@@ -657,6 +657,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, arg
 		// res, err = contractVm.Execute("testtime")
 		// fmt.Println("--testtime-res, err", res, err)
 	}
+	fmt.Println("--ExecuteWasi END--")
 	if err != nil {
 		return nil, err
 	}
