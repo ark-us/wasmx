@@ -56,7 +56,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
 	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
-	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
+	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 	if err != nil {
 		runCleanups(cleanups)
 		return nil, err
@@ -67,6 +67,13 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 
 // key is a bech32 string
 type ContractRouter = map[string]*ContractContext
+
+type IntervalAction struct {
+	Time       int64
+	CallbackId int32
+	Args       []byte
+	Quit       chan bool
+}
 
 type Context struct {
 	Ctx            sdk.Context
@@ -81,6 +88,8 @@ type Context struct {
 	Logs           []WasmxLog
 	Messages       []cw8types.SubMsg `json:"messages"`
 	dbIterators    map[int32]dbm.Iterator
+	intervalsCount int32
+	intervals      map[int32]*IntervalAction
 }
 
 func (context *Context) GetCosmosHandler() types.WasmxCosmosHandler {

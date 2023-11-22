@@ -744,7 +744,7 @@ func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string)
 }
 
 // instantiate/execute(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	switch funcName {
 	case types.ENTRY_POINT_QUERY:
 		return ExecuteCw8Query(context, contractVm, funcName)

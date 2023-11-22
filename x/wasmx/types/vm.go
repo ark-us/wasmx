@@ -45,6 +45,7 @@ var (
 	ENTRY_POINT_EXECUTE     = "execute"
 	ENTRY_POINT_QUERY       = "query"
 	ENTRY_POINT_REPLY       = "reply"
+	ENTRY_POINT_TIMED       = "eventual"
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.

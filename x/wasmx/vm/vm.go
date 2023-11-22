@@ -231,6 +231,8 @@ func ExecuteWasmInterpreted(
 		ContractRouter: contractRouter,
 		NativeHandler:  NativeMap,
 		dbIterators:    map[int32]dbm.Iterator{},
+		intervalsCount: 0,
+		intervals:      map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -258,7 +260,7 @@ func ExecuteWasmInterpreted(
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
-	_, err = executeHandler(context, contractVm, funcName)
+	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "%s", string(context.ReturnData))
@@ -314,6 +316,8 @@ func ExecuteWasm(
 		ContractRouter: contractRouter,
 		NativeHandler:  NativeMap,
 		dbIterators:    map[int32]dbm.Iterator{},
+		intervalsCount: 0,
+		intervals:      map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
@@ -357,7 +361,7 @@ func ExecuteWasm(
 	// fmt.Println("---GetExecuteFunctionHandler---", systemDeps)
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
 	// fmt.Println("---executeHandler---")
-	_, err = executeHandler(context, contractVm, funcName)
+	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	// fmt.Println("---executeHandler-err--", err)
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))

@@ -152,7 +152,7 @@ func InitiateCosmWasmEnv8(context *Context, contractVm *wasmedge.VM, dep *types.
 
 var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
 
-type ExecuteFunctionInterface func(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error)
+type ExecuteFunctionInterface func(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error)
 
 var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
@@ -195,7 +195,7 @@ func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) 
 	return contractVm.Execute(funcName)
 }
 
-func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	// fmt.Println("--ExecuteDefaultContract---", funcName)
 	if funcName != types.ENTRY_POINT_INSTANTIATE {
 		funcName = "main"
@@ -203,7 +203,7 @@ func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName 
 	return contractVm.Execute(funcName)
 }
 
-func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	return contractVm.Execute("main")
 }
 

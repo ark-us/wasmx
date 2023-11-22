@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -300,6 +301,94 @@ func wasmxGrpcRequest(context interface{}, callframe *wasmedge.CallingFrame, par
 	return returns, wasmedge.Result_Success
 }
 
+func executeTimedAction(context *Context, intervalId int32, argsPtr int32) error {
+	fmt.Println("executeTimedAction", intervalId, argsPtr)
+	contractCtx, ok := context.ContractRouter[context.Env.Contract.Address.String()]
+	if !ok {
+		return fmt.Errorf("timed action: contract context not found")
+	}
+	executeHandler := GetExecuteFunctionHandler(contractCtx.ContractInfo.SystemDeps)
+
+	args := []interface{}{intervalId, argsPtr}
+	_, err := executeHandler(context, contractCtx.Vm, types.ENTRY_POINT_TIMED, args)
+	fmt.Println("--executeTimedAction--", err)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// startInterval(repeat: i32, time: u64, args: ArrayBuffer): i32
+func wasmxStartInterval(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 1)
+	repeatCount := params[0].(int64)
+	timeDelay := params[1].(int64)
+	argsbz, err := readMemFromPtr(callframe, params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--wasmxStartInterval--", repeatCount, timeDelay, string(argsbz))
+
+	// store interval on context
+
+	// start goroutine
+	// httpSrvDone := make(chan struct{}, 1)
+	quit := make(chan bool)
+	errCh := make(chan error)
+	// ctx2, cancel := ctx.Ctx.WithCancel(context.Background())
+
+	intervalId := ctx.intervalsCount
+	fmt.Println("--intervalId--", intervalId)
+	ctx.intervalsCount += 1
+	ctx.intervals[intervalId] = &IntervalAction{
+		Time: timeDelay,
+		Args: argsbz,
+		Quit: quit,
+	}
+
+	go func() {
+		for {
+			fmt.Println("* run interval: ", intervalId, timeDelay)
+			select {
+			case <-quit:
+				return
+			case <-ctx.Ctx.Done():
+				// The calling process canceled or closed the provided context
+				return
+			default:
+				argsptr, err := allocateWriteMem(ctx, callframe, argsbz)
+				if err != nil {
+					errCh <- err
+				}
+				fmt.Println("argsptr", argsptr)
+				err = executeTimedAction(ctx, intervalId, argsptr)
+				if err != nil {
+					errCh <- err
+				}
+			}
+			time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+		}
+	}()
+
+	fmt.Println("--after go coroutine--")
+
+	<-quit
+	returns[0] = intervalId
+	return returns, wasmedge.Result_Success
+}
+
+// stopInterval(intervalId: i32): void
+func wasmxStopInterval(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	returns := make([]interface{}, 0)
+	intervalId := params[0].(int32)
+	fmt.Println("* stop interval: ", intervalId)
+	// TODO errors if already stopped?
+	ctx.intervals[intervalId].Quit <- true
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	// fmt.Println("--BuildWasmxEnv2---")
 	env := wasmedge.NewModule("wasmx")
@@ -318,6 +407,10 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	functype_i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
+	)
+	functype_i32i64i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
 
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
@@ -338,6 +431,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
+	env.AddFunction("startInterval", wasmedge.NewFunction(functype_i32i64i32_i32, wasmxStartInterval, context, 0))
+	env.AddFunction("stopInterval", wasmedge.NewFunction(functype_i32_, wasmxStopInterval, context, 0))
 
 	return env
 }
