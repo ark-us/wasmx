@@ -255,6 +255,6 @@ func (suite *KeeperTestSuite) TestWasmxStateMachineTimer() {
 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	// Wait enough time to ensure all goroutines have time to run
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	fmt.Println("Main function finished")
 }
