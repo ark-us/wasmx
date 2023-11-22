@@ -192,6 +192,20 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	return cmd
 }
 
+type MythosApp interface {
+	SetGoRoutineGroup(g *errgroup.Group)
+}
+
+// SetGoRoutineGroup sets the GoRoutineGroup in BaseApp.
+func SetGoRoutineGroup(app types.Application, g *errgroup.Group) error {
+	mythosapp, ok := app.(MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from BaseApp")
+	}
+	mythosapp.SetGoRoutineGroup(g)
+	return nil
+}
+
 func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error {
 	addr := svrCtx.Viper.GetString(srvflags.Address)
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
@@ -216,6 +230,10 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 	}
 
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
+	err = SetGoRoutineGroup(app, g)
+	if err != nil {
+		return err
+	}
 	cmtApp := server.NewCometABCIWrapper(app)
 	svr, err := abciserver.NewServer(addr, transport, cmtApp)
 	if err != nil {
@@ -297,6 +315,10 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	}
 
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
+	err = SetGoRoutineGroup(app, g)
+	if err != nil {
+		return err
+	}
 
 	metrics, err := startTelemetry(config.Config)
 	if err != nil {

@@ -63,6 +63,7 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	}
 	// fmt.Println("-GrpcReceiveRequest-network-execmsgbz--", hex.EncodeToString(execmsgbz))
 	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	fmt.Println("Go - received grpc request and executed state machine", string(resp), err)
 	if err != nil {
 		return nil, err
 	}

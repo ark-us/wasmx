@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,11 +12,13 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	"golang.org/x/sync/errgroup"
 
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 
@@ -56,7 +59,10 @@ func Setup(
 	isCheckTx bool,
 ) *App {
 	db := dbm.NewMemDB()
+	logger := log.NewNopLogger()
 	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), simtestutil.EmptyAppOptions{})
+	g, _, _ := getCtx(logger, true)
+	app.SetGoRoutineGroup(g)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -85,12 +91,16 @@ func Setup(
 func SetupTestingApp(chainID string) (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
 	cfg := MakeEncodingConfig()
+	logger := log.NewNopLogger()
 	app := New(
-		log.NewNopLogger(),
+		logger,
 		db, nil, true, map[int64]bool{},
 		DefaultNodeHome, 5, cfg, simtestutil.EmptyAppOptions{},
 		bam.SetChainID(chainID),
 	)
+	g, _, _ := getCtx(logger, true)
+	app.SetGoRoutineGroup(g)
+
 	return app, app.DefaultGenesis()
 }
 
@@ -103,7 +113,10 @@ func NewTestNetworkFixture() network.TestFixture {
 	defer os.RemoveAll(dir)
 
 	db := dbm.NewMemDB()
-	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), simtestutil.EmptyAppOptions{})
+	logger := log.NewNopLogger()
+	app := New(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), simtestutil.EmptyAppOptions{})
+	g, _, _ := getCtx(logger, true)
+	app.SetGoRoutineGroup(g)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		return New(
@@ -126,4 +139,12 @@ func NewTestNetworkFixture() network.TestFixture {
 			Amino:             app.LegacyAmino(),
 		},
 	}
+}
+
+func getCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
+	ctx, cancelFn := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+	// listen for quit signals so the calling parent process can gracefully exit
+	server.ListenForQuitSignals(g, block, cancelFn, logger)
+	return g, ctx, cancelFn
 }

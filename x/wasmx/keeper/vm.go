@@ -11,26 +11,33 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"golang.org/x/sync/errgroup"
 
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"
 )
 
 type WasmxEngine struct {
-	DataDir    string
-	SourcesDir string
-	printDebug bool
+	goRoutineGroup *errgroup.Group
+	DataDir        string
+	SourcesDir     string
+	printDebug     bool
 }
 
-func NewVM(dataDir string, sourcesDir string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*WasmxEngine, error) {
+func NewVM(goRoutineGroup *errgroup.Group, dataDir string, sourcesDir string, memoryLimit uint32, printDebug bool, cacheSize uint32) (*WasmxEngine, error) {
 	return &WasmxEngine{
-		DataDir:    dataDir,
-		SourcesDir: sourcesDir,
-		printDebug: printDebug,
+		goRoutineGroup: goRoutineGroup, // this is nil at initialization
+		DataDir:        dataDir,
+		SourcesDir:     sourcesDir,
+		printDebug:     printDebug,
 	}, nil
 }
 
-func (k WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error) {
+func (k *WasmxEngine) SetGoRoutineGroup(g *errgroup.Group) {
+	k.goRoutineGroup = g
+}
+
+func (k *WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error) {
 	// get checksum and save wasm
 	checksum := k.checksum(wasmBytecode)
 	filepath := k.build_path(k.DataDir, checksum)
@@ -44,7 +51,7 @@ func (k WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error)
 	return checksum, nil
 }
 
-func (k WasmxEngine) CreateUtf8(sourceCode []byte, extension string) (types.Checksum, error) {
+func (k *WasmxEngine) CreateUtf8(sourceCode []byte, extension string) (types.Checksum, error) {
 	// get checksum and save source code
 	checksum := k.checksum(sourceCode)
 	filepath := k.build_path_utf8(k.SourcesDir, checksum, extension)
@@ -58,11 +65,11 @@ func (k WasmxEngine) CreateUtf8(sourceCode []byte, extension string) (types.Chec
 	return checksum, nil
 }
 
-func (k WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, error) {
+func (k *WasmxEngine) AnalyzeWasm(code types.WasmCode) (types.AnalysisReport, error) {
 	return vm.AnalyzeWasm(code)
 }
 
-func (k WasmxEngine) Instantiate(
+func (k *WasmxEngine) Instantiate(
 	ctx sdk.Context,
 	codeInfo *types.CodeInfo,
 	env types.Env,
@@ -79,10 +86,10 @@ func (k WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false)
 	} else {
 		// TODO gas
-		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -90,7 +97,7 @@ func (k WasmxEngine) Instantiate(
 	return data, 0, nil
 }
 
-func (k WasmxEngine) Execute(
+func (k *WasmxEngine) Execute(
 	ctx sdk.Context,
 	codeInfo *types.CodeInfo,
 	env types.Env,
@@ -107,9 +114,9 @@ func (k WasmxEngine) Execute(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
-		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	}
 
 	if err != nil {
@@ -118,7 +125,7 @@ func (k WasmxEngine) Execute(
 	return data, 0, nil
 }
 
-func (k WasmxEngine) Reply(
+func (k *WasmxEngine) Reply(
 	ctx sdk.Context,
 	codeInfo *types.CodeInfo,
 	env types.Env,
@@ -140,9 +147,9 @@ func (k WasmxEngine) Reply(
 	}
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	} else {
-		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false)
 	}
 
 	if err != nil {
@@ -151,7 +158,7 @@ func (k WasmxEngine) Reply(
 	return data, 0, nil
 }
 
-func (k WasmxEngine) QueryExecute(
+func (k *WasmxEngine) QueryExecute(
 	ctx sdk.Context,
 	codeInfo *types.CodeInfo,
 	env types.Env,
@@ -168,9 +175,9 @@ func (k WasmxEngine) QueryExecute(
 	var data types.ContractResponse
 	var err error
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	} else {
-		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug)
 	}
 
 	if err != nil {
@@ -179,7 +186,7 @@ func (k WasmxEngine) QueryExecute(
 	return data, 0, nil
 }
 
-func (k WasmxEngine) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
+func (k *WasmxEngine) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
 	if types.HasUtf8Dep(deps) {
 		extension := GetExtensionFromDeps(deps)
 		return k.load_utf8(extension, checksum)
@@ -187,11 +194,11 @@ func (k WasmxEngine) GetCode(checksum types.Checksum, deps []string) (types.Wasm
 	return k.load_wasm(checksum)
 }
 
-func (k WasmxEngine) Cleanup() {
+func (k *WasmxEngine) Cleanup() {
 
 }
 
-func (k WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) error {
+func (k *WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) error {
 	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
 	if compiledFolderPath != "" {
 		compiledPath := k.build_path(compiledFolderPath, checksum) + ".so"
@@ -203,46 +210,46 @@ func (k WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) err
 	return k.pin_code(k.build_path(k.DataDir, checksum), pinnedPath)
 }
 
-func (k WasmxEngine) Unpin(checksum types.Checksum) error {
+func (k *WasmxEngine) Unpin(checksum types.Checksum) error {
 	// TODO
 	// remove pinned compiled code
 	return nil
 }
 
-func (k WasmxEngine) pin_code(inPath string, outPath string) error {
+func (k *WasmxEngine) pin_code(inPath string, outPath string) error {
 	return vm.AotCompile(inPath, outPath)
 }
 
-func (k WasmxEngine) checksum(wasmBytecode types.WasmCode) types.Checksum {
+func (k *WasmxEngine) checksum(wasmBytecode types.WasmCode) types.Checksum {
 	h := sha256.New()
 	h.Write(wasmBytecode)
 	return h.Sum(nil)
 }
 
-func (k WasmxEngine) load_utf8(extension string, checksum types.Checksum) ([]byte, error) {
+func (k *WasmxEngine) load_utf8(extension string, checksum types.Checksum) ([]byte, error) {
 	filepath := k.build_path_utf8(k.SourcesDir, checksum, extension)
 	return os.ReadFile(filepath)
 }
 
-func (k WasmxEngine) load_wasm(checksum types.Checksum) (types.WasmCode, error) {
+func (k *WasmxEngine) load_wasm(checksum types.Checksum) (types.WasmCode, error) {
 	filepath := k.build_path(k.DataDir, checksum)
 	return os.ReadFile(filepath)
 }
 
-func (k WasmxEngine) build_path(dataDir string, checksum types.Checksum) string {
+func (k *WasmxEngine) build_path(dataDir string, checksum types.Checksum) string {
 	return path.Join(dataDir, hex.EncodeToString(checksum))
 }
 
-func (k WasmxEngine) build_path_pinned(dataDir string, checksum types.Checksum) string {
+func (k *WasmxEngine) build_path_pinned(dataDir string, checksum types.Checksum) string {
 	return path.Join(dataDir, types.PINNED_FOLDER, hex.EncodeToString(checksum)+".so")
 }
 
-func (k WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, extension string) string {
+func (k *WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, extension string) string {
 	filename := fmt.Sprintf("%s_%s.%s", extension, hex.EncodeToString(checksum), extension)
 	return path.Join(dataDir, extension, filename)
 }
 
-func (k WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
+func (k *WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
 	filepath := ""
 	if codeInfo.Pinned {
 		filepath = k.build_path_pinned(k.DataDir, codeInfo.CodeHash)

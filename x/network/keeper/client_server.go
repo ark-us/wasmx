@@ -241,7 +241,10 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 		return hresp, nil
 	}
 
-	handler := &msgServer{Keeper: mythosapp.GetNetworkKeeper(), TmNode: tmNode}
+	handler := &msgServer{
+		Keeper: mythosapp.GetNetworkKeeper(),
+		TmNode: tmNode,
+	}
 
 	desc := types.Network_Msg_serviceDesc
 	newMethods := make([]grpc.MethodDesc, len(desc.Methods))

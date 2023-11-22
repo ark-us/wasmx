@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cast"
+	"golang.org/x/sync/errgroup"
 
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
@@ -182,6 +183,8 @@ func init() {
 type App struct {
 	*baseapp.BaseApp
 
+	goRoutineGroup *errgroup.Group
+
 	cdc               *codec.LegacyAmino
 	appCodec          codec.Codec
 	txConfig          client.TxConfig
@@ -240,6 +243,7 @@ type App struct {
 
 // New returns a reference to an initialized blockchain app
 func New(
+	// goRoutineGroup *errgroup.Group,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -300,6 +304,7 @@ func New(
 		keys:              keys,
 		tkeys:             tkeys,
 		memKeys:           memKeys,
+		// goRoutineGroup:    goRoutineGroup,
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -529,7 +534,9 @@ func New(
 	app.GovKeeper.SetLegacyRouter(govRouter)
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
+
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
+		app.goRoutineGroup, // this is nil at initialization; maybe make it not nil
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
@@ -1154,4 +1161,14 @@ func (app *App) SimulationManager() *module.SimulationManager {
 // For network grpc
 func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
 	return app.NetworkKeeper
+}
+
+// timed actions in wasmx
+func (app *App) SetGoRoutineGroup(g *errgroup.Group) {
+	app.goRoutineGroup = g
+	app.WasmxKeeper.SetGoRoutineGroup(g)
+}
+
+func (app *App) GetGoRoutineGroup() *errgroup.Group {
+	return app.goRoutineGroup
 }

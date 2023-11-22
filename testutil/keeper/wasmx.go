@@ -137,6 +137,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	k := keeper.NewKeeper(
+		nil,
 		cdc,
 		storeKey,
 		memStoreKey,
