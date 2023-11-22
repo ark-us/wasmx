@@ -629,6 +629,76 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	return data, nil
 }
 
+// Execute executes the contract instance
+func (k Keeper) ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error) {
+	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "executeEventual")
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := RequireNotSystemContract(contractAddress, codeInfo.Deps); err != nil {
+		return nil, err
+	}
+
+	// add known dependencies for that codeId
+	// TODO system deps in the form of smart contracts
+	// e.g. dep = {value, type}
+	// if we cannot just load all the modules in the same VM
+	allDeps := append(codeInfo.Deps, dependencies...)
+
+	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
+	var contractDeps []types.ContractDependency
+
+	for _, hexaddr := range allDeps {
+		if hexaddr[0:2] != "0x" {
+			continue
+		}
+		addr := types.AccAddressFromHex(hexaddr)
+		contractDep, err := k.GetContractDependency(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+		contractDeps = append(contractDeps, contractDep)
+	}
+
+	// TODO panic if coin is not the correct denomination
+	// add denom param for wasmx
+
+	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
+	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute eventual")
+
+	info := types.NewInfo(caller, caller, nil)
+	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
+
+	// prepare querier
+	handler := k.newCosmosHandler(ctx, contractAddress)
+	res, gasUsed, execErr := k.wasmvm.ExecuteEventual(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	k.consumeRuntimeGas(ctx, gasUsed)
+
+	if execErr != nil {
+		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeExecute,
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+	))
+
+	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "dispatch events")
+	}
+
+	data, err := k.handleResponseMessages(ctx, contractAddress, contractInfo.IbcPortId, res.Messages, res.Data)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "dispatch message")
+	}
+	// TODO return data or res.Data
+	return data, nil
+}
+
 // For CosmWasm compatibility
 // reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
 func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8types.Reply) ([]byte, error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/cometbft/cometbft/node"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/network/types"
@@ -18,17 +19,114 @@ import (
 
 var NETWORK_HEX_ADDRESS = "0x0000000000000000000000000000000000000028"
 
+type IntervalAction struct {
+	Delay  int64
+	Repeat int32
+	Args   []byte
+	// Cancel context.CancelFunc
+}
+
 type msgServer struct {
+	intervalCount int32
+	intervals     map[int32]*IntervalAction
 	Keeper
-	TmNode *node.Node
+	TmNode          *node.Node
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error)
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
 func NewMsgServerImpl(keeper Keeper) types.MsgServer {
-	return &msgServer{Keeper: keeper}
+	return &msgServer{
+		Keeper:        keeper,
+		intervalCount: 0,
+		intervals:     map[int32]*IntervalAction{},
+	}
+}
+
+// NewMsgServerImpl returns an implementation of the MsgServer interface
+func NewMsgServer(
+	keeper Keeper,
+	tmNode *node.Node,
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
+) types.MsgServer {
+	keeper.wasmxKeeper.SetGoRoutineCreate(createGoRoutine)
+	return &msgServer{
+		Keeper:          keeper,
+		TmNode:          tmNode,
+		createGoRoutine: createGoRoutine,
+		intervalCount:   0,
+		intervals:       map[int32]*IntervalAction{},
+	}
 }
 
 var _ types.MsgServer = msgServer{}
+
+func (m *msgServer) incrementIntervalId() {
+	m.intervalCount += 1
+}
+
+// TODO this must not be called from outside, only from wasmx... (authority)
+// maybe only from the contract that the interval is for?
+func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartIntervalRequest) (*types.MsgStartIntervalResponse, error) {
+	fmt.Println("Go - start interval request", msg.Address, string(msg.Args))
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Address)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
+	}
+
+	intervalId := m.intervalCount
+	fmt.Println("Go - intervalId", intervalId)
+	m.incrementIntervalId()
+
+	fmt.Println("Go - intervalCount", m.intervalCount)
+
+	m.intervals[intervalId] = &IntervalAction{
+		Delay:  msg.Delay,
+		Repeat: msg.Repeat,
+		Args:   msg.Args,
+		// Cancel: cancelFn, // just through a stop error TODO
+	}
+	fmt.Println("Go - post interval set")
+
+	description := fmt.Sprintf("timed action: id %d, delay %dms, repeat %d, args: %s ", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
+	_intervalId := big.NewInt(int64(intervalId))
+	data := append(_intervalId.FillBytes(make([]byte, 4)), msg.Args...)
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
+	msgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("--StartInterval--", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
+	// action := func() error {
+	// 	_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
+	// 	return err
+	// }
+	// gracefulStop := func() {}
+	// _, err = m.createGoRoutine(description, action, gracefulStop)
+
+	httpSrvDone := make(chan struct{}, 1)
+	errCh := make(chan error)
+	go func() {
+		_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
+		if err != nil {
+			fmt.Println("---thread is closing--", err)
+			if err == types.ErrGoroutineClosed {
+				m.Logger(ctx).Error("Closing thread", "description", description, err.Error())
+				close(httpSrvDone)
+				return
+			}
+
+			m.Logger(ctx).Error("failed to start a new thread", "error", err.Error())
+			errCh <- err
+		}
+	}()
+
+	return &types.MsgStartIntervalResponse{
+		IntervalId: intervalId,
+	}, nil
+}
 
 func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
 	fmt.Println("Go - send grpc request", msg.Address, msg.Data, string(msg.Data))

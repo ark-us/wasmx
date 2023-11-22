@@ -15,6 +15,7 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
 	"mythos/v1/server/config"
+	"mythos/v1/x/network/types"
 )
 
 func StartGRPCServer(
@@ -34,7 +35,38 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app, tmNode)
+	createGoRoutine := func(description string, fn func() error, gracefulStop func()) (chan struct{}, error) {
+		httpSrvDone := make(chan struct{}, 1)
+		errCh := make(chan error)
+		go func() {
+			logger.Info("Creating a new thread", "description", description)
+			if err := fn(); err != nil {
+				fmt.Println("---thread is closing--", err)
+				if err == types.ErrGoroutineClosed {
+					logger.Error("Closing thread", "description", description, err.Error())
+					close(httpSrvDone)
+					return
+				}
+
+				logger.Error("failed to start a new thread", "error", err.Error())
+				errCh <- err
+			}
+		}()
+		select {
+		case <-ctx.Done():
+			// The calling process canceled or closed the provided context, so we must
+			// gracefully stop the GRPC server.
+			logger.Info("stopping opened thread...", "description", description)
+			gracefulStop()
+
+			return httpSrvDone, nil
+		case err := <-errCh:
+			logger.Error("failed to bootnetwork GRPC server", "error", err.Error())
+			return nil, err
+		}
+	}
+
+	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app, tmNode, createGoRoutine)
 	if err != nil {
 		return nil, nil, err
 	}

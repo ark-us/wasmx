@@ -103,6 +103,7 @@ type WasmxCosmosHandler interface {
 	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error)
 	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int) (sdk.AccAddress, error)
 	Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error)
+	Execute(contractAddress sdk.AccAddress, sender sdk.AccAddress, execmsg []byte, value *big.Int, deps []string) (res []byte, err error)
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 }

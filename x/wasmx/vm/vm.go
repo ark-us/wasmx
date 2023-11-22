@@ -199,6 +199,7 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
 	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
@@ -225,17 +226,18 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		goRoutineGroup: goRoutineGroup,
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		ContractRouter: contractRouter,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
-		intervalsCount: 0,
-		intervals:      map[int32]*IntervalAction{},
+		createGoRoutine: createGoRoutine,
+		goRoutineGroup:  goRoutineGroup,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		ContractRouter:  contractRouter,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
+		intervalsCount:  0,
+		intervals:       map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -285,6 +287,7 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
 	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
@@ -311,17 +314,18 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		goRoutineGroup: goRoutineGroup,
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		ContractRouter: contractRouter,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
-		intervalsCount: 0,
-		intervals:      map[int32]*IntervalAction{},
+		createGoRoutine: createGoRoutine,
+		goRoutineGroup:  goRoutineGroup,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		ContractRouter:  contractRouter,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
+		intervalsCount:  0,
+		intervals:       map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
@@ -362,8 +366,12 @@ func ExecuteWasm(
 	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
+	fmt.Println("--ExecuteWasm executeHandler--systemDeps-", systemDeps)
+
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
+
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
+	fmt.Println("--ExecuteWasm executeHandler--err-", err)
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)

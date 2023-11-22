@@ -115,6 +115,12 @@ func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, prov
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
 }
+
+func (h *WasmxCosmosHandler) Execute(contractAddress sdk.AccAddress, sender sdk.AccAddress, execmsg []byte, value *big.Int, deps []string) (res []byte, err error) {
+	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
+	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps)
+}
+
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
 	return h.Keeper.GetContractDependency(ctx, addr)
 }

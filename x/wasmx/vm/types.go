@@ -79,21 +79,22 @@ type IntervalAction struct {
 }
 
 type Context struct {
-	goRoutineGroup *errgroup.Group
-	Ctx            sdk.Context
-	GasMeter       types.GasMeter
-	Env            *types.Env
-	ContractRouter ContractRouter
-	ContractStore  prefix.Store
-	CosmosHandler  types.WasmxCosmosHandler
-	NativeHandler  NativePrecompileHandler
-	ReturnData     []byte
-	CurrentCallId  uint32
-	Logs           []WasmxLog
-	Messages       []cw8types.SubMsg `json:"messages"`
-	dbIterators    map[int32]dbm.Iterator
-	intervalsCount int32
-	intervals      map[int32]*IntervalAction
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error)
+	goRoutineGroup  *errgroup.Group
+	Ctx             sdk.Context
+	GasMeter        types.GasMeter
+	Env             *types.Env
+	ContractRouter  ContractRouter
+	ContractStore   prefix.Store
+	CosmosHandler   types.WasmxCosmosHandler
+	NativeHandler   NativePrecompileHandler
+	ReturnData      []byte
+	CurrentCallId   uint32
+	Logs            []WasmxLog
+	Messages        []cw8types.SubMsg `json:"messages"`
+	dbIterators     map[int32]dbm.Iterator
+	intervalsCount  int32
+	intervals       map[int32]*IntervalAction
 }
 
 func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {

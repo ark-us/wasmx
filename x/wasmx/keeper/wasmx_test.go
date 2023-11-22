@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -252,4 +253,8 @@ func (suite *KeeperTestSuite) TestWasmxStateMachineTimer() {
 
 	data = []byte(`{"run":{"id":0,"event":{"type":"send","params":[]}}}`)
 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	// Wait enough time to ensure all goroutines have time to run
+	time.Sleep(10 * time.Second)
+	fmt.Println("Main function finished")
 }
