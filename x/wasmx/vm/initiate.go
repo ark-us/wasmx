@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"fmt"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
@@ -91,7 +93,7 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 }
 
 func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	// fmt.Println("---InitiateWasi--")
+	fmt.Println("---InitiateWasi--")
 	var cleanups []func()
 
 	// TODO better
