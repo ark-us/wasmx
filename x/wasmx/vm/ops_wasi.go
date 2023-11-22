@@ -614,10 +614,10 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 	return env
 }
 
-func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	var res []interface{}
 	var err error
-	// fmt.Println("--ExecuteWasi---")
+	fmt.Println("--ExecuteWasi---", funcName)
 
 	// WASI standard does not have instantiate
 	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
@@ -640,6 +640,9 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 		if !found {
 			return nil, nil
 		}
+	} else if funcName == types.ENTRY_POINT_TIMED {
+		fmt.Println("--ExecuteWasi---", funcName, args)
+		res, err = contractVm.Execute(funcName, args...)
 	} else {
 		// WASI command - no args, no return
 		res, err = contractVm.Execute("_start")
@@ -660,7 +663,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string) ([]
 	return res, nil
 }
 
-func ExecutePythonInterpreter(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecutePythonInterpreter(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
@@ -715,10 +718,10 @@ set_returndata(res or b'')
 			// fmt.Sprintf(`/:%s`, dir),
 		},
 	)
-	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
+	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 }
 
-func ExecuteJsInterpreter(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteJsInterpreter(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
@@ -759,10 +762,10 @@ wasmx.setReturnData(res || new ArrayBuffer(0));
 			fmt.Sprintf(`.:%s`, dir),
 		},
 	)
-	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE)
+	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 }
 
-func ExecuteWasiWrap(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
+func ExecuteWasiWrap(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	// if funcName == "execute" || funcName == "query" {
 	// 	funcName = "main"
 	// }
@@ -780,7 +783,7 @@ func ExecuteWasiWrap(context *Context, contractVm *wasmedge.VM, funcName string)
 			// fmt.Sprintf(`.:%s`, dir),
 		},
 	)
-	return ExecuteWasi(context, contractVm, funcName)
+	return ExecuteWasi(context, contractVm, funcName, args)
 }
 
 func writeMemDefaultMalloc(vm *wasmedge.VM, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
