@@ -575,7 +575,7 @@ func New(
 		memKeys[networkmoduletypes.MemStoreKey],
 		tkeys[networkmoduletypes.TStoreKey],
 		app.GetSubspace(networkmoduletypes.ModuleName),
-		app.WasmxKeeper,
+		&app.WasmxKeeper,
 		// TODO remove authority?
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)

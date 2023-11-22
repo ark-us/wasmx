@@ -68,6 +68,7 @@ func NewGRPCServer(
 	cfg config.GRPCConfig,
 	app servertypes.Application,
 	tmNode *node.Node,
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) (*grpc.Server, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
@@ -85,7 +86,7 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv)
+	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, createGoRoutine)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
@@ -136,7 +137,14 @@ func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
 // var bzkey = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 // RegisterGRPCServer registers gRPC services directly with the gRPC server.
-func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode *node.Node, sapp servertypes.Application, server *grpc.Server) error {
+func RegisterGRPCServer(
+	svrCtx *server.Context,
+	clientCtx client.Context,
+	tmNode *node.Node,
+	sapp servertypes.Application,
+	server *grpc.Server,
+	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
+) error {
 	app, ok := sapp.(BaseApp)
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
@@ -242,8 +250,9 @@ func RegisterGRPCServer(svrCtx *server.Context, clientCtx client.Context, tmNode
 	}
 
 	handler := &msgServer{
-		Keeper: mythosapp.GetNetworkKeeper(),
-		TmNode: tmNode,
+		Keeper:          mythosapp.GetNetworkKeeper(),
+		TmNode:          tmNode,
+		createGoRoutine: createGoRoutine,
 	}
 
 	desc := types.Network_Msg_serviceDesc

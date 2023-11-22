@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -307,22 +306,22 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-func executeTimedAction(_context *Context, intervalId int32, argsPtr int32) error {
-	fmt.Println("executeTimedAction", intervalId, argsPtr)
-	contractCtx, ok := _context.ContractRouter[_context.Env.Contract.Address.String()]
-	if !ok {
-		return fmt.Errorf("timed action: contract context not found")
-	}
-	executeHandler := GetExecuteFunctionHandler(contractCtx.ContractInfo.SystemDeps)
+// func executeTimedAction(_context *Context, intervalId int32, argsPtr int32) error {
+// 	fmt.Println("executeTimedAction", intervalId, argsPtr)
+// 	contractCtx, ok := _context.ContractRouter[_context.Env.Contract.Address.String()]
+// 	if !ok {
+// 		return fmt.Errorf("timed action: contract context not found")
+// 	}
+// 	executeHandler := GetExecuteFunctionHandler(contractCtx.ContractInfo.SystemDeps)
 
-	args := []interface{}{intervalId, argsPtr}
-	_, err := executeHandler(_context, contractCtx.Vm, types.ENTRY_POINT_TIMED, args)
-	fmt.Println("--executeTimedAction--", err)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// 	args := []interface{}{intervalId, argsPtr}
+// 	_, err := executeHandler(_context, contractCtx.Vm, types.ENTRY_POINT_TIMED, args)
+// 	fmt.Println("--executeTimedAction--", err)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 // startInterval(repeat: i32, time: u64, args: ArrayBuffer): i32
 func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -337,36 +336,74 @@ func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, 
 	fmt.Println("--wasmxStartInterval--", repeatCount, timeDelay, string(argsbz))
 
 	// g, ctx2, cancelFn := getCtx(ctx.GetContext().Logger(), true)
-	g := ctx.goRoutineGroup
-	fmt.Println("--ctx.goRoutineGroup--", g)
+	// g := ctx.goRoutineGroup
+	// fmt.Println("--ctx.goRoutineGroup--", g)
 	// cancelFn must be called to release resources when the process is done
-	ctx2, cancelFn := context.WithCancel(ctx.Ctx)
+	// ctx2, cancelFn := context.WithCancel(ctx.Ctx)
 
-	intervalId := ctx.intervalsCount
-	fmt.Println("--intervalId--", intervalId)
-	ctx.intervalsCount += 1
-	ctx.intervals[intervalId] = &IntervalAction{
-		Time:   timeDelay,
-		Args:   argsbz,
-		Cancel: cancelFn,
+	// intervalId := ctx.intervalsCount
+	// fmt.Println("--intervalId--", intervalId)
+	// ctx.intervalsCount += 1
+	// ctx.intervals[intervalId] = &IntervalAction{
+	// 	Time:   timeDelay,
+	// 	Args:   argsbz,
+	// 	Cancel: cancelFn,
+	// }
+
+	msgtosend := &networktypes.MsgStartIntervalRequest{
+		// Sender:  sdk.AccAddress([]byte("network")).String(),
+		Sender:  ctx.Env.Contract.Address.String(),
+		Address: ctx.Env.Contract.Address.String(),
+		Delay:   timeDelay,
+		Repeat:  repeatCount,
+		Args:    argsbz,
 	}
-	fmt.Println("--before go routine--")
+	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	fmt.Println("--ExecuteCosmosMsg--err-", err)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var resp networktypes.MsgStartIntervalResponse
+	err = resp.Unmarshal(res)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	intervalId := resp.IntervalId
+	fmt.Println("---timer created intervalId", intervalId)
 
-	g.Go(func() error {
-		fmt.Println("--startTimedAction--")
-		_, err = startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
-		if err != nil {
-			ctx.GetContext().Logger().Error("failed to start timed action", "err", err)
-			return err
-		}
+	// description := fmt.Sprintf("timed action: id %s, delay %sms, repeat %s, args: %s ", intervalId, timeDelay, repeatCount, string(argsbz))
+	// action := func() error {
+	// 	_intervalId := big.NewInt(int64(intervalId))
+	// 	data := append(_intervalId.FillBytes(make([]byte, 4)), argsbz...)
+	// 	execmsg := types.WasmxExecutionMessage{Data: data}
+	// 	msgbz, err := json.Marshal(execmsg)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		// Wait for the calling process to be canceled or close the provided context,
-		// so we can gracefully stop the ABCI server.
-		<-ctx2.Done()
-		ctx.GetContext().Logger().Info("stopping the timed action...")
-		cancelFn()
-		return nil
-	})
+	// 	// _, err := startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
+	// 	return err
+	// }
+	// gracefulStop := func() {
+
+	// }
+	// done, err := ctx.createGoRoutine(description, action, gracefulStop)
+
+	// g.Go(func() error {
+	// 	fmt.Println("--startTimedAction--")
+	// 	_, err = startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
+	// 	if err != nil {
+	// 		ctx.GetContext().Logger().Error("failed to start timed action", "err", err)
+	// 		return err
+	// 	}
+
+	// 	// Wait for the calling process to be canceled or close the provided context,
+	// 	// so we can gracefully stop the ABCI server.
+	// 	<-ctx2.Done()
+	// 	ctx.GetContext().Logger().Info("stopping the timed action...")
+	// 	cancelFn()
+	// 	return nil
+	// })
 
 	// err = g.Wait() // use the given wait
 	// if err != nil {
@@ -444,54 +481,54 @@ func getCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, co
 	return g, ctx, cancelFn
 }
 
-func startTimedAction(ctx *Context, callframe *wasmedge.CallingFrame, goctx context.Context, logger log.Logger, intervalId int32, timeDelay int64, repeatCount int32, argsbz []byte) (chan struct{}, error) {
-	httpSrvDone := make(chan struct{}, 1)
-	errCh := make(chan error)
-	currentCount := int32(0)
+// func startTimedAction(ctx *Context, callframe *wasmedge.CallingFrame, goctx context.Context, logger log.Logger, intervalId int32, timeDelay int64, repeatCount int32, argsbz []byte) (chan struct{}, error) {
+// 	httpSrvDone := make(chan struct{}, 1)
+// 	errCh := make(chan error)
+// 	currentCount := int32(0)
 
-	go func() {
-		logger.Info("Starting new timed action", "intervalId", intervalId, "delay", timeDelay, "args", string(argsbz))
-		// if err := httpSrv.Serve(ln); err != nil {
-		// 	logger.Error("failed to serve Websrv", "error", err.Error())
-		// 	if err == http.ErrServerClosed {
-		// 		close(httpSrvDone)
-		// 		return
-		// 	}
+// 	go func() {
+// 		logger.Info("Starting new timed action", "intervalId", intervalId, "delay", timeDelay, "args", string(argsbz))
+// 		// if err := httpSrv.Serve(ln); err != nil {
+// 		// 	logger.Error("failed to serve Websrv", "error", err.Error())
+// 		// 	if err == http.ErrServerClosed {
+// 		// 		close(httpSrvDone)
+// 		// 		return
+// 		// 	}
 
-		// 	logger.Error("failed to start Websrv server", "error", err.Error())
-		// 	errCh <- err
-		// }
-		for {
-			if repeatCount > 0 && currentCount == repeatCount {
-				return
-			}
-			select {
-			case <-goctx.Done():
-				// The calling process canceled or closed the provided context
-				return
-			default:
-				argsptr, err := allocateWriteMem(ctx, callframe, argsbz)
-				if err != nil {
-					errCh <- err
-				}
-				fmt.Println("argsptr", argsptr)
-				err = executeTimedAction(ctx, intervalId, argsptr)
-				if err != nil {
-					errCh <- err
-				}
-			}
-			currentCount += 1
-			time.Sleep(time.Duration(timeDelay) * time.Millisecond)
-		}
-	}()
+// 		// 	logger.Error("failed to start Websrv server", "error", err.Error())
+// 		// 	errCh <- err
+// 		// }
+// 		for {
+// 			if repeatCount > 0 && currentCount == repeatCount {
+// 				return
+// 			}
+// 			select {
+// 			case <-goctx.Done():
+// 				// The calling process canceled or closed the provided context
+// 				return
+// 			default:
+// 				argsptr, err := allocateWriteMem(ctx, callframe, argsbz)
+// 				if err != nil {
+// 					errCh <- err
+// 				}
+// 				fmt.Println("argsptr", argsptr)
+// 				err = executeTimedAction(ctx, intervalId, argsptr)
+// 				if err != nil {
+// 					errCh <- err
+// 				}
+// 			}
+// 			currentCount += 1
+// 			time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+// 		}
+// 	}()
 
-	select {
-	case <-goctx.Done():
-		// The calling process canceled or closed the provided context
-		logger.Info("stopping timed action", "args", string(argsbz))
-		return httpSrvDone, nil
-	case err := <-errCh:
-		logger.Error("failed to start timed action", "error", err.Error())
-		return nil, err
-	}
-}
+// 	select {
+// 	case <-goctx.Done():
+// 		// The calling process canceled or closed the provided context
+// 		logger.Info("stopping timed action", "args", string(argsbz))
+// 		return httpSrvDone, nil
+// 	case err := <-errCh:
+// 		logger.Error("failed to start timed action", "error", err.Error())
+// 		return nil, err
+// 	}
+// }

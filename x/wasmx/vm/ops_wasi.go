@@ -642,7 +642,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, arg
 		}
 	} else if funcName == types.ENTRY_POINT_TIMED {
 		fmt.Println("--ExecuteWasi---", funcName, args)
-		res, err = contractVm.Execute(funcName, args...)
+		res, err = contractVm.Execute(funcName)
 	} else {
 		// WASI command - no args, no return
 		res, err = contractVm.Execute("_start")
@@ -657,7 +657,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, arg
 		// res, err = contractVm.Execute("testtime")
 		// fmt.Println("--testtime-res, err", res, err)
 	}
-	fmt.Println("--ExecuteWasi END--")
+	fmt.Println("--ExecuteWasi END--", funcName)
 	if err != nil {
 		return nil, err
 	}
@@ -770,7 +770,7 @@ func ExecuteWasiWrap(context *Context, contractVm *wasmedge.VM, funcName string,
 	// if funcName == "execute" || funcName == "query" {
 	// 	funcName = "main"
 	// }
-	// fmt.Println("--ExecuteWasiWrap--", funcName)
+	fmt.Println("--ExecuteWasiWrap--", funcName)
 
 	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	wasimodule.InitWasi(

@@ -188,7 +188,8 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	err := keeper.RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv)
+	fn := func(description string, fn func() error, gracefulStop func()) (chan struct{}, error) { return nil, nil }
+	err := keeper.RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, fn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}

@@ -10,4 +10,6 @@ import (
 type WasmxKeeper interface {
 	Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg wasmxtypes.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
 	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg wasmxtypes.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error)
+	ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error)
+	SetGoRoutineCreate(createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error))
 }
