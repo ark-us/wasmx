@@ -68,7 +68,7 @@ func NewGRPCServer(
 	cfg config.GRPCConfig,
 	app servertypes.Application,
 	tmNode *node.Node,
-	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) (*grpc.Server, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
@@ -143,7 +143,7 @@ func RegisterGRPCServer(
 	tmNode *node.Node,
 	sapp servertypes.Application,
 	server *grpc.Server,
-	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) error {
 	app, ok := sapp.(BaseApp)
 	if !ok {

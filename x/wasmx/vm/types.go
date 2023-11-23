@@ -79,7 +79,7 @@ type IntervalAction struct {
 }
 
 type Context struct {
-	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error)
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
 	goRoutineGroup  *errgroup.Group
 	Ctx             sdk.Context
 	GasMeter        types.GasMeter

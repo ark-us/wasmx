@@ -19,7 +19,7 @@ import (
 
 type WasmxEngine struct {
 	goRoutineGroup  *errgroup.Group
-	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error)
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
 	DataDir         string
 	SourcesDir      string
 	printDebug      bool
@@ -38,7 +38,7 @@ func (k *WasmxEngine) SetGoRoutineGroup(g *errgroup.Group) {
 	k.goRoutineGroup = g
 }
 
-func (k *WasmxEngine) SetGoRoutineCreate(createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error)) {
+func (k *WasmxEngine) SetGoRoutineCreate(createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)) {
 	k.createGoRoutine = createGoRoutine
 }
 

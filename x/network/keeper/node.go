@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -35,10 +36,11 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	createGoRoutine := func(description string, fn func() error, gracefulStop func()) (chan struct{}, error) {
+	createGoRoutine := func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error) {
 		httpSrvDone := make(chan struct{}, 1)
 		errCh := make(chan error)
 		go func() {
+			time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 			logger.Info("Creating a new thread", "description", description)
 			if err := fn(); err != nil {
 				fmt.Println("---thread is closing--", err)

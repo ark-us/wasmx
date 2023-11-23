@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/cometbft/cometbft/node"
 	cmttypes "github.com/cometbft/cometbft/types"
@@ -31,7 +32,7 @@ type msgServer struct {
 	intervals     map[int32]*IntervalAction
 	Keeper
 	TmNode          *node.Node
-	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error)
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
@@ -47,7 +48,7 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 func NewMsgServer(
 	keeper Keeper,
 	tmNode *node.Node,
-	createGoRoutine func(description string, fn func() error, gracefulStop func()) (chan struct{}, error),
+	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) types.MsgServer {
 	keeper.wasmxKeeper.SetGoRoutineCreate(createGoRoutine)
 	return &msgServer{
@@ -106,9 +107,11 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 	// gracefulStop := func() {}
 	// _, err = m.createGoRoutine(description, action, gracefulStop)
 
+	timeDelay := msg.Delay
 	httpSrvDone := make(chan struct{}, 1)
 	errCh := make(chan error)
 	go func() {
+		time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 		_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
 		if err != nil {
 			fmt.Println("---thread is closing--", err)
