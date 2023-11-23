@@ -243,9 +243,9 @@ func (suite *KeeperTestSuite) TestWasmxStateMachineTimer() {
 
 	data := []byte(fmt.Sprintf(`{"create":%s}`, config))
 	res := appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Contains(string(res.Data), `{"id":0}`)
+	s.Require().Contains(string(res.Data), `{"id":1}`)
 
-	data = []byte(`{"getCurrentState":{"id":0}}`)
+	data = []byte(`{"getCurrentState":{"id":1}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal("active", string(qres))
 
@@ -255,6 +255,6 @@ func (suite *KeeperTestSuite) TestWasmxStateMachineTimer() {
 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	// Wait enough time to ensure all goroutines have time to run
-	time.Sleep(20 * time.Second)
+	time.Sleep(10 * time.Second)
 	fmt.Println("Main function finished")
 }
