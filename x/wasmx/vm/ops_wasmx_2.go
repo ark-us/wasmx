@@ -273,7 +273,7 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 
 type GrpcRequest struct {
 	Address string `json:"address"`
-	Data    string `json:"data"` // should be []byte (base64 encoded)
+	Data    []byte `json:"data"` // should be []byte (base64 encoded)
 }
 
 func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
