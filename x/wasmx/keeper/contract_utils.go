@@ -46,8 +46,10 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 
 func (k Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store {
 	// default must be core consensus
-	storageKey := k.storeKey
-	if storageType == types.ContractStorageType_Transient {
+	storageKey := k.storeKey // types.ContractStorageType_CoreConsensus
+	if storageType == types.ContractStorageType_MetaConsensus {
+		storageKey = k.clessKey
+	} else if storageType == types.ContractStorageType_Transient {
 		storageKey = k.tKey
 	} else if storageType == types.ContractStorageType_Memory {
 		storageKey = k.memKey

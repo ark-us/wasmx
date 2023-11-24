@@ -20,6 +20,7 @@ type (
 		storeKey       storetypes.StoreKey
 		memKey         storetypes.StoreKey
 		tKey           storetypes.StoreKey
+		clessKey       storetypes.StoreKey
 		paramstore     paramtypes.Subspace
 		wasmxKeeper    types.WasmxKeeper
 
@@ -35,6 +36,7 @@ func NewKeeper(
 	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
 	tKey storetypes.StoreKey,
+	clessKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	wasmxKeeper types.WasmxKeeper,
 	authority string,
@@ -50,6 +52,7 @@ func NewKeeper(
 		storeKey:       storeKey,
 		memKey:         memKey,
 		tKey:           tKey,
+		clessKey:       clessKey,
 		paramstore:     ps,
 		wasmxKeeper:    wasmxKeeper,
 		authority:      authority,

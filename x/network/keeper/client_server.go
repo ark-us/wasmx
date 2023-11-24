@@ -50,6 +50,7 @@ type MythosApp interface {
 	GetNetworkKeeper() Keeper
 	GetTKey(storeKey string) *storetypes.TransientStoreKey
 	GetMKey(storeKey string) *storetypes.MemoryStoreKey
+	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
 }
 
 type BaseApp interface {
@@ -190,7 +191,8 @@ func RegisterGRPCServer(
 		if err != nil {
 			return nil, err
 		}
-		sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+		// sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+		sdkCtx := sdkCtx_
 
 		// Add relevant gRPC headers
 		if height == 0 {
@@ -226,10 +228,6 @@ func RegisterGRPCServer(
 		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
 
-		fmt.Println("-----NETWORK REQUEST--EXEC DONE-")
-
-		commitCacheCtx()
-
 		// we just committed to the query context
 		// fmt.Println("----query context state")
 		// tstore0 := sdkCtx_.MultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
@@ -238,9 +236,30 @@ func RegisterGRPCServer(
 		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstore0.Get(append(tstoreprefix, bz...)))
 
+		// commitCacheCtx()
+
 		// commit original context
-		origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		origtstore.(storetypes.CacheWrap).Write()
+		fmt.Println("--GetCLessKey--", mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
+		origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
+		fmt.Println("--origtstore--", origtstore.GetStoreType())
+		// origtstore.(storetypes.CacheWrap).Write()
+		// origtstore.(storetypes.CommitKVStore).Commit()
+
+		origtstore2 := ctxcachems.GetKVStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
+		fmt.Println("--origtstore2--", origtstore2.GetStoreType())
+		origtstore2.CacheWrap().Write()
+
+		// origtstore2.(consensuslessstore.Store).Commit()
+
+		cms := app.CommitMultiStore()
+		// qms := cms.(storetypes.MultiStore)
+		origtstore3 := cms.GetCommitKVStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
+		fmt.Println("--origtstore3--", origtstore3.GetStoreType())
+		origtstore3.Commit()
+
+		// origtstore2.(storetypes.CommitKVStore).Commit()
+
+		// ctxcachems.Write()
 
 		// fmt.Println("----app state")
 		// tstorer = app.CommitMultiStore().GetKVStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
@@ -331,19 +350,22 @@ func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool
 			)
 	}
 
-	cacheMS, err := qms.CacheMultiStoreWithVersion(height)
-	if err != nil {
-		return sdk.Context{}, nil,
-			errorsmod.Wrapf(
-				sdkerrors.ErrInvalidRequest,
-				"failed to load state at height %d; %s (latest height: %d)", height, err, lastBlockHeight,
-			)
-	}
+	// cacheMS, err := qms.CacheMultiStoreWithVersion(height)
+	// if err != nil {
+	// 	return sdk.Context{}, nil,
+	// 		errorsmod.Wrapf(
+	// 			sdkerrors.ErrInvalidRequest,
+	// 			"failed to load state at height %d; %s (latest height: %d)", height, err, lastBlockHeight,
+	// 		)
+	// }
+	cacheMS := qms.CacheMultiStore()
 
 	tmpctx, err := app.CreateQueryContext(height, false)
 	if err != nil {
 		return sdk.Context{}, nil, err
 	}
+
+	// tmpctx := app.GetContextForFinalizeBlock(make([]byte, 0))
 
 	// branch the commit multi-store for safety
 	ctx := sdk.NewContext(cacheMS, tmpctx.BlockHeader(), true, logger).

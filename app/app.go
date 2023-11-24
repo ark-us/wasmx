@@ -193,9 +193,10 @@ type App struct {
 	invCheckPeriod uint
 
 	// keys to access the substores
-	keys    map[string]*storetypes.KVStoreKey
-	tkeys   map[string]*storetypes.TransientStoreKey
-	memKeys map[string]*storetypes.MemoryStoreKey
+	keys      map[string]*storetypes.KVStoreKey
+	tkeys     map[string]*storetypes.TransientStoreKey
+	memKeys   map[string]*storetypes.MemoryStoreKey
+	clessKeys map[string]*storetypes.ConsensuslessStoreKey
 
 	// keepers
 	AccountKeeper         authkeeper.AccountKeeper
@@ -288,6 +289,7 @@ func New(
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, wasmxmoduletypes.MemStoreKey)
+	clessKeys := storetypes.NewConsensuslessStoreKeys(networkmoduletypes.CLessStoreKey, wasmxmoduletypes.CLessStoreKey)
 
 	// register streaming services
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -305,6 +307,7 @@ func New(
 		tkeys:             tkeys,
 		memKeys:           memKeys,
 		goRoutineGroup:    goRoutineGroup,
+		clessKeys:         clessKeys,
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -541,6 +544,7 @@ func New(
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
 		tkeys[wasmxmoduletypes.TStoreKey],
+		clessKeys[wasmxmoduletypes.CLessStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
@@ -575,6 +579,7 @@ func New(
 		keys[networkmoduletypes.StoreKey],
 		memKeys[networkmoduletypes.MemStoreKey],
 		tkeys[networkmoduletypes.TStoreKey],
+		clessKeys[networkmoduletypes.CLessStoreKey],
 		app.GetSubspace(networkmoduletypes.ModuleName),
 		&app.WasmxKeeper,
 		// TODO remove authority?
@@ -826,6 +831,7 @@ func New(
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
 	app.MountMemoryStores(memKeys)
+	app.MountConsensuslessStores(clessKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -1008,6 +1014,11 @@ func (app *App) GetTKey(storeKey string) *storetypes.TransientStoreKey {
 // Used by network module
 func (app *App) GetMKey(storeKey string) *storetypes.MemoryStoreKey {
 	return app.memKeys[storeKey]
+}
+
+// Used by network module
+func (app *App) GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey {
+	return app.clessKeys[storeKey]
 }
 
 // GetMemKey returns the MemStoreKey for the provided mem key.
