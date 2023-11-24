@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -276,23 +277,30 @@ type GrpcRequest struct {
 }
 
 func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	fmt.Println("--wasmxGrpcRequest--")
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	databz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	fmt.Println("--wasmxGrpcRequest-databz-", databz)
+	fmt.Println("--wasmxGrpcRequest-databz-", string(databz))
+	fmt.Println("--wasmxGrpcRequest-databz-", hex.EncodeToString(databz))
 	var data GrpcRequest
 	err = json.Unmarshal(databz, &data)
+	fmt.Println("--wasmxGrpcRequest-err-", err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	fmt.Println("--wasmxGrpcRequest-data-", data)
 	msg := &networktypes.MsgGrpcSendRequest{
 		Address: data.Address,
 		Data:    []byte(data.Data),
 		Sender:  ctx.Env.Contract.Address.String(),
 	}
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+	fmt.Println("--wasmxGrpcRequest-res, err-", res, err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
