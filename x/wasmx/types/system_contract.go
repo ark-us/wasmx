@@ -167,7 +167,7 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       "network",
 			InitMessage: initMsg,
 			Pinned:      false,
-			StorageType: ContractStorageType_Memory,
+			StorageType: ContractStorageType_MetaConsensus,
 		},
 	}
 }

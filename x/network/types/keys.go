@@ -14,6 +14,8 @@ const (
 	MemStoreKey = "mem_network"
 
 	TStoreKey = "transient_network"
+
+	CLessStoreKey = "consensusless_network"
 )
 
 const (

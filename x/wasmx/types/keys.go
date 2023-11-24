@@ -19,6 +19,8 @@ const (
 
 	TStoreKey = "transient_wasmx"
 
+	CLessStoreKey = "consensusless_wasmx"
+
 	ContractsDir = "wasmx"
 
 	TempDir = "temp"
