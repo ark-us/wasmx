@@ -218,6 +218,62 @@ func (m msgServer) Setup(goCtx context.Context, msg *types.MsgSetup) (*types.Msg
 	}, nil
 }
 
+func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "sender")
+	}
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Msg}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, senderAddr, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	// fmt.Println("-Ping--network-resp---", string(resp))
+
+	return &types.MsgExecuteContractResponse{
+		Data: resp,
+	}, nil
+}
+
+func (m msgServer) QueryContract(goCtx context.Context, msg *types.MsgQueryContract) (*types.MsgQueryContractResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "sender")
+	}
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Msg}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := m.wasmxKeeper.Query(ctx, contractAddress, senderAddr, execmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	// fmt.Println("-Ping--network-resp---", string(resp))
+
+	return &types.MsgQueryContractResponse{
+		Data: resp,
+	}, nil
+}
+
 func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
