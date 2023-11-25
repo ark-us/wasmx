@@ -109,22 +109,24 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 
 	timeDelay := msg.Delay
 	httpSrvDone := make(chan struct{}, 1)
-	errCh := make(chan error)
-	go func() {
+	// errCh := make(chan error)
+	m.goRoutineGroup.Go(func() error {
 		time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 		_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
 		if err != nil {
-			fmt.Println("---thread is closing--", err)
+			// TODO - stop without propagating a stop to parent
 			if err == types.ErrGoroutineClosed {
 				m.Logger(ctx).Error("Closing thread", "description", description, err.Error())
 				close(httpSrvDone)
-				return
+				return nil
 			}
 
 			m.Logger(ctx).Error("failed to start a new thread", "error", err.Error())
-			errCh <- err
+			// errCh <- err
+			return err
 		}
-	}()
+		return nil
+	})
 
 	return &types.MsgStartIntervalResponse{
 		IntervalId: intervalId,
@@ -200,7 +202,7 @@ func (m msgServer) Setup(goCtx context.Context, msg *types.MsgSetup) (*types.Msg
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
 	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"sendRequest","params":[{"key":"address","value":"%s"},{"key":"data","value":"hello"}]}}}`, msg.Data))
 
-	data := []byte(`{"create":{"context":[{"key":"data","value":"hello"},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"received","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"received","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"5000","target":"#AB-Req-Res-timer.sending","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}}`)
+	data := []byte(`{"create":{"context":[{"key":"data","value":"aGVsbG8="},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"received","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"received","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"10000","target":"#AB-Req-Res-timer.sending","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}}`)
 
 	var resp []byte
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
@@ -302,14 +304,14 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Go - current state query: ", string(qres))
+	fmt.Println("Go - Ping current state query: ", string(qres))
 	var qresbz wasmxtypes.WasmxQueryResponse
 	err = json.Unmarshal(qres, &qresbz)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("Go - current state: ", string(qresbz.Data))
+	fmt.Println("Go - Ping current state: ", string(qresbz.Data))
 
 	response := msg.Data + hex.EncodeToString(resp)
 

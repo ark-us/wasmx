@@ -40,6 +40,10 @@ func BenchmarkSimulation(b *testing.B) {
 
 	encoding := app.MakeEncodingConfig()
 
+	appOpts := app.DefaultAppOptions{}
+	g, _, _ := app.GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
+
 	app := app.New(
 		logger,
 		db,
@@ -49,7 +53,7 @@ func BenchmarkSimulation(b *testing.B) {
 		app.DefaultNodeHome,
 		0,
 		encoding,
-		simtestutil.EmptyAppOptions{},
+		appOpts,
 	)
 
 	// Run randomized simulations

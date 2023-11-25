@@ -15,7 +15,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
-	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"golang.org/x/sync/errgroup"
@@ -54,15 +53,33 @@ var DefaultConsensusParams = &tmproto.ConsensusParams{
 	},
 }
 
+// DefaultAppOptions is a stub implementing AppOptions
+type DefaultAppOptions map[string]interface{}
+
+// Get implements AppOptions
+func (m DefaultAppOptions) Get(key string) interface{} {
+	v, ok := m[key]
+	if !ok {
+		return interface{}(nil)
+	}
+
+	return v
+}
+
+func (m DefaultAppOptions) Set(key string, value interface{}) {
+	m[key] = value
+}
+
 // Setup initializes a new Mythos. A Nop logger is set in Mythos.
 func Setup(
 	isCheckTx bool,
 ) *App {
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
-	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), simtestutil.EmptyAppOptions{})
-	g, _, _ := getCtx(logger, true)
-	app.SetGoRoutineGroup(g)
+	appOpts := DefaultAppOptions{}
+	g, _, _ := GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
+	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -92,15 +109,15 @@ func SetupTestingApp(chainID string) (ibctesting.TestingApp, map[string]json.Raw
 	db := dbm.NewMemDB()
 	cfg := MakeEncodingConfig()
 	logger := log.NewNopLogger()
+	appOpts := DefaultAppOptions{}
+	g, _, _ := GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
 	app := New(
 		logger,
 		db, nil, true, map[int64]bool{},
-		DefaultNodeHome, 5, cfg, simtestutil.EmptyAppOptions{},
+		DefaultNodeHome, 5, cfg, appOpts,
 		bam.SetChainID(chainID),
 	)
-	g, _, _ := getCtx(logger, true)
-	app.SetGoRoutineGroup(g)
-
 	return app, app.DefaultGenesis()
 }
 
@@ -114,15 +131,18 @@ func NewTestNetworkFixture() network.TestFixture {
 
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
-	app := New(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), simtestutil.EmptyAppOptions{})
-	g, _, _ := getCtx(logger, true)
-	app.SetGoRoutineGroup(g)
+	appOpts := DefaultAppOptions{}
+	g, _, _ := GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
+	app := New(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
+		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
+		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
 		return New(
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
 			DefaultNodeHome, 5, MakeEncodingConfig(),
-			simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir),
+			appOpts,
 			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 			bam.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
 			bam.SetChainID(val.GetCtx().Viper.GetString(flags.FlagChainID)),
@@ -141,7 +161,7 @@ func NewTestNetworkFixture() network.TestFixture {
 	}
 }
 
-func getCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
+func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 	// listen for quit signals so the calling parent process can gracefully exit

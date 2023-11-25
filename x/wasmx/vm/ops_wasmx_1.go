@@ -22,7 +22,6 @@ type WasmxJsonLog struct {
 // getCallData(): ArrayBuffer
 func getCallData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	fmt.Println("---getCallData--", ctx.Env.CurrentCall.CallData)
 	ptr, err := allocateWriteMem(ctx, callframe, ctx.Env.CurrentCall.CallData)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -262,7 +261,6 @@ func allocateMemVm(vm *wasmedge.VM, size int32) (int32, error) {
 	if vm == nil {
 		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
 	}
-	fmt.Println("--allocateMemVm--", types.MEMORY_EXPORT_AS, size, AS_ARRAY_BUFFER_TYPE)
 	result, err := vm.Execute(types.MEMORY_EXPORT_AS, size, AS_ARRAY_BUFFER_TYPE)
 	if err != nil {
 		return 0, err

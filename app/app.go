@@ -243,7 +243,6 @@ type App struct {
 
 // New returns a reference to an initialized blockchain app
 func New(
-	// goRoutineGroup *errgroup.Group,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -258,6 +257,7 @@ func New(
 	appCodec := encodingConfig.Marshaler
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
+	goRoutineGroup := appOpts.Get("goroutineGroup").(*errgroup.Group)
 
 	// TODO - do we need this?
 	// std.RegisterLegacyAminoCodec(cdc)
@@ -304,7 +304,7 @@ func New(
 		keys:              keys,
 		tkeys:             tkeys,
 		memKeys:           memKeys,
-		// goRoutineGroup:    goRoutineGroup,
+		goRoutineGroup:    goRoutineGroup,
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -536,7 +536,7 @@ func New(
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
-		app.goRoutineGroup, // this is nil at initialization; maybe make it not nil
+		app.goRoutineGroup,
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
@@ -570,6 +570,7 @@ func New(
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
+		app.goRoutineGroup,
 		appCodec,
 		keys[networkmoduletypes.StoreKey],
 		memKeys[networkmoduletypes.MemStoreKey],

@@ -70,13 +70,18 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("")
 
+	logger := log.NewNopLogger()
+	appOpts := app.DefaultAppOptions{}
+	g, _, _ := app.GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
+	appOpts.Set(flags.FlagHome, tempDir())
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
 	tempApp := app.New(
-		log.NewNopLogger(),
+		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
 		cast.ToString(tempOpts.Get(flags.FlagHome)),
-		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, tempOpts)
+		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, appOpts)
 
 	rootCmd := &cobra.Command{
 		Use:   app.Name + "d",
