@@ -366,12 +366,9 @@ func ExecuteWasm(
 	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
-	fmt.Println("--ExecuteWasm executeHandler--systemDeps-", systemDeps)
-
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
 
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
-	fmt.Println("--ExecuteWasm executeHandler--err-", err)
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)

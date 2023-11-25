@@ -229,6 +229,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 		return err
 	}
 
+	svrCtx.Viper.Set("goroutineGroup", g)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
 	err = SetGoRoutineGroup(app, g)
 	if err != nil {
@@ -314,6 +315,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
+	svrCtx.Viper.Set("goroutineGroup", g)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
 	err = SetGoRoutineGroup(app, g)
 	if err != nil {

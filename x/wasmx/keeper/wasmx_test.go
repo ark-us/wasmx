@@ -234,12 +234,10 @@ func (suite *KeeperTestSuite) TestWasmxStateMachineTimer() {
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	fmt.Println("---TestWasmxStateMachineTimer---")
 	codeId := appA.StoreCode(owner, wasmbin, nil)
-	fmt.Println("---TestWasmxStateMachineTimer-InstantiateCode--")
 	contractAddress := appA.InstantiateCode(owner, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "stateMachine", nil)
 
-	config := `{"context":[{"key":"data","value":"hello"},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"IReceivedTheRequest","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"IReceivedTheRequest","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"5000","target":"#AB-Req-Res-timer.sending request","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending request","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}`
+	config := `{"context":[{"key":"data","value":"aGVsbG8="},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"IReceivedTheRequest","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"IReceivedTheRequest","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"5000","target":"#AB-Req-Res-timer.sending request","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending request","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}`
 
 	data := []byte(fmt.Sprintf(`{"create":%s}`, config))
 	res := appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
@@ -251,50 +249,10 @@ func (suite *KeeperTestSuite) TestWasmxStateMachineTimer() {
 
 	fmt.Println("---TestWasmxStateMachineTimer-run--")
 
-	data = []byte(`{"run":{"id":0,"event":{"type":"send","params":[]}}}`)
+	data = []byte(`{"run":{"id":1,"event":{"type":"send","params":[]}}}`)
 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	// Wait enough time to ensure all goroutines have time to run
 	time.Sleep(10 * time.Second)
 	fmt.Println("Main function finished")
 }
-
-// func (suite *KeeperTestSuite) TestWasmxStateMachineRAFT() {
-// 	wasmbin := wasmxStateMachine
-// 	owner := suite.GetRandomAccount()
-// 	sender := suite.GetRandomAccount()
-// 	sender2 := suite.GetRandomAccount()
-// 	initBalance := sdkmath.NewInt(100_000_000_000)
-
-// 	appA := s.GetAppContext(s.chainA)
-// 	appA.Faucet.Fund(appA.Context(), owner.Address, sdk.NewCoin(appA.Denom, initBalance))
-// 	suite.Commit()
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-// 	suite.Commit()
-// 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
-// 	suite.Commit()
-
-// 	fmt.Println("---TestWasmxStateMachineTimer---")
-// 	codeId := appA.StoreCode(owner, wasmbin, nil)
-// 	fmt.Println("---TestWasmxStateMachineTimer-InstantiateCode--")
-// 	contractAddress := appA.InstantiateCode(owner, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "stateMachine", nil)
-
-// 	config := `{"context":[{"key":"data","value":"hello"},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"IReceivedTheRequest","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"IReceivedTheRequest","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"5000","target":"#AB-Req-Res-timer.sending request","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending request","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}`
-
-// 	data := []byte(fmt.Sprintf(`{"create":%s}`, config))
-// 	res := appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-// 	s.Require().Contains(string(res.Data), `{"id":1}`)
-
-// 	data = []byte(`{"getCurrentState":{"id":1}}`)
-// 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-// 	suite.Require().Equal("active", string(qres))
-
-// 	fmt.Println("---TestWasmxStateMachineTimer-run--")
-
-// 	data = []byte(`{"run":{"id":0,"event":{"type":"send","params":[]}}}`)
-// 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-
-// 	// Wait enough time to ensure all goroutines have time to run
-// 	time.Sleep(10 * time.Second)
-// 	fmt.Println("Main function finished")
-// }
