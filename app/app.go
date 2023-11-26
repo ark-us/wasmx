@@ -580,7 +580,7 @@ func New(
 		// TODO remove authority?
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
-	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper)
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 

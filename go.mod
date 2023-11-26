@@ -253,4 +253,6 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// https://github.com/cosmos/cosmos-sdk/blob/e0bda6d7bc73fc4d6664c77c71d46cdc99ee0e6a/UPGRADING.md#replaces
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+
+	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 )
