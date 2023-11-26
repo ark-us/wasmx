@@ -12,6 +12,7 @@ import (
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	sdkerr "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/network/types"
@@ -28,6 +29,7 @@ type IntervalAction struct {
 }
 
 type msgServer struct {
+	app           types.BaseApp
 	intervalCount int32
 	intervals     map[int32]*IntervalAction
 	Keeper
@@ -36,9 +38,10 @@ type msgServer struct {
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServerImpl(keeper Keeper) types.MsgServer {
+func NewMsgServerImpl(keeper Keeper, app types.BaseApp) types.MsgServer {
 	return &msgServer{
 		Keeper:        keeper,
+		app:           app,
 		intervalCount: 0,
 		intervals:     map[int32]*IntervalAction{},
 	}
@@ -48,15 +51,15 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 func NewMsgServer(
 	keeper Keeper,
 	tmNode *node.Node,
-	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
+	// createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) types.MsgServer {
-	keeper.wasmxKeeper.SetGoRoutineCreate(createGoRoutine)
+	// keeper.wasmxKeeper.SetGoRoutineCreate(createGoRoutine)
 	return &msgServer{
-		Keeper:          keeper,
-		TmNode:          tmNode,
-		createGoRoutine: createGoRoutine,
-		intervalCount:   0,
-		intervals:       map[int32]*IntervalAction{},
+		Keeper: keeper,
+		TmNode: tmNode,
+		// createGoRoutine: createGoRoutine,
+		intervalCount: 0,
+		intervals:     map[int32]*IntervalAction{},
 	}
 }
 
@@ -109,10 +112,56 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 
 	timeDelay := msg.Delay
 	httpSrvDone := make(chan struct{}, 1)
+	height := ctx.BlockHeight() - 1 // TODO fixme
+	fmt.Println("---height--", height)
+	logger := m.Keeper.Logger(ctx)
 	// errCh := make(chan error)
 	m.goRoutineGroup.Go(func() error {
+		fmt.Println("--StartInterval--set new ctx")
+
+		// ctx := ht.req.Context()
+		// var cancel context.CancelFunc
+		// if ht.timeoutSet {
+		// 	ctx, cancel = context.WithTimeout(ctx, ht.timeout)
+		// } else {
+		// 	ctx, cancel = context.WithCancel(ctx)
+		// }
+
+		// set context
+		// grpcCtx := goCtx
+		sdkCtx_, ctxcachems, err := CreateQueryContext(m.app, logger, height, false)
+		fmt.Println("--StartInterval--CreateQueryContext", err)
+		if err != nil {
+			logger.Error("failed to create query context", "err", err)
+			return err
+		}
+		sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+
+		// Add relevant gRPC headers
+		if height == 0 {
+			height = sdkCtx.BlockHeight() // If height was not set in the request, set it to the latest
+		}
+
+		// Attach the sdk.Context into the gRPC's context.Context.
+		// grpcCtx = context.WithValue(grpcCtx, sdk.SdkContextKey, sdkCtx)
+
+		// md := metadata.Pairs(grpctypes.GRPCBlockHeightHeader, strconv.FormatInt(height, 10))
+		// if err = grpc.SetHeader(grpcCtx, md); err != nil {
+		// 	logger.Error("failed to set gRPC header", "err", err)
+		// }
+
+		// NOW execute
+		fmt.Println("--StartInterval--sleeping...")
+
 		time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+		fmt.Println("--StartInterval--ExecuteEventual...")
+
+		goCtx := context.Background()
+		goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+		ctx := sdk.UnwrapSDKContext(goCtx)
+
 		_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
+		fmt.Println("--StartInterval--ExecuteEventual", err)
 		if err != nil {
 			// TODO - stop without propagating a stop to parent
 			if err == types.ErrGoroutineClosed {
@@ -125,6 +174,18 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 			// errCh <- err
 			return err
 		}
+
+		commitCacheCtx()
+		// commit original context
+		mythosapp, ok := m.app.(MythosApp)
+		if !ok {
+			return fmt.Errorf("failed to get MythosApp from server Application")
+		}
+		origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+		origtstore.(storetypes.CacheWrap).Write()
+
+		// <-ctx.Done() ?
+		// svrCtx.Logger.Info("stopping the thread...")
 		return nil
 	})
 
