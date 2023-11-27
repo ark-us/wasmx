@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,6 +35,7 @@ import (
 
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -55,10 +57,12 @@ type MythosApp interface {
 
 type BaseApp interface {
 	Name() string
+	ChainID() string
 	CreateQueryContext(height int64, prove bool) (sdk.Context, error)
 	CommitMultiStore() storetypes.CommitMultiStore
 	GetContextForCheckTx(txBytes []byte) sdk.Context
 	GetContextForFinalizeBlock(txBytes []byte) sdk.Context
+	NewUncachedContext(isCheckTx bool, header cmtproto.Header) sdk.Context
 }
 
 // NewGRPCServer returns a correctly configured and initialized gRPC server.
@@ -191,8 +195,8 @@ func RegisterGRPCServer(
 		if err != nil {
 			return nil, err
 		}
-		// sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-		sdkCtx := sdkCtx_
+		sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+		// sdkCtx := sdkCtx_
 
 		// Add relevant gRPC headers
 		if height == 0 {
@@ -206,6 +210,7 @@ func RegisterGRPCServer(
 		if err = grpc.SetHeader(grpcCtx, md); err != nil {
 			svrCtx.Logger.Error("failed to set gRPC header", "err", err)
 		}
+		fmt.Println("-----NETWORK REQUEST-before handler--")
 
 		hresp, err := handler(grpcCtx, req)
 		if err != nil {
@@ -236,13 +241,13 @@ func RegisterGRPCServer(
 		// bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 		// fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstore0.Get(append(tstoreprefix, bz...)))
 
-		// commitCacheCtx()
+		commitCacheCtx()
 
 		// commit original context
 		fmt.Println("--GetCLessKey--", mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
 		origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
 		fmt.Println("--origtstore--", origtstore.GetStoreType())
-		// origtstore.(storetypes.CacheWrap).Write()
+		origtstore.(storetypes.CacheWrap).Write()
 		// origtstore.(storetypes.CommitKVStore).Commit()
 
 		origtstore2 := ctxcachems.GetKVStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
@@ -352,7 +357,7 @@ func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool
 
 	// cacheMS, err := qms.CacheMultiStoreWithVersion(height)
 	// if err != nil {
-	// 	return sdk.Context{}, nil,
+	// 	return sdk.Context{}, nil,CacheMultiStoreWithVersion
 	// 		errorsmod.Wrapf(
 	// 			sdkerrors.ErrInvalidRequest,
 	// 			"failed to load state at height %d; %s (latest height: %d)", height, err, lastBlockHeight,
@@ -360,12 +365,42 @@ func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool
 	// }
 	cacheMS := qms.CacheMultiStore()
 
-	tmpctx, err := app.CreateQueryContext(height, false)
-	if err != nil {
-		return sdk.Context{}, nil, err
-	}
-
+	// tmpctx, err := app.CreateQueryContext(height, false)
+	// if err != nil {
+	// 	return sdk.Context{}, nil, err
+	// }
+	fmt.Println("-----NETWORK REQUEST-before GetContextForFinalizeBlock--")
 	// tmpctx := app.GetContextForFinalizeBlock(make([]byte, 0))
+	// tmpctx := app.GetContextForCheckTx(make([]byte, 0))
+
+	// header := cmtproto.Header{ChainID: req.ChainId, Time: req.Time}
+	header := cmtproto.Header{
+		ChainID:            app.ChainID(),
+		Height:             10,
+		Time:               time.Now().UTC(),
+		ProposerAddress:    []byte("proposer"),
+		NextValidatorsHash: []byte("proposer"),
+		// AppHash:            app.LastCommitID().Hash,
+		// Version: tmversion.Consensus{
+		// 	Block: version.BlockProtocol,
+		// },
+		// LastBlockId: tmproto.BlockID{
+		// 	Hash: tmhash.Sum([]byte("block_id")),
+		// 	PartSetHeader: tmproto.PartSetHeader{
+		// 		Total: 11,
+		// 		Hash:  tmhash.Sum([]byte("partset_header")),
+		// 	},
+		// },
+		// AppHash:            tmhash.Sum([]byte("app")),
+		// DataHash:           tmhash.Sum([]byte("data")),
+		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
+		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
+		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
+		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
+		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
+	}
+	tmpctx := app.NewUncachedContext(false, header)
+	fmt.Println("-----NETWORK REQUEST-before GetContextForFinalizeBlock--", tmpctx)
 
 	// branch the commit multi-store for safety
 	ctx := sdk.NewContext(cacheMS, tmpctx.BlockHeader(), true, logger).

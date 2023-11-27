@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -218,8 +219,16 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	fmt.Println("Go - received grpc request", msg.Data, string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	// contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
+	// }
+
 	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
-	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveRequest","params":[]}}}`))
+	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveRequest","params":[]}}}`))
+	datab64 := base64.StdEncoding.EncodeToString(msg.Data)
+	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"}]}}}`, datab64))
+	fmt.Println("===receiveHeartbeat==", string(data))
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
@@ -251,6 +260,23 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	}
 
 	fmt.Println("Go - current state: ", string(qresbz.Data))
+
+	// logs_count0
+	qmsg = wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getContextValue":{"id":0,"key":"logs_count0"}}`)}
+	qmsgbz, err = json.Marshal(qmsg)
+	if err != nil {
+		return nil, err
+	}
+	qres, err = m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, qmsgbz, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Go - logs count: ", string(qres))
+	err = json.Unmarshal(qres, &qresbz)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Go - logs count: ", string(qresbz.Data))
 
 	return &types.MsgGrpcReceiveRequestResponse{
 		Data: resp,
