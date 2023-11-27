@@ -419,13 +419,13 @@ func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, 
 
 // stopInterval(intervalId: i32): void
 func wasmxStopInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+	// ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	intervalId := params[0].(int32)
-	fmt.Println("* stop interval: ", intervalId)
-	// TODO errors if already stopped?
-	// ctx.intervals[intervalId].Quit <- true
-	ctx.intervals[intervalId].Cancel()
+	// intervalId := params[0].(int32)
+	// fmt.Println("* stop interval: ", intervalId)
+	// // TODO errors if already stopped?
+	// // ctx.intervals[intervalId].Quit <- true
+	// ctx.intervals[intervalId].Cancel()
 	return returns, wasmedge.Result_Success
 }
 
