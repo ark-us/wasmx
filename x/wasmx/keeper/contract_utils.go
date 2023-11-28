@@ -184,6 +184,9 @@ func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 		return nil, nil
 	}
 	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
+	if types.HasInterpreterDep(codeInfo.Deps) {
+		return codeInfo.InterpretedBytecodeRuntime, nil
+	}
 	return k.wasmvm.GetCode(codeInfo.CodeHash, codeInfo.Deps)
 }
 

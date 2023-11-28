@@ -105,7 +105,10 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 		return nil, wasmedge.Result_Fail
 	}
 	var req vmtypes.CallRequest
-	json.Unmarshal(requestbz, &req)
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 
 	returns := make([]interface{}, 1)
 	var success int32
@@ -119,6 +122,69 @@ func externalCall(context interface{}, callframe *wasmedge.CallingFrame, params 
 		success = int32(2)
 	} else {
 		success, returnData = WasmxCall(ctx, req)
+	}
+
+	response := vmtypes.CallResponse{
+		Success: uint8(success),
+		Data:    returnData,
+	}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxCall(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	requestbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req vmtypes.SimpleCallRequestRaw
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	var success int32
+	var returnData []byte
+
+	// Send funds
+	if req.Value.BitLen() > 0 {
+		err = ctx.CosmosHandler.SendCoin(req.To, req.Value)
+	}
+	if err != nil {
+		success = int32(2)
+	} else {
+		contractContext := GetContractContext(ctx, req.To)
+		if contractContext == nil {
+			// ! we return success here in case the contract does not exist
+			success = int32(0)
+		} else {
+			gasLimit := req.GasLimit
+			if gasLimit == nil {
+				// TODO: gas remaining!!
+			}
+			req := vmtypes.CallRequest{
+				To:       req.To,
+				From:     ctx.Env.Contract.Address,
+				Value:    req.Value,
+				GasLimit: gasLimit,
+				Calldata: req.Calldata,
+				Bytecode: contractContext.ContractInfo.Bytecode,
+				CodeHash: contractContext.ContractInfo.CodeHash,
+				IsQuery:  req.IsQuery,
+			}
+			success, returnData = WasmxCall(ctx, req)
+			ctx.ReturnData = returnData
+		}
 	}
 
 	response := vmtypes.CallResponse{
@@ -180,7 +246,10 @@ func wasmxCreateAccount(context interface{}, callframe *wasmedge.CallingFrame, p
 		return nil, wasmedge.Result_Fail
 	}
 	var req vmtypes.CreateAccountRequest
-	json.Unmarshal(requestbz, &req)
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
 	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
@@ -224,7 +293,10 @@ func wasmxCreate2Account(context interface{}, callframe *wasmedge.CallingFrame, 
 		return nil, wasmedge.Result_Fail
 	}
 	var req vmtypes.Create2AccountRequest
-	json.Unmarshal(requestbz, &req)
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
@@ -283,6 +355,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
 	env.AddFunction("getEnv", wasmedge.NewFunction(functype__i32, getEnv, context, 0))
 	env.AddFunction("getCaller", wasmedge.NewFunction(functype__i32, wasmxGetCaller, context, 0))
+	env.AddFunction("getAddress", wasmedge.NewFunction(functype__i32, wasmxGetAddress, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
@@ -291,7 +364,9 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("getBlockHash", wasmedge.NewFunction(functype_i32_i32, wasmxGetBlockHash, context, 0))
 	env.AddFunction("getAccount", wasmedge.NewFunction(functype_i32_i32, getAccount, context, 0))
 	env.AddFunction("getBalance", wasmedge.NewFunction(functype_i32_i32, wasmxGetBalance, context, 0))
+	// TODO move externalCall to only system API
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
+	env.AddFunction("call", wasmedge.NewFunction(functype_i32_i32, wasmxCall, context, 0))
 	env.AddFunction("keccak256", wasmedge.NewFunction(functype_i32_i32, keccak256Util, context, 0))
 
 	env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32_i32, wasmxCreateAccount, context, 0))

@@ -144,13 +144,15 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 		}
 	}
 
-	var reportDeps []string
+	var reportDeps = deps
 
 	if ioutils.IsWasm(wasmCode) {
 		checksum, reportDeps, err = k.createWasm(ctx, wasmCode)
 	} else {
 		if len(deps) > 0 && types.HasUtf8Dep(deps) {
 			checksum, reportDeps, err = k.createSourceInterpreted(ctx, wasmCode, deps)
+		} else if types.HasInterpreterDep(deps) {
+			checksum = k.wasmvm.checksum(wasmCode)
 		}
 	}
 	if err != nil {
@@ -169,6 +171,11 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
 	k.Logger(ctx).Debug("storing new contract", "deps", reportDeps, "code_id", codeID, "checksum", checksum)
 	codeInfo := types.NewCodeInfo(checksum, creator, reportDeps, metadata)
+	if types.HasInterpreterDep(deps) && !types.HasUtf8Dep(deps) {
+		// TODO only store one
+		codeInfo.InterpretedBytecodeDeployment = wasmCode
+		codeInfo.InterpretedBytecodeRuntime = wasmCode
+	}
 	k.storeCodeInfo(ctx, codeID, codeInfo)
 
 	evt := sdk.NewEvent(

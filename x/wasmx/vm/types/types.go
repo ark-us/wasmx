@@ -40,6 +40,14 @@ type CallRequestRaw struct {
 	IsQuery  bool           `json:"isQuery"`
 }
 
+type SimpleCallRequestRaw struct {
+	To       sdk.AccAddress `json:"to"`
+	Value    *big.Int       `json:"value"`
+	GasLimit *big.Int       `json:"gasLimit"`
+	Calldata types.RawBytes `json:"calldata"`
+	IsQuery  bool           `json:"isQuery"`
+}
+
 type CallResponse struct {
 	Success uint8          `json:"success"`
 	Data    types.RawBytes `json:"data"`

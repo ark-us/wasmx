@@ -416,7 +416,7 @@ func (s AppContext) InstantiateCode(sender simulation.Account, codeId uint64, in
 	}
 	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
 	s.S.Require().NoError(err)
-	s.S.Require().True(res.IsOK(), res.GetEvents())
+	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 	contractAddressStr := s.GetContractAddressFromEvents(res.GetEvents())
 	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)

@@ -161,6 +161,7 @@ func init() {
 	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteDefaultMain
 	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
 	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
+	ExecuteFunctionHandler[types.INTERPRETER_FSM] = ExecuteDefaultMain
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {

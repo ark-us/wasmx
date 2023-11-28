@@ -142,6 +142,13 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 		},
+		{
+			Address:     "0x0000000000000000000000000000000000000028",
+			Label:       INTERPRETER_FSM,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_INTERPRETER,
+		},
 	}
 }
 
