@@ -159,6 +159,7 @@ var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
 var ROLE_INTERPRETER_PYTHON = "interpreter_python"
 var ROLE_INTERPRETER_JS = "interpreter_javascript"
+var ROLE_INTERPRETER_FSM = "interpreter_state_machine"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -175,6 +176,8 @@ var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
 var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 
 var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
+
+var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"
@@ -230,6 +233,24 @@ func HasUtf8Dep(deps []string) bool {
 func HasUtf8SystemDep(sysDeps []SystemDep) bool {
 	for _, dep := range sysDeps {
 		if strings.Contains(dep.Label, "utf8") {
+			return true
+		}
+	}
+	return false
+}
+
+func HasInterpreterDep(deps []string) bool {
+	for _, dep := range deps {
+		if strings.Contains(dep, "interpreter_") {
+			return true
+		}
+	}
+	return false
+}
+
+func HasInterpreterSystemDep(sysDeps []SystemDep) bool {
+	for _, dep := range sysDeps {
+		if strings.Contains(dep.Label, "interpreter_") {
 			return true
 		}
 	}
