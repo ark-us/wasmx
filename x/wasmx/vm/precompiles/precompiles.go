@@ -99,6 +99,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = quickjs
 	case types.INTERPRETER_FSM:
 		wasmbin = state_machine
+	case types.CONSENSUS_RAFT:
+		wasmbin = []byte(ConsensusRaftv001)
 	case "sys_proxy":
 		wasmbin = sys_proxy
 	}

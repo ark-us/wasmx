@@ -17,11 +17,6 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/network/v1/params";
   }
-
-  // IsProposer gets the module params
-  rpc IsProposer(QueryIsProposerRequest) returns (QueryIsProposerResponse) {
-    option (google.api.http).get = "/network/v1/is_proposer";
-  }
 }
 
 // QueryParamsRequest is the request type for the Query/Params RPC method.
@@ -31,13 +26,4 @@ message QueryParamsRequest {}
 message QueryParamsResponse {
   // params defines the parameters of the module.
   Params params = 1 [ (gogoproto.nullable) = false ];
-}
-
-// QueryIsProposerRequest is the request type for the Query/Params RPC method.
-message QueryIsProposerRequest {}
-
-// QueryIsProposerResponse is the response type for the Query/IsProposer RPC method.
-message QueryIsProposerResponse {
-  // params defines the parameters of the module.
-  bool is_proposer = 1;
 }

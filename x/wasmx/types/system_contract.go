@@ -19,6 +19,11 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal init message")
 	}
 
+	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":"5000"},{"key":"log","value":""},{"key":"lastApplied","value":"0"},{"key":"commitIndex","value":"0"},{"key":"prevLogIndex","value":"0"},{"key":"matchIndex","value":""},{"key":"nextIndex","value":"[1,1]"},{"key":"currentTerm","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[]"}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
+	}
+
 	return []SystemContract{
 		{
 			Address:     "0x0000000000000000000000000000000000000001",
@@ -27,6 +32,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Native:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		// Ethereum ecrecover
 		{
@@ -35,6 +41,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000002",
@@ -42,6 +49,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000003",
@@ -49,6 +57,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000004",
@@ -56,6 +65,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000005",
@@ -63,6 +73,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000006",
@@ -70,6 +81,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000007",
@@ -77,6 +89,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000008",
@@ -84,6 +97,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000009",
@@ -91,6 +105,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000020",
@@ -98,6 +113,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false, //TODO
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000021",
@@ -105,6 +121,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false, // TODO
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000022",
@@ -113,6 +130,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Native:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000023",
@@ -121,6 +139,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000024",
@@ -129,6 +148,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_ALIAS,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000025",
@@ -137,6 +157,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Native:      true,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000026",
@@ -145,6 +166,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000027",
@@ -153,6 +175,7 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     "0x0000000000000000000000000000000000000028",
@@ -161,21 +184,24 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
-		// {
-		// 	Address:     "0x0000000000000000000000000000000000000029",
-		// 	Label:       "consensus",
-		// 	InitMessage: initMsg,
-		// 	Pinned:      false,
-		// 	Role:        ROLE_CONSENSUS,
-		// 	StorageType: ContractStorageType_MetaConsensus,
-		// },
+		{
+			Address:     "0x0000000000000000000000000000000000000029",
+			Label:       CONSENSUS_RAFT,
+			InitMessage: raftInitMsg,
+			Pinned:      false,
+			Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_MetaConsensus,
+			Deps:        []string{INTERPRETER_FSM},
+		},
 		{
 			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			Label:       "sys_proxy",
 			InitMessage: initMsg,
 			Pinned:      false,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
 		},
 	}
 }

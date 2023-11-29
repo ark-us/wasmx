@@ -39,7 +39,10 @@ message SystemContract {
   bool pinned = 5;
   bool native = 6;
   string role = 7;
-  CodeMetadata metadata = 8 [(gogoproto.nullable) = false];
+  // deps can be hex-formatted contract addresses (32 bytes)
+  // or versioned interface labels
+  repeated string deps = 8;
+  CodeMetadata metadata = 9 [(gogoproto.nullable) = false];
 }
 
 // Code - for importing and exporting code data

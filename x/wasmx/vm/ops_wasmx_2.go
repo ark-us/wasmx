@@ -343,8 +343,9 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 }
 
 type GrpcRequest struct {
-	Address string `json:"address"`
-	Data    []byte `json:"data"` // should be []byte (base64 encoded)
+	IpAddress string `json:"ip_address"`
+	Contract  []byte `json:"contract"`
+	Data      []byte `json:"data"` // should be []byte (base64 encoded)
 }
 
 func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -362,10 +363,12 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		return nil, wasmedge.Result_Fail
 	}
 	fmt.Println("--wasmxGrpcRequest-data-", data)
+	contractAddress := sdk.AccAddress(vmtypes.CleanupAddress(data.Contract))
 	msg := &networktypes.MsgGrpcSendRequest{
-		Address: data.Address,
-		Data:    []byte(data.Data),
-		Sender:  ctx.Env.Contract.Address.String(),
+		IpAddress: data.IpAddress,
+		Contract:  contractAddress.String(),
+		Data:      []byte(data.Data),
+		Sender:    ctx.Env.Contract.Address.String(),
 	}
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
 	fmt.Println("--wasmxGrpcRequest-res, err-", res, err)
@@ -428,11 +431,11 @@ func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, 
 
 	msgtosend := &networktypes.MsgStartIntervalRequest{
 		// Sender:  sdk.AccAddress([]byte("network")).String(),
-		Sender:  ctx.Env.Contract.Address.String(),
-		Address: ctx.Env.Contract.Address.String(),
-		Delay:   timeDelay,
-		Repeat:  repeatCount,
-		Args:    argsbz,
+		Sender:   ctx.Env.Contract.Address.String(),
+		Contract: ctx.Env.Contract.Address.String(),
+		Delay:    timeDelay,
+		Repeat:   repeatCount,
+		Args:     argsbz,
 	}
 	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	fmt.Println("--ExecuteCosmosMsg--err-", err)

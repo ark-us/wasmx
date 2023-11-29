@@ -51,10 +51,10 @@ func (k Keeper) ActivateSystemContract(
 
 	if contract.Native {
 		codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
-		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr, nil, contract.Metadata)
+		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr, contract.Deps, contract.Metadata)
 		k.storeCodeInfo(ctx, codeID, codeInfo)
 	} else {
-		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, []string{}, contract.Metadata)
+		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata)
 		if err != nil {
 			return sdkerr.Wrap(err, "store system contract: "+contract.Label)
 		}
@@ -68,7 +68,7 @@ func (k Keeper) ActivateSystemContract(
 
 	contractAddress := types.AccAddressFromHex(contract.Address)
 	if contract.Native {
-		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, []byte{}, contract.Label)
+		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, contract.InitMessage, contract.Label)
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 	} else {
 		_, err = k.instantiateWithAddress(

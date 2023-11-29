@@ -71,10 +71,10 @@ func (m *msgServer) incrementIntervalId() {
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the interval is for?
 func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartIntervalRequest) (*types.MsgStartIntervalResponse, error) {
-	fmt.Println("Go - start interval request", msg.Address, string(msg.Args))
+	fmt.Println("Go - start interval request", msg.Contract, string(msg.Args))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Address)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
@@ -194,13 +194,16 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 }
 
 func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
-	fmt.Println("Go - send grpc request", msg.Address, msg.Data, string(msg.Data))
+	fmt.Println("Go - send grpc request", msg.IpAddress, msg.Data, string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	ip := msg.Address
+	ip := msg.IpAddress
 	client := StartGRPCClient(ip)
 	req := &types.MsgGrpcReceiveRequest{
-		Data: msg.Data,
+		Data:     msg.Data,
+		Sender:   msg.Sender,
+		Contract: msg.Contract,
+		Encoding: msg.Encoding,
 	}
 	res, err := client.GrpcReceiveRequest(ctx, req)
 	fmt.Println("Go - grpc request sent", err)
@@ -222,9 +225,8 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
 
-	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveRequest","params":[]}}}`))
 	datab64 := base64.StdEncoding.EncodeToString(msg.Data)
-	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"}]}}}`, datab64))
+	data := []byte(fmt.Sprintf(`{"run":{"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"}]}}}`, datab64))
 	fmt.Println("===receiveHeartbeat==", string(data))
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
 	execmsgbz, err := json.Marshal(execmsg)
@@ -240,7 +242,7 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	// fmt.Println("-GrpcReceiveRequest-network-resp---", string(resp))
 
 	// test state
-	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{"id":0}}`)}
+	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{}}`)}
 	qmsgbz, err := json.Marshal(qmsg)
 	if err != nil {
 		return nil, err
@@ -259,7 +261,7 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	fmt.Println("Go - current state: ", string(qresbz.Data))
 
 	// logs_count0
-	qmsg = wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getContextValue":{"id":0,"key":"logs_count0"}}`)}
+	qmsg = wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getContextValue":{"key":"logs_count"}}`)}
 	qmsgbz, err = json.Marshal(qmsg)
 	if err != nil {
 		return nil, err
@@ -287,8 +289,6 @@ func (m msgServer) Setup(goCtx context.Context, msg *types.MsgSetup) (*types.Msg
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
-
-	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"sendRequest","params":[{"key":"address","value":"%s"},{"key":"data","value":"hello"}]}}}`, msg.Data))
 
 	data := []byte(`{"create":{"context":[{"key":"data","value":"aGVsbG8="},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"received","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"received","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"10000","target":"#AB-Req-Res-timer.sending","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}}`)
 

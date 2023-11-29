@@ -769,7 +769,6 @@ func ExecuteWasiWrap(context *Context, contractVm *wasmedge.VM, funcName string,
 	// if funcName == "execute" || funcName == "query" {
 	// 	funcName = "main"
 	// }
-	fmt.Println("--ExecuteWasiWrap--", funcName)
 
 	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	wasimodule.InitWasi(
