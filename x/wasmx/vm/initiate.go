@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"fmt"
-
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
@@ -93,29 +91,12 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 }
 
 func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	fmt.Println("---InitiateWasi--")
 	var cleanups []func()
 
 	// TODO better
-	// env1 := BuildWasiWasmxEnv(context)
-	// fmt.Println("---InitiateWasi-1-")
-	// cleanups = append(cleanups, env1.Release)
-	// err := contractVm.RegisterModule(env1)
-	// fmt.Println("---InitiateWasi-2-")
-	// if err != nil {
-	// 	return cleanups, err
-	// }
-
-	wasmx := BuildWasmxEnv2(context)
-	env := BuildAssemblyScriptEnv(context)
-	cleanups = append(cleanups, wasmx.Release)
-
-	err := contractVm.RegisterModule(wasmx)
-	if err != nil {
-		return cleanups, err
-	}
-	cleanups = append(cleanups, env.Release)
-	err = contractVm.RegisterModule(env)
+	env1 := BuildWasiWasmxEnv(context)
+	cleanups = append(cleanups, env1.Release)
+	err := contractVm.RegisterModule(env1)
 	if err != nil {
 		return cleanups, err
 	}
@@ -180,7 +161,7 @@ func init() {
 	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteDefaultMain
 	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
 	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
-	ExecuteFunctionHandler[types.INTERPRETER_FSM] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.INTERPRETER_FSM] = ExecuteFSM
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
@@ -207,6 +188,13 @@ func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName 
 }
 
 func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
+	return contractVm.Execute("main")
+}
+
+func ExecuteFSM(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
+	if funcName == types.ENTRY_POINT_TIMED {
+		return contractVm.Execute(types.ENTRY_POINT_TIMED)
+	}
 	return contractVm.Execute("main")
 }
 

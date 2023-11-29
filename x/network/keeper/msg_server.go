@@ -20,8 +20,6 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
-var NETWORK_HEX_ADDRESS = "0x0000000000000000000000000000000000000028"
-
 type IntervalAction struct {
 	Delay  int64
 	Repeat int32
@@ -219,12 +217,11 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	fmt.Println("Go - received grpc request", msg.Data, string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	// contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	// if err != nil {
-	// 	return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
-	// }
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
+	}
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
 	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveRequest","params":[]}}}`))
 	datab64 := base64.StdEncoding.EncodeToString(msg.Data)
 	data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"}]}}}`, datab64))
@@ -286,7 +283,11 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 func (m msgServer) Setup(goCtx context.Context, msg *types.MsgSetup) (*types.MsgSetupResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
+	}
+
 	// data := []byte(fmt.Sprintf(`{"run":{"id":0,"event":{"type":"sendRequest","params":[{"key":"address","value":"%s"},{"key":"data","value":"hello"}]}}}`, msg.Data))
 
 	data := []byte(`{"create":{"context":[{"key":"data","value":"aGVsbG8="},{"key":"address","value":"0.0.0.0:8091"}],"id":"AB-Req-Res-timer","initial":"uninitialized","states":[{"name":"uninitialized","after":[],"on":[{"name":"initialize","target":"active","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"active","after":[],"on":[{"name":"receiveRequest","target":"received","guard":"","actions":[]},{"name":"send","target":"sender","guard":"","actions":[]}],"exit":[],"entry":[],"initial":"","states":[]},{"name":"received","after":[{"name":"1000","target":"#AB-Req-Res-timer.active","guard":"","actions":[]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sender","after":[{"name":"10000","target":"#AB-Req-Res-timer.sending","guard":"","actions":[{"type":"xstate.raise","event":{"type":"sendRequest","params":[{"key":"data","value":"data"},{"key":"address","value":"address"}]},"params":[]}]}],"on":[],"exit":[],"entry":[],"initial":"","states":[]},{"name":"sending","after":[],"on":[{"name":"sendRequest","target":"sender","guard":"","actions":[{"type":"sendRequest","params":[]}]}],"exit":[],"entry":[],"initial":"","states":[]}]}}`)
@@ -366,9 +367,12 @@ func (m msgServer) QueryContract(goCtx context.Context, msg *types.MsgQueryContr
 func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 
-	data := []byte(`{"run":{"id":0,"event":{"type":"send","params":[]}}}`)
+	data := []byte(`{"run":{"event":{"type":"send","params":[]}}}`)
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
@@ -382,7 +386,7 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	// fmt.Println("-Ping--network-resp---", string(resp))
 
 	// test state
-	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{"id":0}}`)}
+	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{}}`)}
 	qmsgbz, err := json.Marshal(qmsg)
 	if err != nil {
 		return nil, err
@@ -471,7 +475,10 @@ func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidat
 	// 	wasmxtypes.AccAddressFromHex("2222222222222222222222222222222222222222"),
 	// }
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 	datalen := big.NewInt(int64(len(validatorAddresses))).FillBytes(make([]byte, 32))
 	bz, err := hex.DecodeString("9300c9260000000000000000000000000000000000000000000000000000000000000020")
 	if err != nil {
@@ -510,7 +517,10 @@ func (m msgServer) GetValidators(goCtx context.Context, msg *types.MsgGetValidat
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	// fmt.Println("==GetValidators===")
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 	bz, err := hex.DecodeString("b7ab4db5")
 	if err != nil {
 		return nil, err
@@ -537,11 +547,6 @@ func (m msgServer) GetValidators(goCtx context.Context, msg *types.MsgGetValidat
 	}, nil
 }
 
-// 0x0000000000000000000000000000000000000028
-// setValidators(address[] memory _validators)
-// getProposer()
-// makeProposal(string memory message, address currentNode)
-
 func (m msgServer) MakeProposal(goCtx context.Context, msg *types.MsgMakeProposal) (*types.MsgMakeProposalResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
@@ -556,7 +561,10 @@ func (m msgServer) MakeProposal(goCtx context.Context, msg *types.MsgMakeProposa
 
 	fmt.Println("==currentValidator", currentValidator.Address())
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 	bz, err := hex.DecodeString("589f5dd70000000000000000000000000000000000000000000000000000000000000040" + hex.EncodeToString(currentValidator.Address()) + "000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000")
 	if err != nil {
 		return nil, err
@@ -593,7 +601,10 @@ func (m msgServer) IsProposer(goCtx context.Context, msg *types.MsgIsProposer) (
 
 	fmt.Println("==currentValidator", currentValidator.Address())
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 	bz, err := hex.DecodeString("e9790d02")
 	if err != nil {
 		return nil, err
@@ -625,7 +636,10 @@ func (m msgServer) SetCurrentNode(goCtx context.Context, msg *types.MsgSetCurren
 		return nil, err
 	}
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 	bz, err := hex.DecodeString("9a25709f000000000000000000000000" + hex.EncodeToString(currentValidator.Address()))
 	if err != nil {
 		return nil, err
@@ -646,7 +660,10 @@ func (m msgServer) SetCurrentNode(goCtx context.Context, msg *types.MsgSetCurren
 func (m msgServer) GetCurrentNode(goCtx context.Context, msg *types.MsgGetCurrentNode) (*types.MsgGetCurrentNodeResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	contractAddress := wasmxtypes.AccAddressFromHex(NETWORK_HEX_ADDRESS)
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
 	bz, err := hex.DecodeString("14f26bc3")
 	if err != nil {
 		return nil, err

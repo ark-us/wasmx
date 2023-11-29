@@ -617,7 +617,6 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
 	var res []interface{}
 	var err error
-	fmt.Println("--ExecuteWasi---", funcName)
 
 	// WASI standard does not have instantiate
 	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)

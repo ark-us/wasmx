@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -106,4 +107,36 @@ func (suite *KeeperTestSuite) TestFSM_ERC20() {
 	data = []byte(fmt.Sprintf(`{"getContextValue":{,"key":"balance_%s"}}`, hex.EncodeToString(types.PaddLeftTo32(sender.Address.Bytes()))))
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal("20", string(qres))
+}
+
+func (suite *KeeperTestSuite) TestFSM_Timer() {
+	owner := suite.GetRandomAccount()
+	sender := suite.GetRandomAccount()
+	sender2 := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(100_000_000_000)
+
+	appA := s.GetAppContext(s.chainA)
+	appA.Faucet.Fund(appA.Context(), owner.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	var data []byte
+	var qres []byte
+	deps := []string{types.INTERPRETER_FSM}
+	codeId := appA.StoreCode(owner, []byte(testdata.TimedGrpc), deps)
+	contractAddress := appA.InstantiateCode(owner, codeId, types.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"data","value":"aGVsbG8="},{"key":"address","value":"0.0.0.0:8091"}],"initialState":"uninitialized"}}`)}, "stateMachine", nil)
+
+	data = []byte(`{"getCurrentState":{}}`)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	suite.Require().Equal("active", string(qres))
+
+	data = []byte(`{"run":{"event":{"type":"send","params":[]}}}`)
+	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	// Wait enough time to ensure all goroutines have time to run
+	time.Sleep(10 * time.Second)
+	fmt.Println("Main function finished")
 }

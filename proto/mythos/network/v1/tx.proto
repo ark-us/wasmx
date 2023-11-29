@@ -147,7 +147,8 @@ message MsgQueryContractResponse {
 
 // MsgPing
 message MsgPing {
-    string data = 1;
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string data = 2;
 }
 
 // MsgPingResponse
@@ -157,7 +158,8 @@ message MsgPingResponse {
 
 // MsgSetup
 message MsgSetup {
-    string data = 1;
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string data = 2;
 }
 
 // MsgSetupResponse
@@ -167,7 +169,8 @@ message MsgSetupResponse {
 
 // MsgMakeProposal
 message MsgMakeProposal {
-    string data = 1;
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string data = 2;
 }
 
 // MsgMakeProposalResponse
@@ -176,13 +179,17 @@ message MsgMakeProposalResponse {
 }
 
 // MsgSetValidators
-message MsgSetValidators {}
+message MsgSetValidators {
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
 
 // MsgSetValidatorsResponse
 message MsgSetValidatorsResponse {}
 
 // MsgGetValidators
-message MsgGetValidators {}
+message MsgGetValidators {
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
 
 // MsgGetValidatorsResponse
 message MsgGetValidatorsResponse {
@@ -190,7 +197,9 @@ message MsgGetValidatorsResponse {
 }
 
 // MsgIsProposer
-message MsgIsProposer {}
+message MsgIsProposer {
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
 
 // MsgIsProposerResponse is the response type for the Query/IsProposer RPC method.
 message MsgIsProposerResponse {
@@ -199,13 +208,17 @@ message MsgIsProposerResponse {
 }
 
 // MsgSetCurrentNode
-message MsgSetCurrentNode {}
+message MsgSetCurrentNode {
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
 
 // MsgSetCurrentNodeResponse
 message MsgSetCurrentNodeResponse {}
 
 // MsgGetCurrentNode
-message MsgGetCurrentNode {}
+message MsgGetCurrentNode {
+    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
 
 // MsgGetCurrentNodeResponse
 message MsgGetCurrentNodeResponse {
