@@ -42,7 +42,7 @@ func init() {
 //
 // Time management is handled by the Coordinator in order to ensure synchrony between chains.
 // Each update of any chain increments the block header time for all chains by 5 seconds.
-func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string) *ibcgotesting.TestChain {
+func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string, index int32) *ibcgotesting.TestChain {
 	// generate validator private/public key
 	privVal := mock.NewPV()
 	pubKey, err := privVal.GetPubKey()
@@ -67,7 +67,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string)
 		Coins:   sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, amount)),
 	}
 
-	app := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainID, balance)
+	app := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainID, index, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 

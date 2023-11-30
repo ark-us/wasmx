@@ -12,7 +12,7 @@ var (
 )
 
 // NewCoordinator initializes Coordinator with N TestChain's
-func NewCoordinator(t *testing.T, chainIds []string) *ibcgotesting.Coordinator {
+func NewCoordinator(t *testing.T, chainIds []string, index int32) *ibcgotesting.Coordinator {
 	chains := make(map[string]*ibcgotesting.TestChain)
 	coord := &ibcgotesting.Coordinator{
 		T:           t,
@@ -23,7 +23,7 @@ func NewCoordinator(t *testing.T, chainIds []string) *ibcgotesting.Coordinator {
 	ibcgotesting.DefaultTestingAppInit = ibcgotesting.SetupTestingApp
 
 	for _, chainID := range chainIds {
-		chains[chainID] = NewTestChain(t, coord, chainID)
+		chains[chainID] = NewTestChain(t, coord, chainID, index)
 	}
 
 	coord.Chains = chains

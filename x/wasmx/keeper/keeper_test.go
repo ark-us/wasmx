@@ -101,7 +101,7 @@ func TestKeeperTestSuite(t *testing.T) {
 // SetupTest creates a coordinator with 2 test chains.
 func (suite *KeeperTestSuite) SetupTest() {
 	suite.chainIds = []string{"mythos_7001-1", "mythos_7002-1"}
-	suite.coordinator = ibctesting.NewCoordinator(suite.T(), suite.chainIds)
+	suite.coordinator = ibctesting.NewCoordinator(suite.T(), suite.chainIds, 0)
 	suite.chainA = suite.coordinator.GetChain(suite.chainIds[0])
 	suite.chainB = suite.coordinator.GetChain(suite.chainIds[1])
 

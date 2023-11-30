@@ -765,6 +765,13 @@ func (s AppContext) GetProposalIdFromEvents(events []abci.Event) (uint64, error)
 	return 0, errors.New("not found")
 }
 
+func (s AppContext) QueryDecode(respbz []byte) []byte {
+	var qresp types.WasmxQueryResponse
+	err := json.Unmarshal(respbz, &qresp)
+	s.S.Require().NoError(err)
+	return qresp.Data
+}
+
 // func signEthTx() {
 // 	privkey, _ := ethsecp256k1.GenerateKey()
 // 	ethPriv, err := privkey.ToECDSA()

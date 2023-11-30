@@ -244,14 +244,11 @@ func RegisterGRPCServer(
 		commitCacheCtx()
 
 		// commit original context
-		fmt.Println("--GetCLessKey--", mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
 		origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
-		fmt.Println("--origtstore--", origtstore.GetStoreType())
 		origtstore.(storetypes.CacheWrap).Write()
 		// origtstore.(storetypes.CommitKVStore).Commit()
 
 		origtstore2 := ctxcachems.GetKVStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
-		fmt.Println("--origtstore2--", origtstore2.GetStoreType())
 		origtstore2.CacheWrap().Write()
 
 		// origtstore2.(consensuslessstore.Store).Commit()
@@ -259,7 +256,6 @@ func RegisterGRPCServer(
 		cms := app.CommitMultiStore()
 		// qms := cms.(storetypes.MultiStore)
 		origtstore3 := cms.GetCommitKVStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
-		fmt.Println("--origtstore3--", origtstore3.GetStoreType())
 		origtstore3.Commit()
 
 		// origtstore2.(storetypes.CommitKVStore).Commit()
@@ -400,7 +396,6 @@ func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool
 		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
 	}
 	tmpctx := app.NewUncachedContext(false, header)
-	fmt.Println("-----NETWORK REQUEST-before GetContextForFinalizeBlock--", tmpctx)
 
 	// branch the commit multi-store for safety
 	ctx := sdk.NewContext(cacheMS, tmpctx.BlockHeader(), true, logger).

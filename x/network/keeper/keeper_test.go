@@ -97,14 +97,8 @@ func TestKeeperTestSuite(t *testing.T) {
 // SetupTest creates a coordinator with 2 test chains.
 func (suite *KeeperTestSuite) SetupTest() {
 	suite.chainIds = []string{"mythos_7001-1"}
-	suite.coordinator = ibctesting.NewCoordinator(suite.T(), suite.chainIds)
+	suite.coordinator = ibctesting.NewCoordinator(suite.T(), suite.chainIds, 0)
 	suite.chainA = suite.coordinator.GetChain(suite.chainIds[0])
-
-	mapp, ok := suite.chainA.App.(*app.App)
-	if !ok {
-		panic("not app")
-	}
-	suite.GrpcSetup(suite.T(), mapp)
 }
 
 func (suite *KeeperTestSuite) Commit() {
@@ -134,16 +128,14 @@ func (s *KeeperTestSuite) GetRandomAccount() simulation.Account {
 
 const bufSize = 1024 * 1024
 
-var lis *bufconn.Listener
-
-func (suite *KeeperTestSuite) GrpcSetup(t *testing.T, app servertypes.Application) {
+func GrpcSetup(t *testing.T, mapp *app.App) *bufconn.Listener {
 	serverCtx := server.NewDefaultContext()
-	clientCtx := suite.GetAppContext(suite.chainA).ClientCtx
+	clientCtx := client.Context{}.WithTxConfig(mapp.TxConfig()).WithChainID(mapp.ChainID())
 	config, err := config.GetConfig(serverCtx.Viper)
 	require.NoError(t, err)
 
-	lis = bufconn.Listen(bufSize)
-	grpcServer, err := NewGRPCServer(serverCtx, clientCtx, config.GRPC, app, nil)
+	lis := bufconn.Listen(bufSize)
+	grpcServer, err := NewGRPCServer(serverCtx, clientCtx, config.GRPC, mapp, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -151,18 +143,21 @@ func (suite *KeeperTestSuite) GrpcSetup(t *testing.T, app servertypes.Applicatio
 			log.Fatalf("Server exited with error: %v", err)
 		}
 	}()
+	return lis
 }
 
-func grpcClient(t *testing.T, ctx context.Context) (types.MsgClient, *grpc.ClientConn) {
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
+func (suite *KeeperTestSuite) GrpcClient(ctx context.Context, target string, mapp *app.App) (types.MsgClient, *grpc.ClientConn) {
+	t := suite.T()
+	lis := GrpcSetup(t, mapp)
+	bufDialer := func(context.Context, string) (net.Conn, error) {
+		return lis.Dial()
+	}
+	// target := "bufnet"
+	conn, err := grpc.DialContext(ctx, target, grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	return types.NewMsgClient(conn), conn
-}
-
-func bufDialer(context.Context, string) (net.Conn, error) {
-	return lis.Dial()
 }
 
 func NewGRPCServer(
