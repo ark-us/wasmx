@@ -559,6 +559,7 @@ func New(
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app,
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
 

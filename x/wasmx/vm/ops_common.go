@@ -54,6 +54,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
 		ContractRouter: ctx.ContractRouter,
+		App:            ctx.App,
 		NativeHandler:  ctx.NativeHandler,
 		dbIterators:    map[int32]dbm.Iterator{},
 		Env: &types.Env{

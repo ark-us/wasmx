@@ -57,6 +57,10 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	encodingConfig := app.MakeEncodingConfig()
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
+	appOpts := app.DefaultAppOptions{}
+	g, _, _ := app.GetTestCtx(logger, true)
+	appOpts.Set("goroutineGroup", g)
+
 	paramsSubspace := typesparams.NewSubspace(cdc,
 		codec.NewLegacyAmino(),
 		storeKey,
@@ -138,6 +142,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		authtypes.FeeCollectorName,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
+	mapp := app.New(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
 	k := keeper.NewKeeper(
 		nil,
 		cdc,
@@ -159,6 +164,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		nil,
 		nil,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		mapp,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

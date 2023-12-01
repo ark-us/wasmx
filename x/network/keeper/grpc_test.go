@@ -9,6 +9,9 @@ import (
 	"log"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	ibctesting "mythos/v1/testutil/ibc"
 
 	app "mythos/v1/app"
@@ -107,6 +110,12 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	app2, ok := chain2.App.(*app.App)
 	suite.Require().True(ok)
 
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1000_000_000)
+	appA := s.GetAppContext(chain1)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
 	// ip1 := "tcp://localhost:8090"
 	// ip2 := "tcp://localhost:8091"
 	ip1 := "0.0.0.0:8090"
@@ -150,7 +159,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
-	mapp := s.GetAppContext(s.chainA)
+	mapp := s.GetAppContext(chain1)
 	qrespbz := mapp.QueryDecode(qresp.Data)
 	suite.Require().Equal(string(qrespbz), fmt.Sprintf(`["%s","%s"]`, ip1, ip2))
 
@@ -171,7 +180,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
-	mapp = s.GetAppContext(s.chainA)
+	mapp = s.GetAppContext(chain1)
 	qrespbz = mapp.QueryDecode(qresp.Data)
 	suite.Require().Equal(`Follower`, string(qrespbz))
 
@@ -225,7 +234,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
-	mapp = s.GetAppContext(s.chainA)
+	mapp = s.GetAppContext(chain1)
 	qrespbz = mapp.QueryDecode(qresp.Data)
 	suite.Require().Equal(`Candidate`, string(qrespbz))
 
@@ -245,11 +254,31 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
-	mapp = s.GetAppContext(s.chainA)
+	mapp = s.GetAppContext(chain1)
 	qrespbz = mapp.QueryDecode(qresp.Data)
 	suite.Require().Equal(`active`, string(qrespbz))
 
-	tx := []byte(`{"from":"aa","to":"bb","funds":[],"data":"1122","gas":1000,"price":10}`)
+	// wasmbin, err := base64.StdEncoding.DecodeString("AGFzbQEAAAABBwFgAn9/AX8DAgEABwoBBmFkZFR3bwAACgkBBwAgACABagsACgRuYW1lAgMBAAA=")
+	// suite.Require().NoError(err)
+	// msg := &wasmxtypes.MsgStoreCode{
+	// 	Sender:   sender.Address.String(),
+	// 	ByteCode: wasmbin,
+	// 	Deps:     nil,
+	// }
+	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
+	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+	msgbz, err := json.Marshal(internalmsg)
+	suite.Require().NoError(err)
+	msg := &wasmxtypes.MsgExecuteContract{
+		Sender:       sender.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	tx := mapp.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+
+	// tx := []byte(`{"from":"aa","to":"bb","funds":[],"data":"1122","gas":1000,"price":10}`)
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))

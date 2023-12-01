@@ -85,7 +85,7 @@ func (suite *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint,
 var DEFAULT_GAS_PRICE = "10amyt"
 var DEFAULT_GAS_LIMIT = uint64(20_000_000)
 
-func (s AppContext) prepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
+func (s AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
 	encodingConfig := app.MakeEncodingConfig()
 	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
 	var parsedGasPrices sdk.DecCoins
@@ -305,7 +305,7 @@ func (s AppContext) SendEthTx(
 }
 
 func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*abci.ExecTxResult, error) {
-	bz := s.prepareCosmosTx(account, msgs, nil, nil)
+	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.finalizeBlock(txs)
@@ -317,7 +317,7 @@ func (s AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*abc
 }
 
 func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
-	bz := s.prepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
+	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.finalizeBlock(txs)
@@ -329,7 +329,7 @@ func (s AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, g
 }
 
 func (s AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result, error) {
-	bz := s.prepareCosmosTx(account, msgs, nil, nil)
+	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
 	return s.App.BaseApp.Simulate(bz)
 }
 

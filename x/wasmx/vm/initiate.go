@@ -80,6 +80,18 @@ func InitiateWasmxEnv2(context *Context, contractVm *wasmedge.VM, dep *types.Sys
 	return cleanups, nil
 }
 
+func InstantiateWasmxConsensusJson(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+	var cleanups []func()
+	var err error
+	wasmx := BuildWasmxConsensusJson1(context)
+	err = contractVm.RegisterModule(wasmx)
+	if err != nil {
+		return cleanups, err
+	}
+	cleanups = append(cleanups, wasmx.Release)
+	return cleanups, nil
+}
+
 func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	err := wasmutils.InstantiateWasm(contractVm, dep.FilePath, nil)
@@ -148,6 +160,7 @@ func init() {
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
+	SystemDepHandler[types.WASMX_CONSENSUS_JSON_1] = InstantiateWasmxConsensusJson
 
 	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultContract

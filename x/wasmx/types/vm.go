@@ -119,6 +119,7 @@ func LibWasmEdgeVersion() string {
 
 var EWASM_VM_EXPORT = "ewasm_env_"
 var WASMX_VM_EXPORT = "wasmx_env_"
+var WASMX_CONS_VM_EXPORT = "wasmx_consensus_json_"
 var SYS_VM_EXPORT = "sys_env_"
 var CW_VM_EXPORT = "interface_version_"
 var WASI_VM_EXPORT = "wasi_"
@@ -128,6 +129,9 @@ var WASMX_ENV_1 = "wasmx_env_1"
 
 // wasmx version 2 with env information
 var WASMX_ENV_2 = "wasmx_env_2"
+
+// only for core consensus
+var WASMX_CONSENSUS_JSON_1 = "wasmx_consensus_json_1"
 
 // non-deterministic system operations, only as queries
 var SYS_ENV_1 = "sys_env_1"
@@ -149,10 +153,11 @@ var CW_ENV_8 = "interface_version_8"
 var DEFAULT_SYS_DEP = EWASM_ENV_1
 
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
-	WASMX_ENV_1: true,
-	WASMX_ENV_2: true,
-	EWASM_ENV_1: true,
-	CW_ENV_8:    true,
+	WASMX_ENV_1:            true,
+	WASMX_ENV_2:            true,
+	EWASM_ENV_1:            true,
+	CW_ENV_8:               true,
+	WASMX_CONSENSUS_JSON_1: true,
 }
 
 var ROLE_STORAGE = "storage"

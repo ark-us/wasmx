@@ -57,6 +57,7 @@ type (
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
 		authority string
+		app       types.Application
 	}
 )
 
@@ -81,6 +82,7 @@ func NewKeeper(
 	msgRouter *baseapp.MsgServiceRouter,
 	grpcQueryRouter *baseapp.GRPCQueryRouter,
 	authority string,
+	app types.Application,
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
@@ -120,7 +122,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize)
+	wasmvm, err := NewVM(goRoutineGroup, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app)
 	if err != nil {
 		panic(err)
 	}
@@ -151,6 +153,7 @@ func NewKeeper(
 		tempDir:       tempDir,
 		binDir:        binDir,
 		authority:     authority,
+		app:           app,
 	}
 
 	// cosmwasm support

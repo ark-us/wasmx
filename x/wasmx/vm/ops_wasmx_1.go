@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mythos/v1/x/wasmx/types"
+	"time"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
@@ -184,6 +185,12 @@ func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params 
 	return returns, wasmedge.Result_Success
 }
 
+func asDateNow(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 1)
+	returns[0] = time.Now().UnixMilli()
+	return returns, wasmedge.Result_Success
+}
+
 func readJsString(arr []byte) string {
 	msg := []byte{}
 	for i, char := range arr {
@@ -240,9 +247,14 @@ func BuildAssemblyScriptEnv(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
+	functype__f64 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{},
+		[]wasmedge.ValType{wasmedge.ValType_F64},
+	)
 
 	env.AddFunction("abort", wasmedge.NewFunction(functype_i32i32i32i32_, asAbort, context, 0))
 	env.AddFunction("console.log", wasmedge.NewFunction(functype_i32_, asConsoleLog, context, 0))
+	env.AddFunction("Date.now", wasmedge.NewFunction(functype__f64, asDateNow, context, 0))
 	return env
 }
 

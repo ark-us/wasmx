@@ -123,6 +123,8 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 			dep = parseDependency(fname, types.WASMX_VM_EXPORT)
 		} else if strings.Contains(fname, types.SYS_VM_EXPORT) {
 			dep = parseDependency(fname, types.SYS_VM_EXPORT)
+		} else if strings.Contains(fname, types.WASMX_CONS_VM_EXPORT) {
+			dep = parseDependency(fname, types.SYS_VM_EXPORT)
 		} else if fname == types.EWASM_ENV_0 {
 			dep = types.EWASM_ENV_1
 		} else if fname == types.CW_ENV_8 {
@@ -212,6 +214,7 @@ func ExecuteWasmInterpreted(
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 	isdebug bool,
+	app types.Application,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -233,6 +236,7 @@ func ExecuteWasmInterpreted(
 		Env:             &env,
 		ContractStore:   kvstore,
 		CosmosHandler:   cosmosHandler,
+		App:             app,
 		ContractRouter:  contractRouter,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]dbm.Iterator{},
@@ -300,6 +304,7 @@ func ExecuteWasm(
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 	isdebug bool,
+	app types.Application,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -322,6 +327,7 @@ func ExecuteWasm(
 		ContractStore:   kvstore,
 		CosmosHandler:   cosmosHandler,
 		ContractRouter:  contractRouter,
+		App:             app,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]dbm.Iterator{},
 		intervalsCount:  0,

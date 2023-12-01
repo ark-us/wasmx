@@ -87,6 +87,7 @@ type Context struct {
 	ContractRouter  ContractRouter
 	ContractStore   prefix.Store
 	CosmosHandler   types.WasmxCosmosHandler
+	App             types.Application
 	NativeHandler   NativePrecompileHandler
 	ReturnData      []byte
 	CurrentCallId   uint32
@@ -99,6 +100,10 @@ type Context struct {
 
 func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {
 	return ctx.CosmosHandler
+}
+
+func (ctx *Context) GetApplication() types.Application {
+	return ctx.App
 }
 
 func (ctx *Context) GetContext() sdk.Context {
