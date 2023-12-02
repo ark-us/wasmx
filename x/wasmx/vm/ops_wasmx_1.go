@@ -187,7 +187,7 @@ func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 func asDateNow(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 1)
-	returns[0] = time.Now().UnixMilli()
+	returns[0] = float64(time.Now().UTC().UnixMilli())
 	return returns, wasmedge.Result_Success
 }
 

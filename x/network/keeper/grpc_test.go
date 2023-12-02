@@ -111,9 +111,11 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	suite.Require().True(ok)
 
 	sender := suite.GetRandomAccount()
+	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	appA := s.GetAppContext(chain1)
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
 	// ip1 := "tcp://localhost:8090"
@@ -258,13 +260,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	qrespbz = mapp.QueryDecode(qresp.Data)
 	suite.Require().Equal(`active`, string(qrespbz))
 
-	// wasmbin, err := base64.StdEncoding.DecodeString("AGFzbQEAAAABBwFgAn9/AX8DAgEABwoBBmFkZFR3bwAACgkBBwAgACABagsACgRuYW1lAgMBAAA=")
-	// suite.Require().NoError(err)
-	// msg := &wasmxtypes.MsgStoreCode{
-	// 	Sender:   sender.Address.String(),
-	// 	ByteCode: wasmbin,
-	// 	Deps:     nil,
-	// }
+	// send tx
 	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
 	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
 	msgbz, err := json.Marshal(internalmsg)
@@ -277,9 +273,27 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 		Dependencies: nil,
 	}
 	tx := mapp.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
-
-	// tx := []byte(`{"from":"aa","to":"bb","funds":[],"data":"1122","gas":1000,"price":10}`)
 	txstr := base64.StdEncoding.EncodeToString(tx)
+
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
+	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	// send a second tx!
+	msg = &wasmxtypes.MsgExecuteContract{
+		Sender:       sender2.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	tx = mapp.PrepareCosmosTx(sender2, []sdk.Msg{msg}, nil, nil)
+	txstr = base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
 	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
@@ -298,7 +312,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = mapp.QueryDecode(qresp.Data)
-	suite.Require().Equal(string(qrespbz), `1`)
+	suite.Require().Equal(`2`, string(qrespbz))
 
 	msg1 = []byte(fmt.Sprintf(`{"getContextValue":{"key":"logs_%s"}}`, string(qrespbz)))
 	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
@@ -340,7 +354,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = mapp.QueryDecode(qresp.Data)
-	suite.Require().Equal(string(qrespbz), `1`)
+	suite.Require().Equal(`2`, string(qrespbz))
 
 	time.Sleep(10 * time.Second)
 }
