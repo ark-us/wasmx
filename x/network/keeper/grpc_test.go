@@ -29,6 +29,7 @@ type LogEntry struct {
 	TermId   int32  `json:"termId"`
 	LeaderId int32  `json:"leaderId"`
 	Data     string `json:"data"`
+	Result   string `json:"result"`
 }
 
 type AppendEntry struct {
@@ -37,7 +38,7 @@ type AppendEntry struct {
 	PrevLogIndex int64      `json:"prevLogIndex"`
 	PrevLogTerm  int32      `json:"prevLogTerm"`
 	Entries      []LogEntry `json:"entries"`
-	LeaderCommit int64      `json:"tleaderCommito"`
+	LeaderCommit int64      `json:"leaderCommit"`
 }
 
 func (suite *KeeperTestSuite) TestSetValidators() {
@@ -338,6 +339,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	entrybz, err := json.Marshal(entry)
 	suite.Require().NoError(err)
 
+	// receiveHeartbeat
 	respReceive, err := client2.GrpcReceiveRequest(goctx2, &types.MsgGrpcReceiveRequest{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
@@ -355,6 +357,8 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	suite.Require().NoError(err)
 	qrespbz = mapp.QueryDecode(qresp.Data)
 	suite.Require().Equal(`2`, string(qrespbz))
+
+	// Test finalize block
 
 	time.Sleep(10 * time.Second)
 }
