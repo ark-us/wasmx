@@ -99,6 +99,160 @@ func (suite *KeeperTestSuite) TestStateMachineGrpc() {
 	conn.Close()
 }
 
+func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
+	sender := suite.GetRandomAccount()
+	sender2 := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1000_000_000)
+	appA := s.GetAppContext(suite.chainA)
+	mapp, ok := suite.chainA.App.(*app.App)
+	suite.Require().True(ok)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	ip1 := "bufnet1"
+	goctx1 := context.Background()
+	client1, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
+	defer conn1.Close()
+	consensusBech32 := "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy"
+	// contractAddress := sdk.MustAccAddressFromBech32(consensusBech32)
+
+	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, ip1))
+	resp, err := client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	// Check each simulated node has the correct context:
+	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
+	qresp, err := client1.QueryContract(goctx1, &types.MsgQueryContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	qrespbz := appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(string(qrespbz), fmt.Sprintf(`["%s"]`, ip1))
+
+	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
+	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(string(qrespbz), `0`)
+
+	msg1 = []byte(`{"getCurrentState":{}}`)
+	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(`Follower`, string(qrespbz))
+
+	// Start Leader
+	msg1 = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	msg1 = []byte(`{"getCurrentState":{}}`)
+	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(`Candidate`, string(qrespbz))
+
+	msg1 = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	msg1 = []byte(`{"getCurrentState":{}}`)
+	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(`active`, string(qrespbz))
+
+	// send tx
+	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
+	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+	msgbz, err := json.Marshal(internalmsg)
+	suite.Require().NoError(err)
+	msg := &wasmxtypes.MsgExecuteContract{
+		Sender:       sender.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	txstr := base64.StdEncoding.EncodeToString(tx)
+
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
+	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	// send a second tx!
+	msg = &wasmxtypes.MsgExecuteContract{
+		Sender:       sender2.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	tx = appA.PrepareCosmosTx(sender2, []sdk.Msg{msg}, nil, nil)
+	txstr = base64.StdEncoding.EncodeToString(tx)
+
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
+	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	msg1 = []byte(`{"getContextValue":{"key":"logs_count"}}`)
+	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(`2`, string(qrespbz))
+
+	time.Sleep(10 * time.Second)
+}
+
 func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	chainIds := []string{"mythos_7001-1"}
 	coordinator1 := ibctesting.NewCoordinator(suite.T(), chainIds, 0)
