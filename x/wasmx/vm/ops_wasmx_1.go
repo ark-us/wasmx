@@ -85,9 +85,9 @@ func wasmxStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 	data := ctx.ContractStore.Get(keybz)
-	if len(data) == 0 {
-		data = make([]byte, 32)
-	}
+	// if len(data) == 0 {
+	// 	data = make([]byte, 32)
+	// }
 	newptr, err := allocateWriteMem(ctx, callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
