@@ -488,7 +488,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 		PrevLogIndex: 0,
 		PrevLogTerm:  0,
 		Entries:      []LogEntry{logEntry},
-		LeaderCommit: 1,
+		LeaderCommit: 2, // we finalize 1 block // TODO this should be 1
 	}
 	entrybz, err := json.Marshal(entry)
 	suite.Require().NoError(err)
