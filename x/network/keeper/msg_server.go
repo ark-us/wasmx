@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cometbft/cometbft/node"
-	cmttypes "github.com/cometbft/cometbft/types"
 
 	sdkerr "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
@@ -24,7 +23,6 @@ type IntervalAction struct {
 	Delay  int64
 	Repeat int32
 	Args   []byte
-	// Cancel context.CancelFunc
 }
 
 type msgServer struct {
@@ -32,8 +30,6 @@ type msgServer struct {
 	intervalCount int32
 	intervals     map[int32]*IntervalAction
 	Keeper
-	TmNode          *node.Node
-	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
@@ -50,13 +46,9 @@ func NewMsgServerImpl(keeper Keeper, app types.BaseApp) types.MsgServer {
 func NewMsgServer(
 	keeper Keeper,
 	tmNode *node.Node,
-	// createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) types.MsgServer {
-	// keeper.wasmxKeeper.SetGoRoutineCreate(createGoRoutine)
 	return &msgServer{
-		Keeper: keeper,
-		TmNode: tmNode,
-		// createGoRoutine: createGoRoutine,
+		Keeper:        keeper,
 		intervalCount: 0,
 		intervals:     map[int32]*IntervalAction{},
 	}
@@ -102,12 +94,6 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 		return nil, err
 	}
 	fmt.Println("--StartInterval--", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
-	// action := func() error {
-	// 	_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
-	// 	return err
-	// }
-	// gracefulStop := func() {}
-	// _, err = m.createGoRoutine(description, action, gracefulStop)
 
 	timeDelay := msg.Delay
 	httpSrvDone := make(chan struct{}, 1)
@@ -411,104 +397,104 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 	}, nil
 }
 
-func (m msgServer) Ping2(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
-	fmt.Println("---------Ping", msg.Data, goCtx)
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	fmt.Println("---------Ping ctx", ctx)
+// func (m msgServer) Ping2(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
+// 	fmt.Println("---------Ping", msg.Data, goCtx)
+// 	ctx := sdk.UnwrapSDKContext(goCtx)
+// 	fmt.Println("---------Ping ctx", ctx)
 
-	// fmt.Println("---------Ping validators", m.GetValidators(ctx))
+// 	// fmt.Println("---------Ping validators", m.GetValidators(ctx))
 
-	tmNode := m.TmNode
-	fmt.Println("==Ping=peers===", tmNode.ConsensusReactor().Switch.Peers())
-	fmt.Println("==Ping=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
+// 	tmNode := m.TmNode
+// 	fmt.Println("==Ping=peers===", tmNode.ConsensusReactor().Switch.Peers())
+// 	fmt.Println("==Ping=ProposerAddress===", tmNode.BlockStore().LoadBaseMeta().Header.ProposerAddress)
 
-	fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
-	fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
+// 	fmt.Println("==Validators.GetProposer()===", tmNode.EvidencePool().State().Validators.GetProposer())
+// 	fmt.Println("==NextValidators.GetProposer()===", tmNode.EvidencePool().State().NextValidators.GetProposer())
 
-	fmt.Println("==Validators.Validators()===", tmNode.EvidencePool().State().Validators.Validators)
+// 	fmt.Println("==Validators.Validators()===", tmNode.EvidencePool().State().Validators.Validators)
 
-	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
+// 	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
 
-	bz, err := hex.DecodeString("0000000000000000000000000000000000000005")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--network-bz--", bz)
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
-	resp, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("-network-resp---", resp)
+// 	bz, err := hex.DecodeString("0000000000000000000000000000000000000005")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fmt.Println("--network-bz--", bz)
+// 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+// 	execmsgbz, err := json.Marshal(execmsg)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
+// 	resp, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fmt.Println("-network-resp---", resp)
 
-	response := msg.Data + hex.EncodeToString(resp)
+// 	response := msg.Data + hex.EncodeToString(resp)
 
-	return &types.MsgPingResponse{
-		Data: response,
-	}, nil
-}
+// 	return &types.MsgPingResponse{
+// 		Data: response,
+// 	}, nil
+// }
 
 func (m msgServer) SetValidators(goCtx context.Context, msg *types.MsgSetValidators) (*types.MsgSetValidatorsResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	// fmt.Println("==SetValidators===")
+	// ctx := sdk.UnwrapSDKContext(goCtx)
+	// // fmt.Println("==SetValidators===")
 
-	tmNode := m.TmNode
-	var validators []*cmttypes.Validator
-	validators = tmNode.EvidencePool().State().Validators.Validators
-	fmt.Println("=SetValidators=Validators.Validators()===", len(validators), validators)
+	// tmNode := m.TmNode
+	// var validators []*cmttypes.Validator
+	// validators = tmNode.EvidencePool().State().Validators.Validators
+	// fmt.Println("=SetValidators=Validators.Validators()===", len(validators), validators)
 
-	validatorAddresses := make([]sdk.AccAddress, len(validators))
-	for i, valid := range validators {
-		fmt.Println("---validatorAddresses---", i, valid)
-		validatorAddresses[i] = sdk.AccAddress(valid.Address)
-		fmt.Println("---validatorAddresses---", i, validatorAddresses[i].String(), hex.EncodeToString(validatorAddresses[i]))
-	}
-	fmt.Println("---validatorAddresses---", validatorAddresses)
-
-	// validatorAddresses := []sdk.AccAddress{
-	// 	wasmxtypes.AccAddressFromHex("1111111111111111111111111111111111111111"),
-	// 	wasmxtypes.AccAddressFromHex("2222222222222222222222222222222222222222"),
+	// validatorAddresses := make([]sdk.AccAddress, len(validators))
+	// for i, valid := range validators {
+	// 	fmt.Println("---validatorAddresses---", i, valid)
+	// 	validatorAddresses[i] = sdk.AccAddress(valid.Address)
+	// 	fmt.Println("---validatorAddresses---", i, validatorAddresses[i].String(), hex.EncodeToString(validatorAddresses[i]))
 	// }
+	// fmt.Println("---validatorAddresses---", validatorAddresses)
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-	datalen := big.NewInt(int64(len(validatorAddresses))).FillBytes(make([]byte, 32))
-	bz, err := hex.DecodeString("9300c9260000000000000000000000000000000000000000000000000000000000000020")
-	if err != nil {
-		return nil, err
-	}
-	bz = append(bz, datalen...)
+	// // validatorAddresses := []sdk.AccAddress{
+	// // 	wasmxtypes.AccAddressFromHex("1111111111111111111111111111111111111111"),
+	// // 	wasmxtypes.AccAddressFromHex("2222222222222222222222222222222222222222"),
+	// // }
 
-	for _, valid := range validatorAddresses {
-		// fmt.Println("--SetValidators-bz-0-", hex.EncodeToString(bz))
-		bz = append(bz, make([]byte, 12)...)
-		bz = append(bz, valid.Bytes()...)
-		// fmt.Println("--SetValidators-bz-1-", hex.EncodeToString(bz))
-	}
-	// fmt.Println("--SetValidators-bz--", hex.EncodeToString(bz))
+	// contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "contract")
+	// }
+	// datalen := big.NewInt(int64(len(validatorAddresses))).FillBytes(make([]byte, 32))
+	// bz, err := hex.DecodeString("9300c9260000000000000000000000000000000000000000000000000000000000000020")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// bz = append(bz, datalen...)
 
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-	// fmt.Println("--SetValidators-execmsgbz--", hex.EncodeToString(execmsgbz))
-	// TODO have authority network + governance for these contracts
-	// TODO sender must be network module
-	// sender := sdk.AccAddress("network") // must have 20 bytes
-	sender := contractAddress
-	_, err = m.wasmxKeeper.Execute(ctx, contractAddress, sender, execmsgbz, nil, nil)
-	// fmt.Println("-SetValidators-resp---", resp, err)
-	if err != nil {
-		return nil, err
-	}
+	// for _, valid := range validatorAddresses {
+	// 	// fmt.Println("--SetValidators-bz-0-", hex.EncodeToString(bz))
+	// 	bz = append(bz, make([]byte, 12)...)
+	// 	bz = append(bz, valid.Bytes()...)
+	// 	// fmt.Println("--SetValidators-bz-1-", hex.EncodeToString(bz))
+	// }
+	// // fmt.Println("--SetValidators-bz--", hex.EncodeToString(bz))
+
+	// execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+	// execmsgbz, err := json.Marshal(execmsg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// // fmt.Println("--SetValidators-execmsgbz--", hex.EncodeToString(execmsgbz))
+	// // TODO have authority network + governance for these contracts
+	// // TODO sender must be network module
+	// // sender := sdk.AccAddress("network") // must have 20 bytes
+	// sender := contractAddress
+	// _, err = m.wasmxKeeper.Execute(ctx, contractAddress, sender, execmsgbz, nil, nil)
+	// // fmt.Println("-SetValidators-resp---", resp, err)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &types.MsgSetValidatorsResponse{}, nil
 }
@@ -548,39 +534,39 @@ func (m msgServer) GetValidators(goCtx context.Context, msg *types.MsgGetValidat
 }
 
 func (m msgServer) MakeProposal(goCtx context.Context, msg *types.MsgMakeProposal) (*types.MsgMakeProposalResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
+	// ctx := sdk.UnwrapSDKContext(goCtx)
 
-	tmNode := m.TmNode
-	currentValidator, err := tmNode.PrivValidator().GetPubKey()
-	if err != nil {
-		return nil, err
-	}
-	// tmNode.NodeInfo().ID()
-	// tmNode.Switch().NetAddress()
-	// tmNode.Switch().
+	// tmNode := m.TmNode
+	// currentValidator, err := tmNode.PrivValidator().GetPubKey()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// // tmNode.NodeInfo().ID()
+	// // tmNode.Switch().NetAddress()
+	// // tmNode.Switch().
 
-	fmt.Println("==currentValidator", currentValidator.Address())
+	// fmt.Println("==currentValidator", currentValidator.Address())
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-	bz, err := hex.DecodeString("589f5dd70000000000000000000000000000000000000000000000000000000000000040" + hex.EncodeToString(currentValidator.Address()) + "000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--network-bz--", hex.EncodeToString(bz))
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
-	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("-network-resp---", resp)
+	// contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "contract")
+	// }
+	// bz, err := hex.DecodeString("589f5dd70000000000000000000000000000000000000000000000000000000000000040" + hex.EncodeToString(currentValidator.Address()) + "000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println("--network-bz--", hex.EncodeToString(bz))
+	// execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+	// execmsgbz, err := json.Marshal(execmsg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	// resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println("-network-resp---", resp)
 
 	return &types.MsgMakeProposalResponse{
 		Data: "",
@@ -588,71 +574,75 @@ func (m msgServer) MakeProposal(goCtx context.Context, msg *types.MsgMakeProposa
 }
 
 func (m msgServer) IsProposer(goCtx context.Context, msg *types.MsgIsProposer) (*types.MsgIsProposerResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
+	// ctx := sdk.UnwrapSDKContext(goCtx)
 
-	tmNode := m.TmNode
-	currentValidator, err := tmNode.PrivValidator().GetPubKey()
-	if err != nil {
-		return nil, err
-	}
-	// tmNode.NodeInfo().ID()
-	// tmNode.Switch().NetAddress()
-	// tmNode.Switch().
+	// tmNode := m.TmNode
+	// currentValidator, err := tmNode.PrivValidator().GetPubKey()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// // tmNode.NodeInfo().ID()
+	// // tmNode.Switch().NetAddress()
+	// // tmNode.Switch().
 
-	fmt.Println("==currentValidator", currentValidator.Address())
+	// fmt.Println("==currentValidator", currentValidator.Address())
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-	bz, err := hex.DecodeString("e9790d02")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--network-bz--", bz)
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
-	resp, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("-network-resp---", resp)
+	// contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "contract")
+	// }
+	// bz, err := hex.DecodeString("e9790d02")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println("--network-bz--", bz)
+	// execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+	// execmsgbz, err := json.Marshal(execmsg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println("--network-execmsgbz--", hex.EncodeToString(execmsgbz))
+	// resp, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// fmt.Println("-network-resp---", resp)
+
+	// return &types.MsgIsProposerResponse{
+	// 	IsProposer: hex.EncodeToString(resp) == "0000000000000000000000000000000000000001",
+	// }, nil
 
 	return &types.MsgIsProposerResponse{
-		IsProposer: hex.EncodeToString(resp) == "0000000000000000000000000000000000000001",
+		IsProposer: false,
 	}, nil
 }
 
 func (m msgServer) SetCurrentNode(goCtx context.Context, msg *types.MsgSetCurrentNode) (*types.MsgSetCurrentNodeResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
+	// ctx := sdk.UnwrapSDKContext(goCtx)
 
-	tmNode := m.TmNode
-	currentValidator, err := tmNode.PrivValidator().GetPubKey()
-	if err != nil {
-		return nil, err
-	}
+	// tmNode := m.TmNode
+	// currentValidator, err := tmNode.PrivValidator().GetPubKey()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-	bz, err := hex.DecodeString("9a25709f000000000000000000000000" + hex.EncodeToString(currentValidator.Address()))
-	if err != nil {
-		return nil, err
-	}
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-	_, err = m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+	// contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "contract")
+	// }
+	// bz, err := hex.DecodeString("9a25709f000000000000000000000000" + hex.EncodeToString(currentValidator.Address()))
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// execmsg := wasmxtypes.WasmxExecutionMessage{Data: bz}
+	// execmsgbz, err := json.Marshal(execmsg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// _, err = m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &types.MsgSetCurrentNodeResponse{}, nil
 }

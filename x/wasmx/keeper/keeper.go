@@ -29,7 +29,6 @@ const contractMemoryLimit = 32
 type (
 	Keeper struct {
 		goRoutineGroup        *errgroup.Group
-		createGoRoutine       func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)
 		cdc                   codec.Codec
 		storeKey              storetypes.StoreKey
 		memKey                storetypes.StoreKey
@@ -185,16 +184,6 @@ func (k *Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
 
 func (k *Keeper) WasmVMResponseHandler() cw8types.WasmVMResponseHandler {
 	return k.wasmVMResponseHandler
-}
-
-func (k *Keeper) SetGoRoutineGroup(g *errgroup.Group) {
-	k.goRoutineGroup = g
-	k.wasmvm.SetGoRoutineGroup(g)
-}
-
-func (k *Keeper) SetGoRoutineCreate(createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error)) {
-	k.createGoRoutine = createGoRoutine
-	k.wasmvm.SetGoRoutineCreate(createGoRoutine)
 }
 
 // 0755 = User:rwx Group:r-x World:r-x

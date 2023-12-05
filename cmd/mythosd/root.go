@@ -297,21 +297,6 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 	}
 }
 
-// type MythosApp interface {
-// 	SetGoRoutineGroup(g *errgroup.Group)
-// }
-
-// // SetChainID sets the chain ID in BaseApp.
-// func SetGoRoutineGroup(g *errgroup.Group) func(*baseapp.BaseApp) {
-// 	return func(app *baseapp.BaseApp) {
-// 		mythosapp, ok := app.(MythosApp)
-// 		if !ok {
-// 			return fmt.Errorf("failed to get MythosApp from BaseApp")
-// 		}
-// 		mythosapp.SetGoRoutineGroup(g)
-// 	}
-// }
-
 type appCreator struct {
 	encodingConfig appparams.EncodingConfig
 }

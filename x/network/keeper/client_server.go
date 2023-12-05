@@ -34,7 +34,6 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
 	cmtnet "github.com/cometbft/cometbft/libs/net"
-	"github.com/cometbft/cometbft/node"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
 	"mythos/v1/x/network/types"
@@ -72,8 +71,6 @@ func NewGRPCServer(
 	clientCtx client.Context,
 	cfg config.GRPCConfig,
 	app servertypes.Application,
-	tmNode *node.Node,
-	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) (*grpc.Server, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
@@ -91,7 +88,7 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	err := RegisterGRPCServer(svrCtx, clientCtx, tmNode, app, grpcSrv, createGoRoutine)
+	err := RegisterGRPCServer(svrCtx, clientCtx, app, grpcSrv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
@@ -145,10 +142,8 @@ func dialerFunc(_ context.Context, addr string) (net.Conn, error) {
 func RegisterGRPCServer(
 	svrCtx *server.Context,
 	clientCtx client.Context,
-	tmNode *node.Node,
 	sapp servertypes.Application,
 	server *grpc.Server,
-	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 ) error {
 	app, ok := sapp.(BaseApp)
 	if !ok {
@@ -275,9 +270,7 @@ func RegisterGRPCServer(
 	}
 
 	handler := &msgServer{
-		Keeper:          mythosapp.GetNetworkKeeper(),
-		TmNode:          tmNode,
-		createGoRoutine: createGoRoutine,
+		Keeper: mythosapp.GetNetworkKeeper(),
 	}
 
 	desc := types.Network_Msg_serviceDesc

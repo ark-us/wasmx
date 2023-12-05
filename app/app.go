@@ -1175,13 +1175,3 @@ func (app *App) SimulationManager() *module.SimulationManager {
 func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
 	return app.NetworkKeeper
 }
-
-// timed actions in wasmx
-func (app *App) SetGoRoutineGroup(g *errgroup.Group) {
-	app.goRoutineGroup = g
-	app.WasmxKeeper.SetGoRoutineGroup(g)
-}
-
-func (app *App) GetGoRoutineGroup() *errgroup.Group {
-	return app.goRoutineGroup
-}

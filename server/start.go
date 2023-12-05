@@ -21,7 +21,6 @@ import (
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
-	"github.com/cometbft/cometbft/rpc/client/local"
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
@@ -192,20 +191,6 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	return cmd
 }
 
-type MythosApp interface {
-	SetGoRoutineGroup(g *errgroup.Group)
-}
-
-// SetGoRoutineGroup sets the GoRoutineGroup in BaseApp.
-func SetGoRoutineGroup(app types.Application, g *errgroup.Group) error {
-	mythosapp, ok := app.(MythosApp)
-	if !ok {
-		return fmt.Errorf("failed to get MythosApp from BaseApp")
-	}
-	mythosapp.SetGoRoutineGroup(g)
-	return nil
-}
-
 func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error {
 	addr := svrCtx.Viper.GetString(srvflags.Address)
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
@@ -231,7 +216,6 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 
 	svrCtx.Viper.Set("goroutineGroup", g)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-	err = SetGoRoutineGroup(app, g)
 	if err != nil {
 		return err
 	}
@@ -317,7 +301,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 
 	svrCtx.Viper.Set("goroutineGroup", g)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-	err = SetGoRoutineGroup(app, g)
 	if err != nil {
 		return err
 	}
@@ -337,11 +320,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		svrCtx.Logger.Info("starting node in query only mode; CometBFT is disabled")
 		config.GRPC.Enable = true
 	} else {
-		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
-		tmNode, cleanupFn, err = startCmtNode(ctx, cfg, app, svrCtx)
-		if err != nil {
-			return err
-		}
+		// svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
+		// tmNode, cleanupFn, err = startCmtNode(ctx, cfg, app, svrCtx)
+		// if err != nil {
+		// 	return err
+		// }
 		defer cleanupFn()
 	}
 
@@ -351,11 +334,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	if (config.API.Enable || config.GRPC.Enable || config.Websrv.Enable || config.JsonRpc.Enable) && tmNode != nil {
 		// Re-assign for making the client available below do not use := to avoid
 		// shadowing the clientCtx variable.
-		clientCtx = clientCtx.WithClient(local.New(tmNode))
+		// clientCtx = clientCtx.WithClient(local.New(tmNode))
 
-		app.RegisterTxService(clientCtx)
-		app.RegisterTendermintService(clientCtx)
-		app.RegisterNodeService(clientCtx, config.Config)
+		// app.RegisterTxService(clientCtx)
+		// app.RegisterTendermintService(clientCtx)
+		// app.RegisterNodeService(clientCtx, config.Config)
 	}
 
 	if config.API.Enable || config.Websrv.Enable || config.JsonRpc.Enable {
@@ -386,11 +369,26 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		WithHomeDir(home).
 		WithChainID(genDoc.ChainID)
 
+	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
+	if err != nil {
+		return err
+	}
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
-		_, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, &config, app, tmNode)
+		// _, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, &config, app, tmNode)
+		_, _, err = networkgrpc.StartGRPCServer(
+			svrCtx,
+			clientCtx,
+			ctx,
+			&config,
+			app,
+			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
+			nodeKey,
+			getGenDocProvider(cfg),
+			node.DefaultMetricsProvider(cfg.Instrumentation),
+		)
 		return err
 	})
 	// ----end network

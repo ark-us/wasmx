@@ -201,7 +201,6 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
-	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
@@ -229,19 +228,18 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		createGoRoutine: createGoRoutine,
-		goRoutineGroup:  goRoutineGroup,
-		Ctx:             ctx,
-		GasMeter:        gasMeter,
-		Env:             &env,
-		ContractStore:   kvstore,
-		CosmosHandler:   cosmosHandler,
-		App:             app,
-		ContractRouter:  contractRouter,
-		NativeHandler:   NativeMap,
-		dbIterators:     map[int32]dbm.Iterator{},
-		intervalsCount:  0,
-		intervals:       map[int32]*IntervalAction{},
+		goRoutineGroup: goRoutineGroup,
+		Ctx:            ctx,
+		GasMeter:       gasMeter,
+		Env:            &env,
+		ContractStore:  kvstore,
+		CosmosHandler:  cosmosHandler,
+		App:            app,
+		ContractRouter: contractRouter,
+		NativeHandler:  NativeMap,
+		dbIterators:    map[int32]dbm.Iterator{},
+		intervalsCount: 0,
+		intervals:      map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -291,7 +289,6 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
-	createGoRoutine func(description string, timeDelay int64, fn func() error, gracefulStop func()) (chan struct{}, error),
 	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
@@ -319,19 +316,18 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		createGoRoutine: createGoRoutine,
-		goRoutineGroup:  goRoutineGroup,
-		Ctx:             ctx,
-		GasMeter:        gasMeter,
-		Env:             &env,
-		ContractStore:   kvstore,
-		CosmosHandler:   cosmosHandler,
-		ContractRouter:  contractRouter,
-		App:             app,
-		NativeHandler:   NativeMap,
-		dbIterators:     map[int32]dbm.Iterator{},
-		intervalsCount:  0,
-		intervals:       map[int32]*IntervalAction{},
+		goRoutineGroup: goRoutineGroup,
+		Ctx:            ctx,
+		GasMeter:       gasMeter,
+		Env:            &env,
+		ContractStore:  kvstore,
+		CosmosHandler:  cosmosHandler,
+		ContractRouter: contractRouter,
+		App:            app,
+		NativeHandler:  NativeMap,
+		dbIterators:    map[int32]dbm.Iterator{},
+		intervalsCount: 0,
+		intervals:      map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
