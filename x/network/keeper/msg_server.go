@@ -97,8 +97,9 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 
 	timeDelay := msg.Delay
 	httpSrvDone := make(chan struct{}, 1)
-	height := ctx.BlockHeight() - 1 // TODO fixme
-	fmt.Println("---height--", height)
+	// height := ctx.BlockHeight() - 1 // TODO fixme
+	height := ctx.BlockHeight()
+	fmt.Println("---ctx.BlockHeight()--", height)
 	logger := m.Keeper.Logger(ctx)
 	// errCh := make(chan error)
 	m.goRoutineGroup.Go(func() error {

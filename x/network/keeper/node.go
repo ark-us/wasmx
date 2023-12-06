@@ -38,7 +38,7 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	grpcServer, err := NewGRPCServer(svrCtx, clientCtx, cfgAll.GRPC, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
+	grpcServer, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll.GRPC, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
 	if err != nil {
 		return nil, nil, err
 	}

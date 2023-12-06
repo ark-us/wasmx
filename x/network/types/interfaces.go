@@ -15,4 +15,5 @@ type BaseApp interface {
 	GetContextForCheckTx(txBytes []byte) sdk.Context
 	GetContextForFinalizeBlock(txBytes []byte) sdk.Context
 	NewUncachedContext(isCheckTx bool, header cmtproto.Header) sdk.Context
+	LastBlockHeight() int64
 }

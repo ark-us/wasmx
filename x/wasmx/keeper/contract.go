@@ -552,7 +552,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 	if err != nil {
 		coinType := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY)
 		if coinType == nil {
-			return nil, sdkerr.Wrap(types.ErrInvalid, "missing CONTEXT_COIN_TYPE_KEY")
+			return nil, sdkerr.Wrap(types.ErrInvalid, "missing contract instance and missing CONTEXT_COIN_TYPE_KEY")
 		}
 		// This can be just an ethcall sending value
 		key := coinType.(uint32)
