@@ -2,7 +2,7 @@ package config
 
 const (
 	DefaultNetworkEnable  = true
-	DefaultNetworkPort    = "8090"
+	DefaultNetworkPort    = "26657"
 	DefaultNetworkAddress = "0.0.0.0:" + DefaultNetworkPort
 
 	// DefaultMaxOpenConnections represents the amount of open connections (unlimited = 0)

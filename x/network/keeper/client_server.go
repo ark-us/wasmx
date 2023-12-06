@@ -34,10 +34,13 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	"mythos/v1/x/network/types"
@@ -69,6 +72,19 @@ type BaseApp interface {
 	LastBlockHeight() int64
 }
 
+type ABCIClientI interface {
+	// Reading from abci app
+	ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error)
+	ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error)
+	ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes,
+		opts rpcclient.ABCIQueryOptions) (*rpctypes.ResultABCIQuery, error)
+
+	// Writing to abci app
+	BroadcastTxCommit(context.Context, cmttypes.Tx) (*rpctypes.ResultBroadcastTxCommit, error)
+	BroadcastTxAsync(context.Context, cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error)
+	BroadcastTxSync(context.Context, cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error)
+}
+
 // NewGRPCServer returns a correctly configured and initialized gRPC server.
 // Note, the caller is responsible for starting the server. See StartGRPCServer.
 func NewGRPCServer(
@@ -81,7 +97,7 @@ func NewGRPCServer(
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
-) (*grpc.Server, error) {
+) (*grpc.Server, *ABCIClient, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = config.DefaultGRPCMaxSendMsgSize
@@ -100,17 +116,17 @@ func NewGRPCServer(
 
 	networkServer, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, app, grpcSrv)
 	if err != nil {
-		return nil, fmt.Errorf("failed to register grpc server: %w", err)
+		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
 
 	bapp, ok := app.(BaseApp)
 	if !ok {
-		return nil, fmt.Errorf("failed to get BaseApp from server Application")
+		return nil, nil, fmt.Errorf("failed to get BaseApp from server Application")
 	}
-	mythosapp, ok := bapp.(MythosApp)
-	if !ok {
-		return nil, fmt.Errorf("failed to get MythosApp from server Application")
-	}
+	// mythosapp, ok := bapp.(MythosApp)
+	// if !ok {
+	// 	return nil, fmt.Errorf("failed to get MythosApp from server Application")
+	// }
 	logger := svrCtx.Logger.With("module", "network")
 
 	// load genesis state
@@ -119,9 +135,14 @@ func NewGRPCServer(
 	if bapp.LastBlockHeight() == 0 {
 		resInit, err := initChain(svrCtx, clientCtx, cfg, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		fmt.Println("--resInit--", resInit)
+
+		err = setupNode(bapp, logger, networkServer)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// ctx := sdk.UnwrapSDKContext(goCtx)
@@ -145,121 +166,16 @@ func NewGRPCServer(
 		InterfaceRegistry: clientCtx.InterfaceRegistry,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to register reflection service: %w", err)
+		return nil, nil, fmt.Errorf("failed to register reflection service: %w", err)
 	}
 
 	// Reflection allows external clients to see what services and methods
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
 
-	// setup network
-	// resInit
+	client := NewABCIClient(bapp, logger, networkServer)
 
-	// contractAddress := sdk.MustAccAddressFromBech32("mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy")
-	// msg :=
-	// respp, err := mythosapp.GetNetworkKeeper().ExecuteContract(ctx, contractAddress, contractAddress, msg, nil, nil)
-
-	// resInit.Validators
-	scfg := svrCtx.Config
-	// scfg.StateSync.
-	fmt.Println("--scfg.PrivValidatorListenAddr--", scfg.PrivValidatorListenAddr)
-	fmt.Println("--scfg--", scfg)
-	fmt.Println("--scfg.P2P.Seeds--", scfg.P2P.Seeds)
-	fmt.Println("--scfg.P2P.ExternalAddress--", scfg.P2P.ExternalAddress)
-	fmt.Println("--scfg.P2P.PersistentPeers--", scfg.P2P.PersistentPeers)
-
-	height := int64(0)
-
-	cms := bapp.CommitMultiStore()
-	qms := cms.(storetypes.MultiStore)
-	ctxcachems := qms.CacheMultiStore()
-	// fixme
-	header := cmtproto.Header{
-		ChainID:            bapp.ChainID(),
-		Height:             10,
-		Time:               time.Now().UTC(),
-		ProposerAddress:    []byte("proposer"),
-		NextValidatorsHash: []byte("proposer"),
-		// AppHash:            app.LastCommitID().Hash,
-		// Version: tmversion.Consensus{
-		// 	Block: version.BlockProtocol,
-		// },
-		// LastBlockId: tmproto.BlockID{
-		// 	Hash: tmhash.Sum([]byte("block_id")),
-		// 	PartSetHeader: tmproto.PartSetHeader{
-		// 		Total: 11,
-		// 		Hash:  tmhash.Sum([]byte("partset_header")),
-		// 	},
-		// },
-		// AppHash:            tmhash.Sum([]byte("app")),
-		// DataHash:           tmhash.Sum([]byte("data")),
-		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
-		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
-		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
-		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
-		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
-	}
-	tmpctx := bapp.NewUncachedContext(false, header)
-
-	// branch the commit multi-store for safety
-	sdkCtx_ := sdk.NewContext(ctxcachems, tmpctx.BlockHeader(), true, logger).
-		WithMinGasPrices(nil).
-		WithBlockHeight(height).
-		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
-
-	// sdkCtx_, ctxcachems, err := CreateQueryContext(bapp, logger, height, false)
-	fmt.Println("--StartInterval--CreateQueryContext", err)
-	if err != nil {
-		logger.Error("failed to create query context", "err", err)
-		return nil, err
-	}
-	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-
-	goCtx := context.Background()
-	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
-
-	// TODO ips!
-
-	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, "localhost:9080"))
-	rresp, err := networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Msg:      msg,
-	})
-	fmt.Println("--ExecuteContract setupNode--", rresp, err)
-	if err != nil {
-		return nil, err
-	}
-
-	// make node a candidate
-	msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-	rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Msg:      msg,
-	})
-	fmt.Println("--ExecuteContract candidate--", rresp, err)
-	if err != nil {
-		return nil, err
-	}
-
-	// make node a leader
-	msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-	rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Msg:      msg,
-	})
-	fmt.Println("--ExecuteContract leader--", rresp, err)
-	if err != nil {
-		return nil, err
-	}
-
-	commitCacheCtx()
-	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-	origtstore.(storetypes.CacheWrap).Write()
-
-	return grpcSrv, nil
+	return grpcSrv, client, nil
 }
 
 // StartGRPCClient dials the gRPC server using protoAddr and returns a new
@@ -434,6 +350,8 @@ func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool
 		height = lastBlockHeight
 	}
 
+	fmt.Println("-CreateQueryContext-", height)
+
 	if height <= 1 && prove {
 		return sdk.Context{}, nil,
 			errorsmod.Wrap(
@@ -599,6 +517,15 @@ func initChain(
 	}
 	fmt.Println("--resInit--", resInit)
 
+	// TODO resInit.Validators
+	scfg := svrCtx.Config
+	// scfg.StateSync.
+	fmt.Println("--scfg.PrivValidatorListenAddr--", scfg.PrivValidatorListenAddr)
+	fmt.Println("--scfg--", scfg)
+	fmt.Println("--scfg.P2P.Seeds--", scfg.P2P.Seeds)
+	fmt.Println("--scfg.P2P.ExternalAddress--", scfg.P2P.ExternalAddress)
+	fmt.Println("--scfg.P2P.PersistentPeers--", scfg.P2P.PersistentPeers)
+
 	// TODO - valdiators
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/spec/abci/abci%2B%2B_methods.md#initchain
 	// validators := resInit.Validators || req.Validators
@@ -630,4 +557,308 @@ func initChain(
 	// setup the raft machine
 
 	return resInit, nil
+}
+
+func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error {
+	mythosapp, ok := bapp.(MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from server Application")
+	}
+
+	// setup network
+	// resInit
+
+	// contractAddress := sdk.MustAccAddressFromBech32("mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy")
+	// msg :=
+	// respp, err := mythosapp.GetNetworkKeeper().ExecuteContract(ctx, contractAddress, contractAddress, msg, nil, nil)
+
+	height := int64(0)
+
+	cms := bapp.CommitMultiStore()
+	qms := cms.(storetypes.MultiStore)
+	ctxcachems := qms.CacheMultiStore()
+	// TODO fixme - who should commit first block?
+	header := cmtproto.Header{
+		ChainID:            bapp.ChainID(),
+		Height:             10,
+		Time:               time.Now().UTC(),
+		ProposerAddress:    []byte("proposer"),
+		NextValidatorsHash: []byte("proposer"),
+		// AppHash:            app.LastCommitID().Hash,
+		// Version: tmversion.Consensus{
+		// 	Block: version.BlockProtocol,
+		// },
+		// LastBlockId: tmproto.BlockID{
+		// 	Hash: tmhash.Sum([]byte("block_id")),
+		// 	PartSetHeader: tmproto.PartSetHeader{
+		// 		Total: 11,
+		// 		Hash:  tmhash.Sum([]byte("partset_header")),
+		// 	},
+		// },
+		// AppHash:            tmhash.Sum([]byte("app")),
+		// DataHash:           tmhash.Sum([]byte("data")),
+		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
+		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
+		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
+		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
+		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
+	}
+	tmpctx := bapp.NewUncachedContext(false, header)
+
+	// branch the commit multi-store for safety
+	sdkCtx_ := sdk.NewContext(ctxcachems, tmpctx.BlockHeader(), true, logger).
+		WithMinGasPrices(nil).
+		WithBlockHeight(height).
+		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
+
+	// sdkCtx_, ctxcachems, err := CreateQueryContext(bapp, logger, height, false)
+	// fmt.Println("--StartInterval--CreateQueryContext", err)
+	// if err != nil {
+	// 	logger.Error("failed to create query context", "err", err)
+	// 	return nil, err
+	// }
+	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+
+	goCtx := context.Background()
+	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+
+	// TODO ips!
+
+	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, "localhost:9080"))
+	rresp, err := networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msg,
+	})
+	fmt.Println("--ExecuteContract setupNode--", rresp, err)
+	if err != nil {
+		return err
+	}
+
+	// make node a candidate
+	msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+	rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msg,
+	})
+	fmt.Println("--ExecuteContract candidate--", rresp, err)
+	if err != nil {
+		return err
+	}
+
+	// make node a leader
+	msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+	rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msg,
+	})
+	fmt.Println("--ExecuteContract leader--", rresp, err)
+	if err != nil {
+		return err
+	}
+
+	commitCacheCtx()
+	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+	origtstore.(storetypes.CacheWrap).Write()
+
+	return nil
+}
+
+type ABCIClient struct {
+	bapp          BaseApp
+	networkServer *msgServer
+	logger        log.Logger
+}
+
+func NewABCIClient(bapp BaseApp, logger log.Logger, networkServer *msgServer) *ABCIClient {
+	return &ABCIClient{
+		bapp:          bapp,
+		networkServer: networkServer,
+		logger:        logger,
+	}
+}
+
+func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error) {
+	fmt.Println("--ABCIInfo--")
+	return nil, nil
+}
+
+func (c *ABCIClient) ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error) {
+	fmt.Println("--ABCIQuery--")
+	return nil, nil
+}
+
+func (c *ABCIClient) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes, opts rpcclient.ABCIQueryOptions) (*rpctypes.ResultABCIQuery, error) {
+	fmt.Println("--ABCIQueryWithOptions--")
+	return nil, nil
+}
+
+func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTxCommit, error) {
+	fmt.Println("--BroadcastTxCommit--")
+	return nil, nil
+}
+
+func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
+	fmt.Println("--BroadcastTxAsync--")
+	// TODO use ctx from params?
+
+	sdkCtx, commitCacheCtx, ctxcachems, err := c.prepareCtx()
+
+	goCtx := context.Background()
+	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+
+	// TODO ips!
+
+	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, "localhost:9080"))
+	rresp, err := c.networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msg,
+	})
+	fmt.Println("--ExecuteContract setupNode--", rresp, err)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.commitCtx(sdkCtx, commitCacheCtx, ctxcachems)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rpctypes.ResultBroadcastTx{Hash: tx.Hash()}, nil
+}
+
+func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
+	fmt.Println("--BroadcastTxSync--")
+	// TODO fixme
+	return c.BroadcastTxAsync(ctx, tx)
+}
+
+func (c *ABCIClient) prepareCtx() (sdk.Context, func(), storetypes.CacheMultiStore, error) {
+	fmt.Println("--prepareCtx--")
+	height := c.bapp.LastBlockHeight()
+
+	cms := c.bapp.CommitMultiStore()
+	qms := cms.(storetypes.MultiStore)
+	ctxcachems := qms.CacheMultiStore()
+	// TODO fixme - who should commit first block?
+	header := cmtproto.Header{
+		ChainID:            c.bapp.ChainID(),
+		Height:             10,
+		Time:               time.Now().UTC(),
+		ProposerAddress:    []byte("proposer"),
+		NextValidatorsHash: []byte("proposer"),
+		// AppHash:            app.LastCommitID().Hash,
+		// Version: tmversion.Consensus{
+		// 	Block: version.BlockProtocol,
+		// },
+		// LastBlockId: tmproto.BlockID{
+		// 	Hash: tmhash.Sum([]byte("block_id")),
+		// 	PartSetHeader: tmproto.PartSetHeader{
+		// 		Total: 11,
+		// 		Hash:  tmhash.Sum([]byte("partset_header")),
+		// 	},
+		// },
+		// AppHash:            tmhash.Sum([]byte("app")),
+		// DataHash:           tmhash.Sum([]byte("data")),
+		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
+		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
+		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
+		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
+		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
+	}
+	tmpctx := c.bapp.NewUncachedContext(false, header)
+
+	// branch the commit multi-store for safety
+	sdkCtx_ := sdk.NewContext(ctxcachems, tmpctx.BlockHeader(), true, c.logger).
+		WithMinGasPrices(nil).
+		WithBlockHeight(height).
+		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
+
+	// sdkCtx_, ctxcachems, err := CreateQueryContext(bapp, logger, height, false)
+	// fmt.Println("--StartInterval--CreateQueryContext", err)
+	// if err != nil {
+	// 	logger.Error("failed to create query context", "err", err)
+	// 	return nil, err
+	// }
+	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+
+	return sdkCtx, commitCacheCtx, ctxcachems, nil
+
+}
+
+func (c *ABCIClient) commitCtx(sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
+	fmt.Println("--commitCtx--")
+	mythosapp, ok := c.bapp.(MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from server Application")
+	}
+
+	commitCacheCtx()
+	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+	origtstore.(storetypes.CacheWrap).Write()
+	return nil
+}
+
+func (c *ABCIClient) Validators(ctx context.Context, height *int64, page, perPage *int) (*rpctypes.ResultValidators, error) {
+	fmt.Println("--Validators--")
+	return nil, nil
+}
+
+func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
+	fmt.Println("--Status--")
+	return nil, nil
+}
+
+func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.ResultBlock, error) {
+	fmt.Println("--Block--")
+	return nil, nil
+}
+
+func (c *ABCIClient) BlockByHash(ctx context.Context, hash []byte) (*rpctypes.ResultBlock, error) {
+	fmt.Println("--BlockByHash--")
+	return nil, nil
+}
+
+func (c *ABCIClient) BlockResults(ctx context.Context, height *int64) (*rpctypes.ResultBlockResults, error) {
+	fmt.Println("--BlockResults--")
+	return nil, nil
+}
+
+func (c *ABCIClient) BlockchainInfo(ctx context.Context, minHeight, maxHeight int64) (*rpctypes.ResultBlockchainInfo, error) {
+	fmt.Println("--BlockchainInfo--")
+	return nil, nil
+}
+
+func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.ResultCommit, error) {
+	fmt.Println("--Commit--")
+	return nil, nil
+}
+
+func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes.ResultTx, error) {
+	fmt.Println("--Tx--")
+	return nil, nil
+}
+
+func (c *ABCIClient) TxSearch(
+	ctx context.Context,
+	query string,
+	prove bool,
+	page, perPage *int,
+	orderBy string,
+) (*rpctypes.ResultTxSearch, error) {
+	fmt.Println("--TxSearch--")
+	return nil, nil
+}
+
+func (c *ABCIClient) BlockSearch(
+	ctx context.Context,
+	query string,
+	page, perPage *int,
+	orderBy string,
+) (*rpctypes.ResultBlockSearch, error) {
+	fmt.Println("--BlockSearch--")
+	return nil, nil
 }

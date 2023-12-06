@@ -29,18 +29,18 @@ func StartGRPCServer(
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
-) (*grpc.Server, chan struct{}, error) {
+) (*grpc.Server, client.CometRPC, chan struct{}, error) {
 	GRPCAddr := cfgAll.Network.Address
 	ln, err := Listen(GRPCAddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	grpcServer, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll.GRPC, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
+	grpcServer, rpcClient, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll.GRPC, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	httpSrvDone := make(chan struct{}, 1)
@@ -68,10 +68,10 @@ func StartGRPCServer(
 		logger.Info("stopping network GRPC server...", "address", GRPCAddr)
 		grpcServer.GracefulStop()
 
-		return grpcServer, httpSrvDone, nil
+		return grpcServer, rpcClient, httpSrvDone, nil
 	case err := <-errCh:
 		svrCtx.Logger.Error("failed to bootnetwork GRPC server", "error", err.Error())
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 }
 

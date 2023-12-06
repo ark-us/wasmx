@@ -341,26 +341,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		// app.RegisterNodeService(clientCtx, config.Config)
 	}
 
-	if config.API.Enable || config.Websrv.Enable || config.JsonRpc.Enable {
-		genDoc, err := genDocProvider()
-		if err != nil {
-			return err
-		}
-		clientCtx = clientCtx.
-			WithHomeDir(home).
-			WithChainID(genDoc.ChainID)
-	}
-
-	grpcSrv, clientCtx, err := startGrpcServer(ctx, g, config.Config.GRPC, clientCtx, svrCtx, app)
-	if err != nil {
-		return err
-	}
-
-	err = startAPIServer(ctx, g, cfg, config.Config, clientCtx, svrCtx, app, home, grpcSrv, metrics)
-	if err != nil {
-		return err
-	}
-
 	genDoc, err := genDocProvider()
 	if err != nil {
 		return err
@@ -373,12 +353,13 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	if err != nil {
 		return err
 	}
+	var rpcClient client.CometRPC
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	g.Go(func() error {
 		// httpSrv, httpSrvDone, err
 		// _, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, &config, app, tmNode)
-		_, _, err = networkgrpc.StartGRPCServer(
+		_, rpcClient, _, err = networkgrpc.StartGRPCServer(
 			svrCtx,
 			clientCtx,
 			ctx,
@@ -393,18 +374,30 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	})
 	// ----end network
 
+	clientCtx = clientCtx.WithClient(rpcClient)
+
+	grpcSrv, clientCtx, err := startGrpcServer(ctx, g, config.Config.GRPC, clientCtx, svrCtx, app)
+	if err != nil {
+		return err
+	}
+
+	err = startAPIServer(ctx, g, cfg, config.Config, clientCtx, svrCtx, app, home, grpcSrv, metrics)
+	if err != nil {
+		return err
+	}
+
 	// var (
 	// 	httpSrv     *http.Server
 	// 	httpSrvDone chan struct{}
 	// )
 
 	if config.JsonRpc.Enable {
-		genDoc, err := genDocProvider()
-		if err != nil {
-			return err
-		}
+		// genDoc, err := genDocProvider()
+		// if err != nil {
+		// 	return err
+		// }
 
-		clientCtx := clientCtx.WithChainID(genDoc.ChainID)
+		// clientCtx := clientCtx.WithChainID(genDoc.ChainID)
 
 		tmEndpoint := "/websocket"
 		tmRPCAddr := cfg.RPC.ListenAddress

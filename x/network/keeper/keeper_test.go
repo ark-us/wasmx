@@ -129,13 +129,14 @@ func (s *KeeperTestSuite) GetRandomAccount() simulation.Account {
 const bufSize = 1024 * 1024
 
 func GrpcSetup(t *testing.T, mapp *app.App) *bufconn.Listener {
+	goctx := context.Background()
 	serverCtx := server.NewDefaultContext()
 	clientCtx := client.Context{}.WithTxConfig(mapp.TxConfig()).WithChainID(mapp.ChainID())
 	config, err := config.GetConfig(serverCtx.Viper)
 	require.NoError(t, err)
 
 	lis := bufconn.Listen(bufSize)
-	grpcServer, err := NewGRPCServer(serverCtx, clientCtx, config.GRPC, mapp, nil)
+	grpcServer, err := NewGRPCServer(goctx, serverCtx, clientCtx, config.GRPC, mapp, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -161,6 +162,7 @@ func (suite *KeeperTestSuite) GrpcClient(ctx context.Context, target string, map
 }
 
 func NewGRPCServer(
+	ctx context.Context,
 	svrCtx *server.Context,
 	clientCtx client.Context,
 	cfg sdkconfig.GRPCConfig,
@@ -183,7 +185,7 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	err := keeper.RegisterGRPCServer(svrCtx, clientCtx, app, grpcSrv)
+	_, err := keeper.RegisterGRPCServer(ctx, svrCtx, clientCtx, app, grpcSrv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
