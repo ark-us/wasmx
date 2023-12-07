@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -183,7 +184,8 @@ func init() {
 type App struct {
 	*baseapp.BaseApp
 
-	goRoutineGroup *errgroup.Group
+	goRoutineGroup  *errgroup.Group
+	goContextParent context.Context
 
 	cdc               *codec.LegacyAmino
 	appCodec          codec.Codec
@@ -259,6 +261,7 @@ func New(
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 	goRoutineGroup := appOpts.Get("goroutineGroup").(*errgroup.Group)
+	goContextParent := appOpts.Get("goContextParent").(context.Context)
 
 	// TODO - do we need this?
 	// std.RegisterLegacyAminoCodec(cdc)
@@ -307,6 +310,7 @@ func New(
 		tkeys:             tkeys,
 		memKeys:           memKeys,
 		goRoutineGroup:    goRoutineGroup,
+		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
 	}
 
@@ -575,6 +579,7 @@ func New(
 
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
 		app.goRoutineGroup,
+		app.goContextParent,
 		appCodec,
 		keys[networkmoduletypes.StoreKey],
 		memKeys[networkmoduletypes.MemStoreKey],

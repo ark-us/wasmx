@@ -72,8 +72,9 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 
 	logger := log.NewNopLogger()
 	appOpts := app.DefaultAppOptions{}
-	g, _, _ := app.GetTestCtx(logger, true)
+	g, goctx, _ := app.GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir())
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
 	tempApp := app.New(

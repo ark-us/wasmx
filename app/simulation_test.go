@@ -41,8 +41,9 @@ func BenchmarkSimulation(b *testing.B) {
 	encoding := app.MakeEncodingConfig()
 
 	appOpts := app.DefaultAppOptions{}
-	g, _, _ := app.GetTestCtx(logger, true)
+	g, goctx, _ := app.GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
 
 	app := app.New(
 		logger,

@@ -12,6 +12,7 @@ import (
 	"github.com/cometbft/cometbft/node"
 
 	sdkerr "cosmossdk.io/errors"
+	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -143,88 +144,124 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 	fmt.Println("--StartInterval--", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
 
 	timeDelay := msg.Delay
-	httpSrvDone := make(chan struct{}, 1)
 	// height := ctx.BlockHeight() - 1 // TODO fixme
 	height := ctx.BlockHeight()
 	fmt.Println("---ctx.BlockHeight()--", height)
 	logger := m.Keeper.Logger(ctx)
+
 	// errCh := make(chan error)
 	m.goRoutineGroup.Go(func() error {
-		fmt.Println("--StartInterval--set new ctx")
-
-		// ctx := ht.req.Context()
-		// var cancel context.CancelFunc
-		// if ht.timeoutSet {
-		// 	ctx, cancel = context.WithTimeout(ctx, ht.timeout)
-		// } else {
-		// 	ctx, cancel = context.WithCancel(ctx)
-		// }
-
-		// set context
-		// grpcCtx := goCtx
-		sdkCtx_, ctxcachems, err := CreateQueryContext(m.app, logger, height, false)
-		fmt.Println("--StartInterval--CreateQueryContext", err)
+		_, err := m.startIntervalInternalGoroutine(logger, description, height, timeDelay, msgbz, contractAddress)
 		if err != nil {
-			logger.Error("failed to create query context", "err", err)
-			return err
+			logger.Error("eventual execution failed", "err", err, "description", description)
 		}
-		sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-
-		// Add relevant gRPC headers
-		if height == 0 {
-			height = sdkCtx.BlockHeight() // If height was not set in the request, set it to the latest
-		}
-
-		// Attach the sdk.Context into the gRPC's context.Context.
-		// grpcCtx = context.WithValue(grpcCtx, sdk.SdkContextKey, sdkCtx)
-
-		// md := metadata.Pairs(grpctypes.GRPCBlockHeightHeader, strconv.FormatInt(height, 10))
-		// if err = grpc.SetHeader(grpcCtx, md); err != nil {
-		// 	logger.Error("failed to set gRPC header", "err", err)
-		// }
-
-		// NOW execute
-		fmt.Println("--StartInterval--sleeping...")
-
-		time.Sleep(time.Duration(timeDelay) * time.Millisecond)
-		fmt.Println("--StartInterval--ExecuteEventual...")
-
-		goCtx := context.Background()
-		goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
-		ctx := sdk.UnwrapSDKContext(goCtx)
-
-		_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
-		fmt.Println("--StartInterval--ExecuteEventual", err)
-		if err != nil {
-			// TODO - stop without propagating a stop to parent
-			if err == types.ErrGoroutineClosed {
-				m.Logger(ctx).Error("Closing thread", "description", description, err.Error())
-				close(httpSrvDone)
-				return nil
-			}
-
-			m.Logger(ctx).Error("failed to start a new thread", "error", err.Error())
-			// errCh <- err
-			return err
-		}
-
-		commitCacheCtx()
-		// commit original context
-		mythosapp, ok := m.app.(MythosApp)
-		if !ok {
-			return fmt.Errorf("failed to get MythosApp from server Application")
-		}
-		origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
-		origtstore.(storetypes.CacheWrap).Write()
-
-		// <-ctx.Done() ?
-		// svrCtx.Logger.Info("stopping the thread...")
 		return nil
 	})
 
 	return &types.MsgStartIntervalResponse{
 		IntervalId: intervalId,
 	}, nil
+}
+
+func (m msgServer) startIntervalInternalGoroutine(
+	logger log.Logger,
+	description string,
+	height int64,
+	timeDelay int64,
+	msgbz []byte,
+	contractAddress sdk.AccAddress,
+) (chan struct{}, error) {
+	goCtx2 := m.goContextParent
+	httpSrvDone := make(chan struct{}, 1)
+	errCh := make(chan error)
+	go func() {
+		logger.Info("eventual execution starting", "description", description)
+		err := m.startIntervalInternal(logger, description, height, timeDelay, msgbz, contractAddress)
+		if err != nil {
+			logger.Error("eventual execution failed", "err", err)
+			// return err
+			errCh <- err
+		}
+	}()
+
+	select {
+	case <-goCtx2.Done():
+		// The calling process canceled or closed the provided context, so we must
+		// gracefully stop the websrv server.
+		logger.Info("eventual execution stopping...")
+		// httpSrv.Close()
+		return httpSrvDone, nil
+	case err := <-errCh:
+		logger.Error("eventual execution failed to start", "error", err.Error())
+		return nil, err
+	}
+}
+
+func (m msgServer) startIntervalInternal(
+	logger log.Logger,
+	description string,
+	height int64,
+	timeDelay int64,
+	msgbz []byte,
+	contractAddress sdk.AccAddress,
+) error {
+	// goCtx := context.Background()
+	goCtx2 := m.goContextParent
+	fmt.Println("--StartInterval--set new ctx")
+
+	// set context
+	sdkCtx_, ctxcachems, err := CreateQueryContext(m.app, logger, height, false)
+	fmt.Println("--StartInterval--CreateQueryContext", err)
+	if err != nil {
+		logger.Error("failed to create query context", "err", err)
+		return err
+	}
+	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+
+	// Add relevant gRPC headers
+	if height == 0 {
+		height = sdkCtx.BlockHeight() // If height was not set in the request, set it to the latest
+	}
+
+	// Attach the sdk.Context into the gRPC's context.Context.
+	// grpcCtx = context.WithValue(grpcCtx, sdk.SdkContextKey, sdkCtx)
+
+	// md := metadata.Pairs(grpctypes.GRPCBlockHeightHeader, strconv.FormatInt(height, 10))
+	// if err = grpc.SetHeader(grpcCtx, md); err != nil {
+	// 	logger.Error("failed to set gRPC header", "err", err)
+	// }
+
+	// NOW execute
+	fmt.Println("--StartInterval--sleeping...")
+
+	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+	fmt.Println("--StartInterval--ExecuteEventual...")
+
+	goCtx2 = context.WithValue(goCtx2, sdk.SdkContextKey, sdkCtx)
+	ctx := sdk.UnwrapSDKContext(goCtx2)
+
+	_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
+	fmt.Println("--StartInterval--ExecuteEventual", err)
+	if err != nil {
+		// TODO - stop without propagating a stop to parent
+		if err == types.ErrGoroutineClosed {
+			m.Logger(ctx).Error("Closing eventual thread", "description", description, err.Error())
+			return nil
+		}
+
+		m.Logger(ctx).Error("failed to start a new eventual thread", "error", err.Error())
+		return err
+	}
+
+	commitCacheCtx()
+	// commit original context
+	mythosapp, ok := m.app.(MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from server Application")
+	}
+	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+	origtstore.(storetypes.CacheWrap).Write()
+	return nil
 }
 
 func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {

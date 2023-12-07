@@ -78,8 +78,9 @@ func Setup(
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
-	g, _, _ := GetTestCtx(logger, true)
+	g, goctx, _ := GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
 	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
@@ -111,8 +112,9 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	cfg := MakeEncodingConfig()
 	logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
-	g, _, _ := GetTestCtx(logger, true)
+	g, goctx, _ := GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
 	app := New(
 		logger,
 		db, nil, true, map[int64]bool{},
@@ -133,8 +135,9 @@ func NewTestNetworkFixture() network.TestFixture {
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
-	g, _, _ := GetTestCtx(logger, true)
+	g, goctx, _ := GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
 	app := New(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {

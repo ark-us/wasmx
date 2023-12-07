@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"context"
 	"fmt"
 
 	"cosmossdk.io/log"
@@ -15,14 +16,15 @@ import (
 
 type (
 	Keeper struct {
-		goRoutineGroup *errgroup.Group
-		cdc            codec.Codec
-		storeKey       storetypes.StoreKey
-		memKey         storetypes.StoreKey
-		tKey           storetypes.StoreKey
-		clessKey       storetypes.StoreKey
-		paramstore     paramtypes.Subspace
-		wasmxKeeper    types.WasmxKeeper
+		goRoutineGroup  *errgroup.Group
+		goContextParent context.Context
+		cdc             codec.Codec
+		storeKey        storetypes.StoreKey
+		memKey          storetypes.StoreKey
+		tKey            storetypes.StoreKey
+		clessKey        storetypes.StoreKey
+		paramstore      paramtypes.Subspace
+		wasmxKeeper     types.WasmxKeeper
 
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
@@ -32,6 +34,7 @@ type (
 
 func NewKeeper(
 	goRoutineGroup *errgroup.Group,
+	goContextParent context.Context,
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
@@ -47,15 +50,16 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
-		goRoutineGroup: goRoutineGroup,
-		cdc:            cdc,
-		storeKey:       storeKey,
-		memKey:         memKey,
-		tKey:           tKey,
-		clessKey:       clessKey,
-		paramstore:     ps,
-		wasmxKeeper:    wasmxKeeper,
-		authority:      authority,
+		goRoutineGroup:  goRoutineGroup,
+		goContextParent: goContextParent,
+		cdc:             cdc,
+		storeKey:        storeKey,
+		memKey:          memKey,
+		tKey:            tKey,
+		clessKey:        clessKey,
+		paramstore:      ps,
+		wasmxKeeper:     wasmxKeeper,
+		authority:       authority,
 	}
 	return keeper
 }

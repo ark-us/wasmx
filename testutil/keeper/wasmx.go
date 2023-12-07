@@ -58,8 +58,9 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	appOpts := app.DefaultAppOptions{}
-	g, _, _ := app.GetTestCtx(logger, true)
+	g, goctx, _ := app.GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
 
 	paramsSubspace := typesparams.NewSubspace(cdc,
 		codec.NewLegacyAmino(),

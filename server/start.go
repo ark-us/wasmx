@@ -215,6 +215,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 	}
 
 	svrCtx.Viper.Set("goroutineGroup", g)
+	svrCtx.Viper.Set("goContextParent", ctx)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
 	if err != nil {
 		return err
@@ -300,6 +301,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	}
 
 	svrCtx.Viper.Set("goroutineGroup", g)
+	svrCtx.Viper.Set("goContextParent", ctx)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
 	if err != nil {
 		return err

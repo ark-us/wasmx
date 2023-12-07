@@ -155,7 +155,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`Follower`, string(qrespbz))
+	suite.Require().Equal(`#RAFT-LogReplication.initialized.Follower`, string(qrespbz))
 
 	// Start Leader
 	msg1 = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
@@ -175,7 +175,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`Candidate`, string(qrespbz))
+	suite.Require().Equal(`#RAFT-LogReplication.initialized.Candidate`, string(qrespbz))
 
 	msg1 = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
 	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
@@ -194,7 +194,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`active`, string(qrespbz))
+	suite.Require().Equal(`#RAFT-LogReplication.initialized.Leader.active`, string(qrespbz))
 
 	// send tx
 	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
@@ -232,6 +232,15 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	txstr = base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
+	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	log.Printf("Response: %+v", resp)
+
+	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
 	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
