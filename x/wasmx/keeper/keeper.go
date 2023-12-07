@@ -13,7 +13,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"golang.org/x/sync/errgroup"
 
 	cw8 "mythos/v1/x/wasmx/cw8"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
@@ -28,7 +27,6 @@ const contractMemoryLimit = 32
 
 type (
 	Keeper struct {
-		goRoutineGroup        *errgroup.Group
 		cdc                   codec.Codec
 		storeKey              storetypes.StoreKey
 		memKey                storetypes.StoreKey
@@ -61,7 +59,6 @@ type (
 )
 
 func NewKeeper(
-	goRoutineGroup *errgroup.Group,
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
@@ -121,7 +118,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app)
+	wasmvm, err := NewVM(contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app)
 	if err != nil {
 		panic(err)
 	}
@@ -132,7 +129,6 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
-		goRoutineGroup:    goRoutineGroup,
 		cdc:               cdc,
 		storeKey:          storeKey,
 		memKey:            memKey,

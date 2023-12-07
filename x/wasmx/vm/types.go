@@ -6,7 +6,6 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -79,7 +78,6 @@ type IntervalAction struct {
 }
 
 type Context struct {
-	goRoutineGroup *errgroup.Group
 	Ctx            sdk.Context
 	GasMeter       types.GasMeter
 	Env            *types.Env

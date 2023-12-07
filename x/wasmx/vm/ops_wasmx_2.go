@@ -385,23 +385,6 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-// func executeTimedAction(_context *Context, intervalId int32, argsPtr int32) error {
-// 	fmt.Println("executeTimedAction", intervalId, argsPtr)
-// 	contractCtx, ok := _context.ContractRouter[_context.Env.Contract.Address.String()]
-// 	if !ok {
-// 		return fmt.Errorf("timed action: contract context not found")
-// 	}
-// 	executeHandler := GetExecuteFunctionHandler(contractCtx.ContractInfo.SystemDeps)
-
-// 	args := []interface{}{intervalId, argsPtr}
-// 	_, err := executeHandler(_context, contractCtx.Vm, types.ENTRY_POINT_TIMED, args)
-// 	fmt.Println("--executeTimedAction--", err)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
 // startInterval(repeat: i32, time: u64, args: ArrayBuffer): i32
 func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
@@ -414,23 +397,7 @@ func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, 
 	}
 	fmt.Println("--wasmxStartInterval--", repeatCount, timeDelay, string(argsbz))
 
-	// g, ctx2, cancelFn := getCtx(ctx.GetContext().Logger(), true)
-	// g := ctx.goRoutineGroup
-	// fmt.Println("--ctx.goRoutineGroup--", g)
-	// cancelFn must be called to release resources when the process is done
-	// ctx2, cancelFn := context.WithCancel(ctx.Ctx)
-
-	// intervalId := ctx.intervalsCount
-	// fmt.Println("--intervalId--", intervalId)
-	// ctx.intervalsCount += 1
-	// ctx.intervals[intervalId] = &IntervalAction{
-	// 	Time:   timeDelay,
-	// 	Args:   argsbz,
-	// 	Cancel: cancelFn,
-	// }
-
 	msgtosend := &networktypes.MsgStartIntervalRequest{
-		// Sender:  sdk.AccAddress([]byte("network")).String(),
 		Sender:   ctx.Env.Contract.Address.String(),
 		Contract: ctx.Env.Contract.Address.String(),
 		Delay:    timeDelay,
@@ -449,45 +416,6 @@ func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, 
 	}
 	intervalId := resp.IntervalId
 	fmt.Println("---timer created intervalId", intervalId)
-
-	// description := fmt.Sprintf("timed action: id %s, delay %sms, repeat %s, args: %s ", intervalId, timeDelay, repeatCount, string(argsbz))
-	// action := func() error {
-	// 	_intervalId := big.NewInt(int64(intervalId))
-	// 	data := append(_intervalId.FillBytes(make([]byte, 4)), argsbz...)
-	// 	execmsg := types.WasmxExecutionMessage{Data: data}
-	// 	msgbz, err := json.Marshal(execmsg)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	// _, err := startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
-	// 	return err
-	// }
-	// gracefulStop := func() {
-
-	// }
-	// done, err := ctx.createGoRoutine(description, action, gracefulStop)
-
-	// g.Go(func() error {
-	// 	fmt.Println("--startTimedAction--")
-	// 	_, err = startTimedAction(ctx, callframe, ctx2, ctx.GetContext().Logger(), intervalId, timeDelay, repeatCount, argsbz)
-	// 	if err != nil {
-	// 		ctx.GetContext().Logger().Error("failed to start timed action", "err", err)
-	// 		return err
-	// 	}
-
-	// 	// Wait for the calling process to be canceled or close the provided context,
-	// 	// so we can gracefully stop the ABCI server.
-	// 	<-ctx2.Done()
-	// 	ctx.GetContext().Logger().Info("stopping the timed action...")
-	// 	cancelFn()
-	// 	return nil
-	// })
-
-	// err = g.Wait() // use the given wait
-	// if err != nil {
-	// 	return nil, wasmedge.Result_Fail
-	// }
 	returns[0] = intervalId
 	return returns, wasmedge.Result_Success
 }

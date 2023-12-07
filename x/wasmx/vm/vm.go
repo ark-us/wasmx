@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"golang.org/x/exp/slices"
-	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -201,7 +200,6 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
-	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -228,7 +226,6 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		goRoutineGroup: goRoutineGroup,
 		Ctx:            ctx,
 		GasMeter:       gasMeter,
 		Env:            &env,
@@ -289,7 +286,6 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
-	goRoutineGroup *errgroup.Group,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -316,7 +312,6 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		goRoutineGroup: goRoutineGroup,
 		Ctx:            ctx,
 		GasMeter:       gasMeter,
 		Env:            &env,
