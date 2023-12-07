@@ -21,6 +21,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -28,6 +29,8 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+
+	"github.com/cosmos/go-bip39"
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
@@ -116,6 +119,24 @@ func (suite *KeeperTestSuite) Coordinator() *ibcgotesting.Coordinator {
 func (s *KeeperTestSuite) GetRandomAccount() simulation.Account {
 	pk := ed25519.GenPrivKey()
 	privKey := secp256k1.GenPrivKeyFromSecret(pk.GetKey().Seed())
+	pubKey := privKey.PubKey()
+	address := sdk.AccAddress(pubKey.Address())
+	account := simulation.Account{
+		PrivKey: privKey,
+		PubKey:  pubKey,
+		Address: address,
+	}
+	return account
+}
+
+func (s *KeeperTestSuite) GetAccountFromMnemonic(mnemonic string) simulation.Account {
+	s.Require().True(bip39.IsMnemonicValid(mnemonic))
+	hdPath := hd.CreateHDPath(118, 0, 0).String()
+	derivedPriv, err := hd.Secp256k1.Derive()(mnemonic, "", hdPath)
+	s.Require().NoError(err)
+	privKey := hd.Secp256k1.Generate()(derivedPriv)
+
+	// privKey := secp256k1.GenPrivKeyFromSecret(pk.GetKey().Seed())
 	pubKey := privKey.PubKey()
 	address := sdk.AccAddress(pubKey.Address())
 	account := simulation.Account{

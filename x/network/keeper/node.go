@@ -47,11 +47,11 @@ func StartGRPCServer(
 
 	errCh := make(chan error)
 	go func() {
-		svrCtx.Logger.Info("Starting network server", "address", GRPCAddr)
+		svrCtx.Logger.Info("Starting network GRPC server", "address", GRPCAddr)
 		if err := grpcServer.Serve(ln); err != nil {
 			fmt.Println("---err--", err)
 			if err == http.ErrServerClosed {
-				svrCtx.Logger.Error("Closing network server", "address", GRPCAddr, err.Error())
+				svrCtx.Logger.Info("Closing network GRPC server", "address", GRPCAddr, err.Error())
 				close(httpSrvDone)
 				return
 			}
@@ -70,7 +70,7 @@ func StartGRPCServer(
 
 		return grpcServer, rpcClient, httpSrvDone, nil
 	case err := <-errCh:
-		svrCtx.Logger.Error("failed to bootnetwork GRPC server", "error", err.Error())
+		svrCtx.Logger.Error("failed to boot network GRPC server", "error", err.Error())
 		return nil, nil, nil, err
 	}
 }

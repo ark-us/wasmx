@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strconv"
@@ -133,16 +134,16 @@ func NewGRPCServer(
 	// Run the InitChain logic
 	// setup node ips
 	if bapp.LastBlockHeight() == 0 {
-		resInit, err := initChain(svrCtx, clientCtx, cfg, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
+		resInit, err := initChain(svrCtx, clientCtx, cfg, app, privValidator, nodeKey, genesisDocProvider, metricsProvider, networkServer)
 		if err != nil {
 			return nil, nil, err
 		}
 		fmt.Println("--resInit--", resInit)
 
-		err = setupNode(bapp, logger, networkServer)
-		if err != nil {
-			return nil, nil, err
-		}
+		// err = setupNode(bapp, logger, networkServer)
+		// if err != nil {
+		// 	return nil, nil, err
+		// }
 	}
 
 	// ctx := sdk.UnwrapSDKContext(goCtx)
@@ -454,6 +455,7 @@ func initChain(
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
+	networkServer *msgServer,
 ) (*abci.ResponseInitChain, error) {
 	consensusLogger := svrCtx.Logger.With("module", "consensus")
 	// cfg := svrCtx.Config
@@ -556,6 +558,26 @@ func initChain(
 
 	// setup the raft machine
 
+	err = setupNode(bapp, consensusLogger, networkServer)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
+
+	// freq = &abci.RequestFinalizeBlock{
+	// 	Height: bapp.LastBlockHeight(),
+	// 	Time:   req.Time,
+	// }
+	// resFinalize, err = app.FinalizeBlock(freq)
+	// fmt.Println("--resFinalize--", resFinalize, err)
+
+	// resCommit, err = app.Commit()
+	// fmt.Println("--resCommit--", resCommit, err)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	return resInit, nil
 }
 
@@ -572,7 +594,7 @@ func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error 
 	// msg :=
 	// respp, err := mythosapp.GetNetworkKeeper().ExecuteContract(ctx, contractAddress, contractAddress, msg, nil, nil)
 
-	height := int64(0)
+	height := bapp.LastBlockHeight()
 
 	cms := bapp.CommitMultiStore()
 	qms := cms.(storetypes.MultiStore)
@@ -580,11 +602,11 @@ func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error 
 	// TODO fixme - who should commit first block?
 	header := cmtproto.Header{
 		ChainID:            bapp.ChainID(),
-		Height:             10,
+		Height:             height,
 		Time:               time.Now().UTC(),
 		ProposerAddress:    []byte("proposer"),
 		NextValidatorsHash: []byte("proposer"),
-		// AppHash:            app.LastCommitID().Hash,
+		// AppHash:            bapp.LastCommitID().Hash,
 		// Version: tmversion.Consensus{
 		// 	Block: version.BlockProtocol,
 		// },
@@ -695,6 +717,11 @@ func (c *ABCIClient) ABCIQueryWithOptions(ctx context.Context, path string, data
 	return nil, nil
 }
 
+// func (c *ABCIClient) Simulate(_ context.Context, tx cmttypes.SimulateRequest) (*rpctypes.SimulateResponse, error) {
+// 	fmt.Println("--BroadcastTxCommit--")
+// 	return nil, nil
+// }
+
 func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTxCommit, error) {
 	fmt.Println("--BroadcastTxCommit--")
 	return nil, nil
@@ -709,15 +736,13 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 	goCtx := context.Background()
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
 
-	// TODO ips!
-
-	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, "localhost:9080"))
+	msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
 	rresp, err := c.networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msg,
 	})
-	fmt.Println("--ExecuteContract setupNode--", rresp, err)
+	fmt.Println("--ExecuteContract BroadcastTxAsync--", rresp, err)
 	if err != nil {
 		return nil, err
 	}

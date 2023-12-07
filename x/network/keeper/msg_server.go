@@ -55,9 +55,56 @@ func NewMsgServer(
 }
 
 var _ types.MsgServer = msgServer{}
+var _ types.BroadcastAPIServer = msgServer{}
 
 func (m *msgServer) incrementIntervalId() {
 	m.intervalCount += 1
+}
+
+func (m msgServer) Ping(goCtx context.Context, msg *types.RequestPing) (*types.ResponsePing, error) {
+	return &types.ResponsePing{}, nil
+}
+
+func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcastTx) (*types.ResponseBroadcastTx, error) {
+	// TODO BroadcastTxCommit and return receipt
+
+	msgbz := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(msg.Tx)))
+	rresp, err := m.ExecuteContract(goCtx, &types.MsgExecuteContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msgbz,
+	})
+	fmt.Println("--ExecuteContract BroadcastTxAsync--", rresp, err)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("--ExecuteContract BroadcastTxAsync--", string(rresp.Data))
+
+	// return &types.ResponseBroadcastTx{
+	// 	CheckTx: &abci.ResponseCheckTx{
+	// 		Code: res.CheckTx.Code,
+	// 		Data: res.CheckTx.Data,
+	// 		Log:  res.CheckTx.Log,
+	// 	},
+	// 	TxResult: &abci.ExecTxResult{
+	// 		Code: res.TxResult.Code,
+	// 		Data: res.TxResult.Data,
+	// 		Log:  res.TxResult.Log,
+	// 	},
+	// }, nil
+
+	return &types.ResponseBroadcastTx{
+		CheckTx: &types.ResponseCheckTx{
+			Code: 0,
+			Data: rresp.Data,
+			Log:  "",
+		},
+		TxResult: &types.ExecTxResult{
+			Code: 0,
+			Data: rresp.Data,
+			Log:  "",
+		},
+	}, nil
 }
 
 // TODO this must not be called from outside, only from wasmx... (authority)
@@ -351,7 +398,7 @@ func (m msgServer) QueryContract(goCtx context.Context, msg *types.MsgQueryContr
 	}, nil
 }
 
-func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPingResponse, error) {
+func (m msgServer) Ping2(goCtx context.Context, msg *types.MsgPing2) (*types.MsgPing2Response, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
@@ -393,7 +440,7 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.MsgPing) (*types.MsgPi
 
 	response := msg.Data + hex.EncodeToString(resp)
 
-	return &types.MsgPingResponse{
+	return &types.MsgPing2Response{
 		Data: response,
 	}, nil
 }

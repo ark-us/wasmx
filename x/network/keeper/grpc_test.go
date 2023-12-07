@@ -93,7 +93,7 @@ func (suite *KeeperTestSuite) TestStateMachineGrpc() {
 	// client.Start -> contract.run(sendRequest) -> log current state
 	// query - receive msg -> contract.run(receiveRequest) -> log current state
 	//
-	resp, err := client.Ping(ctx, &types.MsgPing{Data: "localhost:8090"})
+	resp, err := client.Ping2(ctx, &types.MsgPing2{Data: "localhost:8090"})
 	suite.Require().NoError(err)
 	log.Printf("Response: %+v", resp)
 	conn.Close()
@@ -515,4 +515,33 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	// Test finalize block
 
 	time.Sleep(10 * time.Second)
+}
+
+func (suite *KeeperTestSuite) TestRAFTEncodeTx() {
+	mnemonic := "enrich nose brisk lobster room large uniform mystery crush govern lazy vital feed dove soul emotion oblige shuffle else entry trend there dentist garbage"
+	sender := suite.GetAccountFromMnemonic(mnemonic)
+	initBalance := sdkmath.NewInt(1000_000_000)
+	appA := s.GetAppContext(suite.chainA)
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	// send tx
+	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
+	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+	msgbz, err := json.Marshal(internalmsg)
+	suite.Require().NoError(err)
+	msg := &wasmxtypes.MsgExecuteContract{
+		Sender:       sender.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	txstr := base64.StdEncoding.EncodeToString(tx)
+	fmt.Println("==txstr==", txstr)
+
+	msgbase64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr)))
+
+	fmt.Println("==msgbase64==", msgbase64)
 }

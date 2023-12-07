@@ -59,13 +59,12 @@ func StartWebsrv(
 	go func() {
 		svrCtx.Logger.Info("Starting Websrv server", "address", cfg.Address)
 		if err := httpSrv.Serve(ln); err != nil {
-			svrCtx.Logger.Error("failed to serve Websrv", "error", err.Error())
 			if err == http.ErrServerClosed {
+				svrCtx.Logger.Info("closing Websrv", "error", err.Error())
 				close(httpSrvDone)
 				return
 			}
-
-			svrCtx.Logger.Error("failed to start Websrv server", "error", err.Error())
+			svrCtx.Logger.Error("failed to serve Websrv", "error", err.Error())
 			errCh <- err
 		}
 	}()

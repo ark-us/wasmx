@@ -169,6 +169,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 		Aliases: []string{"start", "init", "inst", "i"},
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("---InstantiateContractCmd-")
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
@@ -180,6 +181,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
+			fmt.Println("---InstantiateContractCmd before GenerateOrBroadcastTxCLI-")
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 		SilenceUsage: true,
