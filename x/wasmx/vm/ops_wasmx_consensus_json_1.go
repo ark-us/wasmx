@@ -20,11 +20,9 @@ func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 	fmt.Println("=consensus=PrepareProposal==", string(reqbz))
 	var req abci.RequestPrepareProposal
 	err = json.Unmarshal(reqbz, &req)
-	fmt.Println("=consensus=PrepareProposal=req=", req, err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("=consensus=PrepareProposal=req=MaxTxBytes=", req.MaxTxBytes)
 	resp, err := ctx.GetApplication().PrepareProposal(&req)
 	fmt.Println("=consensus=PrepareProposal=resp=", resp, err)
 	if err != nil {
@@ -80,7 +78,6 @@ func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 
 // FinalizeBlock(*abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error)
 func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("=consensus=FinalizeBlock==")
 	ctx := _context.(*Context)
 	reqbz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
@@ -112,7 +109,6 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 
 // Commit() (*abci.ResponseCommit, error)
 func Commit(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("=consensus=Commit==")
 	ctx := _context.(*Context)
 	resp, err := ctx.GetApplication().Commit()
 	if err != nil {
@@ -133,7 +129,6 @@ func Commit(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 }
 
 func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("=consensus=CheckTx==")
 	ctx := _context.(*Context)
 	reqbz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {

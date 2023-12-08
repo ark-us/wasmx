@@ -54,7 +54,7 @@ func (suite *KeeperTestSuite) TestSetValidators() {
 	fmt.Println("-----storage before-execution---")
 	app := suite.GetApp(suite.chainA)
 	bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-	tstorer := app.CommitMultiStore().GetKVStore(app.GetMKey(wasmxtypes.MemStoreKey))
+	tstorer := app.CommitMultiStore().GetKVStore(app.GetCLessKey(wasmxtypes.CLessStoreKey))
 	fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
 	bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
 	fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))

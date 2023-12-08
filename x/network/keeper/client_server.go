@@ -57,8 +57,8 @@ type Config struct {
 
 type MythosApp interface {
 	GetNetworkKeeper() Keeper
-	GetTKey(storeKey string) *storetypes.TransientStoreKey
-	GetMKey(storeKey string) *storetypes.MemoryStoreKey
+	// GetTKey(storeKey string) *storetypes.TransientStoreKey
+	// GetMKey(storeKey string) *storetypes.MemoryStoreKey
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
 }
 
@@ -682,7 +682,7 @@ func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error 
 	}
 
 	commitCacheCtx()
-	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
 	origtstore.(storetypes.CacheWrap).Write()
 
 	return nil
@@ -822,7 +822,7 @@ func (c *ABCIClient) commitCtx(sdkCtx sdk.Context, commitCacheCtx func(), ctxcac
 	}
 
 	commitCacheCtx()
-	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
 	origtstore.(storetypes.CacheWrap).Write()
 	return nil
 }

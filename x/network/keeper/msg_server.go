@@ -259,7 +259,7 @@ func (m msgServer) startIntervalInternal(
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}
-	origtstore := ctxcachems.GetStore(mythosapp.GetMKey(wasmxtypes.MemStoreKey))
+	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
 	origtstore.(storetypes.CacheWrap).Write()
 	return nil
 }
