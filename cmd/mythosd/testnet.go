@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 
 	tmconfig "github.com/cometbft/cometbft/config"
-	tmos "github.com/cometbft/cometbft/libs/os"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
@@ -575,12 +574,12 @@ func writeFile(name string, dir string, contents []byte) error {
 	writePath := filepath.Join(dir)
 	file := filepath.Join(writePath, name)
 
-	err := tmos.EnsureDir(writePath, 0o755)
+	err := EnsureDir(writePath, 0o755)
 	if err != nil {
 		return err
 	}
 
-	err = tmos.WriteFile(file, contents, 0o644)
+	err = os.WriteFile(file, contents, 0o644)
 	if err != nil {
 		return err
 	}
@@ -631,5 +630,15 @@ func startTestnet(cmd *cobra.Command, args startArgs) error {
 	}
 	testnet.Cleanup()
 
+	return nil
+}
+
+// EnsureDir ensures the given directory exists, creating it if necessary.
+// Errors if the path already exists as a non-directory.
+func EnsureDir(dir string, mode os.FileMode) error {
+	err := os.MkdirAll(dir, mode)
+	if err != nil {
+		return fmt.Errorf("could not create directory %q: %w", dir, err)
+	}
 	return nil
 }

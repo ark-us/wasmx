@@ -125,7 +125,6 @@ import (
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
-	tmos "github.com/cometbft/cometbft/libs/os"
 
 	ante "mythos/v1/app/ante"
 	appparams "mythos/v1/app/params"
@@ -875,7 +874,7 @@ func New(
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
-			tmos.Exit(err.Error())
+			Exit(err.Error())
 		}
 
 		// TODO
@@ -1178,4 +1177,9 @@ func (app *App) SimulationManager() *module.SimulationManager {
 // For network grpc
 func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
 	return app.NetworkKeeper
+}
+
+func Exit(s string) {
+	fmt.Printf(s + "\n")
+	os.Exit(1)
 }

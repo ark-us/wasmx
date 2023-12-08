@@ -144,14 +144,11 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 	fmt.Println("--StartInterval--", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
 
 	timeDelay := msg.Delay
-	// height := ctx.BlockHeight() - 1 // TODO fixme
-	height := ctx.BlockHeight()
-	fmt.Println("---ctx.BlockHeight()--", height)
 	logger := m.Keeper.Logger(ctx)
 
 	// errCh := make(chan error)
 	m.goRoutineGroup.Go(func() error {
-		_, err := m.startIntervalInternalGoroutine(logger, description, height, timeDelay, msgbz, contractAddress)
+		_, err := m.startIntervalInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
 			logger.Error("eventual execution failed", "err", err, "description", description)
 		}
@@ -166,7 +163,6 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 func (m msgServer) startIntervalInternalGoroutine(
 	logger log.Logger,
 	description string,
-	height int64,
 	timeDelay int64,
 	msgbz []byte,
 	contractAddress sdk.AccAddress,
@@ -176,7 +172,7 @@ func (m msgServer) startIntervalInternalGoroutine(
 	errCh := make(chan error)
 	go func() {
 		logger.Info("eventual execution starting", "description", description)
-		err := m.startIntervalInternal(logger, description, height, timeDelay, msgbz, contractAddress)
+		err := m.startIntervalInternal(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
 			logger.Error("eventual execution failed", "err", err)
 			// return err
@@ -200,14 +196,13 @@ func (m msgServer) startIntervalInternalGoroutine(
 func (m msgServer) startIntervalInternal(
 	logger log.Logger,
 	description string,
-	height int64,
 	timeDelay int64,
 	msgbz []byte,
 	contractAddress sdk.AccAddress,
 ) error {
 	// goCtx := context.Background()
 	goCtx2 := m.goContextParent
-	fmt.Println("--StartInterval--set new ctx")
+	height := m.app.LastBlockHeight()
 
 	// set context
 	sdkCtx_, ctxcachems, err := CreateQueryContext(m.app, logger, height, false)
@@ -218,10 +213,10 @@ func (m msgServer) startIntervalInternal(
 	}
 	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
 
-	// Add relevant gRPC headers
-	if height == 0 {
-		height = sdkCtx.BlockHeight() // If height was not set in the request, set it to the latest
-	}
+	// // Add relevant gRPC headers
+	// if height == 0 {
+	// 	height = sdkCtx.BlockHeight() // If height was not set in the request, set it to the latest
+	// }
 
 	// Attach the sdk.Context into the gRPC's context.Context.
 	// grpcCtx = context.WithValue(grpcCtx, sdk.SdkContextKey, sdkCtx)
