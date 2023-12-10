@@ -43,7 +43,7 @@ func StartGRPCServer(
 		return nil, nil, nil, err
 	}
 
-	err = StartRPC(ctx, app, svrCtx.Logger, cfgAll)
+	err = StartRPC(ctx, app, rpcClient, svrCtx.Logger, cfgAll)
 	if err != nil {
 		return nil, nil, nil, err
 	}

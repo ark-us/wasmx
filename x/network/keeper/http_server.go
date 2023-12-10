@@ -16,7 +16,8 @@ import (
 )
 
 type Environment struct {
-	app servertypes.Application
+	app         servertypes.Application
+	networkWrap *ABCIClient
 }
 
 // Routes is a map of available routes.
@@ -145,7 +146,11 @@ func (env *Environment) CheckTx(ctx *rpctypes.Context, tx comettypes.Tx) (*ctype
 	return nil, fmt.Errorf("CheckTx not implemented")
 }
 
-func (env *Environment) Tx(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+// Tx allows you to query the transaction results. `nil` could mean the
+// transaction is in the mempool, invalidated, or was not sent in the first
+// place.
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/tx
+func (env *Environment) Tx(ctx *rpctypes.Context, hash []byte, prove bool) (*ctypes.ResultBroadcastTxCommit, error) {
 	fmt.Println("= WS Tx")
 	return nil, fmt.Errorf("Tx not implemented")
 }
@@ -197,14 +202,21 @@ func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx comettypes.T
 	return nil, fmt.Errorf("BroadcastTxCommit not implemented")
 }
 
-func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTx, error) {
 	fmt.Println("= WS BroadcastTxSync")
-	return nil, fmt.Errorf("BroadcastTxSync not implemented")
+	// return nil, fmt.Errorf("BroadcastTxSync not implemented")
+	return env.networkWrap.BroadcastTxSync(context.TODO(), tx)
 }
 
 func (env *Environment) BroadcastTxAsync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 	fmt.Println("= WS BroadcastTxAsync")
 	return nil, fmt.Errorf("BroadcastTxAsync not implemented")
+
+	// err := env.Mempool.CheckTx(tx, nil, mempl.TxInfo{})
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return &ctypes.ResultBroadcastTx{Hash: tx.Hash()}, nil
 }
 
 func (env *Environment) ABCIQuery(

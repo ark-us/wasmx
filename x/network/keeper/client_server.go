@@ -714,13 +714,13 @@ type wsConnection struct {
 	// funcMap    map[string]*RPCFunc
 }
 
-func StartRPC(ctx context.Context, app servertypes.Application, logger log.Logger, cfg *config.Config) error {
+func StartRPC(ctx context.Context, app servertypes.Application, networkWrap *ABCIClient, logger log.Logger, cfg *config.Config) error {
 	// listenAddrs := splitAndTrimEmpty(n.config.RPC.ListenAddress, ",", " ")
 	// listenAddr := cfg.API.Address
 	listenAddr := "tcp://localhost:26657"
 	// listenAddr := "tcp://0.0.0.0:26756"
 	fmt.Println("-StartRPC--listenAddr---", listenAddr)
-	env := Environment{app}
+	env := Environment{app: app, networkWrap: networkWrap}
 	routes := env.GetRoutes()
 	wm := WebsocketManager{logger: logger}
 	// rpcLogger := logger.With("module", "rpc-server")
@@ -901,8 +901,34 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 
 func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
 	fmt.Println("-network-BroadcastTxSync--")
-	// TODO fixme
+
 	return c.BroadcastTxAsync(ctx, tx)
+
+	// TODO fixme
+
+	// resCh := make(chan *abci.ResponseCheckTx, 1)
+	// err := env.Mempool.CheckTx(tx, func(res *abci.ResponseCheckTx) {
+	// 	select {
+	// 	case <-ctx.Context().Done():
+	// 	case resCh <- res:
+	// 	}
+	// }, mempl.TxInfo{})
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// select {
+	// case <-ctx.Context().Done():
+	// 	return nil, fmt.Errorf("broadcast confirmation not received: %w", ctx.Context().Err())
+	// case res := <-resCh:
+	// 	return &ctypes.ResultBroadcastTx{
+	// 		Code:      res.Code,
+	// 		Data:      res.Data,
+	// 		Log:       res.Log,
+	// 		Codespace: res.Codespace,
+	// 		Hash:      tx.Hash(),
+	// 	}, nil
+	// }
 }
 
 func (c *ABCIClient) prepareCtx() (sdk.Context, func(), storetypes.CacheMultiStore, error) {
