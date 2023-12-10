@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -12,6 +13,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
+
+	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
 	ethlog "github.com/ethereum/go-ethereum/log"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
@@ -33,7 +36,11 @@ func StartJsonRpc(
 	cfg := cfgAll.JsonRpc
 	svrCtx.Logger.Info("starting JSON-RPC server ", cfg.Address)
 
-	tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
+
+	// TODO replace
+	// tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
+	var tmWsClient *rpcclient.WSClient
+
 	logger := svrCtx.Logger.With("module", "geth")
 	ethlog.Root().SetHandler(ethlog.FuncHandler(func(r *ethlog.Record) error {
 		switch r.Lvl {

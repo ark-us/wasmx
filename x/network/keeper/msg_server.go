@@ -9,8 +9,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/cometbft/cometbft/node"
-
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -27,7 +25,7 @@ type IntervalAction struct {
 }
 
 type msgServer struct {
-	app           types.BaseApp
+	App           types.BaseApp
 	intervalCount int32
 	intervals     map[int32]*IntervalAction
 	Keeper
@@ -37,7 +35,7 @@ type msgServer struct {
 func NewMsgServerImpl(keeper Keeper, app types.BaseApp) types.MsgServer {
 	return &msgServer{
 		Keeper:        keeper,
-		app:           app,
+		App:           app,
 		intervalCount: 0,
 		intervals:     map[int32]*IntervalAction{},
 	}
@@ -46,7 +44,6 @@ func NewMsgServerImpl(keeper Keeper, app types.BaseApp) types.MsgServer {
 // NewMsgServerImpl returns an implementation of the MsgServer interface
 func NewMsgServer(
 	keeper Keeper,
-	tmNode *node.Node,
 ) types.MsgServer {
 	return &msgServer{
 		Keeper:        keeper,
@@ -202,10 +199,10 @@ func (m msgServer) startIntervalInternal(
 ) error {
 	// goCtx := context.Background()
 	goCtx2 := m.goContextParent
-	height := m.app.LastBlockHeight()
+	height := m.App.LastBlockHeight()
 
 	// set context
-	sdkCtx_, ctxcachems, err := CreateQueryContext(m.app, logger, height, false)
+	sdkCtx_, ctxcachems, err := CreateQueryContext(m.App, logger, height, false)
 	fmt.Println("--StartInterval--CreateQueryContext", err)
 	if err != nil {
 		logger.Error("failed to create query context", "err", err)
@@ -250,7 +247,7 @@ func (m msgServer) startIntervalInternal(
 
 	commitCacheCtx()
 	// commit original context
-	mythosapp, ok := m.app.(MythosApp)
+	mythosapp, ok := m.App.(MythosApp)
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}

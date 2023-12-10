@@ -43,6 +43,11 @@ func StartGRPCServer(
 		return nil, nil, nil, err
 	}
 
+	err = StartRPC(ctx, app, svrCtx.Logger, cfgAll)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	httpSrvDone := make(chan struct{}, 1)
 
 	errCh := make(chan error)

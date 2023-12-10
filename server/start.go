@@ -110,7 +110,9 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			withTM, _ := cmd.Flags().GetBool(srvflags.WithTendermint)
 			if !withTM {
 				serverCtx.Logger.Info("starting ABCI without Tendermint")
-				return startStandAlone(serverCtx, appCreator)
+				// return startStandAlone(serverCtx, appCreator)
+				// TODO replace this
+				return nil
 			}
 
 			serverCtx.Logger.Info("Unlocking keyring")
@@ -376,7 +378,25 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	})
 	// ----end network
 
+	bapp, ok := app.(networkgrpc.BaseApp)
+	if !ok {
+		return fmt.Errorf("failed to get BaseApp from server Application")
+	}
+	mythosapp, ok := app.(networkgrpc.MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from server Application")
+	}
+	networkServer := networkgrpc.NewMsgServerImpl(mythosapp.GetNetworkKeeper(), bapp)
+	rpcClient = networkgrpc.NewABCIClient(bapp, logger, networkServer)
+
+	fmt.Println("==rpcClient==", rpcClient)
 	clientCtx = clientCtx.WithClient(rpcClient)
+	n, err := clientCtx.GetNode()
+	fmt.Println("==rpcClient==", n)
+
+	app.RegisterTxService(clientCtx)
+	app.RegisterTendermintService(clientCtx)
+	app.RegisterNodeService(clientCtx, config.Config)
 
 	grpcSrv, clientCtx, err := startGrpcServer(ctx, g, config.Config.GRPC, clientCtx, svrCtx, app)
 	if err != nil {

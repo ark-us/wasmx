@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 
+	gws "github.com/gorilla/websocket"
+
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/rootmulti"
@@ -24,7 +27,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/server/config"
+	sdkconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/server/grpc/gogoreflection"
 	reflection "github.com/cosmos/cosmos-sdk/server/grpc/reflection/v2alpha1"
 
@@ -42,10 +45,14 @@ import (
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
+	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
+
+	"mythos/v1/server/config"
 )
 
 var NETWORK_GAS_LIMIT = uint64(1000000000)
@@ -92,7 +99,7 @@ func NewGRPCServer(
 	ctx context.Context,
 	svrCtx *server.Context,
 	clientCtx client.Context,
-	cfg config.GRPCConfig,
+	cfg sdkconfig.GRPCConfig,
 	app servertypes.Application,
 	privValidator cmttypes.PrivValidator,
 	nodeKey *p2p.NodeKey,
@@ -101,12 +108,12 @@ func NewGRPCServer(
 ) (*grpc.Server, *ABCIClient, error) {
 	maxSendMsgSize := cfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
-		maxSendMsgSize = config.DefaultGRPCMaxSendMsgSize
+		maxSendMsgSize = sdkconfig.DefaultGRPCMaxSendMsgSize
 	}
 
 	maxRecvMsgSize := cfg.MaxRecvMsgSize
 	if maxRecvMsgSize == 0 {
-		maxRecvMsgSize = config.DefaultGRPCMaxRecvMsgSize
+		maxRecvMsgSize = sdkconfig.DefaultGRPCMaxRecvMsgSize
 	}
 
 	grpcSrv := grpc.NewServer(
@@ -128,7 +135,13 @@ func NewGRPCServer(
 	// if !ok {
 	// 	return nil, fmt.Errorf("failed to get MythosApp from server Application")
 	// }
+
 	logger := svrCtx.Logger.With("module", "network")
+
+	client := NewABCIClient(bapp, logger, networkServer)
+	fmt.Println("==NewABCIClient=rpcClient==", client)
+
+	clientCtx = clientCtx.WithClient(client)
 
 	// load genesis state
 	// Run the InitChain logic
@@ -173,8 +186,6 @@ func NewGRPCServer(
 	// Reflection allows external clients to see what services and methods
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
-
-	client := NewABCIClient(bapp, logger, networkServer)
 
 	return grpcSrv, client, nil
 }
@@ -286,6 +297,7 @@ func RegisterGRPCServer(
 
 	handler := &msgServer{
 		Keeper: mythosapp.GetNetworkKeeper(),
+		App:    app,
 	}
 
 	desc := types.Network_Msg_serviceDesc
@@ -449,7 +461,7 @@ func loadGenDoc(genesisDocProvider node.GenesisDocProvider) (*cmttypes.GenesisDo
 func initChain(
 	svrCtx *server.Context,
 	clientCtx client.Context,
-	grpccfg config.GRPCConfig,
+	grpccfg sdkconfig.GRPCConfig,
 	app servertypes.Application,
 	privValidator cmttypes.PrivValidator,
 	nodeKey *p2p.NodeKey,
@@ -688,13 +700,145 @@ func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error 
 	return nil
 }
 
+type WebsocketManager struct {
+	gws.Upgrader
+
+	// funcMap       map[string]*RPCFunc
+	logger        log.Logger
+	wsConnOptions []func(*wsConnection)
+}
+
+type wsConnection struct {
+	baseConn   *gws.Conn
+	remoteAddr string
+	// funcMap    map[string]*RPCFunc
+}
+
+func StartRPC(ctx context.Context, app servertypes.Application, logger log.Logger, cfg *config.Config) error {
+	// listenAddrs := splitAndTrimEmpty(n.config.RPC.ListenAddress, ",", " ")
+	// listenAddr := cfg.API.Address
+	listenAddr := "tcp://localhost:26657"
+	// listenAddr := "tcp://0.0.0.0:26756"
+	fmt.Println("-StartRPC--listenAddr---", listenAddr)
+	env := Environment{app}
+	routes := env.GetRoutes()
+	wm := WebsocketManager{logger: logger}
+	// rpcLogger := logger.With("module", "rpc-server")
+	rpcLogger := servercmtlog.CometLoggerWrapper{Logger: logger.With("module", "rpc-server")}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/websocket", wm.WebsocketHandler)
+	cometjsonserver.RegisterRPCFuncs(mux, routes, rpcLogger)
+
+	// mux.HandleFunc("/health", makeHTTPHandler(rpcFunc, logger))
+
+	var rootHandler http.Handler = mux
+	// if rpcConfig.IsCorsEnabled() {
+	// 	rootHandler = addCORSHandler(rpcConfig, mux)
+	// }
+	// return rootHandler
+
+	config := cometjsonserver.DefaultConfig()
+	// config.MaxBodyBytes = cfg.API.MaxBodyBytes
+	// config.MaxHeaderBytes = cfg.API.MaxHeaderBytes
+	// config.MaxOpenConnections = cfg.API.MaxOpenConnections
+
+	listener, err := cometjsonserver.Listen(
+		listenAddr,
+		int(config.MaxOpenConnections),
+	)
+	if err != nil {
+		return err
+	}
+
+	// httpSrvDone := make(chan struct{}, 1)
+	// errCh := make(chan error)
+
+	go func() {
+		if err := cometjsonserver.Serve(
+			listener,
+			rootHandler,
+			rpcLogger,
+			config,
+		); err != nil {
+			logger.Error("Error serving server", "err", err)
+			// errCh <- err
+		}
+	}()
+
+	// select {
+	// case <-ctx.Done():
+	// 	// The calling process canceled or closed the provided context, so we must
+	// 	// gracefully stop the GRPC server.
+	// 	logger.Info("stopping network GRPC server...", "address", GRPCAddr)
+
+	// 	return grpcServer, rpcClient, httpSrvDone, nil
+	// case err := <-errCh:
+	// 	svrCtx.Logger.Error("failed to boot network GRPC server", "error", err.Error())
+	// 	return nil, nil, nil, err
+	// }
+
+	return nil
+}
+
+// func RegisterRPCFuncs(mux *http.ServeMux, funcMap map[string]*RPCFunc, logger log.Logger) {
+// 	// HTTP endpoints
+// 	for funcName, rpcFunc := range funcMap {
+// 		mux.HandleFunc("/"+funcName, makeHTTPHandler(rpcFunc, logger))
+// 	}
+
+// 	// JSONRPC endpoints
+// 	mux.HandleFunc("/", handleInvalidJSONRPCPaths(makeJSONRPCHandler(funcMap, logger)))
+// }
+
+func health(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (wm *WebsocketManager) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	wsConn, err := wm.Upgrade(w, r, nil)
+	if err != nil {
+		// TODO - return http error
+		wm.logger.Error("Failed to upgrade connection", "err", err)
+		return
+	}
+	defer func() {
+		if err := wsConn.Close(); err != nil {
+			wm.logger.Error("Failed to close connection", "err", err)
+		}
+	}()
+
+	// register connection
+	// con := newWSConnection(wsConn, wm.funcMap, wm.wsConnOptions...)
+	con := &wsConnection{
+		// funcMap:    wm.funcMap,
+		remoteAddr: wsConn.RemoteAddr().String(),
+		baseConn:   wsConn,
+	}
+
+	// con.SetLogger(wm.logger.With("remote", wsConn.RemoteAddr()))
+	wm.logger.Info("New websocket connection", "remote", con.remoteAddr)
+	// err = con.Start() // BLOCKING
+	// if err != nil {
+	// 	wm.logger.Error("Failed to start connection", "err", err)
+	// 	return
+	// }
+	// if err := con.Stop(); err != nil {
+	// 	wm.logger.Error("error while stopping connection", "error", err)
+	// }
+}
+
+// func makeHTTPHandler(rpcFunc *RPCFunc, logger log.Logger) func(http.ResponseWriter, *http.Request) {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 	}
+// }
+
 type ABCIClient struct {
 	bapp          BaseApp
-	networkServer *msgServer
+	networkServer types.MsgServer
 	logger        log.Logger
 }
 
-func NewABCIClient(bapp BaseApp, logger log.Logger, networkServer *msgServer) *ABCIClient {
+func NewABCIClient(bapp BaseApp, logger log.Logger, networkServer types.MsgServer) *ABCIClient {
 	return &ABCIClient{
 		bapp:          bapp,
 		networkServer: networkServer,
@@ -703,17 +847,17 @@ func NewABCIClient(bapp BaseApp, logger log.Logger, networkServer *msgServer) *A
 }
 
 func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error) {
-	fmt.Println("--ABCIInfo--")
+	fmt.Println("-network-ABCIInfo--")
 	return nil, nil
 }
 
 func (c *ABCIClient) ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error) {
-	fmt.Println("--ABCIQuery--")
+	fmt.Println("-network-ABCIQuery--")
 	return nil, nil
 }
 
 func (c *ABCIClient) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes, opts rpcclient.ABCIQueryOptions) (*rpctypes.ResultABCIQuery, error) {
-	fmt.Println("--ABCIQueryWithOptions--")
+	fmt.Println("-network-ABCIQueryWithOptions--")
 	return nil, nil
 }
 
@@ -723,12 +867,12 @@ func (c *ABCIClient) ABCIQueryWithOptions(ctx context.Context, path string, data
 // }
 
 func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTxCommit, error) {
-	fmt.Println("--BroadcastTxCommit--")
+	fmt.Println("-network-BroadcastTxCommit--")
 	return nil, nil
 }
 
 func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
-	fmt.Println("--BroadcastTxAsync--")
+	fmt.Println("-network-BroadcastTxAsync--")
 	// TODO use ctx from params?
 
 	sdkCtx, commitCacheCtx, ctxcachems, err := c.prepareCtx()
@@ -742,7 +886,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msg,
 	})
-	fmt.Println("--ExecuteContract BroadcastTxAsync--", rresp, err)
+	fmt.Println("-network-ExecuteContract BroadcastTxAsync--", rresp, err)
 	if err != nil {
 		return nil, err
 	}
@@ -756,13 +900,13 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 }
 
 func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
-	fmt.Println("--BroadcastTxSync--")
+	fmt.Println("-network-BroadcastTxSync--")
 	// TODO fixme
 	return c.BroadcastTxAsync(ctx, tx)
 }
 
 func (c *ABCIClient) prepareCtx() (sdk.Context, func(), storetypes.CacheMultiStore, error) {
-	fmt.Println("--prepareCtx--")
+	fmt.Println("-network-prepareCtx--")
 	height := c.bapp.LastBlockHeight()
 
 	cms := c.bapp.CommitMultiStore()
@@ -815,7 +959,7 @@ func (c *ABCIClient) prepareCtx() (sdk.Context, func(), storetypes.CacheMultiSto
 }
 
 func (c *ABCIClient) commitCtx(sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
-	fmt.Println("--commitCtx--")
+	fmt.Println("-network-commitCtx--")
 	mythosapp, ok := c.bapp.(MythosApp)
 	if !ok {
 		return fmt.Errorf("failed to get MythosApp from server Application")
@@ -828,42 +972,42 @@ func (c *ABCIClient) commitCtx(sdkCtx sdk.Context, commitCacheCtx func(), ctxcac
 }
 
 func (c *ABCIClient) Validators(ctx context.Context, height *int64, page, perPage *int) (*rpctypes.ResultValidators, error) {
-	fmt.Println("--Validators--")
+	fmt.Println("-network-Validators--")
 	return nil, nil
 }
 
 func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
-	fmt.Println("--Status--")
+	fmt.Println("-network-Status--")
 	return nil, nil
 }
 
 func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.ResultBlock, error) {
-	fmt.Println("--Block--")
+	fmt.Println("-network-Block--")
 	return nil, nil
 }
 
 func (c *ABCIClient) BlockByHash(ctx context.Context, hash []byte) (*rpctypes.ResultBlock, error) {
-	fmt.Println("--BlockByHash--")
+	fmt.Println("-network-BlockByHash--")
 	return nil, nil
 }
 
 func (c *ABCIClient) BlockResults(ctx context.Context, height *int64) (*rpctypes.ResultBlockResults, error) {
-	fmt.Println("--BlockResults--")
+	fmt.Println("-network-BlockResults--")
 	return nil, nil
 }
 
 func (c *ABCIClient) BlockchainInfo(ctx context.Context, minHeight, maxHeight int64) (*rpctypes.ResultBlockchainInfo, error) {
-	fmt.Println("--BlockchainInfo--")
+	fmt.Println("-network-BlockchainInfo--")
 	return nil, nil
 }
 
 func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.ResultCommit, error) {
-	fmt.Println("--Commit--")
+	fmt.Println("-network-Commit--")
 	return nil, nil
 }
 
 func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes.ResultTx, error) {
-	fmt.Println("--Tx--")
+	fmt.Println("-network-Tx--")
 	return nil, nil
 }
 
@@ -874,7 +1018,7 @@ func (c *ABCIClient) TxSearch(
 	page, perPage *int,
 	orderBy string,
 ) (*rpctypes.ResultTxSearch, error) {
-	fmt.Println("--TxSearch--")
+	fmt.Println("-network-TxSearch--")
 	return nil, nil
 }
 
@@ -884,6 +1028,6 @@ func (c *ABCIClient) BlockSearch(
 	page, perPage *int,
 	orderBy string,
 ) (*rpctypes.ResultBlockSearch, error) {
-	fmt.Println("--BlockSearch--")
+	fmt.Println("-network-BlockSearch--")
 	return nil, nil
 }
