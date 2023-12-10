@@ -2,6 +2,8 @@ package vm
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -12,6 +14,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/cometbft/cometbft/crypto/tmhash"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
@@ -19,6 +23,22 @@ import (
 
 	networktypes "mythos/v1/x/network/types"
 )
+
+func sha256(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	hashbz := tmhash.Sum(data)
+	ptr, err := allocateWriteMem(ctx, callframe, hashbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
 
 // getEnv(): ArrayBuffer
 func getEnv(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -454,6 +474,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+
+	env.AddFunction("sha256", wasmedge.NewFunction(functype_i32_i32, sha256, context, 0))
 
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
 	env.AddFunction("getEnv", wasmedge.NewFunction(functype__i32, getEnv, context, 0))

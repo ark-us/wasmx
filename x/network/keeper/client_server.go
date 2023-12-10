@@ -3,6 +3,8 @@ package keeper
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -1009,7 +1011,55 @@ func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
 
 func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.ResultBlock, error) {
 	fmt.Println("-network-Block--")
-	return nil, nil
+
+	// get indexed tx
+	key := types.GetBlockKey(*height)
+	resp, err := c.fsmQuery(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("block (%d) not found", height)
+	}
+
+	var logEntry types.LogEntry
+	err = json.Unmarshal(resp.Data, &logEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	var b abci.RequestProcessProposal
+	err = json.Unmarshal(logEntry.Data, &b)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO fixme
+	blockId := cmttypes.BlockID{
+		Hash:          make([]byte, 0),
+		PartSetHeader: cmttypes.PartSetHeader{},
+	}
+
+	lastCommit := cmttypes.Commit{
+		Height:     *height,
+		Round:      b.ProposedLastCommit.Round,
+		BlockID:    blockId,
+		Signatures: make([]cmttypes.CommitSig, 0),
+	}
+
+	evidence := make([]cmttypes.Evidence, 0)
+
+	txs := make([]cmttypes.Tx, len(b.Txs))
+	for i, tx := range b.Txs {
+		txs[i] = cmttypes.Tx(tx)
+	}
+	result := rpctypes.ResultBlock{
+		BlockID: blockId,
+		Block:   cmttypes.MakeBlock(b.Height, txs, &lastCommit, evidence),
+	}
+
+	return &result, nil
 }
 
 func (c *ABCIClient) BlockByHash(ctx context.Context, hash []byte) (*rpctypes.ResultBlock, error) {
@@ -1034,7 +1084,69 @@ func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.Resul
 
 func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes.ResultTx, error) {
 	fmt.Println("-network-Tx--")
-	return nil, nil
+
+	// get indexed tx
+	key := types.GetTxKey(hash)
+	resp, err := c.fsmQuery(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("tx (%X) not found", hash)
+	}
+
+	var indexedTx types.IndexedTransaction
+	err = json.Unmarshal(resp.Data, &indexedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	// get block data
+	key = types.GetBlockKey(indexedTx.Height)
+	resp, err = c.fsmQuery(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("tx block (%d) not found", indexedTx.Height)
+	}
+
+	var logEntry types.LogEntry
+	err = json.Unmarshal(resp.Data, &logEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	var blockData abci.RequestProcessProposal
+	err = json.Unmarshal(logEntry.Data, &blockData)
+	if err != nil {
+		return nil, err
+	}
+
+	var blockResultData abci.ResponseFinalizeBlock
+	err = json.Unmarshal(logEntry.Result, &blockResultData)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(blockResultData.TxResults) < int(indexedTx.Index) {
+		return nil, fmt.Errorf("tx index (%d) not found in block %d", indexedTx.Index, indexedTx.Height)
+	}
+
+	var proof cmttypes.TxProof
+	// TODO proof
+
+	// this is a query, we do not commit anything
+	return &rpctypes.ResultTx{
+		Hash:     hash,
+		Height:   indexedTx.Height,
+		Index:    indexedTx.Index,
+		TxResult: *blockResultData.TxResults[indexedTx.Index],
+		Tx:       blockData.Txs[indexedTx.Index],
+		Proof:    proof,
+	}, nil
 }
 
 func (c *ABCIClient) TxSearch(
@@ -1056,4 +1168,31 @@ func (c *ABCIClient) BlockSearch(
 ) (*rpctypes.ResultBlockSearch, error) {
 	fmt.Println("-network-BlockSearch--")
 	return nil, nil
+}
+
+func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
+	sdkCtx, _, _, err := c.prepareCtx()
+	if err != nil {
+		return nil, err
+	}
+
+	goCtx := context.Background()
+	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+
+	msg := []byte(fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key))
+	rresp, err := c.networkServer.QueryContract(goCtx, &types.MsgQueryContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msg,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(rresp.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

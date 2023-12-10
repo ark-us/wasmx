@@ -111,9 +111,9 @@ func (env *Environment) GenesisChunked(ctx *rpctypes.Context, tx comettypes.Tx) 
 	return nil, fmt.Errorf("GenesisChunked not implemented")
 }
 
-func (env *Environment) Block(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Block(ctx *rpctypes.Context, height *int64) (*ctypes.ResultBlock, error) {
 	fmt.Println("= WS Block")
-	return nil, fmt.Errorf("Block not implemented")
+	return env.networkWrap.Block(context.TODO(), height)
 }
 
 func (env *Environment) BlockByHash(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
@@ -150,12 +150,12 @@ func (env *Environment) CheckTx(ctx *rpctypes.Context, tx comettypes.Tx) (*ctype
 // transaction is in the mempool, invalidated, or was not sent in the first
 // place.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/tx
-func (env *Environment) Tx(ctx *rpctypes.Context, hash []byte, prove bool) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Tx(ctx *rpctypes.Context, hash []byte, prove bool) (*ctypes.ResultTx, error) {
 	fmt.Println("= WS Tx")
-	return nil, fmt.Errorf("Tx not implemented")
+	return env.networkWrap.Tx(context.TODO(), hash, prove)
 }
 
-func (env *Environment) TxSearch(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) TxSearch(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultTxSearch, error) {
 	fmt.Println("= WS TxSearch")
 	return nil, fmt.Errorf("TxSearch not implemented")
 }
@@ -204,7 +204,6 @@ func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx comettypes.T
 
 func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTx, error) {
 	fmt.Println("= WS BroadcastTxSync")
-	// return nil, fmt.Errorf("BroadcastTxSync not implemented")
 	return env.networkWrap.BroadcastTxSync(context.TODO(), tx)
 }
 
