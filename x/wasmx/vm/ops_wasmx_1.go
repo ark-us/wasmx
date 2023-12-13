@@ -179,8 +179,15 @@ func asAbort(context interface{}, callframe *wasmedge.CallingFrame, params []int
 func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	// fmt.Println("-asConsoleLog", readJsString(message))
-	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx_env_1: console.log: %s", readJsString(message)))
+	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx: console.log: %s", readJsString(message)))
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func asConsoleInfo(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	message, _ := readMemFromPtr(callframe, params[0])
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx: console.info: %s", readJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -188,7 +195,15 @@ func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params 
 func asConsoleError(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Error(fmt.Sprintf("wasmx_env_1: console.error: %s", readJsString(message)))
+	ctx.GetContext().Logger().Error(fmt.Sprintf("wasmx: console.error: %s", readJsString(message)))
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func asConsoleDebug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	message, _ := readMemFromPtr(callframe, params[0])
+	ctx := context.(*Context)
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx: console.debug: %s", readJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -262,7 +277,9 @@ func BuildAssemblyScriptEnv(context *Context) *wasmedge.Module {
 
 	env.AddFunction("abort", wasmedge.NewFunction(functype_i32i32i32i32_, asAbort, context, 0))
 	env.AddFunction("console.log", wasmedge.NewFunction(functype_i32_, asConsoleLog, context, 0))
+	env.AddFunction("console.info", wasmedge.NewFunction(functype_i32_, asConsoleInfo, context, 0))
 	env.AddFunction("console.error", wasmedge.NewFunction(functype_i32_, asConsoleError, context, 0))
+	env.AddFunction("console.debug", wasmedge.NewFunction(functype_i32_, asConsoleDebug, context, 0))
 	env.AddFunction("Date.now", wasmedge.NewFunction(functype__f64, asDateNow, context, 0))
 	return env
 }
