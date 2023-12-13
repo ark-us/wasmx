@@ -16,4 +16,5 @@ type BaseApp interface {
 	GetContextForFinalizeBlock(txBytes []byte) sdk.Context
 	NewUncachedContext(isCheckTx bool, header cmtproto.Header) sdk.Context
 	LastBlockHeight() int64
+	LastCommitID() storetypes.CommitID
 }

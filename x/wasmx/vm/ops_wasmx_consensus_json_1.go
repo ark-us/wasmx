@@ -1,13 +1,42 @@
 package vm
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	merkle "github.com/cometbft/cometbft/crypto/merkle"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 )
+
+type MerkleSlices struct {
+	Slices [][]byte `json:"slices"`
+}
+
+func merkleHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var val MerkleSlices
+	err = json.Unmarshal(data, &val)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	hashbz := merkle.HashFromByteSlices(val.Slices)
+
+	ptr, err := allocateWriteMem(ctx, callframe, hashbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
 
 // PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
 func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -168,6 +197,8 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+
+	env.AddFunction("MerkleHash", wasmedge.NewFunction(functype_i32_i32, merkleHash, context, 0))
 
 	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, PrepareProposal, context, 0))
 	env.AddFunction("ProcessProposal", wasmedge.NewFunction(functype_i32_i32, ProcessProposal, context, 0))

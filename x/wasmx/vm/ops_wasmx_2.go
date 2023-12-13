@@ -1,17 +1,12 @@
 package vm
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
 
-	"golang.org/x/sync/errgroup"
-
-	"cosmossdk.io/log"
-	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -503,63 +498,3 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	return env
 }
-
-func getCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
-	ctx, cancelFn := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
-	// listen for quit signals so the calling parent process can gracefully exit
-	server.ListenForQuitSignals(g, block, cancelFn, logger)
-	return g, ctx, cancelFn
-}
-
-// func startTimedAction(ctx *Context, callframe *wasmedge.CallingFrame, goctx context.Context, logger log.Logger, intervalId int32, timeDelay int64, repeatCount int32, argsbz []byte) (chan struct{}, error) {
-// 	httpSrvDone := make(chan struct{}, 1)
-// 	errCh := make(chan error)
-// 	currentCount := int32(0)
-
-// 	go func() {
-// 		logger.Info("Starting new timed action", "intervalId", intervalId, "delay", timeDelay, "args", string(argsbz))
-// 		// if err := httpSrv.Serve(ln); err != nil {
-// 		// 	logger.Error("failed to serve Websrv", "error", err.Error())
-// 		// 	if err == http.ErrServerClosed {
-// 		// 		close(httpSrvDone)
-// 		// 		return
-// 		// 	}
-
-// 		// 	logger.Error("failed to start Websrv server", "error", err.Error())
-// 		// 	errCh <- err
-// 		// }
-// 		for {
-// 			if repeatCount > 0 && currentCount == repeatCount {
-// 				return
-// 			}
-// 			select {
-// 			case <-goctx.Done():
-// 				// The calling process canceled or closed the provided context
-// 				return
-// 			default:
-// 				argsptr, err := allocateWriteMem(ctx, callframe, argsbz)
-// 				if err != nil {
-// 					errCh <- err
-// 				}
-// 				fmt.Println("argsptr", argsptr)
-// 				err = executeTimedAction(ctx, intervalId, argsptr)
-// 				if err != nil {
-// 					errCh <- err
-// 				}
-// 			}
-// 			currentCount += 1
-// 			time.Sleep(time.Duration(timeDelay) * time.Millisecond)
-// 		}
-// 	}()
-
-// 	select {
-// 	case <-goctx.Done():
-// 		// The calling process canceled or closed the provided context
-// 		logger.Info("stopping timed action", "args", string(argsbz))
-// 		return httpSrvDone, nil
-// 	case err := <-errCh:
-// 		logger.Error("failed to start timed action", "error", err.Error())
-// 		return nil, err
-// 	}
-// }

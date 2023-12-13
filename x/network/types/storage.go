@@ -3,6 +3,9 @@ package types
 import (
 	"encoding/base64"
 	"strconv"
+
+	cmtlibs "github.com/cometbft/cometbft/libs/bytes"
+	cmttypes "github.com/cometbft/cometbft/types"
 )
 
 var LOG_INDEXER = "logs_"
@@ -27,4 +30,24 @@ func GetTxKey(hash []byte) string {
 
 func GetBlockKey(index int64) string {
 	return LOG_INDEXER + strconv.Itoa(int(index))
+}
+
+type InitChainSetup struct {
+	ChainID          string                    `json:"chain_id"`
+	ConsensusParams  *cmttypes.ConsensusParams `json:"consensus_params"`
+	Validators       []*cmttypes.Validator     `json:"validators"`
+	AppHash          []byte                    `json:"app_hash"`
+	LastResultsHash  []byte                    `json:"last_results_hash"`
+	CurrentValidator cmtlibs.HexBytes          `json:"current_validator"`
+	Version          Version                   `json:"version"`
+}
+
+type Consensus struct {
+	Block uint64 `json:"block"`
+	App   uint64 `json:"app"`
+}
+
+type Version struct {
+	Consensus Consensus `json:"consensus"`
+	Software  string    `json:"software"`
 }

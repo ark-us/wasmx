@@ -33,6 +33,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/grpc/gogoreflection"
 	reflection "github.com/cosmos/cosmos-sdk/server/grpc/reflection/v2alpha1"
 
+	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -40,6 +41,7 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
@@ -49,7 +51,6 @@ import (
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
-	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -69,17 +70,6 @@ type MythosApp interface {
 	// GetTKey(storeKey string) *storetypes.TransientStoreKey
 	// GetMKey(storeKey string) *storetypes.MemoryStoreKey
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
-}
-
-type BaseApp interface {
-	Name() string
-	ChainID() string
-	CreateQueryContext(height int64, prove bool) (sdk.Context, error)
-	CommitMultiStore() storetypes.CommitMultiStore
-	GetContextForCheckTx(txBytes []byte) sdk.Context
-	GetContextForFinalizeBlock(txBytes []byte) sdk.Context
-	NewUncachedContext(isCheckTx bool, header cmtproto.Header) sdk.Context
-	LastBlockHeight() int64
 }
 
 type ABCIClientI interface {
@@ -129,7 +119,7 @@ func NewGRPCServer(
 		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
 
-	bapp, ok := app.(BaseApp)
+	bapp, ok := app.(types.BaseApp)
 	if !ok {
 		return nil, nil, fmt.Errorf("failed to get BaseApp from server Application")
 	}
@@ -217,7 +207,7 @@ func RegisterGRPCServer(
 	sapp servertypes.Application,
 	server *grpc.Server,
 ) (*msgServer, error) {
-	app, ok := sapp.(BaseApp)
+	app, ok := sapp.(types.BaseApp)
 	if !ok {
 		return nil, fmt.Errorf("failed to get BaseApp from server Application")
 	}
@@ -339,7 +329,7 @@ func checkNegativeHeight(height int64) error {
 
 // createQueryContext creates a new sdk.Context for a query, taking as args
 // the block height and whether the query needs a proof or not.
-func CreateQueryContext(app BaseApp, logger log.Logger, height int64, prove bool) (sdk.Context, storetypes.CacheMultiStore, error) {
+func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prove bool) (sdk.Context, storetypes.CacheMultiStore, error) {
 	if err := checkNegativeHeight(height); err != nil {
 		return sdk.Context{}, nil, err
 	}
@@ -492,19 +482,18 @@ func initChain(
 		"protocol-version", res.AppVersion,
 	)
 
-	// // Only set the version if there is no existing state.
-	// if h.initialState.LastBlockHeight == 0 {
-	// 	h.initialState.Version.Consensus.App = res.AppVersion
-	// }
-
 	// check if network contract exists
-	// check block is 0
 
 	genDoc, err := loadGenDoc(genesisDocProvider)
 	if err != nil {
 		return nil, err
 	}
 
+	pubKey, err := privValidator.GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+	validatorAddress := pubKey.Address()
 	validators := make([]*cmttypes.Validator, len(genDoc.Validators))
 	for i, val := range genDoc.Validators {
 		validators[i] = cmttypes.NewValidator(val.PubKey, val.Power)
@@ -513,7 +502,7 @@ func initChain(
 	nextVals := cmttypes.TM2PB.ValidatorUpdates(validatorSet)
 	pbparams := genDoc.ConsensusParams.ToProto()
 	fmt.Println("--InitialHeight--", genDoc.InitialHeight)
-	bapp, ok := app.(BaseApp)
+	bapp, ok := app.(types.BaseApp)
 	if !ok {
 		return nil, fmt.Errorf("failed to get BaseApp from server Application")
 	}
@@ -533,7 +522,6 @@ func initChain(
 	}
 	fmt.Println("--resInit--", resInit)
 
-	// TODO resInit.Validators
 	scfg := svrCtx.Config
 	// scfg.StateSync.
 	fmt.Println("--scfg.PrivValidatorListenAddr--", scfg.PrivValidatorListenAddr)
@@ -541,10 +529,6 @@ func initChain(
 	fmt.Println("--scfg.P2P.Seeds--", scfg.P2P.Seeds)
 	fmt.Println("--scfg.P2P.ExternalAddress--", scfg.P2P.ExternalAddress)
 	fmt.Println("--scfg.P2P.PersistentPeers--", scfg.P2P.PersistentPeers)
-
-	// TODO - valdiators
-	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/spec/abci/abci%2B%2B_methods.md#initchain
-	// validators := resInit.Validators || req.Validators
 
 	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
 
@@ -563,16 +547,55 @@ func initChain(
 
 	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
 
-	// TODO
-	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L326
-	// appHash = resInit.AppHash
-	// if len(res.AppHash) > 0 {
-	// 	state.AppHash = res.AppHash
-	// }
+	// If the app returned validators or consensus params, update the state.
+
+	appHash = resInit.AppHash
+	if len(resInit.AppHash) > 0 {
+		appHash = resInit.AppHash
+	}
+	validatorsUpdates := resInit.Validators
+	if len(validatorsUpdates) == 0 {
+		validatorsUpdates = req.Validators
+	}
+	if len(validatorsUpdates) == 0 {
+		// If validator set is not set in genesis and still empty after InitChain, exit.
+		return nil, fmt.Errorf("validator set is nil in genesis and still empty after InitChain")
+	}
+	vals, err := cmttypes.PB2TM.ValidatorUpdates(validatorsUpdates)
+	if err != nil {
+		return nil, err
+	}
+	consensusParams := *genDoc.ConsensusParams
+	if resInit.ConsensusParams != nil {
+		consensusParams = consensusParams.Update(resInit.ConsensusParams)
+	}
+
+	version := types.Version{
+		Software: "",
+		Consensus: types.Consensus{
+			App:   res.AppVersion,
+			Block: 0,
+		},
+	}
+	// TODO ?
+	// version.Consensus.App = consensusParams.Version.App
+
+	initChainSetup := &types.InitChainSetup{
+		ChainID:         bapp.ChainID(),
+		ConsensusParams: &consensusParams,
+		AppHash:         appHash,
+		Validators:      vals,
+		// We update the last results hash with the empty hash, to conform with RFC-6962.
+		LastResultsHash:  merkle.HashFromByteSlices(nil),
+		CurrentValidator: validatorAddress,
+		Version:          version,
+	}
+
+	// TODO check if app block height is same as network block height
+	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
 	// setup the raft machine
-
-	err = setupNode(bapp, consensusLogger, networkServer)
+	err = setupNode(bapp, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -595,72 +618,20 @@ func initChain(
 	return resInit, nil
 }
 
-func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error {
-	mythosapp, ok := bapp.(MythosApp)
-	if !ok {
-		return fmt.Errorf("failed to get MythosApp from server Application")
-	}
+func setupNode(bapp types.BaseApp, logger log.Logger, networkServer *msgServer, initChainSetup *types.InitChainSetup) error {
 
-	// setup network
-	// resInit
-
-	// contractAddress := sdk.MustAccAddressFromBech32("mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy")
-	// msg :=
-	// respp, err := mythosapp.GetNetworkKeeper().ExecuteContract(ctx, contractAddress, contractAddress, msg, nil, nil)
-
-	height := bapp.LastBlockHeight()
-
-	cms := bapp.CommitMultiStore()
-	qms := cms.(storetypes.MultiStore)
-	ctxcachems := qms.CacheMultiStore()
-	// TODO fixme - who should commit first block?
-	header := cmtproto.Header{
-		ChainID:            bapp.ChainID(),
-		Height:             height,
-		Time:               time.Now().UTC(),
-		ProposerAddress:    []byte("proposer"),
-		NextValidatorsHash: []byte("proposer"),
-		// AppHash:            bapp.LastCommitID().Hash,
-		// Version: tmversion.Consensus{
-		// 	Block: version.BlockProtocol,
-		// },
-		// LastBlockId: tmproto.BlockID{
-		// 	Hash: tmhash.Sum([]byte("block_id")),
-		// 	PartSetHeader: tmproto.PartSetHeader{
-		// 		Total: 11,
-		// 		Hash:  tmhash.Sum([]byte("partset_header")),
-		// 	},
-		// },
-		// AppHash:            tmhash.Sum([]byte("app")),
-		// DataHash:           tmhash.Sum([]byte("data")),
-		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
-		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
-		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
-		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
-		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
-	}
-	tmpctx := bapp.NewUncachedContext(false, header)
-
-	// branch the commit multi-store for safety
-	sdkCtx_ := sdk.NewContext(ctxcachems, tmpctx.BlockHeader(), true, logger).
-		WithMinGasPrices(nil).
-		WithBlockHeight(height).
-		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
-
-	// sdkCtx_, ctxcachems, err := CreateQueryContext(bapp, logger, height, false)
-	// fmt.Println("--StartInterval--CreateQueryContext", err)
-	// if err != nil {
-	// 	logger.Error("failed to create query context", "err", err)
-	// 	return nil, err
-	// }
-	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-
+	sdkCtx, commitCacheCtx, ctxcachems, err := createContext(bapp, logger)
 	goCtx := context.Background()
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
 
 	// TODO ips!
 
-	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, "localhost:9080"))
+	initbz, err := json.Marshal(initChainSetup)
+	if err != nil {
+		return err
+	}
+	initData := base64.StdEncoding.EncodeToString(initbz)
+	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, "localhost:9080", initData))
 	rresp, err := networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
@@ -695,10 +666,10 @@ func setupNode(bapp BaseApp, logger log.Logger, networkServer *msgServer) error 
 		return err
 	}
 
-	commitCacheCtx()
-	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
-	origtstore.(storetypes.CacheWrap).Write()
-
+	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -835,12 +806,12 @@ func (wm *WebsocketManager) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 // }
 
 type ABCIClient struct {
-	bapp          BaseApp
+	bapp          types.BaseApp
 	networkServer types.MsgServer
 	logger        log.Logger
 }
 
-func NewABCIClient(bapp BaseApp, logger log.Logger, networkServer types.MsgServer) *ABCIClient {
+func NewABCIClient(bapp types.BaseApp, logger log.Logger, networkServer types.MsgServer) *ABCIClient {
 	return &ABCIClient{
 		bapp:          bapp,
 		networkServer: networkServer,
@@ -877,7 +848,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 	fmt.Println("-network-BroadcastTxAsync--")
 	// TODO use ctx from params?
 
-	sdkCtx, commitCacheCtx, ctxcachems, err := c.prepareCtx()
+	sdkCtx, commitCacheCtx, ctxcachems, err := createContext(c.bapp, c.logger)
 
 	goCtx := context.Background()
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
@@ -893,7 +864,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 		return nil, err
 	}
 
-	err = c.commitCtx(sdkCtx, commitCacheCtx, ctxcachems)
+	err = commitCtx(c.bapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
 		return nil, err
 	}
@@ -931,72 +902,6 @@ func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpct
 	// 		Hash:      tx.Hash(),
 	// 	}, nil
 	// }
-}
-
-func (c *ABCIClient) prepareCtx() (sdk.Context, func(), storetypes.CacheMultiStore, error) {
-	fmt.Println("-network-prepareCtx--")
-	height := c.bapp.LastBlockHeight()
-
-	cms := c.bapp.CommitMultiStore()
-	qms := cms.(storetypes.MultiStore)
-	ctxcachems := qms.CacheMultiStore()
-	// TODO fixme - who should commit first block?
-	header := cmtproto.Header{
-		ChainID:            c.bapp.ChainID(),
-		Height:             10,
-		Time:               time.Now().UTC(),
-		ProposerAddress:    []byte("proposer"),
-		NextValidatorsHash: []byte("proposer"),
-		// AppHash:            app.LastCommitID().Hash,
-		// Version: tmversion.Consensus{
-		// 	Block: version.BlockProtocol,
-		// },
-		// LastBlockId: tmproto.BlockID{
-		// 	Hash: tmhash.Sum([]byte("block_id")),
-		// 	PartSetHeader: tmproto.PartSetHeader{
-		// 		Total: 11,
-		// 		Hash:  tmhash.Sum([]byte("partset_header")),
-		// 	},
-		// },
-		// AppHash:            tmhash.Sum([]byte("app")),
-		// DataHash:           tmhash.Sum([]byte("data")),
-		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
-		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
-		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
-		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
-		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
-	}
-	tmpctx := c.bapp.NewUncachedContext(false, header)
-
-	// branch the commit multi-store for safety
-	sdkCtx_ := sdk.NewContext(ctxcachems, tmpctx.BlockHeader(), true, c.logger).
-		WithMinGasPrices(nil).
-		WithBlockHeight(height).
-		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
-
-	// sdkCtx_, ctxcachems, err := CreateQueryContext(bapp, logger, height, false)
-	// fmt.Println("--StartInterval--CreateQueryContext", err)
-	// if err != nil {
-	// 	logger.Error("failed to create query context", "err", err)
-	// 	return nil, err
-	// }
-	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-
-	return sdkCtx, commitCacheCtx, ctxcachems, nil
-
-}
-
-func (c *ABCIClient) commitCtx(sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
-	fmt.Println("-network-commitCtx--")
-	mythosapp, ok := c.bapp.(MythosApp)
-	if !ok {
-		return fmt.Errorf("failed to get MythosApp from server Application")
-	}
-
-	commitCacheCtx()
-	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
-	origtstore.(storetypes.CacheWrap).Write()
-	return nil
 }
 
 func (c *ABCIClient) Validators(ctx context.Context, height *int64, page, perPage *int) (*rpctypes.ResultValidators, error) {
@@ -1171,7 +1076,7 @@ func (c *ABCIClient) BlockSearch(
 }
 
 func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
-	sdkCtx, _, _, err := c.prepareCtx()
+	sdkCtx, _, _, err := createContext(c.bapp, c.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -1195,4 +1100,60 @@ func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) 
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func createContext(bapp types.BaseApp, logger log.Logger) (sdk.Context, func(), storetypes.CacheMultiStore, error) {
+	height := bapp.LastBlockHeight()
+	cms := bapp.CommitMultiStore()
+	qms := cms.(storetypes.MultiStore)
+	ctxcachems := qms.CacheMultiStore()
+
+	header := cmtproto.Header{
+		ChainID:            bapp.ChainID(),
+		Height:             height,
+		Time:               time.Now().UTC(),
+		ProposerAddress:    []byte("proposer"),
+		NextValidatorsHash: []byte("proposer"),
+		AppHash:            bapp.LastCommitID().Hash,
+		// Version: tmversion.Consensus{
+		// 	Block: version.BlockProtocol,
+		// },
+		// LastBlockId: tmproto.BlockID{
+		// 	Hash: tmhash.Sum([]byte("block_id")),
+		// 	PartSetHeader: tmproto.PartSetHeader{
+		// 		Total: 11,
+		// 		Hash:  tmhash.Sum([]byte("partset_header")),
+		// 	},
+		// },
+		// AppHash:            tmhash.Sum([]byte("app")),
+		// DataHash:           tmhash.Sum([]byte("data")),
+		// EvidenceHash:       tmhash.Sum([]byte("evidence")),
+		// ValidatorsHash:     tmhash.Sum([]byte("validators")),
+		// NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
+		// ConsensusHash:      tmhash.Sum([]byte("consensus")),
+		// LastResultsHash:    tmhash.Sum([]byte("last_result")),
+	}
+	tmpctx := bapp.NewUncachedContext(false, header)
+
+	// branch the commit multi-store for safety
+	sdkCtx_ := sdk.NewContext(ctxcachems, tmpctx.BlockHeader(), true, logger).
+		WithMinGasPrices(nil).
+		WithBlockHeight(height).
+		WithGasMeter(storetypes.NewGasMeter(NETWORK_GAS_LIMIT))
+
+	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
+
+	return sdkCtx, commitCacheCtx, ctxcachems, nil
+}
+
+func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
+	mythosapp, ok := bapp.(MythosApp)
+	if !ok {
+		return fmt.Errorf("failed to get MythosApp from server Application")
+	}
+
+	commitCacheCtx()
+	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
+	origtstore.(storetypes.CacheWrap).Write()
+	return nil
 }

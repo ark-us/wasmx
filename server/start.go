@@ -52,6 +52,7 @@ import (
 	networkgrpc "mythos/v1/x/network/keeper"
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
+	networktypes "mythos/v1/x/network/types"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -378,7 +379,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	})
 	// ----end network
 
-	bapp, ok := app.(networkgrpc.BaseApp)
+	bapp, ok := app.(networktypes.BaseApp)
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
 	}
