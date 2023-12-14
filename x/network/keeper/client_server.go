@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -41,6 +42,7 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtconfig "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
@@ -56,6 +58,7 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 
 	"mythos/v1/server/config"
+	networkconfig "mythos/v1/x/network/server/config"
 )
 
 var NETWORK_GAS_LIMIT = uint64(1000000000)
@@ -91,19 +94,20 @@ func NewGRPCServer(
 	ctx context.Context,
 	svrCtx *server.Context,
 	clientCtx client.Context,
-	cfg sdkconfig.GRPCConfig,
+	cfg *config.Config,
 	app servertypes.Application,
 	privValidator cmttypes.PrivValidator,
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
 ) (*grpc.Server, *ABCIClient, error) {
-	maxSendMsgSize := cfg.MaxSendMsgSize
+	grpccfg := cfg.GRPC
+	maxSendMsgSize := grpccfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = sdkconfig.DefaultGRPCMaxSendMsgSize
 	}
 
-	maxRecvMsgSize := cfg.MaxRecvMsgSize
+	maxRecvMsgSize := grpccfg.MaxRecvMsgSize
 	if maxRecvMsgSize == 0 {
 		maxRecvMsgSize = sdkconfig.DefaultGRPCMaxRecvMsgSize
 	}
@@ -114,7 +118,7 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	networkServer, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, app, grpcSrv)
+	networkServer, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
@@ -204,6 +208,7 @@ func RegisterGRPCServer(
 	ctx context.Context,
 	svrCtx *server.Context,
 	clientCtx client.Context,
+	cfg *config.Config,
 	sapp servertypes.Application,
 	server *grpc.Server,
 ) (*msgServer, error) {
@@ -453,7 +458,7 @@ func loadGenDoc(genesisDocProvider node.GenesisDocProvider) (*cmttypes.GenesisDo
 func initChain(
 	svrCtx *server.Context,
 	clientCtx client.Context,
-	grpccfg sdkconfig.GRPCConfig,
+	cfgAll *config.Config,
 	app servertypes.Application,
 	privValidator cmttypes.PrivValidator,
 	nodeKey *p2p.NodeKey,
@@ -595,7 +600,7 @@ func initChain(
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
 	// setup the raft machine
-	err = setupNode(bapp, consensusLogger, networkServer, initChainSetup)
+	err = setupNode(scfg, cfgAll.Network, bapp, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -618,7 +623,7 @@ func initChain(
 	return resInit, nil
 }
 
-func setupNode(bapp types.BaseApp, logger log.Logger, networkServer *msgServer, initChainSetup *types.InitChainSetup) error {
+func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer, initChainSetup *types.InitChainSetup) error {
 
 	sdkCtx, commitCacheCtx, ctxcachems, err := createContext(bapp, logger)
 	goCtx := context.Background()
@@ -631,39 +636,58 @@ func setupNode(bapp types.BaseApp, logger log.Logger, networkServer *msgServer, 
 		return err
 	}
 	initData := base64.StdEncoding.EncodeToString(initbz)
-	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, "localhost:9080", initData))
+
+	// peers are joined by comma
+	persistentPeers := strings.Split(scfg.P2P.PersistentPeers, ",")
+	nodeIps := make([]string, len(persistentPeers)+1)
+	// add self // TODO
+	// nodeIps[0] = scfg.RPC.ListenAddress
+	nodeIps[0] = scfg.P2P.ListenAddress
+	for i, peer := range persistentPeers {
+		nodeIps[i+1] = peer[41:]
+	}
+	peersbz, err := json.Marshal(nodeIps)
+	if err != nil {
+		return err
+	}
+
+	peers := string(peersbz)
+	peers = strings.Replace(peers, `"`, `\"`, -1)
+	fmt.Println("-nodeIPs peers-", peers)
+
+	// TODO node IPS!!!
+	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, peers, initData))
 	rresp, err := networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msg,
 	})
-	fmt.Println("--ExecuteContract setupNode--", rresp, err)
 	if err != nil {
 		return err
 	}
+	if netcfg.Leader {
+		// make node a candidate
+		msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+		rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+			Msg:      msg,
+		})
+		fmt.Println("--ExecuteContract candidate--", rresp, err)
+		if err != nil {
+			return err
+		}
 
-	// make node a candidate
-	msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-	rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Msg:      msg,
-	})
-	fmt.Println("--ExecuteContract candidate--", rresp, err)
-	if err != nil {
-		return err
-	}
-
-	// make node a leader
-	msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-	rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Msg:      msg,
-	})
-	fmt.Println("--ExecuteContract leader--", rresp, err)
-	if err != nil {
-		return err
+		// make node a leader
+		msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+		rresp, err = networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+			Msg:      msg,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
@@ -687,11 +711,10 @@ type wsConnection struct {
 	// funcMap    map[string]*RPCFunc
 }
 
-func StartRPC(ctx context.Context, app servertypes.Application, networkWrap *ABCIClient, logger log.Logger, cfg *config.Config) error {
+func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Application, networkWrap *ABCIClient, logger log.Logger, cfg *config.Config) error {
 	// listenAddrs := splitAndTrimEmpty(n.config.RPC.ListenAddress, ",", " ")
-	// listenAddr := cfg.API.Address
-	listenAddr := "tcp://localhost:26657"
-	// listenAddr := "tcp://0.0.0.0:26756"
+	listenAddr := svrCtx.Config.RPC.ListenAddress
+
 	fmt.Println("-StartRPC--listenAddr---", listenAddr)
 	env := Environment{app: app, networkWrap: networkWrap}
 	routes := env.GetRoutes()
@@ -733,7 +756,7 @@ func StartRPC(ctx context.Context, app servertypes.Application, networkWrap *ABC
 			rpcLogger,
 			config,
 		); err != nil {
-			logger.Error("Error serving server", "err", err)
+			logger.Error("Error serving RPC network server", "err", err)
 			// errCh <- err
 		}
 	}()

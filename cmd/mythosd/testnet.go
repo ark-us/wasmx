@@ -234,6 +234,12 @@ Example:
 
 const nodeDirPerm = 0o755
 
+// const p2pListenAddress = "26656"
+// const p2pListenAddressMulti = 26756
+// replace with network module // TODO maybe have network module on 26656
+const p2pListenAddress = "8090"
+const p2pListenAddressMulti = 8090
+
 // initTestnetFiles initializes testnet files for a testnet to be run in a separate process
 func initTestnetFiles(
 	clientCtx client.Context,
@@ -300,9 +306,9 @@ func initTestnetFiles(
 			return err
 		}
 
-		memo := fmt.Sprintf("%s@%s:26656", nodeIDs[i], ip)
+		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], ip, p2pListenAddress)
 		if args.sameMachine {
-			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(26756+i))
+			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(p2pListenAddressMulti+i))
 		}
 		genFiles = append(genFiles, nodeConfig.GenesisFile())
 
@@ -403,6 +409,11 @@ func initTestnetFiles(
 			appConfigCopy.JsonRpc.WsAddress = strings.Replace(appConfig.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
 			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
 			appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+		}
+		// TODO temporary until we find a way to set the leader
+		// Set the first node as a Leader
+		if i == 0 {
+			appConfigCopy.Network.Leader = true
 		}
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
@@ -512,7 +523,7 @@ func collectGenFiles(
 		gentxsDir := filepath.Join(outputDir, "gentxs")
 		nodeConfig.Moniker = nodeDirName
 		if sameMachine {
-			nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26756+i)
+			nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
 		}
 
 		nodeConfig.SetRoot(nodeDir)

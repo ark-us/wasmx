@@ -5,4 +5,5 @@ const (
 	NetworkEnable             = "network.enable"
 	NetworkAddress            = "network.address"
 	NetworkMaxOpenConnections = "network.max-open-connections"
+	NetworkLeader             = "network.leader"
 )

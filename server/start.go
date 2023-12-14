@@ -180,6 +180,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Int(jsonrpcflags.JsonRpcMaxOpenConnections, jsonrpcconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener")
 
 	cmd.Flags().Bool(networkflags.NetworkEnable, true, "Define if the network grpc server should be enabled")
+	cmd.Flags().Bool(networkflags.NetworkLeader, false, "Set node as leader. Temporary.")
 	cmd.Flags().String(networkflags.NetworkAddress, networkconfig.DefaultNetworkAddress, "the network grpc server address to listen on")
 	cmd.Flags().Int(networkflags.NetworkMaxOpenConnections, networkconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener") //nolint:lll
 
@@ -390,10 +391,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	networkServer := networkgrpc.NewMsgServerImpl(mythosapp.GetNetworkKeeper(), bapp)
 	rpcClient = networkgrpc.NewABCIClient(bapp, logger, networkServer)
 
-	fmt.Println("==rpcClient==", rpcClient)
 	clientCtx = clientCtx.WithClient(rpcClient)
-	n, err := clientCtx.GetNode()
-	fmt.Println("==rpcClient==", n)
 
 	app.RegisterTxService(clientCtx)
 	app.RegisterTendermintService(clientCtx)

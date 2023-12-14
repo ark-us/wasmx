@@ -38,12 +38,12 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	grpcServer, rpcClient, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll.GRPC, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
+	grpcServer, rpcClient, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	err = StartRPC(ctx, app, rpcClient, svrCtx.Logger, cfgAll)
+	err = StartRPC(svrCtx, ctx, app, rpcClient, svrCtx.Logger, cfgAll)
 	if err != nil {
 		return nil, nil, nil, err
 	}

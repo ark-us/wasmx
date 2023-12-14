@@ -157,7 +157,7 @@ func GrpcSetup(t *testing.T, mapp *app.App) *bufconn.Listener {
 	require.NoError(t, err)
 
 	lis := bufconn.Listen(bufSize)
-	grpcServer, err := NewGRPCServer(goctx, serverCtx, clientCtx, config.GRPC, mapp, nil)
+	grpcServer, err := NewGRPCServer(goctx, serverCtx, clientCtx, &config, mapp, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -186,16 +186,17 @@ func NewGRPCServer(
 	ctx context.Context,
 	svrCtx *server.Context,
 	clientCtx client.Context,
-	cfg sdkconfig.GRPCConfig,
+	cfg *config.Config,
 	app servertypes.Application,
 	tmNode *node.Node,
 ) (*grpc.Server, error) {
-	maxSendMsgSize := cfg.MaxSendMsgSize
+	grpccfg := cfg.GRPC
+	maxSendMsgSize := grpccfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
 		maxSendMsgSize = sdkconfig.DefaultGRPCMaxSendMsgSize
 	}
 
-	maxRecvMsgSize := cfg.MaxRecvMsgSize
+	maxRecvMsgSize := grpccfg.MaxRecvMsgSize
 	if maxRecvMsgSize == 0 {
 		maxRecvMsgSize = sdkconfig.DefaultGRPCMaxRecvMsgSize
 	}
@@ -206,7 +207,7 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	_, err := keeper.RegisterGRPCServer(ctx, svrCtx, clientCtx, app, grpcSrv)
+	_, err := keeper.RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}

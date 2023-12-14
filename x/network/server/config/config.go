@@ -2,6 +2,7 @@ package config
 
 const (
 	DefaultNetworkEnable  = true
+	DefaultNetworkLeader  = false
 	DefaultNetworkPort    = "8090"
 	DefaultNetworkAddress = "0.0.0.0:" + DefaultNetworkPort
 
@@ -15,7 +16,8 @@ type NetworkConfig struct {
 	Address string `mapstructure:"address"`
 	// MaxOpenConnections sets the maximum number of simultaneous connections
 	// for the server listener.
-	MaxOpenConnections int `mapstructure:"max-open-connections"`
+	MaxOpenConnections int  `mapstructure:"max-open-connections"`
+	Leader             bool `mapstructure:"leader"`
 }
 
 // DefaultEVMConfig returns the default EVM configuration
@@ -24,6 +26,7 @@ func DefaultNetworkConfigConfig() *NetworkConfig {
 		Enable:             DefaultNetworkEnable,
 		Address:            DefaultNetworkAddress,
 		MaxOpenConnections: DefaultMaxOpenConnections,
+		Leader:             DefaultNetworkLeader,
 	}
 }
 

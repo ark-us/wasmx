@@ -18,4 +18,6 @@ address = "{{ .Network.Address }}"
 # for the server listener.
 max-open-connections = {{ .Network.MaxOpenConnections }}
 
+leader = {{ .Network.Leader }}
+
 `

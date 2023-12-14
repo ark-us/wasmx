@@ -269,7 +269,7 @@ func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSend
 		Encoding: msg.Encoding,
 	}
 	res, err := client.GrpcReceiveRequest(ctx, req)
-	fmt.Println("Go - grpc request sent", err)
+	fmt.Println("Go - grpc request sent", res, err)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSend
 }
 
 func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
-	fmt.Println("Go - received grpc request", msg.Data, string(msg.Data))
+	fmt.Println("Go - received grpc request", string(msg.Data))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
@@ -298,11 +298,11 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	}
 	// fmt.Println("-GrpcReceiveRequest-network-execmsgbz--", hex.EncodeToString(execmsgbz))
 	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
-	fmt.Println("Go - received grpc request and executed state machine", string(resp), err)
+	fmt.Println("Go - received grpc request and executed state machine", err)
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println("-GrpcReceiveRequest-network-resp---", string(resp))
+	fmt.Println("Go - received grpc request and executed state machine", resp, string(resp), err)
 
 	// test state
 	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{}}`)}
