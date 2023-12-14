@@ -235,7 +235,7 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 	// TODO Debug!
-	ctx.GetContext().Logger().Info(msg, parts...)
+	ctx.GetContext().Logger().Debug(msg, parts...)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

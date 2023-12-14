@@ -141,15 +141,37 @@ func storageLoadGlobal(context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxGetReturnData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	newptr, err := allocateWriteMem(ctx, callframe, ctx.ReturnData)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = newptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxSetReturnData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	data, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	ctx.ReturnData = data
-	// fmt.Println("---getCalwasmxFinishlData--", data)
 	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 0)
+	ctx.ReturnData = data
+	// TODO fixme wasmedge fails if we terminate
 	// terminate the WASM execution
 	// return returns, wasmedge.Result_Terminate
 	return returns, wasmedge.Result_Success
@@ -161,8 +183,7 @@ func wasmxRevert(context interface{}, callframe *wasmedge.CallingFrame, params [
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	returns := make([]interface{}, 1)
-	returns[0] = data
+	returns := make([]interface{}, 0)
 	ctx.ReturnData = data
 	return returns, wasmedge.Result_Fail
 }
@@ -172,7 +193,7 @@ func asAbort(context interface{}, callframe *wasmedge.CallingFrame, params []int
 	message, _ := readMemFromPtr(callframe, params[0])
 	fileName, _ := readMemFromPtr(callframe, params[1])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", readJsString(message), readJsString(fileName), params[2], params[3]))
+	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", readJsString(message), readJsString(fileName), params[2], params[3]))
 	return wasmxRevert(context, callframe, params)
 }
 
@@ -203,6 +224,7 @@ func asConsoleError(context interface{}, callframe *wasmedge.CallingFrame, param
 func asConsoleDebug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
+	// TODO Debug!
 	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx: console.debug: %s", readJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -252,6 +274,8 @@ func BuildWasmxEnv1(context *Context) *wasmedge.Module {
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
+	env.AddFunction("getReturnData", wasmedge.NewFunction(functype__i32, wasmxGetReturnData, context, 0))
+	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32_, wasmxSetReturnData, context, 0))
 	env.AddFunction("finish", wasmedge.NewFunction(functype_i32_, wasmxFinish, context, 0))
 	env.AddFunction("revert", wasmedge.NewFunction(functype_i32_, wasmxRevert, context, 0))
 	env.AddFunction("storageLoad_global", wasmedge.NewFunction(functype_i32i32_, storageLoadGlobal, context, 0))
