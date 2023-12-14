@@ -95,3 +95,16 @@ CGO_LDFLAGS='-Wl,-rpath,/Users/user/.wasmedge/lib' go test --count=1 -short -v .
 | secp384r1    | 564953b2fecd1d407c12fdc5561cba42d943875f5052a9fdae07867f1503e425 | 0x0000000000000000000000000000000000000000000000000000000000000020 |
 | secp384r1_registry | 7826207180357cfff71028dfd847688e6379cfaac6f8f7d5624bd801fb99111f | 0x0000000000000000000000000000000000000000000000000000000000000021 |
 | evm_shanghai | 8870e4eb2859ccaaa50a06de94cec658d78617df336a8ec29f0a5c9f29bf975a | 0x0000000000000000000000000000000000000000000000000000000000000023 |
+
+## Default Ports
+
+* `1317` API server; REST HTTP server generated from protos (cosmos-sdk)
+* `9090` gRPC server generated from protos (cosmos-sdk)
+* `26656` consensus p2p incoming connections - p2p.laddr (former cometbft port)
+* `26657` consensus RPC - HTTP server + JSON-RPC server - rpc.laddr (former cometbft port)
+* `26657/websocket` consensus RPC - websockets (former cometbft port)
+* `8090` network module
+* `8545` JSON-RPC
+* `8546` JSON-RPC websockets
+* `9999` websrv webserver
+* `6060` pprof
