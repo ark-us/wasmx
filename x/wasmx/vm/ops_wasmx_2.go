@@ -398,23 +398,20 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-// startInterval(repeat: i32, time: u64, args: ArrayBuffer): i32
-func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+// startTimeout(repeat: i32, time: u64, args: ArrayBuffer): i32
+func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	repeatCount := params[0].(int32)
-	timeDelay := params[1].(int64)
-	argsbz, err := readMemFromPtr(callframe, params[2])
+	returns := make([]interface{}, 0)
+	timeDelay := params[0].(int64)
+	argsbz, err := readMemFromPtr(callframe, params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--wasmxStartInterval--", repeatCount, timeDelay, string(argsbz))
 
-	msgtosend := &networktypes.MsgStartIntervalRequest{
+	msgtosend := &networktypes.MsgStartTimeoutRequest{
 		Sender:   ctx.Env.Contract.Address.String(),
 		Contract: ctx.Env.Contract.Address.String(),
 		Delay:    timeDelay,
-		Repeat:   repeatCount,
 		Args:     argsbz,
 	}
 	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
@@ -422,14 +419,11 @@ func wasmxStartInterval(_context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var resp networktypes.MsgStartIntervalResponse
+	var resp networktypes.MsgStartTimeoutResponse
 	err = resp.Unmarshal(res)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	intervalId := resp.IntervalId
-	fmt.Println("---timer created intervalId", intervalId)
-	returns[0] = intervalId
 	return returns, wasmedge.Result_Success
 }
 
@@ -493,7 +487,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
-	env.AddFunction("startInterval", wasmedge.NewFunction(functype_i32i64i32_i32, wasmxStartInterval, context, 0))
+	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32i64i32_i32, wasmxStartTimeout, context, 0))
 	env.AddFunction("stopInterval", wasmedge.NewFunction(functype_i32_, wasmxStopInterval, context, 0))
 
 	return env

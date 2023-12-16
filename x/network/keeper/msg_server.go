@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
@@ -25,19 +24,17 @@ type IntervalAction struct {
 }
 
 type msgServer struct {
-	App           types.BaseApp
-	intervalCount int32
-	intervals     map[int32]*IntervalAction
+	App       types.BaseApp
+	intervals map[int32]*IntervalAction
 	Keeper
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
 func NewMsgServerImpl(keeper Keeper, app types.BaseApp) types.MsgServer {
 	return &msgServer{
-		Keeper:        keeper,
-		App:           app,
-		intervalCount: 0,
-		intervals:     map[int32]*IntervalAction{},
+		Keeper:    keeper,
+		App:       app,
+		intervals: map[int32]*IntervalAction{},
 	}
 }
 
@@ -46,18 +43,13 @@ func NewMsgServer(
 	keeper Keeper,
 ) types.MsgServer {
 	return &msgServer{
-		Keeper:        keeper,
-		intervalCount: 0,
-		intervals:     map[int32]*IntervalAction{},
+		Keeper:    keeper,
+		intervals: map[int32]*IntervalAction{},
 	}
 }
 
 var _ types.MsgServer = msgServer{}
 var _ types.BroadcastAPIServer = msgServer{}
-
-func (m *msgServer) incrementIntervalId() {
-	m.intervalCount += 1
-}
 
 func (m msgServer) Ping(goCtx context.Context, msg *types.RequestPing) (*types.ResponsePing, error) {
 	return &types.ResponsePing{}, nil
@@ -107,7 +99,7 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the interval is for?
-func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartIntervalRequest) (*types.MsgStartIntervalResponse, error) {
+func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
 	fmt.Println("Go - start interval request", msg.Contract, string(msg.Args))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
@@ -116,48 +108,31 @@ func (m msgServer) StartInterval(goCtx context.Context, msg *types.MsgStartInter
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
 
-	intervalId := m.intervalCount
-	fmt.Println("Go - intervalId", intervalId)
-	m.incrementIntervalId()
+	description := fmt.Sprintf("timed action: delay %dms, args: %s ", msg.Delay, string(msg.Args))
 
-	fmt.Println("Go - intervalCount", m.intervalCount)
-
-	m.intervals[intervalId] = &IntervalAction{
-		Delay:  msg.Delay,
-		Repeat: msg.Repeat,
-		Args:   msg.Args,
-		// Cancel: cancelFn, // just through a stop error TODO
-	}
-	fmt.Println("Go - post interval set")
-
-	description := fmt.Sprintf("timed action: id %d, delay %dms, repeat %d, args: %s ", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
-	_intervalId := big.NewInt(int64(intervalId))
-	data := append(_intervalId.FillBytes(make([]byte, 4)), msg.Args...)
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Args}
 	msgbz, err := json.Marshal(execmsg)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--StartInterval--", intervalId, msg.Delay, msg.Repeat, string(msg.Args))
+	fmt.Println("--StartTimeout--", msg.Delay, string(msg.Args))
 
 	timeDelay := msg.Delay
 	logger := m.Keeper.Logger(ctx)
 
 	// errCh := make(chan error)
 	m.goRoutineGroup.Go(func() error {
-		_, err := m.startIntervalInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
+		_, err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
 			logger.Error("eventual execution failed", "err", err, "description", description)
 		}
 		return nil
 	})
 
-	return &types.MsgStartIntervalResponse{
-		IntervalId: intervalId,
-	}, nil
+	return &types.MsgStartTimeoutResponse{}, nil
 }
 
-func (m msgServer) startIntervalInternalGoroutine(
+func (m msgServer) startTimeoutInternalGoroutine(
 	logger log.Logger,
 	description string,
 	timeDelay int64,
@@ -170,7 +145,7 @@ func (m msgServer) startIntervalInternalGoroutine(
 	errCh := make(chan error)
 	go func() {
 		logger.Info("eventual execution starting", "description", description)
-		err := m.startIntervalInternal(logger, description, timeDelay, msgbz, contractAddress)
+		err := m.startTimeoutInternal(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
 			logger.Error("eventual execution failed", "err", err)
 			// return err
@@ -196,7 +171,7 @@ func (m msgServer) startIntervalInternalGoroutine(
 	}
 }
 
-func (m msgServer) startIntervalInternal(
+func (m msgServer) startTimeoutInternal(
 	logger log.Logger,
 	description string,
 	timeDelay int64,
@@ -209,7 +184,7 @@ func (m msgServer) startIntervalInternal(
 
 	// set context
 	sdkCtx_, ctxcachems, err := CreateQueryContext(m.App, logger, height, false)
-	fmt.Println("--StartInterval--CreateQueryContext", err)
+	fmt.Println("--StartTimeout--CreateQueryContext", err)
 	if err != nil {
 		logger.Error("failed to create query context", "err", err)
 		return err
@@ -230,16 +205,16 @@ func (m msgServer) startIntervalInternal(
 	// }
 
 	// NOW execute
-	fmt.Println("--StartInterval--sleeping...")
+	fmt.Println("--StartTimeout--sleeping...")
 
 	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
-	fmt.Println("--StartInterval--ExecuteEventual...")
+	fmt.Println("--StartTimeout--ExecuteEventual...")
 
 	goCtx2 = context.WithValue(goCtx2, sdk.SdkContextKey, sdkCtx)
 	ctx := sdk.UnwrapSDKContext(goCtx2)
 
 	_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
-	fmt.Println("--StartInterval--ExecuteEventual", err)
+	fmt.Println("--StartTimeout--ExecuteEventual", err)
 	if err != nil {
 		// TODO - stop without propagating a stop to parent
 		if err == types.ErrGoroutineClosed {
