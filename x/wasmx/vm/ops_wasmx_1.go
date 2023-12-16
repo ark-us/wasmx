@@ -1,6 +1,7 @@
 package vm
 
 import (
+	crypto_rand "crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -236,6 +237,17 @@ func asDateNow(context interface{}, callframe *wasmedge.CallingFrame, params []i
 	return returns, wasmedge.Result_Success
 }
 
+func asSeed(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	returns := make([]interface{}, 1)
+	var b [8]byte
+	_, err := crypto_rand.Read(b[:])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = float64(binary.LittleEndian.Uint64(b[:]))
+	return returns, wasmedge.Result_Success
+}
+
 func readJsString(arr []byte) string {
 	msg := []byte{}
 	for i, char := range arr {
@@ -305,6 +317,7 @@ func BuildAssemblyScriptEnv(context *Context) *wasmedge.Module {
 	env.AddFunction("console.error", wasmedge.NewFunction(functype_i32_, asConsoleError, context, 0))
 	env.AddFunction("console.debug", wasmedge.NewFunction(functype_i32_, asConsoleDebug, context, 0))
 	env.AddFunction("Date.now", wasmedge.NewFunction(functype__f64, asDateNow, context, 0))
+	env.AddFunction("seed", wasmedge.NewFunction(functype__f64, asSeed, context, 0))
 	return env
 }
 
