@@ -166,6 +166,7 @@ func (m msgServer) startIntervalInternalGoroutine(
 ) (chan struct{}, error) {
 	goCtx2 := m.goContextParent
 	httpSrvDone := make(chan struct{}, 1)
+	intervalEnded := make(chan bool, 1)
 	errCh := make(chan error)
 	go func() {
 		logger.Info("eventual execution starting", "description", description)
@@ -175,18 +176,23 @@ func (m msgServer) startIntervalInternalGoroutine(
 			// return err
 			errCh <- err
 		}
+		logger.Info("eventual execution ended", "description", description)
+		// close(httpSrvDone)
+		intervalEnded <- true
 	}()
 
 	select {
 	case <-goCtx2.Done():
 		// The calling process canceled or closed the provided context, so we must
-		// gracefully stop the websrv server.
+		// gracefully stop the network server.
 		logger.Info("eventual execution stopping...")
 		// httpSrv.Close()
 		return httpSrvDone, nil
 	case err := <-errCh:
 		logger.Error("eventual execution failed to start", "error", err.Error())
 		return nil, err
+	case <-intervalEnded:
+		return httpSrvDone, nil
 	}
 }
 
@@ -241,7 +247,7 @@ func (m msgServer) startIntervalInternal(
 			return nil
 		}
 
-		m.Logger(ctx).Error("failed to start a new eventual thread", "error", err.Error())
+		m.Logger(ctx).Error("eventual execution failed", "error", err.Error())
 		return err
 	}
 
