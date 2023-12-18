@@ -28,29 +28,8 @@ service Msg {
     // QueryContract
     rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
 
-    // Setup
-    rpc Setup(MsgSetup) returns (MsgSetupResponse);
-
-    // Ping2
-    rpc Ping2(MsgPing2) returns (MsgPing2Response);
-
-    // MakeProposal
-    rpc MakeProposal(MsgMakeProposal) returns (MsgMakeProposalResponse);
-
-    // IsProposer // TODO this should be a query
-    rpc IsProposer(MsgIsProposer) returns (MsgIsProposerResponse);
-
-    // SetCurrentNode // TODO
-    rpc SetCurrentNode(MsgSetCurrentNode) returns (MsgSetCurrentNodeResponse);
-
-    // GetCurrentNode // TODO
-    rpc GetCurrentNode(MsgGetCurrentNode) returns (MsgGetCurrentNodeResponse);
-
-    // SetValidators // TODO remove
-    rpc SetValidators(MsgSetValidators) returns (MsgSetValidatorsResponse);
-
-    // GetValidators // TODO remove
-    rpc GetValidators(MsgGetValidators) returns (MsgGetValidatorsResponse);
+    // Ping
+    rpc Ping(MsgPing) returns (MsgPingResponse);
 }
 
 message MsgGrpcSendRequest {
@@ -143,82 +122,13 @@ message MsgQueryContractResponse {
     bytes data = 1;
 }
 
-// MsgPing2
-message MsgPing2 {
+// MsgPing
+message MsgPing {
     string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     string data = 2;
 }
 
-// MsgPing2Response
-message MsgPing2Response {
+// MsgPingResponse
+message MsgPingResponse {
     string data = 1;
-}
-
-// MsgSetup
-message MsgSetup {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string data = 2;
-}
-
-// MsgSetupResponse
-message MsgSetupResponse {
-    string data = 1;
-}
-
-// MsgMakeProposal
-message MsgMakeProposal {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string data = 2;
-}
-
-// MsgMakeProposalResponse
-message MsgMakeProposalResponse {
-    string data = 1;
-}
-
-// MsgSetValidators
-message MsgSetValidators {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-// MsgSetValidatorsResponse
-message MsgSetValidatorsResponse {}
-
-// MsgGetValidators
-message MsgGetValidators {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-// MsgGetValidatorsResponse
-message MsgGetValidatorsResponse {
-    repeated string validators = 1;
-}
-
-// MsgIsProposer
-message MsgIsProposer {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-// MsgIsProposerResponse is the response type for the Query/IsProposer RPC method.
-message MsgIsProposerResponse {
-  // params defines the parameters of the module.
-  bool is_proposer = 1;
-}
-
-// MsgSetCurrentNode
-message MsgSetCurrentNode {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-// MsgSetCurrentNodeResponse
-message MsgSetCurrentNodeResponse {}
-
-// MsgGetCurrentNode
-message MsgGetCurrentNode {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-// MsgGetCurrentNodeResponse
-message MsgGetCurrentNodeResponse {
-    string current_node = 1;
 }
