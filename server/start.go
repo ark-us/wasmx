@@ -181,6 +181,8 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 	cmd.Flags().Bool(networkflags.NetworkEnable, true, "Define if the network grpc server should be enabled")
 	cmd.Flags().Bool(networkflags.NetworkLeader, false, "Set node as leader. Temporary.")
+	cmd.Flags().String(networkflags.NetworkIps, "localhost:8090", "Set node ips. Temporary.")
+	cmd.Flags().Int32(networkflags.NetworkNodeId, 0, "Set node as leader. Temporary.")
 	cmd.Flags().String(networkflags.NetworkAddress, networkconfig.DefaultNetworkAddress, "the network grpc server address to listen on")
 	cmd.Flags().Int(networkflags.NetworkMaxOpenConnections, networkconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener") //nolint:lll
 

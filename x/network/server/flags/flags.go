@@ -6,4 +6,6 @@ const (
 	NetworkAddress            = "network.address"
 	NetworkMaxOpenConnections = "network.max-open-connections"
 	NetworkLeader             = "network.leader"
+	NetworkIps                = "network.ips"
+	NetworkNodeId             = "network.id"
 )

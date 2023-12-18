@@ -361,6 +361,11 @@ type GrpcRequest struct {
 	Data      []byte `json:"data"` // should be []byte (base64 encoded)
 }
 
+type GrpcResponse struct {
+	Data  []byte `json:"data"`
+	Error string `json:"error"`
+}
+
 func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
@@ -368,14 +373,11 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--wasmxGrpcRequest-databz-", string(databz))
 	var data GrpcRequest
 	err = json.Unmarshal(databz, &data)
-	fmt.Println("--wasmxGrpcRequest-err-", err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--wasmxGrpcRequest-data-", data)
 	contractAddress := sdk.AccAddress(vmtypes.CleanupAddress(data.Contract))
 	msg := &networktypes.MsgGrpcSendRequest{
 		IpAddress: data.IpAddress,
@@ -384,13 +386,21 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		Sender:    ctx.Env.Contract.Address.String(),
 	}
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
-	fmt.Println("--wasmxGrpcRequest-res, err-", res, err)
+	errmsg := ""
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		errmsg = err.Error()
 	}
 	// TODO evs?
 	fmt.Println("--evs", evs)
-	ptr, err := allocateWriteMem(ctx, callframe, res)
+	resp := GrpcResponse{
+		Data:  res,
+		Error: errmsg,
+	}
+	respbz, err := json.Marshal(resp)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -457,9 +467,9 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
-	functype_i32i64i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
+	functype_i64i32_ := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
+		[]wasmedge.ValType{},
 	)
 
 	env.AddFunction("sha256", wasmedge.NewFunction(functype_i32_i32, sha256, context, 0))
@@ -487,7 +497,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
-	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32i64i32_i32, wasmxStartTimeout, context, 0))
+	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i64i32_, wasmxStartTimeout, context, 0))
 	env.AddFunction("stopInterval", wasmedge.NewFunction(functype_i32_, wasmxStopInterval, context, 0))
 
 	return env

@@ -274,6 +274,20 @@ func initTestnetFiles(
 		genFiles    []string
 	)
 
+	var networkIps = make([]string, args.numValidators)
+	for i := 0; i < args.numValidators; i++ {
+		ip, err := getIP(i, args.startingIPAddress)
+		if err != nil {
+			return err
+		}
+		host := fmt.Sprintf("%s@%s:%s", nodeIDs[i], ip, "8090")
+		if args.sameMachine {
+			host = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+		}
+		networkIps[i] = host
+	}
+	networkIpsStr := strings.Join(networkIps, ",")
+
 	inBuf := bufio.NewReader(cmd.InOrStdin())
 	// generate private keys, node IDs, and initial transactions
 	for i := 0; i < args.numValidators; i++ {
@@ -412,9 +426,11 @@ func initTestnetFiles(
 		}
 		// TODO temporary until we find a way to set the leader
 		// Set the first node as a Leader
-		if i == 0 {
-			appConfigCopy.Network.Leader = true
-		}
+		// if i == 0 {
+		// 	appConfigCopy.Network.Leader = true
+		// }
+		appConfigCopy.Network.Id = int32(i)
+		appConfigCopy.Network.Ips = networkIpsStr
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
 	}

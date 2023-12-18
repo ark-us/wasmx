@@ -110,14 +110,15 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	ip1 := "bufnet1"
 	goctx1 := context.Background()
 	client1, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
 	defer conn1.Close()
 	consensusBech32 := "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy"
-	// contractAddress := sdk.MustAccAddressFromBech32(consensusBech32)
+	consensusAddr := sdk.MustAccAddressFromBech32(consensusBech32)
 
-	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\"]"}]}}}`, ip1))
+	initChainSetupStr := `{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"0.0.0.0:8090\"]"},{"key":"initChainSetup","value":"eyJjaGFpbl9pZCI6Im15dGhvc183MDAwLTE0IiwiY29uc2Vuc3VzX3BhcmFtcyI6eyJibG9jayI6eyJtYXhfYnl0ZXMiOjIyMDIwMDk2LCJtYXhfZ2FzIjotMX0sImV2aWRlbmNlIjp7Im1heF9hZ2VfbnVtX2Jsb2NrcyI6MTAwMDAwLCJtYXhfYWdlX2R1cmF0aW9uIjoxNzI4MDAwMDAwMDAwMDAsIm1heF9ieXRlcyI6MTA0ODU3Nn0sInZhbGlkYXRvciI6eyJwdWJfa2V5X3R5cGVzIjpbImVkMjU1MTkiXX0sInZlcnNpb24iOnsiYXBwIjowfSwiYWJjaSI6eyJ2b3RlX2V4dGVuc2lvbnNfZW5hYmxlX2hlaWdodCI6MH19LCJ2YWxpZGF0b3JzIjpbeyJhZGRyZXNzIjoiM0M2MUFCNDI5NkEyMUM1REZFRDRFNURBQTM0MTkxMDM3OUYxODUxNiIsInB1Yl9rZXkiOiJJKzNDZ05RZTNvQzE0RGd2TkdNbGcrR1Z4L3lhMWQ4dEhnTlBEUTQxRCtBPSIsInZvdGluZ19wb3dlciI6MTAwMDAwMDAwMDAwMDAwLCJwcm9wb3Nlcl9wcmlvcml0eSI6MH0seyJhZGRyZXNzIjoiMjZDQTYxQjM4MEMyOTc5M0NGQjNCQTFFN0I3ODg3NDMyMjJCRUY1OSIsInB1Yl9rZXkiOiIyQzd5RzJvTkdHM3liMTQzYXpmNGRodWJGTTBGYXhURjlpTElDNXdVYmZ3PSIsInZvdGluZ19wb3dlciI6MTAwMDAwMDAwMDAwMDAwLCJwcm9wb3Nlcl9wcmlvcml0eSI6MH1dLCJhcHBfaGFzaCI6IjQ3REVRcGo4SEJTYSsvVEltVys1SkNldVFlUmttNU5NcEpXWkczaFN1RlU9IiwibGFzdF9yZXN1bHRzX2hhc2giOiI0N0RFUXBqOEhCU2ErL1RJbVcrNUpDZXVRZVJrbTVOTXBKV1pHM2hTdUZVPSIsImN1cnJlbnRfdmFsaWRhdG9yIjoiM0M2MUFCNDI5NkEyMUM1REZFRDRFNURBQTM0MTkxMDM3OUYxODUxNiIsInZlcnNpb24iOnsiY29uc2Vuc3VzIjp7ImJsb2NrIjowLCJhcHAiOjB9LCJzb2Z0d2FyZSI6IiJ9fQ=="}]}}}`
+	msg1 := []byte(initChainSetupStr)
+
 	resp, err := client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
@@ -135,7 +136,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz := appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(string(qrespbz), fmt.Sprintf(`["%s"]`, ip1))
+	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
 
 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
 	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
@@ -155,10 +156,10 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`#RAFT-LogReplication.initialized.Follower`, string(qrespbz))
+	suite.Require().Equal(`#RAFT-FULL-1.initialized.unstarted`, string(qrespbz))
 
 	// Start Leader
-	msg1 = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
+	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
 	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
@@ -175,16 +176,20 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`#RAFT-LogReplication.initialized.Candidate`, string(qrespbz))
+	suite.Require().Equal(`#RAFT-FULL-1.initialized.Follower`, string(qrespbz))
 
-	msg1 = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-	resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
+	msg1 = []byte(`{"eventual":{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}}`)
+	respbz, err := appA.App.WasmxKeeper.ExecuteEventual(appA.Context(), consensusAddr, consensusAddr, msg1, nil)
 	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
+	log.Printf("Response: %+v", string(respbz))
+
+	// resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+	// 	Sender:   consensusBech32,
+	// 	Contract: consensusBech32,
+	// 	Msg:      msg1,
+	// })
+	// suite.Require().NoError(err)
+	// log.Printf("Response: %+v", resp)
 
 	msg1 = []byte(`{"getCurrentState":{}}`)
 	qresp, err = client1.QueryContract(goctx1, &types.MsgQueryContract{
@@ -194,7 +199,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`#RAFT-LogReplication.initialized.Leader.active`, string(qrespbz))
+	suite.Require().Equal(`#RAFT-FULL-1.initialized.Candidate`, string(qrespbz))
 
 	// send tx
 	contractAddress := wasmxtypes.AccAddressFromHex("0x0000000000000000000000000000000000000004")
@@ -297,7 +302,9 @@ func (suite *KeeperTestSuite) TestRAFTLogReplication() {
 	consensusBech32 := "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy"
 	// contractAddress := sdk.MustAccAddressFromBech32(consensusBech32)
 
-	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\",\"%s\"]"}]}}}`, ip1, ip2))
+	initChainSetup := "eyJjaGFpbl9pZCI6Im15dGhvc183MDAwLTE0IiwiY29uc2Vuc3VzX3BhcmFtcyI6eyJibG9jayI6eyJtYXhfYnl0ZXMiOjIyMDIwMDk2LCJtYXhfZ2FzIjotMX0sImV2aWRlbmNlIjp7Im1heF9hZ2VfbnVtX2Jsb2NrcyI6MTAwMDAwLCJtYXhfYWdlX2R1cmF0aW9uIjoxNzI4MDAwMDAwMDAwMDAsIm1heF9ieXRlcyI6MTA0ODU3Nn0sInZhbGlkYXRvciI6eyJwdWJfa2V5X3R5cGVzIjpbImVkMjU1MTkiXX0sInZlcnNpb24iOnsiYXBwIjowfSwiYWJjaSI6eyJ2b3RlX2V4dGVuc2lvbnNfZW5hYmxlX2hlaWdodCI6MH19LCJ2YWxpZGF0b3JzIjpbeyJhZGRyZXNzIjoiODRFMjhCRThGODk4QzE5NTMxOEU1QTg0RDMxRERBMzU5NzlFMUMwQSIsInB1Yl9rZXkiOiI4aERqZkJqc1c4d3k3Z2MzVlNSZk9LMnVoTlljaWJIdDdHbkI3a2p3KytjPSIsInZvdGluZ19wb3dlciI6MTAwMDAwMDAwMDAwMDAwLCJwcm9wb3Nlcl9wcmlvcml0eSI6MH1dLCJhcHBfaGFzaCI6IjQ3REVRcGo4SEJTYSsvVEltVys1SkNldVFlUmttNU5NcEpXWkczaFN1RlU9IiwibGFzdF9yZXN1bHRzX2hhc2giOiI0N0RFUXBqOEhCU2ErL1RJbVcrNUpDZXVRZVJrbTVOTXBKV1pHM2hTdUZVPSIsImN1cnJlbnRfdmFsaWRhdG9yIjoiODRFMjhCRThGODk4QzE5NTMxOEU1QTg0RDMxRERBMzU5NzlFMUMwQSIsInZlcnNpb24iOnsiY29uc2Vuc3VzIjp7ImJsb2NrIjowLCJhcHAiOjB9LCJzb2Z0d2FyZSI6IiJ9fQ"
+	// await runFnOwner("run", machine, {event: {type: "setupNode", params: [{key: "currentNodeId", value: "0"},{key: "nodeIPs", value: "[\"0.0.0.0:8090\"]"},{key: "initChainSetup", value: initChainSetup2}]}});
+	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"%s\",\"%s\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, ip1, ip2, initChainSetup))
 	resp, err := client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,

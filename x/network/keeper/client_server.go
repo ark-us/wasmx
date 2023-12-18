@@ -127,16 +127,9 @@ func NewGRPCServer(
 	if !ok {
 		return nil, nil, fmt.Errorf("failed to get BaseApp from server Application")
 	}
-	// mythosapp, ok := bapp.(MythosApp)
-	// if !ok {
-	// 	return nil, fmt.Errorf("failed to get MythosApp from server Application")
-	// }
 
 	logger := svrCtx.Logger.With("module", "network")
-
 	client := NewABCIClient(bapp, logger, networkServer)
-	fmt.Println("==NewABCIClient=rpcClient==", client)
-
 	clientCtx = clientCtx.WithClient(client)
 
 	// load genesis state
@@ -153,6 +146,11 @@ func NewGRPCServer(
 		// if err != nil {
 		// 	return nil, nil, err
 		// }
+	}
+	// start the node
+	err = startNode(svrCtx.Config, cfg.Network, bapp, logger, networkServer)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// ctx := sdk.UnwrapSDKContext(goCtx)
@@ -384,7 +382,6 @@ func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prov
 	// if err != nil {
 	// 	return sdk.Context{}, nil, err
 	// }
-	fmt.Println("-----NETWORK REQUEST-before GetContextForFinalizeBlock--")
 	// tmpctx := app.GetContextForFinalizeBlock(make([]byte, 0))
 	// tmpctx := app.GetContextForCheckTx(make([]byte, 0))
 
@@ -528,13 +525,12 @@ func initChain(
 	fmt.Println("--resInit--", resInit)
 
 	scfg := svrCtx.Config
-	// scfg.StateSync.
+
 	fmt.Println("--scfg.PrivValidatorListenAddr--", scfg.PrivValidatorListenAddr)
 	fmt.Println("--scfg--", scfg)
 	fmt.Println("--scfg.P2P.Seeds--", scfg.P2P.Seeds)
 	fmt.Println("--scfg.P2P.ExternalAddress--", scfg.P2P.ExternalAddress)
 	fmt.Println("--scfg.P2P.PersistentPeers--", scfg.P2P.PersistentPeers)
-
 	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
 
 	freq := &abci.RequestFinalizeBlock{
@@ -623,9 +619,37 @@ func initChain(
 	return resInit, nil
 }
 
+func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer) error {
+	sdkCtx, commitCacheCtx, ctxcachems, err := createContext(bapp, logger)
+	if err != nil {
+		return err
+	}
+	goCtx := context.Background()
+	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+
+	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
+	rresp, err := networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
+		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Msg:      msg,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer, initChainSetup *types.InitChainSetup) error {
 
 	sdkCtx, commitCacheCtx, ctxcachems, err := createContext(bapp, logger)
+	if err != nil {
+		return err
+	}
 	goCtx := context.Background()
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
 
@@ -638,14 +662,7 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	initData := base64.StdEncoding.EncodeToString(initbz)
 
 	// peers are joined by comma
-	persistentPeers := strings.Split(scfg.P2P.PersistentPeers, ",")
-	nodeIps := make([]string, len(persistentPeers)+1)
-	// add self // TODO
-	// nodeIps[0] = scfg.RPC.ListenAddress
-	nodeIps[0] = scfg.P2P.ListenAddress
-	for i, peer := range persistentPeers {
-		nodeIps[i+1] = peer[41:]
-	}
+	nodeIps := strings.Split(netcfg.Ips, ",")
 	peersbz, err := json.Marshal(nodeIps)
 	if err != nil {
 		return err
@@ -656,7 +673,7 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	fmt.Println("-nodeIPs peers-", peers)
 
 	// TODO node IPS!!!
-	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, peers, initData))
+	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
 	rresp, err := networkServer.ExecuteContract(goCtx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
@@ -715,7 +732,6 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 	// listenAddrs := splitAndTrimEmpty(n.config.RPC.ListenAddress, ",", " ")
 	listenAddr := svrCtx.Config.RPC.ListenAddress
 
-	fmt.Println("-StartRPC--listenAddr---", listenAddr)
 	env := Environment{app: app, networkWrap: networkWrap}
 	routes := env.GetRoutes()
 	wm := WebsocketManager{logger: logger}

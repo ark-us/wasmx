@@ -100,7 +100,7 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the interval is for?
 func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
-	fmt.Println("Go - start interval request", msg.Contract, string(msg.Args))
+	fmt.Println("Go - start interval request", msg.Contract, msg.Delay, string(msg.Args))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
@@ -115,7 +115,6 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--StartTimeout--", msg.Delay, string(msg.Args))
 
 	timeDelay := msg.Delay
 	logger := m.Keeper.Logger(ctx)
@@ -178,13 +177,15 @@ func (m msgServer) startTimeoutInternal(
 	msgbz []byte,
 	contractAddress sdk.AccAddress,
 ) error {
+	// sleep first and then load the context
+	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+
 	// goCtx := context.Background()
 	goCtx2 := m.goContextParent
 	height := m.App.LastBlockHeight()
 
 	// set context
 	sdkCtx_, ctxcachems, err := CreateQueryContext(m.App, logger, height, false)
-	fmt.Println("--StartTimeout--CreateQueryContext", err)
 	if err != nil {
 		logger.Error("failed to create query context", "err", err)
 		return err
@@ -205,16 +206,12 @@ func (m msgServer) startTimeoutInternal(
 	// }
 
 	// NOW execute
-	fmt.Println("--StartTimeout--sleeping...")
 
-	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
-	fmt.Println("--StartTimeout--ExecuteEventual...")
 
 	goCtx2 = context.WithValue(goCtx2, sdk.SdkContextKey, sdkCtx)
 	ctx := sdk.UnwrapSDKContext(goCtx2)
 
 	_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
-	fmt.Println("--StartTimeout--ExecuteEventual", err)
 	if err != nil {
 		// TODO - stop without propagating a stop to parent
 		if err == types.ErrGoroutineClosed {
@@ -269,9 +266,7 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
 
-	datab64 := base64.StdEncoding.EncodeToString(msg.Data)
-	data := []byte(fmt.Sprintf(`{"run":{"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"}]}}}`, datab64))
-	fmt.Println("===receiveHeartbeat==", string(data))
+	data := msg.Data
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
 	execmsgbz, err := json.Marshal(execmsg)
 	if err != nil {
@@ -284,42 +279,6 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 		return nil, err
 	}
 	fmt.Println("Go - received grpc request and executed state machine", resp, string(resp), err)
-
-	// test state
-	qmsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getCurrentState":{}}`)}
-	qmsgbz, err := json.Marshal(qmsg)
-	if err != nil {
-		return nil, err
-	}
-	qres, err := m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, qmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Go - current state query: ", string(qres))
-	var qresbz wasmxtypes.WasmxQueryResponse
-	err = json.Unmarshal(qres, &qresbz)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println("Go - current state: ", string(qresbz.Data))
-
-	// logs_count0
-	qmsg = wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"getContextValue":{"key":"logs_count"}}`)}
-	qmsgbz, err = json.Marshal(qmsg)
-	if err != nil {
-		return nil, err
-	}
-	qres, err = m.wasmxKeeper.Query(ctx, contractAddress, contractAddress, qmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Go - logs count: ", string(qres))
-	err = json.Unmarshal(qres, &qresbz)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Go - logs count: ", string(qresbz.Data))
 
 	return &types.MsgGrpcReceiveRequestResponse{
 		Data: resp,
