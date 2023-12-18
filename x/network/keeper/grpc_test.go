@@ -3,7 +3,6 @@ package keeper_test
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -39,64 +38,6 @@ type AppendEntry struct {
 	PrevLogTerm  int32      `json:"prevLogTerm"`
 	Entries      []LogEntry `json:"entries"`
 	LeaderCommit int64      `json:"leaderCommit"`
-}
-
-func (suite *KeeperTestSuite) TestSetValidators() {
-	ctx := context.Background()
-	mapp, ok := suite.chainA.App.(*app.App)
-	suite.Require().True(ok)
-	client, conn := suite.GrpcClient(ctx, DefaultTarget, mapp)
-	defer conn.Close()
-	resp, err := client.SetValidators(ctx, &types.MsgSetValidators{})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
-
-	fmt.Println("-----storage before-execution---")
-	app := suite.GetApp(suite.chainA)
-	bz, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000001")
-	tstorer := app.CommitMultiStore().GetKVStore(app.GetCLessKey(wasmxtypes.CLessStoreKey))
-	fmt.Println("-----GET-----0000000000000000000000000000000000000000000000000000000000000001", tstorer.Get(append(tstoreprefix, bz...)))
-	bz, _ = hex.DecodeString("b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6")
-	fmt.Println("------GET----b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6", tstorer.Get(append(tstoreprefix, bz...)))
-
-	// Test for output here.
-	fmt.Println("=====GetValidators====")
-	resp2, err := client.GetValidators(ctx, &types.MsgGetValidators{})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp2)
-}
-
-func (suite *KeeperTestSuite) TestSetValidators2() {
-	ctx := context.Background()
-	mapp, ok := suite.chainA.App.(*app.App)
-	suite.Require().True(ok)
-	client, conn := suite.GrpcClient(ctx, DefaultTarget, mapp)
-	resp, err := client.SetValidators(ctx, &types.MsgSetValidators{})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
-	conn.Close()
-
-	ctx = context.Background()
-	client, conn = suite.GrpcClient(ctx, DefaultTarget, mapp)
-	fmt.Println("=====GetValidators====")
-	resp2, err := client.GetValidators(ctx, &types.MsgGetValidators{})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp2)
-	conn.Close()
-}
-
-func (suite *KeeperTestSuite) TestStateMachineGrpc() {
-	ctx := context.Background()
-	mapp, ok := suite.chainA.App.(*app.App)
-	suite.Require().True(ok)
-	client, conn := suite.GrpcClient(ctx, DefaultTarget, mapp)
-	// client.Start -> contract.run(sendRequest) -> log current state
-	// query - receive msg -> contract.run(receiveRequest) -> log current state
-	//
-	resp, err := client.Ping2(ctx, &types.MsgPing2{Data: "localhost:8090"})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
-	conn.Close()
 }
 
 func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {

@@ -8,8 +8,8 @@ import (
 )
 
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(&MsgPing2{}, "network/MsgPing2", nil)
 	cdc.RegisterConcrete(&MsgGrpcSendRequest{}, "network/MsgGrpcSendRequest", nil)
+	cdc.RegisterConcrete(&MsgStartTimeoutRequest{}, "network/MsgStartTimeoutRequest", nil)
 
 	cdc.RegisterConcrete(&RequestPing{}, "network/RequestPing", nil)
 	cdc.RegisterConcrete(&RequestBroadcastTx{}, "network/RequestBroadcastTx", nil)
@@ -18,8 +18,8 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations(
 		(*sdk.Msg)(nil),
-		&MsgPing2{},
 		&MsgGrpcSendRequest{},
+		&MsgStartTimeoutRequest{},
 
 		&RequestPing{},
 		&RequestBroadcastTx{},

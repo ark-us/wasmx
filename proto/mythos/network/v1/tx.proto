@@ -27,9 +27,6 @@ service Msg {
 
     // QueryContract
     rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
-
-    // Ping
-    rpc Ping(MsgPing) returns (MsgPingResponse);
 }
 
 message MsgGrpcSendRequest {
@@ -120,15 +117,4 @@ message MsgQueryContract {
 // QueryContractResponse
 message MsgQueryContractResponse {
     bytes data = 1;
-}
-
-// MsgPing
-message MsgPing {
-    string contract = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string data = 2;
-}
-
-// MsgPingResponse
-message MsgPingResponse {
-    string data = 1;
 }
