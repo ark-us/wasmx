@@ -13,20 +13,26 @@ option (gogoproto.goproto_getters_all) = false;
 service Msg {
     option (cosmos.msg.v1.service) = true;
 
+    // needed by wasmx module
+
     // GrpcSendRequest
     rpc GrpcSendRequest(MsgGrpcSendRequest) returns (MsgGrpcSendRequestResponse);
-
-    // GrpcReceiveRequest
-    rpc GrpcReceiveRequest(MsgGrpcReceiveRequest) returns (MsgGrpcReceiveRequestResponse);
 
     // StartTimeout
     rpc StartTimeout(MsgStartTimeoutRequest) returns (MsgStartTimeoutResponse);
 
+    // this is external, for the grpc server
+    // TODO remove from the message server, only keep for grpc?
+
+    // GrpcReceiveRequest
+    rpc GrpcReceiveRequest(MsgGrpcReceiveRequest) returns (MsgGrpcReceiveRequestResponse);
+
+    // internal methods
     // ExecuteContract
-    rpc ExecuteContract(MsgExecuteContract) returns (MsgExecuteContractResponse);
+    // rpc ExecuteContract(MsgExecuteContract) returns (MsgExecuteContractResponse);
 
     // QueryContract
-    rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
+    // rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
 }
 
 message MsgGrpcSendRequest {

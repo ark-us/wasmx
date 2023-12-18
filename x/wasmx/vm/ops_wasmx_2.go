@@ -392,8 +392,15 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	}
 	// TODO evs?
 	fmt.Println("--evs", evs)
+	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
+	if res != nil {
+		err = rres.Unmarshal(res)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+	}
 	resp := GrpcResponse{
-		Data:  res,
+		Data:  rres.Data,
 		Error: errmsg,
 	}
 	respbz, err := json.Marshal(resp)

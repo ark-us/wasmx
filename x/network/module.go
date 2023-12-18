@@ -92,25 +92,28 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 // AppModule implements the AppModule interface that defines the inter-dependent methods that modules need to implement
 type AppModule struct {
 	AppModuleBasic
-	keeper keeper.Keeper
-	app    types.BaseApp
+	keeper         keeper.Keeper
+	app            types.BaseApp
+	actionExecutor *keeper.ActionExecutor
 }
 
 func NewAppModule(
 	cdc codec.Codec,
 	keeper keeper.Keeper,
 	app types.BaseApp,
+	actionExecutor *keeper.ActionExecutor,
 ) AppModule {
 	return AppModule{
 		AppModuleBasic: NewAppModuleBasic(cdc),
 		keeper:         keeper,
 		app:            app,
+		actionExecutor: actionExecutor,
 	}
 }
 
 // RegisterServices registers a gRPC query service to respond to the module-specific gRPC queries
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper, am.app))
+	types.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(&am.keeper, am.app, am.actionExecutor))
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 }
 

@@ -231,7 +231,8 @@ type App struct {
 
 	WebsrvKeeper websrvmodulekeeper.Keeper
 
-	NetworkKeeper networkmodulekeeper.Keeper
+	NetworkKeeper  networkmodulekeeper.Keeper
+	actionExecutor *networkmodulekeeper.ActionExecutor
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
 
 	// mm is the module manager
@@ -589,7 +590,8 @@ func New(
 		// TODO remove authority?
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
-	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
+	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app, app.actionExecutor)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
@@ -1175,8 +1177,11 @@ func (app *App) SimulationManager() *module.SimulationManager {
 }
 
 // For network grpc
-func (app *App) GetNetworkKeeper() networkmodulekeeper.Keeper {
-	return app.NetworkKeeper
+func (app *App) GetNetworkKeeper() *networkmodulekeeper.Keeper {
+	return &app.NetworkKeeper
+}
+func (app *App) GetActionExecutor() *networkmodulekeeper.ActionExecutor {
+	return app.actionExecutor
 }
 
 func Exit(s string) {

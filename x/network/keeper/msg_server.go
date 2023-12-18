@@ -3,14 +3,12 @@ package keeper
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/log"
-	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/network/types"
@@ -24,31 +22,25 @@ type IntervalAction struct {
 }
 
 type msgServer struct {
-	App       types.BaseApp
-	intervals map[int32]*IntervalAction
-	Keeper
+	ActionExecutor *ActionExecutor
+	App            types.BaseApp
+	intervals      map[int32]*IntervalAction
+	*Keeper
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServerImpl(keeper Keeper, app types.BaseApp) types.MsgServer {
+func NewMsgServerImpl(keeper *Keeper, app types.BaseApp, actionExecutor *ActionExecutor) types.MsgServer {
 	return &msgServer{
-		Keeper:    keeper,
-		App:       app,
-		intervals: map[int32]*IntervalAction{},
-	}
-}
-
-// NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServer(
-	keeper Keeper,
-) types.MsgServer {
-	return &msgServer{
-		Keeper:    keeper,
-		intervals: map[int32]*IntervalAction{},
+		Keeper:         keeper,
+		App:            app,
+		ActionExecutor: actionExecutor,
+		intervals:      map[int32]*IntervalAction{},
 	}
 }
 
 var _ types.MsgServer = msgServer{}
+
+// TODO do we stil nee this?
 var _ types.BroadcastAPIServer = msgServer{}
 
 func (m msgServer) Ping(goCtx context.Context, msg *types.RequestPing) (*types.ResponsePing, error) {
@@ -57,9 +49,10 @@ func (m msgServer) Ping(goCtx context.Context, msg *types.RequestPing) (*types.R
 
 func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcastTx) (*types.ResponseBroadcastTx, error) {
 	// TODO BroadcastTxCommit and return receipt
+	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	msgbz := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(msg.Tx)))
-	rresp, err := m.ExecuteContract(goCtx, &types.MsgExecuteContract{
+	rresp, err := m.Keeper.ExecuteContract(ctx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msgbz,
@@ -94,6 +87,47 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 			Data: rresp.Data,
 			Log:  "",
 		},
+	}, nil
+}
+
+func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	ip := msg.IpAddress
+	client := StartGRPCClient(ip)
+	req := &types.MsgGrpcReceiveRequest{
+		Data:     msg.Data,
+		Sender:   msg.Sender,
+		Contract: msg.Contract,
+		Encoding: msg.Encoding,
+	}
+	res, err := client.GrpcReceiveRequest(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgGrpcSendRequestResponse{
+		Data: res.Data,
+	}, nil
+}
+
+func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	msg2 := &types.MsgExecuteContract{
+		Sender:   msg.Sender,
+		Contract: msg.Contract,
+		Msg:      msg.Data,
+	}
+	resp, err := m.Keeper.ExecuteContract(ctx, msg2)
+
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Go - received grpc request and executed state machine", resp, string(resp.Data), err)
+
+	return &types.MsgGrpcReceiveRequestResponse{
+		Data: resp.Data,
 	}, nil
 }
 
@@ -180,161 +214,26 @@ func (m msgServer) startTimeoutInternal(
 	// sleep first and then load the context
 	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 
-	// goCtx := context.Background()
 	goCtx2 := m.goContextParent
 	height := m.App.LastBlockHeight()
 
-	// set context
-	sdkCtx_, ctxcachems, err := CreateQueryContext(m.App, logger, height, false)
-	if err != nil {
-		logger.Error("failed to create query context", "err", err)
-		return err
-	}
-	sdkCtx, commitCacheCtx := sdkCtx_.CacheContext()
-
-	// // Add relevant gRPC headers
-	// if height == 0 {
-	// 	height = sdkCtx.BlockHeight() // If height was not set in the request, set it to the latest
-	// }
-
-	// Attach the sdk.Context into the gRPC's context.Context.
-	// grpcCtx = context.WithValue(grpcCtx, sdk.SdkContextKey, sdkCtx)
-
-	// md := metadata.Pairs(grpctypes.GRPCBlockHeightHeader, strconv.FormatInt(height, 10))
-	// if err = grpc.SetHeader(grpcCtx, md); err != nil {
-	// 	logger.Error("failed to set gRPC header", "err", err)
-	// }
-
-	// NOW execute
-
-
-	goCtx2 = context.WithValue(goCtx2, sdk.SdkContextKey, sdkCtx)
-	ctx := sdk.UnwrapSDKContext(goCtx2)
-
-	_, err = m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
-	if err != nil {
-		// TODO - stop without propagating a stop to parent
-		if err == types.ErrGoroutineClosed {
-			m.Logger(ctx).Error("Closing eventual thread", "description", description, err.Error())
-			return nil
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+		res, err := m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
+		if err != nil {
+			// TODO - stop without propagating a stop to parent
+			if err == types.ErrGoroutineClosed {
+				m.Logger(ctx).Error("Closing eventual thread", "description", description, err.Error())
+				return res, nil
+			}
+			m.Logger(ctx).Error("eventual execution failed", "error", err.Error())
+			return nil, err
 		}
-
-		m.Logger(ctx).Error("eventual execution failed", "error", err.Error())
-		return err
+		return res, nil
 	}
+	// disregard result
+	_, err := m.ActionExecutor.Execute(goCtx2, height, cb)
 
-	commitCacheCtx()
-	// commit original context
-	mythosapp, ok := m.App.(MythosApp)
-	if !ok {
-		return fmt.Errorf("failed to get MythosApp from server Application")
-	}
-	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
-	origtstore.(storetypes.CacheWrap).Write()
-	return nil
-}
 
-func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
-	fmt.Println("Go - send grpc request", msg.IpAddress, msg.Data, string(msg.Data))
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	ip := msg.IpAddress
-	client := StartGRPCClient(ip)
-	req := &types.MsgGrpcReceiveRequest{
-		Data:     msg.Data,
-		Sender:   msg.Sender,
-		Contract: msg.Contract,
-		Encoding: msg.Encoding,
-	}
-	res, err := client.GrpcReceiveRequest(ctx, req)
-	fmt.Println("Go - grpc request sent", res, err)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.MsgGrpcSendRequestResponse{
-		Data: res.Data,
-	}, nil
-}
-
-func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
-	fmt.Println("Go - received grpc request", string(msg.Data))
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
-	}
-
-	data := msg.Data
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: data}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-	// fmt.Println("-GrpcReceiveRequest-network-execmsgbz--", hex.EncodeToString(execmsgbz))
-	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, contractAddress, execmsgbz, nil, nil)
-	fmt.Println("Go - received grpc request and executed state machine", err)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Go - received grpc request and executed state machine", resp, string(resp), err)
-
-	return &types.MsgGrpcReceiveRequestResponse{
-		Data: resp,
-	}, nil
-}
-
-func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "sender")
-	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Msg}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := m.wasmxKeeper.Execute(ctx, contractAddress, senderAddr, execmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.MsgExecuteContractResponse{
-		Data: resp,
-	}, nil
-}
-
-func (m msgServer) QueryContract(goCtx context.Context, msg *types.MsgQueryContract) (*types.MsgQueryContractResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "sender")
-	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Msg}
-	execmsgbz, err := json.Marshal(execmsg)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := m.wasmxKeeper.Query(ctx, contractAddress, senderAddr, execmsgbz, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.MsgQueryContractResponse{
-		Data: resp,
-	}, nil
+	return err
 }
