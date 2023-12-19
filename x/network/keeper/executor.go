@@ -166,7 +166,6 @@ func NewActionExecutor(bapp types.BaseApp, logger log.Logger) *ActionExecutor {
 }
 
 func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
-	fmt.Println("----ActionExecutor START--")
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
@@ -178,9 +177,7 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 		goCtx = context.Background()
 	}
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
-
 	res, err := cb(goCtx)
-	fmt.Println("----ActionExecutor exec cb--", res, err)
 	if err != nil {
 		return nil, err
 	}

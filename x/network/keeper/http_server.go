@@ -10,6 +10,7 @@ import (
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometrpc "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	rpctypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
+	"github.com/cometbft/cometbft/types"
 	comettypes "github.com/cometbft/cometbft/types"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -66,47 +67,50 @@ func (env *Environment) GetRoutes() cometcore.RoutesMap {
 	}
 }
 
-func (env *Environment) Subscribe(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Subscribe(ctx *rpctypes.Context, query string) (*ctypes.ResultSubscribe, error) {
 	fmt.Println("= WS Subscribe")
 	return nil, fmt.Errorf("Subscribe not implemented")
 }
 
-func (env *Environment) Unsubscribe(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Unsubscribe(ctx *rpctypes.Context, query string) (*ctypes.ResultUnsubscribe, error) {
 	fmt.Println("= WS Unsubscribe")
 	return nil, fmt.Errorf("Unsubscribe not implemented")
 }
 
-func (env *Environment) UnsubscribeAll(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) UnsubscribeAll(ctx *rpctypes.Context) (*ctypes.ResultUnsubscribe, error) {
 	fmt.Println("= WS UnsubscribeAll")
 	return nil, fmt.Errorf("UnsubscribeAll not implemented")
 }
 
-func (env *Environment) Health(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Health(*rpctypes.Context) (*ctypes.ResultHealth, error) {
 	fmt.Println("= WS Health")
 	return nil, fmt.Errorf("Health not implemented")
 }
 
-func (env *Environment) Status(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Status(*rpctypes.Context) (*ctypes.ResultStatus, error) {
 	fmt.Println("= WS Status")
 	return nil, fmt.Errorf("Status not implemented")
 }
 
-func (env *Environment) NetInfo(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) NetInfo(*rpctypes.Context) (*ctypes.ResultNetInfo, error) {
 	fmt.Println("= WS NetInfo")
 	return nil, fmt.Errorf("NetInfo not implemented")
 }
 
-func (env *Environment) BlockchainInfo(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BlockchainInfo(
+	_ *rpctypes.Context,
+	minHeight, maxHeight int64,
+) (*ctypes.ResultBlockchainInfo, error) {
 	fmt.Println("= WS BlockchainInfo")
 	return nil, fmt.Errorf("BlockchainInfo not implemented")
 }
 
-func (env *Environment) Genesis(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Genesis(*rpctypes.Context) (*ctypes.ResultGenesis, error) {
 	fmt.Println("= WS Genesis")
 	return nil, fmt.Errorf("Genesis not implemented")
 }
 
-func (env *Environment) GenesisChunked(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) GenesisChunked(_ *rpctypes.Context, chunk uint) (*ctypes.ResultGenesisChunk, error) {
 	fmt.Println("= WS GenesisChunked")
 	return nil, fmt.Errorf("GenesisChunked not implemented")
 }
@@ -116,32 +120,32 @@ func (env *Environment) Block(ctx *rpctypes.Context, height *int64) (*ctypes.Res
 	return env.networkWrap.Block(context.TODO(), height)
 }
 
-func (env *Environment) BlockByHash(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BlockByHash(_ *rpctypes.Context, hash []byte) (*ctypes.ResultBlock, error) {
 	fmt.Println("= WS BlockByHash")
 	return nil, fmt.Errorf("BlockByHash not implemented")
 }
 
-func (env *Environment) BlockResults(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BlockResults(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultBlockResults, error) {
 	fmt.Println("= WS BlockResults")
 	return nil, fmt.Errorf("BlockResults not implemented")
 }
 
-func (env *Environment) Commit(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Commit(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultCommit, error) {
 	fmt.Println("= WS Commit")
 	return nil, fmt.Errorf("Commit not implemented")
 }
 
-func (env *Environment) Header(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Header(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultHeader, error) {
 	fmt.Println("= WS Header")
 	return nil, fmt.Errorf("Header not implemented")
 }
 
-func (env *Environment) HeaderByHash(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) HeaderByHash(_ *rpctypes.Context, hash bytes.HexBytes) (*ctypes.ResultHeader, error) {
 	fmt.Println("= WS HeaderByHash")
 	return nil, fmt.Errorf("HeaderByHash not implemented")
 }
 
-func (env *Environment) CheckTx(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) CheckTx(_ *rpctypes.Context, tx types.Tx) (*ctypes.ResultCheckTx, error) {
 	fmt.Println("= WS CheckTx")
 	return nil, fmt.Errorf("CheckTx not implemented")
 }
@@ -155,49 +159,67 @@ func (env *Environment) Tx(ctx *rpctypes.Context, hash []byte, prove bool) (*cty
 	return env.networkWrap.Tx(context.TODO(), hash, prove)
 }
 
-func (env *Environment) TxSearch(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultTxSearch, error) {
+func (env *Environment) TxSearch(
+	ctx *rpctypes.Context,
+	query string,
+	prove bool,
+	pagePtr, perPagePtr *int,
+	orderBy string,
+) (*ctypes.ResultTxSearch, error) {
 	fmt.Println("= WS TxSearch")
 	return nil, fmt.Errorf("TxSearch not implemented")
 }
 
-func (env *Environment) BlockSearch(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BlockSearch(
+	ctx *rpctypes.Context,
+	query string,
+	pagePtr, perPagePtr *int,
+	orderBy string,
+) (*ctypes.ResultBlockSearch, error) {
 	fmt.Println("= WS BlockSearch")
 	return nil, fmt.Errorf("BlockSearch not implemented")
 }
 
-func (env *Environment) Validators(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) Validators(
+	_ *rpctypes.Context,
+	heightPtr *int64,
+	pagePtr, perPagePtr *int,
+) (*ctypes.ResultValidators, error) {
 	fmt.Println("= WS Validators")
 	return nil, fmt.Errorf("Validators not implemented")
 }
 
-func (env *Environment) DumpConsensusState(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) DumpConsensusState(*rpctypes.Context) (*ctypes.ResultDumpConsensusState, error) {
 	fmt.Println("= WS DumpConsensusState")
 	return nil, fmt.Errorf("DumpConsensusState not implemented")
 }
 
-func (env *Environment) GetConsensusState(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) GetConsensusState(*rpctypes.Context) (*ctypes.ResultConsensusState, error) {
 	fmt.Println("= WS GetConsensusState")
 	return nil, fmt.Errorf("GetConsensusState not implemented")
 }
 
-func (env *Environment) ConsensusParams(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) ConsensusParams(
+	_ *rpctypes.Context,
+	heightPtr *int64,
+) (*ctypes.ResultConsensusParams, error) {
 	fmt.Println("= WS ConsensusParams")
 	return nil, fmt.Errorf("ConsensusParams not implemented")
 }
 
-func (env *Environment) UnconfirmedTxs(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) UnconfirmedTxs(_ *rpctypes.Context, limitPtr *int) (*ctypes.ResultUnconfirmedTxs, error) {
 	fmt.Println("= WS UnconfirmedTxs")
 	return nil, fmt.Errorf("UnconfirmedTxs not implemented")
 }
 
-func (env *Environment) NumUnconfirmedTxs(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) NumUnconfirmedTxs(*rpctypes.Context) (*ctypes.ResultUnconfirmedTxs, error) {
 	fmt.Println("= WS NumUnconfirmedTxs")
 	return nil, fmt.Errorf("NumUnconfirmedTxs not implemented")
 }
 
 // BroadcastTxCommit returns with the responses from CheckTx and ExecTxResult.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Tx/broadcast_tx_commit
-func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 	fmt.Println("= WS BroadcastTxCommit")
 	return nil, fmt.Errorf("BroadcastTxCommit not implemented")
 }
@@ -207,9 +229,9 @@ func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx)
 	return env.networkWrap.BroadcastTxSync(context.TODO(), tx)
 }
 
-func (env *Environment) BroadcastTxAsync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BroadcastTxAsync(_ *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
 	fmt.Println("= WS BroadcastTxAsync")
-	return nil, fmt.Errorf("BroadcastTxAsync not implemented")
+	return env.networkWrap.BroadcastTxAsync(context.TODO(), tx)
 
 	// err := env.Mempool.CheckTx(tx, nil, mempl.TxInfo{})
 	// if err != nil {
@@ -225,7 +247,6 @@ func (env *Environment) ABCIQuery(
 	height int64,
 	prove bool,
 ) (*ctypes.ResultABCIQuery, error) {
-	fmt.Println("= WS ABCIQuery")
 	req := &abci.RequestQuery{
 		Data:   data,
 		Height: height,
@@ -240,12 +261,18 @@ func (env *Environment) ABCIQuery(
 	return resp, nil
 }
 
-func (env *Environment) ABCIInfo(ctx *rpctypes.Context) (*ctypes.ResultBroadcastTxCommit, error) {
-	fmt.Println("= WS ABCIInfo")
-	return nil, fmt.Errorf("ABCIInfo not implemented")
+func (env *Environment) ABCIInfo(_ *rpctypes.Context) (*ctypes.ResultABCIInfo, error) {
+	resInfo, err := env.app.Info(RequestInfo)
+	if err != nil {
+		return nil, err
+	}
+	return &ctypes.ResultABCIInfo{Response: *resInfo}, nil
 }
 
-func (env *Environment) BroadcastEvidence(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BroadcastEvidence(
+	_ *rpctypes.Context,
+	ev types.Evidence,
+) (*ctypes.ResultBroadcastEvidence, error) {
 	fmt.Println("= WS BroadcastEvidence")
 	return nil, fmt.Errorf("BroadcastEvidence not implemented")
 }

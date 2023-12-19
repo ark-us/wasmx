@@ -246,8 +246,6 @@ func RegisterGRPCServer(
 			}
 		}
 
-		fmt.Println("-----NETWORK REQUEST--height-", height)
-
 		cb := func(goctx context.Context) (any, error) {
 			sdkCtx := sdk.UnwrapSDKContext(goctx)
 			// Add relevant gRPC headers
