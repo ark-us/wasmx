@@ -495,9 +495,7 @@ func (suite *KeeperTestSuite) TestRAFTEncodeTx() {
 	}
 	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
 	txstr := base64.StdEncoding.EncodeToString(tx)
-	fmt.Println("==txstr==", txstr)
 
 	msgbase64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr)))
-
 	fmt.Println("==msgbase64==", msgbase64)
 }

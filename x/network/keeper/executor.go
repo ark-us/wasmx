@@ -57,8 +57,6 @@ func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prov
 		height = lastBlockHeight
 	}
 
-	fmt.Println("-CreateQueryContext-", height)
-
 	if height <= 1 && prove {
 		return sdk.Context{}, nil, nil,
 			errorsmod.Wrap(
@@ -187,6 +185,5 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("----ActionExecutor END--")
 	return res, nil
 }

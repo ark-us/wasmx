@@ -18,6 +18,7 @@ import (
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/rs/cors"
 
 	gws "github.com/gorilla/websocket"
 
@@ -44,9 +45,12 @@ import (
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
+	cmtquery "github.com/cometbft/cometbft/libs/pubsub/query"
+	"github.com/cometbft/cometbft/libs/pubsub/query/syntax"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
@@ -142,7 +146,7 @@ func NewGRPCServer(
 		if err != nil {
 			return nil, nil, err
 		}
-		fmt.Println("--resInit--", resInit)
+		fmt.Println("* resInit", resInit)
 
 		// err = setupNode(bapp, logger, networkServer)
 		// if err != nil {
@@ -366,12 +370,11 @@ func initChain(
 	validatorSet := cmttypes.NewValidatorSet(validators)
 	nextVals := cmttypes.TM2PB.ValidatorUpdates(validatorSet)
 	pbparams := genDoc.ConsensusParams.ToProto()
-	fmt.Println("--InitialHeight--", genDoc.InitialHeight)
 	bapp, ok := app.(types.BaseApp)
 	if !ok {
 		return nil, fmt.Errorf("failed to get BaseApp from server Application")
 	}
-	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
+
 	req := &abci.RequestInitChain{
 		Time:            genDoc.GenesisTime,
 		ChainId:         genDoc.ChainID,
@@ -380,39 +383,30 @@ func initChain(
 		Validators:      nextVals,
 		AppStateBytes:   genDoc.AppState,
 	}
-	fmt.Println("--InitChain--", req)
 	resInit, err := app.InitChain(req)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--resInit--", resInit)
+	fmt.Println("* resInit", resInit)
 
 	scfg := svrCtx.Config
-
-	fmt.Println("--scfg.PrivValidatorListenAddr--", scfg.PrivValidatorListenAddr)
-	fmt.Println("--scfg--", scfg)
-	fmt.Println("--scfg.P2P.Seeds--", scfg.P2P.Seeds)
-	fmt.Println("--scfg.P2P.ExternalAddress--", scfg.P2P.ExternalAddress)
-	fmt.Println("--scfg.P2P.PersistentPeers--", scfg.P2P.PersistentPeers)
-	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
-
 	freq := &abci.RequestFinalizeBlock{
 		Height: req.InitialHeight,
 		Time:   req.Time,
 	}
 	resFinalize, err := app.FinalizeBlock(freq)
-	fmt.Println("--resFinalize--", resFinalize, err)
-
-	resCommit, err := app.Commit()
-	fmt.Println("--resCommit--", resCommit, err)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("* resFinalize", resFinalize)
 
-	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
+	resCommit, err := app.Commit()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("* resCommit", resCommit)
 
 	// If the app returned validators or consensus params, update the state.
-
 	appHash = resInit.AppHash
 	if len(resInit.AppHash) > 0 {
 		appHash = resInit.AppHash
@@ -464,8 +458,6 @@ func initChain(
 		return nil, err
 	}
 
-	fmt.Println("--app.LastBlockHeight()--", bapp.LastBlockHeight())
-
 	// freq = &abci.RequestFinalizeBlock{
 	// 	Height: bapp.LastBlockHeight(),
 	// 	Time:   req.Time,
@@ -489,7 +481,7 @@ func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	}
 
 	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	rresp, err := networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
+	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msg,
@@ -506,14 +498,11 @@ func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 }
 
 func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer, initChainSetup *types.InitChainSetup) error {
-
 	// TODO do I need to replace CreateQueryContext with ActionExecutor?
 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, logger, bapp.LastBlockHeight(), false)
 	if err != nil {
 		return err
 	}
-
-	// TODO ips!
 
 	initbz, err := json.Marshal(initChainSetup)
 	if err != nil {
@@ -527,14 +516,12 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	if err != nil {
 		return err
 	}
-
 	peers := string(peersbz)
 	peers = strings.Replace(peers, `"`, `\"`, -1)
-	fmt.Println("-nodeIPs peers-", peers)
 
 	// TODO node IPS!!!
 	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
-	rresp, err := networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
+	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
 		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msg,
@@ -545,19 +532,18 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	if netcfg.Leader {
 		// make node a candidate
 		msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-		rresp, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
+		_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
 			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 			Msg:      msg,
 		})
-		fmt.Println("--ExecuteContract candidate--", rresp, err)
 		if err != nil {
 			return err
 		}
 
 		// make node a leader
 		msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-		rresp, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
+		_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
 			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 			Msg:      msg,
@@ -592,10 +578,9 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 	// listenAddrs := splitAndTrimEmpty(n.config.RPC.ListenAddress, ",", " ")
 	listenAddr := svrCtx.Config.RPC.ListenAddress
 
-	env := Environment{app: app, networkWrap: networkWrap}
+	env := Environment{app: app, networkWrap: networkWrap, serverConfig: svrCtx.Config, config: cfg}
 	routes := env.GetRoutes()
 	wm := WebsocketManager{logger: logger}
-	// rpcLogger := logger.With("module", "rpc-server")
 	rpcLogger := servercmtlog.CometLoggerWrapper{Logger: logger.With("module", "rpc-server")}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/websocket", wm.WebsocketHandler)
@@ -604,9 +589,9 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 	// mux.HandleFunc("/health", makeHTTPHandler(rpcFunc, logger))
 
 	var rootHandler http.Handler = mux
-	// if rpcConfig.IsCorsEnabled() {
-	// 	rootHandler = addCORSHandler(rpcConfig, mux)
-	// }
+	if svrCtx.Config.RPC.IsCorsEnabled() {
+		rootHandler = addCORSHandler(svrCtx.Config.RPC, mux)
+	}
 	// return rootHandler
 
 	config := cometjsonserver.DefaultConfig()
@@ -650,6 +635,16 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 	// }
 
 	return nil
+}
+
+func addCORSHandler(rpcConfig *cmtconfig.RPCConfig, h http.Handler) http.Handler {
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins: rpcConfig.CORSAllowedOrigins,
+		AllowedMethods: rpcConfig.CORSAllowedMethods,
+		AllowedHeaders: rpcConfig.CORSAllowedHeaders,
+	})
+	h = corsMiddleware.Handler(h)
+	return h
 }
 
 // func RegisterRPCFuncs(mux *http.ServeMux, funcMap map[string]*RPCFunc, logger log.Logger) {
@@ -741,7 +736,7 @@ func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpct
 }
 
 func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
-	fmt.Println("-network-BroadcastTxAsync--")
+	fmt.Println("* ABCIClient BroadcastTxAsync")
 	// TODO use ctx from params?
 
 	cb := func(goctx context.Context) (any, error) {
@@ -751,7 +746,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 			Msg:      msg,
 		})
-		fmt.Println("-network-ExecuteContract BroadcastTxAsync--", rresp, err)
+		fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
 		if err != nil {
 			return nil, err
 		}
@@ -760,12 +755,14 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 	resp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
 	// TODO handle resp, err ?
 
+	fmt.Println("* ABCIClient BroadcastTxAsync", resp, err)
+	fmt.Println("* ABCIClient txhash", hex.EncodeToString(tx.Hash()), base64.StdEncoding.EncodeToString(tx.Hash()))
 
 	return &rpctypes.ResultBroadcastTx{Hash: tx.Hash()}, nil
 }
 
 func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
-	fmt.Println("-network-BroadcastTxSync--")
+	fmt.Println("* ABCIClient BroadcastTxSync")
 
 	return c.BroadcastTxAsync(ctx, tx)
 
@@ -953,8 +950,36 @@ func (c *ABCIClient) TxSearch(
 	page, perPage *int,
 	orderBy string,
 ) (*rpctypes.ResultTxSearch, error) {
-	fmt.Println("-network-TxSearch--")
-	return nil, nil
+	q, err := cmtquery.New(query)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("* TxSearch q", q.String())
+
+	// cometbft/state/txindex/kv
+	// get a list of conditions (like "tx.height > 5")
+	conditions := q.Syntax()
+	// if there is a hash condition, return the result immediately
+	hash, ok, err := lookForHash(conditions)
+	fmt.Println("* TxSearch hash ok,err", ok, err)
+	if err != nil {
+		return nil, fmt.Errorf("error during searching for a hash in the query: %w", err)
+	} else if ok {
+		res, err := c.Tx(ctx, hash, false) // TODO prove?
+		switch {
+		case err != nil:
+			return &rpctypes.ResultTxSearch{}, fmt.Errorf("error while retrieving the result: %w", err)
+		case res == nil:
+			return &rpctypes.ResultTxSearch{Txs: []*rpctypes.ResultTx{}, TotalCount: 0}, nil
+		default:
+			return &rpctypes.ResultTxSearch{Txs: []*rpctypes.ResultTx{res}, TotalCount: 1}, nil
+		}
+	}
+
+	// TODO ordering, pagination
+	totalCount := 0
+	apiResults := make([]*ctypes.ResultTx, 0)
+	return &ctypes.ResultTxSearch{Txs: apiResults, TotalCount: totalCount}, nil
 }
 
 func (c *ABCIClient) BlockSearch(
@@ -964,7 +989,7 @@ func (c *ABCIClient) BlockSearch(
 	orderBy string,
 ) (*rpctypes.ResultBlockSearch, error) {
 	fmt.Println("-network-BlockSearch--")
-	return nil, nil
+	return nil, fmt.Errorf("BlockSearch not implemented")
 }
 
 func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
@@ -988,4 +1013,14 @@ func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) 
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func lookForHash(conditions []syntax.Condition) (hash []byte, ok bool, err error) {
+	for _, c := range conditions {
+		if c.Tag == cmttypes.TxHashKey {
+			decoded, err := hex.DecodeString(c.Arg.Value())
+			return decoded, true, err
+		}
+	}
+	return
 }

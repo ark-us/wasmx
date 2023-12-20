@@ -3,9 +3,13 @@ package keeper
 import (
 	"context"
 	"fmt"
+	"mythos/v1/server/config"
+	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtconfig "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/libs/bytes"
+	cometp2p "github.com/cometbft/cometbft/p2p"
 	cometcore "github.com/cometbft/cometbft/rpc/core"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometrpc "github.com/cometbft/cometbft/rpc/jsonrpc/server"
@@ -14,11 +18,15 @@ import (
 	comettypes "github.com/cometbft/cometbft/types"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+
+	"github.com/cosmos/ibc-go/v8/testing/mock"
 )
 
 type Environment struct {
-	app         servertypes.Application
-	networkWrap *ABCIClient
+	app          servertypes.Application
+	networkWrap  *ABCIClient
+	serverConfig *cmtconfig.Config
+	config       *config.Config
 }
 
 // Routes is a map of available routes.
@@ -89,7 +97,65 @@ func (env *Environment) Health(*rpctypes.Context) (*ctypes.ResultHealth, error) 
 
 func (env *Environment) Status(*rpctypes.Context) (*ctypes.ResultStatus, error) {
 	fmt.Println("= WS Status")
-	return nil, fmt.Errorf("Status not implemented")
+	// TODO finalize
+
+	res, err := env.app.Info(RequestInfo)
+	if err != nil {
+		return nil, fmt.Errorf("error calling Info: %v", err)
+	}
+	privVal := mock.NewPV()
+	pubKey, err := privVal.GetPubKey()
+	result := &ctypes.ResultStatus{
+		NodeInfo: cometp2p.DefaultNodeInfo{
+			ProtocolVersion: cometp2p.ProtocolVersion{
+				P2P:   RequestInfo.P2PVersion,
+				Block: RequestInfo.BlockVersion,
+				App:   res.AppVersion,
+			},
+			Network:       env.networkWrap.bapp.ChainID(),
+			DefaultNodeID: "9111ccf0de42038bfc305123ee92a6b7eadda2cc",
+			ListenAddr:    env.config.Network.Address,
+			Version:       res.Version,
+			Channels:      []byte{1, 2},
+			Moniker:       "fffr",
+			Other:         cometp2p.DefaultNodeInfoOther{TxIndex: "on", RPCAddress: env.serverConfig.RPC.ListenAddress},
+		},
+		SyncInfo: ctypes.SyncInfo{
+			LatestBlockHash:     res.LastBlockAppHash, // TODO fixme
+			LatestAppHash:       res.LastBlockAppHash,
+			LatestBlockHeight:   res.LastBlockHeight,
+			LatestBlockTime:     time.Now(),
+			EarliestBlockHash:   res.LastBlockAppHash,
+			EarliestAppHash:     res.LastBlockAppHash,
+			EarliestBlockHeight: res.LastBlockHeight,
+			EarliestBlockTime:   time.Now(),
+			CatchingUp:          false,
+		},
+		ValidatorInfo: ctypes.ValidatorInfo{
+			Address:     bytes.HexBytes(pubKey.Address()),
+			PubKey:      pubKey,
+			VotingPower: 0,
+		},
+		// NodeInfo: env.P2PTransport.NodeInfo().(p2p.DefaultNodeInfo),
+		// SyncInfo: ctypes.SyncInfo{
+		// 	LatestBlockHash:     latestBlockHash,
+		// 	LatestAppHash:       latestAppHash,
+		// 	LatestBlockHeight:   latestHeight,
+		// 	LatestBlockTime:     time.Unix(0, latestBlockTimeNano),
+		// 	EarliestBlockHash:   earliestBlockHash,
+		// 	EarliestAppHash:     earliestAppHash,
+		// 	EarliestBlockHeight: earliestBlockHeight,
+		// 	EarliestBlockTime:   time.Unix(0, earliestBlockTimeNano),
+		// 	CatchingUp:          env.ConsensusReactor.WaitSync(),
+		// },
+		// ValidatorInfo: ctypes.ValidatorInfo{
+		// 	Address:     env.PubKey.Address(),
+		// 	PubKey:      env.PubKey,
+		// 	VotingPower: votingPower,
+		// },
+	}
+
+	return result, nil
 }
 
 func (env *Environment) NetInfo(*rpctypes.Context) (*ctypes.ResultNetInfo, error) {
@@ -167,7 +233,7 @@ func (env *Environment) TxSearch(
 	orderBy string,
 ) (*ctypes.ResultTxSearch, error) {
 	fmt.Println("= WS TxSearch")
-	return nil, fmt.Errorf("TxSearch not implemented")
+	return env.networkWrap.TxSearch(context.TODO(), query, prove, pagePtr, perPagePtr, orderBy)
 }
 
 func (env *Environment) BlockSearch(
@@ -247,6 +313,7 @@ func (env *Environment) ABCIQuery(
 	height int64,
 	prove bool,
 ) (*ctypes.ResultABCIQuery, error) {
+	fmt.Println("= WS ABCIQuery-", height, path, prove)
 	req := &abci.RequestQuery{
 		Data:   data,
 		Height: height,
@@ -254,6 +321,7 @@ func (env *Environment) ABCIQuery(
 		Prove:  prove,
 	}
 	res, err := env.app.Query(context.TODO(), req)
+	fmt.Println("= WS ABCIQuery-", height, path, res, err)
 	if err != nil {
 		return nil, err
 	}
