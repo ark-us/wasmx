@@ -2,7 +2,6 @@ package vm
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -385,13 +384,12 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		Data:      []byte(data.Data),
 		Sender:    ctx.Env.Contract.Address.String(),
 	}
-	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+	// TODO evs?
+	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
 	errmsg := ""
 	if err != nil {
 		errmsg = err.Error()
 	}
-	// TODO evs?
-	fmt.Println("--evs", evs)
 	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
 	if res != nil {
 		err = rres.Unmarshal(res)
@@ -432,7 +430,6 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 		Args:     argsbz,
 	}
 	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
-	fmt.Println("--ExecuteCosmosMsg--err-", err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

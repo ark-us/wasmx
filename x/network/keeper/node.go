@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 
@@ -55,7 +54,6 @@ func StartGRPCServer(
 	go func() {
 		svrCtx.Logger.Info("Starting network GRPC server", "address", GRPCAddr)
 		if err := grpcServer.Serve(ln); err != nil {
-			fmt.Println("---err--", err)
 			if err == http.ErrServerClosed {
 				svrCtx.Logger.Info("Closing network GRPC server", "address", GRPCAddr, err.Error())
 				close(httpSrvDone)

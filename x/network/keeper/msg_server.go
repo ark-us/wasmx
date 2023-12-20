@@ -57,11 +57,9 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
 		Msg:      msgbz,
 	})
-	fmt.Println("--ExecuteContract BroadcastTxAsync--", rresp, err)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--ExecuteContract BroadcastTxAsync--", string(rresp.Data))
 
 	// return &types.ResponseBroadcastTx{
 	// 	CheckTx: &abci.ResponseCheckTx{
@@ -124,7 +122,6 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Go - received grpc request and executed state machine", resp, string(resp.Data), err)
 
 	return &types.MsgGrpcReceiveRequestResponse{
 		Data: resp.Data,
@@ -134,7 +131,6 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the interval is for?
 func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
-	fmt.Println("Go - start interval request", msg.Contract, msg.Delay, string(msg.Args))
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
@@ -233,7 +229,6 @@ func (m msgServer) startTimeoutInternal(
 	}
 	// disregard result
 	_, err := m.ActionExecutor.Execute(goCtx2, height, cb)
-
 
 	return err
 }

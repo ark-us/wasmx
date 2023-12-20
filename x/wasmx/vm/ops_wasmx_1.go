@@ -225,8 +225,7 @@ func asConsoleError(context interface{}, callframe *wasmedge.CallingFrame, param
 func asConsoleDebug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := readMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	// TODO Debug!
-	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx: console.debug: %s", readJsString(message)))
+	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx: console.debug: %s", readJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

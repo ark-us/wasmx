@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 
@@ -35,7 +34,6 @@ func StartJsonRpc(
 ) (*http.Server, chan struct{}, error) {
 	cfg := cfgAll.JsonRpc
 	svrCtx.Logger.Info("starting JSON-RPC server ", cfg.Address)
-
 
 	// TODO replace
 	// tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)

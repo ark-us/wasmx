@@ -640,7 +640,6 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, arg
 			return nil, nil
 		}
 	} else if funcName == types.ENTRY_POINT_TIMED {
-		fmt.Println("--ExecuteWasi---", funcName, args)
 		res, err = contractVm.Execute(funcName)
 	} else {
 		// WASI command - no args, no return
@@ -656,7 +655,6 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, arg
 		// res, err = contractVm.Execute("testtime")
 		// fmt.Println("--testtime-res, err", res, err)
 	}
-	fmt.Println("--ExecuteWasi END--", funcName)
 	if err != nil {
 		return nil, err
 	}

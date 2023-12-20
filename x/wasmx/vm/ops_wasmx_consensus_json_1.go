@@ -2,7 +2,6 @@ package vm
 
 import (
 	"encoding/json"
-	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	merkle "github.com/cometbft/cometbft/crypto/merkle"
@@ -43,15 +42,14 @@ func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 
-	fmt.Println("=consensus=PrepareProposal==", string(reqbz))
 	var req abci.RequestPrepareProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	resp, err := ctx.GetApplication().PrepareProposal(&req)
-	fmt.Println("=consensus=PrepareProposal=resp=", resp, err)
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "PrepareProposal")
 		return nil, wasmedge.Result_Fail
 	}
 	respbz, err := json.Marshal(resp)
@@ -70,22 +68,19 @@ func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 
 // ProcessProposal(*abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error)
 func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("=consensus=ProcessProposal==")
 	ctx := _context.(*Context)
 	reqbz, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("=consensus=ProcessProposal=reqbz=", string(reqbz))
 	var req abci.RequestProcessProposal
 	err = json.Unmarshal(reqbz, &req)
-	fmt.Println("=consensus=ProcessProposal=reqbz=", req, err)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	resp, err := ctx.GetApplication().ProcessProposal(&req)
-	fmt.Println("=consensus=ProcessProposal=resp=", resp, err)
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
 		return nil, wasmedge.Result_Fail
 	}
 	respbz, err := json.Marshal(resp)
@@ -109,7 +104,6 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("=consensus=FinalizeBlock=reqbz=", string(reqbz))
 	var req abci.RequestFinalizeBlock
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
@@ -117,6 +111,7 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	}
 	resp, err := ctx.GetApplication().FinalizeBlock(&req)
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
 		return nil, wasmedge.Result_Fail
 	}
 	respbz, err := json.Marshal(resp)
@@ -138,6 +133,7 @@ func Commit(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 	ctx := _context.(*Context)
 	resp, err := ctx.GetApplication().Commit()
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "Commit")
 		return nil, wasmedge.Result_Fail
 	}
 	respbz, err := json.Marshal(resp)
@@ -165,9 +161,9 @@ func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []in
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("=consensus=CheckTx==", req)
 	resp, err := ctx.GetApplication().CheckTx(&req)
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "CheckTx")
 		return nil, wasmedge.Result_Fail
 	}
 	respbz, err := json.Marshal(resp)
@@ -234,8 +230,7 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO Debug!
-	ctx.GetContext().Logger().Info(msg, parts...)
+	ctx.GetContext().Logger().Debug(msg, parts...)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

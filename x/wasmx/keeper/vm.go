@@ -143,8 +143,6 @@ func (k *WasmxEngine) ExecuteEventual(
 		data, err = vm.ExecuteWasm(ctx, types.ENTRY_POINT_TIMED, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, k.app)
 	}
 
-	fmt.Println("Go: ExecuteEventual END")
-
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
