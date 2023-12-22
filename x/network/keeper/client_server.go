@@ -3,7 +3,6 @@ package keeper
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -45,18 +44,14 @@ import (
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
-	cmtquery "github.com/cometbft/cometbft/libs/pubsub/query"
-	"github.com/cometbft/cometbft/libs/pubsub/query/syntax"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 
 	"mythos/v1/server/config"
 	networkconfig "mythos/v1/x/network/server/config"
@@ -135,7 +130,7 @@ func NewGRPCServer(
 	}
 
 	logger := svrCtx.Logger.With("module", "network")
-	client := NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), mythosapp.GetActionExecutor())
+	client := NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor())
 	clientCtx = clientCtx.WithClient(client)
 
 	// load genesis state
@@ -529,29 +524,6 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	if err != nil {
 		return err
 	}
-	if netcfg.Leader {
-		// make node a candidate
-		msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-		_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Msg:      msg,
-		})
-		if err != nil {
-			return err
-		}
-
-		// make node a leader
-		msg = []byte(`{"run":{"event": {"type": "change", "params": []}}}`)
-		_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Msg:      msg,
-		})
-		if err != nil {
-			return err
-		}
-	}
 
 	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
@@ -607,8 +579,8 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 		return err
 	}
 
-	// httpSrvDone := make(chan struct{}, 1)
-	// errCh := make(chan error)
+	httpSrvDone := make(chan struct{}, 1)
+	errCh := make(chan error)
 
 	go func() {
 		if err := cometjsonserver.Serve(
@@ -617,24 +589,27 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 			rpcLogger,
 			config,
 		); err != nil {
-			logger.Error("Error serving RPC network server", "err", err)
-			// errCh <- err
+			if err == http.ErrServerClosed {
+				svrCtx.Logger.Info("Closing network RPC server", "address", listenAddr, err.Error())
+				close(httpSrvDone)
+				return
+			}
+			logger.Error("Error serving RPC network server", "err", err.Error())
+			errCh <- err
 		}
 	}()
 
-	// select {
-	// case <-ctx.Done():
-	// 	// The calling process canceled or closed the provided context, so we must
-	// 	// gracefully stop the GRPC server.
-	// 	logger.Info("stopping network GRPC server...", "address", GRPCAddr)
+	select {
+	case <-ctx.Done():
+		// The calling process canceled or closed the provided context, so we must
+		// gracefully stop the GRPC server.
+		logger.Info("stopping network RPC server...", "address", listenAddr)
 
-	// 	return grpcServer, rpcClient, httpSrvDone, nil
-	// case err := <-errCh:
-	// 	svrCtx.Logger.Error("failed to boot network GRPC server", "error", err.Error())
-	// 	return nil, nil, nil, err
-	// }
-
-	return nil
+		return nil
+	case err := <-errCh:
+		svrCtx.Logger.Error("failed to boot network RPC server", "error", err.Error())
+		return err
+	}
 }
 
 func addCORSHandler(rpcConfig *cmtconfig.RPCConfig, h http.Handler) http.Handler {
@@ -645,20 +620,6 @@ func addCORSHandler(rpcConfig *cmtconfig.RPCConfig, h http.Handler) http.Handler
 	})
 	h = corsMiddleware.Handler(h)
 	return h
-}
-
-// func RegisterRPCFuncs(mux *http.ServeMux, funcMap map[string]*RPCFunc, logger log.Logger) {
-// 	// HTTP endpoints
-// 	for funcName, rpcFunc := range funcMap {
-// 		mux.HandleFunc("/"+funcName, makeHTTPHandler(rpcFunc, logger))
-// 	}
-
-// 	// JSONRPC endpoints
-// 	mux.HandleFunc("/", handleInvalidJSONRPCPaths(makeJSONRPCHandler(funcMap, logger)))
-// }
-
-func health(w http.ResponseWriter, r *http.Request) {
-
 }
 
 func (wm *WebsocketManager) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -692,335 +653,4 @@ func (wm *WebsocketManager) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 	// if err := con.Stop(); err != nil {
 	// 	wm.logger.Error("error while stopping connection", "error", err)
 	// }
-}
-
-type ABCIClient struct {
-	bapp           types.BaseApp
-	nk             types.WasmxWrapper
-	logger         log.Logger
-	actionExecutor *ActionExecutor
-}
-
-func NewABCIClient(bapp types.BaseApp, logger log.Logger, networkKeeper types.WasmxWrapper, actionExecutor *ActionExecutor) *ABCIClient {
-	return &ABCIClient{
-		bapp:           bapp,
-		nk:             networkKeeper,
-		logger:         logger,
-		actionExecutor: actionExecutor,
-	}
-}
-
-func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error) {
-	fmt.Println("-network-ABCIInfo--")
-	return nil, nil
-}
-
-func (c *ABCIClient) ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error) {
-	fmt.Println("-network-ABCIQuery--")
-	return nil, nil
-}
-
-func (c *ABCIClient) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes, opts rpcclient.ABCIQueryOptions) (*rpctypes.ResultABCIQuery, error) {
-	fmt.Println("-network-ABCIQueryWithOptions--")
-	return nil, nil
-}
-
-// func (c *ABCIClient) Simulate(_ context.Context, tx cmttypes.SimulateRequest) (*rpctypes.SimulateResponse, error) {
-// 	fmt.Println("--BroadcastTxCommit--")
-// 	return nil, nil
-// }
-
-func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTxCommit, error) {
-	fmt.Println("-network-BroadcastTxCommit--")
-	return nil, nil
-}
-
-func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
-	fmt.Println("* ABCIClient BroadcastTxAsync")
-	// TODO use ctx from params?
-
-	cb := func(goctx context.Context) (any, error) {
-		msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-		rresp, err := c.nk.ExecuteContract(sdk.UnwrapSDKContext(goctx), &types.MsgExecuteContract{
-			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Msg:      msg,
-		})
-		fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
-		if err != nil {
-			return nil, err
-		}
-		return rresp, nil
-	}
-	resp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
-	// TODO handle resp, err ?
-
-	fmt.Println("* ABCIClient BroadcastTxAsync", resp, err)
-	fmt.Println("* ABCIClient txhash", hex.EncodeToString(tx.Hash()), base64.StdEncoding.EncodeToString(tx.Hash()))
-
-	return &rpctypes.ResultBroadcastTx{Hash: tx.Hash()}, nil
-}
-
-func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
-	fmt.Println("* ABCIClient BroadcastTxSync")
-
-	return c.BroadcastTxAsync(ctx, tx)
-
-	// TODO fixme
-
-	// resCh := make(chan *abci.ResponseCheckTx, 1)
-	// err := env.Mempool.CheckTx(tx, func(res *abci.ResponseCheckTx) {
-	// 	select {
-	// 	case <-ctx.Context().Done():
-	// 	case resCh <- res:
-	// 	}
-	// }, mempl.TxInfo{})
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// select {
-	// case <-ctx.Context().Done():
-	// 	return nil, fmt.Errorf("broadcast confirmation not received: %w", ctx.Context().Err())
-	// case res := <-resCh:
-	// 	return &ctypes.ResultBroadcastTx{
-	// 		Code:      res.Code,
-	// 		Data:      res.Data,
-	// 		Log:       res.Log,
-	// 		Codespace: res.Codespace,
-	// 		Hash:      tx.Hash(),
-	// 	}, nil
-	// }
-}
-
-func (c *ABCIClient) Validators(ctx context.Context, height *int64, page, perPage *int) (*rpctypes.ResultValidators, error) {
-	fmt.Println("-network-Validators--")
-	return nil, nil
-}
-
-func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
-	fmt.Println("-network-Status--")
-	return nil, nil
-}
-
-func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.ResultBlock, error) {
-	fmt.Println("-network-Block--")
-
-	// get indexed tx
-	key := types.GetBlockKey(*height)
-	resp, err := c.fsmQuery(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(resp.Data) == 0 {
-		return nil, fmt.Errorf("block (%d) not found", height)
-	}
-
-	var logEntry types.LogEntry
-	err = json.Unmarshal(resp.Data, &logEntry)
-	if err != nil {
-		return nil, err
-	}
-
-	var b abci.RequestProcessProposal
-	err = json.Unmarshal(logEntry.Data, &b)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO fixme
-	blockId := cmttypes.BlockID{
-		Hash:          make([]byte, 0),
-		PartSetHeader: cmttypes.PartSetHeader{},
-	}
-
-	lastCommit := cmttypes.Commit{
-		Height:     *height,
-		Round:      b.ProposedLastCommit.Round,
-		BlockID:    blockId,
-		Signatures: make([]cmttypes.CommitSig, 0),
-	}
-
-	evidence := make([]cmttypes.Evidence, 0)
-
-	txs := make([]cmttypes.Tx, len(b.Txs))
-	for i, tx := range b.Txs {
-		txs[i] = cmttypes.Tx(tx)
-	}
-	result := rpctypes.ResultBlock{
-		BlockID: blockId,
-		Block:   cmttypes.MakeBlock(b.Height, txs, &lastCommit, evidence),
-	}
-
-	return &result, nil
-}
-
-func (c *ABCIClient) BlockByHash(ctx context.Context, hash []byte) (*rpctypes.ResultBlock, error) {
-	fmt.Println("-network-BlockByHash--")
-	return nil, nil
-}
-
-func (c *ABCIClient) BlockResults(ctx context.Context, height *int64) (*rpctypes.ResultBlockResults, error) {
-	fmt.Println("-network-BlockResults--")
-	return nil, nil
-}
-
-func (c *ABCIClient) BlockchainInfo(ctx context.Context, minHeight, maxHeight int64) (*rpctypes.ResultBlockchainInfo, error) {
-	fmt.Println("-network-BlockchainInfo--")
-	return nil, nil
-}
-
-func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.ResultCommit, error) {
-	fmt.Println("-network-Commit--")
-	return nil, nil
-}
-
-func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes.ResultTx, error) {
-	fmt.Println("-network-Tx--")
-
-	// get indexed tx
-	key := types.GetTxKey(hash)
-	resp, err := c.fsmQuery(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(resp.Data) == 0 {
-		return nil, fmt.Errorf("tx (%X) not found", hash)
-	}
-
-	var indexedTx types.IndexedTransaction
-	err = json.Unmarshal(resp.Data, &indexedTx)
-	if err != nil {
-		return nil, err
-	}
-
-	// get block data
-	key = types.GetBlockKey(indexedTx.Height)
-	resp, err = c.fsmQuery(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(resp.Data) == 0 {
-		return nil, fmt.Errorf("tx block (%d) not found", indexedTx.Height)
-	}
-
-	var logEntry types.LogEntry
-	err = json.Unmarshal(resp.Data, &logEntry)
-	if err != nil {
-		return nil, err
-	}
-
-	var blockData abci.RequestProcessProposal
-	err = json.Unmarshal(logEntry.Data, &blockData)
-	if err != nil {
-		return nil, err
-	}
-
-	var blockResultData abci.ResponseFinalizeBlock
-	err = json.Unmarshal(logEntry.Result, &blockResultData)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(blockResultData.TxResults) < int(indexedTx.Index) {
-		return nil, fmt.Errorf("tx index (%d) not found in block %d", indexedTx.Index, indexedTx.Height)
-	}
-
-	var proof cmttypes.TxProof
-	// TODO proof
-
-	// this is a query, we do not commit anything
-	return &rpctypes.ResultTx{
-		Hash:     hash,
-		Height:   indexedTx.Height,
-		Index:    indexedTx.Index,
-		TxResult: *blockResultData.TxResults[indexedTx.Index],
-		Tx:       blockData.Txs[indexedTx.Index],
-		Proof:    proof,
-	}, nil
-}
-
-func (c *ABCIClient) TxSearch(
-	ctx context.Context,
-	query string,
-	prove bool,
-	page, perPage *int,
-	orderBy string,
-) (*rpctypes.ResultTxSearch, error) {
-	q, err := cmtquery.New(query)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("* TxSearch q", q.String())
-
-	// cometbft/state/txindex/kv
-	// get a list of conditions (like "tx.height > 5")
-	conditions := q.Syntax()
-	// if there is a hash condition, return the result immediately
-	hash, ok, err := lookForHash(conditions)
-	fmt.Println("* TxSearch hash ok,err", ok, err)
-	if err != nil {
-		return nil, fmt.Errorf("error during searching for a hash in the query: %w", err)
-	} else if ok {
-		res, err := c.Tx(ctx, hash, false) // TODO prove?
-		switch {
-		case err != nil:
-			return &rpctypes.ResultTxSearch{}, fmt.Errorf("error while retrieving the result: %w", err)
-		case res == nil:
-			return &rpctypes.ResultTxSearch{Txs: []*rpctypes.ResultTx{}, TotalCount: 0}, nil
-		default:
-			return &rpctypes.ResultTxSearch{Txs: []*rpctypes.ResultTx{res}, TotalCount: 1}, nil
-		}
-	}
-
-	// TODO ordering, pagination
-	totalCount := 0
-	apiResults := make([]*ctypes.ResultTx, 0)
-	return &ctypes.ResultTxSearch{Txs: apiResults, TotalCount: totalCount}, nil
-}
-
-func (c *ABCIClient) BlockSearch(
-	ctx context.Context,
-	query string,
-	page, perPage *int,
-	orderBy string,
-) (*rpctypes.ResultBlockSearch, error) {
-	fmt.Println("-network-BlockSearch--")
-	return nil, fmt.Errorf("BlockSearch not implemented")
-}
-
-func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
-	cb := func(goctx context.Context) (any, error) {
-		msg := []byte(fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key))
-		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
-			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Msg:      msg,
-		})
-	}
-	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
-	if err != nil {
-		return nil, err
-	}
-	rresp := qresp.(*types.MsgQueryContractResponse)
-
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(rresp.Data, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-func lookForHash(conditions []syntax.Condition) (hash []byte, ok bool, err error) {
-	for _, c := range conditions {
-		if c.Tag == cmttypes.TxHashKey {
-			decoded, err := hex.DecodeString(c.Arg.Value())
-			return decoded, true, err
-		}
-	}
-	return
 }

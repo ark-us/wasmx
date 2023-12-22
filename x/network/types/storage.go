@@ -10,6 +10,7 @@ import (
 
 var LOG_INDEXER = "logs_"
 var TX_INDEXER = "tx_"
+var LAST_LOG_INDEX = "logs_last_index"
 
 type IndexedTransaction struct {
 	Height int64  `json:"height"`
@@ -21,6 +22,8 @@ type LogEntry struct {
 	TermId   int32  `json:"termId"`
 	LeaderId int32  `json:"leaderId"`
 	Data     []byte `json:"data"`   // RequestProcessProposal
+	Header   []byte `json:"header"` // Block Header
+	Commit   []byte `json:"commit"` // BlockCommit
 	Result   []byte `json:"result"` // ResponseFinalizeBlock
 }
 
@@ -30,6 +33,10 @@ func GetTxKey(hash []byte) string {
 
 func GetBlockKey(index int64) string {
 	return LOG_INDEXER + strconv.Itoa(int(index))
+}
+
+func GetLastBlockHeightKey() string {
+	return LAST_LOG_INDEX
 }
 
 type InitChainSetup struct {

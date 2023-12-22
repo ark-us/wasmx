@@ -80,8 +80,6 @@ func StartWebsrv(
 		svrCtx.Logger.Error("failed to boot websrv server", "error", err.Error())
 		return nil, nil, err
 	}
-
-	return httpSrv, httpSrvDone, nil
 }
 
 func Listen(addr string, cfg *config.WebsrvConfig) (net.Listener, error) {

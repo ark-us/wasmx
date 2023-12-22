@@ -3,23 +3,19 @@ package keeper
 import (
 	"context"
 	"fmt"
-	"mythos/v1/server/config"
-	"time"
 
-	abci "github.com/cometbft/cometbft/abci/types"
 	cmtconfig "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/libs/bytes"
-	cometp2p "github.com/cometbft/cometbft/p2p"
+	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	cometcore "github.com/cometbft/cometbft/rpc/core"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometrpc "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	rpctypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
-	"github.com/cometbft/cometbft/types"
 	comettypes "github.com/cometbft/cometbft/types"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
-	"github.com/cosmos/ibc-go/v8/testing/mock"
+	"mythos/v1/server/config"
 )
 
 type Environment struct {
@@ -95,67 +91,9 @@ func (env *Environment) Health(*rpctypes.Context) (*ctypes.ResultHealth, error) 
 	return nil, fmt.Errorf("Health not implemented")
 }
 
-func (env *Environment) Status(*rpctypes.Context) (*ctypes.ResultStatus, error) {
+func (env *Environment) Status(ctx *rpctypes.Context) (*ctypes.ResultStatus, error) {
 	fmt.Println("= WS Status")
-	// TODO finalize
-
-	res, err := env.app.Info(RequestInfo)
-	if err != nil {
-		return nil, fmt.Errorf("error calling Info: %v", err)
-	}
-	privVal := mock.NewPV()
-	pubKey, err := privVal.GetPubKey()
-	result := &ctypes.ResultStatus{
-		NodeInfo: cometp2p.DefaultNodeInfo{
-			ProtocolVersion: cometp2p.ProtocolVersion{
-				P2P:   RequestInfo.P2PVersion,
-				Block: RequestInfo.BlockVersion,
-				App:   res.AppVersion,
-			},
-			Network:       env.networkWrap.bapp.ChainID(),
-			DefaultNodeID: "9111ccf0de42038bfc305123ee92a6b7eadda2cc",
-			ListenAddr:    env.config.Network.Address,
-			Version:       res.Version,
-			Channels:      []byte{1, 2},
-			Moniker:       "fffr",
-			Other:         cometp2p.DefaultNodeInfoOther{TxIndex: "on", RPCAddress: env.serverConfig.RPC.ListenAddress},
-		},
-		SyncInfo: ctypes.SyncInfo{
-			LatestBlockHash:     res.LastBlockAppHash, // TODO fixme
-			LatestAppHash:       res.LastBlockAppHash,
-			LatestBlockHeight:   res.LastBlockHeight,
-			LatestBlockTime:     time.Now(),
-			EarliestBlockHash:   res.LastBlockAppHash,
-			EarliestAppHash:     res.LastBlockAppHash,
-			EarliestBlockHeight: res.LastBlockHeight,
-			EarliestBlockTime:   time.Now(),
-			CatchingUp:          false,
-		},
-		ValidatorInfo: ctypes.ValidatorInfo{
-			Address:     bytes.HexBytes(pubKey.Address()),
-			PubKey:      pubKey,
-			VotingPower: 0,
-		},
-		// NodeInfo: env.P2PTransport.NodeInfo().(p2p.DefaultNodeInfo),
-		// SyncInfo: ctypes.SyncInfo{
-		// 	LatestBlockHash:     latestBlockHash,
-		// 	LatestAppHash:       latestAppHash,
-		// 	LatestBlockHeight:   latestHeight,
-		// 	LatestBlockTime:     time.Unix(0, latestBlockTimeNano),
-		// 	EarliestBlockHash:   earliestBlockHash,
-		// 	EarliestAppHash:     earliestAppHash,
-		// 	EarliestBlockHeight: earliestBlockHeight,
-		// 	EarliestBlockTime:   time.Unix(0, earliestBlockTimeNano),
-		// 	CatchingUp:          env.ConsensusReactor.WaitSync(),
-		// },
-		// ValidatorInfo: ctypes.ValidatorInfo{
-		// 	Address:     env.PubKey.Address(),
-		// 	PubKey:      env.PubKey,
-		// 	VotingPower: votingPower,
-		// },
-	}
-
-	return result, nil
+	return env.networkWrap.Status(context.TODO())
 }
 
 func (env *Environment) NetInfo(*rpctypes.Context) (*ctypes.ResultNetInfo, error) {
@@ -211,7 +149,7 @@ func (env *Environment) HeaderByHash(_ *rpctypes.Context, hash bytes.HexBytes) (
 	return nil, fmt.Errorf("HeaderByHash not implemented")
 }
 
-func (env *Environment) CheckTx(_ *rpctypes.Context, tx types.Tx) (*ctypes.ResultCheckTx, error) {
+func (env *Environment) CheckTx(_ *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultCheckTx, error) {
 	fmt.Println("= WS CheckTx")
 	return nil, fmt.Errorf("CheckTx not implemented")
 }
@@ -285,7 +223,7 @@ func (env *Environment) NumUnconfirmedTxs(*rpctypes.Context) (*ctypes.ResultUnco
 
 // BroadcastTxCommit returns with the responses from CheckTx and ExecTxResult.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Tx/broadcast_tx_commit
-func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
+func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 	fmt.Println("= WS BroadcastTxCommit")
 	return nil, fmt.Errorf("BroadcastTxCommit not implemented")
 }
@@ -295,7 +233,7 @@ func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx)
 	return env.networkWrap.BroadcastTxSync(context.TODO(), tx)
 }
 
-func (env *Environment) BroadcastTxAsync(_ *rpctypes.Context, tx types.Tx) (*ctypes.ResultBroadcastTx, error) {
+func (env *Environment) BroadcastTxAsync(_ *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTx, error) {
 	fmt.Println("= WS BroadcastTxAsync")
 	return env.networkWrap.BroadcastTxAsync(context.TODO(), tx)
 
@@ -314,32 +252,16 @@ func (env *Environment) ABCIQuery(
 	prove bool,
 ) (*ctypes.ResultABCIQuery, error) {
 	fmt.Println("= WS ABCIQuery-", height, path, prove)
-	req := &abci.RequestQuery{
-		Data:   data,
-		Height: height,
-		Path:   path,
-		Prove:  prove,
-	}
-	res, err := env.app.Query(context.TODO(), req)
-	fmt.Println("= WS ABCIQuery-", height, path, res, err)
-	if err != nil {
-		return nil, err
-	}
-	resp := &ctypes.ResultABCIQuery{Response: *res}
-	return resp, nil
+	return env.networkWrap.ABCIQueryWithOptions(context.TODO(), path, data, rpcclient.ABCIQueryOptions{Height: height, Prove: prove})
 }
 
 func (env *Environment) ABCIInfo(_ *rpctypes.Context) (*ctypes.ResultABCIInfo, error) {
-	resInfo, err := env.app.Info(RequestInfo)
-	if err != nil {
-		return nil, err
-	}
-	return &ctypes.ResultABCIInfo{Response: *resInfo}, nil
+	return env.networkWrap.ABCIInfo(context.TODO())
 }
 
 func (env *Environment) BroadcastEvidence(
 	_ *rpctypes.Context,
-	ev types.Evidence,
+	ev comettypes.Evidence,
 ) (*ctypes.ResultBroadcastEvidence, error) {
 	fmt.Println("= WS BroadcastEvidence")
 	return nil, fmt.Errorf("BroadcastEvidence not implemented")

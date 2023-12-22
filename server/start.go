@@ -391,7 +391,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return fmt.Errorf("failed to get MythosApp from server Application")
 	}
 
-	rpcClient = networkgrpc.NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), mythosapp.GetActionExecutor())
+	rpcClient = networkgrpc.NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor())
 
 	clientCtx = clientCtx.WithClient(rpcClient)
 
