@@ -28,11 +28,11 @@ func StartGRPCServer(
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
-) (*grpc.Server, client.CometRPC, chan struct{}, error) {
+) (*grpc.Server, client.CometRPC, error) {
 	GRPCAddr := cfgAll.Network.Address
 	ln, err := Listen(GRPCAddr)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	logger := svrCtx.Logger.With("module", "network")
@@ -40,15 +40,13 @@ func StartGRPCServer(
 	// TODO we are starting the raft protocol before the grpc server is running; we should start it after
 	grpcServer, rpcClient, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	err = StartRPC(svrCtx, ctx, app, rpcClient, svrCtx.Logger, cfgAll)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-
-	httpSrvDone := make(chan struct{}, 1)
 
 	errCh := make(chan error)
 	go func() {
@@ -56,7 +54,6 @@ func StartGRPCServer(
 		if err := grpcServer.Serve(ln); err != nil {
 			if err == http.ErrServerClosed {
 				svrCtx.Logger.Info("Closing network GRPC server", "address", GRPCAddr, err.Error())
-				close(httpSrvDone)
 				return
 			}
 
@@ -72,10 +69,10 @@ func StartGRPCServer(
 		logger.Info("stopping network GRPC server...", "address", GRPCAddr)
 		grpcServer.GracefulStop()
 
-		return grpcServer, rpcClient, httpSrvDone, nil
+		return grpcServer, rpcClient, nil
 	case err := <-errCh:
 		svrCtx.Logger.Error("failed to boot network GRPC server", "error", err.Error())
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 }
 

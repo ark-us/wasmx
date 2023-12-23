@@ -13,6 +13,11 @@ type MerkleSlices struct {
 	Slices [][]byte `json:"slices"`
 }
 
+type FinalizeBlockWrap struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
+}
+
 func merkleHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	data, err := readMemFromPtr(callframe, params[0])
@@ -110,19 +115,27 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 		return nil, wasmedge.Result_Fail
 	}
 	resp, err := ctx.GetApplication().FinalizeBlock(&req)
+	errmsg := ""
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
-		return nil, wasmedge.Result_Fail
+		errmsg = err.Error()
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	respwrap := &FinalizeBlockWrap{
+		Error: errmsg,
+		Data:  respbz,
+	}
+	respwrapbz, err := json.Marshal(respwrap)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-
+	ptr, err := allocateWriteMem(ctx, callframe, respwrapbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
 	return returns, wasmedge.Result_Success
@@ -141,6 +154,23 @@ func Commit(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 		return nil, wasmedge.Result_Fail
 	}
 	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func RollbackToVersion(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	err := ctx.GetApplication().CommitMultiStore().RollbackToVersion(params[0].(int64))
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, []byte(errMsg))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -249,12 +279,17 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+	functype_i64_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I64},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
 
+	env.AddFunction("CheckTx", wasmedge.NewFunction(functype_i32_i32, CheckTx, context, 0))
 	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, PrepareProposal, context, 0))
 	env.AddFunction("ProcessProposal", wasmedge.NewFunction(functype_i32_i32, ProcessProposal, context, 0))
 	env.AddFunction("FinalizeBlock", wasmedge.NewFunction(functype_i32_i32, FinalizeBlock, context, 0))
 	env.AddFunction("Commit", wasmedge.NewFunction(functype__i32, Commit, context, 0))
-	env.AddFunction("CheckTx", wasmedge.NewFunction(functype_i32_i32, CheckTx, context, 0))
+	env.AddFunction("RollbackToVersion", wasmedge.NewFunction(functype_i64_i32, RollbackToVersion, context, 0))
 
 	env.AddFunction("MerkleHash", wasmedge.NewFunction(functype_i32_i32, merkleHash, context, 0))
 

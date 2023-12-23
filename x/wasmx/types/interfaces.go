@@ -5,9 +5,11 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 )
 
@@ -86,6 +88,7 @@ type Application interface {
 	VerifyVoteExtension(*abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error)
 	// Commit the state and return the application Merkle root hash
 	Commit() (*abci.ResponseCommit, error)
+	CommitMultiStore() storetypes.CommitMultiStore
 
 	// State Sync Connection
 	ListSnapshots(*abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)                // List available snapshots

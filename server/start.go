@@ -365,9 +365,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	g.Go(func() error {
-		// httpSrv, httpSrvDone, err
-		// _, _, err = networkgrpc.StartGRPCServer(svrCtx, clientCtx, ctx, &config, app, tmNode)
-		_, rpcClient, _, err = networkgrpc.StartGRPCServer(
+		_, rpcClient, err = networkgrpc.StartGRPCServer(
 			svrCtx,
 			clientCtx,
 			ctx,

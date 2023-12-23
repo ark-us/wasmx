@@ -142,11 +142,6 @@ func NewGRPCServer(
 			return nil, nil, err
 		}
 		fmt.Println("* resInit", resInit)
-
-		// err = setupNode(bapp, logger, networkServer)
-		// if err != nil {
-		// 	return nil, nil, err
-		// }
 	}
 	// start the node
 	err = startNode(svrCtx.Config, cfg.Network, bapp, logger, networkServer)
@@ -579,7 +574,7 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 		return err
 	}
 
-	httpSrvDone := make(chan struct{}, 1)
+	// httpSrvDone := make(chan struct{}, 1)
 	errCh := make(chan error)
 
 	go func() {
@@ -591,7 +586,6 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 		); err != nil {
 			if err == http.ErrServerClosed {
 				svrCtx.Logger.Info("Closing network RPC server", "address", listenAddr, err.Error())
-				close(httpSrvDone)
 				return
 			}
 			logger.Error("Error serving RPC network server", "err", err.Error())
@@ -604,7 +598,7 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 		// The calling process canceled or closed the provided context, so we must
 		// gracefully stop the GRPC server.
 		logger.Info("stopping network RPC server...", "address", listenAddr)
-
+		close(errCh)
 		return nil
 	case err := <-errCh:
 		svrCtx.Logger.Error("failed to boot network RPC server", "error", err.Error())

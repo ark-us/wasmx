@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
@@ -149,9 +150,8 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 	timeDelay := msg.Delay
 	logger := m.Keeper.Logger(ctx)
 
-	// errCh := make(chan error)
 	m.goRoutineGroup.Go(func() error {
-		_, err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
+		err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
 			logger.Error("eventual execution failed", "err", err, "description", description)
 		}
@@ -167,12 +167,24 @@ func (m msgServer) startTimeoutInternalGoroutine(
 	timeDelay int64,
 	msgbz []byte,
 	contractAddress sdk.AccAddress,
-) (chan struct{}, error) {
+) error {
 	goCtx2 := m.goContextParent
-	httpSrvDone := make(chan struct{}, 1)
+
+	select {
+	case <-goCtx2.Done():
+		logger.Info("parent context was closed, we do not start the delayed execution")
+		return nil
+	default:
+		// continue
+	}
+
+	wg := new(sync.WaitGroup)
+
 	intervalEnded := make(chan bool, 1)
 	errCh := make(chan error)
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		logger.Info("eventual execution starting", "description", description)
 		err := m.startTimeoutInternal(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
@@ -181,22 +193,25 @@ func (m msgServer) startTimeoutInternalGoroutine(
 			errCh <- err
 		}
 		logger.Info("eventual execution ended", "description", description)
-		// close(httpSrvDone)
 		intervalEnded <- true
 	}()
+	wg.Wait()
 
 	select {
 	case <-goCtx2.Done():
 		// The calling process canceled or closed the provided context, so we must
 		// gracefully stop the network server.
 		logger.Info("eventual execution stopping...")
-		// httpSrv.Close()
-		return httpSrvDone, nil
+		close(intervalEnded)
+		close(errCh)
+		return nil
 	case err := <-errCh:
 		logger.Error("eventual execution failed to start", "error", err.Error())
-		return nil, err
+		close(intervalEnded)
+		return err
 	case <-intervalEnded:
-		return httpSrvDone, nil
+		close(intervalEnded)
+		return nil
 	}
 }
 

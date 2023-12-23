@@ -13,8 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 
-	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
-
 	ethlog "github.com/ethereum/go-ethereum/log"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
@@ -35,9 +33,7 @@ func StartJsonRpc(
 	cfg := cfgAll.JsonRpc
 	svrCtx.Logger.Info("starting JSON-RPC server ", cfg.Address)
 
-	// TODO replace
-	// tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
-	var tmWsClient *rpcclient.WSClient
+	tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
 
 	logger := svrCtx.Logger.With("module", "geth")
 	ethlog.Root().SetHandler(ethlog.FuncHandler(func(r *ethlog.Record) error {
@@ -113,7 +109,7 @@ func StartJsonRpc(
 		// gracefully stop the JSON-RPC server.
 		logger.Info("stopping JSON-RPC server...", "address", cfg.Address)
 		httpSrv.Close()
-
+		close(errCh)
 		return httpSrv, httpSrvDone, nil
 	case err := <-errCh:
 		svrCtx.Logger.Error("failed to boot JSON-RPC server", "error", err.Error())

@@ -75,6 +75,7 @@ func StartWebsrv(
 		// gracefully stop the websrv server.
 		svrCtx.Logger.Info("stopping websrv web server...", "address", cfg.Address)
 		httpSrv.Close()
+		close(errCh)
 		return httpSrv, httpSrvDone, nil
 	case err := <-errCh:
 		svrCtx.Logger.Error("failed to boot websrv server", "error", err.Error())
