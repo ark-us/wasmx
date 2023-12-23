@@ -89,6 +89,7 @@ type Application interface {
 	// Commit the state and return the application Merkle root hash
 	Commit() (*abci.ResponseCommit, error)
 	CommitMultiStore() storetypes.CommitMultiStore
+	LastBlockHeight() int64
 
 	// State Sync Connection
 	ListSnapshots(*abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)                // List available snapshots
