@@ -89,7 +89,7 @@ func StartJsonRpc(
 		return nil, nil, err
 	}
 
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
 		svrCtx.Logger.Info("Starting JSON-RPC server", "address", cfg.Address)
 		if err := httpSrv.Serve(ln); err != nil {

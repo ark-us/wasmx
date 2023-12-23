@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"sync"
+	"runtime"
 	"time"
 
 	sdkerr "cosmossdk.io/errors"
@@ -150,6 +150,8 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 	timeDelay := msg.Delay
 	logger := m.Keeper.Logger(ctx)
 
+	fmt.Println("Number of goroutines start0", runtime.NumGoroutine())
+
 	m.goRoutineGroup.Go(func() error {
 		err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
@@ -157,6 +159,8 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 		}
 		return nil
 	})
+
+	fmt.Println("Number of goroutines end0", runtime.NumGoroutine())
 
 	return &types.MsgStartTimeoutResponse{}, nil
 }
@@ -170,6 +174,8 @@ func (m msgServer) startTimeoutInternalGoroutine(
 ) error {
 	goCtx2 := m.goContextParent
 
+	fmt.Println("Number of goroutines start 10 in .Go", runtime.NumGoroutine())
+
 	select {
 	case <-goCtx2.Done():
 		logger.Info("parent context was closed, we do not start the delayed execution")
@@ -178,13 +184,17 @@ func (m msgServer) startTimeoutInternalGoroutine(
 		// continue
 	}
 
-	wg := new(sync.WaitGroup)
+	// wg := new(sync.WaitGroup)
 
+	// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 	intervalEnded := make(chan bool, 1)
-	errCh := make(chan error)
-	wg.Add(1)
+	errCh := make(chan error, 1)
+	// wg.Add(1)
 	go func() {
-		defer wg.Done()
+		// defer wg.Done()
+
+		fmt.Println("Number of goroutines start 11 (in goroutine)", runtime.NumGoroutine())
+
 		logger.Info("eventual execution starting", "description", description)
 		err := m.startTimeoutInternal(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
@@ -195,23 +205,31 @@ func (m msgServer) startTimeoutInternalGoroutine(
 		logger.Info("eventual execution ended", "description", description)
 		intervalEnded <- true
 	}()
-	wg.Wait()
+
+	fmt.Println("Number of goroutines start 12 before wg.Wait", runtime.NumGoroutine())
+
+	// wg.Wait()
+
+	fmt.Println("Number of goroutines start 13 after wg.Wait", runtime.NumGoroutine())
 
 	select {
-	case <-goCtx2.Done():
-		// The calling process canceled or closed the provided context, so we must
-		// gracefully stop the network server.
-		logger.Info("eventual execution stopping...")
-		close(intervalEnded)
-		close(errCh)
-		return nil
+	// case <-goCtx2.Done():
+	// 	// The calling process canceled or closed the provided context, so we must
+	// 	// gracefully stop the network server.
+	// 	logger.Info("eventual execution stopping...")
+	// 	close(intervalEnded)
+	// 	close(errCh)
+	// 	return nil
 	case err := <-errCh:
 		logger.Error("eventual execution failed to start", "error", err.Error())
 		close(intervalEnded)
 		return err
 	case <-intervalEnded:
+		logger.Info("!!!!!intervalEnded", "description", description)
 		close(intervalEnded)
 		return nil
+	case <-time.After(time.Duration(timeDelay)*time.Millisecond + time.Minute):
+		return fmt.Errorf("request did not complete within allowed duration")
 	}
 }
 
@@ -225,7 +243,17 @@ func (m msgServer) startTimeoutInternal(
 	// sleep first and then load the context
 	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 
+	fmt.Println("Number of goroutines1", runtime.NumGoroutine())
+
 	goCtx2 := m.goContextParent
+	select {
+	case <-goCtx2.Done():
+		logger.Info("parent context was closed, we do not start the delayed execution")
+		return nil
+	default:
+		// continue
+	}
+
 	height := m.App.LastBlockHeight()
 
 	cb := func(goctx context.Context) (any, error) {

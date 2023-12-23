@@ -239,6 +239,9 @@ func wasmxLoggerInfo(context interface{}, callframe *wasmedge.CallingFrame, para
 		return nil, wasmedge.Result_Fail
 	}
 	ctx.GetContext().Logger().Info(msg, parts...)
+	// if strings.Contains(msg, "start block proposal") {
+	// 	panic("000")
+	// }
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

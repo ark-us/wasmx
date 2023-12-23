@@ -174,6 +174,8 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 	if goCtx == nil {
 		goCtx = context.Background()
 	}
+	// goCtx, cancelFn := context.WithCancel(goCtx)
+	// defer cancelFn()
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
 	res, err := cb(goCtx)
 	if err != nil {

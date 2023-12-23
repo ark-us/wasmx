@@ -2,8 +2,10 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
+	"runtime"
 
 	"google.golang.org/grpc"
 
@@ -48,7 +50,9 @@ func StartGRPCServer(
 		return nil, nil, err
 	}
 
-	errCh := make(chan error)
+	fmt.Println("---NewGRPCServer & StartRPC END goroutines--", runtime.NumGoroutine())
+
+	errCh := make(chan error, 1)
 	go func() {
 		svrCtx.Logger.Info("Starting network GRPC server", "address", GRPCAddr)
 		if err := grpcServer.Serve(ln); err != nil {
