@@ -6,6 +6,9 @@ import (
 	"net"
 	"net/http"
 	"runtime"
+	"time"
+
+	_ "net/http/pprof" //nolint: gosec
 
 	"google.golang.org/grpc"
 
@@ -70,12 +73,35 @@ func StartGRPCServer(
 		}
 	}()
 
+	var pprofSrv *http.Server
+	// run pprof server if it is enabled
+	if svrCtx.Config.RPC.IsPprofEnabled() {
+		readHeaderTimeout := 10 * time.Second
+		pprofSrv = &http.Server{
+			Addr:              svrCtx.Config.RPC.PprofListenAddress,
+			Handler:           nil,
+			ReadHeaderTimeout: readHeaderTimeout,
+		}
+		go func() {
+			if err := pprofSrv.ListenAndServe(); err != http.ErrServerClosed {
+				// Error starting or closing listener:
+				svrCtx.Logger.Error("pprof HTTP server ListenAndServe", "err", err)
+			}
+		}()
+	}
+
 	select {
 	case <-ctx.Done():
 		// The calling process canceled or closed the provided context, so we must
 		// gracefully stop the GRPC server.
 		logger.Info("stopping network GRPC server...", "address", GRPCAddr)
 		grpcServer.GracefulStop()
+
+		if svrCtx.Config.RPC.IsPprofEnabled() {
+			if err := pprofSrv.Shutdown(context.Background()); err != nil {
+				svrCtx.Logger.Error("Pprof HTTP server Shutdown", "err", err)
+			}
+		}
 
 		return grpcServer, rpcClient, nil
 	case err := <-errCh:
