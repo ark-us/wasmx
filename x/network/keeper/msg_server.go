@@ -152,16 +152,33 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 
 	fmt.Println("Number of goroutines start0", runtime.NumGoroutine())
 
-	m.goRoutineGroup.Go(func() error {
-		printMemStats("StartTimeout2")
-		err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
-		if err != nil {
-			logger.Error("eventual execution failed", "err", err, "description", description)
+	wrapper := func(logger_ log.Logger, contractAddress_ sdk.AccAddress, msgbz_ []byte, timeDelay_ int64, description_ string) func() error {
+		return func() error {
+			err := m.startTimeoutInternalGoroutine(logger_, description_, timeDelay_, msgbz_, contractAddress_)
+			if err != nil {
+				logger.Error("eventual execution failed", "err", err, "description", description)
+			}
+			fmt.Println("---StartTimeout END--")
+			return nil
 		}
-		runtime.GC()
-		// debug.FreeOSMemory()
-		return nil
+	}
+	fn := wrapper(logger, contractAddress, msgbz, timeDelay, description)
+	m.goRoutineGroup.Go(func() error {
+		return fn()
 	})
+
+	// m.goRoutineGroup.Go(func() error {
+	// 	printMemStats("StartTimeout2")
+	// 	err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
+	// 	if err != nil {
+	// 		logger.Error("eventual execution failed", "err", err, "description", description)
+	// 	}
+	// 	// runtime.GC()
+	// 	// debug.FreeOSMemory()
+
+	// 	fmt.Println("---StartTimeout END--")
+	// 	return nil
+	// })
 
 	fmt.Println("Number of goroutines end0", runtime.NumGoroutine())
 	printMemStats("StartTimeout END")
