@@ -16,6 +16,8 @@ import (
 	ethlog "github.com/ethereum/go-ethereum/log"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
 
+	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
+
 	"mythos/v1/server/config"
 	"mythos/v1/x/wasmx/rpc"
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
@@ -33,7 +35,8 @@ func StartJsonRpc(
 	cfg := cfgAll.JsonRpc
 	svrCtx.Logger.Info("starting JSON-RPC server ", cfg.Address)
 
-	tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
+	// tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
+	var tmWsClient *rpcclient.WSClient
 
 	logger := svrCtx.Logger.With("module", "geth")
 	ethlog.Root().SetHandler(ethlog.FuncHandler(func(r *ethlog.Record) error {

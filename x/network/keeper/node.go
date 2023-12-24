@@ -45,14 +45,18 @@ func StartGRPCServer(
 		return nil, nil, err
 	}
 
-	err = StartRPC(svrCtx, ctx, app, rpcClient, svrCtx.Logger, cfgAll)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	fmt.Println("---NewGRPCServer & StartRPC END goroutines--", runtime.NumGoroutine())
 
 	errCh := make(chan error, 1)
+
+	go func() {
+		err = StartRPC(svrCtx, ctx, app, rpcClient, svrCtx.Logger, cfgAll)
+		if err != nil {
+			svrCtx.Logger.Error("Failed to start network RPC server", "error", err.Error())
+			errCh <- err
+		}
+	}()
+
 	go func() {
 		svrCtx.Logger.Info("Starting network GRPC server", "address", GRPCAddr)
 		if err := grpcServer.Serve(ln); err != nil {
