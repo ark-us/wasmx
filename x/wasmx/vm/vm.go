@@ -46,6 +46,7 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	var err error
 
 	// first in, last cleaned up
+	cleanups = append(cleanups, conf.Release)
 	cleanups = append(cleanups, contractVm.Release)
 
 	// set default
@@ -53,8 +54,9 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 		label := types.DEFAULT_SYS_DEP
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
-
+	printMemStats("pre initiateWasmDeps")
 	cleanups, err = initiateWasmDeps(context, contractVm, systemDeps, cleanups)
+	printMemStats("post initiateWasmDeps")
 	if err != nil {
 		return nil, cleanups, err
 	}
@@ -90,9 +92,12 @@ func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []ty
 
 // run in inverse order
 func runCleanups(cleanups []func()) {
+	fmt.Println("--runCleanups", len(cleanups))
+	printMemStats("pre runCleanups")
 	for i := len(cleanups) - 1; i >= 0; i-- {
 		cleanups[i]()
 	}
+	printMemStats("post runCleanups")
 }
 
 func buildExecutionContextClassic(info types.ContractDependency) *ContractContext {
@@ -106,6 +111,10 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	report := types.AnalysisReport{}
 	loader := wasmedge.NewLoader()
 	ast, err := loader.LoadBuffer(wasmbuffer)
+	defer func() {
+		ast.Release()
+		loader.Release()
+	}()
 	if err != nil {
 		return report, err
 	}
@@ -161,8 +170,6 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 		}
 	}
 
-	ast.Release()
-	loader.Release()
 	return report, nil
 }
 
@@ -173,17 +180,17 @@ func AotCompile(inPath string, outPath string) error {
 	// Create Compiler
 	// compiler := wasmedge.NewCompilerWithConfig(conf)
 	compiler := wasmedge.NewCompiler()
+	defer func() {
+		compiler.Release()
+		// conf.Release()
+	}()
 
 	// Compile WASM AOT
 	err := compiler.Compile(inPath, outPath)
 	if err != nil {
 		fmt.Println("Go: Compile WASM to AOT mode Failed!!")
-		compiler.Release()
 		return err
 	}
-
-	// conf.Release()
-	compiler.Release()
 	return nil
 }
 
@@ -252,24 +259,30 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
+	printMemStats("[interpreter] pre InitiateWasm")
 	contractVm, _cleanups, err := InitiateWasm(context, "", nil, systemDeps)
+	printMemStats("[interpreter] post InitiateWasm")
 	cleanups = append(cleanups, _cleanups...)
-	if err != nil {
+	defer func() {
 		runCleanups(cleanups)
+	}()
+	if err != nil {
 		return types.ContractResponse{}, err
 	}
 	selfContext.Vm = contractVm
+	printMemStats("[interpreter] pre setExecutionBytecode")
 	setExecutionBytecode(context, contractVm, funcName)
 	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	printMemStats("[interpreter] pre executeHandler")
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
+	printMemStats("[interpreter] post executeHandler")
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "%s", string(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
-		runCleanups(cleanups)
 		if isdebug {
 			// we don't fail for debug/tracing transactions
 			return resp, nil
@@ -280,8 +293,6 @@ func ExecuteWasmInterpreted(
 	}
 
 	response := handleContractResponse(context, contractVm, isdebug)
-
-	runCleanups(cleanups)
 	return response, nil
 }
 
@@ -351,10 +362,15 @@ func ExecuteWasm(
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
 
+	printMemStats("pre InitiateWasm")
+
 	contractVm, _cleanups, err := InitiateWasm(context, env.Contract.FilePath, nil, systemDeps)
+	printMemStats("post InitiateWasm")
 	cleanups = append(cleanups, _cleanups...)
-	if err != nil {
+	defer func() {
 		runCleanups(cleanups)
+	}()
+	if err != nil {
 		return types.ContractResponse{}, err
 	}
 	selfContext.Vm = contractVm
@@ -369,7 +385,6 @@ func ExecuteWasm(
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
 		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
-		runCleanups(cleanups)
 		if isdebug {
 			return resp, nil
 		}
@@ -378,7 +393,6 @@ func ExecuteWasm(
 		// return types.ContractResponse{}, err
 	}
 	response := handleContractResponse(context, contractVm, isdebug)
-	runCleanups(cleanups)
 	return response, nil
 }
 
@@ -525,4 +539,20 @@ func getMemory(contractVm *wasmedge.VM) []byte {
 	dst := make([]byte, len(membz))
 	copy(dst, membz)
 	return dst
+}
+
+func printMemStats(msg string) {
+	// var mem runtime.MemStats
+	// runtime.ReadMemStats(&mem)
+
+	// // TotalAlloc is bytes of allocated heap objects
+	// // Sys is the total bytes of memory obtained from the OS
+	// // HeapAlloc is bytes of allocated heap objects
+	// // HeapSys is bytes of heap memory obtained from the OS
+
+	// // fmt.Printf("%s: TotalAlloc (Heap Object Bytes): %v\n", msg, mem.TotalAlloc/1000000)
+	// // fmt.Printf("%s: Sys (OS Obtained Bytes): %v\n", msg, mem.Sys/1000000)
+	// fmt.Printf("%s: HeapAlloc (Heap Object Bytes): %v\n", msg, mem.HeapAlloc/1000000)
+	// // fmt.Printf("%s: HeapSys (OS Heap Bytes): %v\n", msg, mem.HeapSys/1000000)
+	// fmt.Printf("%s: Frees: %v\n", msg, mem.Frees/1000000)
 }

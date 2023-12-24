@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"runtime/pprof"
 
 	"github.com/spf13/cobra"
@@ -263,17 +264,67 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		if err != nil {
 			return err
 		}
+		memProfile := cpuProfile + "_mem.prof"
+		fm, err := os.Create(memProfile)
+		if err != nil {
+			return err
+		}
+		gorProfile := cpuProfile + "_gor.prof"
+		fg, err := os.Create(gorProfile)
+		if err != nil {
+			return err
+		}
+		allocProfile := cpuProfile + "_alloc.prof"
+		fa, err := os.Create(allocProfile)
+		if err != nil {
+			return err
+		}
 
 		svrCtx.Logger.Info("starting CPU profiler", "profile", cpuProfile)
 		if err := pprof.StartCPUProfile(f); err != nil {
 			return err
 		}
+		if err := pprof.WriteHeapProfile(fm); err != nil {
+			return err
+		}
+		if err := pprof.Lookup("goroutine").WriteTo(fg, 0); err != nil {
+			return err
+		}
+		if err := pprof.Lookup("allocs").WriteTo(fa, 0); err != nil {
+			return err
+		}
+
+		// "goroutine":    goroutineProfile,
+		// "threadcreate": threadcreateProfile,
+		// "heap":         heapProfile,
+		// "allocs":       allocsProfile,
+		// "block":        blockProfile,
+		// "mutex":        mutexProfile,
 
 		defer func() {
 			svrCtx.Logger.Info("stopping CPU profiler", "profile", cpuProfile)
 			pprof.StopCPUProfile()
 			if err := f.Close(); err != nil {
 				logger.Error("failed to close CPU profiler file", "error", err.Error())
+			}
+		}()
+		defer func() {
+			svrCtx.Logger.Info("stopping memory profiler", "profile", memProfile)
+			runtime.GC() // get up-to-date statistics
+			if err := fm.Close(); err != nil {
+				logger.Error("failed to close memory profiler file", "error", err.Error())
+			}
+		}()
+		defer func() {
+			svrCtx.Logger.Info("stopping goroutine profiler", "profile", gorProfile)
+			if err := fg.Close(); err != nil {
+				logger.Error("failed to close goroutine profiler file", "error", err.Error())
+			}
+		}()
+		defer func() {
+			svrCtx.Logger.Info("stopping allocs profiler", "profile", allocProfile)
+			if err := fa.Close(); err != nil {
+				logger.Error("failed to close allocs profiler file", "error", err.Error())
 			}
 		}()
 	}

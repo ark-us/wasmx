@@ -25,7 +25,6 @@ type IntervalAction struct {
 type msgServer struct {
 	ActionExecutor *ActionExecutor
 	App            types.BaseApp
-	intervals      map[int32]*IntervalAction
 	*Keeper
 }
 
@@ -35,7 +34,6 @@ func NewMsgServerImpl(keeper *Keeper, app types.BaseApp, actionExecutor *ActionE
 		Keeper:         keeper,
 		App:            app,
 		ActionExecutor: actionExecutor,
-		intervals:      map[int32]*IntervalAction{},
 	}
 }
 
@@ -134,6 +132,8 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	printMemStats("StartTimeout")
+
 	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
@@ -153,14 +153,18 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 	fmt.Println("Number of goroutines start0", runtime.NumGoroutine())
 
 	m.goRoutineGroup.Go(func() error {
+		printMemStats("StartTimeout2")
 		err := m.startTimeoutInternalGoroutine(logger, description, timeDelay, msgbz, contractAddress)
 		if err != nil {
 			logger.Error("eventual execution failed", "err", err, "description", description)
 		}
+		runtime.GC()
+		// debug.FreeOSMemory()
 		return nil
 	})
 
 	fmt.Println("Number of goroutines end0", runtime.NumGoroutine())
+	printMemStats("StartTimeout END")
 
 	return &types.MsgStartTimeoutResponse{}, nil
 }
@@ -173,6 +177,7 @@ func (m msgServer) startTimeoutInternalGoroutine(
 	contractAddress sdk.AccAddress,
 ) error {
 	goCtx2 := m.goContextParent
+	printMemStats("startTimeoutInternalGoroutine")
 
 	fmt.Println("Number of goroutines start 10 in .Go", runtime.NumGoroutine())
 
@@ -192,6 +197,7 @@ func (m msgServer) startTimeoutInternalGoroutine(
 	// wg.Add(1)
 	go func() {
 		// defer wg.Done()
+		printMemStats("startTimeoutInternalGoroutine2")
 
 		fmt.Println("Number of goroutines start 11 (in goroutine)", runtime.NumGoroutine())
 
@@ -209,6 +215,8 @@ func (m msgServer) startTimeoutInternalGoroutine(
 	fmt.Println("Number of goroutines start 12 before wg.Wait", runtime.NumGoroutine())
 
 	// wg.Wait()
+
+	printMemStats("startTimeoutInternalGoroutine END")
 
 	fmt.Println("Number of goroutines start 13 after wg.Wait", runtime.NumGoroutine())
 
@@ -243,6 +251,8 @@ func (m msgServer) startTimeoutInternal(
 	// sleep first and then load the context
 	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 
+	printMemStats("startTimeoutInternal")
+
 	fmt.Println("Number of goroutines1", runtime.NumGoroutine())
 
 	goCtx2 := m.goContextParent
@@ -257,8 +267,10 @@ func (m msgServer) startTimeoutInternal(
 	height := m.App.LastBlockHeight()
 
 	cb := func(goctx context.Context) (any, error) {
+		printMemStats("startTimeoutInternal callback")
 		ctx := sdk.UnwrapSDKContext(goctx)
 		res, err := m.Keeper.wasmxKeeper.ExecuteEventual(ctx, contractAddress, contractAddress, msgbz, make([]string, 0))
+		printMemStats("startTimeoutInternal callback END")
 		if err != nil {
 			// TODO - stop without propagating a stop to parent
 			if err == types.ErrGoroutineClosed {
@@ -273,5 +285,23 @@ func (m msgServer) startTimeoutInternal(
 	// disregard result
 	_, err := m.ActionExecutor.Execute(goCtx2, height, cb)
 
+	printMemStats("startTimeoutInternal END")
+
 	return err
+}
+
+func printMemStats(msg string) {
+	// var mem runtime.MemStats
+	// runtime.ReadMemStats(&mem)
+
+	// // TotalAlloc is bytes of allocated heap objects
+	// // Sys is the total bytes of memory obtained from the OS
+	// // HeapAlloc is bytes of allocated heap objects
+	// // HeapSys is bytes of heap memory obtained from the OS
+
+	// fmt.Printf("%s: TotalAlloc (Heap Object Bytes): %v\n", msg, mem.TotalAlloc/1000000)
+	// fmt.Printf("%s: Sys (OS Obtained Bytes): %v\n", msg, mem.Sys/1000000)
+	// fmt.Printf("%s: HeapAlloc (Heap Object Bytes): %v\n", msg, mem.HeapAlloc/1000000)
+	// fmt.Printf("%s: HeapSys (OS Heap Bytes): %v\n", msg, mem.HeapSys/1000000)
+	// fmt.Printf("%s: Frees: %v\n", msg, mem.Frees/1000000)
 }

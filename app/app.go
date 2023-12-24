@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	_ "net/http/pprof"
+
 	"os"
 	"path/filepath"
 
@@ -12,19 +14,27 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
+
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/core/appmodule"
 	"cosmossdk.io/log"
+
 	storetypes "cosmossdk.io/store/types"
 	"cosmossdk.io/x/circuit"
+
 	circuitkeeper "cosmossdk.io/x/circuit/keeper"
+
 	circuittypes "cosmossdk.io/x/circuit/types"
 	"cosmossdk.io/x/evidence"
+
 	evidencekeeper "cosmossdk.io/x/evidence/keeper"
+
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
+
 	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
+
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
 
@@ -33,115 +43,184 @@ import (
 
 	// upgradeclient "cosmossdk.io/x/upgrade/client"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
+
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
+
 	nodeservice "github.com/cosmos/cosmos-sdk/client/grpc/node"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
+
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/std"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
+
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
+
 	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
+
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
+
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
+
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
+
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
 
 	// distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
+
 	testdata_pulsar "github.com/cosmos/cosmos-sdk/testutil/testdata/testpb"
+
 	consensus "github.com/cosmos/cosmos-sdk/x/consensus"
+
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
+
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
+
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
+
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"github.com/cosmos/cosmos-sdk/x/group"
+
 	groupkeeper "github.com/cosmos/cosmos-sdk/x/group/keeper"
+
 	groupmodule "github.com/cosmos/cosmos-sdk/x/group/module"
 	"github.com/cosmos/cosmos-sdk/x/mint"
+
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
+
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
+
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
+
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+
 	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
+
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
+
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/ibc-go/modules/capability"
 
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
+
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+
 	ica "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts"
+
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/keeper"
+
 	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
+
 	icahost "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host"
+
 	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
+
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
+
 	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
+
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
+
 	ibc "github.com/cosmos/ibc-go/v8/modules/core"
 
 	// ibcclientclient "github.com/cosmos/ibc-go/v8/modules/core/02-client/client"
 	icahostkeeper "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/keeper"
+
 	ibcporttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
+
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
+
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
 	ante "mythos/v1/app/ante"
+
 	appparams "mythos/v1/app/params"
+
 	docs "mythos/v1/docs"
+
 	networkmodule "mythos/v1/x/network"
+
 	networkmodulekeeper "mythos/v1/x/network/keeper"
+
 	networkmoduletypes "mythos/v1/x/network/types"
+
 	wasmxmodule "mythos/v1/x/wasmx"
+
 	wasmxclient "mythos/v1/x/wasmx/client"
+
 	wasmxmodulekeeper "mythos/v1/x/wasmx/keeper"
+
 	wasmxmoduletypes "mythos/v1/x/wasmx/types"
+
 	websrvmodule "mythos/v1/x/websrv"
+
 	websrvclient "mythos/v1/x/websrv/client"
+
 	websrvmodulekeeper "mythos/v1/x/websrv/keeper"
+
 	websrvmoduletypes "mythos/v1/x/websrv/types"
-	// this line is used by starport scaffolding # stargate/app/moduleImport
 )
+
+// this line is used by starport scaffolding # stargate/app/moduleImport
 
 var (
 	// DefaultNodeHome default home directories for the application daemon
