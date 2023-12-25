@@ -158,7 +158,7 @@ func NewKeeper(
 	keeper.wasmVMQueryHandler = qhandler
 
 	// Register core contracts after the cw8 handlers are attached to the keeper
-	cch := cchtypes.NewContractHandlerMap(*keeper)
+	cch := cchtypes.NewContractHandlerMap(keeper)
 	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
 	keeper.cch = &cch
 

@@ -5,7 +5,7 @@ import (
 )
 
 // RegisterRouteHandler registers a web route and its smart contract controller
-func (k Keeper) RegisterRouteHandler(
+func (k *Keeper) RegisterRouteHandler(
 	ctx sdk.Context,
 	path string,
 	contractAddressBech32 string,
@@ -19,7 +19,7 @@ func (k Keeper) RegisterRouteHandler(
 }
 
 // DeregisterRouteHandler deregisters a web route
-func (k Keeper) DeregisterRouteHandler(
+func (k *Keeper) DeregisterRouteHandler(
 	ctx sdk.Context,
 	path string,
 	contractAddressBech32 string,

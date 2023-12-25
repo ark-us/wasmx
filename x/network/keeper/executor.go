@@ -163,6 +163,14 @@ func NewActionExecutor(bapp types.BaseApp, logger log.Logger) *ActionExecutor {
 	}
 }
 
+func (r *ActionExecutor) GetLogger() log.Logger {
+	return r.logger
+}
+
+func (r *ActionExecutor) GetApp() types.BaseApp {
+	return r.bapp
+}
+
 func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()

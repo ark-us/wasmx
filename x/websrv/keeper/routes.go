@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func (k Keeper) GetMostSpecificRouteToContract(ctx sdk.Context, route string) sdk.AccAddress {
+func (k *Keeper) GetMostSpecificRouteToContract(ctx sdk.Context, route string) sdk.AccAddress {
 	// "" "arg1" "arg2" ..
 	parts := strings.Split(route, "/")
 	// a hardcoded max of path parts
@@ -34,7 +34,7 @@ func (k Keeper) GetMostSpecificRouteToContract(ctx sdk.Context, route string) sd
 	return nil
 }
 
-func (k Keeper) RegisterRoute(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
+func (k *Keeper) RegisterRoute(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
 	// If it was previously registered, remove that registration
 	k.DeleteContractToRoute(ctx, contractAddress)
 	k.DeleteRouteToContract(ctx, route)
@@ -42,13 +42,13 @@ func (k Keeper) RegisterRoute(ctx sdk.Context, route string, contractAddress sdk
 	k.SetRouteToContract(ctx, route, contractAddress)
 }
 
-func (k Keeper) DeregisterRoute(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
+func (k *Keeper) DeregisterRoute(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
 	// If it was previously registered, remove that registration
 	k.DeleteContractToRoute(ctx, contractAddress)
 	k.DeleteRouteToContract(ctx, route)
 }
 
-func (k Keeper) GetRouteToContract(ctx sdk.Context, route string) sdk.AccAddress {
+func (k *Keeper) GetRouteToContract(ctx sdk.Context, route string) sdk.AccAddress {
 	store := ctx.KVStore(k.storeKey)
 	addressbz := store.Get(types.GetRouteToContractKey(route))
 	if addressbz == nil {
@@ -57,28 +57,28 @@ func (k Keeper) GetRouteToContract(ctx sdk.Context, route string) sdk.AccAddress
 	return sdk.AccAddress(addressbz)
 }
 
-func (k Keeper) SetRouteToContract(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
+func (k *Keeper) SetRouteToContract(ctx sdk.Context, route string, contractAddress sdk.AccAddress) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetRouteToContractKey(route), contractAddress.Bytes())
 }
 
-func (k Keeper) DeleteRouteToContract(ctx sdk.Context, route string) {
+func (k *Keeper) DeleteRouteToContract(ctx sdk.Context, route string) {
 	store := ctx.KVStore(k.storeKey)
 	store.Delete(types.GetRouteToContractKey(route))
 }
 
-func (k Keeper) GetContractToRoute(ctx sdk.Context, contractAddress sdk.AccAddress) string {
+func (k *Keeper) GetContractToRoute(ctx sdk.Context, contractAddress sdk.AccAddress) string {
 	store := ctx.KVStore(k.storeKey)
 	route := store.Get(types.GetContractToRouteKey(contractAddress))
 	return string(route)
 }
 
-func (k Keeper) SetContractToRoute(ctx sdk.Context, contractAddress sdk.AccAddress, route string) {
+func (k *Keeper) SetContractToRoute(ctx sdk.Context, contractAddress sdk.AccAddress, route string) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetContractToRouteKey(contractAddress), []byte(route))
 }
 
-func (k Keeper) DeleteContractToRoute(ctx sdk.Context, contractAddress sdk.AccAddress) {
+func (k *Keeper) DeleteContractToRoute(ctx sdk.Context, contractAddress sdk.AccAddress) {
 	store := ctx.KVStore(k.storeKey)
 	store.Delete(types.GetContractToRouteKey(contractAddress))
 }

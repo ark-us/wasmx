@@ -17,9 +17,9 @@ import (
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
 
-var _ types.QueryServer = Keeper{}
+var _ types.QueryServer = &Keeper{}
 
-func (k Keeper) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
+func (k *Keeper) ContractInfo(c context.Context, req *types.QueryContractInfoRequest) (*types.QueryContractInfoResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -38,7 +38,7 @@ func (k Keeper) ContractInfo(c context.Context, req *types.QueryContractInfoRequ
 }
 
 // ContractsByCode lists all smart contracts for a code id
-func (k Keeper) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
+func (k *Keeper) ContractsByCode(c context.Context, req *types.QueryContractsByCodeRequest) (*types.QueryContractsByCodeResponse, error) {
 	// if req == nil {
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }
@@ -66,7 +66,7 @@ func (k Keeper) ContractsByCode(c context.Context, req *types.QueryContractsByCo
 	return &types.QueryContractsByCodeResponse{}, nil
 }
 
-func (k Keeper) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
+func (k *Keeper) AllContractState(c context.Context, req *types.QueryAllContractStateRequest) (*types.QueryAllContractStateResponse, error) {
 	// if req == nil {
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }
@@ -100,7 +100,7 @@ func (k Keeper) AllContractState(c context.Context, req *types.QueryAllContractS
 	return nil, nil
 }
 
-func (k Keeper) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
+func (k *Keeper) RawContractState(c context.Context, req *types.QueryRawContractStateRequest) (*types.QueryRawContractStateResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -118,7 +118,7 @@ func (k Keeper) RawContractState(c context.Context, req *types.QueryRawContractS
 	return &types.QueryRawContractStateResponse{Data: rsp}, nil
 }
 
-// func (k Keeper) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (rsp *types.QuerySmartContractStateResponse, err error) {
+// func (k *Keeper) SmartContractState(c context.Context, req *types.QuerySmartContractStateRequest) (rsp *types.QuerySmartContractStateResponse, err error) {
 // if req == nil {
 // 	return nil, status.Error(codes.InvalidArgument, "empty request")
 // }
@@ -161,7 +161,7 @@ func (k Keeper) RawContractState(c context.Context, req *types.QueryRawContractS
 // return &types.QuerySmartContractStateResponse{Data: bz}, nil
 // }
 
-func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContractCallRequest) (rsp *types.QuerySmartContractCallResponse, err error) {
+func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContractCallRequest) (rsp *types.QuerySmartContractCallResponse, err error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -213,7 +213,7 @@ func (k Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContra
 	return &types.QuerySmartContractCallResponse{Data: bz}, nil
 }
 
-func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp *types.QueryCallEthResponse, err error) {
+func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp *types.QueryCallEthResponse, err error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -292,7 +292,7 @@ func (k Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp 
 	return &types.QueryCallEthResponse{Data: bz, GasUsed: ctx.GasMeter().GasConsumed()}, nil
 }
 
-func (k Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContractCallRequest) (rsp *types.QueryDebugContractCallResponse, err error) {
+func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContractCallRequest) (rsp *types.QueryDebugContractCallResponse, err error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -337,7 +337,7 @@ func (k Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContra
 	return &types.QueryDebugContractCallResponse{Data: bz, MemorySnapshot: memsnapshot, ErrorMessage: errMsg}, nil
 }
 
-func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
+func (k *Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.QueryCodeResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -357,7 +357,7 @@ func (k Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.Que
 	}, nil
 }
 
-func (k Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*types.QueryCodeInfoResponse, error) {
+func (k *Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*types.QueryCodeInfoResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -373,7 +373,7 @@ func (k Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*t
 	}, nil
 }
 
-func (k Keeper) Codes(c context.Context, req *types.QueryCodesRequest) (*types.QueryCodesResponse, error) {
+func (k *Keeper) Codes(c context.Context, req *types.QueryCodesRequest) (*types.QueryCodesResponse, error) {
 	// if req == nil {
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }
@@ -402,7 +402,7 @@ func (k Keeper) Codes(c context.Context, req *types.QueryCodesRequest) (*types.Q
 	return nil, nil
 }
 
-func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*types.QueryContractInfoResponse, error) {
+func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper *Keeper) (*types.QueryContractInfoResponse, error) {
 	info := keeper.GetContractInfo(ctx, addr)
 	if info == nil {
 		return nil, types.ErrNotFound
@@ -413,7 +413,7 @@ func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper Keeper) (*ty
 	}, nil
 }
 
-func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeResponse, error) {
+func queryCode(ctx sdk.Context, codeID uint64, keeper *Keeper) (*types.QueryCodeResponse, error) {
 	if codeID == 0 {
 		return nil, nil
 	}
@@ -431,7 +431,7 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper Keeper) (*types.QueryCodeR
 	return &types.QueryCodeResponse{CodeInfo: res, Data: code}, nil
 }
 
-func (k Keeper) ContractsByCreator(c context.Context, req *types.QueryContractsByCreatorRequest) (*types.QueryContractsByCreatorResponse, error) {
+func (k *Keeper) ContractsByCreator(c context.Context, req *types.QueryContractsByCreatorRequest) (*types.QueryContractsByCreatorResponse, error) {
 	// if req == nil {
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }

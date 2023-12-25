@@ -25,6 +25,7 @@ type (
 		clessKey        storetypes.StoreKey
 		paramstore      paramtypes.Subspace
 		wasmxKeeper     types.WasmxKeeper
+		actionExecutor  *ActionExecutor
 
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
@@ -42,6 +43,7 @@ func NewKeeper(
 	clessKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	wasmxKeeper types.WasmxKeeper,
+	actionExecutor *ActionExecutor,
 	authority string,
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -59,6 +61,7 @@ func NewKeeper(
 		clessKey:        clessKey,
 		paramstore:      ps,
 		wasmxKeeper:     wasmxKeeper,
+		actionExecutor:  actionExecutor,
 		authority:       authority,
 	}
 	return keeper

@@ -19,7 +19,7 @@ import (
 
 type WasmxCosmosHandler struct {
 	Ctx             sdk.Context
-	Keeper          Keeper
+	Keeper          *Keeper
 	ContractAddress sdk.AccAddress
 }
 
@@ -128,7 +128,7 @@ func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.Acc
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
 
-func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
+func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
 		Ctx:             ctx,
 		Keeper:          k,
@@ -136,7 +136,7 @@ func (k Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress
 	}
 }
 
-func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) ([]byte, error) {
+func (k *Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) ([]byte, error) {
 	// TODO if we allow historical queries, at a certain block
 	// use app.Query(queryReq)
 	queryFn := k.grpcQueryRouter.Route(reqQuery.Path)
@@ -147,7 +147,7 @@ func (k Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) 
 	return res.Value, nil
 }
 
-func (k Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
+func (k *Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
 	// sdk.Msg
 	var msg sdk.Msg
 	err := k.cdc.UnpackAny(any, &msg)
@@ -157,7 +157,7 @@ func (k Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sd
 	return k.ExecuteCosmosMsg(ctx, msg, owner)
 }
 
-func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
+func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
 	anymsg, err := cdctypes.NewAnyWithValue(msg)
 	if err != nil {
 		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message any")
@@ -179,7 +179,7 @@ func (k Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddr
 
 // Attempts to get the message handler from the router and if found will then execute the message.
 // If the message execution is successful, the proto marshaled message response will be returned.
-func (k Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]sdk.Event, []byte, error) {
+func (k *Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]sdk.Event, []byte, error) {
 	handler := k.msgRouter.Handler(msg)
 	if handler == nil {
 		return nil, nil, types.ErrInvalidRoute
@@ -193,7 +193,7 @@ func (k Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]sdk.Event, []byte, e
 	return res.GetEvents(), res.Data, nil
 }
 
-// func (k Keeper) newQueryHandler(ctx sdk.Context, contractAddress sdk.AccAddress) QueryHandler {
+// func (k *Keeper) newQueryHandler(ctx sdk.Context, contractAddress sdk.AccAddress) QueryHandler {
 // 	return NewQueryHandler(ctx, k, contractAddress, k.gasRegister)
 // }
 

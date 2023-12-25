@@ -26,6 +26,7 @@ import (
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 
+	// "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -33,6 +34,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/grpc/gogoreflection"
 	reflection "github.com/cosmos/cosmos-sdk/server/grpc/reflection/v2alpha1"
 
+	// runapp "github.com/cosmos/cosmos-sdk/runtime"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -116,18 +118,21 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	networkServer, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
+	_, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
-
-	bapp, ok := app.(types.BaseApp)
-	if !ok {
-		return nil, nil, fmt.Errorf("failed to get BaseApp from server Application")
+	bapp, err := GetBaseApp(app)
+	if err != nil {
+		return nil, nil, err
 	}
-	mythosapp, ok := bapp.(MythosApp)
-	if !ok {
-		return nil, nil, fmt.Errorf("failed to get MythosApp from server Application")
+	mythosapp, err := GetMythosApp(app)
+	if err != nil {
+		return nil, nil, err
+	}
+	networkServer := &msgServer{
+		Keeper: mythosapp.GetNetworkKeeper(),
+		App:    bapp,
 	}
 
 	logger := svrCtx.Logger.With("module", "network")
@@ -209,14 +214,17 @@ func RegisterGRPCServer(
 	sapp servertypes.Application,
 	server *grpc.Server,
 ) (*msgServer, error) {
-	app, ok := sapp.(types.BaseApp)
-	if !ok {
-		return nil, fmt.Errorf("failed to get BaseApp from server Application")
+	app, err := GetBaseApp(sapp)
+	if err != nil {
+		return nil, err
 	}
-	mythosapp, ok := app.(MythosApp)
-	if !ok {
-		return nil, fmt.Errorf("failed to get MythosApp from server Application")
+	mythosapp, err := GetMythosApp(sapp)
+	if err != nil {
+		return nil, err
 	}
+
+	// sapp.RegisterGRPCServer(server)
+	// return nil, nil
 
 	actionExecutor := mythosapp.GetActionExecutor()
 
@@ -263,9 +271,8 @@ func RegisterGRPCServer(
 
 	// NewMsgServerImpl
 	handler := &msgServer{
-		Keeper:         mythosapp.GetNetworkKeeper(),
-		App:            app,
-		ActionExecutor: actionExecutor,
+		Keeper: mythosapp.GetNetworkKeeper(),
+		App:    app,
 	}
 
 	desc := types.Network_Msg_serviceDesc
@@ -365,9 +372,9 @@ func initChain(
 	validatorSet := cmttypes.NewValidatorSet(validators)
 	nextVals := cmttypes.TM2PB.ValidatorUpdates(validatorSet)
 	pbparams := genDoc.ConsensusParams.ToProto()
-	bapp, ok := app.(types.BaseApp)
-	if !ok {
-		return nil, fmt.Errorf("failed to get BaseApp from server Application")
+	bapp, err := GetBaseApp(app)
+	if err != nil {
+		return nil, err
 	}
 
 	req := &abci.RequestInitChain{
@@ -654,4 +661,28 @@ func (wm *WebsocketManager) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 	// if err := con.Stop(); err != nil {
 	// 	wm.logger.Error("error while stopping connection", "error", err)
 	// }
+}
+
+func GetBaseApp(app servertypes.Application) (types.BaseApp, error) {
+	bapp, ok := app.(types.BaseApp)
+	if !ok {
+		return nil, fmt.Errorf("failed to get App from server Application")
+	}
+	// _, ok = app.(*baseapp.BaseApp)
+	// if !ok {
+	// 	return nil, fmt.Errorf("failed to get App as baseapp pointer from server Application")
+	// }
+	// _, ok = app.(*runapp.App)
+	// if !ok {
+	// 	return nil, fmt.Errorf("failed to get App as runapp pointer from server Application")
+	// }
+	return bapp, nil
+}
+
+func GetMythosApp(app servertypes.Application) (MythosApp, error) {
+	mythosapp, ok := app.(MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("failed to get MythosApp from server Application")
+	}
+	return mythosapp, nil
 }

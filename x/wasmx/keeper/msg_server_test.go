@@ -11,5 +11,5 @@ import (
 
 func setupMsgServer(t testing.TB) (types.MsgServer, context.Context) {
 	k, ctx := keepertest.WasmxKeeper(t)
-	return keeper.NewMsgServerImpl(*k), ctx
+	return keeper.NewMsgServerImpl(k), ctx
 }

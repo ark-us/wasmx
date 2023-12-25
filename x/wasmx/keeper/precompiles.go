@@ -11,7 +11,7 @@ import (
 	"mythos/v1/x/wasmx/vm/precompiles"
 )
 
-func (k Keeper) BootstrapSystemContracts(
+func (k *Keeper) BootstrapSystemContracts(
 	ctx sdk.Context,
 	bootstrapAccountAddr sdk.AccAddress,
 	contracts []types.SystemContract,
@@ -27,7 +27,7 @@ func (k Keeper) BootstrapSystemContracts(
 }
 
 // ActivateEmbeddedSystemContract
-func (k Keeper) ActivateEmbeddedSystemContract(
+func (k *Keeper) ActivateEmbeddedSystemContract(
 	ctx sdk.Context,
 	bootstrapAccountAddr sdk.AccAddress,
 	contract types.SystemContract,
@@ -38,7 +38,7 @@ func (k Keeper) ActivateEmbeddedSystemContract(
 }
 
 // ActivateSystemContract
-func (k Keeper) ActivateSystemContract(
+func (k *Keeper) ActivateSystemContract(
 	ctx sdk.Context,
 	bootstrapAccountAddr sdk.AccAddress,
 	contract types.SystemContract,
@@ -93,7 +93,7 @@ func (k Keeper) ActivateSystemContract(
 }
 
 // SetSystemContract
-func (k Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract) {
+func (k *Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract) {
 	addr := types.AccAddressFromHex(contract.Address)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
 	bz := k.cdc.MustMarshal(&contract)
@@ -101,7 +101,7 @@ func (k Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract
 }
 
 // GetSystemContracts
-func (k Keeper) GetSystemContracts(ctx sdk.Context) (contracts []types.SystemContract) {
+func (k *Keeper) GetSystemContracts(ctx sdk.Context) (contracts []types.SystemContract) {
 	k.IterateSystemContracts(ctx, func(contract types.SystemContract) bool {
 		contracts = append(contracts, contract)
 		return false
@@ -111,7 +111,7 @@ func (k Keeper) GetSystemContracts(ctx sdk.Context) (contracts []types.SystemCon
 
 // IterateSystemContracts
 // When the callback returns true, the loop is aborted early.
-func (k Keeper) IterateSystemContracts(ctx sdk.Context, cb func(types.SystemContract) bool) {
+func (k *Keeper) IterateSystemContracts(ctx sdk.Context, cb func(types.SystemContract) bool) {
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()

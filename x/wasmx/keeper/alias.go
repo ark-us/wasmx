@@ -8,7 +8,7 @@ import (
 	"mythos/v1/x/wasmx/types/contract_handler/alias"
 )
 
-func (k Keeper) GetAlias(ctx sdk.Context, addr sdk.AccAddress) (sdk.AccAddress, bool) {
+func (k *Keeper) GetAlias(ctx sdk.Context, addr sdk.AccAddress) (sdk.AccAddress, bool) {
 	addrEth := types.EvmAddressFromAcc(addr)
 	querymsg := alias.GetCosmosAddressRequest{EthAddress: addrEth, CoinType: cchtypes.COIN_TYPE_ETH}
 	resp, err := k.ContractHandler().Query(ctx, cchtypes.ContractHandlerMessage{

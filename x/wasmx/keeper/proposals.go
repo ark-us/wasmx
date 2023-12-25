@@ -5,7 +5,7 @@ import (
 )
 
 // RegisterRoleHandler registers a web route and its smart contract controller
-func (k Keeper) RegisterRoleHandler(
+func (k *Keeper) RegisterRoleHandler(
 	ctx sdk.Context,
 	role string,
 	label string,
@@ -19,7 +19,7 @@ func (k Keeper) RegisterRoleHandler(
 }
 
 // DeregisterRoleHandler deregisters a web route
-func (k Keeper) DeregisterRoleHandler(
+func (k *Keeper) DeregisterRoleHandler(
 	ctx sdk.Context,
 	contractAddressBech32 string,
 ) error {

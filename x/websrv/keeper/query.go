@@ -15,9 +15,9 @@ import (
 	"mythos/v1/x/websrv/types"
 )
 
-var _ types.QueryServer = Keeper{}
+var _ types.QueryServer = &Keeper{}
 
-func (k Keeper) ContractByRoute(c context.Context, req *types.QueryContractByRouteRequest) (*types.QueryContractByRouteResponse, error) {
+func (k *Keeper) ContractByRoute(c context.Context, req *types.QueryContractByRouteRequest) (*types.QueryContractByRouteResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -30,7 +30,7 @@ func (k Keeper) ContractByRoute(c context.Context, req *types.QueryContractByRou
 	}, nil
 }
 
-func (k Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContractRequest) (*types.QueryRouteByContractResponse, error) {
+func (k *Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContractRequest) (*types.QueryRouteByContractResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -44,7 +44,7 @@ func (k Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContra
 	}, nil
 }
 
-func (k Keeper) GetAllOauthClients(c context.Context, req *types.QueryGetAllOauthClientsRequest) (*types.QueryGetAllOauthClientsResponse, error) {
+func (k *Keeper) GetAllOauthClients(c context.Context, req *types.QueryGetAllOauthClientsRequest) (*types.QueryGetAllOauthClientsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -54,7 +54,7 @@ func (k Keeper) GetAllOauthClients(c context.Context, req *types.QueryGetAllOaut
 	}, nil
 }
 
-func (k Keeper) GetOauthClient(c context.Context, req *types.QueryGetOauthClientRequest) (*types.QueryGetOauthClientResponse, error) {
+func (k *Keeper) GetOauthClient(c context.Context, req *types.QueryGetOauthClientRequest) (*types.QueryGetOauthClientResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -67,7 +67,7 @@ func (k Keeper) GetOauthClient(c context.Context, req *types.QueryGetOauthClient
 	}, nil
 }
 
-func (k Keeper) GetOauthClientsByOwner(c context.Context, req *types.QueryGetOauthClientsByOwnerRequest) (*types.QueryGetOauthClientsByOwnerResponse, error) {
+func (k *Keeper) GetOauthClientsByOwner(c context.Context, req *types.QueryGetOauthClientsByOwnerRequest) (*types.QueryGetOauthClientsByOwnerResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -85,7 +85,7 @@ func (k Keeper) GetOauthClientsByOwner(c context.Context, req *types.QueryGetOau
 	}, nil
 }
 
-func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*types.QueryHttpResponseGet, error) {
+func (k *Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*types.QueryHttpResponseGet, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -108,7 +108,7 @@ func (k Keeper) HttpGet(c context.Context, req *types.QueryHttpRequestGet) (*typ
 	return &types.QueryHttpResponseGet{Data: rspbz}, nil
 }
 
-func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.HttpResponse, error) {
+func (k *Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.HttpResponse, error) {
 	headerMap := k.headersToMap(req)
 	path := headerMap[types.Path_Info]
 	contractAddress := k.GetMostSpecificRouteToContract(ctx, path)
@@ -142,7 +142,7 @@ func (k Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types.
 	return resp, nil
 }
 
-func (k Keeper) headersToMap(req types.HttpRequest) map[uint8]string {
+func (k *Keeper) headersToMap(req types.HttpRequest) map[uint8]string {
 	var headerMap = map[uint8]string{}
 	for _, header := range req.Header {
 		headerMap[header.HeaderType] = header.Value

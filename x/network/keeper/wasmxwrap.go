@@ -35,6 +35,31 @@ func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract)
 	}, nil
 }
 
+func (k *Keeper) ExecuteEventual(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "sender")
+	}
+	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
+	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Msg}
+	execmsgbz, err := json.Marshal(execmsg)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := k.wasmxKeeper.ExecuteEventual(ctx, contractAddress, senderAddr, execmsgbz, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgExecuteContractResponse{
+		Data: resp,
+	}, nil
+}
+
 func (k *Keeper) QueryContract(ctx sdk.Context, msg *types.MsgQueryContract) (*types.MsgQueryContractResponse, error) {
 	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
 	if err != nil {

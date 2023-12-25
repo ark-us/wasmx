@@ -18,7 +18,7 @@ func UInt64LengthPrefix(bz []byte) []byte {
 }
 
 // EwasmClassicAddressGenerator generates a contract address using codeID and instanceID sequence and increments sequence
-func (k Keeper) EwasmClassicAddressGenerator(creator sdk.AccAddress) AddressGenerator {
+func (k *Keeper) EwasmClassicAddressGenerator(creator sdk.AccAddress) AddressGenerator {
 	return func(ctx sdk.Context, _ uint64, _ []byte) sdk.AccAddress {
 		existingAcct := k.accountKeeper.GetAccount(ctx, creator)
 		if existingAcct == nil {
@@ -62,7 +62,7 @@ func EwasmBuildContractAddressPredictable(creator sdk.AccAddress, salt []byte, c
 }
 
 // EwasmPredictableAddressGenerator generates a predictable contract address
-func (k Keeper) EwasmPredictableAddressGenerator(creator sdk.AccAddress, salt []byte, _ []byte, _ bool) AddressGenerator {
+func (k *Keeper) EwasmPredictableAddressGenerator(creator sdk.AccAddress, salt []byte, _ []byte, _ bool) AddressGenerator {
 	return func(ctx sdk.Context, _ uint64, checksum []byte) sdk.AccAddress {
 		return EwasmBuildContractAddressPredictable(creator, salt, checksum)
 	}

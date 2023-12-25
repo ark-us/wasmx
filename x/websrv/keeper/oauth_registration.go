@@ -12,7 +12,7 @@ import (
 	"mythos/v1/x/websrv/types"
 )
 
-func (k Keeper) GetAddressToClients(ctx sdk.Context, owner sdk.AccAddress) ([]uint64, error) {
+func (k *Keeper) GetAddressToClients(ctx sdk.Context, owner sdk.AccAddress) ([]uint64, error) {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetKeyOauthAddressToClientsPrefix(owner))
 	if len(bz) == 0 {
@@ -26,7 +26,7 @@ func (k Keeper) GetAddressToClients(ctx sdk.Context, owner sdk.AccAddress) ([]ui
 	return clientIds, nil
 }
 
-func (k Keeper) SetNewClientId(ctx sdk.Context, owner sdk.AccAddress, clientId uint64) error {
+func (k *Keeper) SetNewClientId(ctx sdk.Context, owner sdk.AccAddress, clientId uint64) error {
 	store := ctx.KVStore(k.storeKey)
 	clientIds, _ := k.GetAddressToClients(ctx, owner)
 	if len(clientIds) > 100 {
@@ -41,7 +41,7 @@ func (k Keeper) SetNewClientId(ctx sdk.Context, owner sdk.AccAddress, clientId u
 	return nil
 }
 
-func (k Keeper) DeleteClientIdFromOwner(ctx sdk.Context, owner sdk.AccAddress, clientId uint64) error {
+func (k *Keeper) DeleteClientIdFromOwner(ctx sdk.Context, owner sdk.AccAddress, clientId uint64) error {
 	store := ctx.KVStore(k.storeKey)
 
 	clientIds, _ := k.GetAddressToClients(ctx, owner)
@@ -63,7 +63,7 @@ func (k Keeper) DeleteClientIdFromOwner(ctx sdk.Context, owner sdk.AccAddress, c
 	return nil
 }
 
-func (k Keeper) GetClientIdToInfo(ctx sdk.Context, clientId uint64) (*types.OauthClientInfo, error) {
+func (k *Keeper) GetClientIdToInfo(ctx sdk.Context, clientId uint64) (*types.OauthClientInfo, error) {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetKeyOauthClientIdToInfoPrefix(clientId))
 	if len(bz) == 0 {
@@ -77,7 +77,7 @@ func (k Keeper) GetClientIdToInfo(ctx sdk.Context, clientId uint64) (*types.Oaut
 	return &info, nil
 }
 
-func (k Keeper) SetClientIdToInfo(ctx sdk.Context, clientId uint64, info types.OauthClientInfo) error {
+func (k *Keeper) SetClientIdToInfo(ctx sdk.Context, clientId uint64, info types.OauthClientInfo) error {
 	store := ctx.KVStore(k.storeKey)
 	bz, err := k.cdc.Marshal(&info)
 	if err != nil {
@@ -87,12 +87,12 @@ func (k Keeper) SetClientIdToInfo(ctx sdk.Context, clientId uint64, info types.O
 	return nil
 }
 
-func (k Keeper) DeleteClientIdToInfo(ctx sdk.Context, clientId uint64) {
+func (k *Keeper) DeleteClientIdToInfo(ctx sdk.Context, clientId uint64) {
 	store := ctx.KVStore(k.storeKey)
 	store.Delete(types.GetKeyOauthClientIdToInfoPrefix(clientId))
 }
 
-func (k Keeper) autoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uint64 {
+func (k *Keeper) autoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(lastIdKey)
 	id := uint64(1)
@@ -105,7 +105,7 @@ func (k Keeper) autoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uint64 
 }
 
 // PeekAutoIncrementClientId reads the current value without incrementing it.
-func (k Keeper) PeekAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uint64 {
+func (k *Keeper) PeekAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(lastIdKey)
 	id := uint64(1)
@@ -115,7 +115,7 @@ func (k Keeper) PeekAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte) uin
 	return id
 }
 
-func (k Keeper) importAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte, val uint64) error {
+func (k *Keeper) importAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte, val uint64) error {
 	store := ctx.KVStore(k.storeKey)
 	if store.Has(lastIdKey) {
 		return sdkerr.Wrapf(wasmxtypes.ErrDuplicate, "autoincrement id: %s", string(lastIdKey))
@@ -126,7 +126,7 @@ func (k Keeper) importAutoIncrementClientId(ctx sdk.Context, lastIdKey []byte, v
 }
 
 // GetOauthClients
-func (k Keeper) GetOauthClients(ctx sdk.Context) (infos []types.OauthClientInfo) {
+func (k *Keeper) GetOauthClients(ctx sdk.Context) (infos []types.OauthClientInfo) {
 	k.IterateOauthClients(ctx, func(contract types.OauthClientInfo) bool {
 		infos = append(infos, contract)
 		return false
@@ -136,7 +136,7 @@ func (k Keeper) GetOauthClients(ctx sdk.Context) (infos []types.OauthClientInfo)
 
 // IterateOauthClients
 // When the callback returns true, the loop is aborted early.
-func (k Keeper) IterateOauthClients(ctx sdk.Context, cb func(types.OauthClientInfo) bool) {
+func (k *Keeper) IterateOauthClients(ctx sdk.Context, cb func(types.OauthClientInfo) bool) {
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyOauthClientIdToInfoPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()

@@ -427,6 +427,9 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 			getGenDocProvider(cfg),
 			node.DefaultMetricsProvider(cfg.Instrumentation),
 		)
+		if err != nil {
+			svrCtx.Logger.Error(err.Error())
+		}
 		return err
 	})
 	// ----end network
@@ -479,6 +482,9 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		g.Go(func() error {
 			// httpSrv, httpSrvDone, err
 			_, _, err = jsonrpc.StartJsonRpc(svrCtx, clientCtx, ctx, tmRPCAddr, tmEndpoint, &config)
+			if err != nil {
+				svrCtx.Logger.Error(err.Error())
+			}
 			return err
 		})
 		// defer func() {
@@ -507,9 +513,9 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		g.Go(func() error {
 			// httpSrv, httpSrvDone, err
 			_, _, err = websrv.StartWebsrv(svrCtx, clientCtx, ctx, &config.Websrv)
-			// if err != nil {
-			// 	return err
-			// }
+			if err != nil {
+				svrCtx.Logger.Error(err.Error())
+			}
 			return err
 		})
 		// defer func() {

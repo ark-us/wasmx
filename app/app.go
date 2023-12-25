@@ -650,12 +650,13 @@ func New(
 		keys[websrvmoduletypes.StoreKey],
 		memKeys[websrvmoduletypes.MemStoreKey],
 		app.GetSubspace(websrvmoduletypes.ModuleName),
-		app.WasmxKeeper,
+		&app.WasmxKeeper,
 		app.Query,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 
+	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
 		app.goRoutineGroup,
 		app.goContextParent,
@@ -666,11 +667,12 @@ func New(
 		clessKeys[networkmoduletypes.CLessStoreKey],
 		app.GetSubspace(networkmoduletypes.ModuleName),
 		&app.WasmxKeeper,
+		app.actionExecutor,
 		// TODO remove authority?
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
-	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
-	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app, app.actionExecutor)
+
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
@@ -980,7 +982,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig) {
 			SignModeHandler: txConfig.SignModeHandler(),
 			FeegrantKeeper:  app.FeeGrantKeeper,
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
-			WasmxKeeper:     app.WasmxKeeper,
+			WasmxKeeper:     &app.WasmxKeeper,
 			CircuitKeeper:   &app.CircuitKeeper,
 		},
 	)

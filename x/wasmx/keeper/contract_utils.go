@@ -11,7 +11,7 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
-func (k Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
+func (k *Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(lastIDKey)
 	id := uint64(1)
@@ -24,7 +24,7 @@ func (k Keeper) autoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 }
 
 // PeekAutoIncrementID reads the current value without incrementing it.
-func (k Keeper) PeekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
+func (k *Keeper) PeekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(lastIDKey)
 	id := uint64(1)
@@ -34,7 +34,7 @@ func (k Keeper) PeekAutoIncrementID(ctx sdk.Context, lastIDKey []byte) uint64 {
 	return id
 }
 
-func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uint64) error {
+func (k *Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uint64) error {
 	store := ctx.KVStore(k.storeKey)
 	if store.Has(lastIDKey) {
 		return sdkerr.Wrapf(types.ErrDuplicate, "autoincrement id: %s", string(lastIDKey))
@@ -44,7 +44,7 @@ func (k Keeper) importAutoIncrementID(ctx sdk.Context, lastIDKey []byte, val uin
 	return nil
 }
 
-func (k Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store {
+func (k *Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store {
 	// default must be core consensus
 	storageKey := k.storeKey // types.ContractStorageType_CoreConsensus
 	if storageType == types.ContractStorageType_MetaConsensus {
@@ -57,11 +57,11 @@ func (k Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorage
 	return prefix.NewStore(ctx.KVStore(storageKey), prefixStoreKey)
 }
 
-func (k Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
+func (k *Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
 	return k.wasmvm.GetCode(checksum, deps)
 }
 
-func (k Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
+func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
 	store := ctx.KVStore(k.storeKey)
 
 	contractBz := store.Get(types.GetContractAddressKey(contractAddress))
@@ -81,7 +81,7 @@ func (k Keeper) ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress
 	return contractInfo, codeInfo, prefixStoreKey, nil
 }
 
-func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
+func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *types.ContractInfo {
 	store := ctx.KVStore(k.storeKey)
 	var contract types.ContractInfo
 	contractBz := store.Get(types.GetContractAddressKey(contractAddress))
@@ -92,24 +92,24 @@ func (k Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress)
 	return &contract
 }
 
-func (k Keeper) HasContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
+func (k *Keeper) HasContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
 	store := ctx.KVStore(k.storeKey)
 	return store.Has(types.GetContractAddressKey(contractAddress))
 }
 
 // storeContractInfo persists the ContractInfo. No secondary index updated here.
-func (k Keeper) storeContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
+func (k *Keeper) storeContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
 }
 
 // Temporary function, used for testing. TODO: remove
 // StoreContractInfo persists the ContractInfo. No secondary index updated here.
-func (k Keeper) StoreContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
+func (k *Keeper) StoreContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
 	k.storeContractInfo(ctx, contractAddress, contract)
 }
 
-func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
+func (k *Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyContractPrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()
@@ -126,7 +126,7 @@ func (k Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, typ
 
 // IterateContractState iterates through all elements of the key value store for the given contract address and passes
 // them to the provided callback function. The callback method can return true to abort early.
-func (k Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAddress, cb func(key, value []byte) bool) {
+func (k *Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAddress, cb func(key, value []byte) bool) {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
 	iter := prefixStore.Iterator(nil, nil)
@@ -139,7 +139,7 @@ func (k Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAdd
 	}
 }
 
-func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.ContractStorage) error {
+func (k *Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.ContractStorage) error {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
 	for _, model := range models {
@@ -154,7 +154,7 @@ func (k Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddr
 	return nil
 }
 
-func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
+func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo
 	codeInfoBz := store.Get(types.GetCodeKey(codeID))
@@ -165,12 +165,12 @@ func (k Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
 	return &codeInfo
 }
 
-func (k Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
+func (k *Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
 	store := ctx.KVStore(k.storeKey)
 	return store.Has(types.GetCodeKey(codeID))
 }
 
-func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo) bool) {
+func (k *Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo) bool) {
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyCodePrefix)
 	iter := prefixStore.Iterator(nil, nil)
 	defer iter.Close()
@@ -185,7 +185,7 @@ func (k Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo
 	}
 }
 
-func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
+func (k *Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo
 	codeInfoBz := store.Get(types.GetCodeKey(codeID))
@@ -201,7 +201,7 @@ func (k Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 
 // TransferCoins transfers coins from source to destination account when coin send was enabled for them and the recipient
 // is not in the blocked address list.
-func (k Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amount sdk.Coins) error {
+func (k *Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amount sdk.Coins) error {
 	em := sdk.NewEventManager()
 	ctx := parentCtx.WithEventManager(em)
 	// TODO do we do blocked addresses here?
@@ -226,13 +226,13 @@ func (k Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, to
 }
 
 // IsPinnedCode returns true when codeID is pinned in wasmvm cache
-func (k Keeper) IsPinnedCode(ctx sdk.Context, codeID uint64) bool {
+func (k *Keeper) IsPinnedCode(ctx sdk.Context, codeID uint64) bool {
 	// store := ctx.KVStore(k.storeKey)
 	// return store.Has(types.GetPinnedCodeIndexPrefix(codeID))
 	return false
 }
 
-func (k Keeper) CanCallSystemContract(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
+func (k *Keeper) CanCallSystemContract(ctx sdk.Context, contractAddress sdk.AccAddress) bool {
 	// is EOA
 	if !k.HasContractInfo(ctx, contractAddress) {
 		return true

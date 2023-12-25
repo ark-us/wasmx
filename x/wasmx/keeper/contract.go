@@ -21,11 +21,11 @@ import (
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
 
-func (k Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {
+func (k *Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {
 	return k.create(ctx, creator, wasmByteCode, deps, metadata)
 }
 
-func (k Keeper) Deploy(
+func (k *Keeper) Deploy(
 	ctx sdk.Context,
 	creator sdk.AccAddress,
 	wasmByteCode []byte,
@@ -38,35 +38,35 @@ func (k Keeper) Deploy(
 	return k.CreateInterpreted(ctx, creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{})
 }
 
-func (k Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+func (k *Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
 	return k.pinCode(ctx, codeId, compiledFolderPath)
 }
 
-func (k Keeper) UnpinCode(ctx sdk.Context, codeId uint64) error {
+func (k *Keeper) UnpinCode(ctx sdk.Context, codeId uint64) error {
 	return k.unpinCode(ctx, codeId)
 }
 
-func (k Keeper) Instantiate(ctx sdk.Context, codeId uint64, creator sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, label string) (sdk.AccAddress, []byte, error) {
+func (k *Keeper) Instantiate(ctx sdk.Context, codeId uint64, creator sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, label string) (sdk.AccAddress, []byte, error) {
 	return k.instantiate(ctx, codeId, creator, msg, funds, label)
 }
 
-func (k Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, salt []byte, fixMsg bool, label string) (sdk.AccAddress, []byte, error) {
+func (k *Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, salt []byte, fixMsg bool, label string) (sdk.AccAddress, []byte, error) {
 	return k.instantiate2(ctx, codeId, senderAddr, msg, funds, salt, fixMsg, label)
 }
 
-func (k Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error) {
+func (k *Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error) {
 	return k.execute(ctx, contractAddr, senderAddr, msg, funds, dependencies)
 }
 
-func (k Keeper) ExecuteWithOrigin(ctx sdk.Context, originAddr sdk.AccAddress, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
+func (k *Keeper) ExecuteWithOrigin(ctx sdk.Context, originAddr sdk.AccAddress, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
 	return k.executeWithOrigin(ctx, originAddr, contractAddr, senderAddr, msg, funds)
 }
 
-func (k Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, codeContractAddr sdk.AccAddress, storageContractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
+func (k *Keeper) ExecuteDelegate(ctx sdk.Context, originAddr sdk.AccAddress, codeContractAddr sdk.AccAddress, storageContractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
 	return nil, nil
 }
 
-func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error) {
+func (k *Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error) {
 	res, err := k.query(ctx, contractAddr, senderAddr, msg, funds, deps, false)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (k Keeper) Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr s
 	return json.Marshal(&types.WasmxQueryResponse{Data: res.Data})
 }
 
-func (k Keeper) QueryDebug(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, []byte, string) {
+func (k *Keeper) QueryDebug(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, []byte, string) {
 	res, err := k.query(ctx, contractAddr, senderAddr, msg, funds, deps, true)
 	if err != nil {
 		errmsg := res.ErrorMessage
@@ -84,11 +84,14 @@ func (k Keeper) QueryDebug(ctx sdk.Context, contractAddr sdk.AccAddress, senderA
 		return nil, res.MemorySnapshot, errmsg
 	}
 	data, err := json.Marshal(&types.WasmxQueryResponse{Data: res.Data})
+	if err != nil {
+		return nil, res.MemorySnapshot, err.Error()
+	}
 	return data, res.MemorySnapshot, res.ErrorMessage
 }
 
 // QueryRaw returns the contract's state for give key. Returns `nil` when key is `nil`.
-func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []byte) []byte {
+func (k *Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []byte) []byte {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "query-raw")
 	if key == nil {
 		return nil
@@ -100,7 +103,7 @@ func (k Keeper) QueryRaw(ctx sdk.Context, contractAddress sdk.AccAddress, key []
 }
 
 // QuerySmart queries the smart contract itself. cosmwasm compat.
-func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
+func (k *Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []byte) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "query-smart")
 	senderAddr := contractAddr
 	res, err := k.query(ctx, contractAddr, senderAddr, req, nil, nil, false)
@@ -110,7 +113,7 @@ func (k Keeper) QuerySmart(ctx sdk.Context, contractAddr sdk.AccAddress, req []b
 	return res.Data, nil
 }
 
-func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
+func (k *Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
 	if err != nil {
 		return types.ContractDependency{}, err
@@ -132,7 +135,7 @@ func (k Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (typ
 }
 
 // TODO remove deps. they are extracted from the wasm module
-func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
+func (k *Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerr.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
 	}
@@ -192,7 +195,7 @@ func (k Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte,
 	return codeID, checksum, nil
 }
 
-func (k Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, reportDeps []string, err error) {
+func (k *Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, reportDeps []string, err error) {
 	ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
 	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
 	if err != nil {
@@ -206,7 +209,7 @@ func (k Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, r
 	return checksum, report.Dependencies, nil
 }
 
-func (k Keeper) createSourceInterpreted(ctx sdk.Context, sourceCode []byte, deps []string) (checksum []byte, reportDeps []string, err error) {
+func (k *Keeper) createSourceInterpreted(ctx sdk.Context, sourceCode []byte, deps []string) (checksum []byte, reportDeps []string, err error) {
 	// TODO actually run the source code in the compiler
 	// and verify that it is valid
 	// maybe store the compiled bytecode
@@ -223,7 +226,7 @@ func (k Keeper) createSourceInterpreted(ctx sdk.Context, sourceCode []byte, deps
 }
 
 // this is for bytecode interpreters (e.g. for EVM)
-func (k Keeper) CreateInterpreted(
+func (k *Keeper) CreateInterpreted(
 	ctx sdk.Context,
 	creator sdk.AccAddress,
 	provenance sdk.AccAddress,
@@ -295,13 +298,13 @@ func (k Keeper) CreateInterpreted(
 	return codeID, checksum, contractAddress, nil
 }
 
-func (k Keeper) storeCodeInfo(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo) {
+func (k *Keeper) storeCodeInfo(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo) {
 	store := ctx.KVStore(k.storeKey)
 	// 0x01 | codeID (uint64) -> ContractInfo
 	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshal(&codeInfo))
 }
 
-func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
+func (k *Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
 	if ioutils.IsGzip(wasmCode) {
 		var err error
 		wasmCode, err = ioutils.Uncompress(wasmCode, uint64(types.MaxWasmSize))
@@ -327,7 +330,7 @@ func (k Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeIn
 	return nil
 }
 
-func (k Keeper) instantiateWithAddress(
+func (k *Keeper) instantiateWithAddress(
 	ctx sdk.Context,
 	codeID uint64,
 	creator sdk.AccAddress,
@@ -348,7 +351,7 @@ func (k Keeper) instantiateWithAddress(
 	return data, err
 }
 
-func (k Keeper) instantiate(
+func (k *Keeper) instantiate(
 	ctx sdk.Context,
 	codeID uint64,
 	creator sdk.AccAddress,
@@ -368,7 +371,7 @@ func (k Keeper) instantiate(
 	return k.instantiateInternal(ctx, codeID, creator, nil, types.ContractStorageType_CoreConsensus, initMsg, deposit, contractAddress, codeInfo, label)
 }
 
-func (k Keeper) instantiate2(
+func (k *Keeper) instantiate2(
 	ctx sdk.Context,
 	codeID uint64,
 	creator sdk.AccAddress,
@@ -391,7 +394,7 @@ func (k Keeper) instantiate2(
 	return k.instantiateInternal(ctx, codeID, creator, nil, types.ContractStorageType_CoreConsensus, initMsg, deposit, contractAddress, codeInfo, label)
 }
 
-func (k Keeper) instantiateInternal(
+func (k *Keeper) instantiateInternal(
 	ctx sdk.Context,
 	codeID uint64,
 	creator sdk.AccAddress,
@@ -504,7 +507,7 @@ func (k Keeper) instantiateInternal(
 }
 
 // PinCode pins the wasm contract in wasmvm cache
-func (k Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
 	codeInfo := k.GetCodeInfo(ctx, codeId)
 	if codeInfo == nil {
 		return sdkerr.Wrap(types.ErrNotFound, "code info")
@@ -526,7 +529,7 @@ func (k Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath strin
 }
 
 // UnpinCode removes the wasm contract from wasmvm cache
-func (k Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
+func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 	codeInfo := k.GetCodeInfo(ctx, codeId)
 	if codeInfo == nil {
 		return sdkerr.Wrap(types.ErrNotFound, "code info")
@@ -546,7 +549,7 @@ func (k Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 }
 
 // Execute executes the contract instance
-func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
+func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
@@ -637,7 +640,7 @@ func (k Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller 
 }
 
 // Execute executes the contract instance
-func (k Keeper) ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error) {
+func (k *Keeper) ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "executeEventual")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
@@ -708,7 +711,7 @@ func (k Keeper) ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress,
 
 // For CosmWasm compatibility
 // reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
-func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8types.Reply) ([]byte, error) {
+func (k *Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8types.Reply) ([]byte, error) {
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
@@ -760,7 +763,7 @@ func (k Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw8
 }
 
 // executeWithOrigin executes the contract instance
-func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
+func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "executeWithOrigin")
 
 	// fail if caller is not a contract
@@ -817,7 +820,7 @@ func (k Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contra
 }
 
 // Execute executes the contract instance
-func (k Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string, isdebug bool) (*types.ContractResponse, error) {
+func (k *Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string, isdebug bool) (*types.ContractResponse, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
@@ -929,7 +932,7 @@ func (k *Keeper) handleResponseMessages(
 }
 
 // Calculate how much gas can we use for the wasmx execution
-func (k Keeper) runtimeGasForContract(ctx sdk.Context) uint64 {
+func (k *Keeper) runtimeGasForContract(ctx sdk.Context) uint64 {
 	meter := ctx.GasMeter()
 	if meter.IsOutOfGas() {
 		return 0
@@ -940,7 +943,7 @@ func (k Keeper) runtimeGasForContract(ctx sdk.Context) uint64 {
 	return k.gasRegister.ToWasmVMGas(meter.Limit() - meter.GasConsumedToLimit())
 }
 
-func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
+func (k *Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	consumed := k.gasRegister.FromWasmVMGas(gas)
 	ctx.GasMeter().ConsumeGas(consumed, "wasm contract")
 	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
@@ -949,7 +952,7 @@ func (k Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	}
 }
 
-func (k Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []types.SystemDep {
+func (k *Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []types.SystemDep {
 	var sdeps []types.SystemDep
 	for _, dep := range depLabels {
 		if dep[0:2] != "0x" {
@@ -966,7 +969,7 @@ func (k Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []ty
 	return sdeps
 }
 
-func (k Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
+func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
 	role := k.GetRoleByLabel(ctx, label)
 	if role == nil {
 		return types.SystemDep{}, fmt.Errorf("no role from label")
@@ -1013,7 +1016,7 @@ func (m MultipliedGasMeter) ConsumeGas(gas storetypes.Gas, descriptor string) {
 	}
 }
 
-func (k Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {
+func (k *Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {
 	return NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
 }
 
