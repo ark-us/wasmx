@@ -14,7 +14,7 @@ import (
 
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
-	cmttypes "github.com/cometbft/cometbft/types"
+	pvm "github.com/cometbft/cometbft/privval"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -29,7 +29,7 @@ func StartGRPCServer(
 	ctx context.Context,
 	cfgAll *config.Config,
 	app servertypes.Application,
-	privValidator cmttypes.PrivValidator,
+	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,

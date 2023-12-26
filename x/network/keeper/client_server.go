@@ -49,6 +49,7 @@ import (
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
+	pvm "github.com/cometbft/cometbft/privval"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
@@ -96,7 +97,7 @@ func NewGRPCServer(
 	clientCtx client.Context,
 	cfg *config.Config,
 	app servertypes.Application,
-	privValidator cmttypes.PrivValidator,
+	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
@@ -326,7 +327,7 @@ func initChain(
 	clientCtx client.Context,
 	cfgAll *config.Config,
 	app servertypes.Application,
-	privValidator cmttypes.PrivValidator,
+	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider node.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
@@ -364,7 +365,6 @@ func initChain(
 	if err != nil {
 		return nil, err
 	}
-	validatorAddress := pubKey.Address()
 	validators := make([]*cmttypes.Validator, len(genDoc.Validators))
 	for i, val := range genDoc.Validators {
 		validators[i] = cmttypes.NewValidator(val.PubKey, val.Power)
@@ -447,8 +447,10 @@ func initChain(
 		Validators:      vals,
 		// We update the last results hash with the empty hash, to conform with RFC-6962.
 		LastResultsHash:  merkle.HashFromByteSlices(nil),
-		CurrentValidator: validatorAddress,
 		Version:          version,
+		ValidatorAddress: pubKey.Address(),
+		ValidatorPrivKey: privValidator.Key.PrivKey.Bytes(),
+		ValidatorPubKey:  pubKey.Bytes(),
 	}
 
 	// TODO check if app block height is same as network block height

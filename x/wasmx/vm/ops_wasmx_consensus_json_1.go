@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	merkle "github.com/cometbft/cometbft/crypto/merkle"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -210,6 +211,54 @@ func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []in
 	return returns, wasmedge.Result_Success
 }
 
+func ed25519Sign(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	privbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	msgbz, err := readMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	privKey := ed25519.PrivKey(privbz)
+	signature, err := privKey.Sign(msgbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, signature)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	pubkeybz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	signaturebz, err := readMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	msgbz, err := readMemFromPtr(callframe, params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	pubKey := ed25519.PubKey(pubkeybz)
+	isSigner := pubKey.VerifySignature(msgbz, signaturebz)
+	returns := make([]interface{}, 1)
+	returns[0] = 0
+	if isSigner {
+		returns[0] = 1
+	}
+	return returns, wasmedge.Result_Success
+}
+
 type LoggerLog struct {
 	Msg   string   `json:"msg"`
 	Parts []string `json:"parts"`
@@ -286,6 +335,14 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I64},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+	functype_i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
+	functype_i32i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
 
 	env.AddFunction("CheckTx", wasmedge.NewFunction(functype_i32_i32, CheckTx, context, 0))
 	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, PrepareProposal, context, 0))
@@ -299,6 +356,9 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 	env.AddFunction("LoggerInfo", wasmedge.NewFunction(functype_i32_, wasmxLoggerInfo, context, 0))
 	env.AddFunction("LoggerError", wasmedge.NewFunction(functype_i32_, wasmxLoggerError, context, 0))
 	env.AddFunction("LoggerDebug", wasmedge.NewFunction(functype_i32_, wasmxLoggerDebug, context, 0))
+
+	env.AddFunction("ed25519Sign", wasmedge.NewFunction(functype_i32i32_i32, ed25519Sign, context, 0))
+	env.AddFunction("ed25519Verify", wasmedge.NewFunction(functype_i32i32i32_i32, ed25519Verify, context, 0))
 
 	return env
 }

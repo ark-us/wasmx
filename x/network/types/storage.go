@@ -45,8 +45,10 @@ type InitChainSetup struct {
 	Validators       []*cmttypes.Validator     `json:"validators"`
 	AppHash          []byte                    `json:"app_hash"`
 	LastResultsHash  []byte                    `json:"last_results_hash"`
-	CurrentValidator cmtlibs.HexBytes          `json:"current_validator"`
 	Version          Version                   `json:"version"`
+	ValidatorAddress cmtlibs.HexBytes          `json:"validator_address"`
+	ValidatorPrivKey []byte                    `json:"validator_privkey"`
+	ValidatorPubKey  []byte                    `json:"validator_pubkey"`
 }
 
 type Consensus struct {
