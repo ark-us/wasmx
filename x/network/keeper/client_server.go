@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -184,8 +183,6 @@ func NewGRPCServer(
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
 
-	fmt.Println("---NewGRPCServer END goroutines--", runtime.NumGoroutine())
-
 	return grpcSrv, client, nil
 }
 
@@ -237,8 +234,6 @@ func RegisterGRPCServer(
 		if !ok {
 			return nil, status.Error(codes.Internal, "unable to retrieve metadata")
 		}
-
-		fmt.Println("Number of goroutines00", runtime.NumGoroutine())
 
 		// Get height header from the request context, if present.
 		var height int64
@@ -479,7 +474,6 @@ func initChain(
 }
 
 func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer) error {
-	fmt.Println("Number of goroutines [startNode]", runtime.NumGoroutine())
 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, logger, bapp.LastBlockHeight(), false)
 	if err != nil {
 		return err
@@ -499,7 +493,6 @@ func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	if err != nil {
 		return err
 	}
-	fmt.Println("Number of goroutines [startNode END]", runtime.NumGoroutine())
 	return nil
 }
 

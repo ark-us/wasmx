@@ -2,10 +2,8 @@ package keeper
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
-	"runtime"
 	"time"
 
 	_ "net/http/pprof" //nolint: gosec
@@ -47,8 +45,6 @@ func StartGRPCServer(
 	if err != nil {
 		return nil, nil, err
 	}
-
-	fmt.Println("---NewGRPCServer & StartRPC END goroutines--", runtime.NumGoroutine())
 
 	errCh := make(chan error, 1)
 

@@ -13,8 +13,6 @@ import (
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the interval is for?
 func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
-	printMemStats("StartTimeout")
-
 	k.goRoutineGroup.Go(func() error {
 		err := k.startTimeoutInternalGoroutine(msg)
 		if err != nil {
@@ -22,16 +20,12 @@ func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutR
 		}
 		return nil
 	})
-	printMemStats("StartTimeout END")
-
 	return &types.MsgStartTimeoutResponse{}, nil
 }
 
 func (k *Keeper) startTimeoutInternalGoroutine(
 	msg *types.MsgStartTimeoutRequest,
 ) error {
-	printMemStats("startTimeoutInternalGoroutine")
-
 	select {
 	case <-k.goContextParent.Done():
 		k.actionExecutor.GetLogger().Info("parent context was closed, we do not start the delayed execution")
@@ -54,8 +48,6 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(intervalEnded)
 	defer close(errCh)
 	go func() {
-		printMemStats("startTimeoutInternalGoroutine2")
-
 		k.actionExecutor.GetLogger().Info("eventual execution starting", "description", description)
 		err := k.startTimeoutInternal(description, timeDelay, msgbz, contractAddress)
 		if err != nil {
@@ -65,8 +57,6 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 		k.actionExecutor.GetLogger().Info("eventual execution ended", "description", description)
 		intervalEnded <- true
 	}()
-
-	printMemStats("startTimeoutInternalGoroutine END")
 
 	select {
 	case err := <-errCh:
@@ -87,8 +77,6 @@ func (k *Keeper) startTimeoutInternal(
 	// sleep first and then load the context
 	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
 
-	printMemStats("startTimeoutInternal")
-
 	select {
 	case <-k.goContextParent.Done():
 		k.actionExecutor.GetLogger().Info("parent context was closed, we do not start the delayed execution")
@@ -98,7 +86,6 @@ func (k *Keeper) startTimeoutInternal(
 	}
 
 	cb := func(goctx context.Context) (any, error) {
-		printMemStats("startTimeoutInternal callback")
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := &types.MsgExecuteContract{
 			Sender:   contractAddress.String(),
@@ -106,9 +93,7 @@ func (k *Keeper) startTimeoutInternal(
 			Msg:      msgbz,
 		}
 		res, err := k.ExecuteEventual(ctx, msg)
-		printMemStats("startTimeoutInternal callback END")
 		if err != nil {
-			// TODO - stop without propagating a stop to parent
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("Closing eventual thread", "description", description, err.Error())
 				return res, nil
@@ -121,23 +106,5 @@ func (k *Keeper) startTimeoutInternal(
 	// disregard result
 	_, err := k.actionExecutor.Execute(k.goContextParent, k.actionExecutor.GetApp().LastBlockHeight(), cb)
 
-	printMemStats("startTimeoutInternal END")
-
 	return err
-}
-
-func printMemStats(msg string) {
-	// var mem runtime.MemStats
-	// runtime.ReadMemStats(&mem)
-
-	// // TotalAlloc is bytes of allocated heap objects
-	// // Sys is the total bytes of memory obtained from the OS
-	// // HeapAlloc is bytes of allocated heap objects
-	// // HeapSys is bytes of heap memory obtained from the OS
-
-	// fmt.Printf("%s: TotalAlloc (Heap Object Bytes): %v\n", msg, mem.TotalAlloc/1000000)
-	// fmt.Printf("%s: Sys (OS Obtained Bytes): %v\n", msg, mem.Sys/1000000)
-	// fmt.Printf("%s: HeapAlloc (Heap Object Bytes): %v\n", msg, mem.HeapAlloc/1000000)
-	// fmt.Printf("%s: HeapSys (OS Heap Bytes): %v\n", msg, mem.HeapSys/1000000)
-	// fmt.Printf("%s: Frees: %v\n", msg, mem.Frees/1000000)
 }

@@ -449,7 +449,6 @@ func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--qresp", qresp)
 	rresp := qresp.(*types.MsgQueryContractResponse)
 
 	var resp wasmxtypes.ContractResponse
