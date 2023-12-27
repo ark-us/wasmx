@@ -55,7 +55,8 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
 	printMemStats("pre initiateWasmDeps")
-	cleanups, err = initiateWasmDeps(context, contractVm, systemDeps, cleanups)
+	_cleanups, err := initiateWasmDeps(context, contractVm, systemDeps)
+	cleanups = append(cleanups, _cleanups...)
 	printMemStats("post initiateWasmDeps")
 	if err != nil {
 		return nil, cleanups, err
@@ -67,10 +68,12 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	return contractVm, cleanups, err
 }
 
-func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []types.SystemDep, cleanups []func()) ([]func(), error) {
+func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []types.SystemDep) ([]func(), error) {
+	cleanups := make([]func(), 0)
 	for _, systemDep := range systemDeps {
 		// system deps of system deps
-		cleanups, err := initiateWasmDeps(context, contractVm, systemDep.Deps, cleanups)
+		_cleanups, err := initiateWasmDeps(context, contractVm, systemDep.Deps)
+		cleanups = append(cleanups, _cleanups...)
 		if err != nil {
 			return cleanups, err
 		}
