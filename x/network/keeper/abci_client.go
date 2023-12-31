@@ -406,7 +406,10 @@ func (c *ABCIClient) TxSearch(
 	conditions := q.Syntax()
 	// if there is a hash condition, return the result immediately
 	hash, ok, err := lookForHash(conditions)
-	c.logger.Debug("ABCIClient.TxSearch", "hash", hex.EncodeToString(hash), "ok", ok, "err", err.Error())
+	if err != nil {
+		c.logger.Error("ABCIClient.TxSearch", "ok", ok, "err", err.Error())
+	}
+	c.logger.Debug("ABCIClient.TxSearch", "hash", hex.EncodeToString(hash), "ok", ok)
 	if err != nil {
 		return nil, fmt.Errorf("error during searching for a hash in the query: %w", err)
 	} else if ok {
