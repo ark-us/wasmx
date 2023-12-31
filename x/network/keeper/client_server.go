@@ -447,7 +447,7 @@ func initChain(
 		ValidatorAddress: pubKey.Address(),
 		ValidatorPrivKey: privValidator.Key.PrivKey.Bytes(),
 		ValidatorPubKey:  pubKey.Bytes(),
-		BlocksContract:   storageAddr.Bytes(),
+		BlocksContract:   storageAddr.String(),
 	}
 
 	// TODO check if app block height is same as network block height

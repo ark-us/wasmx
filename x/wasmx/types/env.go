@@ -88,12 +88,12 @@ type ChainInfo struct {
 
 type EnvContractInfo struct {
 	Address    sdk.AccAddress `json:"address"`
-	CodeHash   RawBytes       `json:"codeHash"`
+	CodeHash   []byte         `json:"codeHash"`
 	CodeId     uint64         `json:"codeId"`
 	SystemDeps []string       `json:"deps"`
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
-	Bytecode RawBytes `json:"bytecode"`
+	Bytecode []byte `json:"bytecode"`
 	// used for source code interpreters (e.g. python)
 	FilePath string `json:"filepath"`
 }
@@ -104,7 +104,7 @@ type BlockInfo struct {
 	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
 	Timestamp uint64         `json:"timestamp"`
 	GasLimit  uint64         `json:"gasLimit"`
-	Hash      RawBytes       `json:"hash"`
+	Hash      []byte         `json:"hash"`
 	Proposer  sdk.AccAddress `json:"proposer"`
 }
 
@@ -126,7 +126,7 @@ type MessageInfo struct {
 	// Amount of funds send to the contract along with this message
 	Funds    *big.Int `json:"funds"`
 	GasLimit *big.Int `json:"gasLimit"`
-	CallData RawBytes `json:"callData"`
+	CallData []byte   `json:"callData"`
 }
 
 type ContractDependency struct {
@@ -154,7 +154,7 @@ func (u RawBytes) MarshalJSON() ([]byte, error) {
 }
 
 func (m ChainInfo) MarshalJSON() ([]byte, error) {
-	var chainId RawBytes = m.ChainId.FillBytes(make([]byte, 32))
+	var chainId []byte = m.ChainId.FillBytes(make([]byte, 32))
 	return json.Marshal(map[string]interface{}{
 		"denom":       m.Denom,
 		"chainId":     chainId,
@@ -177,10 +177,10 @@ func (m ChainInfo) MarshalJSON() ([]byte, error) {
 // }
 
 func (m BlockInfo) MarshalJSON() ([]byte, error) {
-	var height RawBytes = big.NewInt(int64(m.Height)).FillBytes(make([]byte, 32))
-	var timestamp RawBytes = big.NewInt(int64(m.Timestamp)).FillBytes(make([]byte, 32))
-	var gasLimit RawBytes = big.NewInt(int64(m.GasLimit)).FillBytes(make([]byte, 32))
-	var proposer RawBytes = PaddLeftTo32(m.Proposer.Bytes())
+	var height []byte = big.NewInt(int64(m.Height)).FillBytes(make([]byte, 32))
+	var timestamp []byte = big.NewInt(int64(m.Timestamp)).FillBytes(make([]byte, 32))
+	var gasLimit []byte = big.NewInt(int64(m.GasLimit)).FillBytes(make([]byte, 32))
+	var proposer []byte = PaddLeftTo32(m.Proposer.Bytes())
 	return json.Marshal(map[string]interface{}{
 		"height":    height,
 		"timestamp": timestamp,
@@ -191,7 +191,7 @@ func (m BlockInfo) MarshalJSON() ([]byte, error) {
 }
 
 func (m TransactionInfo) MarshalJSON() ([]byte, error) {
-	var gasPrice RawBytes = m.GasPrice.FillBytes(make([]byte, 32))
+	var gasPrice []byte = m.GasPrice.FillBytes(make([]byte, 32))
 	return json.Marshal(map[string]interface{}{
 		"index":    m.Index,
 		"gasPrice": gasPrice,
@@ -199,7 +199,7 @@ func (m TransactionInfo) MarshalJSON() ([]byte, error) {
 }
 
 func (m EnvContractInfo) MarshalJSON() ([]byte, error) {
-	var address RawBytes = PaddLeftTo32(m.Address.Bytes())
+	var address []byte = PaddLeftTo32(m.Address.Bytes())
 	return json.Marshal(map[string]interface{}{
 		"address":  address,
 		"codeHash": m.CodeHash,
@@ -210,10 +210,10 @@ func (m EnvContractInfo) MarshalJSON() ([]byte, error) {
 }
 
 func (m MessageInfo) MarshalJSON() ([]byte, error) {
-	var origin RawBytes = PaddLeftTo32(m.Origin.Bytes())
-	var sender RawBytes = PaddLeftTo32(m.Sender.Bytes())
-	var funds RawBytes = m.Funds.FillBytes(make([]byte, 32))
-	var gasLimit RawBytes = m.GasLimit.FillBytes(make([]byte, 32))
+	var origin []byte = PaddLeftTo32(m.Origin.Bytes())
+	var sender []byte = PaddLeftTo32(m.Sender.Bytes())
+	var funds []byte = m.Funds.FillBytes(make([]byte, 32))
+	var gasLimit []byte = m.GasLimit.FillBytes(make([]byte, 32))
 	return json.Marshal(map[string]interface{}{
 		"origin":   origin,
 		"sender":   sender,

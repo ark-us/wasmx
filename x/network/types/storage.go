@@ -49,6 +49,7 @@ type InitChainSetup struct {
 	ValidatorAddress cmtlibs.HexBytes          `json:"validator_address"`
 	ValidatorPrivKey []byte                    `json:"validator_privkey"`
 	ValidatorPubKey  []byte                    `json:"validator_pubkey"`
+	BlocksContract   string                    `json:"wasmx_blocks_contract"`
 }
 
 type Consensus struct {

@@ -187,6 +187,8 @@ var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
 
 var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 
+var STORAGE_CHAIN = "storage_chain"
+
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"

@@ -58,6 +58,9 @@ var (
 	//go:embed 28.finite_state_machine.wasm
 	state_machine []byte
 
+	//go:embed 29.storage_chain.wasm
+	storage_chain []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -103,6 +106,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = []byte(ConsensusRaftv001)
 	case "sys_proxy":
 		wasmbin = sys_proxy
+	case types.STORAGE_CHAIN:
+		wasmbin = storage_chain
 	}
 	return wasmbin
 }

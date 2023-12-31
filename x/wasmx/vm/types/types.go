@@ -20,9 +20,9 @@ type CallRequest struct {
 	From       sdk.AccAddress `json:"from"`
 	Value      *big.Int       `json:"value"`
 	GasLimit   *big.Int       `json:"gasLimit"`
-	Calldata   types.RawBytes `json:"calldata"`
-	Bytecode   types.RawBytes `json:"bytecode"`
-	CodeHash   types.RawBytes `json:"codeHash"`
+	Calldata   []byte         `json:"calldata"`
+	Bytecode   []byte         `json:"bytecode"`
+	CodeHash   []byte         `json:"codeHash"`
 	FilePath   string         `json:"filePath"`
 	CodeId     uint64         `json:"codeId"`
 	SystemDeps []string       `json:"systemDeps"`
@@ -44,18 +44,18 @@ type SimpleCallRequestRaw struct {
 	To       sdk.AccAddress `json:"to"`
 	Value    *big.Int       `json:"value"`
 	GasLimit *big.Int       `json:"gasLimit"`
-	Calldata types.RawBytes `json:"calldata"`
+	Calldata []byte         `json:"calldata"`
 	IsQuery  bool           `json:"isQuery"`
 }
 
 type CallResponse struct {
-	Success uint8          `json:"success"`
-	Data    types.RawBytes `json:"data"`
+	Success uint8  `json:"success"`
+	Data    []byte `json:"data"`
 }
 
 type CreateAccountRequest struct {
-	Bytecode types.RawBytes `json:"bytecode"`
-	Balance  *big.Int       `json:"balance"`
+	Bytecode []byte   `json:"bytecode"`
+	Balance  *big.Int `json:"balance"`
 }
 
 type CreateAccountRequestRaw struct {
@@ -64,9 +64,9 @@ type CreateAccountRequestRaw struct {
 }
 
 type Create2AccountRequest struct {
-	Bytecode types.RawBytes `json:"bytecode"`
-	Balance  *big.Int       `json:"balance"`
-	Salt     *big.Int       `json:"salt"`
+	Bytecode []byte   `json:"bytecode"`
+	Balance  *big.Int `json:"balance"`
+	Salt     *big.Int `json:"salt"`
 }
 
 type Create2AccountRequestRaw struct {
@@ -76,10 +76,10 @@ type Create2AccountRequestRaw struct {
 }
 
 func (m CallRequest) MarshalJSON() ([]byte, error) {
-	var to types.RawBytes = types.PaddLeftTo32(m.To.Bytes())
-	var from types.RawBytes = types.PaddLeftTo32(m.From.Bytes())
-	var value types.RawBytes = m.Value.FillBytes(make([]byte, 32))
-	var gasLimit types.RawBytes = m.GasLimit.FillBytes(make([]byte, 32))
+	var to []byte = types.PaddLeftTo32(m.To.Bytes())
+	var from []byte = types.PaddLeftTo32(m.From.Bytes())
+	var value []byte = m.Value.FillBytes(make([]byte, 32))
+	var gasLimit []byte = m.GasLimit.FillBytes(make([]byte, 32))
 	return json.Marshal(map[string]interface{}{
 		"to":       to,
 		"from":     from,
