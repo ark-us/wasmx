@@ -6,6 +6,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
+	merkle "github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -118,6 +120,7 @@ func keccak256Util(_context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+// TODO move this to a restricted host
 // call request -> call response
 func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
@@ -453,6 +456,142 @@ func wasmxStopInterval(_context interface{}, callframe *wasmedge.CallingFrame, p
 	return returns, wasmedge.Result_Success
 }
 
+type MerkleSlices struct {
+	Slices [][]byte `json:"slices"`
+}
+
+type FinalizeBlockWrap struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
+}
+
+func merkleHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	data, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var val MerkleSlices
+	err = json.Unmarshal(data, &val)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	hashbz := merkle.HashFromByteSlices(val.Slices)
+	ptr, err := allocateWriteMem(ctx, callframe, hashbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func ed25519Sign(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	privbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	msgbz, err := readMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	privKey := ed25519.PrivKey(privbz)
+	signature, err := privKey.Sign(msgbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, signature)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	pubkeybz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	signaturebz, err := readMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	msgbz, err := readMemFromPtr(callframe, params[2])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	pubKey := ed25519.PubKey(pubkeybz)
+	isSigner := pubKey.VerifySignature(msgbz, signaturebz)
+	returns := make([]interface{}, 1)
+	returns[0] = 0
+	if isSigner {
+		returns[0] = 1
+	}
+	return returns, wasmedge.Result_Success
+}
+
+type LoggerLog struct {
+	Msg   string   `json:"msg"`
+	Parts []string `json:"parts"`
+}
+
+func getLoggerData(callframe *wasmedge.CallingFrame, params []interface{}) (string, []any, error) {
+	message, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return "", nil, err
+	}
+	var data LoggerLog
+	err = json.Unmarshal(message, &data)
+	if err != nil {
+		return "", nil, err
+	}
+	parts := make([]any, len(data.Parts))
+	for i, part := range data.Parts {
+		parts[i] = part
+	}
+	return data.Msg, parts, nil
+}
+
+func wasmxLoggerInfo(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	msg, parts, err := getLoggerData(callframe, params)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.GetContext().Logger().Info(msg, parts...)
+	// if strings.Contains(msg, "start block proposal") {
+	// 	panic("000")
+	// }
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxLoggerError(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	msg, parts, err := getLoggerData(callframe, params)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.GetContext().Logger().Error(msg, parts...)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	msg, parts, err := getLoggerData(callframe, params)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.GetContext().Logger().Debug(msg, parts...)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
@@ -474,6 +613,14 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	functype_i64i32_ := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
+	)
+	functype_i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
+	functype_i32i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
 
 	env.AddFunction("sha256", wasmedge.NewFunction(functype_i32_i32, sha256, context, 0))
@@ -503,6 +650,15 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
 	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i64i32_, wasmxStartTimeout, context, 0))
 	env.AddFunction("stopInterval", wasmedge.NewFunction(functype_i32_, wasmxStopInterval, context, 0))
+
+	env.AddFunction("MerkleHash", wasmedge.NewFunction(functype_i32_i32, merkleHash, context, 0))
+
+	env.AddFunction("LoggerInfo", wasmedge.NewFunction(functype_i32_, wasmxLoggerInfo, context, 0))
+	env.AddFunction("LoggerError", wasmedge.NewFunction(functype_i32_, wasmxLoggerError, context, 0))
+	env.AddFunction("LoggerDebug", wasmedge.NewFunction(functype_i32_, wasmxLoggerDebug, context, 0))
+
+	env.AddFunction("ed25519Sign", wasmedge.NewFunction(functype_i32i32_i32, ed25519Sign, context, 0))
+	env.AddFunction("ed25519Verify", wasmedge.NewFunction(functype_i32i32i32_i32, ed25519Verify, context, 0))
 
 	return env
 }
