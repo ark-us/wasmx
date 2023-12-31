@@ -54,10 +54,10 @@ import (
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	"mythos/v1/x/network/types"
-
 	"mythos/v1/server/config"
 	networkconfig "mythos/v1/x/network/server/config"
+	"mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 var NETWORK_GAS_LIMIT = uint64(1000000000)
@@ -435,6 +435,7 @@ func initChain(
 	// TODO ?
 	// version.Consensus.App = consensusParams.Version.App
 
+	storageAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
 	initChainSetup := &types.InitChainSetup{
 		ChainID:         bapp.ChainID(),
 		ConsensusParams: &consensusParams,
@@ -446,6 +447,7 @@ func initChain(
 		ValidatorAddress: pubKey.Address(),
 		ValidatorPrivKey: privValidator.Key.PrivKey.Bytes(),
 		ValidatorPubKey:  pubKey.Bytes(),
+		BlocksContract:   storageAddr.Bytes(),
 	}
 
 	// TODO check if app block height is same as network block height
@@ -479,10 +481,13 @@ func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 		return err
 	}
 
+	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+	consensusAddrBech32 := consensusAddr.String()
+
 	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
 	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Sender:   consensusAddrBech32,
+		Contract: consensusAddrBech32,
 		Msg:      msg,
 	})
 	if err != nil {
@@ -518,11 +523,14 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	peers := string(peersbz)
 	peers = strings.Replace(peers, `"`, `\"`, -1)
 
+	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+	consensusAddrBech32 := consensusAddr.String()
+
 	// TODO node IPS!!!
 	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
 	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Sender:   consensusAddrBech32,
+		Contract: consensusAddrBech32,
 		Msg:      msg,
 	})
 	if err != nil {

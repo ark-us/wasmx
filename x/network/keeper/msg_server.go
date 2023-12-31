@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 type msgServer struct {
@@ -36,10 +37,13 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 	// TODO BroadcastTxCommit and return receipt
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+	consensusAddrBech32 := consensusAddr.String()
+
 	msgbz := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(msg.Tx)))
 	rresp, err := m.Keeper.ExecuteContract(ctx, &types.MsgExecuteContract{
-		Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-		Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+		Sender:   consensusAddrBech32,
+		Contract: consensusAddrBech32,
 		Msg:      msgbz,
 	})
 	if err != nil {

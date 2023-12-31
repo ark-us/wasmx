@@ -163,7 +163,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.GetAppContext(s.chainA)
-	aliasEthAddr := sdk.AccAddress(appA.Hex2bz("0x0000000000000000000000000000000000000024"))
+	aliasEthAddr := sdk.AccAddress(appA.Hex2bz(types.ADDR_ALIAS_ETH))
 
 	// We only fund sender
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

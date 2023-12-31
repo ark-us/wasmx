@@ -99,12 +99,15 @@ func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpct
 func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
 	c.logger.Debug("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()))
 
+	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+	consensusAddrBech32 := consensusAddr.String()
+
 	// TODO use ctx from params?
 	cb := func(goctx context.Context) (any, error) {
 		msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
 		rresp, err := c.nk.ExecuteContract(sdk.UnwrapSDKContext(goctx), &types.MsgExecuteContract{
-			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+			Sender:   consensusAddrBech32,
+			Contract: consensusAddrBech32,
 			Msg:      msg,
 		})
 		fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
@@ -438,10 +441,13 @@ func (c *ABCIClient) BlockSearch(
 
 func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
 	cb := func(goctx context.Context) (any, error) {
+		consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+		consensusAddrBech32 := consensusAddr.String()
+
 		msg := []byte(fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key))
 		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
-			Sender:   "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
-			Contract: "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpfqnvljy",
+			Sender:   consensusAddrBech32,
+			Contract: consensusAddrBech32,
 			Msg:      msg,
 		})
 	}

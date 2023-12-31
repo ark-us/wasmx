@@ -36,7 +36,7 @@ var (
 // 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 // 	suite.Commit()
 
-// 	pyInterpreterAddress := types.AccAddressFromHex("0x0000000000000000000000000000000000000026")
+// 	pyInterpreterAddress := types.AccAddressFromHex(types.ADDR_INTERPRETER_PYTHON)
 
 // 	data := []byte(`
 // from wasmx import storage_store

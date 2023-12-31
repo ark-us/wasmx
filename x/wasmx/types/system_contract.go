@@ -12,6 +12,29 @@ import (
 
 type SystemContracts = []SystemContract
 
+var ADDR_ECRECOVER = "0x0000000000000000000000000000000000000001"
+var ADDR_ECRECOVERETH = "0x000000000000000000000000000000000000001f"
+var ADDR_SHA2_256 = "0x0000000000000000000000000000000000000002"
+var ADDR_RIPMD160 = "0x0000000000000000000000000000000000000003"
+var ADDR_IDENTITY = "0x0000000000000000000000000000000000000004"
+var ADDR_MODEXP = "0x0000000000000000000000000000000000000005"
+var ADDR_ECADD = "0x0000000000000000000000000000000000000006"
+var ADDR_ECMUL = "0x0000000000000000000000000000000000000007"
+var ADDR_ECPAIRINGS = "0x0000000000000000000000000000000000000008"
+var ADDR_BLAKE2F = "0x0000000000000000000000000000000000000009"
+var ADDR_SECP384R1 = "0x0000000000000000000000000000000000000020"
+var ADDR_SECP384R1_REGISTRY = "0x0000000000000000000000000000000000000021"
+var ADDR_SECRET_SHARING = "0x0000000000000000000000000000000000000022"
+var ADDR_INTERPRETER_EVM_SHANGHAI = "0x0000000000000000000000000000000000000023"
+var ADDR_ALIAS_ETH = "0x0000000000000000000000000000000000000024"
+var ADDR_PROXY_INTERFACES = "0x0000000000000000000000000000000000000025"
+var ADDR_INTERPRETER_PYTHON = "0x0000000000000000000000000000000000000026"
+var ADDR_INTERPRETER_JS = "0x0000000000000000000000000000000000000027"
+var ADDR_INTERPRETER_FSM = "0x0000000000000000000000000000000000000028"
+var ADDR_STORAGE_CHAIN = "0x0000000000000000000000000000000000000029"
+var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002a"
+var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
 func DefaultSystemContracts() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
@@ -26,7 +49,7 @@ func DefaultSystemContracts() SystemContracts {
 
 	return []SystemContract{
 		{
-			Address:     "0x0000000000000000000000000000000000000001",
+			Address:     ADDR_ECRECOVER,
 			Label:       "ecrecover",
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -36,7 +59,7 @@ func DefaultSystemContracts() SystemContracts {
 		},
 		// Ethereum ecrecover
 		{
-			Address:     "0x000000000000000000000000000000000000001f",
+			Address:     ADDR_ECRECOVERETH,
 			Label:       "ecrecovereth",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -44,7 +67,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000002",
+			Address:     ADDR_SHA2_256,
 			Label:       "sha2-256",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -52,7 +75,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000003",
+			Address:     ADDR_RIPMD160,
 			Label:       "ripmd160",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -60,7 +83,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000004",
+			Address:     ADDR_IDENTITY,
 			Label:       "identity",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -68,7 +91,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000005",
+			Address:     ADDR_MODEXP,
 			Label:       "modexp",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -76,7 +99,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000006",
+			Address:     ADDR_ECADD,
 			Label:       "ecadd",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -84,7 +107,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000007",
+			Address:     ADDR_ECMUL,
 			Label:       "ecmul",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -92,7 +115,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000008",
+			Address:     ADDR_ECPAIRINGS,
 			Label:       "ecpairings",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -100,7 +123,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000009",
+			Address:     ADDR_BLAKE2F,
 			Label:       "blake2f",
 			InitMessage: initMsg,
 			Pinned:      true,
@@ -108,7 +131,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000020",
+			Address:     ADDR_SECP384R1,
 			Label:       "secp384r1",
 			InitMessage: initMsg,
 			Pinned:      false, //TODO
@@ -116,7 +139,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000021",
+			Address:     ADDR_SECP384R1_REGISTRY,
 			Label:       "secp384r1_registry",
 			InitMessage: initMsg,
 			Pinned:      false, // TODO
@@ -124,7 +147,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000022",
+			Address:     ADDR_SECRET_SHARING,
 			Label:       "secret_sharing",
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -133,7 +156,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000023",
+			Address:     ADDR_INTERPRETER_EVM_SHANGHAI,
 			Label:       INTERPRETER_EVM_SHANGHAI,
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -142,7 +165,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000024",
+			Address:     ADDR_ALIAS_ETH,
 			Label:       "alias_eth",
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -151,7 +174,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000025",
+			Address:     ADDR_PROXY_INTERFACES,
 			Label:       "proxy_interfaces",
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -160,7 +183,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000026",
+			Address:     ADDR_INTERPRETER_PYTHON,
 			Label:       INTERPRETER_PYTHON,
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -169,7 +192,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000027",
+			Address:     ADDR_INTERPRETER_JS,
 			Label:       INTERPRETER_JS,
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -178,7 +201,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000028",
+			Address:     ADDR_INTERPRETER_FSM,
 			Label:       INTERPRETER_FSM,
 			InitMessage: initMsg,
 			Pinned:      false,
@@ -187,7 +210,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     "0x0000000000000000000000000000000000000029",
+			Address:     ADDR_CONSENSUS_RAFT,
 			Label:       CONSENSUS_RAFT,
 			InitMessage: raftInitMsg,
 			Pinned:      false,
@@ -196,7 +219,7 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{INTERPRETER_FSM},
 		},
 		{
-			Address:     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			Address:     ADDR_SYS_PROXY,
 			Label:       "sys_proxy",
 			InitMessage: initMsg,
 			Pinned:      false,

@@ -10,9 +10,9 @@ import (
 type NativeMapI map[string]func(context *Context, input []byte) ([]byte, error)
 
 var NativeMap = NativeMapI{
-	"0x0000000000000000000000000000000000000001": Secp256k1RecoverNative,
-	"0x0000000000000000000000000000000000000022": SecretSharing,
-	"0x0000000000000000000000000000000000000025": ProxyInterfaces,
+	types.ADDR_ECRECOVER:        Secp256k1RecoverNative,
+	types.ADDR_SECRET_SHARING:   SecretSharing,
+	types.ADDR_PROXY_INTERFACES: ProxyInterfaces,
 }
 
 func (m NativeMapI) IsPrecompile(contractAddress sdk.AccAddress) bool {
