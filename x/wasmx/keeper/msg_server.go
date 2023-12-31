@@ -221,7 +221,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -258,7 +258,7 @@ func (m msgServer) ExecuteWithOriginContract(goCtx context.Context, msg *types.M
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := sdk.AccAddressFromBech32(msg.Contract)
+	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}

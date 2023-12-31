@@ -22,21 +22,13 @@ var bzkey = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4
 
 var DefaultTarget = "bufnet"
 
-type LogEntry struct {
-	Index    int64  `json:"index"`
-	TermId   int32  `json:"termId"`
-	LeaderId int32  `json:"leaderId"`
-	Data     string `json:"data"`
-	Result   string `json:"result"`
-}
-
 type AppendEntry struct {
-	TermId       int32      `json:"termId"`
-	LeaderId     int32      `json:"leaderId"`
-	PrevLogIndex int64      `json:"prevLogIndex"`
-	PrevLogTerm  int32      `json:"prevLogTerm"`
-	Entries      []LogEntry `json:"entries"`
-	LeaderCommit int64      `json:"leaderCommit"`
+	TermId       int32            `json:"termId"`
+	LeaderId     int32            `json:"leaderId"`
+	PrevLogIndex int64            `json:"prevLogIndex"`
+	PrevLogTerm  int32            `json:"prevLogTerm"`
+	Entries      []types.LogEntry `json:"entries"`
+	LeaderCommit int64            `json:"leaderCommit"`
 }
 
 func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
@@ -53,8 +45,8 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	// goctx1 := context.Background()
 	// client1, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
 	// defer conn1.Close()
-	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusBech32 := consensusAddr.String()
+
+	consensusBech32 := wasmxtypes.CONSENSUS_RAFT
 
 	storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","wasmx_blocks_contract":"%s"}`, storageContract.String()))
@@ -121,12 +113,14 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	suite.Require().Equal(`#RAFT-FULL-1.initialized.Follower`, string(qrespbz))
 
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
-	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg1}
-	execmsgbz, err := json.Marshal(execmsg)
+
+	respbz, err := appA.App.NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+		Sender:   consensusBech32,
+		Contract: consensusBech32,
+		Msg:      msg1,
+	})
 	suite.Require().NoError(err)
-	respbz, err := appA.App.WasmxKeeper.ExecuteEventual(appA.Context(), consensusAddr, consensusAddr, execmsgbz, nil)
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", string(respbz))
+	log.Printf("Response: %+v", string(respbz.Data))
 
 	// resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
 	// 	Sender:   consensusBech32,

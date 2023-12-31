@@ -165,10 +165,12 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
+	// TODO validate deps
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 	if err := req.QueryData.ValidateBasic(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid query data")
 	}
-	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	contractAddr, err := k.GetAddressOrRole(ctx, req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -176,8 +178,6 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 	if err != nil {
 		return nil, err
 	}
-	// TODO validate deps
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {
@@ -296,10 +296,12 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
+	// TODO validate deps
+	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 	if err := req.QueryData.ValidateBasic(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid query data")
 	}
-	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	contractAddr, err := k.GetAddressOrRole(ctx, req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -307,8 +309,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 	if err != nil {
 		return nil, err
 	}
-	// TODO validate deps
-	ctx := sdk.UnwrapSDKContext(c).WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
+
 	// recover from out-of-gas panic
 	defer func() {
 		if r := recover(); r != nil {

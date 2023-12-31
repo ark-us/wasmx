@@ -481,13 +481,10 @@ func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 		return err
 	}
 
-	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusAddrBech32 := consensusAddr.String()
-
 	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
 	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-		Sender:   consensusAddrBech32,
-		Contract: consensusAddrBech32,
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg,
 	})
 	if err != nil {
@@ -523,14 +520,11 @@ func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	peers := string(peersbz)
 	peers = strings.Replace(peers, `"`, `\"`, -1)
 
-	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusAddrBech32 := consensusAddr.String()
-
 	// TODO node IPS!!!
 	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
 	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-		Sender:   consensusAddrBech32,
-		Contract: consensusAddrBech32,
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg,
 	})
 	if err != nil {

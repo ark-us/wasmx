@@ -8,9 +8,12 @@ import (
 	cmttypes "github.com/cometbft/cometbft/types"
 )
 
-var LOG_INDEXER = "logs_"
+var BLOCK_LAST_INDEX = "block_last_index"
+var BLOCK_INDEX_KEY = "block_"
+var BLOCK_HASH_KEY = "block_by_hash_"
 var TX_INDEXER = "tx_"
-var LAST_LOG_INDEX = "logs_last_index"
+var PARAMS_KEY = "consensus_params"
+var DATA_INDEXER = "data_"
 
 type IndexedTransaction struct {
 	Height int64  `json:"height"`
@@ -21,10 +24,17 @@ type LogEntry struct {
 	Index    int64  `json:"index"`
 	TermId   int32  `json:"termId"`
 	LeaderId int32  `json:"leaderId"`
-	Data     []byte `json:"data"`   // RequestProcessProposal
-	Header   []byte `json:"header"` // Block Header
-	Commit   []byte `json:"commit"` // BlockCommit
-	Result   []byte `json:"result"` // ResponseFinalizeBlock
+	Data     []byte `json:"data"` // empty for finalized blocks
+}
+
+type BlockEntry struct {
+	Index          int64  `json:"index"`
+	ReaderContract []byte `json:"readerContract"`
+	WriterContract []byte `json:"writerContract"`
+	Data           []byte `json:"data"`   // RequestProcessProposal
+	Header         []byte `json:"header"` // Block Header
+	Commit         []byte `json:"commit"` // BlockCommit
+	Result         []byte `json:"result"` // ResponseFinalizeBlock
 }
 
 func GetTxKey(hash []byte) string {
@@ -32,11 +42,11 @@ func GetTxKey(hash []byte) string {
 }
 
 func GetBlockKey(index int64) string {
-	return LOG_INDEXER + strconv.Itoa(int(index))
+	return BLOCK_INDEX_KEY + strconv.Itoa(int(index))
 }
 
 func GetLastBlockHeightKey() string {
-	return LAST_LOG_INDEX
+	return BLOCK_LAST_INDEX
 }
 
 type InitChainSetup struct {

@@ -99,15 +99,12 @@ func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpct
 func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
 	c.logger.Debug("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()))
 
-	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusAddrBech32 := consensusAddr.String()
-
 	// TODO use ctx from params?
 	cb := func(goctx context.Context) (any, error) {
 		msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
 		rresp, err := c.nk.ExecuteContract(sdk.UnwrapSDKContext(goctx), &types.MsgExecuteContract{
-			Sender:   consensusAddrBech32,
-			Contract: consensusAddrBech32,
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,
 		})
 		fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
@@ -253,20 +250,20 @@ func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.Result
 		return nil, fmt.Errorf("block (%d) not found", height)
 	}
 
-	var logEntry types.LogEntry
-	err = json.Unmarshal(resp.Data, &logEntry)
+	var entry types.BlockEntry
+	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
 		return nil, err
 	}
 
 	var b abci.RequestProcessProposal
-	err = json.Unmarshal(logEntry.Data, &b)
+	err = json.Unmarshal(entry.Data, &b)
 	if err != nil {
 		return nil, err
 	}
 
 	var header cmttypes.Header
-	err = json.Unmarshal(logEntry.Header, &header)
+	err = json.Unmarshal(entry.Header, &header)
 	if err != nil {
 		return nil, err
 	}
@@ -355,20 +352,20 @@ func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes
 		return nil, fmt.Errorf("tx block (%d) not found", indexedTx.Height)
 	}
 
-	var logEntry types.LogEntry
-	err = json.Unmarshal(resp.Data, &logEntry)
+	var entry types.BlockEntry
+	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
 		return nil, err
 	}
 
 	var blockData abci.RequestProcessProposal
-	err = json.Unmarshal(logEntry.Data, &blockData)
+	err = json.Unmarshal(entry.Data, &blockData)
 	if err != nil {
 		return nil, err
 	}
 
 	var blockResultData abci.ResponseFinalizeBlock
-	err = json.Unmarshal(logEntry.Result, &blockResultData)
+	err = json.Unmarshal(entry.Result, &blockResultData)
 	if err != nil {
 		return nil, err
 	}
@@ -441,13 +438,11 @@ func (c *ABCIClient) BlockSearch(
 
 func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
 	cb := func(goctx context.Context) (any, error) {
-		consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-		consensusAddrBech32 := consensusAddr.String()
 
 		msg := []byte(fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key))
 		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
-			Sender:   consensusAddrBech32,
-			Contract: consensusAddrBech32,
+			Sender:   wasmxtypes.ROLE_STORAGE,
+			Contract: wasmxtypes.ROLE_STORAGE,
 			Msg:      msg,
 		})
 	}

@@ -34,6 +34,26 @@ func (k *Keeper) DeregisterRole(
 	return fmt.Errorf("DeregisterRole not implemented")
 }
 
+func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
+	addr, found := k.GetContractAddressByRole(ctx, addressOrRole)
+	if found {
+		return addr, nil
+	}
+	role := k.GetRoleByLabel(ctx, addressOrRole)
+	if role != nil {
+		contractAddr, err := sdk.AccAddressFromBech32(addressOrRole)
+		if err != nil {
+			return nil, err
+		}
+		return contractAddr, nil
+	}
+	contractAddr, err := sdk.AccAddressFromBech32(addressOrRole)
+	if err != nil {
+		return nil, err
+	}
+	return contractAddr, nil
+}
+
 // GetContractAddressByRole
 func (k *Keeper) GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool) {
 	store := ctx.KVStore(k.storeKey)

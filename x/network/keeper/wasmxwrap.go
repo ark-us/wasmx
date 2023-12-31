@@ -11,11 +11,11 @@ import (
 )
 
 func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -36,11 +36,11 @@ func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract)
 }
 
 func (k *Keeper) ExecuteEventual(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -61,11 +61,11 @@ func (k *Keeper) ExecuteEventual(ctx sdk.Context, msg *types.MsgExecuteContract)
 }
 
 func (k *Keeper) QueryContract(ctx sdk.Context, msg *types.MsgQueryContract) (*types.MsgQueryContractResponse, error) {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
+	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}

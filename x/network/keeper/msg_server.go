@@ -37,13 +37,10 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 	// TODO BroadcastTxCommit and return receipt
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	consensusAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusAddrBech32 := consensusAddr.String()
-
 	msgbz := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(msg.Tx)))
 	rresp, err := m.Keeper.ExecuteContract(ctx, &types.MsgExecuteContract{
-		Sender:   consensusAddrBech32,
-		Contract: consensusAddrBech32,
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msgbz,
 	})
 	if err != nil {
