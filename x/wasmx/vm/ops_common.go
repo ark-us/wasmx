@@ -37,6 +37,22 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		return int32(0), nil
 	}
 
+	// deterministic contracts cannot transact with or query non-deterministic contracts
+	sourceContract := GetContractContext(ctx, req.From)
+	fromStorageType := sourceContract.ContractInfo.StorageType
+	toStorageType := depContext.ContractInfo.StorageType
+	if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
+		// deterministic contracts can read from metaconsensus
+		if toStorageType == types.ContractStorageType_MetaConsensus && !req.IsQuery {
+			ctx.Ctx.Logger().Debug("deterministic contract tried to execute meta consensus contract", "from", req.From.String(), "to", req.To.String())
+			return int32(1), nil
+		}
+		if toStorageType != types.ContractStorageType_MetaConsensus {
+			ctx.Ctx.Logger().Debug("deterministic contract tried to execute non-deterministic contract", "from", req.From.String(), "to", req.To.String())
+			return int32(1), nil
+		}
+	}
+
 	callContext := types.MessageInfo{
 		Origin:   ctx.Env.CurrentCall.Origin,
 		Sender:   req.From,
