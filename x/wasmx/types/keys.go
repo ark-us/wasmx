@@ -19,7 +19,9 @@ const (
 
 	TStoreKey = "transient_wasmx"
 
-	CLessStoreKey = "consensusless_wasmx"
+	MetaConsensusStoreKey = "meta_consensus_wasmx"
+
+	SingleConsensusStoreKey = "single_consensus_wasmx"
 
 	ContractsDir = "wasmx"
 

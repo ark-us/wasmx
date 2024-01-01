@@ -371,7 +371,7 @@ func New(
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, wasmxmoduletypes.MemStoreKey)
-	clessKeys := storetypes.NewConsensuslessStoreKeys(networkmoduletypes.CLessStoreKey, wasmxmoduletypes.CLessStoreKey)
+	clessKeys := storetypes.NewConsensuslessStoreKeys(networkmoduletypes.CLessStoreKey, wasmxmoduletypes.MetaConsensusStoreKey, wasmxmoduletypes.SingleConsensusStoreKey)
 
 	// register streaming services
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -626,7 +626,8 @@ func New(
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
 		tkeys[wasmxmoduletypes.TStoreKey],
-		clessKeys[wasmxmoduletypes.CLessStoreKey],
+		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],
+		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,

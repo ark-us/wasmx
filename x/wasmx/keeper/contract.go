@@ -134,7 +134,6 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ty
 	}, nil
 }
 
-// TODO remove deps. they are extracted from the wasm module
 func (k *Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerr.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")

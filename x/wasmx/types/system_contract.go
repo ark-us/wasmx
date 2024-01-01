@@ -229,10 +229,7 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: raftInitMsg,
 			Pinned:      false,
 			Role:        ROLE_CONSENSUS,
-			// TODO MetaConsensus is deterministic, can be read from contracts
-			// TODO we need a nondeterministic persistence here
-			// e.g. IndividualConsensus
-			StorageType: ContractStorageType_MetaConsensus,
+			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM},
 		},
 		{

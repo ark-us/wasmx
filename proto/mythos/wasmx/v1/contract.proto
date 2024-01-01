@@ -66,8 +66,9 @@ enum ContractStorageType {
     // blocks, transactions - meta chain data
     MetaConsensus = 1;
     // node-specific storage that must NOT be used in deterministic operations
-    Memory = 2;
-    Transient = 3;
+    SingleConsensus = 2;
+    Memory = 3;
+    Transient = 4;
 }
 
 // ContractInfo stores a WASM contract instance

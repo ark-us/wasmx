@@ -48,7 +48,9 @@ func (k *Keeper) ContractStore(ctx sdk.Context, storageType types.ContractStorag
 	// default must be core consensus
 	storageKey := k.storeKey // types.ContractStorageType_CoreConsensus
 	if storageType == types.ContractStorageType_MetaConsensus {
-		storageKey = k.clessKey
+		storageKey = k.metaConsKey
+	} else if storageType == types.ContractStorageType_SingleConsensus {
+		storageKey = k.singleConsKey
 	} else if storageType == types.ContractStorageType_Transient {
 		storageKey = k.tKey
 	} else if storageType == types.ContractStorageType_Memory {

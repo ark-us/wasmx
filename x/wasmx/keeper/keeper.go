@@ -31,7 +31,8 @@ type (
 		storeKey              storetypes.StoreKey
 		memKey                storetypes.StoreKey
 		tKey                  storetypes.StoreKey
-		clessKey              storetypes.StoreKey
+		metaConsKey           storetypes.StoreKey
+		singleConsKey         storetypes.StoreKey
 		paramstore            paramtypes.Subspace
 		interfaceRegistry     cdctypes.InterfaceRegistry
 		msgRouter             *baseapp.MsgServiceRouter
@@ -63,7 +64,8 @@ func NewKeeper(
 	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
 	tKey storetypes.StoreKey,
-	clessKey storetypes.StoreKey,
+	metaConsKey storetypes.StoreKey,
+	singleConsKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
@@ -133,7 +135,8 @@ func NewKeeper(
 		storeKey:          storeKey,
 		memKey:            memKey,
 		tKey:              tKey,
-		clessKey:          clessKey,
+		metaConsKey:       metaConsKey,
+		singleConsKey:     singleConsKey,
 		paramstore:        ps,
 		interfaceRegistry: interfaceRegistry,
 		msgRouter:         msgRouter,

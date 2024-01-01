@@ -137,7 +137,10 @@ func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ct
 	}
 
 	commitCacheCtx()
-	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
+	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.MetaConsensusStoreKey))
+	origtstore.(storetypes.CacheWrap).Write()
+
+	origtstore = ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.SingleConsensusStoreKey))
 	origtstore.(storetypes.CacheWrap).Write()
 
 	// origtstore2 := ctxcachems.GetKVStore(mythosapp.GetCLessKey(wasmxtypes.CLessStoreKey))
