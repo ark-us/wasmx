@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"strings"
+
 	dbm "github.com/cometbft/cometbft-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -61,15 +63,43 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		GasLimit: req.GasLimit,
 	}
 
+	to := req.To
+	systemDeps := req.SystemDeps
+	// clone router
+	newrouter := cloneContractRouter(ctx.ContractRouter)
+	// TODO req.To or to?
+	routerAddress := req.To.String()
+
+	if depContext.ContractInfo.Role == types.ROLE_LIBRARY {
+		to = req.From
+		// TODO
+		// newrouter[to.String()].ContractInfo.
+		// TODO inherit execution depepndencies comming from roles
+		sysdeps := newrouter[routerAddress].ContractInfo.SystemDeps
+		for _, dep := range sourceContract.ContractInfo.SystemDeps {
+			if strings.Contains(dep.Role, "consensus") {
+				systemDeps = append(systemDeps, dep.Role)
+				sysdeps = append(sysdeps, dep)
+			}
+			for _, subdep := range dep.Deps {
+				if strings.Contains(subdep.Role, "consensus") {
+					systemDeps = append(systemDeps, subdep.Role)
+					sysdeps = append(sysdeps, subdep)
+				}
+			}
+		}
+		newrouter[routerAddress].ContractInfo.SystemDepsRaw = systemDeps
+		newrouter[routerAddress].ContractInfo.SystemDeps = sysdeps
+	}
 	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[req.To.String()].ContractInfo.StorageType, ctx.ContractRouter[req.To.String()].ContractInfo.StoreKey)
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[to.String()].ContractInfo.StorageType, ctx.ContractRouter[to.String()].ContractInfo.StoreKey)
 
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
 		ContractStore:  contractStore,
 		CosmosHandler:  ctx.CosmosHandler,
-		ContractRouter: ctx.ContractRouter,
+		ContractRouter: newrouter,
 		App:            ctx.App,
 		NativeHandler:  ctx.NativeHandler,
 		dbIterators:    map[int32]dbm.Iterator{},
@@ -78,17 +108,18 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 			Transaction: ctx.Env.Transaction,
 			Chain:       ctx.Env.Chain,
 			Contract: types.EnvContractInfo{
-				Address:    req.To,
+				Address:    to,
 				CodeHash:   req.CodeHash,
 				Bytecode:   req.Bytecode,
 				FilePath:   req.FilePath,
 				CodeId:     req.CodeId,
-				SystemDeps: req.SystemDeps,
+				SystemDeps: systemDeps,
 			},
 			CurrentCall: callContext,
 		},
 	}
-	_, err := newctx.ContractRouter[req.To.String()].Execute(newctx)
+
+	_, err := newrouter[routerAddress].Execute(newctx)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
@@ -104,4 +135,12 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		}
 	}
 	return success, newctx.ReturnData
+}
+
+func cloneContractRouter(router map[string]*ContractContext) map[string]*ContractContext {
+	newrouter := make(map[string]*ContractContext, 0)
+	for k := range router {
+		newrouter[k] = router[k].CloneShallow()
+	}
+	return newrouter
 }

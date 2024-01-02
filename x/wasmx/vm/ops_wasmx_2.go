@@ -221,6 +221,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	ptr, err := allocateWriteMem(ctx, callframe, responsebz)
 	if err != nil {
+		ctx.Ctx.Logger().Debug("wasmxCall allocate memory", "err", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	returns[0] = ptr

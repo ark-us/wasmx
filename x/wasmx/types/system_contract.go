@@ -32,7 +32,8 @@ var ADDR_INTERPRETER_PYTHON = "0x0000000000000000000000000000000000000026"
 var ADDR_INTERPRETER_JS = "0x0000000000000000000000000000000000000027"
 var ADDR_INTERPRETER_FSM = "0x0000000000000000000000000000000000000028"
 var ADDR_STORAGE_CHAIN = "0x0000000000000000000000000000000000000029"
-var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002a"
+var ADDR_CONSENSUS_RAFT_LIBRARY = "0x000000000000000000000000000000000000002a"
+var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002b"
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func DefaultSystemContracts() SystemContracts {
@@ -224,13 +225,22 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
+			Address:     ADDR_CONSENSUS_RAFT_LIBRARY,
+			Label:       "raft_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
 			Address:     ADDR_CONSENSUS_RAFT,
 			Label:       CONSENSUS_RAFT,
 			InitMessage: raftInitMsg,
 			Pinned:      false,
 			Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{INTERPRETER_FSM},
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFT_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
 			Address:     ADDR_SYS_PROXY,

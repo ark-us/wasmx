@@ -2,6 +2,7 @@ package types
 
 import (
 	bytes "bytes"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -169,6 +170,8 @@ var ROLE_INTERPRETER_PYTHON = "interpreter_python"
 var ROLE_INTERPRETER_JS = "interpreter_javascript"
 var ROLE_INTERPRETER_FSM = "interpreter_state_machine"
 
+var ROLE_LIBRARY = "deplibrary"
+
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
 // encoding = ""
@@ -278,3 +281,15 @@ func HasInterpreterSystemDep(sysDeps []SystemDep) bool {
 // 	}
 // 	return true
 // }
+
+func BuildDep(addr string, deptype string) string {
+	return fmt.Sprintf("%s:%s", addr, deptype)
+}
+
+func ParseDep(dep string) (string, string) {
+	parts := strings.Split(dep, ":")
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return dep, ""
+}

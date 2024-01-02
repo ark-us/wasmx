@@ -60,6 +60,17 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 		return nil, cleanups, err
 	}
 
+	registered := contractVm.ListRegisteredModule()
+	// register mocks if dependencies are not already registered
+	if !slices.Contains(registered, "consensus") {
+		mock := BuildWasmxConsensusJson1Mock(context)
+		err = contractVm.RegisterModule(mock)
+		if err != nil {
+			return nil, cleanups, err
+		}
+		cleanups = append(cleanups, mock.Release)
+	}
+
 	if filePath != "" || len(wasmbuffer) > 0 {
 		err = wasmutils.InstantiateWasm(contractVm, filePath, wasmbuffer)
 	}

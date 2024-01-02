@@ -35,6 +35,18 @@ type ContractContext struct {
 	ContractInfo types.ContractDependency
 }
 
+// TODO deeper clone - this may be rewritten on each nested call
+// we don't want to rewrite the original data, which acts as a cache
+func (c ContractContext) CloneShallow() *ContractContext {
+	return &ContractContext{
+		Vm:           c.Vm,
+		VmAst:        c.VmAst,
+		VmExecutor:   c.VmExecutor,
+		Context:      c.Context,
+		ContractInfo: c.ContractInfo,
+	}
+}
+
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	found := newctx.NativeHandler.IsPrecompile(newctx.Env.Contract.Address)
 	if found {
@@ -70,6 +82,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 // key is a bech32 string
 type ContractRouter = map[string]*ContractContext
 
+// TODO remove
 type IntervalAction struct {
 	Time       int64
 	CallbackId int32

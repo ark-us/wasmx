@@ -147,7 +147,7 @@ func (k *Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte
 		}
 	}
 
-	var reportDeps = deps
+	var reportDeps = make([]string, 0)
 
 	if ioutils.IsWasm(wasmCode) {
 		checksum, reportDeps, err = k.createWasm(ctx, wasmCode)
@@ -161,6 +161,8 @@ func (k *Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte
 	if err != nil {
 		return 0, checksum, err
 	}
+	// TODO filter deps?
+	reportDeps = append(reportDeps, deps...)
 
 	if len(checksum) == 0 {
 		return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")
@@ -457,7 +459,11 @@ func (k *Keeper) instantiateInternal(
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
+	systemDeps := k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
+	// contractDeps, err := k.ContractDepsFromCodeDeps(ctx, codeInfo.Deps)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	// instantiate wasm contract
 	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, storageType, handler, k.gasMeter(ctx), systemDeps)
@@ -575,20 +581,10 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 	// e.g. dep = {value, type}
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
-
-	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
-	var contractDeps []types.ContractDependency
-
-	for _, hexaddr := range allDeps {
-		if hexaddr[0:2] != "0x" {
-			continue
-		}
-		addr := types.AccAddressFromHex(hexaddr)
-		contractDep, err := k.GetContractDependency(ctx, addr)
-		if err != nil {
-			return nil, err
-		}
-		contractDeps = append(contractDeps, contractDep)
+	systemDeps := k.SystemDepsFromCodeDeps(ctx, allDeps)
+	contractDeps, err := k.ContractDepsFromCodeDeps(ctx, allDeps)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO panic if coin is not the correct denomination
@@ -653,19 +649,10 @@ func (k *Keeper) ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
 
-	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
-	var contractDeps []types.ContractDependency
-
-	for _, hexaddr := range allDeps {
-		if hexaddr[0:2] != "0x" {
-			continue
-		}
-		addr := types.AccAddressFromHex(hexaddr)
-		contractDep, err := k.GetContractDependency(ctx, addr)
-		if err != nil {
-			return nil, err
-		}
-		contractDeps = append(contractDeps, contractDep)
+	systemDeps := k.SystemDepsFromCodeDeps(ctx, allDeps)
+	contractDeps, err := k.ContractDepsFromCodeDeps(ctx, allDeps)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO panic if coin is not the correct denomination
@@ -837,19 +824,10 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller s
 	// e.g. dep = {value, type}
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
-	var systemDeps = k.SystemDepsFromCodeDeps(ctx, allDeps)
-
-	var contractDeps []types.ContractDependency
-	for _, hexaddr := range allDeps {
-		if hexaddr[0:2] != "0x" {
-			continue
-		}
-		addr := types.AccAddressFromHex(hexaddr)
-		contractDep, err := k.GetContractDependency(ctx, addr)
-		if err != nil {
-			return nil, err
-		}
-		contractDeps = append(contractDeps, contractDep)
+	systemDeps := k.SystemDepsFromCodeDeps(ctx, allDeps)
+	contractDeps, err := k.ContractDepsFromCodeDeps(ctx, allDeps)
+	if err != nil {
+		return nil, err
 	}
 
 	// add more funds
@@ -946,6 +924,24 @@ func (k *Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	if ctx.GasMeter().IsOutOfGas() {
 		panic(storetypes.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
 	}
+}
+
+func (k *Keeper) ContractDepsFromCodeDeps(ctx sdk.Context, allDeps []string) ([]types.ContractDependency, error) {
+	var contractDeps []types.ContractDependency
+	for _, hexaddr := range allDeps {
+		if hexaddr[0:2] != "0x" {
+			continue
+		}
+		hexaddr, role := types.ParseDep(hexaddr)
+		addr := types.AccAddressFromHex(hexaddr)
+		contractDep, err := k.GetContractDependency(ctx, addr)
+		if err != nil {
+			return nil, err
+		}
+		contractDep.Role = role
+		contractDeps = append(contractDeps, contractDep)
+	}
+	return contractDeps, nil
 }
 
 func (k *Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []types.SystemDep {

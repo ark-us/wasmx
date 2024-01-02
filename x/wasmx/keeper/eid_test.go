@@ -482,7 +482,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
-	registryAddress := sdk.AccAddress(appA.Hex2bz("0000000000000000000000000000000000000021"))
+	registryAddress := sdk.AccAddress(appA.Hex2bz(types.ADDR_SECP384R1_REGISTRY))
 
 	fmt.Println("--register--")
 	start := time.Now()

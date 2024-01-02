@@ -61,6 +61,9 @@ var (
 	//go:embed 29.storage_chain.wasm
 	storage_chain []byte
 
+	//go:embed 2a.raft_library.wasm
+	raft_library []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -103,7 +106,9 @@ func GetPrecompileByLabel(label string) []byte {
 	case types.INTERPRETER_FSM:
 		wasmbin = state_machine
 	case types.CONSENSUS_RAFT:
-		wasmbin = []byte(ConsensusRaftv001)
+		wasmbin = []byte(ConsensusRaftv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFT_LIBRARY)))
+	case "raft_library":
+		wasmbin = raft_library
 	case "sys_proxy":
 		wasmbin = sys_proxy
 	case types.STORAGE_CHAIN:
