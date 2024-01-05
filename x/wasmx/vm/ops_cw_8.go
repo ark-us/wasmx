@@ -482,6 +482,7 @@ func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []
 		return nil, wasmedge.Result_Fail
 	}
 	returns := make([]interface{}, 0)
+	ctx.FinishData = data
 	ctx.ReturnData = data
 	ctx.GetContext().Logger().Debug("cosmwasm8: abort: " + string(data))
 	return returns, wasmedge.Result_Fail

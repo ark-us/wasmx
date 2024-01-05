@@ -688,7 +688,7 @@ func finish(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = result
-	// TODO!! rename this to FinishData and leave ReturnData for inner calls
+	ctx.FinishData = result
 	ctx.ReturnData = result
 	// terminate the WASM execution
 	return returns, wasmedge.Result_Terminate
@@ -709,6 +709,7 @@ func revert(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = result
+	ctx.FinishData = result
 	ctx.ReturnData = result
 	return returns, wasmedge.Result_Fail
 }

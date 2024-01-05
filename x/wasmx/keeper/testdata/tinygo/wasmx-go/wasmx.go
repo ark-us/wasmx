@@ -19,8 +19,8 @@ func StorageLoad_(keyPtr, keyLen uint32) uint64
 //go:wasmimport wasmx getCallData
 func GetCallData_() uint64
 
-//go:wasmimport wasmx setReturnData
-func SetReturnData_(dataPtr, dataLen uint32)
+//go:wasmimport wasmx setFinishData
+func SetFinishData_(dataPtr, dataLen uint32)
 
 //go:wasmimport wasmx getEnv
 func GetEnv_() uint64
@@ -92,9 +92,9 @@ func GetCallData() []byte {
 	return bytesFromDynPtr(ptr)
 }
 
-func SetReturnData(data []byte) {
+func SetFinishData(data []byte) {
 	keyPtr, keyLength := BytesToLeakedPtr(data)
-	SetReturnData_(keyPtr, keyLength)
+	SetFinishData_(keyPtr, keyLength)
 }
 
 func Bech32StringToBytes(addrBech32 string) []byte {

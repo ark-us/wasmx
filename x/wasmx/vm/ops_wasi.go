@@ -79,13 +79,14 @@ func wasiGetCallData(context interface{}, callframe *wasmedge.CallingFrame, para
 	return returns, wasmedge.Result_Success
 }
 
-func wasiSetReturnData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasiSetFinishData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 0)
 	ctx := context.(*Context)
 	data, err := readMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	ctx.FinishData = data
 	ctx.ReturnData = data
 	return returns, wasmedge.Result_Success
 }
@@ -101,6 +102,7 @@ func wasiSetExitCode(context interface{}, callframe *wasmedge.CallingFrame, para
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	ctx.FinishData = errorMsg
 	ctx.ReturnData = errorMsg
 	return returns, wasmedge.Result_Fail
 }
@@ -584,7 +586,9 @@ func BuildWasiWasmxEnv(context *Context) *wasmedge.Module {
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32i32i32_, wasiStorageStore, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32i32_i64, wasiStorageLoad, context, 0))
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i64, wasiGetCallData, context, 0))
-	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32i32_, wasiSetReturnData, context, 0))
+	env.AddFunction("setFinishData", wasmedge.NewFunction(functype_i32i32_, wasiSetFinishData, context, 0))
+	// TODO some precompiles use setReturnData instead of setFinishData
+	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32i32_, wasmxSetFinishData, context, 0))
 	env.AddFunction("setExitCode", wasmedge.NewFunction(functype_i32i32i32_, wasiSetExitCode, context, 0))
 
 	env.AddFunction("callClassic", wasmedge.NewFunction(functype_i64i32i32i32i32_i64, wasiCallClassic, context, 0))
@@ -677,7 +681,7 @@ func ExecutePythonInterpreter(context *Context, contractVm *wasmedge.VM, funcNam
 	strcontent := fmt.Sprintf(`
 import sys
 import json
-from wasmx import set_returndata
+from wasmx import set_finishdata
 
 %s
 
@@ -690,7 +694,7 @@ if len(sys.argv) > 1 and sys.argv[1] != "":
 else:
 	res = entrypoint()
 
-set_returndata(res or b'')
+set_finishdata(res or b'')
 `, string(content), funcName)
 
 	err = os.WriteFile(inputFile, []byte(strcontent), 0644)
@@ -740,7 +744,7 @@ if (scriptArgs.length > 1 && scriptArgs[1] != "") {
 	inputData = std.parseExtJSON(scriptArgs[1]);
 }
 const res = contract.%s(inputData);
-wasmx.setReturnData(res || new ArrayBuffer(0));
+wasmx.setFinishData(res || new ArrayBuffer(0));
 
 	`, fileName, funcName)
 

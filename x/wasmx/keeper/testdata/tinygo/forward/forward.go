@@ -38,13 +38,13 @@ func main() {
 			addrs[i] = v.(string)
 		}
 		resp := forward(value, addrs)
-		wasmx.SetReturnData(resp)
+		wasmx.SetFinishData(resp)
 		return
 	} else if gjson.Get(data, "forward_get").Exists() {
 		iaddrs := gjson.Get(data, "forward_get|0").Value().([]interface{})
 		addrs := make([]string, len(iaddrs))
 		resp := forwardGet(addrs)
-		wasmx.SetReturnData(resp)
+		wasmx.SetFinishData(resp)
 		return
 	}
 	panic("Invalid function")

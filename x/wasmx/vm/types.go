@@ -100,6 +100,7 @@ type Context struct {
 	App            types.Application
 	NativeHandler  NativePrecompileHandler
 	ReturnData     []byte
+	FinishData     []byte
 	CurrentCallId  uint32
 	Logs           []WasmxLog
 	Messages       []cw8types.SubMsg `json:"messages"`

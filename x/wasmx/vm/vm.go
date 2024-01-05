@@ -284,8 +284,8 @@ func ExecuteWasmInterpreted(
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
-		wrapErr := sdkerr.Wrapf(err, "%s", string(context.ReturnData))
-		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
+		wrapErr := sdkerr.Wrapf(err, "%s", string(context.FinishData))
+		resp := handleContractErrorResponse(contractVm, context.FinishData, isdebug, wrapErr)
 		if isdebug {
 			// we don't fail for debug/tracing transactions
 			return resp, nil
@@ -383,8 +383,8 @@ func ExecuteWasm(
 
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	if err != nil {
-		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.ReturnData))
-		resp := handleContractErrorResponse(contractVm, context.ReturnData, isdebug, wrapErr)
+		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.FinishData))
+		resp := handleContractErrorResponse(contractVm, context.FinishData, isdebug, wrapErr)
 		if isdebug {
 			return resp, nil
 		}
@@ -458,7 +458,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 }
 
 func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug bool) types.ContractResponse {
-	data := context.ReturnData
+	data := context.FinishData
 	logs := context.Logs
 	messages := context.Messages
 	var events []types.Event

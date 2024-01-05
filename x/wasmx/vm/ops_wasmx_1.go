@@ -153,13 +153,24 @@ func wasmxGetReturnData(context interface{}, callframe *wasmedge.CallingFrame, p
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxSetReturnData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxGetFinishData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	newptr, err := allocateWriteMem(ctx, callframe, ctx.FinishData)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = newptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxSetFinishData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	data, err := readMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.ReturnData = data
+	ctx.FinishData = data
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -171,6 +182,7 @@ func wasmxFinish(context interface{}, callframe *wasmedge.CallingFrame, params [
 		return nil, wasmedge.Result_Fail
 	}
 	returns := make([]interface{}, 0)
+	ctx.FinishData = data
 	ctx.ReturnData = data
 	// TODO fixme wasmedge fails if we terminate
 	// terminate the WASM execution
@@ -185,6 +197,7 @@ func wasmxRevert(context interface{}, callframe *wasmedge.CallingFrame, params [
 		return nil, wasmedge.Result_Fail
 	}
 	returns := make([]interface{}, 0)
+	ctx.FinishData = data
 	ctx.ReturnData = data
 	return returns, wasmedge.Result_Fail
 }
@@ -286,7 +299,10 @@ func BuildWasmxEnv1(context *Context) *wasmedge.Module {
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
 	env.AddFunction("getReturnData", wasmedge.NewFunction(functype__i32, wasmxGetReturnData, context, 0))
-	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32_, wasmxSetReturnData, context, 0))
+	env.AddFunction("getFinishData", wasmedge.NewFunction(functype__i32, wasmxGetFinishData, context, 0))
+	env.AddFunction("setFinishData", wasmedge.NewFunction(functype_i32_, wasmxSetFinishData, context, 0))
+	// TODO some precompiles use setReturnData instead of setFinishData
+	env.AddFunction("setReturnData", wasmedge.NewFunction(functype_i32_, wasmxSetFinishData, context, 0))
 	env.AddFunction("finish", wasmedge.NewFunction(functype_i32_, wasmxFinish, context, 0))
 	env.AddFunction("revert", wasmedge.NewFunction(functype_i32_, wasmxRevert, context, 0))
 	env.AddFunction("storageLoad_global", wasmedge.NewFunction(functype_i32i32_, storageLoadGlobal, context, 0))

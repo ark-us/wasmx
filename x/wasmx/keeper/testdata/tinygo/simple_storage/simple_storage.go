@@ -29,7 +29,7 @@ func main() {
 		storageStore([]byte(value.String()))
 	} else if gjson.Get(data, "load").Exists() {
 		resp := storageLoad()
-		wasmx.SetReturnData(resp)
+		wasmx.SetFinishData(resp)
 	} else if gjson.Get(data, "wrapStore").Exists() {
 		addr := gjson.Get(data, "wrapStore|0")
 		value := gjson.Get(data, "wrapStore|1")
@@ -37,7 +37,7 @@ func main() {
 	} else if gjson.Get(data, "wrapLoad").Exists() {
 		addr := gjson.Get(data, "wrapLoad|0")
 		resp := wrapLoad(addr.String())
-		wasmx.SetReturnData(resp)
+		wasmx.SetFinishData(resp)
 	}
 }
 
