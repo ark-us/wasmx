@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"slices"
 	"strings"
 
 	dbm "github.com/cometbft/cometbft-db"
@@ -41,17 +42,19 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 
 	// deterministic contracts cannot transact with or query non-deterministic contracts
 	sourceContract := GetContractContext(ctx, req.From)
-	fromStorageType := sourceContract.ContractInfo.StorageType
-	toStorageType := depContext.ContractInfo.StorageType
-	if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
-		// deterministic contracts can read from metaconsensus
-		if toStorageType == types.ContractStorageType_MetaConsensus && !req.IsQuery {
-			ctx.Ctx.Logger().Debug("deterministic contract tried to execute meta consensus contract", "from", req.From.String(), "to", req.To.String())
-			return int32(1), nil
-		}
-		if toStorageType != types.ContractStorageType_MetaConsensus {
-			ctx.Ctx.Logger().Debug("deterministic contract tried to execute non-deterministic contract", "from", req.From.String(), "to", req.To.String())
-			return int32(1), nil
+	if sourceContract != nil {
+		fromStorageType := sourceContract.ContractInfo.StorageType
+		toStorageType := depContext.ContractInfo.StorageType
+		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
+			// deterministic contracts can read from metaconsensus
+			if toStorageType == types.ContractStorageType_MetaConsensus && !req.IsQuery {
+				ctx.Ctx.Logger().Debug("deterministic contract tried to execute meta consensus contract", "from", req.From.String(), "to", req.To.String())
+				return int32(1), nil
+			}
+			if toStorageType != types.ContractStorageType_MetaConsensus {
+				ctx.Ctx.Logger().Debug("deterministic contract tried to execute non-deterministic contract", "from", req.From.String(), "to", req.To.String())
+				return int32(1), nil
+			}
 		}
 	}
 
@@ -71,22 +74,51 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	routerAddress := req.To.String()
 
 	if depContext.ContractInfo.Role == types.ROLE_LIBRARY {
+		// use the sender contract if the call is to a library
 		to = req.From
 		// TODO
 		// newrouter[to.String()].ContractInfo.
 		// TODO inherit execution depepndencies comming from roles
-		sysdeps := newrouter[routerAddress].ContractInfo.SystemDeps
+		sysdeps := newrouter[req.To.String()].ContractInfo.SystemDeps
 		for _, dep := range sourceContract.ContractInfo.SystemDeps {
 			if strings.Contains(dep.Role, "consensus") {
-				systemDeps = append(systemDeps, dep.Role)
-				sysdeps = append(sysdeps, dep)
+				if !slices.Contains(systemDeps, dep.Role) {
+					systemDeps = append(systemDeps, dep.Role)
+				}
+				found := slices.ContainsFunc(sysdeps, func(n types.SystemDep) bool {
+					return n.Role == dep.Role
+				})
+				if !found {
+					sysdeps = append(sysdeps, dep)
+				}
 			}
 			for _, subdep := range dep.Deps {
 				if strings.Contains(subdep.Role, "consensus") {
-					systemDeps = append(systemDeps, subdep.Role)
-					sysdeps = append(sysdeps, subdep)
+					if !slices.Contains(systemDeps, subdep.Role) {
+						systemDeps = append(systemDeps, subdep.Role)
+					}
+					found := slices.ContainsFunc(sysdeps, func(n types.SystemDep) bool {
+						return n.Role == subdep.Role
+					})
+					if !found {
+						sysdeps = append(sysdeps, subdep)
+					}
 				}
 			}
+		}
+		ci := newrouter[routerAddress].ContractInfo
+		newrouter[routerAddress].ContractInfo = types.ContractDependency{
+			Address:       ci.Address,
+			Role:          ci.Role,
+			Label:         ci.Label,
+			StoreKey:      ci.StoreKey,
+			FilePath:      ci.FilePath,
+			Bytecode:      ci.Bytecode,
+			CodeHash:      ci.CodeHash,
+			CodeId:        ci.CodeId,
+			StorageType:   ci.StorageType,
+			SystemDepsRaw: systemDeps,
+			SystemDeps:    sysdeps,
 		}
 		newrouter[routerAddress].ContractInfo.SystemDepsRaw = systemDeps
 		newrouter[routerAddress].ContractInfo.SystemDeps = sysdeps
@@ -94,11 +126,15 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	tempCtx, commit := ctx.Ctx.CacheContext()
 	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[to.String()].ContractInfo.StorageType, ctx.ContractRouter[to.String()].ContractInfo.StoreKey)
 
+	// for authorizing cosmos messages sent by the contract, we check the sender/signer is the contract
+	// so we initialize the cosmos handler with the target contract
+	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(to)
+
 	newctx := &Context{
 		Ctx:            tempCtx,
 		GasMeter:       ctx.GasMeter,
 		ContractStore:  contractStore,
-		CosmosHandler:  ctx.CosmosHandler,
+		CosmosHandler:  newCosmosHandler,
 		ContractRouter: newrouter,
 		App:            ctx.App,
 		NativeHandler:  ctx.NativeHandler,

@@ -333,9 +333,9 @@ func (m msgServer) RegisterRole(goCtx context.Context, msg *types.MsgRegisterRol
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	err := m.Keeper.RegisterRoleHandler(ctx, msg.Role, msg.Label, msg.ContractAddress)
 	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract address")
+		return nil, err
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -345,8 +345,6 @@ func (m msgServer) RegisterRole(goCtx context.Context, msg *types.MsgRegisterRol
 		sdk.NewAttribute(types.AttributeKeyRole, msg.Role),
 		sdk.NewAttribute(types.AttributeKeyRoleLabel, msg.Label),
 	))
-
-	m.Keeper.RegisterRole(ctx, msg.Role, msg.Label, contractAddress)
 
 	return &types.MsgRegisterRoleResponse{}, nil
 }

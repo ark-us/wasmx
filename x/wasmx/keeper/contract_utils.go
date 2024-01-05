@@ -140,7 +140,7 @@ func (k *Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAd
 	}
 }
 
-func (k *Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.ContractStorage) error {
+func (k *Keeper) ImportContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.ContractStorage) error {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
 	for _, model := range models {
@@ -151,6 +151,20 @@ func (k *Keeper) importContractState(ctx sdk.Context, contractAddress sdk.AccAdd
 			return sdkerr.Wrapf(types.ErrDuplicate, "duplicate key: %x", model.Key)
 		}
 		prefixStore.Set(model.Key, model.Value)
+	}
+	return nil
+}
+
+func (k *Keeper) MigrateContractStateByStorageType(ctx sdk.Context, contractAddress sdk.AccAddress, sourceStorage types.ContractStorageType, targetStorage types.ContractStorageType) error {
+	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
+	prefixStoreSource := k.ContractStore(ctx, sourceStorage, prefixStoreKey)
+	prefixStoreTarget := k.ContractStore(ctx, targetStorage, prefixStoreKey)
+	iter := prefixStoreSource.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		prefixStoreTarget.Set(iter.Key(), iter.Value())
+		prefixStoreSource.Delete(iter.Key())
 	}
 	return nil
 }

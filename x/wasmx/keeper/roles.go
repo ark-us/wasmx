@@ -23,6 +23,8 @@ func (k *Keeper) RegisterRole(
 	k.SetContractAddressByRole(ctx, role, contractAddress)
 	k.SetRoleByLabel(ctx, roleObj)
 	k.SetRoleLabelByContract(ctx, contractAddress, label)
+	// TODO replace the previous role? if a role cannot hold 2 contracts?
+	// e.g. consensus
 	return nil
 }
 

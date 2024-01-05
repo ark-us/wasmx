@@ -128,6 +128,10 @@ func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.Acc
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
 
+func (h *WasmxCosmosHandler) WithNewAddress(addr sdk.AccAddress) types.WasmxCosmosHandler {
+	return h.Keeper.newCosmosHandler(h.Ctx, addr)
+}
+
 func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
 		Ctx:             ctx,

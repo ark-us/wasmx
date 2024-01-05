@@ -254,12 +254,12 @@ func (s AppContext) prepareEthTx(
 
 func (s AppContext) finalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
 	req := &abci.RequestFinalizeBlock{
-		Txs:             txs,
-		Height:          s.App.LastBlockHeight() + 1,
-		Time:            s.Chain.CurrentHeader.Time,
-		Hash:            s.App.LastCommitID().Hash,
-		ProposerAddress: s.Chain.CurrentHeader.ProposerAddress,
-		// NextValidatorsHash: valSet.Hash(),
+		Txs:                txs,
+		Height:             s.App.LastBlockHeight() + 1,
+		Time:               s.Chain.CurrentHeader.Time,
+		Hash:               s.App.LastCommitID().Hash,
+		ProposerAddress:    s.Chain.CurrentHeader.ProposerAddress,
+		NextValidatorsHash: s.Chain.CurrentHeader.ValidatorsHash,
 	}
 	res, err := s.App.BaseApp.FinalizeBlock(req)
 	if err != nil {
@@ -341,7 +341,7 @@ func (s AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []
 	}
 	res, err := s.DeliverTx(sender, storeCodeMsg)
 	s.S.Require().NoError(err)
-	s.S.Require().True(res.IsOK(), res.GetEvents())
+	s.S.Require().True(res.IsOK(), res.Log, res.GetEvents())
 	s.S.Commit()
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
@@ -391,7 +391,7 @@ func (s AppContext) Deploy(sender simulation.Account, code []byte, deps []string
 
 	res, err := s.DeliverTx(sender, storeCodeMsg)
 	s.S.Require().NoError(err)
-	s.S.Require().True(res.IsOK(), res.GetEvents())
+	s.S.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
 	s.S.Commit()
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
@@ -537,7 +537,7 @@ func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1
 	s.S.Require().NoError(err)
 	resp, err := s.DeliverTx(sender, proposalMsg)
 	s.S.Require().NoError(err)
-	s.S.Require().True(resp.IsOK(), resp.GetEvents())
+	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 
 	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
 	s.S.Require().NoError(err)
