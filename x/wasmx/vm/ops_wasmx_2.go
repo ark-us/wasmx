@@ -535,6 +535,43 @@ func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+// addr_canonicalize(string) -> ArrayBuffer;
+func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrStrBz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	data, err := addr_canonicalize(addrStrBz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+// addr_humanize(ArrayBuffer) -> string;
+func wasmxHumanize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrBz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrBz))
+	ptr, err := allocateWriteMem(ctx, callframe, []byte(addr.String()))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 type LoggerLog struct {
 	Msg   string   `json:"msg"`
 	Parts []string `json:"parts"`
@@ -658,6 +695,9 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("ed25519Sign", wasmedge.NewFunction(functype_i32i32_i32, ed25519Sign, context, 0))
 	env.AddFunction("ed25519Verify", wasmedge.NewFunction(functype_i32i32i32_i32, ed25519Verify, context, 0))
+
+	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
+	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
 
 	return env
 }
