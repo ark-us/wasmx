@@ -417,24 +417,36 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-// startTimeout(repeat: i32, time: u64, args: ArrayBuffer): i32
+type StartTimeoutRequest struct {
+	Contract string `json:"contract"`
+	Delay    int64  `json:"delay"`
+	Args     []byte `json:"args"`
+}
+
+// TODO move this to a restricted role
+// startTimeout(req: ArrayBuffer): i32
 func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	timeDelay := params[0].(int64)
-	argsbz, err := readMemFromPtr(callframe, params[1])
+	reqbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StartTimeoutRequest
+	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 
 	msgtosend := &networktypes.MsgStartTimeoutRequest{
 		Sender:   ctx.Env.Contract.Address.String(),
-		Contract: ctx.Env.Contract.Address.String(),
-		Delay:    timeDelay,
-		Args:     argsbz,
+		Contract: req.Contract,
+		Delay:    req.Delay,
+		Args:     req.Args,
 	}
 	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	var resp networktypes.MsgStartTimeoutResponse
@@ -442,18 +454,6 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	return returns, wasmedge.Result_Success
-}
-
-// stopInterval(intervalId: i32): void
-func wasmxStopInterval(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	// ctx := _context.(*Context)
-	returns := make([]interface{}, 0)
-	// intervalId := params[0].(int32)
-	// fmt.Println("* stop interval: ", intervalId)
-	// // TODO errors if already stopped?
-	// // ctx.intervals[intervalId].Quit <- true
-	// ctx.intervals[intervalId].Cancel()
 	return returns, wasmedge.Result_Success
 }
 
@@ -611,10 +611,6 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{},
 	)
-	functype_i64i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
 	functype_i32i32_i32 := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
@@ -652,8 +648,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
-	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i64i32_, wasmxStartTimeout, context, 0))
-	env.AddFunction("stopInterval", wasmedge.NewFunction(functype_i32_, wasmxStopInterval, context, 0))
+	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32_, wasmxStartTimeout, context, 0))
 
 	env.AddFunction("MerkleHash", wasmedge.NewFunction(functype_i32_i32, merkleHash, context, 0))
 

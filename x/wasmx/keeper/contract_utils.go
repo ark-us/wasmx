@@ -105,7 +105,6 @@ func (k *Keeper) storeContractInfo(ctx sdk.Context, contractAddress sdk.AccAddre
 	store.Set(types.GetContractAddressKey(contractAddress), k.cdc.MustMarshal(contract))
 }
 
-// Temporary function, used for testing. TODO: remove
 // StoreContractInfo persists the ContractInfo. No secondary index updated here.
 func (k *Keeper) StoreContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress, contract *types.ContractInfo) {
 	k.storeContractInfo(ctx, contractAddress, contract)

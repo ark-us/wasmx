@@ -6,7 +6,6 @@ import (
 	"mythos/v1/x/network/types"
 	"time"
 
-	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -34,13 +33,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 		// continue
 	}
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
-	}
-	description := fmt.Sprintf("timed action: delay %dms, args: %s ", msg.Delay, string(msg.Args))
-	timeDelay := msg.Delay
-	msgbz := msg.Args
+	description := fmt.Sprintf("timed action: delay %dms, contract %s, args: %s ", msg.Delay, msg.Contract, string(msg.Args))
 
 	// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 	intervalEnded := make(chan bool, 1)
@@ -49,7 +42,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Info("eventual execution starting", "description", description)
-		err := k.startTimeoutInternal(description, timeDelay, msgbz, contractAddress)
+		err := k.startTimeoutInternal(description, msg)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err)
 			errCh <- err
@@ -70,12 +63,10 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 
 func (k *Keeper) startTimeoutInternal(
 	description string,
-	timeDelay int64,
-	msgbz []byte,
-	contractAddress sdk.AccAddress,
+	msg *types.MsgStartTimeoutRequest,
 ) error {
 	// sleep first and then load the context
-	time.Sleep(time.Duration(timeDelay) * time.Millisecond)
+	time.Sleep(time.Duration(msg.Delay) * time.Millisecond)
 
 	select {
 	case <-k.goContextParent.Done():
@@ -88,9 +79,9 @@ func (k *Keeper) startTimeoutInternal(
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := &types.MsgExecuteContract{
-			Sender:   contractAddress.String(),
-			Contract: contractAddress.String(),
-			Msg:      msgbz,
+			Sender:   msg.Sender,
+			Contract: msg.Contract,
+			Msg:      msg.Args,
 		}
 		res, err := k.ExecuteEventual(ctx, msg)
 		if err != nil {

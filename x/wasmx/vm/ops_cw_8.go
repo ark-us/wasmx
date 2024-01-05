@@ -244,10 +244,7 @@ func cw_8_addr_humanize(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	addr, err := addr_canonicalize(addrBz)
-	if err != nil {
-		return cwError(ctx, callframe, err.Error())
-	}
+	addr := sdk.AccAddress(addrBz)
 	_, err = writeMemToDestinationCw(ctx, callframe, []byte(addr.String()), params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail

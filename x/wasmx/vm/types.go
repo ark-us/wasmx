@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"context"
-
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -82,14 +80,6 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 // key is a bech32 string
 type ContractRouter = map[string]*ContractContext
 
-// TODO remove
-type IntervalAction struct {
-	Time       int64
-	CallbackId int32
-	Args       []byte
-	Cancel     context.CancelFunc
-}
-
 type Context struct {
 	Ctx            sdk.Context
 	GasMeter       types.GasMeter
@@ -105,8 +95,6 @@ type Context struct {
 	Logs           []WasmxLog
 	Messages       []cw8types.SubMsg `json:"messages"`
 	dbIterators    map[int32]dbm.Iterator
-	intervalsCount int32
-	intervals      map[int32]*IntervalAction
 }
 
 func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {

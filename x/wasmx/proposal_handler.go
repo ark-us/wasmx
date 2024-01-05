@@ -34,9 +34,9 @@ func handleRegisterRoleProposal(
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeRegisterRole,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, p.ContractAddress),
 		sdk.NewAttribute(types.AttributeKeyRole, p.Role),
 		sdk.NewAttribute(types.AttributeKeyRoleLabel, p.Label),
-		sdk.NewAttribute(types.AttributeKeyContractAddr, p.ContractAddress),
 	))
 
 	return nil

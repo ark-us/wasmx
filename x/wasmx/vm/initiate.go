@@ -193,7 +193,6 @@ func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) 
 }
 
 func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
-	// fmt.Println("--ExecuteDefaultContract---", funcName)
 	if funcName != types.ENTRY_POINT_INSTANTIATE && funcName != types.ENTRY_POINT_TIMED {
 		funcName = "main"
 	}

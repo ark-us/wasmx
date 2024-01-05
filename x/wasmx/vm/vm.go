@@ -250,8 +250,6 @@ func ExecuteWasmInterpreted(
 		ContractRouter: contractRouter,
 		NativeHandler:  NativeMap,
 		dbIterators:    map[int32]dbm.Iterator{},
-		intervalsCount: 0,
-		intervals:      map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -335,8 +333,6 @@ func ExecuteWasm(
 		App:            app,
 		NativeHandler:  NativeMap,
 		dbIterators:    map[int32]dbm.Iterator{},
-		intervalsCount: 0,
-		intervals:      map[int32]*IntervalAction{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
