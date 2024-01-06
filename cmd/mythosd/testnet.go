@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -429,11 +430,6 @@ func initTestnetFiles(
 			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
 			appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 		}
-		// TODO temporary until we find a way to set the leader
-		// Set the first node as a Leader
-		// if i == 0 {
-		// 	appConfigCopy.Network.Leader = true
-		// }
 		appConfigCopy.Network.Id = int32(i)
 		appConfigCopy.Network.Ips = networkIpsStr
 
@@ -496,6 +492,9 @@ func initGenFiles(
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[govtypes.ModuleName], &govGenState)
 
 	govGenState.Params.MinDeposit[0].Denom = coinDenom
+	// TODO make this bigger once we have our own governance contract
+	votingP := time.Minute * 2
+	govGenState.Params.VotingPeriod = &votingP
 	appGenState[govtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&govGenState)
 
 	var crisisGenState crisistypes.GenesisState
