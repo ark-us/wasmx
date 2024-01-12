@@ -195,6 +195,8 @@ var STORAGE_CHAIN = "storage_chain"
 
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
 
+var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
+
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"
 var MEMORY_EXPORT_MALLOC = "malloc"

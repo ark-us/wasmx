@@ -221,7 +221,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	ptr, err := allocateWriteMem(ctx, callframe, responsebz)
 	if err != nil {
-		ctx.Ctx.Logger().Debug("wasmxCall allocate memory", "err", err.Error())
+		ctx.Ctx.Logger().Error("wasmxCall allocate memory", "err", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	returns[0] = ptr
@@ -676,16 +676,11 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("getBlockHash", wasmedge.NewFunction(functype_i32_i32, wasmxGetBlockHash, context, 0))
 	env.AddFunction("getAccount", wasmedge.NewFunction(functype_i32_i32, getAccount, context, 0))
 	env.AddFunction("getBalance", wasmedge.NewFunction(functype_i32_i32, wasmxGetBalance, context, 0))
-	// TODO move externalCall to only system API
-	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
 	env.AddFunction("call", wasmedge.NewFunction(functype_i32_i32, wasmxCall, context, 0))
 	env.AddFunction("keccak256", wasmedge.NewFunction(functype_i32_i32, keccak256Util, context, 0))
 
 	env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32_i32, wasmxCreateAccount, context, 0))
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
-
-	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
-	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32_, wasmxStartTimeout, context, 0))
 
 	env.AddFunction("MerkleHash", wasmedge.NewFunction(functype_i32_i32, merkleHash, context, 0))
 
@@ -698,6 +693,11 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
+
+	// TODO move externalCall, grpcRequest, startTimeout to only system API
+	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
+	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
+	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32_, wasmxStartTimeout, context, 0))
 
 	return env
 }

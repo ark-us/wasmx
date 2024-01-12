@@ -40,7 +40,7 @@ func StartGRPCServer(
 
 	logger := svrCtx.Logger.With("module", "network")
 
-	// TODO we are starting the raft protocol before the grpc server is running; we should start it after
+	// TODO we are starting the consensus protocol before the grpc server is running; we should start it after
 	grpcServer, rpcClient, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
 	if err != nil {
 		return nil, nil, err

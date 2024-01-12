@@ -31,6 +31,7 @@ func timeNow(context interface{}, callframe *wasmedge.CallingFrame, params []int
 	return returns, wasmedge.Result_Success
 }
 
+// timeNow is non-deterministic
 func BuildSysEnv(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("sys")
 	ctx := &SysContext{ctx: context}

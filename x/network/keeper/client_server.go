@@ -453,7 +453,7 @@ func initChain(
 	// TODO check if app block height is same as network block height
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
-	// setup the raft machine
+	// setup the consensus contract
 	err = setupNode(scfg, cfgAll.Network, bapp, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
 		return nil, err

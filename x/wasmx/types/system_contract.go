@@ -33,7 +33,10 @@ var ADDR_INTERPRETER_JS = "0x0000000000000000000000000000000000000027"
 var ADDR_INTERPRETER_FSM = "0x0000000000000000000000000000000000000028"
 var ADDR_STORAGE_CHAIN = "0x0000000000000000000000000000000000000029"
 var ADDR_CONSENSUS_RAFT_LIBRARY = "0x000000000000000000000000000000000000002a"
-var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002b"
+var ADDR_CONSENSUS_TENDERMINT_LIBRARY = "0x000000000000000000000000000000000000002b"
+var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002c"
+var ADDR_CONSENSUS_TENDERMINT = "0x000000000000000000000000000000000000002d"
+
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func DefaultSystemContracts() SystemContracts {
@@ -49,6 +52,11 @@ func DefaultSystemContracts() SystemContracts {
 	}
 
 	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
+	}
+
+	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"roundTimeout","value":10000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
 	}
@@ -234,6 +242,15 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
+			Address:     ADDR_CONSENSUS_TENDERMINT_LIBRARY,
+			Label:       "tendermint_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
 			Address:     ADDR_CONSENSUS_RAFT,
 			Label:       CONSENSUS_RAFT,
 			InitMessage: raftInitMsg,
@@ -241,6 +258,15 @@ func DefaultSystemContracts() SystemContracts {
 			Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFT_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_CONSENSUS_TENDERMINT,
+			Label:       CONSENSUS_TENDERMINT,
+			InitMessage: tendermintInitMsg,
+			Pinned:      false,
+			// Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINT_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
 			Address:     ADDR_SYS_PROXY,
