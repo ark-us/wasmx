@@ -8,6 +8,10 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
+// role => contractAddress
+// label => role
+// contractAddress => label
+
 // RegisterRole registers a contract
 func (k *Keeper) RegisterRole(
 	ctx sdk.Context,
