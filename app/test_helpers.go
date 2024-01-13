@@ -35,9 +35,9 @@ func init() {
 // DefaultTestingAppInit defines the IBC application used for testing
 var DefaultTestingAppInit func(chainId string, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 
-// DefaultConsensusParams defines the default Tendermint consensus params used in
+// DefaultTestingConsensusParams defines the default Tendermint consensus params used in
 // Mythos testing.
-var DefaultConsensusParams = &tmproto.ConsensusParams{
+var DefaultTestingConsensusParams = &tmproto.ConsensusParams{
 	Block: &tmproto.BlockParams{
 		MaxBytes: 2_000_000,
 		MaxGas:   30_000_000, // -1 no limit
@@ -51,6 +51,9 @@ var DefaultConsensusParams = &tmproto.ConsensusParams{
 		PubKeyTypes: []string{
 			tmtypes.ABCIPubKeyTypeEd25519,
 		},
+	},
+	Version: &tmproto.VersionParams{
+		App: 0,
 	},
 }
 
@@ -97,7 +100,7 @@ func Setup(
 				ChainId:         "mythos_1000-1",
 				Time:            time.Now().UTC(),
 				Validators:      []abci.ValidatorUpdate{},
-				ConsensusParams: DefaultConsensusParams,
+				ConsensusParams: DefaultTestingConsensusParams,
 				AppStateBytes:   stateBytes,
 			},
 		)

@@ -107,7 +107,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,
 		})
-		fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
+		// fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
 		if err != nil {
 			return nil, err
 		}

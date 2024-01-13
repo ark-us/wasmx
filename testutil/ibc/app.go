@@ -35,7 +35,7 @@ var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.Testin
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, index int32, balances ...banktypes.Balance) ibcgotesting.TestingApp {
+func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState := DefaultTestingAppInit(chainID, index)
 	// set genesis accounts
 	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
@@ -84,7 +84,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	govGenesis := govtypes1.DefaultGenesisState()
 	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, sdkmath.NewInt(1_000_000_000)))
-	votingPeriod := time.Second * 5
+	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = &votingPeriod
 	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGenesis)
 
@@ -113,13 +113,13 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	require.NoError(t, err)
 
 	// init chain will set the validator set and initialize the genesis accounts
-	_, err = app.InitChain(
+	resInit, err := app.InitChain(
 		&abci.RequestInitChain{
 			ChainId:         chainID,
 			InitialHeight:   1,
 			Time:            time.Now().UTC(),
 			Validators:      []abci.ValidatorUpdate{},
-			ConsensusParams: wasmxapp.DefaultConsensusParams,
+			ConsensusParams: wasmxapp.DefaultTestingConsensusParams,
 			AppStateBytes:   stateBytes,
 		},
 	)
@@ -133,5 +133,5 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	})
 	require.NoError(t, err)
 
-	return app
+	return app, resInit
 }

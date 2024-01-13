@@ -16,8 +16,13 @@ type msgServer struct {
 	*Keeper
 }
 
+type MsgServerInternal interface {
+	types.MsgServer
+	ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error)
+}
+
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServerImpl(keeper *Keeper, app types.BaseApp) types.MsgServer {
+func NewMsgServerImpl(keeper *Keeper, app types.BaseApp) MsgServerInternal {
 	return &msgServer{
 		Keeper: keeper,
 		App:    app,

@@ -46,6 +46,14 @@ func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
 	balance := h.Keeper.bank.GetBalance(h.Ctx, addr, h.Keeper.denom)
 	return balance.Amount.BigInt()
 }
+func (h *WasmxCosmosHandler) GetAccount(addr sdk.AccAddress) sdk.AccountI {
+	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
+	if found {
+		addr = aliasAddr
+	}
+	acc := h.Keeper.accountKeeper.GetAccount(h.Ctx, addr)
+	return acc
+}
 func (h *WasmxCosmosHandler) SendCoin(addr sdk.AccAddress, value *big.Int) error {
 	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
 	if found {

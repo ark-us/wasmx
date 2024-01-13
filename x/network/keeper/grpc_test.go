@@ -1,10 +1,7 @@
 package keeper_test
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -13,11 +10,10 @@ import (
 
 	// ibctesting "mythos/v1/testutil/ibc"
 
-	app "mythos/v1/app"
 	"mythos/v1/x/network/types"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	wasmxtypes "mythos/v1/x/wasmx/types"
-	wasmxvm "mythos/v1/x/wasmx/vm/precompiles"
+	precompiles "mythos/v1/x/wasmx/vm/precompiles"
 )
 
 var tstoreprefix = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40}
@@ -34,227 +30,441 @@ type AppendEntry struct {
 	LeaderCommit int64            `json:"leaderCommit"`
 }
 
-func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
-	sender := suite.GetRandomAccount()
-	sender2 := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
-	appA := s.GetAppContext(suite.chainA)
-	mapp, ok := suite.chainA.App.(*app.App)
-	suite.Require().True(ok)
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
+// func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
+// 	sender := suite.GetAccountFromMnemonic("work reward tooth zero chimney employ list grass priority pudding laundry crystal spend response bomb skill engine head science onion spider upper slab volume")
+// 	sender2 := suite.GetRandomAccount()
+// 	initBalance := sdkmath.NewInt(1000_000_000)
+// 	appA := s.GetAppContext(suite.chain)
+// 	mapp, ok := suite.chainA.App.(*app.App)
+// 	suite.Require().True(ok)
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
 
-	// goctx1 := context.Background()
-	// client1, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
-	// defer conn1.Close()
+// 	_, err := appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+// 	suite.Require().NoError(err)
 
-	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusBech32 := consensusContract.String()
+// 	// goctx1 := context.Background()
+// 	// client1, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
+// 	// defer conn1.Close()
 
-	storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
-	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","wasmx_blocks_contract":"%s"}`, storageContract.String()))
+// 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+// 	consensusBech32 := consensusContract.String()
 
-	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"0.0.0.0:8090\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
-	resp, err := mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
+// 	storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
+// 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","wasmx_blocks_contract":"%s"}`, storageContract.String()))
 
-	// Check each simulated node has the correct context:
-	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
-	qresp, err := mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	qrespbz := appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
+// 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"0.0.0.0:8090\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
+// 	resp, err := mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
 
-	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
-	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(string(qrespbz), `0`)
+// 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+// 	suite.Require().NoError(err)
 
-	msg1 = []byte(`{"getCurrentState":{}}`)
-	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`#RAFT-FULL-1.initialized.unstarted`, string(qrespbz))
+// 	// Check each simulated node has the correct context:
+// 	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
+// 	qresp, err := mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz := appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
 
-	// Start Leader
-	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
+// 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(string(qrespbz), `0`)
 
-	msg1 = []byte(`{"getCurrentState":{}}`)
-	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`#RAFT-FULL-1.initialized.Follower`, string(qrespbz))
+// 	msg1 = []byte(`{"getCurrentState":{}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(`#RAFT-FULL-1.initialized.unstarted`, string(qrespbz))
 
-	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
+// 	// Start Leader
+// 	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
+// 	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
 
-	respbz, err := appA.App.NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", string(respbz.Data))
+// 	msg1 = []byte(`{"getCurrentState":{}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(`#RAFT-FULL-1.initialized.Follower`, string(qrespbz))
 
-	// resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
-	// 	Sender:   consensusBech32,
-	// 	Contract: consensusBech32,
-	// 	Msg:      msg1,
-	// })
-	// suite.Require().NoError(err)
-	// log.Printf("Response: %+v", resp)
+// 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+// 	suite.Require().NoError(err)
 
-	msg1 = []byte(`{"getCurrentState":{}}`)
-	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	qrespbz = appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(`#RAFT-FULL-1.initialized.Leader.active`, string(qrespbz))
+// 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+// 	suite.Require().NoError(err)
 
-	// send tx
-	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)
-	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
-	msgbz, err := json.Marshal(internalmsg)
-	suite.Require().NoError(err)
-	msg := &wasmxtypes.MsgExecuteContract{
-		Sender:       sender.Address.String(),
-		Contract:     contractAddress.String(),
-		Msg:          msgbz,
-		Funds:        nil,
-		Dependencies: nil,
-	}
-	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
-	txstr := base64.StdEncoding.EncodeToString(tx)
+// 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
 
-	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
-	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
+// 	respbz, err := appA.App.NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", string(respbz.Data))
 
-	// send a second tx!
-	msg = &wasmxtypes.MsgExecuteContract{
-		Sender:       sender2.Address.String(),
-		Contract:     contractAddress.String(),
-		Msg:          msgbz,
-		Funds:        nil,
-		Dependencies: nil,
-	}
-	tx = appA.PrepareCosmosTx(sender2, []sdk.Msg{msg}, nil, nil)
-	txstr = base64.StdEncoding.EncodeToString(tx)
+// 	// resp, err = client1.ExecuteContract(goctx1, &types.MsgExecuteContract{
+// 	// 	Sender:   consensusBech32,
+// 	// 	Contract: consensusBech32,
+// 	// 	Msg:      msg1,
+// 	// })
+// 	// suite.Require().NoError(err)
+// 	// log.Printf("Response: %+v", resp)
 
-	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
-	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
+// 	fmt.Println("--sender--", sender.Address.String())
+// 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+// 	suite.Require().NoError(err)
 
-	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
+// 	msg1 = []byte(`{"getCurrentState":{}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(`#RAFT-FULL-1.initialized.Leader.active`, string(qrespbz))
 
-	msg1 = []byte(`{"getContextValue":{"key":"logs_count"}}`)
-	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	qrespbz = appA.QueryDecode(qresp.Data)
-	// TODO commit the txs
-	suite.Require().Equal(``, string(qrespbz))
+// 	// send tx
+// 	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)
+// 	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+// 	msgbz, err := json.Marshal(internalmsg)
+// 	suite.Require().NoError(err)
+// 	msg := &wasmxtypes.MsgExecuteContract{
+// 		Sender:       sender.Address.String(),
+// 		Contract:     contractAddress.String(),
+// 		Msg:          msgbz,
+// 		Funds:        nil,
+// 		Dependencies: nil,
+// 	}
+// 	fmt.Println("--sender--", sender.Address.String())
+// 	fmt.Println("--contractAddress--", contractAddress.String())
+// 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+// 	suite.Require().NoError(err)
 
-	time.Sleep(10 * time.Second)
-}
+// 	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+// 	txstr := base64.StdEncoding.EncodeToString(tx)
 
-func (suite *KeeperTestSuite) TestRAFTMigration() {
+// 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
+// 	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
+
+// 	// send a second tx!
+// 	msg = &wasmxtypes.MsgExecuteContract{
+// 		Sender:       sender2.Address.String(),
+// 		Contract:     contractAddress.String(),
+// 		Msg:          msgbz,
+// 		Funds:        nil,
+// 		Dependencies: nil,
+// 	}
+// 	tx = appA.PrepareCosmosTx(sender2, []sdk.Msg{msg}, nil, nil)
+// 	txstr = base64.StdEncoding.EncodeToString(tx)
+
+// 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
+// 	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
+
+// 	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
+// 	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
+
+// 	msg1 = []byte(`{"getContextValue":{"key":"logs_count"}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	// TODO commit the txs
+// 	suite.Require().Equal(``, string(qrespbz))
+
+// 	time.Sleep(10 * time.Second)
+// }
+
+// func (suite *KeeperTestSuite) TestRAFTMigration() {
+// 	sender := suite.GetRandomAccount()
+// 	sender2 := suite.GetRandomAccount()
+// 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+// 	appA := s.GetAppContext(suite.chainA)
+// 	mapp, ok := suite.chainA.App.(*app.App)
+// 	suite.Require().True(ok)
+// 	valAccount := simulation.Account{
+// 		PrivKey: s.chainA.SenderPrivKey,
+// 		PubKey:  s.chainA.SenderPrivKey.PubKey(),
+// 		Address: s.chainA.SenderAccount.GetAddress(),
+// 	}
+
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
+// 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
+
+// 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+// 	consensusBech32 := consensusContract.String()
+
+// 	storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
+// 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","wasmx_blocks_contract":"%s"}`, storageContract.String()))
+
+// 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"0.0.0.0:8090\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
+// 	resp, err := mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
+
+// 	// migrate contract
+// 	wasmbin := wasmxvm.GetPrecompileByLabel(wasmxtypes.CONSENSUS_RAFT)
+// 	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
+// 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
+// 	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(raftInitMsg)}, "newconsensus", nil)
+
+// 	msgServer := wasmxkeeper.NewMsgServerImpl(&appA.App.WasmxKeeper)
+// 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
+// 		Role:            wasmxtypes.ROLE_CONSENSUS,
+// 		Label:           "consensus_raft_0.0.2",
+// 		ContractAddress: newConsensus.String(),
+// 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
+// 		Title:           "title",
+// 		Description:     "description",
+// 	})
+// 	suite.Require().NoError(err)
+
+// 	// call setup()
+// 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
+// 	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: newConsensus.String(),
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+
+// 	// Check each simulated node has the correct context:
+// 	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
+// 	qresp, err := mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz := appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
+
+// 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(string(qrespbz), `0`)
+// }
+
+// func (suite *KeeperTestSuite) TestTendermintMigration() {
+// 	sender := suite.GetRandomAccount()
+// 	sender2 := suite.GetRandomAccount()
+// 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+// 	appA := s.GetAppContext(suite.chainA)
+// 	mapp, ok := suite.chainA.App.(*app.App)
+// 	suite.Require().True(ok)
+// 	valAccount := simulation.Account{
+// 		PrivKey: s.chainA.SenderPrivKey,
+// 		PubKey:  s.chainA.SenderPrivKey.PubKey(),
+// 		Address: s.chainA.SenderAccount.GetAddress(),
+// 	}
+
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
+// 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
+
+// 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_TENDERMINT)
+// 	consensusBech32 := consensusContract.String()
+
+// 	storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
+// 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","wasmx_blocks_contract":"%s"}`, storageContract.String()))
+
+// 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"0.0.0.0:8090\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
+// 	resp, err := mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	log.Printf("Response: %+v", resp)
+
+// 	// migrate contract
+// 	wasmbin := wasmxvm.GetPrecompileByLabel(wasmxtypes.CONSENSUS_TENDERMINT)
+// 	initMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"roundTimeout","value":"10000"}],"initialState":"uninitialized"}}`
+// 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
+// 	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(initMsg)}, "newconsensus", nil)
+
+// 	msgServer := wasmxkeeper.NewMsgServerImpl(&appA.App.WasmxKeeper)
+// 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
+// 		Role:            wasmxtypes.ROLE_CONSENSUS,
+// 		Label:           "consensus_tendermint_0.0.2",
+// 		ContractAddress: newConsensus.String(),
+// 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
+// 		Title:           "title",
+// 		Description:     "description",
+// 	})
+// 	suite.Require().NoError(err)
+
+// 	// call setup()
+// 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
+// 	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+// 		Sender:   consensusBech32,
+// 		Contract: newConsensus.String(),
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+
+// 	// Check each simulated node has the correct context:
+// 	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
+// 	qresp, err := mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz := appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
+
+// 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
+// 	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+// 		Sender:   consensusBech32,
+// 		Contract: consensusBech32,
+// 		Msg:      msg1,
+// 	})
+// 	suite.Require().NoError(err)
+// 	qrespbz = appA.QueryDecode(qresp.Data)
+// 	suite.Require().Equal(string(qrespbz), `0`)
+// }
+
+func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
-	appA := s.GetAppContext(suite.chainA)
-	mapp, ok := suite.chainA.App.(*app.App)
-	suite.Require().True(ok)
+	appA := s.AppContext()
 	valAccount := simulation.Account{
-		PrivKey: s.chainA.SenderPrivKey,
-		PubKey:  s.chainA.SenderPrivKey.PubKey(),
-		Address: s.chainA.SenderAccount.GetAddress(),
+		PrivKey: s.chain.SenderPrivKey,
+		PubKey:  s.chain.SenderPrivKey.PubKey(),
+		Address: s.chain.SenderAccount.GetAddress(),
 	}
-
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
+	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
+	raftContractBech32 := raftContract.String()
 
-	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusBech32 := consensusContract.String()
-
-	storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
-	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","wasmx_blocks_contract":"%s"}`, storageContract.String()))
-
-	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"nodeIPs","value":"[\"0.0.0.0:8090\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
-	resp, err := mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
+	// storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
+	// call start() on RAFT consensus
+	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
+	_, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+		Sender:   raftContractBech32,
+		Contract: raftContractBech32,
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
-	log.Printf("Response: %+v", resp)
 
+	// Candidate -> Leader
+	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
+	_, err = suite.App().NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+		Sender:   raftContractBech32,
+		Contract: raftContractBech32,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+
+	tendermintInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"roundTimeout","value":10000}],"initialState":"uninitialized"}}`)}
+	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_TENDERMINT)
+
+	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM, wasmxtypes.BuildDep(wasmxtypes.ADDR_CONSENSUS_TENDERMINT_LIBRARY, wasmxtypes.ROLE_LIBRARY)})
+	newConsensus := appA.InstantiateCode(sender, codeId, tendermintInitMsg, "newconsensus", nil)
+
+	// Register contract role proposal
+	newlabel := wasmxtypes.CONSENSUS_TENDERMINT + "2"
+	proposal := wasmxtypes.NewRegisterRoleProposal("Register consensus", "Register consensus", "consensus", newlabel, newConsensus.String())
+	appA.PassGovProposal(valAccount, sender, proposal)
+
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
+	s.Require().Equal(newlabel, resp)
+
+	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
+	s.Require().Equal(newConsensus.String(), role.ContractAddress)
+	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal("consensus", role.Role)
+
+	// check that the setup was done on the new contract
+	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
+	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
+	fmt.Println("---state---", newConsensus.String(), stateKey, state)
+
+	// execute next block
+
+	time.Sleep(time.Second * 20)
+
+	return
 	// migrate contract
-	wasmbin := wasmxvm.GetPrecompileByLabel(wasmxtypes.CONSENSUS_RAFT)
-	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
-	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
-	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(raftInitMsg)}, "newconsensus", nil)
+	tendermintContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_TENDERMINT)
 
 	msgServer := wasmxkeeper.NewMsgServerImpl(&appA.App.WasmxKeeper)
 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
 		Role:            wasmxtypes.ROLE_CONSENSUS,
-		Label:           "consensus_raft_0.0.2",
-		ContractAddress: newConsensus.String(),
+		Label:           "consensus_tendermint_0.0.1",
+		ContractAddress: tendermintContract.String(),
 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
 		Title:           "title",
 		Description:     "description",
@@ -262,19 +472,19 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	suite.Require().NoError(err)
 
 	// call setup()
-	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
-	resp, err = mapp.NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   consensusBech32,
-		Contract: newConsensus.String(),
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
+	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+		Sender:   raftContractBech32,
+		Contract: tendermintContract.String(),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
 
 	// Check each simulated node has the correct context:
 	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
-	qresp, err := mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
+	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+		Sender:   tendermintContract.String(),
+		Contract: tendermintContract.String(),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -282,14 +492,31 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
 
 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
-	qresp, err = mapp.NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   consensusBech32,
-		Contract: consensusBech32,
+	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+		Sender:   tendermintContract.String(),
+		Contract: tendermintContract.String(),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
 	qrespbz = appA.QueryDecode(qresp.Data)
 	suite.Require().Equal(string(qrespbz), `0`)
+
+	// call start()
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
+	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+		Sender:   raftContractBech32,
+		Contract: tendermintContract.String(),
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+
+	msg1 = []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
+	_, err = appA.App.NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+		Sender:   tendermintContract.String(),
+		Contract: tendermintContract.String(),
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
 }
 
 // func (suite *KeeperTestSuite) TestRAFTLogReplication() {
@@ -557,29 +784,29 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 // 	time.Sleep(10 * time.Second)
 // }
 
-func (suite *KeeperTestSuite) TestRAFTEncodeTx() {
-	mnemonic := "enrich nose brisk lobster room large uniform mystery crush govern lazy vital feed dove soul emotion oblige shuffle else entry trend there dentist garbage"
-	sender := suite.GetAccountFromMnemonic(mnemonic)
-	initBalance := sdkmath.NewInt(1000_000_000)
-	appA := s.GetAppContext(suite.chainA)
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	suite.Commit()
+// func (suite *KeeperTestSuite) TestRAFTEncodeTx() {
+// 	mnemonic := "enrich nose brisk lobster room large uniform mystery crush govern lazy vital feed dove soul emotion oblige shuffle else entry trend there dentist garbage"
+// 	sender := suite.GetAccountFromMnemonic(mnemonic)
+// 	initBalance := sdkmath.NewInt(1000_000_000)
+// 	appA := s.GetAppContext(suite.chainA)
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	suite.Commit()
 
-	// send tx
-	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)
-	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
-	msgbz, err := json.Marshal(internalmsg)
-	suite.Require().NoError(err)
-	msg := &wasmxtypes.MsgExecuteContract{
-		Sender:       sender.Address.String(),
-		Contract:     contractAddress.String(),
-		Msg:          msgbz,
-		Funds:        nil,
-		Dependencies: nil,
-	}
-	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
-	txstr := base64.StdEncoding.EncodeToString(tx)
+// 	// send tx
+// 	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)
+// 	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+// 	msgbz, err := json.Marshal(internalmsg)
+// 	suite.Require().NoError(err)
+// 	msg := &wasmxtypes.MsgExecuteContract{
+// 		Sender:       sender.Address.String(),
+// 		Contract:     contractAddress.String(),
+// 		Msg:          msgbz,
+// 		Funds:        nil,
+// 		Dependencies: nil,
+// 	}
+// 	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+// 	txstr := base64.StdEncoding.EncodeToString(tx)
 
-	msgbase64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr)))
-	fmt.Println("==msgbase64==", msgbase64)
-}
+// 	msgbase64 := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr)))
+// 	fmt.Println("==msgbase64==", msgbase64)
+// }

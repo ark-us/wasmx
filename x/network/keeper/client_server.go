@@ -43,6 +43,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtconfig "github.com/cometbft/cometbft/config"
+	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
@@ -143,14 +144,14 @@ func NewGRPCServer(
 	// Run the InitChain logic
 	// setup node ips
 	if bapp.LastBlockHeight() == 0 {
-		resInit, err := initChain(svrCtx, clientCtx, cfg, app, privValidator, nodeKey, genesisDocProvider, metricsProvider, networkServer)
+		_, err := initChain(svrCtx, clientCtx, cfg, app, privValidator, nodeKey, genesisDocProvider, metricsProvider, networkServer)
 		if err != nil {
 			return nil, nil, err
 		}
-		fmt.Println("* resInit", resInit)
+		// fmt.Println("* resInit", resInit)
 	}
 	// start the node
-	err = startNode(svrCtx.Config, cfg.Network, bapp, logger, networkServer)
+	err = StartNode(bapp, logger, networkServer)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,6 +190,9 @@ func NewGRPCServer(
 // StartGRPCClient dials the gRPC server using protoAddr and returns a new
 // BroadcastAPIClient.
 func StartGRPCClient(protoAddr string) types.MsgClient {
+	// TODO time limit grpc request
+	// ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
+	// conn, err := grpc.DialContext(ctx, protoAddr, grpc.WithInsecure(), grpc.WithContextDialer(dialerFunc))
 	conn, err := grpc.Dial(protoAddr, grpc.WithInsecure(), grpc.WithContextDialer(dialerFunc))
 	if err != nil {
 		panic(err)
@@ -350,16 +354,11 @@ func initChain(
 	)
 
 	// check if network contract exists
-
 	genDoc, err := loadGenDoc(genesisDocProvider)
 	if err != nil {
 		return nil, err
 	}
 
-	pubKey, err := privValidator.GetPubKey()
-	if err != nil {
-		return nil, err
-	}
 	validators := make([]*cmttypes.Validator, len(genDoc.Validators))
 	for i, val := range genDoc.Validators {
 		validators[i] = cmttypes.NewValidator(val.PubKey, val.Power)
@@ -384,27 +383,23 @@ func initChain(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("* resInit", resInit)
 
-	scfg := svrCtx.Config
+	// scfg := svrCtx.Config
 	freq := &abci.RequestFinalizeBlock{
 		Height: req.InitialHeight,
 		Time:   req.Time,
 	}
-	resFinalize, err := app.FinalizeBlock(freq)
+	_, err = app.FinalizeBlock(freq)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("* resFinalize", resFinalize)
 
-	resCommit, err := app.Commit()
+	_, err = app.Commit()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("* resCommit", resCommit)
 
 	// If the app returned validators or consensus params, update the state.
-	appHash = resInit.AppHash
 	if len(resInit.AppHash) > 0 {
 		appHash = resInit.AppHash
 	}
@@ -424,28 +419,60 @@ func initChain(
 	if resInit.ConsensusParams != nil {
 		consensusParams = consensusParams.Update(resInit.ConsensusParams)
 	}
+	pubKey, err := privValidator.GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+	privKey := privValidator.Key.PrivKey
+	err = InitConsensusContract(bapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, vals, res.AppVersion, pubKey, privKey)
+	if err != nil {
+		return nil, err
+	}
 
+	return resInit, nil
+}
+
+type PrivKey interface {
+	Bytes() []byte
+}
+
+func InitConsensusContract(
+	bapp types.BaseApp,
+	consensusLogger log.Logger,
+	cfgNetwork networkconfig.NetworkConfig,
+	networkServer MsgServerInternal,
+	appHash []byte,
+	consensusParams *cmttypes.ConsensusParams,
+	vals []*cmttypes.Validator,
+	appVersion uint64,
+	pubKey crypto.PubKey,
+	privKey PrivKey,
+) error {
 	version := types.Version{
 		Software: "",
 		Consensus: types.Consensus{
-			App:   res.AppVersion,
+			App:   appVersion,
 			Block: 0,
 		},
 	}
 	// TODO ?
 	// version.Consensus.App = consensusParams.Version.App
 
+	// for i, j := 0, len(vals)-1; i < j; i, j = i+1, j-1 {
+	// 	vals[i], vals[j] = vals[j], vals[i]
+	// }
+
 	storageAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
 	initChainSetup := &types.InitChainSetup{
 		ChainID:         bapp.ChainID(),
-		ConsensusParams: &consensusParams,
+		ConsensusParams: consensusParams,
 		AppHash:         appHash,
 		Validators:      vals,
 		// We update the last results hash with the empty hash, to conform with RFC-6962.
 		LastResultsHash:  merkle.HashFromByteSlices(nil),
 		Version:          version,
 		ValidatorAddress: pubKey.Address(),
-		ValidatorPrivKey: privValidator.Key.PrivKey.Bytes(),
+		ValidatorPrivKey: privKey.Bytes(),
 		ValidatorPubKey:  pubKey.Bytes(),
 		BlocksContract:   storageAddr.String(),
 	}
@@ -454,28 +481,14 @@ func initChain(
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
 	// setup the consensus contract
-	err = setupNode(scfg, cfgAll.Network, bapp, consensusLogger, networkServer, initChainSetup)
+	err := SetupNode(cfgNetwork, bapp, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	// freq = &abci.RequestFinalizeBlock{
-	// 	Height: bapp.LastBlockHeight(),
-	// 	Time:   req.Time,
-	// }
-	// resFinalize, err = app.FinalizeBlock(freq)
-	// fmt.Println("--resFinalize--", resFinalize, err)
-
-	// resCommit, err = app.Commit()
-	// fmt.Println("--resCommit--", resCommit, err)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	return resInit, nil
+	return nil
 }
 
-func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer) error {
+func StartNode(bapp types.BaseApp, logger log.Logger, networkServer MsgServerInternal) error {
 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, logger, bapp.LastBlockHeight(), false)
 	if err != nil {
 		return err
@@ -498,7 +511,7 @@ func startNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp 
 	return nil
 }
 
-func setupNode(scfg *cmtconfig.Config, netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer *msgServer, initChainSetup *types.InitChainSetup) error {
+func SetupNode(netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
 	// TODO do I need to replace CreateQueryContext with ActionExecutor?
 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, logger, bapp.LastBlockHeight(), false)
 	if err != nil {

@@ -95,6 +95,7 @@ type WasmxCosmosHandler interface {
 	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
 	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
 	GetBalance(addr sdk.AccAddress) *big.Int
+	GetAccount(addr sdk.AccAddress) sdk.AccountI
 	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetCode(contractAddress sdk.AccAddress) []byte

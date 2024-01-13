@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strconv"
 
 	cmtlibs "github.com/cometbft/cometbft/libs/bytes"
@@ -14,6 +15,11 @@ var BLOCK_HASH_KEY = "block_by_hash_"
 var TX_INDEXER = "tx_"
 var PARAMS_KEY = "consensus_params"
 var DATA_INDEXER = "data_"
+var INTERVAL_ID_KEY = "intervalIdKey"
+var BLOCK_DELAY = "blockTimeout"
+var VALIDATORS_KEY = "validators"
+var STATE_KEY = "state"
+var FSM_CONTEXT_KEY = "context_"
 
 type IndexedTransaction struct {
 	Height int64  `json:"height"`
@@ -47,6 +53,14 @@ func GetBlockKey(index int64) string {
 
 func GetLastBlockHeightKey() string {
 	return BLOCK_LAST_INDEX
+}
+
+func GetLastIntervalIdKey() string {
+	return INTERVAL_ID_KEY
+}
+
+func GetLastIntervalIdByStateKey(state string, delay string) string {
+	return fmt.Sprintf(`%s_%s_%s`, INTERVAL_ID_KEY, state, delay)
 }
 
 type InitChainSetup struct {
