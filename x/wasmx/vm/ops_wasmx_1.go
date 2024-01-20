@@ -249,6 +249,7 @@ func asDateNow(context interface{}, callframe *wasmedge.CallingFrame, params []i
 	return returns, wasmedge.Result_Success
 }
 
+// TODO - move this only for non-deterministic contracts
 func asSeed(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	returns := make([]interface{}, 1)
 	var b [8]byte

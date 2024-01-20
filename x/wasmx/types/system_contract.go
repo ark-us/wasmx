@@ -36,6 +36,8 @@ var ADDR_CONSENSUS_RAFT_LIBRARY = "0x000000000000000000000000000000000000002a"
 var ADDR_CONSENSUS_TENDERMINT_LIBRARY = "0x000000000000000000000000000000000000002b"
 var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002c"
 var ADDR_CONSENSUS_TENDERMINT = "0x000000000000000000000000000000000000002d"
+var ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY = "0x000000000000000000000000000000000000002e"
+var ADDR_CONSENSUS_AVA_SNOWMAN = "0x000000000000000000000000000000000000002f"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -51,14 +53,19 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal storageInitMsg message")
 	}
 
-	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"},{"key":"blockTimeout","value":"heartbeatTimeout"}],"initialState":"uninitialized"}}`)})
+	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
 	}
 
-	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"roundTimeout","value":10000},{"key":"blockTimeout","value":"roundTimeout"}],"initialState":"uninitialized"}}`)})
+	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":10000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
+		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+	}
+
+	avaInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"sampleSize","value":"2"},{"key":"betaThreshold","value":2},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":80}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
 	}
 
 	return []SystemContract{
@@ -267,6 +274,24 @@ func DefaultSystemContracts() SystemContracts {
 			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINT_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY,
+			Label:       "ava_snowman_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_CONSENSUS_AVA_SNOWMAN,
+			Label:       CONSENSUS_AVA_SNOWMAN,
+			InitMessage: avaInitMsg,
+			Pinned:      false,
+			// Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
 			Address:     ADDR_SYS_PROXY,

@@ -29,14 +29,14 @@ func (suite *KeeperTestSuite) TestFSM_Semaphore() {
 
 	data = []byte(`{"getCurrentState":{}}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal([]byte("red"), resp)
+	s.Require().Equal([]byte("#Semaphore.red"), resp)
 
 	data = []byte(`{"run":{"event":{"type":"next","params":[]}}}`)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	data = []byte(`{"getCurrentState":{}}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal([]byte("blue"), resp)
+	s.Require().Equal([]byte("#Semaphore.blue"), resp)
 }
 
 func (suite *KeeperTestSuite) TestFSM_ERC20() {
@@ -62,7 +62,7 @@ func (suite *KeeperTestSuite) TestFSM_ERC20() {
 
 	data = []byte(`{"getCurrentState":{}}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal([]byte("active"), resp)
+	s.Require().Equal([]byte("#ERC20.unlocked.active"), resp)
 
 	data = []byte(fmt.Sprintf(`{"run":{"event":{"type":"mint","params":[{"key":"to","value": "%s"},{"key":"amount","value":"100"}]}}}`, hex.EncodeToString(types.PaddLeftTo32(owner.Address.Bytes()))))
 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
@@ -131,7 +131,7 @@ func (suite *KeeperTestSuite) TestFSM_Timer() {
 
 	data = []byte(`{"getCurrentState":{}}`)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	suite.Require().Equal("active", string(qres))
+	suite.Require().Equal("#AB-Req-Res-timer.active", string(qres))
 
 	data = []byte(`{"run":{"event":{"type":"send","params":[]}}}`)
 	appA.ExecuteContract(owner, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
