@@ -36,7 +36,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/go-bip39"
 
@@ -252,8 +251,9 @@ func (suite *KeeperTestSuite) SetupApp() {
 	require.NoError(t, err)
 	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
-	_validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
-	mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
+	// TODO
+	// _validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
+	// mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
 
 	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
 	require.NoError(t, err)

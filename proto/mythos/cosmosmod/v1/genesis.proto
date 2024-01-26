@@ -1,0 +1,12 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/staking/v1beta1/genesis.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+
+// GenesisState defines the network module's genesis state.
+message GenesisState {
+    cosmos.staking.v1beta1.GenesisState staking = 1 [(gogoproto.nullable) = false];
+}

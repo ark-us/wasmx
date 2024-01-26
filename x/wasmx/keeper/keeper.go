@@ -69,10 +69,10 @@ func NewKeeper(
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	bankKeeper types.BankKeeper,
-	portSource cw8types.ICS20TransferPortSource,
-	stakingKeeper types.StakingKeeper,
+	// portSource cw8types.ICS20TransferPortSource,
+	// stakingKeeper types.StakingKeeper,
 	distrKeeper types.DistributionKeeper,
-	channelKeeper types.ChannelKeeper,
+	// channelKeeper types.ChannelKeeper,
 	wasmConfig types.WasmConfig,
 	homeDir string,
 	denom string,
@@ -155,10 +155,10 @@ func NewKeeper(
 	}
 
 	// cosmwasm support
-	handler := cw8.NewMessageDispatcher(keeper, cdc, portSource)
-	keeper.wasmVMResponseHandler = handler
-	qhandler := cw8.DefaultQueryPlugins(bankKeeper, stakingKeeper, distrKeeper, channelKeeper, keeper)
-	keeper.wasmVMQueryHandler = qhandler
+	// handler := cw8.NewMessageDispatcher(keeper, cdc, portSource)
+	// keeper.wasmVMResponseHandler = handler
+	// qhandler := cw8.DefaultQueryPlugins(bankKeeper, stakingKeeper, distrKeeper, channelKeeper, keeper)
+	// keeper.wasmVMQueryHandler = qhandler
 
 	// Register core contracts after the cw8 handlers are attached to the keeper
 	cch := cchtypes.NewContractHandlerMap(keeper)

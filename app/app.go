@@ -146,9 +146,6 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/ibc-go/modules/capability"
@@ -218,6 +215,12 @@ import (
 	websrvmodulekeeper "mythos/v1/x/websrv/keeper"
 
 	websrvmoduletypes "mythos/v1/x/websrv/types"
+
+	cosmosmodkeeper "mythos/v1/x/cosmosmod/keeper"
+
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+
+	cosmosmod "mythos/v1/x/cosmosmod"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport
@@ -283,7 +286,7 @@ type App struct {
 	AuthzKeeper           authzkeeper.Keeper
 	BankKeeper            bankkeeper.Keeper
 	CapabilityKeeper      *capabilitykeeper.Keeper
-	StakingKeeper         *stakingkeeper.Keeper
+	StakingKeeper         *cosmosmodkeeper.Keeper
 	SlashingKeeper        slashingkeeper.Keeper
 	MintKeeper            mintkeeper.Keeper
 	DistrKeeper           distrkeeper.Keeper
@@ -367,6 +370,7 @@ func New(
 		wasmxmoduletypes.StoreKey,
 		websrvmoduletypes.StoreKey,
 		networkmoduletypes.StoreKey,
+		cosmosmodtypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
@@ -450,15 +454,75 @@ func New(
 		logger,
 	)
 
-	app.StakingKeeper = stakingkeeper.NewKeeper(
+	// stakingKeeper := stakingkeeper.NewKeeper(
+	// 	appCodec,
+	// 	runtime.NewKVStoreService(keys[stakingtypes.StoreKey]),
+	// 	app.AccountKeeper,
+	// 	app.BankKeeper,
+	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	// 	authcodec.NewBech32Codec(Bech32PrefixValAddr),
+	// 	authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+	// )
+	// app.StakingKeeper = stakingKeeper
+
+	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
+	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[stakingtypes.StoreKey]),
+		keys[wasmxmoduletypes.StoreKey],
+		memKeys[wasmxmoduletypes.MemStoreKey],
+		tkeys[wasmxmoduletypes.TStoreKey],
+		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],
+		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
+		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
+		// app.TransferKeeper,
+		// stakingKeeper,
+		distrkeeper.NewQuerier(app.DistrKeeper),
+		// app.IBCKeeper.ChannelKeeper,
+		wasmconfig,
+		homePath,
+		BaseDenom,
+		app.interfaceRegistry,
+		app.MsgServiceRouter(),
+		app.GRPCQueryRouter(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app,
+	)
+	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
+
+	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
+	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
+		app.goRoutineGroup,
+		app.goContextParent,
+		appCodec,
+		keys[networkmoduletypes.StoreKey],
+		memKeys[networkmoduletypes.MemStoreKey],
+		tkeys[networkmoduletypes.TStoreKey],
+		clessKeys[networkmoduletypes.CLessStoreKey],
+		app.GetSubspace(networkmoduletypes.ModuleName),
+		&app.WasmxKeeper,
+		app.actionExecutor,
+		// TODO remove authority?
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
+
+	app.StakingKeeper = cosmosmodkeeper.NewKeeper(
+		appCodec,
+		keys[cosmosmodtypes.StoreKey],
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		// TODO what authority?
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		authcodec.NewBech32Codec(Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
+
+	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.StakingKeeper, app)
 
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec,
@@ -619,33 +683,6 @@ func New(
 	// Set legacy router for backwards compatibility with gov v1beta1
 	app.GovKeeper.SetLegacyRouter(govRouter)
 
-	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
-
-	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
-		appCodec,
-		keys[wasmxmoduletypes.StoreKey],
-		memKeys[wasmxmoduletypes.MemStoreKey],
-		tkeys[wasmxmoduletypes.TStoreKey],
-		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],
-		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
-		app.GetSubspace(wasmxmoduletypes.ModuleName),
-		app.AccountKeeper,
-		app.BankKeeper,
-		app.TransferKeeper,
-		app.StakingKeeper,
-		distrkeeper.NewQuerier(app.DistrKeeper),
-		app.IBCKeeper.ChannelKeeper,
-		wasmconfig,
-		homePath,
-		BaseDenom,
-		app.interfaceRegistry,
-		app.MsgServiceRouter(),
-		app.GRPCQueryRouter(),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		app,
-	)
-	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
-
 	app.WebsrvKeeper = *websrvmodulekeeper.NewKeeper(
 		appCodec,
 		keys[websrvmoduletypes.StoreKey],
@@ -656,24 +693,6 @@ func New(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
-
-	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
-	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
-		app.goRoutineGroup,
-		app.goContextParent,
-		appCodec,
-		keys[networkmoduletypes.StoreKey],
-		memKeys[networkmoduletypes.MemStoreKey],
-		tkeys[networkmoduletypes.TStoreKey],
-		clessKeys[networkmoduletypes.CLessStoreKey],
-		app.GetSubspace(networkmoduletypes.ModuleName),
-		&app.WasmxKeeper,
-		app.actionExecutor,
-		// TODO remove authority?
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
-
-	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
@@ -693,13 +712,14 @@ func New(
 
 	// register hooks after all modules have been initialized
 
-	app.StakingKeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(
-			// insert staking hooks receivers here
-			app.DistrKeeper.Hooks(),
-			app.SlashingKeeper.Hooks(),
-		),
-	)
+	// TODO hooks?
+	// app.StakingKeeper.SetHooks(
+	// 	stakingtypes.NewMultiStakingHooks(
+	// 		// insert staking hooks receivers here
+	// 		app.DistrKeeper.Hooks(),
+	// 		app.SlashingKeeper.Hooks(),
+	// 	),
+	// )
 
 	app.GovKeeper.SetHooks(
 		govtypes.NewMultiGovHooks(
@@ -729,7 +749,7 @@ func New(
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, minttypes.DefaultInflationCalculationFn, app.GetSubspace(minttypes.ModuleName)),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName), app.interfaceRegistry),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
-		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
+		// staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
 		upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		params.NewAppModule(app.ParamsKeeper),
@@ -750,6 +770,8 @@ func New(
 
 		// network TODO
 		networkModule,
+
+		cosmosmodModule,
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -808,6 +830,7 @@ func New(
 		paramstypes.ModuleName,
 		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
 	)
@@ -834,6 +857,7 @@ func New(
 		upgradetypes.ModuleName,
 		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers
 	)
@@ -872,8 +896,9 @@ func New(
 		icatypes.ModuleName,
 		// mythos
 		wasmxmoduletypes.ModuleName,
-		websrvmoduletypes.ModuleName,
 		networkmoduletypes.ModuleName,
+		cosmosmodtypes.ModuleName,
+		websrvmoduletypes.ModuleName,
 	}
 
 	app.mm.SetOrderInitGenesis(genesisModuleOrder...)
@@ -1031,6 +1056,7 @@ func (a *App) Configurator() module.Configurator {
 // InitChainer application update at chain initialization
 func (app *App) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
 	var genesisState GenesisState
+	fmt.Println("--InitChainer--")
 	if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
@@ -1196,6 +1222,7 @@ func (app *App) GetTxConfig() client.TxConfig {
 
 // AutoCliOpts returns the autocli options for the app.
 func (app *App) AutoCliOpts() autocli.AppOptions {
+	fmt.Println("--AutoCliOpts--")
 	modules := make(map[string]appmodule.AppModule, 0)
 	for _, m := range app.mm.Modules {
 		if moduleWithName, ok := m.(module.HasName); ok {
@@ -1246,8 +1273,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(wasmxmoduletypes.ModuleName)
-	paramsKeeper.Subspace(websrvmoduletypes.ModuleName)
+	paramsKeeper.Subspace(cosmosmodtypes.ModuleName)
 	paramsKeeper.Subspace(networkmoduletypes.ModuleName)
+	paramsKeeper.Subspace(websrvmoduletypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
 
 	return paramsKeeper

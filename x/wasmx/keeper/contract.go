@@ -903,6 +903,10 @@ func (k *Keeper) handleResponseMessages(
 	msgs []cw8types.SubMsg,
 	data []byte,
 ) ([]byte, error) {
+	if len(msgs) == 0 {
+		return data, nil
+	}
+	// TODO do we still need this?
 	if k.wasmVMResponseHandler == nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "no wasmVMResponseHandler found")
 	}

@@ -31,7 +31,8 @@ import (
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
+
+	// ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -81,11 +82,11 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(stakingtypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
-	subspace := func(m string) paramstypes.Subspace {
-		r, ok := paramsKeeper.GetSubspace(m)
-		require.True(t, ok)
-		return r
-	}
+	// subspace := func(m string) paramstypes.Subspace {
+	// 	r, ok := paramsKeeper.GetSubspace(m)
+	// 	require.True(t, ok)
+	// 	return r
+	// }
 	maccPerms := map[string][]string{
 		authtypes.FeeCollectorName:     nil,
 		distrtypes.ModuleName:          nil,
@@ -112,19 +113,19 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		logger,
 	)
-	transferKeeper := ibctransferkeeper.NewKeeper(
-		cdc,
-		storetypes.NewKVStoreKey(ibctransfertypes.StoreKey),
-		subspace(ibctransfertypes.ModuleName),
-		// app.IBCKeeper.ChannelKeeper,
-		// app.IBCKeeper.ChannelKeeper,
-		// &app.IBCKeeper.PortKeeper,
-		nil, nil, nil,
-		accountKeeper,
-		bankKeeper,
-		nil, //scopedTransferKeeper,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
+	// transferKeeper := ibctransferkeeper.NewKeeper(
+	// 	cdc,
+	// 	storetypes.NewKVStoreKey(ibctransfertypes.StoreKey),
+	// 	subspace(ibctransfertypes.ModuleName),
+	// 	// app.IBCKeeper.ChannelKeeper,
+	// 	// app.IBCKeeper.ChannelKeeper,
+	// 	// &app.IBCKeeper.PortKeeper,
+	// 	nil, nil, nil,
+	// 	accountKeeper,
+	// 	bankKeeper,
+	// 	nil, //scopedTransferKeeper,
+	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	// )
 	stakingKeeper := stakingkeeper.NewKeeper(
 		cdc,
 		runtime.NewKVStoreService(storetypes.NewKVStoreKey(stakingtypes.StoreKey)),
@@ -156,10 +157,10 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		paramsSubspace,
 		accountKeeper,
 		bankKeeper,
-		transferKeeper,
-		stakingKeeper,
+		// transferKeeper,
+		// stakingKeeper,
 		distrkeeper.NewQuerier(distrKeeper),
-		nil,
+		// nil,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
 		app.BaseDenom,
