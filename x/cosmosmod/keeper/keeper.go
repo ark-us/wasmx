@@ -18,6 +18,7 @@ import (
 
 type (
 	Keeper struct {
+		jsoncdc        codec.JSONCodec
 		cdc            codec.Codec
 		storeKey       storetypes.StoreKey
 		paramstore     paramtypes.Subspace
@@ -35,6 +36,7 @@ type (
 )
 
 func NewKeeper(
+	jsoncdc codec.JSONCodec,
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
@@ -51,6 +53,7 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
+		jsoncdc:               jsoncdc,
 		cdc:                   cdc,
 		storeKey:              storeKey,
 		paramstore:            ps,
@@ -71,4 +74,8 @@ func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
 // GetAuthority returns the module's authority.
 func (k *Keeper) GetAuthority() string {
 	return k.authority
+}
+
+func (k *Keeper) JSONCodec() codec.JSONCodec {
+	return k.jsoncdc
 }

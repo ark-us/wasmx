@@ -511,6 +511,7 @@ func New(
 
 	app.StakingKeeper = cosmosmodkeeper.NewKeeper(
 		appCodec,
+		appCodec,
 		keys[cosmosmodtypes.StoreKey],
 		app.GetSubspace(cosmosmodtypes.ModuleName),
 		&app.WasmxKeeper,

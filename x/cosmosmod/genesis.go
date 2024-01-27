@@ -7,6 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+
 	"mythos/v1/x/cosmosmod/keeper"
 	"mythos/v1/x/cosmosmod/types"
 	networktypes "mythos/v1/x/network/types"
@@ -14,21 +16,15 @@ import (
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.
-func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) {
-	// // this line is used by starport scaffolding # genesis/module/init
-	// k.SetParams(ctx, genState.Params)
-	// for _, contract := range genState.SystemContracts {
-	// 	k.SetSystemContract(ctx, contract)
-	// }
-
-	var stakingGenesis stakingtypes.GenesisState = genState.Staking
-	msgjson, err := json.Marshal(stakingGenesis)
+func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) []abci.ValidatorUpdate {
+	stakingGenesis := genState.Staking
+	msgjson, err := k.JSONCodec().MarshalJSON(&stakingGenesis)
 	if err != nil {
 		panic(err)
 	}
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	fmt.Println("----InitGenesis---", string(msgbz))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+
+	res, err := k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -36,6 +32,12 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	if err != nil {
 		panic(err)
 	}
+	var valupdates []abci.ValidatorUpdate
+	err = json.Unmarshal(res.Data, &valupdates)
+	if err != nil {
+		panic(err)
+	}
+	return valupdates
 }
 
 // ExportGenesis returns the module's exported genesis
