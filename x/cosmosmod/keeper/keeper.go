@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
@@ -18,13 +19,14 @@ import (
 
 type (
 	Keeper struct {
-		jsoncdc        codec.JSONCodec
-		cdc            codec.Codec
-		storeKey       storetypes.StoreKey
-		paramstore     paramtypes.Subspace
-		wasmxKeeper    networktypes.WasmxKeeper
-		NetworkKeeper  networkkeeper.Keeper
-		actionExecutor *networkkeeper.ActionExecutor
+		jsoncdc           codec.JSONCodec
+		cdc               codec.Codec
+		storeKey          storetypes.StoreKey
+		paramstore        paramtypes.Subspace
+		InterfaceRegistry cdctypes.InterfaceRegistry
+		wasmxKeeper       networktypes.WasmxKeeper
+		NetworkKeeper     networkkeeper.Keeper
+		actionExecutor    *networkkeeper.ActionExecutor
 
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
@@ -44,6 +46,7 @@ func NewKeeper(
 	networkKeeper networkkeeper.Keeper,
 	actionExecutor *networkkeeper.ActionExecutor,
 	authority string,
+	interfaceRegistry cdctypes.InterfaceRegistry,
 	validatorAddressCodec addresscodec.Codec,
 	consensusAddressCodec addresscodec.Codec,
 ) *Keeper {
@@ -61,6 +64,7 @@ func NewKeeper(
 		NetworkKeeper:         networkKeeper,
 		actionExecutor:        actionExecutor,
 		authority:             authority,
+		InterfaceRegistry:     interfaceRegistry,
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
 	}

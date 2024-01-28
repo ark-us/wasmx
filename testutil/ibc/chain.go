@@ -126,16 +126,14 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	require.NoError(t, err)
 	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
-
-	fmt.Println("---testing")
+	fmt.Println("--TODO", _validator)
 
 	// TODO ?
 	// _validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
 	// mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
-
-	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
-	require.NoError(t, err)
-	mapp.StakingKeeper.SetValidator(ctx, _validator)
+	// err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
+	// require.NoError(t, err)
+	// mapp.StakingKeeper.SetValidator(ctx, _validator)
 
 	coord.CommitBlock(chain)
 

@@ -66,14 +66,13 @@ func GetLastIntervalIdByStateKey(state string, delay string) string {
 type InitChainSetup struct {
 	ChainID          string                    `json:"chain_id"`
 	ConsensusParams  *cmttypes.ConsensusParams `json:"consensus_params"`
-	Validators       []*cmttypes.Validator     `json:"validators"`
 	AppHash          []byte                    `json:"app_hash"`
 	LastResultsHash  []byte                    `json:"last_results_hash"`
 	Version          Version                   `json:"version"`
 	ValidatorAddress cmtlibs.HexBytes          `json:"validator_address"`
 	ValidatorPrivKey []byte                    `json:"validator_privkey"`
 	ValidatorPubKey  []byte                    `json:"validator_pubkey"`
-	BlocksContract   string                    `json:"wasmx_blocks_contract"`
+	Peers            []string                  `json:"peers"`
 }
 
 type Consensus struct {

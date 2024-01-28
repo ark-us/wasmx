@@ -109,6 +109,7 @@ type WasmxCosmosHandler interface {
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 	WithNewAddress(addr sdk.AccAddress) WasmxCosmosHandler
+	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library

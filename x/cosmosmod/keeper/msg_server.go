@@ -33,7 +33,6 @@ func (m msgServer) CreateValidator(goCtx context.Context, msg *stakingtypes.MsgC
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"CreateValidator":%s}`, string(msgjson)))
-	fmt.Println("----CreateValidator---", string(msgbz))
 	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.ValidatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,

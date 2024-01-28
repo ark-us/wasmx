@@ -254,9 +254,10 @@ func initTestnetFiles(
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
 	}
-
+	var err error
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
+	nodeIPs := make([]string, args.numValidators)
 
 	appConfig := config.DefaultConfig()
 	appConfig.MinGasPrices = args.minGasPrices
@@ -277,11 +278,17 @@ func initTestnetFiles(
 
 	var networkIps = make([]string, args.numValidators)
 	for i := 0; i < args.numValidators; i++ {
-		ip, err := getIP(i, args.startingIPAddress)
+		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig)
+		if err != nil {
+			_ = os.RemoveAll(args.outputDir)
+			return err
+		}
+		nodeIPs[i], err = getIP(i, args.startingIPAddress)
 		if err != nil {
 			return err
 		}
-		host := fmt.Sprintf("%s@%s:%s", nodeIDs[i], ip, "8090")
+		addr := sdk.AccAddress(valPubKeys[i].Bytes()).String()
+		host := fmt.Sprintf("%s@%s:%s", addr, nodeIPs[i], "8090")
 		if args.sameMachine {
 			host = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 		}
@@ -314,19 +321,7 @@ func initTestnetFiles(
 
 		nodeConfig.Moniker = nodeDirName
 
-		ip, err := getIP(i, args.startingIPAddress)
-		if err != nil {
-			_ = os.RemoveAll(args.outputDir)
-			return err
-		}
-
-		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig)
-		if err != nil {
-			_ = os.RemoveAll(args.outputDir)
-			return err
-		}
-
-		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], ip, p2pListenAddress)
+		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
 		if args.sameMachine {
 			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(p2pListenAddressMulti+i))
 		}
@@ -440,7 +435,7 @@ func initTestnetFiles(
 		return err
 	}
 
-	err := collectGenFiles(
+	err = collectGenFiles(
 		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
 		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine,
 	)

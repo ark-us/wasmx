@@ -2,7 +2,6 @@ package ibctesting
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -81,7 +80,6 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis)
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
-	fmt.Println("--stakingGenesis--", string(genesisState[stakingtypes.ModuleName]))
 
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {

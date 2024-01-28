@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	addresscodec "cosmossdk.io/core/address"
@@ -14,6 +15,9 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmttypes "github.com/cometbft/cometbft/types"
+
+	networktypes "mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // BondedRatio the fraction of the staking tokens which are currently bonded
@@ -42,8 +46,28 @@ func (k Keeper) Delegation(ctx context.Context, addrDel sdk.AccAddress, addrVal 
 }
 
 // GetAllValidators gets the set of all validators with no limits, used during genesis dump
-func (k Keeper) GetAllValidators(ctx context.Context) (validators []stakingtypes.Validator, err error) {
-	return make([]stakingtypes.Validator, 0), nil
+func (k Keeper) GetAllValidators(goCtx context.Context) (validators []stakingtypes.Validator, err error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	msgbz := []byte(`{"GetAllValidators":{}}`)
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	var validatorsResp stakingtypes.QueryValidatorsResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &validatorsResp)
+	if err != nil {
+		return nil, err
+	}
+	return validatorsResp.Validators, nil
 }
 
 // IsValidatorJailed checks and returns boolean of a validator status jailed or not.

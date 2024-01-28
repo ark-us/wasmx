@@ -135,6 +135,9 @@ func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.Acc
 func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool {
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
+func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
+	return h.Keeper.GetAddressOrRole(ctx, addressOrRole)
+}
 
 func (h *WasmxCosmosHandler) WithNewAddress(addr sdk.AccAddress) types.WasmxCosmosHandler {
 	return h.Keeper.newCosmosHandler(h.Ctx, addr)

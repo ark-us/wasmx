@@ -1,10 +1,13 @@
 package cosmosmod
 
 import (
-	"encoding/json"
 	"fmt"
 
+	errors "cosmossdk.io/errors"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -22,8 +25,8 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	if err != nil {
 		panic(err)
 	}
-	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
 
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
 	res, err := k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
 		Contract: wasmxtypes.ROLE_STAKING,
@@ -32,12 +35,33 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	if err != nil {
 		panic(err)
 	}
-	var valupdates []abci.ValidatorUpdate
-	err = json.Unmarshal(res.Data, &valupdates)
+	var response types.InitGenesisResponse
+	err = k.JSONCodec().UnmarshalJSON(res.Data, &response)
 	if err != nil {
 		panic(err)
 	}
-	return valupdates
+	updates := make([]abci.ValidatorUpdate, len(response.Updates))
+	for i, upd := range response.Updates {
+		var pkI cryptotypes.PubKey
+		err = k.InterfaceRegistry.UnpackAny(upd.PubKey, &pkI)
+		if err != nil {
+			panic(err)
+		}
+		pk, ok := upd.PubKey.GetCachedValue().(cryptotypes.PubKey)
+		if !ok {
+			panic(errors.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk))
+		}
+		tmPk, err := cryptocodec.ToCmtProtoPublicKey(pk)
+		if err != nil {
+			panic(err)
+		}
+		updates[i] = abci.ValidatorUpdate{
+			PubKey: tmPk,
+			Power:  upd.Power,
+		}
+	}
+
+	return updates
 }
 
 // ExportGenesis returns the module's exported genesis

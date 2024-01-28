@@ -60,6 +60,7 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
 	}
 
+	// TODO remove nodeIPs, we have peers in genesis init
 	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":10000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")

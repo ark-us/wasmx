@@ -309,9 +309,9 @@ type App struct {
 	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
 	ScopedICAHostKeeper  capabilitykeeper.ScopedKeeper
 
-	WasmxKeeper wasmxmodulekeeper.Keeper
-
-	WebsrvKeeper websrvmodulekeeper.Keeper
+	WasmxKeeper     wasmxmodulekeeper.Keeper
+	CosmosmodKeeper *cosmosmodkeeper.Keeper
+	WebsrvKeeper    websrvmodulekeeper.Keeper
 
 	NetworkKeeper  networkmodulekeeper.Keeper
 	actionExecutor *networkmodulekeeper.ActionExecutor
@@ -454,17 +454,6 @@ func New(
 		logger,
 	)
 
-	// stakingKeeper := stakingkeeper.NewKeeper(
-	// 	appCodec,
-	// 	runtime.NewKVStoreService(keys[stakingtypes.StoreKey]),
-	// 	app.AccountKeeper,
-	// 	app.BankKeeper,
-	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	// 	authcodec.NewBech32Codec(Bech32PrefixValAddr),
-	// 	authcodec.NewBech32Codec(Bech32PrefixConsAddr),
-	// )
-	// app.StakingKeeper = stakingKeeper
-
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
 		appCodec,
@@ -509,7 +498,7 @@ func New(
 
 	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
-	app.StakingKeeper = cosmosmodkeeper.NewKeeper(
+	app.CosmosmodKeeper = cosmosmodkeeper.NewKeeper(
 		appCodec,
 		appCodec,
 		keys[cosmosmodtypes.StoreKey],
@@ -519,9 +508,11 @@ func New(
 		app.actionExecutor,
 		// TODO what authority?
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app.interfaceRegistry,
 		authcodec.NewBech32Codec(Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
+	app.StakingKeeper = app.CosmosmodKeeper
 
 	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.StakingKeeper, app)
 
@@ -1057,7 +1048,6 @@ func (a *App) Configurator() module.Configurator {
 // InitChainer application update at chain initialization
 func (app *App) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (*abci.ResponseInitChain, error) {
 	var genesisState GenesisState
-	fmt.Println("--InitChainer--")
 	if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
 		panic(err)
 	}
@@ -1223,7 +1213,6 @@ func (app *App) GetTxConfig() client.TxConfig {
 
 // AutoCliOpts returns the autocli options for the app.
 func (app *App) AutoCliOpts() autocli.AppOptions {
-	fmt.Println("--AutoCliOpts--")
 	modules := make(map[string]appmodule.AppModule, 0)
 	for _, m := range app.mm.Modules {
 		if moduleWithName, ok := m.(module.HasName); ok {

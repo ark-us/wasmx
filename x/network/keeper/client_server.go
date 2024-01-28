@@ -411,10 +411,6 @@ func initChain(
 		// If validator set is not set in genesis and still empty after InitChain, exit.
 		return nil, fmt.Errorf("validator set is nil in genesis and still empty after InitChain")
 	}
-	vals, err := cmttypes.PB2TM.ValidatorUpdates(validatorsUpdates)
-	if err != nil {
-		return nil, err
-	}
 	consensusParams := *genDoc.ConsensusParams
 	if resInit.ConsensusParams != nil {
 		consensusParams = consensusParams.Update(resInit.ConsensusParams)
@@ -424,7 +420,11 @@ func initChain(
 		return nil, err
 	}
 	privKey := privValidator.Key.PrivKey
-	err = InitConsensusContract(bapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, vals, res.AppVersion, pubKey, privKey)
+
+	// peers := strings.Split(svrCtx.Config.P2P.PersistentPeers, ",")
+	peers := strings.Split(cfgAll.Network.Ips, ",")
+
+	err = InitConsensusContract(bapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, res.AppVersion, pubKey, privKey, peers)
 	if err != nil {
 		return nil, err
 	}
@@ -443,10 +443,10 @@ func InitConsensusContract(
 	networkServer MsgServerInternal,
 	appHash []byte,
 	consensusParams *cmttypes.ConsensusParams,
-	vals []*cmttypes.Validator,
 	appVersion uint64,
 	pubKey crypto.PubKey,
 	privKey PrivKey,
+	peers []string,
 ) error {
 	version := types.Version{
 		Software: "",
@@ -458,23 +458,17 @@ func InitConsensusContract(
 	// TODO ?
 	// version.Consensus.App = consensusParams.Version.App
 
-	// for i, j := 0, len(vals)-1; i < j; i, j = i+1, j-1 {
-	// 	vals[i], vals[j] = vals[j], vals[i]
-	// }
-
-	storageAddr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
 	initChainSetup := &types.InitChainSetup{
 		ChainID:         bapp.ChainID(),
 		ConsensusParams: consensusParams,
 		AppHash:         appHash,
-		Validators:      vals,
 		// We update the last results hash with the empty hash, to conform with RFC-6962.
 		LastResultsHash:  merkle.HashFromByteSlices(nil),
 		Version:          version,
 		ValidatorAddress: pubKey.Address(),
 		ValidatorPrivKey: privKey.Bytes(),
 		ValidatorPubKey:  pubKey.Bytes(),
-		BlocksContract:   storageAddr.String(),
+		Peers:            peers,
 	}
 
 	// TODO check if app block height is same as network block height
