@@ -22,6 +22,7 @@ var ADDR_ECADD = "0x0000000000000000000000000000000000000006"
 var ADDR_ECMUL = "0x0000000000000000000000000000000000000007"
 var ADDR_ECPAIRINGS = "0x0000000000000000000000000000000000000008"
 var ADDR_BLAKE2F = "0x0000000000000000000000000000000000000009"
+
 var ADDR_SECP384R1 = "0x0000000000000000000000000000000000000020"
 var ADDR_SECP384R1_REGISTRY = "0x0000000000000000000000000000000000000021"
 var ADDR_SECRET_SHARING = "0x0000000000000000000000000000000000000022"
@@ -38,6 +39,7 @@ var ADDR_CONSENSUS_RAFT = "0x000000000000000000000000000000000000002c"
 var ADDR_CONSENSUS_TENDERMINT = "0x000000000000000000000000000000000000002d"
 var ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY = "0x000000000000000000000000000000000000002e"
 var ADDR_CONSENSUS_AVA_SNOWMAN = "0x000000000000000000000000000000000000002f"
+var ADDR_STAKING = "0x0000000000000000000000000000000000000030"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -58,6 +60,7 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
 	}
 
+	// TODO remove nodeIPs, we have peers in genesis init
 	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":10000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
@@ -237,6 +240,15 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_STORAGE,
 			StorageType: ContractStorageType_MetaConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_STAKING,
+			Label:       STAKING_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_STAKING,
+			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
 		{

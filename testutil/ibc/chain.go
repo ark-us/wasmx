@@ -1,6 +1,7 @@
 package ibctesting
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -126,12 +126,14 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	require.NoError(t, err)
 	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
-	_validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
-	mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
+	fmt.Println("--TODO", _validator)
 
-	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
-	require.NoError(t, err)
-	mapp.StakingKeeper.SetValidator(ctx, _validator)
+	// TODO ?
+	// _validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
+	// mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
+	// err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
+	// require.NoError(t, err)
+	// mapp.StakingKeeper.SetValidator(ctx, _validator)
 
 	coord.CommitBlock(chain)
 

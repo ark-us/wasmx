@@ -41,11 +41,11 @@ type CallRequestRaw struct {
 }
 
 type SimpleCallRequestRaw struct {
-	To       sdk.AccAddress `json:"to"`
-	Value    *big.Int       `json:"value"`
-	GasLimit *big.Int       `json:"gasLimit"`
-	Calldata []byte         `json:"calldata"`
-	IsQuery  bool           `json:"isQuery"`
+	To       string   `json:"to"`
+	Value    *big.Int `json:"value"`
+	GasLimit *big.Int `json:"gasLimit"`
+	Calldata []byte   `json:"calldata"`
+	IsQuery  bool     `json:"isQuery"`
 }
 
 type CallResponse struct {

@@ -70,6 +70,9 @@ var (
 	//go:embed 2e.ava_snowman_library.wasm
 	ava_snowman_library []byte
 
+	//go:embed 30.staking_0.0.1.wasm
+	staking_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -127,6 +130,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = sys_proxy
 	case types.STORAGE_CHAIN:
 		wasmbin = storage_chain
+	case types.STAKING_v001:
+		wasmbin = staking_contract
 	}
 	return wasmbin
 }

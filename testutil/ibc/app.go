@@ -26,6 +26,7 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
 	wasmxapp "mythos/v1/app"
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -74,7 +75,11 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	stakingParams := stakingtypes.DefaultParams()
 	stakingParams.BondDenom = wasmxapp.BondDenom
 	stakingGenesis := stakingtypes.NewGenesisState(stakingParams, validators, delegations)
+	// TODO remove
 	genesisState[stakingtypes.ModuleName] = app.AppCodec().MustMarshalJSON(stakingGenesis)
+
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis)
+	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {

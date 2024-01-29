@@ -131,6 +131,7 @@ func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params
 	var req vmtypes.CallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
+		ctx.Ctx.Logger().Debug("unmarshalling CallRequest failed", "error", err)
 		return nil, wasmedge.Result_Fail
 	}
 
@@ -173,6 +174,13 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	var req vmtypes.SimpleCallRequestRaw
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
+		ctx.Ctx.Logger().Debug("unmarshalling CallRequest failed", "error", err)
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO have this resolver for any internal call
+	// it should be a smart contract
+	to, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.To)
+	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 
@@ -182,12 +190,12 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 
 	// Send funds
 	if req.Value.BitLen() > 0 {
-		err = ctx.CosmosHandler.SendCoin(req.To, req.Value)
+		err = ctx.CosmosHandler.SendCoin(to, req.Value)
 	}
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, req.To)
+		contractContext := GetContractContext(ctx, to)
 		if contractContext == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
@@ -197,7 +205,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 				// TODO: gas remaining!!
 			}
 			req := vmtypes.CallRequest{
-				To:       req.To,
+				To:       to,
 				From:     ctx.Env.Contract.Address,
 				Value:    req.Value,
 				GasLimit: gasLimit,
@@ -625,7 +633,7 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.GetContext().Logger().Debug(msg, parts...)
+	ctx.GetContext().Logger().Info(msg, parts...)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

@@ -109,6 +109,7 @@ type WasmxCosmosHandler interface {
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 	WithNewAddress(addr sdk.AccAddress) WasmxCosmosHandler
+	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library
@@ -164,6 +165,7 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 }
 
 var ROLE_STORAGE = "storage"
+var ROLE_STAKING = "staking"
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
@@ -193,6 +195,8 @@ var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
 var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 
 var STORAGE_CHAIN = "storage_chain"
+
+var STAKING_v001 = "staking_0.0.1"
 
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
 

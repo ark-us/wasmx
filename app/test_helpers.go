@@ -114,14 +114,14 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	db := dbm.NewMemDB()
 	cfg := MakeEncodingConfig()
 
-	// level := "network:debug,wasmx:debug,*:info"
-	// filter, _ := log.ParseLogLevel(level)
-	// logger := log.NewLogger(
-	// 	os.Stderr,
-	// 	log.LevelOption(1), // info=1
-	// 	// log.FilterOption(filter),
-	// )
-	logger := log.NewNopLogger()
+	level := "network:debug,wasmx:debug,*:info"
+	filter, _ := log.ParseLogLevel(level)
+	logger := log.NewLogger(
+		os.Stderr,
+		log.LevelOption(1), // info=1
+		log.FilterOption(filter),
+	)
+	// logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
 	appOpts.Set("goroutineGroup", g)

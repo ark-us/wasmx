@@ -276,6 +276,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	if err != nil {
 		return err
 	}
+
 	consensusParams := cmttypes.ConsensusParamsFromProto(*app.DefaultTestingConsensusParams)
 	if resInit.ConsensusParams != nil {
 		consensusParams = consensusParams.Update(resInit.ConsensusParams)
@@ -283,6 +284,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 
 	cfgNetwork := networkconfig.DefaultNetworkConfigConfig()
 	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper(), suite.App().BaseApp)
+
 	addr := sdk.AccAddress(vals[0].PubKey.Bytes())
 	err = networkkeeper.InitConsensusContract(
 		suite.App(),
