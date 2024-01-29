@@ -51,6 +51,8 @@ import (
 
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
+
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	// "mythos/v1/testutil/network"
 )
 
@@ -290,7 +292,8 @@ func initTestnetFiles(
 		addr := sdk.AccAddress(valPubKeys[i].Bytes()).String()
 		host := fmt.Sprintf("%s@%s:%s", addr, nodeIPs[i], "8090")
 		if args.sameMachine {
-			host = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+			host = fmt.Sprintf("%s@%s", addr, ipaddr)
 		}
 		networkIps[i] = host
 	}
@@ -477,11 +480,11 @@ func initGenFiles(
 	bankGenState.Balances = genBalances
 	appGenState[banktypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&bankGenState)
 
-	var stakingGenState stakingtypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[stakingtypes.ModuleName], &stakingGenState)
+	var cosmosmodGenState cosmosmodtypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
-	stakingGenState.Params.BondDenom = coinDenom
-	appGenState[stakingtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&stakingGenState)
+	cosmosmodGenState.Staking.Params.BondDenom = coinDenom
+	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
 
 	var govGenState govv1.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[govtypes.ModuleName], &govGenState)

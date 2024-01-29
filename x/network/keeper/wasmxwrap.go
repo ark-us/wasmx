@@ -13,11 +13,11 @@ import (
 func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
-		return nil, sdkerr.Wrap(err, "sender")
+		return nil, sdkerr.Wrap(err, "sender address or role: "+msg.Sender)
 	}
 	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
+		return nil, sdkerr.Wrap(err, "contract address or role: "+msg.Contract)
 	}
 	execmsg := wasmxtypes.WasmxExecutionMessage{Data: msg.Msg}
 	execmsgbz, err := json.Marshal(execmsg)

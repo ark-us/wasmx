@@ -758,12 +758,9 @@ func New(
 
 		// mythos modules
 		wasmxModule,
-		websrvModule,
-
-		// network TODO
 		networkModule,
-
 		cosmosmodModule,
+		websrvModule,
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -867,6 +864,12 @@ func New(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		distrtypes.ModuleName,
+
+		// mythos
+		wasmxmoduletypes.ModuleName,
+		networkmoduletypes.ModuleName,
+		cosmosmodtypes.ModuleName,
+
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
@@ -886,10 +889,7 @@ func New(
 		ibctransfertypes.ModuleName,
 		ibcexported.ModuleName,
 		icatypes.ModuleName,
-		// mythos
-		wasmxmoduletypes.ModuleName,
-		networkmoduletypes.ModuleName,
-		cosmosmodtypes.ModuleName,
+		// mythos extra
 		websrvmoduletypes.ModuleName,
 	}
 
