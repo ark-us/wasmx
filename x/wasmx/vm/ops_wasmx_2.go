@@ -270,7 +270,26 @@ func wasmxGetBlockHash(_context interface{}, callframe *wasmedge.CallingFrame, p
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	rolebz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, string(rolebz))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, addr.Bytes())
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
@@ -278,7 +297,7 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req vmtypes.CreateAccountRequest
+	var req vmtypes.CreateAccountInterpretedRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -317,7 +336,7 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxCreate2AccountInterpreted(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
@@ -325,7 +344,7 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req vmtypes.Create2AccountRequest
+	var req vmtypes.Create2AccountInterpretedRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -359,6 +378,94 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 
 	contractbz := paddLeftTo32(contractAddress.Bytes())
 	ptr, err := allocateWriteMem(ctx, callframe, contractbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+
+	requestbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req vmtypes.InstantiateAccountRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO info from provenance ?
+	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: req.Msg})
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	contractAddress, err := ctx.CosmosHandler.Create(
+		req.CodeId,
+		ctx.Env.Contract.Address,
+		initMsg,
+		req.Label,
+		nil,
+		req.Funds,
+	)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	response := vmtypes.InstantiateAccountResponse{Address: contractAddress}
+	respbz, err := json.Marshal(response)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+
+	requestbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req vmtypes.Instantiate2AccountRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	// TODO info from provenance ?
+	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	contractAddress, err := ctx.CosmosHandler.Create2(
+		req.CodeId,
+		ctx.Env.Contract.Address,
+		initMsg,
+		req.Salt,
+		req.Label,
+		nil,
+		req.Funds,
+	)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	response := vmtypes.Instantiate2AccountResponse{Address: contractAddress}
+	respbz, err := json.Marshal(response)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -687,6 +794,9 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("call", wasmedge.NewFunction(functype_i32_i32, wasmxCall, context, 0))
 	env.AddFunction("keccak256", wasmedge.NewFunction(functype_i32_i32, keccak256Util, context, 0))
 
+	env.AddFunction("createAccountInterpreted", wasmedge.NewFunction(functype_i32_i32, wasmxCreateAccountInterpreted, context, 0))
+	env.AddFunction("create2AccountInterpreted", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2AccountInterpreted, context, 0))
+
 	env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32_i32, wasmxCreateAccount, context, 0))
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
@@ -701,6 +811,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
+
+	env.AddFunction("getAddressByRole", wasmedge.NewFunction(functype_i32_i32, wasmxGetAddressByRole, context, 0))
 
 	// TODO move externalCall, grpcRequest, startTimeout to only system API
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))

@@ -53,26 +53,49 @@ type CallResponse struct {
 	Data    []byte `json:"data"`
 }
 
-type CreateAccountRequest struct {
+type CreateAccountInterpretedRequest struct {
 	Bytecode []byte   `json:"bytecode"`
 	Balance  *big.Int `json:"balance"`
 }
 
-type CreateAccountRequestRaw struct {
+type CreateAccountInterpretedRequestRaw struct {
 	Bytecode types.RawBytes `json:"bytecode"`
 	Balance  types.RawBytes `json:"balance"`
 }
 
-type Create2AccountRequest struct {
+type Create2AccountInterpretedRequest struct {
 	Bytecode []byte   `json:"bytecode"`
 	Balance  *big.Int `json:"balance"`
 	Salt     *big.Int `json:"salt"`
 }
 
-type Create2AccountRequestRaw struct {
+type Create2AccountInterpretedRequestRaw struct {
 	Bytecode types.RawBytes `json:"bytecode"`
 	Balance  types.RawBytes `json:"balance"`
 	Salt     types.RawBytes `json:"salt"`
+}
+
+type InstantiateAccountRequest struct {
+	CodeId uint64    `json:"code_id"`
+	Msg    []byte    `json:"msg"`
+	Funds  sdk.Coins `json:"funds"`
+	Label  string    `json:"label"`
+}
+
+type InstantiateAccountResponse struct {
+	Address sdk.AccAddress `json:"address"`
+}
+
+type Instantiate2AccountRequest struct {
+	CodeId uint64    `json:"code_id"`
+	Msg    []byte    `json:"msg"`
+	Funds  sdk.Coins `json:"funds"`
+	Label  string    `json:"label"`
+	Salt   []byte    `json:"salt"`
+}
+
+type Instantiate2AccountResponse struct {
+	Address sdk.AccAddress `json:"address"`
 }
 
 func (m CallRequest) MarshalJSON() ([]byte, error) {
@@ -112,12 +135,12 @@ func (m *CallRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (m *CreateAccountRequest) UnmarshalJSON(data []byte) error {
+func (m *CreateAccountInterpretedRequest) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
 	if string(data) == "[]" || string(data) == "null" {
 		return nil
 	}
-	var d CreateAccountRequestRaw
+	var d CreateAccountInterpretedRequestRaw
 	if err := json.Unmarshal(data, &d); err != nil {
 		return err
 	}
@@ -126,12 +149,12 @@ func (m *CreateAccountRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (m *Create2AccountRequest) UnmarshalJSON(data []byte) error {
+func (m *Create2AccountInterpretedRequest) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null
 	if string(data) == "[]" || string(data) == "null" {
 		return nil
 	}
-	var d Create2AccountRequestRaw
+	var d Create2AccountInterpretedRequestRaw
 	if err := json.Unmarshal(data, &d); err != nil {
 		return err
 	}

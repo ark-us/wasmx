@@ -603,7 +603,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 			return nil, err
 		}
 	}
-
+	// TODO execute with origin
 	info := types.NewInfo(caller, caller, coins)
 	env := types.NewEnv(ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)

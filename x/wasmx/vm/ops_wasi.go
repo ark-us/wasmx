@@ -361,7 +361,7 @@ func wasi_instantiateAccount(context interface{}, callframe *wasmedge.CallingFra
 		return nil, wasmedge.Result_Fail
 	}
 	// TODO label?
-	contractAddress, err := ctx.CosmosHandler.Create(uint64(codeId), ctx.Env.Contract.Address, initMsg, "", balance)
+	contractAddress, err := ctx.CosmosHandler.Create(uint64(codeId), ctx.Env.Contract.Address, initMsg, "", balance, nil)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -393,7 +393,7 @@ func wasi_instantiateAccount2(context interface{}, callframe *wasmedge.CallingFr
 		return nil, wasmedge.Result_Fail
 	}
 	// TODO label?
-	contractAddress, err := ctx.CosmosHandler.Create2(uint64(codeId), ctx.Env.Contract.Address, initMsg, salt, "", balance)
+	contractAddress, err := ctx.CosmosHandler.Create2(uint64(codeId), ctx.Env.Contract.Address, initMsg, salt, "", balance, nil)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

@@ -104,8 +104,10 @@ func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, storageType types.Co
 }
 
 // TODO provenance
-func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int) (sdk.AccAddress, error) {
-	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
+func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (sdk.AccAddress, error) {
+	if value != nil {
+		funds = sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
+	}
 	address, _, err := h.Keeper.Instantiate(h.Ctx, codeId, creator, initMsg, funds, label)
 	if err != nil {
 		return nil, err
@@ -114,8 +116,10 @@ func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initM
 }
 
 // TODO provenance
-func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt types.Checksum, label string, value *big.Int) (sdk.AccAddress, error) {
-	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
+func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt types.Checksum, label string, value *big.Int, funds sdk.Coins) (sdk.AccAddress, error) {
+	if value != nil {
+		funds = sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
+	}
 	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, funds, salt, false, label)
 	return address, err
 }
