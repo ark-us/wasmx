@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -76,8 +78,11 @@ func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params 
 // SELFBALANCE result_ptr: i32
 func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	balance := ctx.CosmosHandler.GetBalance(ctx.Env.Contract.Address)
-	writeBigInt(callframe, balance, params[0])
+	balance, err := BankGetBalance(ctx, ctx.Env.Contract.Address, ctx.Env.Chain.Denom)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	writeBigInt(callframe, balance.Amount.BigInt(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -89,8 +94,11 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	balance := ctx.CosmosHandler.GetBalance(vmtypes.CleanupAddress(addressbz))
-	writeBigInt(callframe, balance, params[1])
+	balance, err := BankGetBalance(ctx, vmtypes.CleanupAddress(addressbz), ctx.Env.Chain.Denom)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	writeBigInt(callframe, balance.Amount.BigInt(), params[1])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -365,7 +373,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 
 	// Send funds
 	if value.BitLen() > 0 {
-		err = ctx.CosmosHandler.SendCoin(addr, value)
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, addr, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(value))))
 	}
 	if err != nil {
 		success = int32(2)

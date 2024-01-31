@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/ioutils"
@@ -570,7 +571,18 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 			if found {
 				contractAddress = aliasAddr
 			}
-			err = k.bank.SendCoins(ctx, caller, contractAddress, coins)
+
+			bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
+			msg := banktypes.NewMsgSend(caller, contractAddress, coins)
+			msgbz, err := k.cdc.MarshalJSON(msg)
+			if err != nil {
+				return nil, err
+			}
+			execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
+			if err != nil {
+				return nil, err
+			}
+			_, err = k.execute(ctx, bankAddress, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
 			return nil, err
 		}
 		return nil, err

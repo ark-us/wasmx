@@ -1,11 +1,13 @@
 package vm
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
 	dbm "github.com/cometbft/cometbft-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
@@ -24,6 +26,65 @@ func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
 	depContext = buildExecutionContextClassic(dep)
 	ctx.ContractRouter[addr.String()] = depContext
 	return depContext
+}
+
+func BankGetBalance(ctx *Context, addr sdk.AccAddress, denom string) (sdk.Coin, error) {
+	alias, found := ctx.CosmosHandler.GetAlias(addr)
+	if found {
+		addr = alias
+	}
+	msg := banktypes.NewQueryBalanceRequest(addr, denom)
+	msgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	res, err := BankCall(ctx, msgbz, true)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	fmt.Println("---getbalance", string(res))
+	return sdk.Coin{}, nil
+}
+
+func BankSendCoin(ctx *Context, from sdk.AccAddress, to sdk.AccAddress, amount sdk.Coins) error {
+	aliasFrom, found := ctx.CosmosHandler.GetAlias(from)
+	if found {
+		from = aliasFrom
+	}
+	aliasTo, found := ctx.CosmosHandler.GetAlias(to)
+	if found {
+		to = aliasTo
+	}
+	msg := banktypes.NewMsgSend(from, to, amount)
+	msgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	_, err = BankCall(ctx, msgbz, false)
+	return err
+}
+
+func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
+	// initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
+	// if err != nil {
+	// 	return returns, wasmedge.Result_Fail
+	// }
+
+	bankAddress, err := ctx.GetCosmosHandler().GetAddressOrRole(ctx.Ctx, types.ROLE_BANK)
+	if err != nil {
+		return nil, err
+	}
+	req := vmtypes.CallRequest{
+		To:       bankAddress,
+		From:     bankAddress, // TODO wasmx?
+		Calldata: msgbz,
+		IsQuery:  isQuery,
+	}
+	success, data := WasmxCall(ctx, req)
+	if success > 0 {
+		return nil, fmt.Errorf("bank call failed: %s", string(data))
+	}
+	return data, nil
 }
 
 // All WasmX, eWasm calls must go through here

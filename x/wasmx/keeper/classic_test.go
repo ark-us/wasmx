@@ -10,7 +10,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
 
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
@@ -330,7 +329,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	// TODO reenable coinbase
 	// s.Require().Equal("000000000000000000000000"+hex.EncodeToString(appA.Context().BlockHeader().ProposerAddress), qres)
 
-	realBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
+	realBalance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Denom)
 	s.Require().NoError(err)
 
 	calld = balancehex + "00000000000000000000000039B1BF12E9e21D78F0c76d192c26d47fa710Ec98"
@@ -339,11 +338,11 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = balancehex + "000000000000000000000000" + contractAddressHex[2:]
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
+	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Amount.BigInt().Bytes()))
 
 	calld = selfbalancehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Balance.Amount.BigInt().Bytes()))
+	s.Require().Contains(qres, "00"+hex.EncodeToString(realBalance.Amount.BigInt().Bytes()))
 
 	calld = extcodehashhex + "000000000000000000000000" + strings.ToLower(contractAddressHex[2:])
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -498,17 +497,17 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 
 	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callrevertbin", nil)
 
-	balance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverAcc.String(), Denom: appA.Denom})
+	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), receiverAcc, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(balance.GetBalance().Amount, sdkmath.NewInt(0))
+	s.Require().Equal(balance.Amount, sdkmath.NewInt(0))
 
 	// contract does not have funds, so the inner call fails but tx returns
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000004")
 
-	balance, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverAcc.String(), Denom: appA.Denom})
+	balance, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), receiverAcc, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(balance.GetBalance().Amount, sdkmath.NewInt(0))
+	s.Require().Equal(balance.Amount, sdkmath.NewInt(0))
 
 	// contract has funds, so the inner call succeeds, but tx fails
 	// the inner call sends funds to the 0x1111 address, that does not yet exist
@@ -521,9 +520,9 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	s.Require().True(res.IsErr(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "failed to execute message", res.GetLog())
 
-	balance, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverAcc.String(), Denom: appA.Denom})
+	balance, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), receiverAcc, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(balance.GetBalance().Amount, sdkmath.NewInt(0))
+	s.Require().Equal(balance.Amount, sdkmath.NewInt(0))
 }
 
 func (suite *KeeperTestSuite) TestEwasmNestedGeneralCall() {
@@ -784,9 +783,9 @@ func (suite *KeeperTestSuite) TestEwasmCreate1() {
 	s.Require().NoError(err)
 
 	wrappedCtx := appA.Context()
-	createdContractFunds, err := appA.App.BankKeeper.AllBalances(wrappedCtx, &banktypes.QueryAllBalancesRequest{Address: createdContractAddress.String()})
+	createdContractFunds, err := appA.App.WasmxKeeper.AllBalances(wrappedCtx, createdContractAddress)
 	s.Require().NoError(err)
-	s.Require().Equal(creationFunds, createdContractFunds.Balances)
+	s.Require().Equal(creationFunds, createdContractFunds)
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), createdContractAddress, keybz)
@@ -841,9 +840,9 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 	s.Require().NoError(err)
 
 	wrappedCtx := appA.Context()
-	createdContractFunds, err := appA.App.BankKeeper.AllBalances(wrappedCtx, &banktypes.QueryAllBalancesRequest{Address: createdContractAddress.String()})
+	createdContractFunds, err := appA.App.WasmxKeeper.AllBalances(wrappedCtx, createdContractAddress)
 	s.Require().NoError(err)
-	s.Require().Equal(creationFunds, createdContractFunds.Balances)
+	s.Require().Equal(creationFunds, createdContractFunds)
 
 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), createdContractAddress, keybz)
@@ -984,9 +983,9 @@ func (suite *KeeperTestSuite) TestContractTransfer() {
 
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s", sendETH, value, receiver.Hex()[2:]))}, nil, nil)
 
-	realBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: types.AccAddressFromEvm(receiver).String(), Denom: appA.Denom})
+	realBalance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), types.AccAddressFromEvm(receiver), appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(realBalance.GetBalance().Amount, sdkmath.NewInt(1))
+	s.Require().Equal(realBalance.Amount, sdkmath.NewInt(1))
 }
 
 func (suite *KeeperTestSuite) TestKeccak256() {

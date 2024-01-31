@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -141,7 +142,7 @@ func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params
 
 	// Send funds
 	if req.Value.BitLen() > 0 {
-		err = ctx.CosmosHandler.SendCoin(req.To, req.Value)
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, req.To, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
 	}
 	if err != nil {
 		success = int32(2)
@@ -190,7 +191,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 
 	// Send funds
 	if req.Value.BitLen() > 0 {
-		err = ctx.CosmosHandler.SendCoin(to, req.Value)
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
 	}
 	if err != nil {
 		success = int32(2)
@@ -243,8 +244,11 @@ func wasmxGetBalance(_context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	balance := ctx.CosmosHandler.GetBalance(address)
-	ptr, err := allocateWriteMem(ctx, callframe, balance.FillBytes(make([]byte, 32)))
+	balance, err := BankGetBalance(ctx, address, ctx.Env.Chain.Denom)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, balance.Amount.BigInt().FillBytes(make([]byte, 32)))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

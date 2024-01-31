@@ -9,6 +9,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -38,13 +39,11 @@ func (h *WasmxCosmosHandler) ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte,
 func (h *WasmxCosmosHandler) WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error) {
 	return h.Keeper.wasmVMQueryHandler.HandleQuery(h.Ctx, caller, request)
 }
-func (h *WasmxCosmosHandler) GetBalance(addr sdk.AccAddress) *big.Int {
-	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
-	if found {
-		addr = aliasAddr
-	}
-	balance := h.Keeper.bank.GetBalance(h.Ctx, addr, h.Keeper.denom)
-	return balance.Amount.BigInt()
+func (h *WasmxCosmosHandler) JSONCodec() codec.JSONCodec {
+	return h.Keeper.cdc
+}
+func (h *WasmxCosmosHandler) GetAlias(addr sdk.AccAddress) (sdk.AccAddress, bool) {
+	return h.Keeper.GetAlias(h.Ctx, addr)
 }
 func (h *WasmxCosmosHandler) GetAccount(addr sdk.AccAddress) sdk.AccountI {
 	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
@@ -53,13 +52,6 @@ func (h *WasmxCosmosHandler) GetAccount(addr sdk.AccAddress) sdk.AccountI {
 	}
 	acc := h.Keeper.accountKeeper.GetAccount(h.Ctx, addr)
 	return acc
-}
-func (h *WasmxCosmosHandler) SendCoin(addr sdk.AccAddress, value *big.Int) error {
-	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
-	if found {
-		addr = aliasAddr
-	}
-	return h.Keeper.bank.SendCoins(h.Ctx, h.ContractAddress, addr, sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value))))
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)

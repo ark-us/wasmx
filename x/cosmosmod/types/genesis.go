@@ -1,14 +1,16 @@
 package types
 
 import (
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingmod "github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking stakingtypes.GenesisState) *GenesisState {
+func NewGenesisState(staking stakingtypes.GenesisState, bank banktypes.GenesisState) *GenesisState {
 	return &GenesisState{
 		Staking: staking,
+		Bank:    bank,
 	}
 }
 
@@ -17,6 +19,7 @@ func NewGenesisState(staking stakingtypes.GenesisState) *GenesisState {
 func DefaultGenesisState() *GenesisState {
 	return &GenesisState{
 		Staking: *stakingtypes.DefaultGenesisState(),
+		Bank:    *banktypes.DefaultGenesisState(),
 	}
 }
 
@@ -24,6 +27,9 @@ func DefaultGenesisState() *GenesisState {
 // failure.
 func (gs GenesisState) Validate() error {
 	if err := stakingmod.ValidateGenesis(&gs.Staking); err != nil {
+		return err
+	}
+	if err := gs.Bank.Validate(); err != nil {
 		return err
 	}
 	return nil

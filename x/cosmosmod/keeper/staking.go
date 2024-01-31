@@ -3,7 +3,6 @@ package keeper
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	addresscodec "cosmossdk.io/core/address"
@@ -95,6 +94,13 @@ func (k Keeper) IterateValidators(goCtx context.Context, fn func(index int64, va
 		return err
 	}
 	for i, validator := range validators {
+		// we need to unpack, for usage with GetCachedValue() by other modules
+		var pkI cryptotypes.PubKey
+		err = k.InterfaceRegistry.UnpackAny(validator.ConsensusPubkey, &pkI)
+		if err != nil {
+			panic(err)
+		}
+
 		if fn(int64(i), validator) {
 			break
 		}

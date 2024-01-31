@@ -17,8 +17,6 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		// &MsgGrpcSendRequest{},
 	)
 
-	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)
+	msgservice.RegisterMsgServiceDesc(registry, &_MsgStaking_serviceDesc)
+	msgservice.RegisterMsgServiceDesc(registry, &_MsgBank_serviceDesc)
 }
-
-// TODO better solution?
-var Network_Msg_serviceDesc = _Msg_serviceDesc

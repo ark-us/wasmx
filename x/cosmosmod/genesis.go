@@ -20,6 +20,30 @@ import (
 
 // InitGenesis initializes the module's state from a provided genesis state.
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) []abci.ValidatorUpdate {
+	// initialize bank
+	bankGenesis := genState.Bank
+	bankmsgjson, err := k.JSONCodec().MarshalJSON(&bankGenesis)
+	if err != nil {
+		panic(err)
+	}
+	// all system contracts have been created
+	erc20jsonCodeId := 0
+	for i, sysc := range wasmxtypes.DefaultSystemContracts() {
+		if sysc.Label == "erc20json" {
+			erc20jsonCodeId = i
+		}
+	}
+	bankmsgbz := []byte(fmt.Sprintf(`{"InitGenesis":{"genesis":%s,"code_ids":[%d]}`, string(bankmsgjson), erc20jsonCodeId))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      bankmsgbz,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// initialize staking
 	stakingGenesis := genState.Staking
 	msgjson, err := k.JSONCodec().MarshalJSON(&stakingGenesis)
 	if err != nil {

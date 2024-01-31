@@ -75,17 +75,18 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	stakingParams := stakingtypes.DefaultParams()
 	stakingParams.BondDenom = wasmxapp.BondDenom
 	stakingGenesis := stakingtypes.NewGenesisState(stakingParams, validators, delegations)
-	// TODO remove
-	genesisState[stakingtypes.ModuleName] = app.AppCodec().MustMarshalJSON(stakingGenesis)
 
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis)
-	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
-
+	// update total supply
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {
 		// add genesis acc tokens and delegated tokens to total supply
 		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(wasmxapp.BondDenom, bondAmt))...)
 	}
+	bankGenesis := banktypes.NewGenesisState(banktypes.DefaultGenesisState().Params, balances, totalSupply, []banktypes.Metadata{}, []banktypes.SendEnabled{})
+	bankGenesis.Supply = nil
+
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis)
+	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	govGenesis := govtypes1.DefaultGenesisState()
 	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, sdkmath.NewInt(1_000_000_000)))
@@ -98,12 +99,6 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 		Address: authtypes.NewModuleAddress(stakingtypes.BondedPoolName).String(),
 		Coins:   sdk.Coins{sdk.NewCoin(wasmxapp.BondDenom, bondAmt.Mul(sdkmath.NewInt(int64(len(valSet.Validators)))))},
 	})
-
-	// update total supply
-	bankGenesis := banktypes.NewGenesisState(banktypes.DefaultGenesisState().Params, balances, totalSupply, []banktypes.Metadata{}, []banktypes.SendEnabled{})
-
-	bankGenesis.Supply = nil
-	genesisState[banktypes.ModuleName] = app.AppCodec().MustMarshalJSON(bankGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 	wasmxGenesis := wasmxtypes.DefaultGenesisState()

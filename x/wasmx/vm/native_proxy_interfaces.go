@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	sdkerr "cosmossdk.io/errors"
+	sdkmath "cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
@@ -166,7 +167,7 @@ func EvmToJsonCall(method *aabi.Method, context *Context, calld []byte) ([]byte,
 	var returnData []byte
 	// Send funds
 	if req.Value.BitLen() > 0 {
-		err = handler.SendCoin(req.To, req.Value)
+		err = BankSendCoin(context, context.Env.Contract.Address, req.To, sdk.NewCoins(sdk.NewCoin(context.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
 	}
 	if err != nil {
 		success = int32(2)

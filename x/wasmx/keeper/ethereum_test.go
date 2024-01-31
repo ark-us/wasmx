@@ -8,7 +8,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/ethereum/go-ethereum/common"
 
 	"mythos/v1/crypto/ethsecp256k1"
@@ -180,7 +179,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	appA.ExecuteContract(sender, aliasEthAddr, *execMsg, nil, nil)
 	suite.Commit()
 
-	senderBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	senderBalance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
 	s.Require().NoError(err)
 
 	// Send coins with tx signed by alias account
@@ -188,19 +187,19 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	appA.SendEthTx(priv, &receiverHex, []byte{}, value, 300000, nil, nil)
 	suite.Commit()
 
-	receiverBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiver.Address.String(), Denom: appA.Denom})
+	receiverBalance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), receiver.Address, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(receiverBalance.GetBalance().Amount.BigInt(), value)
+	s.Require().Equal(receiverBalance.Amount.BigInt(), value)
 
-	senderBalance2, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	senderBalance2, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
 	s.Require().NoError(err)
-	diff := big.NewInt(0).Sub(senderBalance.GetBalance().Amount.BigInt(), value)
-	s.Require().Equal(senderBalance2.GetBalance().Amount.BigInt(), diff)
+	diff := big.NewInt(0).Sub(senderBalance.Amount.BigInt(), value)
+	s.Require().Equal(senderBalance2.Amount.BigInt(), diff)
 	senderBalance = senderBalance2
 
-	senderEthBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: senderEth.String(), Denom: appA.Denom})
+	senderEthBalance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), senderEth, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(senderEthBalance.GetBalance().Amount.BigInt(), big.NewInt(0))
+	s.Require().Equal(senderEthBalance.Amount.BigInt(), big.NewInt(0))
 
 	// test contract
 	// "f8b2cb4f": "getBalance(address)",
@@ -220,19 +219,19 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	appA.SendEthTx(priv, nil, appA.Hex2bz(calld), big.NewInt(10), uint64(1000000), big.NewInt(10000), nil)
 	valueSent := big.NewInt(10)
 
-	receiverBalance2, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiver.Address.String(), Denom: appA.Denom})
+	receiverBalance2, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), receiver.Address, appA.Denom)
 	s.Require().NoError(err)
-	diff = big.NewInt(0).Add(receiverBalance.GetBalance().Amount.BigInt(), valueSent)
-	s.Require().Equal(diff, receiverBalance2.GetBalance().Amount.BigInt())
+	diff = big.NewInt(0).Add(receiverBalance.Amount.BigInt(), valueSent)
+	s.Require().Equal(diff, receiverBalance2.Amount.BigInt())
 
-	senderBalance2, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	senderBalance2, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
 	s.Require().NoError(err)
-	diff = big.NewInt(0).Sub(senderBalance.GetBalance().Amount.BigInt(), value)
-	s.Require().Equal(senderBalance2.GetBalance().Amount.BigInt(), diff)
+	diff = big.NewInt(0).Sub(senderBalance.Amount.BigInt(), value)
+	s.Require().Equal(senderBalance2.Amount.BigInt(), diff)
 
-	senderEthBalance, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: senderEth.String(), Denom: appA.Denom})
+	senderEthBalance, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), senderEth, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(senderEthBalance.GetBalance().Amount.BigInt(), big.NewInt(0))
+	s.Require().Equal(senderEthBalance.Amount.BigInt(), big.NewInt(0))
 
 	// res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(sendCoinsHex)}, nil, nil)
 
