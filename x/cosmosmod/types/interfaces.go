@@ -2,7 +2,9 @@ package types
 
 import (
 	"cosmossdk.io/core/address"
-	// sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // AccountKeeper defines a subset of methods implemented by the cosmos-sdk account keeper
@@ -14,4 +16,14 @@ type AccountKeeper interface {
 	// Set an account in the store.
 	// SetAccount(ctx context.Context, acc sdk.AccountI)
 	AddressCodec() address.Codec
+}
+
+// WasmxKeeper defines a subset of methods implemented by the cosmos-sdk account keeper
+type WasmxKeeper interface {
+	Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg wasmxtypes.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
+	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg wasmxtypes.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error)
+	ExecuteEventual(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error)
+	ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (wasmxtypes.ContractInfo, wasmxtypes.CodeInfo, []byte, error)
+	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
+	IterateContractState(ctx sdk.Context, contractAddress sdk.AccAddress, cb func(key, value []byte) bool)
 }

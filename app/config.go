@@ -12,14 +12,16 @@ const (
 	Name          = "mythos"
 	HumanCoinUnit = "myt"
 	BaseDenom     = "amyt"
+	DenomUnit     = "myt"
 	BaseDenomUnit = 18
+	BondBaseDenom = "asmyt"
+	BondDenom     = "smyt"
 )
 
 // PowerReduction defines the default power reduction value for staking
 var PowerReduction = sdkmath.NewIntFromBigInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(BaseDenomUnit), nil))
 
 var (
-	BondDenom = BaseDenom
 	// Bech32PrefixAccAddr defines the Bech32 prefix of an account's address
 	Bech32PrefixAccAddr = Bech32Prefix
 	// Bech32PrefixAccPub defines the Bech32 prefix of an account's public key

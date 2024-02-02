@@ -16,7 +16,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	stakingmod "github.com/cosmos/cosmos-sdk/x/staking"
 
 	networktypes "mythos/v1/x/network/types"
 
@@ -58,8 +57,8 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 }
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
-func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesisState())
+func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
+	return cdc.MustMarshalJSON(types.DefaultGenesisState("myt", 18, "mythos"))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form
@@ -68,7 +67,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 	if err := cdc.UnmarshalJSON(bz, &genState); err != nil {
 		return fmt.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
 	}
-	return stakingmod.ValidateGenesis(&genState.Staking)
+	return genState.Staking.Validate()
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the module

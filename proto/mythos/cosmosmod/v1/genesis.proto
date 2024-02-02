@@ -4,11 +4,13 @@ package mythos.cosmosmod.v1;
 import "gogoproto/gogo.proto";
 import "cosmos/staking/v1beta1/genesis.proto";
 import "cosmos/bank/v1beta1/genesis.proto";
+import "mythos/cosmosmod/v1/bank_genesis.proto";
+import "mythos/cosmosmod/v1/staking_genesis.proto";
 
 option go_package = "mythos/v1/x/cosmosmod/types";
 
-// GenesisState defines the network module's genesis state.
+// GenesisState defines the cosmosmod module's genesis state.
 message GenesisState {
-    cosmos.staking.v1beta1.GenesisState staking = 1 [(gogoproto.nullable) = false];
-    cosmos.bank.v1beta1.GenesisState bank = 2 [(gogoproto.nullable) = false];
+    StakingGenesisState staking = 1 [(gogoproto.nullable) = false];
+    BankGenesisState bank = 2 [(gogoproto.nullable) = false];
 }

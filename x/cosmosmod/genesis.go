@@ -26,14 +26,7 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	if err != nil {
 		panic(err)
 	}
-	// all system contracts have been created
-	erc20jsonCodeId := 0
-	for i, sysc := range wasmxtypes.DefaultSystemContracts() {
-		if sysc.Label == "erc20json" {
-			erc20jsonCodeId = i
-		}
-	}
-	bankmsgbz := []byte(fmt.Sprintf(`{"InitGenesis":{"genesis":%s,"code_ids":[%d]}`, string(bankmsgjson), erc20jsonCodeId))
+	bankmsgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(bankmsgjson)))
 	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,

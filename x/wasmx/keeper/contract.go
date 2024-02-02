@@ -123,6 +123,10 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ty
 	filepath := k.wasmvm.GetFilePath(codeInfo)
 	label := k.GetRoleLabelByContract(ctx, addr)
 	role := k.GetRoleByLabel(ctx, label)
+	rolename := ""
+	if role != nil {
+		rolename = role.Role
+	}
 
 	return types.ContractDependency{
 		Address:       addr,
@@ -134,7 +138,7 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ty
 		CodeId:        contractInfo.CodeId,
 		SystemDepsRaw: codeInfo.Deps,
 		StorageType:   contractInfo.StorageType,
-		Role:          role.Role,
+		Role:          rolename,
 		Label:         label,
 	}, nil
 }

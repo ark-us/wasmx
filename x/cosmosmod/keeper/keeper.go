@@ -12,7 +12,6 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	networkkeeper "mythos/v1/x/network/keeper"
-	networktypes "mythos/v1/x/network/types"
 
 	"mythos/v1/x/cosmosmod/types"
 )
@@ -25,7 +24,7 @@ type (
 		paramstore        paramtypes.Subspace
 		InterfaceRegistry cdctypes.InterfaceRegistry
 		ak                types.AccountKeeper
-		WasmxKeeper       networktypes.WasmxKeeper
+		WasmxKeeper       types.WasmxKeeper
 		NetworkKeeper     networkkeeper.Keeper
 		actionExecutor    *networkkeeper.ActionExecutor
 
@@ -44,7 +43,7 @@ func NewKeeper(
 	storeKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
-	wasmxKeeper networktypes.WasmxKeeper,
+	wasmxKeeper types.WasmxKeeper,
 	networkKeeper networkkeeper.Keeper,
 	actionExecutor *networkkeeper.ActionExecutor,
 	authority string,

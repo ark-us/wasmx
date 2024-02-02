@@ -1,0 +1,47 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/bank/v1beta1/bank.proto";
+import "cosmos/bank/v1beta1/genesis.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+
+// BankGenesisState defines the bank module's genesis state.
+message BankGenesisState {
+    // params defines all the parameters of the module.
+    cosmos.bank.v1beta1.Params params = 1 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // balances is an array containing the balances of all the accounts.
+    repeated cosmos.bank.v1beta1.Balance balances = 2 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // supply represents the total supply. If it is left empty, then supply will be calculated based on the provided
+    // balances. Otherwise, it will be used to validate that the sum of the balances equals this amount.
+    repeated cosmos.base.v1beta1.Coin supply = 3 [
+        (amino.encoding)         = "legacy_coins",
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins",
+        (gogoproto.nullable)     = false,
+        (amino.dont_omitempty)   = true
+    ];
+
+    // denom_metadata defines the metadata of the different coins.
+    repeated DenomDeploymentInfo denom_info = 4 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // send_enabled defines the denoms where send is enabled or disabled.
+    //
+    // Since: cosmos-sdk 0.47
+    repeated cosmos.bank.v1beta1.SendEnabled send_enabled = 5 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+}
+
+// Metadata represents a struct that describes
+// a basic token.
+message DenomDeploymentInfo {
+    cosmos.bank.v1beta1.Metadata metadata = 1 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+    uint64 code_id = 2;
+    repeated string admins = 3;
+    repeated string minters = 4;
+    string contract = 5 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}

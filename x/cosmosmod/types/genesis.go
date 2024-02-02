@@ -1,36 +1,266 @@
 package types
 
 import (
+	"errors"
+	fmt "fmt"
+	"strings"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingmod "github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking stakingtypes.GenesisState, bank banktypes.GenesisState) *GenesisState {
+func NewGenesisState(staking StakingGenesisState, bank BankGenesisState) *GenesisState {
 	return &GenesisState{
 		Staking: staking,
 		Bank:    bank,
 	}
 }
 
+// NewBankGenesisState returns a default bank module genesis state.
+func NewBankGenesisState(params banktypes.Params, balances []banktypes.Balance, supply sdk.Coins, denomInfo []DenomDeploymentInfo, sendEnabled []banktypes.SendEnabled) *BankGenesisState {
+	return &BankGenesisState{
+		Params:      params,
+		Balances:    balances,
+		Supply:      supply,
+		DenomInfo:   denomInfo,
+		SendEnabled: sendEnabled,
+	}
+}
+
+// NewStakingGenesisState returns a default staking module genesis state.
+func NewStakingGenesisState(params stakingtypes.Params, validators []stakingtypes.Validator, delegations []Delegation) *StakingGenesisState {
+	return &StakingGenesisState{
+		Params:      params,
+		Validators:  validators,
+		Delegations: delegations,
+	}
+}
+
+// DefaultStakingGenesisState returns a default bank module genesis state.
+func DefaultStakingGenesisState() *StakingGenesisState {
+	return &StakingGenesisState{
+		Params: stakingtypes.DefaultParams(),
+	}
+}
+
+func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string) []DenomDeploymentInfo {
+	erc20jsonCodeId := -1
+	derc20jsonCodeId := -1
+	for i, sysc := range wasmxtypes.DefaultSystemContracts() {
+		if sysc.Label == wasmxtypes.ERC20_v001 {
+			erc20jsonCodeId = i + 1
+		} else if sysc.Label == wasmxtypes.DERC20_v001 {
+			derc20jsonCodeId = i + 1
+		}
+	}
+	if erc20jsonCodeId == -1 {
+		panic(fmt.Sprintf("%s missing", wasmxtypes.ERC20_v001))
+	}
+	if derc20jsonCodeId == -1 {
+		panic(fmt.Sprintf("%s missing", wasmxtypes.DERC20_v001))
+	}
+	return []DenomDeploymentInfo{
+		{
+			Metadata: banktypes.Metadata{
+				Description: "main gas token",
+				DenomUnits: []*banktypes.DenomUnit{
+					{
+						Denom:    denomUnit,
+						Exponent: baseDenomUnit,
+						Aliases:  []string{},
+					},
+					{
+						Denom:    fmt.Sprintf("a%s", denomUnit),
+						Exponent: 1,
+						Aliases:  []string{},
+					},
+				},
+				Base:    fmt.Sprintf("a%s", denomUnit),
+				Display: strings.ToUpper(denomUnit),
+				Name:    strings.ToUpper(denomUnit),
+				Symbol:  denomUnit,
+				URI:     "",
+				URIHash: "",
+			},
+			CodeId:  uint64(erc20jsonCodeId),
+			Admins:  []string{"bank", "governance"},
+			Minters: []string{"bank", "governance"},
+		},
+		{
+			Metadata: banktypes.Metadata{
+				Description: "staking token",
+				DenomUnits: []*banktypes.DenomUnit{
+					{
+						Denom:    fmt.Sprintf("s%s", denomUnit),
+						Exponent: baseDenomUnit,
+						Aliases:  []string{},
+					},
+					{
+						Denom:    fmt.Sprintf("as%s", denomUnit),
+						Exponent: 1,
+						Aliases:  []string{},
+					},
+				},
+				Base:    fmt.Sprintf("as%s", denomUnit),
+				Display: strings.ToUpper(fmt.Sprintf("s%s", denomUnit)),
+				Name:    strings.ToUpper(fmt.Sprintf("s%s", denomUnit)),
+				Symbol:  fmt.Sprintf("s%s", denomUnit),
+				URI:     "",
+				URIHash: "",
+			},
+			CodeId:  uint64(derc20jsonCodeId),
+			Admins:  []string{"staking", "bank"},
+			Minters: []string{"staking", "bank"},
+		},
+	}
+}
+
+// DefaultBankGenesisState returns a default bank module genesis state.
+func DefaultBankGenesisState(denomUnit string, baseDenomUnit uint32, denomName string) *BankGenesisState {
+	return NewBankGenesisState(banktypes.DefaultParams(), []banktypes.Balance{}, sdk.Coins{}, DefaultBankDenoms(denomUnit, baseDenomUnit, denomName), []banktypes.SendEnabled{})
+}
+
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
-func DefaultGenesisState() *GenesisState {
+func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, denomName string) *GenesisState {
 	return &GenesisState{
-		Staking: *stakingtypes.DefaultGenesisState(),
-		Bank:    *banktypes.DefaultGenesisState(),
+		Staking: *DefaultStakingGenesisState(),
+		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit, denomName),
 	}
 }
 
 // Validate performs basic genesis state validation returning an error upon any
 // failure.
 func (gs GenesisState) Validate() error {
-	if err := stakingmod.ValidateGenesis(&gs.Staking); err != nil {
+	if err := gs.Staking.Validate(); err != nil {
 		return err
 	}
 	if err := gs.Bank.Validate(); err != nil {
 		return err
 	}
+	return nil
+}
+
+// ValidateGenesis validates the provided staking genesis state to ensure the
+// expected invariants holds. (i.e. params in correct bounds, no duplicate validators)
+func (gs StakingGenesisState) Validate() error {
+	if err := validateGenesisStateValidators(gs.Validators); err != nil {
+		return err
+	}
+
+	return gs.Params.Validate()
+}
+
+// Validate performs basic genesis state validation returning an error upon any
+// failure.
+func (gs BankGenesisState) Validate() error {
+	if len(gs.Params.SendEnabled) > 0 && len(gs.SendEnabled) > 0 {
+		return errors.New("send_enabled defined in both the send_enabled field and in params (deprecated)")
+	}
+
+	if err := gs.Params.Validate(); err != nil {
+		return err
+	}
+
+	seenSendEnabled := make(map[string]bool)
+	seenBalances := make(map[string]bool)
+	seenMetadatas := make(map[string]bool)
+
+	totalSupply := sdk.Coins{}
+
+	for _, p := range gs.GetSendEnabled() {
+		if _, exists := seenSendEnabled[p.Denom]; exists {
+			return fmt.Errorf("duplicate send enabled found: '%s'", p.Denom)
+		}
+		if err := p.Validate(); err != nil {
+			return err
+		}
+		seenSendEnabled[p.Denom] = true
+	}
+
+	for _, balance := range gs.Balances {
+		if seenBalances[balance.Address] {
+			return fmt.Errorf("duplicate balance for address %s", balance.Address)
+		}
+
+		if err := balance.Validate(); err != nil {
+			return err
+		}
+
+		seenBalances[balance.Address] = true
+
+		totalSupply = totalSupply.Add(balance.Coins...)
+	}
+
+	for _, info := range gs.DenomInfo {
+		if seenMetadatas[info.Metadata.Base] {
+			return fmt.Errorf("duplicate client metadata for denom %s", info.Metadata.Base)
+		}
+
+		if err := info.Metadata.Validate(); err != nil {
+			return err
+		}
+
+		// TODO info.CodeId
+		// TODO info.Admins
+		// TODO info.Minters
+
+		seenMetadatas[info.Metadata.Base] = true
+	}
+
+	if !gs.Supply.Empty() {
+		// NOTE: this errors if supply for any given coin is zero
+		err := gs.Supply.Validate()
+		if err != nil {
+			return err
+		}
+
+		if !gs.Supply.Equal(totalSupply) {
+			return fmt.Errorf("genesis supply is incorrect, expected %v, got %v", gs.Supply, totalSupply)
+		}
+	}
+
+	return nil
+}
+
+func validateGenesisStateValidators(validators []stakingtypes.Validator) error {
+	addrMap := make(map[string]bool, len(validators))
+
+	for i := 0; i < len(validators); i++ {
+		val := validators[i]
+		consPk, err := val.ConsPubKey()
+		if err != nil {
+			return err
+		}
+
+		strKey := string(consPk.Bytes())
+
+		if _, ok := addrMap[strKey]; ok {
+			consAddr, err := val.GetConsAddr()
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("duplicate validator in genesis state: moniker %v, address %v", val.Description.Moniker, consAddr)
+		}
+
+		if val.Jailed && val.IsBonded() {
+			consAddr, err := val.GetConsAddr()
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("validator is bonded and jailed in genesis state: moniker %v, address %v", val.Description.Moniker, consAddr)
+		}
+
+		if val.DelegatorShares.IsZero() && !val.IsUnbonding() {
+			return fmt.Errorf("bonded/unbonded genesis validator cannot have zero delegator shares, validator: %v", val)
+		}
+
+		addrMap[strKey] = true
+	}
+
 	return nil
 }

@@ -4,8 +4,13 @@ import (
 	"encoding/json"
 
 	codec "github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	exported "github.com/cosmos/cosmos-sdk/x/bank/exported"
 )
+
+type QueryAddressByDenomResponse struct {
+	Address sdk.AccAddress `json:"address"`
+}
 
 // GenesisBalancesIterator implements genesis account iteration.
 type GenesisBalancesIterator struct{}

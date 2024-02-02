@@ -1,0 +1,67 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/staking/v1beta1/staking.proto";
+import "cosmos/staking/v1beta1/genesis.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+
+// StakingGenesisState defines the staking module's genesis state.
+message StakingGenesisState {
+    // params defines all the parameters of related to deposit.
+    cosmos.staking.v1beta1.Params params = 1 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // last_total_power tracks the total amounts of bonded tokens recorded during
+    // the previous end block.
+    bytes last_total_power = 2 [
+        (cosmos_proto.scalar)  = "cosmos.Int",
+        (gogoproto.customtype) = "cosmossdk.io/math.Int",
+        (gogoproto.nullable)   = false,
+        (amino.dont_omitempty) = true
+    ];
+
+    // last_validator_powers is a special index that provides a historical list
+    // of the last-block's bonded validators.
+    repeated cosmos.staking.v1beta1.LastValidatorPower last_validator_powers = 3 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // validators defines the validator set at genesis.
+    repeated cosmos.staking.v1beta1.Validator validators = 4 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // delegations defines the delegations active at genesis.
+    repeated Delegation delegations = 5 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // TODO update this to what we need
+    // unbonding_delegations defines the unbonding delegations active at genesis.
+    repeated cosmos.staking.v1beta1.UnbondingDelegation unbonding_delegations = 6 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // TODO update this to what we need
+    // redelegations defines the redelegations active at genesis.
+    repeated cosmos.staking.v1beta1.Redelegation redelegations = 7 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // exported defines a bool to identify whether the chain dealing with exported or initialized genesis.
+    bool exported = 8;
+}
+
+// Delegation represents the bond with tokens held by an account. It is
+// owned by one delegator, and is associated with the voting power of one
+// validator.
+message Delegation {
+    option (gogoproto.equal)           = false;
+    option (gogoproto.goproto_getters) = false;
+
+    // delegator_address is the encoded address of the delegator.
+    string delegator_address = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // validator_address is the encoded address of the validator.
+    string validator_address = 2 [(cosmos_proto.scalar) = "cosmos.ValidatorAddressString"];
+    // delegated amount
+    bytes amount = 3 [
+        (cosmos_proto.scalar)  = "cosmos.Int",
+        (gogoproto.customtype) = "cosmossdk.io/math.Int",
+        (gogoproto.nullable)   = false,
+        (amino.dont_omitempty) = true
+    ];
+}

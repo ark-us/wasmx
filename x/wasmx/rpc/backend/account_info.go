@@ -89,7 +89,7 @@ func (b *Backend) GetBalance(_address common.Address, blockNrOrHash rpctypes.Blo
 	req := &banktypes.QueryBalanceRequest{
 		Address: address.String(),
 		// TODO
-		Denom: app.BondDenom,
+		Denom: app.BondBaseDenom,
 	}
 
 	_, err = b.TendermintBlockByNumber(blockNum)

@@ -72,7 +72,7 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
 	}
 
-	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"authorities":["governance"]}}`)})
+	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"authorities":["staking","governance"]}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
@@ -269,7 +269,16 @@ func DefaultSystemContracts() SystemContracts {
 		// we only need to create, not initialize the erc20 contract
 		{
 			Address:     "",
-			Label:       "erc20json",
+			Label:       ERC20_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		// we only need to create, not initialize the derc20 contract
+		{
+			Address:     "",
+			Label:       DERC20_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
 			StorageType: ContractStorageType_CoreConsensus,
