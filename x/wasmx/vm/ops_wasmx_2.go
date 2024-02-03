@@ -400,6 +400,7 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 	var req vmtypes.InstantiateAccountRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
+		ctx.Ctx.Logger().Debug("unmarshaling InstantiateAccountRequest", "error", err)
 		return nil, wasmedge.Result_Fail
 	}
 	// TODO info from provenance ?

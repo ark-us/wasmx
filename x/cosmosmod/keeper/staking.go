@@ -3,6 +3,8 @@ package keeper
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	addresscodec "cosmossdk.io/core/address"
@@ -50,8 +52,26 @@ func (k Keeper) ConsensusAddressCodec() addresscodec.Codec {
 // Delegation gets the delegation interface for a particular set of delegator and validator addresses
 func (k Keeper) Delegation(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (stakingtypes.DelegationI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("Delegation not implemented")
-	return nil, nil
+	msgbz := []byte(fmt.Sprintf(`{"GetDelegation":{"delegator_addr":"%s","validator_addr":"%s"}}`, addrDel.String(), addrVal.String()))
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	var validatorsResp stakingtypes.QueryDelegationResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &validatorsResp)
+	if err != nil {
+		return nil, err
+	}
+	return validatorsResp.DelegationResponse.Delegation, nil
 }
 
 // GetAllValidators gets the set of all validators with no limits, used during genesis dump
@@ -147,8 +167,26 @@ func (k Keeper) Unjail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 // Validator gets the Validator interface for a particular address
 func (k Keeper) Validator(goCtx context.Context, address sdk.ValAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("Validator not implemented")
-	return nil, nil
+	msgbz := []byte(fmt.Sprintf(`{"GetValidator":{"validator_addr":"%s"}}`, address.String()))
+	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	var validatorsResp stakingtypes.QueryValidatorResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &validatorsResp)
+	if err != nil {
+		return nil, err
+	}
+	return validatorsResp.Validator, nil
 }
 
 // ValidatorByConsAddr gets the validator interface for a particular pubkey
@@ -169,8 +207,44 @@ func (k Keeper) GetAllDelegatorDelegations(goCtx context.Context, delegator sdk.
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
 func (k Keeper) GetAllSDKDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetAllSDKDelegations not implemented")
-	return make([]types.Delegation, 0), nil
+
+	// TODO asmyt denom
+	msgbz := []byte(`{"GetAddressByDenom":{"denom":"asmyt"}}`)
+	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp1 wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp1)
+	if err != nil {
+		return nil, err
+	}
+	var qaddrResp types.QueryAddressByDenomResponse
+	err = json.Unmarshal(resp1.Data, &qaddrResp)
+	if err != nil {
+		return nil, err
+	}
+	derc20Address := qaddrResp.Address
+	k.WasmxKeeper.IterateContractState(ctx, derc20Address, func(key []byte, value []byte) bool {
+		if !strings.HasPrefix(string(key), types.STAKING_DELEGATOR_TO_DELEGATION_KEY) {
+			return false
+		}
+		delegator, validator, amount, err := types.ParseStoredDelegation(key, value)
+		if err == nil {
+			delegations = append(delegations, stakingtypes.Delegation{
+				DelegatorAddress: delegator,
+				ValidatorAddress: validator,
+				// TODO amount will be big int
+				Shares: math.LegacyNewDec(amount.Int64()),
+			})
+		}
+		return false
+	})
+	return delegations, nil
 }
 
 // IterateDelegations iterates through all of the delegations from a delegator

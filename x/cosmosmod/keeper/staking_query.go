@@ -28,8 +28,18 @@ func (k QuerierStaking) Validators(goCtx context.Context, req *stakingtypes.Quer
 
 func (k QuerierStaking) Validator(goCtx context.Context, req *stakingtypes.QueryValidatorRequest) (*stakingtypes.QueryValidatorResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("Validator not implemented")
-	return &stakingtypes.QueryValidatorResponse{}, nil
+	k.Keeper.Logger(ctx).Error("QuerierStaking - Validator not implemented")
+	// addr, err := sdk.AccAddressFromBech32(req.ValidatorAddr)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "sender")
+	// }
+	// validator, err := k.Keeper.Validator(goCtx, addr)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// return &stakingtypes.QueryValidatorResponse{Validator: validator}, nil
+	return nil, nil
 }
 
 func (k QuerierStaking) ValidatorDelegations(goCtx context.Context, req *stakingtypes.QueryValidatorDelegationsRequest) (*stakingtypes.QueryValidatorDelegationsResponse, error) {
