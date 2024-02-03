@@ -1,0 +1,125 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "amino/amino.proto";
+import "cosmos/bank/v1beta1/bank.proto";
+import "cosmos/bank/v1beta1/query.proto";
+import "cosmos/query/v1/query.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+option (gogoproto.goproto_getters_all) = false;
+
+// QueryBank defines the gRPC querier service for bank
+service QueryBank {
+    // Balance queries the balance of a single coin for a single account.
+    rpc Balance(cosmos.bank.v1beta1.QueryBalanceRequest) returns (cosmos.bank.v1beta1.QueryBalanceResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/balances/{address}/by_denom";
+    }
+
+    // AllBalances queries the balance of all coins for a single account.
+    //
+    // When called from another module, this query might consume a high amount of
+    // gas if the pagination field is incorrectly set.
+    rpc AllBalances(cosmos.bank.v1beta1.QueryAllBalancesRequest) returns (cosmos.bank.v1beta1.QueryAllBalancesResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/balances/{address}";
+    }
+
+    // SpendableBalances queries the spendable balance of all coins for a single
+    // account.
+    //
+    // When called from another module, this query might consume a high amount of
+    // gas if the pagination field is incorrectly set.
+    //
+    // Since: cosmos-sdk 0.46
+    rpc SpendableBalances(cosmos.bank.v1beta1.QuerySpendableBalancesRequest) returns (cosmos.bank.v1beta1.QuerySpendableBalancesResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/spendable_balances/{address}";
+    }
+
+    // SpendableBalanceByDenom queries the spendable balance of a single denom for
+    // a single account.
+    //
+    // When called from another module, this query might consume a high amount of
+    // gas if the pagination field is incorrectly set.
+    //
+    // Since: cosmos-sdk 0.47
+    rpc SpendableBalanceByDenom(cosmos.bank.v1beta1.QuerySpendableBalanceByDenomRequest) returns (cosmos.bank.v1beta1.QuerySpendableBalanceByDenomResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/spendable_balances/{address}/by_denom";
+    }
+
+    // TotalSupply queries the total supply of all coins.
+    //
+    // When called from another module, this query might consume a high amount of
+    // gas if the pagination field is incorrectly set.
+    rpc TotalSupply(cosmos.bank.v1beta1.QueryTotalSupplyRequest) returns (cosmos.bank.v1beta1.QueryTotalSupplyResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/supply";
+    }
+
+    // SupplyOf queries the supply of a single coin.
+    //
+    // When called from another module, this query might consume a high amount of
+    // gas if the pagination field is incorrectly set.
+    rpc SupplyOf(cosmos.bank.v1beta1.QuerySupplyOfRequest) returns (cosmos.bank.v1beta1.QuerySupplyOfResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/supply/by_denom";
+    }
+
+    // Params queries the parameters of x/bank module.
+    rpc Params(cosmos.bank.v1beta1.QueryParamsRequest) returns (cosmos.bank.v1beta1.QueryParamsResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/params";
+    }
+
+    // DenomMetadata queries the client metadata of a given coin denomination.
+    rpc DenomMetadata(cosmos.bank.v1beta1.QueryDenomMetadataRequest) returns (cosmos.bank.v1beta1.QueryDenomMetadataResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/denoms_metadata/{denom}";
+    }
+
+    // // DenomsMetadata queries the client metadata of a given coin denomination.
+    // rpc DenomMetadataByQueryString(cosmos.bank.v1beta1.QueryDenomMetadataByQueryStringRequest)
+    //     returns (cosmos.bank.v1beta1.QueryDenomMetadataByQueryStringResponse) {
+    //     option (cosmos.query.v1.module_query_safe) = true;
+    //     option (google.api.http).get               = "/cosmos/bank/v1beta1/denoms_metadata_by_query_string";
+    // }
+
+    // DenomsMetadata queries the client metadata for all registered coin
+    // denominations.
+    rpc DenomsMetadata(cosmos.bank.v1beta1.QueryDenomsMetadataRequest) returns (cosmos.bank.v1beta1.QueryDenomsMetadataResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/denoms_metadata";
+    }
+
+    // DenomOwners queries for all account addresses that own a particular token
+    // denomination.
+    //
+    // When called from another module, this query might consume a high amount of
+    // gas if the pagination field is incorrectly set.
+    //
+    // Since: cosmos-sdk 0.46
+    rpc DenomOwners(cosmos.bank.v1beta1.QueryDenomOwnersRequest) returns (cosmos.bank.v1beta1.QueryDenomOwnersResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/denom_owners/{denom}";
+    }
+
+    // SendEnabled queries for SendEnabled entries.
+    //
+    // This query only returns denominations that have specific SendEnabled settings.
+    // Any denomination that does not have a specific setting will use the default
+    // params.default_send_enabled, and will not be returned by this query.
+    //
+    // Since: cosmos-sdk 0.47
+    rpc SendEnabled(cosmos.bank.v1beta1.QuerySendEnabledRequest) returns (cosmos.bank.v1beta1.QuerySendEnabledResponse) {
+        option (cosmos.query.v1.module_query_safe) = true;
+        option (google.api.http).get               = "/cosmos/bank/v1beta1/send_enabled";
+    }
+}

@@ -2,11 +2,14 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"mythos/v1/x/wasmx/types"
 )
@@ -227,9 +230,9 @@ func (k *Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, t
 	// 	return sdkerr.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr.String())
 	// }
 
-	sdkerr := k.bank.SendCoins(ctx, fromAddr, toAddr, amount)
-	if sdkerr != nil {
-		return sdkerr
+	err := k.SendCoins(ctx, fromAddr, toAddr, amount)
+	if err != nil {
+		return err
 	}
 	for _, e := range em.Events() {
 		if e.Type == sdk.EventTypeMessage { // skip messages as we talk to the keeper directly
@@ -238,6 +241,90 @@ func (k *Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, t
 		parentCtx.EventManager().EmitEvent(e)
 	}
 	return nil
+}
+
+func (k *Keeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, coins sdk.Coins) error {
+	aliasFrom, found := k.GetAlias(ctx, fromAddr)
+	if found {
+		fromAddr = aliasFrom
+	}
+	aliasTo, found := k.GetAlias(ctx, toAddr)
+	if found {
+		toAddr = aliasTo
+	}
+	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
+	msg := banktypes.NewMsgSend(fromAddr, toAddr, coins)
+	msgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
+	if err != nil {
+		return err
+	}
+	_, err = k.execute(ctx, bankAddress, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
+	return err
+}
+
+func (k *Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) (sdk.Coin, error) {
+	aliasAddr, found := k.GetAlias(ctx, addr)
+	if found {
+		addr = aliasAddr
+	}
+	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	msg := banktypes.NewQueryBalanceRequest(addr, denom)
+	msgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	resp, err := k.query(ctx, bankAddress, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil, false)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	fmt.Println("---getbalanc2z", string(resp.Data))
+	return sdk.Coin{}, nil
+}
+
+func (k *Keeper) AllBalances(ctx sdk.Context, addr sdk.AccAddress) (sdk.Coins, error) {
+	aliasAddr, found := k.GetAlias(ctx, addr)
+	if found {
+		addr = aliasAddr
+	}
+	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
+	if err != nil {
+		return nil, err
+	}
+	msg := banktypes.NewQueryAllBalancesRequest(addr, nil, false)
+	msgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return nil, err
+	}
+	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
+	if err != nil {
+		return nil, err
+	}
+	resp, err := k.query(ctx, bankAddress, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil, false)
+	if err != nil {
+		return nil, err
+	}
+	var contractResp types.ContractResponse
+	err = json.Unmarshal(resp.Data, &contractResp)
+	if err != nil {
+		return nil, err
+	}
+	var response banktypes.QueryAllBalancesResponse
+	err = k.cdc.UnmarshalJSON(contractResp.Data, &response)
+	if err != nil {
+		return nil, err
+	}
+	return response.Balances, nil
 }
 
 // IsPinnedCode returns true when codeID is pinned in wasmvm cache

@@ -11,7 +11,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"mythos/v1/crypto/ethsecp256k1"
 
@@ -347,26 +346,26 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
-	balanceContract, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
+	balanceContract, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Denom)
 	s.Require().NoError(err)
 
-	balanceReceiver, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: recipient.Address.String(), Denom: appA.Denom})
+	balanceReceiver, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), recipient.Address, appA.Denom)
 	s.Require().NoError(err)
 
-	s.Require().Equal(coins[0].Amount, balanceContract.Balance.Amount)
-	s.Require().Equal(sdkmath.NewInt(0), balanceReceiver.Balance.Amount)
+	s.Require().Equal(coins[0].Amount, balanceContract.Amount)
+	s.Require().Equal(sdkmath.NewInt(0), balanceReceiver.Amount)
 
 	data = fmt.Sprintf(`{"release":{"id":"swap1","preimage":"%s"}}`, preimage)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, nil, nil)
 
-	balanceContract, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: contractAddress.String(), Denom: appA.Denom})
+	balanceContract, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Denom)
 	s.Require().NoError(err)
 
-	balanceReceiver, err = appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: recipient.Address.String(), Denom: appA.Denom})
+	balanceReceiver, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), recipient.Address, appA.Denom)
 	s.Require().NoError(err)
 
-	s.Require().Equal(coins[0].Amount, balanceReceiver.Balance.Amount)
-	s.Require().Equal(sdkmath.NewInt(0), balanceContract.Balance.Amount)
+	s.Require().Equal(coins[0].Amount, balanceReceiver.Amount)
+	s.Require().Equal(sdkmath.NewInt(0), balanceContract.Amount)
 
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{}}`)}, nil, nil)
 	suite.Require().Equal(`{"swaps":[]}`, string(qres))

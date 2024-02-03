@@ -40,6 +40,7 @@ var ADDR_CONSENSUS_TENDERMINT = "0x000000000000000000000000000000000000002d"
 var ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY = "0x000000000000000000000000000000000000002e"
 var ADDR_CONSENSUS_AVA_SNOWMAN = "0x000000000000000000000000000000000000002f"
 var ADDR_STAKING = "0x0000000000000000000000000000000000000030"
+var ADDR_BANK = "0x0000000000000000000000000000000000000031"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -69,6 +70,11 @@ func DefaultSystemContracts() SystemContracts {
 	avaInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"sampleSize","value":"2"},{"key":"betaThreshold","value":2},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":80}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
+	}
+
+	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"authorities":["staking","governance"]}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
 
 	return []SystemContract{
@@ -248,6 +254,33 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_STAKING,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_BANK,
+			Label:       BANK_v001,
+			InitMessage: bankInitMsg,
+			Pinned:      false,
+			Role:        ROLE_BANK,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		// we only need to create, not initialize the erc20 contract
+		{
+			Address:     "",
+			Label:       ERC20_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		// we only need to create, not initialize the derc20 contract
+		{
+			Address:     "",
+			Label:       DERC20_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

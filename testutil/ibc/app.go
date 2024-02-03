@@ -43,7 +43,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	genesisState[authtypes.ModuleName] = app.AppCodec().MustMarshalJSON(authGenesis)
 
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
-	delegations := make([]stakingtypes.Delegation, 0, len(valSet.Validators))
+	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
 
 	bondAmt := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
@@ -67,43 +67,38 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 			MinSelfDelegation: sdkmath.ZeroInt(),
 		}
 		validators = append(validators, validator)
-		delegation := stakingtypes.NewDelegation(genAccs[0].GetAddress().String(), valAddr, sdkmath.LegacyOneDec())
+		delegation := cosmosmodtypes.Delegation{
+			DelegatorAddress: genAccs[0].GetAddress().String(),
+			ValidatorAddress: valAddr,
+			Amount:           bondAmt,
+		}
+		// (genAccs[0].GetAddress().String(), valAddr, sdkmath.LegacyOneDec())
 		delegations = append(delegations, delegation)
 	}
 
 	// set validators and delegations
 	stakingParams := stakingtypes.DefaultParams()
-	stakingParams.BondDenom = wasmxapp.BondDenom
-	stakingGenesis := stakingtypes.NewGenesisState(stakingParams, validators, delegations)
-	// TODO remove
-	genesisState[stakingtypes.ModuleName] = app.AppCodec().MustMarshalJSON(stakingGenesis)
+	stakingParams.BondDenom = wasmxapp.BondBaseDenom
+	stakingGenesis := cosmosmodtypes.NewStakingGenesisState(stakingParams, validators, delegations)
 
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis)
-	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
-
+	// update total supply
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {
 		// add genesis acc tokens and delegated tokens to total supply
-		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(wasmxapp.BondDenom, bondAmt))...)
+		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(wasmxapp.BaseDenom, bondAmt))...)
 	}
+	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(wasmxapp.DenomUnit, wasmxapp.BaseDenomUnit, wasmxapp.Name)
+	bankGenesis.Supply = totalSupply
+	bankGenesis.Balances = balances
+
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis)
+	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	govGenesis := govtypes1.DefaultGenesisState()
-	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, sdkmath.NewInt(1_000_000_000)))
+	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BaseDenom, sdkmath.NewInt(1_000_000_000)))
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = &votingPeriod
 	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGenesis)
-
-	// add bonded amount to bonded pool module account
-	balances = append(balances, banktypes.Balance{
-		Address: authtypes.NewModuleAddress(stakingtypes.BondedPoolName).String(),
-		Coins:   sdk.Coins{sdk.NewCoin(wasmxapp.BondDenom, bondAmt.Mul(sdkmath.NewInt(int64(len(valSet.Validators)))))},
-	})
-
-	// update total supply
-	bankGenesis := banktypes.NewGenesisState(banktypes.DefaultGenesisState().Params, balances, totalSupply, []banktypes.Metadata{}, []banktypes.SendEnabled{})
-
-	bankGenesis.Supply = nil
-	genesisState[banktypes.ModuleName] = app.AppCodec().MustMarshalJSON(bankGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 	wasmxGenesis := wasmxtypes.DefaultGenesisState()

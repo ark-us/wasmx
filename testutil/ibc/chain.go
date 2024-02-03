@@ -64,7 +64,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(wasmxapp.BondDenom, amount)),
+		Coins:   sdk.NewCoins(sdk.NewCoin(wasmxapp.BaseDenom, amount)),
 	}
 
 	app, _ := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainID, index, balance)

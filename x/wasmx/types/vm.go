@@ -9,6 +9,7 @@ import (
 	"cosmossdk.io/store/prefix"
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -94,9 +95,7 @@ type WasmxCosmosHandler interface {
 	ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error)
 	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
 	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
-	GetBalance(addr sdk.AccAddress) *big.Int
 	GetAccount(addr sdk.AccAddress) sdk.AccountI
-	SendCoin(addr sdk.AccAddress, value *big.Int) error
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetCode(contractAddress sdk.AccAddress) []byte
 	GetBlockHash(blockNumber uint64) Checksum
@@ -110,6 +109,8 @@ type WasmxCosmosHandler interface {
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 	WithNewAddress(addr sdk.AccAddress) WasmxCosmosHandler
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
+	JSONCodec() codec.JSONCodec
+	GetAlias(addr sdk.AccAddress) (sdk.AccAddress, bool)
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library
@@ -166,6 +167,7 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 
 var ROLE_STORAGE = "storage"
 var ROLE_STAKING = "staking"
+var ROLE_BANK = "bank"
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
@@ -196,13 +198,18 @@ var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 
 var STORAGE_CHAIN = "storage_chain"
 
-var STAKING_v001 = "staking_0.0.1"
-
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
 
 var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
 
 var CONSENSUS_AVA_SNOWMAN = "consensus_ava_snowman_0.0.1"
+
+var STAKING_v001 = "staking_0.0.1"
+
+var BANK_v001 = "bank_0.0.1"
+
+var ERC20_v001 = "erc20json"
+var DERC20_v001 = "derc20json"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

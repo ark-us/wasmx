@@ -192,7 +192,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(app.BondDenom, amount)),
+		Coins:   sdk.NewCoins(sdk.NewCoin(app.BondBaseDenom, amount)),
 	}
 
 	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainId, 0, balance)

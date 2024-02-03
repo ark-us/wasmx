@@ -16,7 +16,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	stakingmod "github.com/cosmos/cosmos-sdk/x/staking"
 
 	networktypes "mythos/v1/x/network/types"
 
@@ -58,8 +57,8 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 }
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
-func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesisState())
+func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
+	return cdc.MustMarshalJSON(types.DefaultGenesisState("myt", 18, "mythos"))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form
@@ -68,12 +67,13 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 	if err := cdc.UnmarshalJSON(bz, &genState); err != nil {
 		return fmt.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
 	}
-	return stakingmod.ValidateGenesis(&genState.Staking)
+	return genState.Staking.Validate()
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the module
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
+	types.RegisterQueryBankHandlerClient(context.Background(), mux, types.NewQueryBankClient(clientCtx))
+	types.RegisterQueryStakingHandlerClient(context.Background(), mux, types.NewQueryStakingClient(clientCtx))
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
@@ -113,9 +113,10 @@ func NewAppModule(
 
 // RegisterServices registers a gRPC query service to respond to the module-specific gRPC queries
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(&am.keeper))
-	querier := keeper.NewQuerier(&am.keeper)
-	types.RegisterQueryServer(cfg.QueryServer(), querier)
+	types.RegisterMsgBankServer(cfg.MsgServer(), keeper.NewMsgBankServerImpl(&am.keeper))
+	types.RegisterMsgStakingServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.keeper))
+	types.RegisterQueryBankServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.keeper))
+	types.RegisterQueryStakingServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.keeper))
 }
 
 // RegisterInvariants registers the invariants of the module. If an invariant deviates from its predicted value, the InvariantRegistry triggers appropriate logic (most often the chain will be halted)

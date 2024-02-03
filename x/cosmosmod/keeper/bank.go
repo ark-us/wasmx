@@ -1,0 +1,171 @@
+package keeper
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	networktypes "mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
+)
+
+// SendCoins transfers amt coins from a sending account to a receiving account.
+// An error is returned upon failure.
+func (k Keeper) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAddress, amt sdk.Coins) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("SendCoins not implemented")
+	return nil
+}
+
+// MintCoins creates new coins from thin air and adds it to the module account.
+// It will panic if the module account does not exist or is unauthorized.
+func (k Keeper) MintCoins(goCtx context.Context, moduleName string, amounts sdk.Coins) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("MintCoins not implemented")
+	return nil
+}
+
+// SendCoinsFromModuleToAccount transfers coins from a ModuleAccount to an AccAddress.
+// It will panic if the module account does not exist. An error is returned if
+// the recipient address is black-listed or if sending the tokens fails.
+func (k Keeper) SendCoinsFromModuleToAccount(
+	goCtx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins,
+) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("SendCoinsFromModuleToAccount not implemented")
+	return nil
+}
+
+// SendCoinsFromModuleToModule transfers coins from a ModuleAccount to another.
+// It will panic if either module account does not exist.
+func (k Keeper) SendCoinsFromModuleToModule(
+	goCtx context.Context, senderModule, recipientModule string, amt sdk.Coins,
+) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("SendCoinsFromModuleToModule not implemented")
+	return nil
+}
+
+// SendCoinsFromAccountToModule transfers coins from an AccAddress to a ModuleAccount.
+// It will panic if the module account does not exist.
+func (k Keeper) SendCoinsFromAccountToModule(
+	goCtx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins,
+) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("SendCoinsFromAccountToModule not implemented")
+	return nil
+}
+
+// BurnCoins burns coins deletes coins from the balance of the module account.
+// It will panic if the module account does not exist or is unauthorized.
+func (k Keeper) BurnCoins(goCtx context.Context, moduleName string, amounts sdk.Coins) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("BurnCoins not implemented")
+	return nil
+}
+
+// SetDenomMetaData sets the denominations metadata
+func (k Keeper) SetDenomMetaData(goCtx context.Context, denomMetaData banktypes.Metadata) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("SetDenomMetaData not implemented")
+}
+
+// HasDenomMetaData checks if the denomination metadata exists in store.
+func (k Keeper) HasDenomMetaData(goCtx context.Context, denom string) bool {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("HasDenomMetaData not implemented")
+	return true
+}
+
+// IsSendEnabledCoin returns the current SendEnabled status of the provided coin's denom
+func (k Keeper) IsSendEnabledCoin(goCtx context.Context, coin sdk.Coin) bool {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("IsSendEnabledCoin not implemented")
+	return true
+}
+
+// IsSendEnabledCoins checks the coins provided and returns an ErrSendDisabled
+// if any of the coins are not configured for sending. Returns nil if sending is
+// enabled for all provided coins.
+func (k Keeper) IsSendEnabledCoins(goCtx context.Context, coins ...sdk.Coin) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("IsSendEnabledCoins not implemented")
+	return nil
+}
+
+// LockedCoins returns all the coins that are not spendable (i.e. locked) for an
+// account by address. For standard accounts, the result will always be no coins.
+// For vesting accounts, LockedCoins is delegated to the concrete vesting account
+// type.
+func (k Keeper) LockedCoins(goCtx context.Context, addr sdk.AccAddress) sdk.Coins {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("LockedCoins not implemented")
+	return nil
+}
+
+// BlockedAddr checks if a given address is restricted from
+// receiving funds.
+func (k Keeper) BlockedAddr(addr sdk.AccAddress) bool {
+	fmt.Println("BlockedAddr not implemented")
+	// return k.blockedAddrs[addr.String()]
+	// TODO
+	return false
+}
+
+// SpendableCoins returns the total balances of spendable coins for an account
+// by address. If the account has no spendable coins, an empty Coins slice is
+// returned.
+func (k Keeper) SpendableCoins(goCtx context.Context, addr sdk.AccAddress) sdk.Coins {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("SpendableCoins not implemented")
+	return nil
+}
+
+// GetAllBalances returns all the account balances for the given account address.
+func (k Keeper) GetAllBalances(goCtx context.Context, addr sdk.AccAddress) sdk.Coins {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	msg := banktypes.NewQueryAllBalancesRequest(addr, nil, false)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return nil
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetAllBalances":%s}`, string(bankmsgbz)))
+	resp, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil
+	}
+	var contractResp wasmxtypes.ContractResponse
+	err = json.Unmarshal(resp.Data, &contractResp)
+	if err != nil {
+		return nil
+	}
+
+	var response banktypes.QueryAllBalancesResponse
+	err = k.cdc.UnmarshalJSON(contractResp.Data, &response)
+	if err != nil {
+		return nil
+	}
+
+	return response.Balances
+}
+
+// GetBalance returns the balance of a specific denomination for a given account
+// by address.
+func (k Keeper) GetBalance(goCtx context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Logger(ctx).Error("GetBalance not implemented")
+	return sdk.NewCoin(denom, math.NewInt(0))
+}
+
+// // GetSupply retrieves the Supply from store
+// func (k Keeper) GetSupply(goCtx context.Context, denom string) sdk.Coin {
+// 	return sdk.NewCoin(denom, math.NewInt(0))
+// }

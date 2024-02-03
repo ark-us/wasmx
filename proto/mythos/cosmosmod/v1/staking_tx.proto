@@ -10,9 +10,10 @@ import "cosmos/staking/v1beta1/tx.proto";
 option go_package = "mythos/v1/x/cosmosmod/types";
 option (gogoproto.goproto_getters_all) = false;
 
-// Msg defines the grpc server
-service Msg {
-    // staking
+// MsgStaking defines the grpc server for staking
+service MsgStaking {
+    option (cosmos.msg.v1.service) = true;
+
     // CreateValidator defines a method for creating a new validator.
     rpc CreateValidator(cosmos.staking.v1beta1.MsgCreateValidator) returns (cosmos.staking.v1beta1.MsgCreateValidatorResponse);
 

@@ -114,7 +114,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
 // validator configuration files for running a multi-validator testnet in a separate process
-func NewTestnetCmd(mbm module.BasicManager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
+func NewTestnetCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
 	testnetCmd := &cobra.Command{
 		Use:                        "testnet",
 		Short:                      "subcommands for starting or configuring local testnets",
@@ -130,7 +130,7 @@ func NewTestnetCmd(mbm module.BasicManager, genBalIterator banktypes.GenesisBala
 }
 
 // get cmd to initialize all files for tendermint testnet and application
-func testnetInitFilesCmd(mbm module.BasicManager, genBalIterator banktypes.GenesisBalancesIterator) *cobra.Command {
+func testnetInitFilesCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init-files",
 		Short: "Initialize config directories & files for a multi-validator testnet running locally via separate processes (e.g. Docker Compose or similar)",
@@ -249,7 +249,7 @@ func initTestnetFiles(
 	cmd *cobra.Command,
 	nodeConfig *tmconfig.Config,
 	mbm module.BasicManager,
-	genBalIterator banktypes.GenesisBalancesIterator,
+	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 ) error {
@@ -473,16 +473,10 @@ func initGenFiles(
 	authGenState.Accounts = accounts
 	appGenState[authtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&authGenState)
 
-	// set the balances in the genesis state
-	var bankGenState banktypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[banktypes.ModuleName], &bankGenState)
-
-	bankGenState.Balances = genBalances
-	appGenState[banktypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&bankGenState)
-
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
+	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = coinDenom
 	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
 
@@ -530,7 +524,7 @@ func initGenFiles(
 func collectGenFiles(
 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator banktypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool,
+	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator cosmosmodtypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool,
 ) error {
 	var appState json.RawMessage
 	genTime := tmtime.Now()

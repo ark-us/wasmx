@@ -165,6 +165,9 @@ func (m *Create2AccountInterpretedRequest) UnmarshalJSON(data []byte) error {
 }
 
 func CleanupAddress(addr []byte) []byte {
+	if len(addr) == 20 {
+		return addr
+	}
 	if IsEvmAddress(types.BytesToAddressCW(addr)) {
 		return addr[12:]
 	}

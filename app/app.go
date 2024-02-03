@@ -83,9 +83,6 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
@@ -284,7 +281,7 @@ type App struct {
 	// keepers
 	AccountKeeper         authkeeper.AccountKeeper
 	AuthzKeeper           authzkeeper.Keeper
-	BankKeeper            bankkeeper.Keeper
+	BankKeeper            *cosmosmodkeeper.Keeper
 	CapabilityKeeper      *capabilitykeeper.Keeper
 	StakingKeeper         *cosmosmodkeeper.Keeper
 	SlashingKeeper        slashingkeeper.Keeper
@@ -445,14 +442,14 @@ func New(
 		app.AccountKeeper,
 	)
 
-	app.BankKeeper = bankkeeper.NewBaseKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[banktypes.StoreKey]),
-		app.AccountKeeper,
-		app.BlockedModuleAccountAddrs(),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		logger,
-	)
+	// app.BankKeeper = bankkeeper.NewBaseKeeper(
+	// 	appCodec,
+	// 	runtime.NewKVStoreService(keys[banktypes.StoreKey]),
+	// 	app.AccountKeeper,
+	// 	app.BlockedModuleAccountAddrs(),
+	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	// 	logger,
+	// )
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
@@ -464,7 +461,7 @@ func New(
 		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
-		app.BankKeeper,
+		// app.BankKeeper,
 		// app.TransferKeeper,
 		// stakingKeeper,
 		distrkeeper.NewQuerier(app.DistrKeeper),
@@ -478,7 +475,7 @@ func New(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		app,
 	)
-	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper, app.AccountKeeper, app.BankKeeper)
+	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
 
 	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
@@ -503,6 +500,7 @@ func New(
 		appCodec,
 		keys[cosmosmodtypes.StoreKey],
 		app.GetSubspace(cosmosmodtypes.ModuleName),
+		app.AccountKeeper,
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
 		app.actionExecutor,
@@ -513,6 +511,7 @@ func New(
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
 	app.StakingKeeper = app.CosmosmodKeeper
+	app.BankKeeper = app.CosmosmodKeeper
 
 	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.StakingKeeper, app)
 
@@ -735,13 +734,11 @@ func New(
 		),
 		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
 		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
-		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName)),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, minttypes.DefaultInflationCalculationFn, app.GetSubspace(minttypes.ModuleName)),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName), app.interfaceRegistry),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
-		// staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
 		upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		params.NewAppModule(app.ParamsKeeper),
@@ -862,15 +859,15 @@ func New(
 		// sdk
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
-		banktypes.ModuleName,
-		distrtypes.ModuleName,
 
 		// mythos
 		wasmxmoduletypes.ModuleName,
 		networkmoduletypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 
-		stakingtypes.ModuleName,
+		// banktypes.ModuleName,
+		distrtypes.ModuleName,
+		// stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
 		minttypes.ModuleName,

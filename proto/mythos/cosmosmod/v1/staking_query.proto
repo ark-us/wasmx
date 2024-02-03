@@ -14,10 +14,8 @@ import "cosmos/query/v1/query.proto";
 option go_package = "mythos/v1/x/cosmosmod/types";
 option (gogoproto.goproto_getters_all) = false;
 
-// Query defines the gRPC querier service.
-service Query {
-    // staking
-
+// QueryStaking defines the gRPC querier service for staking
+service QueryStaking {
     // Validators queries all validators that match the given status.
     //
     // When called from another module, this query might consume a high amount of

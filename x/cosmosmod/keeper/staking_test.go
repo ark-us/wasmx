@@ -37,7 +37,7 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 	// tstaking.Commission = stakingtypes.NewCommissionRates(math.LegacyNewDecWithPrec(5, 1), math.LegacyNewDecWithPrec(5, 1), math.LegacyNewDec(0))
 	// tstaking.CreateValidator(valAddr1, valConsPk0, math.NewInt(100), true)
 
-	stakingServer := keeper.NewMsgServerImpl(appA.App.CosmosmodKeeper)
+	stakingServer := keeper.NewMsgStakingServerImpl(appA.App.CosmosmodKeeper)
 
 	createValMsg, err := stakingtypes.NewMsgCreateValidator(
 		valAddr1.String(),

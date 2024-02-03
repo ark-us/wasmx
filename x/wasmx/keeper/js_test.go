@@ -8,7 +8,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
@@ -202,9 +201,9 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	balance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: sender.Address.String(), Denom: appA.Denom})
+	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
 	s.Require().NoError(err)
-	s.Require().Equal(balance.GetBalance().Amount.BigInt().FillBytes(make([]byte, 32)), resp)
+	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
 	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)

@@ -140,7 +140,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain *ibcgotesting.TestChain) testu
 	appContext.Denom = app.BaseDenom
 
 	t := suite.T()
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().CosmosmodKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }
@@ -192,7 +192,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(app.BondDenom, amount)),
+		Coins:   sdk.NewCoins(sdk.NewCoin(app.BaseDenom, amount)),
 	}
 
 	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainId, 0, balance)

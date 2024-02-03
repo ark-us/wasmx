@@ -156,7 +156,6 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		sStoreKey,
 		paramsSubspace,
 		accountKeeper,
-		bankKeeper,
 		// transferKeeper,
 		// stakingKeeper,
 		distrkeeper.NewQuerier(distrKeeper),

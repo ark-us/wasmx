@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -134,7 +135,7 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 
 	// Send funds
 	if value.BitLen() > 0 {
-		err = ctx.CosmosHandler.SendCoin(addr, value)
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, addr, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(value))))
 	}
 	if err != nil {
 		success = int32(2)
@@ -321,8 +322,11 @@ func wasi_getBalance(context interface{}, callframe *wasmedge.CallingFrame, para
 		return nil, wasmedge.Result_Fail
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	balance := ctx.CosmosHandler.GetBalance(address)
-	balancebz := balance.FillBytes(make([]byte, 32))
+	balance, err := BankGetBalance(ctx, address, ctx.Env.Chain.Denom)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	balancebz := balance.Amount.BigInt().FillBytes(make([]byte, 32))
 	ptr, err := writeMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, balancebz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail

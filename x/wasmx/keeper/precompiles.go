@@ -65,6 +65,11 @@ func (k *Keeper) ActivateSystemContract(
 			return sdkerr.Wrap(err, "pin system contract: "+contract.Label)
 		}
 	}
+	// no address, we just need to create a code id
+	if contract.Address == "" {
+		k.Logger(ctx).Info("created system contract", "label", contract.Label, "code_id", codeID)
+		return nil
+	}
 
 	contractAddress := types.AccAddressFromHex(contract.Address)
 	if contract.Native {
@@ -94,6 +99,11 @@ func (k *Keeper) ActivateSystemContract(
 
 // SetSystemContract
 func (k *Keeper) SetSystemContract(ctx sdk.Context, contract types.SystemContract) {
+	// for contracts where we just need the code id and are not deployed
+	// TODO better, because these contracts will not be exported
+	if contract.Address == "" {
+		return
+	}
 	addr := types.AccAddressFromHex(contract.Address)
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.KeyPrefixSystemContract)
 	bz := k.cdc.MustMarshal(&contract)

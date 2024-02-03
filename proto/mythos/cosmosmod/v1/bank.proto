@@ -1,0 +1,13 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/any.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/msg/v1/msg.proto";
+import "amino/amino.proto";
+import "cosmos/bank/v1beta1/tx.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+option (gogoproto.goproto_getters_all) = false;
+

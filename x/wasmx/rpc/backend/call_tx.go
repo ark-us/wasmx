@@ -49,7 +49,7 @@ func (b *Backend) DoCall(
 
 	funds := sdk.Coins{}
 	if args.Value != nil {
-		funds = sdk.NewCoins(sdk.NewCoin(app.BondDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
+		funds = sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
 	}
 
 	req := wasmxtypes.QuerySmartContractCallRequest{
@@ -125,7 +125,7 @@ func (b *Backend) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 	}
 
 	// TODO denom from smart contract
-	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BondDenom)
+	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BaseDenom)
 	if err != nil {
 		b.logger.Error("failed to build cosmos tx", "error", err.Error())
 		return common.Hash{}, err
@@ -203,7 +203,7 @@ func (b *Backend) simulateTransaction(ctx context.Context, args rpctypes.Transac
 	ethereumTx.Sender = wasmxtypes.AccAddressFromEvm(*args.From).String()
 
 	// TODO denom from smart contract
-	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BondDenom)
+	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BaseDenom)
 	if err != nil {
 		b.logger.Error("failed to build cosmos tx", "error", err.Error())
 		return hexutil.Uint64(0), err
