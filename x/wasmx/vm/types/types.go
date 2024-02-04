@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"mythos/v1/x/wasmx/types"
@@ -41,11 +42,11 @@ type CallRequestRaw struct {
 }
 
 type SimpleCallRequestRaw struct {
-	To       string   `json:"to"`
-	Value    *big.Int `json:"value"`
-	GasLimit *big.Int `json:"gasLimit"`
-	Calldata []byte   `json:"calldata"`
-	IsQuery  bool     `json:"isQuery"`
+	To       string       `json:"to"`
+	Value    *sdkmath.Int `json:"value"`
+	GasLimit *big.Int     `json:"gasLimit"`
+	Calldata []byte       `json:"calldata"`
+	IsQuery  bool         `json:"isQuery"`
 }
 
 type CallResponse struct {

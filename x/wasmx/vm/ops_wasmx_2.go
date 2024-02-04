@@ -190,8 +190,8 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	var returnData []byte
 
 	// Send funds
-	if req.Value.BitLen() > 0 {
-		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
+	if req.Value.BigInt().BitLen() > 0 {
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value.BigInt()))))
 	}
 	if err != nil {
 		success = int32(2)
@@ -208,7 +208,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 			req := vmtypes.CallRequest{
 				To:       to,
 				From:     ctx.Env.Contract.Address,
-				Value:    req.Value,
+				Value:    req.Value.BigInt(),
 				GasLimit: gasLimit,
 				Calldata: req.Calldata,
 				Bytecode: contractContext.ContractInfo.Bytecode,

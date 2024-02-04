@@ -279,32 +279,18 @@ func initTestnetFiles(
 	)
 
 	var networkIps = make([]string, args.numValidators)
-	for i := 0; i < args.numValidators; i++ {
-		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig)
-		if err != nil {
-			_ = os.RemoveAll(args.outputDir)
-			return err
-		}
-		nodeIPs[i], err = getIP(i, args.startingIPAddress)
-		if err != nil {
-			return err
-		}
-		addr := sdk.AccAddress(valPubKeys[i].Bytes()).String()
-		host := fmt.Sprintf("%s@%s:%s", addr, nodeIPs[i], "8090")
-		if args.sameMachine {
-			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
-			host = fmt.Sprintf("%s@%s", addr, ipaddr)
-		}
-		networkIps[i] = host
-	}
-	networkIpsStr := strings.Join(networkIps, ",")
-
+	valaddr := make([]sdk.AccAddress, args.numValidators)
+	nodeDirNames := make([]string, args.numValidators)
+	nodeDirs := make([]string, args.numValidators)
+	kbs := make([]keyring.Keyring, args.numValidators)
 	inBuf := bufio.NewReader(cmd.InOrStdin())
 	// generate private keys, node IDs, and initial transactions
 	for i := 0; i < args.numValidators; i++ {
 		nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, i)
 		nodeDir := filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
-		gentxsDir := filepath.Join(args.outputDir, "gentxs")
+
+		nodeDirNames[i] = nodeDirName
+		nodeDirs[i] = nodeDir
 
 		nodeConfig.SetRoot(nodeDir)
 		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
@@ -324,16 +310,23 @@ func initTestnetFiles(
 
 		nodeConfig.Moniker = nodeDirName
 
-		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
-		if args.sameMachine {
-			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(p2pListenAddressMulti+i))
+		nodeIPs[i], err = getIP(i, args.startingIPAddress)
+		if err != nil {
+			return err
 		}
+		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig)
+		if err != nil {
+			_ = os.RemoveAll(args.outputDir)
+			return err
+		}
+
 		genFiles = append(genFiles, nodeConfig.GenesisFile())
 
 		kb, err := keyring.New(sdk.KeyringServiceName(), args.keyringBackend, nodeDir, inBuf, clientCtx.Codec)
 		if err != nil {
 			return err
 		}
+		kbs[i] = kb
 
 		keyringAlgos, _ := kb.SupportedAlgorithms()
 		algo, err := keyring.NewSigningAlgoFromString(args.algo, keyringAlgos)
@@ -357,6 +350,27 @@ func initTestnetFiles(
 		// save private key seed words
 		if err := writeFile(fmt.Sprintf("%v.json", "key_seed"), nodeDir, cliPrint); err != nil {
 			return err
+		}
+
+		host := fmt.Sprintf("%s@%s:%s", addr.String(), nodeIPs[i], "8090")
+		if args.sameMachine {
+			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+			host = fmt.Sprintf("%s@%s", addr.String(), ipaddr)
+		}
+		valaddr[i] = addr
+		networkIps[i] = host
+	}
+	networkIpsStr := strings.Join(networkIps, ",")
+
+	for i := 0; i < args.numValidators; i++ {
+		gentxsDir := filepath.Join(args.outputDir, "gentxs")
+		nodeDirName := nodeDirNames[i]
+		nodeDir := nodeDirs[i]
+		addr := valaddr[i]
+		kb := kbs[i]
+		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
+		if args.sameMachine {
+			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(p2pListenAddressMulti+i))
 		}
 
 		accStakingTokens := sdk.TokensFromConsensusPower(5000, app.PowerReduction)
@@ -434,7 +448,7 @@ func initTestnetFiles(
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
 	}
 
-	if err := initGenFiles(clientCtx, mbm, args.chainID, app.BaseDenom, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
+	if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
 		return err
 	}
 
@@ -453,8 +467,7 @@ func initTestnetFiles(
 func initGenFiles(
 	clientCtx client.Context,
 	mbm module.BasicManager,
-	chainID,
-	coinDenom string,
+	chainID string,
 	genAccounts []authtypes.GenesisAccount,
 	genBalances []banktypes.Balance,
 	genFiles []string,
@@ -477,13 +490,13 @@ func initGenFiles(
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
 	cosmosmodGenState.Bank.Balances = genBalances
-	cosmosmodGenState.Staking.Params.BondDenom = coinDenom
+	cosmosmodGenState.Staking.Params.BondDenom = app.BondBaseDenom
 	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
 
 	var govGenState govv1.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[govtypes.ModuleName], &govGenState)
 
-	govGenState.Params.MinDeposit[0].Denom = coinDenom
+	govGenState.Params.MinDeposit[0].Denom = app.BaseDenom
 	// TODO make this bigger once we have our own governance contract
 	votingP := time.Minute * 2
 	govGenState.Params.VotingPeriod = &votingP
@@ -492,7 +505,7 @@ func initGenFiles(
 	var crisisGenState crisistypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState)
 
-	crisisGenState.ConstantFee.Denom = coinDenom
+	crisisGenState.ConstantFee.Denom = app.BaseDenom
 	appGenState[crisistypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&crisisGenState)
 
 	// var wasmxGenState wasmxtypes.GenesisState
