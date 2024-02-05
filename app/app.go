@@ -865,9 +865,7 @@ func New(
 		networkmoduletypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 
-		// banktypes.ModuleName,
 		distrtypes.ModuleName,
-		// stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
 		govtypes.ModuleName,
 		minttypes.ModuleName,
