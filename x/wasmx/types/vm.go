@@ -93,6 +93,7 @@ type WasmxCosmosHandler interface {
 	ContractStore(ctx sdk.Context, storageType ContractStorageType, prefixStoreKey []byte) prefix.Store
 	SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error)
 	ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error)
+	ExecuteCosmosMsgAnyBz(msgbz []byte) ([]sdk.Event, []byte, error)
 	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
 	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
 	GetAccount(addr sdk.AccAddress) sdk.AccountI
@@ -168,6 +169,8 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 var ROLE_STORAGE = "storage"
 var ROLE_STAKING = "staking"
 var ROLE_BANK = "bank"
+var ROLE_HOOKS = "hooks"
+var ROLE_GOVERNANCE = "gov"
 var ROLE_INTERPRETER = "interpreter"
 var ROLE_PRECOMPILE = "precompile"
 var ROLE_ALIAS = "alias"
@@ -210,6 +213,9 @@ var BANK_v001 = "bank_0.0.1"
 
 var ERC20_v001 = "erc20json"
 var DERC20_v001 = "derc20json"
+
+var HOOKS_v001 = "hooks_0.0.1"
+var GOV_v001 = "gov_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

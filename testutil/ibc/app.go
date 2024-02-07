@@ -20,7 +20,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
@@ -91,14 +90,13 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	bankGenesis.Supply = totalSupply
 	bankGenesis.Balances = balances
 
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis)
-	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
-
 	govGenesis := govtypes1.DefaultGenesisState()
 	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BaseDenom, sdkmath.NewInt(1_000_000_000)))
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = &votingPeriod
-	genesisState[govtypes.ModuleName] = app.AppCodec().MustMarshalJSON(govGenesis)
+
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis)
+	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 	wasmxGenesis := wasmxtypes.DefaultGenesisState()

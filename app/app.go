@@ -84,7 +84,6 @@ import (
 
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
@@ -110,15 +109,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/cosmos/cosmos-sdk/x/gov"
 
-	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
-
-	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
-
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"github.com/cosmos/cosmos-sdk/x/group"
 
 	groupkeeper "github.com/cosmos/cosmos-sdk/x/group/keeper"
@@ -131,13 +122,10 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
 
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
-
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	paramproposal "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
@@ -199,15 +187,11 @@ import (
 
 	wasmxmodule "mythos/v1/x/wasmx"
 
-	wasmxclient "mythos/v1/x/wasmx/client"
-
 	wasmxmodulekeeper "mythos/v1/x/wasmx/keeper"
 
 	wasmxmoduletypes "mythos/v1/x/wasmx/types"
 
 	websrvmodule "mythos/v1/x/websrv"
-
-	websrvclient "mythos/v1/x/websrv/client"
 
 	websrvmodulekeeper "mythos/v1/x/websrv/keeper"
 
@@ -227,16 +211,17 @@ var (
 	DefaultNodeHome string
 
 	// module account permissions
+	// TODO remove/replace this
 	maccPerms = map[string][]string{
-		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
-		icatypes.ModuleName:            nil,
-		minttypes.ModuleName:           {authtypes.Minter},
-		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-		govtypes.ModuleName:            {authtypes.Burner},
-		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
-		wasmxmoduletypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+		authtypes.FeeCollectorName:       nil,
+		distrtypes.ModuleName:            nil,
+		icatypes.ModuleName:              nil,
+		minttypes.ModuleName:             {authtypes.Minter},
+		stakingtypes.BondedPoolName:      {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName:   {authtypes.Burner, authtypes.Staking},
+		wasmxmoduletypes.ROLE_GOVERNANCE: {authtypes.Burner},
+		ibctransfertypes.ModuleName:      {authtypes.Minter, authtypes.Burner},
+		wasmxmoduletypes.ModuleName:      {authtypes.Minter, authtypes.Burner},
 		// this line is used by starport scaffolding # stargate/app/maccPerms
 	}
 )
@@ -279,15 +264,16 @@ type App struct {
 	clessKeys map[string]*storetypes.ConsensuslessStoreKey
 
 	// keepers
-	AccountKeeper         authkeeper.AccountKeeper
-	AuthzKeeper           authzkeeper.Keeper
-	BankKeeper            *cosmosmodkeeper.Keeper
-	CapabilityKeeper      *capabilitykeeper.Keeper
-	StakingKeeper         *cosmosmodkeeper.Keeper
-	SlashingKeeper        slashingkeeper.Keeper
-	MintKeeper            mintkeeper.Keeper
-	DistrKeeper           distrkeeper.Keeper
-	GovKeeper             *govkeeper.Keeper
+	AccountKeeper    authkeeper.AccountKeeper
+	AuthzKeeper      authzkeeper.Keeper
+	CapabilityKeeper *capabilitykeeper.Keeper
+	BankKeeper       *cosmosmodkeeper.Keeper
+	StakingKeeper    *cosmosmodkeeper.Keeper
+	GovKeeper        *cosmosmodkeeper.Keeper
+	SlashingKeeper   slashingkeeper.Keeper
+	MintKeeper       mintkeeper.Keeper
+	DistrKeeper      distrkeeper.Keeper
+
 	CrisisKeeper          *crisiskeeper.Keeper
 	UpgradeKeeper         *upgradekeeper.Keeper
 	ParamsKeeper          paramskeeper.Keeper
@@ -359,8 +345,8 @@ func New(
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 
 	keys := storetypes.NewKVStoreKeys(
-		authtypes.StoreKey, authz.ModuleName, banktypes.StoreKey, stakingtypes.StoreKey, crisistypes.StoreKey,
-		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey, govtypes.StoreKey,
+		authtypes.StoreKey, authz.ModuleName, crisistypes.StoreKey,
+		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		paramstypes.StoreKey, consensusparamtypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, circuittypes.StoreKey,
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
 		icacontrollertypes.StoreKey,
@@ -405,7 +391,7 @@ func New(
 	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[consensusparamtypes.StoreKey]),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		runtime.EventService{},
 	)
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
@@ -432,7 +418,7 @@ func New(
 		maccPerms,
 		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
 		Bech32PrefixAccAddr,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(
@@ -441,15 +427,6 @@ func New(
 		app.MsgServiceRouter(),
 		app.AccountKeeper,
 	)
-
-	// app.BankKeeper = bankkeeper.NewBaseKeeper(
-	// 	appCodec,
-	// 	runtime.NewKVStoreService(keys[banktypes.StoreKey]),
-	// 	app.AccountKeeper,
-	// 	app.BlockedModuleAccountAddrs(),
-	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	// 	logger,
-	// )
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
@@ -461,6 +438,7 @@ func New(
 		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		app.AccountKeeper,
+		// TODO?
 		// app.BankKeeper,
 		// app.TransferKeeper,
 		// stakingKeeper,
@@ -472,7 +450,7 @@ func New(
 		app.interfaceRegistry,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app,
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
@@ -490,7 +468,7 @@ func New(
 		&app.WasmxKeeper,
 		app.actionExecutor,
 		// TODO remove authority?
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
@@ -505,13 +483,14 @@ func New(
 		app.NetworkKeeper,
 		app.actionExecutor,
 		// TODO what authority?
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
 		authcodec.NewBech32Codec(Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
 	app.StakingKeeper = app.CosmosmodKeeper
 	app.BankKeeper = app.CosmosmodKeeper
+	app.GovKeeper = app.CosmosmodKeeper
 
 	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.StakingKeeper, app)
 
@@ -522,7 +501,7 @@ func New(
 		app.AccountKeeper,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	app.DistrKeeper = distrkeeper.NewKeeper(
@@ -532,7 +511,7 @@ func New(
 		app.BankKeeper,
 		app.StakingKeeper,
 		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
@@ -540,7 +519,7 @@ func New(
 		cdc,
 		runtime.NewKVStoreService(keys[slashingtypes.StoreKey]),
 		app.StakingKeeper,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	app.CrisisKeeper = crisiskeeper.NewKeeper(
@@ -549,11 +528,11 @@ func New(
 		invCheckPeriod,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.AccountKeeper.AddressCodec(),
 	)
 
-	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuittypes.StoreKey]), authtypes.NewModuleAddress(govtypes.ModuleName).String(), app.AccountKeeper.AddressCodec())
+	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuittypes.StoreKey]), authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(), app.AccountKeeper.AddressCodec())
 	app.BaseApp.SetCircuitBreaker(&app.CircuitKeeper)
 
 	groupConfig := group.DefaultConfig()
@@ -581,7 +560,7 @@ func New(
 		appCodec,
 		homePath,
 		app.BaseApp,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	// ... other modules keepers
@@ -594,7 +573,7 @@ func New(
 		app.StakingKeeper,
 		app.UpgradeKeeper,
 		scopedIBCKeeper,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
 	// Create Transfer Keepers
@@ -608,7 +587,7 @@ func New(
 		app.AccountKeeper,
 		app.BankKeeper,
 		scopedTransferKeeper,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 	transferModule := transfer.NewAppModule(app.TransferKeeper)
 	transferIBCModule := transfer.NewIBCModule(app.TransferKeeper)
@@ -622,7 +601,7 @@ func New(
 		app.AccountKeeper,
 		scopedICAHostKeeper,
 		app.MsgServiceRouter(),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 	app.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
 		appCodec, keys[icacontrollertypes.StoreKey],
@@ -632,7 +611,7 @@ func New(
 		app.IBCKeeper.PortKeeper,
 		scopedICAControllerKeeper,
 		app.MsgServiceRouter(),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 	icaModule := ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
@@ -649,31 +628,6 @@ func New(
 	// If evidence needs to be handled for the app, set routes in router here and seal
 	app.EvidenceKeeper = *evidenceKeeper
 
-	// Register the proposal types
-	// Deprecated: Avoid adding new handlers, instead use the new proposal flow
-	// by granting the governance module the right to execute the message.
-	// See: https://docs.cosmos.network/main/modules/gov#proposal-messages
-	govRouter := govv1beta1.NewRouter()
-	govRouter.
-		AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
-		AddRoute(paramproposal.RouterKey, params.NewParamChangeProposalHandler(app.ParamsKeeper)).
-		AddRoute(websrvmoduletypes.RouterKey, websrvmodule.NewWebsrvProposalHandler(&app.WebsrvKeeper)).
-		AddRoute(wasmxmoduletypes.RouterKey, wasmxmodule.NewWasmxProposalHandler(&app.WasmxKeeper))
-	govConfig := govtypes.DefaultConfig()
-	app.GovKeeper = govkeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[govtypes.StoreKey]),
-		app.AccountKeeper,
-		app.BankKeeper,
-		app.StakingKeeper,
-		app.DistrKeeper,
-		app.MsgServiceRouter(),
-		govConfig,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
-	// Set legacy router for backwards compatibility with gov v1beta1
-	app.GovKeeper.SetLegacyRouter(govRouter)
-
 	app.WebsrvKeeper = *websrvmodulekeeper.NewKeeper(
 		appCodec,
 		keys[websrvmoduletypes.StoreKey],
@@ -681,7 +635,7 @@ func New(
 		app.GetSubspace(websrvmoduletypes.ModuleName),
 		&app.WasmxKeeper,
 		app.Query,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 
@@ -712,11 +666,12 @@ func New(
 	// 	),
 	// )
 
-	app.GovKeeper.SetHooks(
-		govtypes.NewMultiGovHooks(
-		// insert governance hooks receivers here
-		),
-	)
+	// TODO governance hooks? or we just read block events
+	// app.GovKeeper.SetHooks(
+	// 	govtypes.NewMultiGovHooks(
+	// 	// insert governance hooks receivers here
+	// 	),
+	// )
 
 	/**** Module Options ****/
 
@@ -735,7 +690,6 @@ func New(
 		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
 		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
-		gov.NewAppModule(appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, minttypes.DefaultInflationCalculationFn, app.GetSubspace(minttypes.ModuleName)),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName), app.interfaceRegistry),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
@@ -772,15 +726,16 @@ func New(
 		app.mm,
 		map[string]module.AppModuleBasic{
 			genutiltypes.ModuleName: genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
-			govtypes.ModuleName: gov.NewAppModuleBasic(
-				[]govclient.ProposalHandler{
-					paramsclient.ProposalHandler,
-					websrvclient.RegisterRouteProposalHandler,
-					websrvclient.DeregisterRouteProposalHandler,
-					wasmxclient.RegisterRoleProposalHandler,
-					wasmxclient.DeregisterRoleProposalHandler,
-				},
-			),
+			// TODO remove
+			// wasmxmoduletypes.ROLE_GOVERNANCE: gov.NewAppModuleBasic(
+			// 	[]govclient.ProposalHandler{
+			// 		paramsclient.ProposalHandler,
+			// 		websrvclient.RegisterRouteProposalHandler,
+			// 		websrvclient.DeregisterRouteProposalHandler,
+			// 		wasmxclient.RegisterRoleProposalHandler,
+			// 		wasmxclient.DeregisterRoleProposalHandler,
+			// 	},
+			// ),
 		})
 	// TODO - do we need this?
 	// app.BasicModuleManager.RegisterLegacyAminoCodec(cdc)
@@ -801,10 +756,7 @@ func New(
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
-		stakingtypes.ModuleName,
 		authtypes.ModuleName,
-		banktypes.ModuleName,
-		govtypes.ModuleName,
 		crisistypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		ibcexported.ModuleName,
@@ -823,14 +775,11 @@ func New(
 
 	app.mm.SetOrderEndBlockers(
 		crisistypes.ModuleName,
-		govtypes.ModuleName,
-		stakingtypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		ibcexported.ModuleName,
 		icatypes.ModuleName,
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
-		banktypes.ModuleName,
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		minttypes.ModuleName,
@@ -867,7 +816,6 @@ func New(
 
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
-		govtypes.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		genutiltypes.ModuleName,
@@ -1071,7 +1019,7 @@ func (app *App) BlockedModuleAccountAddrs() map[string]bool {
 	modAccAddrs := app.ModuleAccountAddrs()
 
 	// allow the following addresses to receive funds
-	delete(modAccAddrs, authtypes.NewModuleAddress(govtypes.ModuleName).String())
+	delete(modAccAddrs, authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String())
 
 	return modAccAddrs
 }
@@ -1246,12 +1194,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
 	paramsKeeper.Subspace(authtypes.ModuleName)
-	paramsKeeper.Subspace(banktypes.ModuleName)
-	paramsKeeper.Subspace(stakingtypes.ModuleName)
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(govtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)

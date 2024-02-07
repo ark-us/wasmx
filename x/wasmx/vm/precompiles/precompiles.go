@@ -82,6 +82,12 @@ var (
 	//go:embed 33.derc20json_0.0.1.wasm
 	derc20json_contract []byte
 
+	//go:embed 34.hooks_0.0.1.wasm
+	hooks_contract []byte
+
+	//go:embed 35.gov_0.0.1.wasm
+	gov_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -147,6 +153,10 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = erc20json_contract
 	case types.DERC20_v001:
 		wasmbin = derc20json_contract
+	case types.HOOKS_v001:
+		wasmbin = hooks_contract
+	case types.GOV_v001:
+		wasmbin = gov_contract
 	}
 	return wasmbin
 }

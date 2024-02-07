@@ -293,6 +293,37 @@ func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFram
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	// TODO events? add to context?
+	_, _, err = ctx.CosmosHandler.ExecuteCosmosMsgAnyBz(reqbz)
+	errmsg := ""
+	success := 0
+	if err != nil {
+		errmsg = err.Error()
+		success = 1
+	}
+	response := vmtypes.CallResponse{
+		Success: uint8(success),
+		Data:    []byte(errmsg),
+	}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := allocateWriteMem(ctx, callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
@@ -818,6 +849,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
 
 	env.AddFunction("getAddressByRole", wasmedge.NewFunction(functype_i32_i32, wasmxGetAddressByRole, context, 0))
+
+	env.AddFunction("executeCosmosMsg", wasmedge.NewFunction(functype_i32_i32, wasmxExecuteCosmosMsg, context, 0))
 
 	// TODO move externalCall, grpcRequest, startTimeout to only system API
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))

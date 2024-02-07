@@ -33,6 +33,13 @@ func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]b
 func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error) {
 	return h.Keeper.ExecuteCosmosMsgAny(h.Ctx, any, h.ContractAddress)
 }
+func (h *WasmxCosmosHandler) ExecuteCosmosMsgAnyBz(msgbz []byte) ([]sdk.Event, []byte, error) {
+	any, err := h.Keeper.AnyFromBz(msgbz)
+	if err != nil {
+		return nil, nil, err
+	}
+	return h.Keeper.ExecuteCosmosMsgAny(h.Ctx, &any, h.ContractAddress)
+}
 func (h *WasmxCosmosHandler) ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error) {
 	return h.Keeper.ExecuteCosmosMsg(h.Ctx, msg, h.ContractAddress)
 }

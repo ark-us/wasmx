@@ -21,6 +21,7 @@ import (
 // InitGenesis initializes the module's state from a provided genesis state.
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) []abci.ValidatorUpdate {
 	// initialize bank
+	k.Logger(ctx).Info("initializing bank genesis")
 	bankGenesis := genState.Bank
 	bankmsgjson, err := k.JSONCodec().MarshalJSON(&bankGenesis)
 	if err != nil {
@@ -35,8 +36,28 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	if err != nil {
 		panic(err)
 	}
+	k.Logger(ctx).Info("initialized bank genesis")
+
+	// initialize gov
+	k.Logger(ctx).Info("initializing gov genesis")
+	govGenesis := genState.Gov
+	govmsgjson, err := k.JSONCodec().MarshalJSON(&govGenesis)
+	if err != nil {
+		panic(err)
+	}
+	govmsgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(govmsgjson)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_GOVERNANCE,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      govmsgbz,
+	})
+	if err != nil {
+		panic(err)
+	}
+	k.Logger(ctx).Info("initialized gov genesis")
 
 	// initialize staking
+	k.Logger(ctx).Info("initializing staking genesis")
 	stakingGenesis := genState.Staking
 	msgjson, err := k.JSONCodec().MarshalJSON(&stakingGenesis)
 	if err != nil {
@@ -57,6 +78,7 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	if err != nil {
 		panic(err)
 	}
+	k.Logger(ctx).Info("initialized staking genesis")
 	updates := make([]abci.ValidatorUpdate, len(response.Updates))
 	for i, upd := range response.Updates {
 		var pkI cryptotypes.PubKey

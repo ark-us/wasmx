@@ -41,6 +41,8 @@ var ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY = "0x000000000000000000000000000000000000
 var ADDR_CONSENSUS_AVA_SNOWMAN = "0x000000000000000000000000000000000000002f"
 var ADDR_STAKING = "0x0000000000000000000000000000000000000030"
 var ADDR_BANK = "0x0000000000000000000000000000000000000031"
+var ADDR_HOOKS = "0x0000000000000000000000000000000000000034"
+var ADDR_GOV = "0x0000000000000000000000000000000000000035"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -281,6 +283,24 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       DERC20_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_HOOKS,
+			Label:       HOOKS_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_HOOKS,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_GOV,
+			Label:       GOV_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_GOVERNANCE,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

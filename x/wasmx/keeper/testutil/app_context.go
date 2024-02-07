@@ -550,9 +550,9 @@ func (s AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1
 
 	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
 	s.S.Require().NoError(err)
-	proposal, err := s.App.GovKeeper.Proposals.Get(s.Context(), proposalId)
+	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
-	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Status)
+	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
 
 	s.S.Commit()
 	return resp
@@ -564,9 +564,9 @@ func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, conte
 
 	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
 	s.S.Require().NoError(err)
-	proposal, err := s.App.GovKeeper.Proposals.Get(s.Context(), proposalId)
+	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
-	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Status)
+	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
 
 	// msgs, err := s.ParseProposal(proposal)
 	// s.S.Require().NoError(err)
@@ -583,16 +583,16 @@ func (s AppContext) PassGovProposal(valAccount, sender simulation.Account, conte
 	s.S.Require().True(resp.IsOK(), resp.GetEvents())
 	s.S.Commit()
 
-	votingParams, err := s.App.GovKeeper.Params.Get(s.Context())
+	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
 	s.S.Require().NoError(err)
-	voteEnd := *votingParams.VotingPeriod + time.Hour
+	voteEnd := *params.Params.VotingPeriod + time.Hour
 	s.S.CommitNBlocks(s.Chain, uint64(voteEnd.Seconds()/5))
 	s.S.Commit()
 
 	// check proposal passed
-	proposal, err = s.App.GovKeeper.Proposals.Get(s.Context(), proposalId)
+	proposal, err = s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
-	s.S.Require().Equal(govtypes1.StatusPassed, proposal.Status, "gov proposal does not have status passed")
+	s.S.Require().Equal(govtypes1.StatusPassed, proposal.Proposal.Status, "gov proposal does not have status passed")
 }
 
 func (s AppContext) ParseProposal(proposal govtypes1.Proposal) ([]sdk.Msg, error) {

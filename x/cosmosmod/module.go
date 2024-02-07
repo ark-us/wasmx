@@ -74,6 +74,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	types.RegisterQueryBankHandlerClient(context.Background(), mux, types.NewQueryBankClient(clientCtx))
 	types.RegisterQueryStakingHandlerClient(context.Background(), mux, types.NewQueryStakingClient(clientCtx))
+	types.RegisterQueryGovHandlerClient(context.Background(), mux, types.NewQueryGovClient(clientCtx))
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
@@ -115,8 +116,10 @@ func NewAppModule(
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgBankServer(cfg.MsgServer(), keeper.NewMsgBankServerImpl(&am.keeper))
 	types.RegisterMsgStakingServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.keeper))
+	types.RegisterMsgGovServer(cfg.MsgServer(), keeper.NewMsgGovServerImpl(&am.keeper))
 	types.RegisterQueryBankServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.keeper))
 	types.RegisterQueryStakingServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.keeper))
+	types.RegisterQueryGovServer(cfg.QueryServer(), keeper.NewQuerierGov(&am.keeper))
 }
 
 // RegisterInvariants registers the invariants of the module. If an invariant deviates from its predicted value, the InvariantRegistry triggers appropriate logic (most often the chain will be halted)
