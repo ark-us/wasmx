@@ -211,7 +211,7 @@ var (
 	DefaultNodeHome string
 
 	// module account permissions
-	// TODO remove/replace this
+	// TODO remove/replace this ?
 	maccPerms = map[string][]string{
 		authtypes.FeeCollectorName:       nil,
 		distrtypes.ModuleName:            nil,
@@ -803,7 +803,6 @@ func New(
 	// NOTE: Capability module must occur first so that it can initialize any capabilities
 	// so that other modules that want to create or claim capabilities afterwards in InitChain
 	// can do so safely.
-	// NOTE: wasmx module must be at the end, because it calls other modules
 	genesisModuleOrder := []string{
 		// sdk
 		capabilitytypes.ModuleName,

@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/any.proto";
 import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
+import "cosmos/base/v1beta1/coin.proto";
 import "amino/amino.proto";
 import "cosmos/staking/v1beta1/tx.proto";
 
@@ -20,4 +21,12 @@ message InitGenesisResponse {
 message ValidatorUpdate {
     google.protobuf.Any pub_key = 1 [(cosmos_proto.accepts_interface) = "cosmos.crypto.PubKey"];
     int64 power   = 2;
+}
+
+// DelegationResponse is equivalent to Delegation except that it contains a
+// balance in addition to shares which is more suitable for client responses.
+message QueryTotalSupplyResponse {
+    option (gogoproto.equal) = false;
+
+    cosmos.base.v1beta1.Coin supply = 2 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
 }

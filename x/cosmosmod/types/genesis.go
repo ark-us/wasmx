@@ -89,8 +89,8 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 				URIHash: "",
 			},
 			CodeId:  uint64(erc20jsonCodeId),
-			Admins:  []string{"bank", "governance"},
-			Minters: []string{"bank", "governance"},
+			Admins:  []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_GOVERNANCE},
+			Minters: []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_GOVERNANCE},
 		},
 		{
 			Metadata: banktypes.Metadata{
@@ -115,8 +115,8 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 				URIHash: "",
 			},
 			CodeId:  uint64(derc20jsonCodeId),
-			Admins:  []string{"staking", "bank"},
-			Minters: []string{"staking", "bank"},
+			Admins:  []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			Minters: []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
 		},
 	}
 }

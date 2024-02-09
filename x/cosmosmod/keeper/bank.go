@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
@@ -17,7 +16,46 @@ import (
 // An error is returned upon failure.
 func (k Keeper) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAddress, amt sdk.Coins) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SendCoins not implemented")
+	msg := banktypes.NewMsgSend(fromAddr, toAddr, amt)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return err
+	}
+	// TODO replace account keeper
+	// Create account if recipient does not exist.
+	//
+	// NOTE: This should ultimately be removed in favor a more flexible approach
+	// such as delegated fee messages.
+	accExists := k.ak.HasAccount(ctx, toAddr)
+	if !accExists {
+		defer telemetry.IncrCounter(1, "new", "account")
+		k.ak.SetAccount(ctx, k.ak.NewAccountWithAddress(ctx, toAddr))
+	}
+
+	// bech32 encoding is expensive! Only do it once for fromAddr
+	fromAddrString := fromAddr.String()
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeTransfer,
+			sdk.NewAttribute(types.AttributeKeyRecipient, toAddr.String()),
+			sdk.NewAttribute(types.AttributeKeySender, fromAddrString),
+			sdk.NewAttribute(sdk.AttributeKeyAmount, amt.String()),
+		),
+		sdk.NewEvent(
+			sdk.EventTypeMessage,
+			sdk.NewAttribute(types.AttributeKeySender, fromAddr.String()),
+		),
+	})
 	return nil
 }
 
@@ -25,7 +63,24 @@ func (k Keeper) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAddress
 // It will panic if the module account does not exist or is unauthorized.
 func (k Keeper) MintCoins(goCtx context.Context, moduleName string, amounts sdk.Coins) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("MintCoins not implemented")
+	k.Logger(ctx).Debug("MintCoins", moduleName, amounts)
+	msg := &banktypes.Balance{
+		Address: moduleName,
+		Coins:   amounts,
+	}
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"MintCoins":%s}`, string(bankmsgbz)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -36,7 +91,20 @@ func (k Keeper) SendCoinsFromModuleToAccount(
 	goCtx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins,
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SendCoinsFromModuleToAccount not implemented")
+	msg := banktypes.NewMsgSend(authtypes.NewModuleAddress(senderModule), recipientAddr, amt)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -46,7 +114,20 @@ func (k Keeper) SendCoinsFromModuleToModule(
 	goCtx context.Context, senderModule, recipientModule string, amt sdk.Coins,
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SendCoinsFromModuleToModule not implemented")
+	msg := banktypes.NewMsgSend(authtypes.NewModuleAddress(senderModule), authtypes.NewModuleAddress(recipientModule), amt)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -56,7 +137,20 @@ func (k Keeper) SendCoinsFromAccountToModule(
 	goCtx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins,
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SendCoinsFromAccountToModule not implemented")
+	msg := banktypes.NewMsgSend(senderAddr, authtypes.NewModuleAddress(recipientModule), amt)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -161,8 +255,33 @@ func (k Keeper) GetAllBalances(goCtx context.Context, addr sdk.AccAddress) sdk.C
 // by address.
 func (k Keeper) GetBalance(goCtx context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetBalance not implemented")
-	return sdk.NewCoin(denom, math.NewInt(0))
+	msg := banktypes.NewQueryBalanceRequest(addr, denom)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	if err != nil {
+		return sdk.Coin{}
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetBalance":%s}`, string(bankmsgbz)))
+	resp, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return sdk.Coin{}
+	}
+	var contractResp wasmxtypes.ContractResponse
+	err = json.Unmarshal(resp.Data, &contractResp)
+	if err != nil {
+		return sdk.Coin{}
+	}
+
+	var response banktypes.QueryBalanceResponse
+	err = k.cdc.UnmarshalJSON(contractResp.Data, &response)
+	if err != nil {
+		return sdk.Coin{}
+	}
+
+	return *response.Balance
 }
 
 // // GetSupply retrieves the Supply from store

@@ -7,6 +7,8 @@ import (
 
 	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -73,8 +75,9 @@ func DefaultSystemContracts() SystemContracts {
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
 	}
-
-	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"authorities":["staking","governance"]}}`)})
+	// TODO remove/replace minter
+	// note we use ROLE_BANK for redirected messages through cosmosmod
+	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s","%s","%s"]}`, ROLE_STAKING, ROLE_GOVERNANCE, ROLE_BANK, authtypes.NewModuleAddress("fee_collector").String(), authtypes.NewModuleAddress("mint").String()))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}

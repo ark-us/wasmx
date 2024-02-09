@@ -29,14 +29,36 @@ import (
 func (k Keeper) BondedRatio(goCtx context.Context) (math.LegacyDec, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("BondedRatio not implemented")
-	return math.LegacyZeroDec(), nil
+	return math.LegacyOneDec(), nil
 }
 
 // StakingTokenSupply staking tokens from the total supply
 func (k Keeper) StakingTokenSupply(goCtx context.Context) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("StakingTokenSupply not implemented")
-	return math.ZeroInt(), nil
+	derc20Address, err := k.GetDERC20Address(ctx)
+	if err != nil {
+		return math.NewInt(0), err
+	}
+	msgbz := []byte(`{"totalSupply":{}}`)
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: derc20Address.String(),
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return math.NewInt(0), err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return math.NewInt(0), err
+	}
+	var response types.QueryTotalSupplyResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &response)
+	if err != nil {
+		return math.NewInt(0), err
+	}
+	return response.Supply.Amount, nil
 }
 
 // ValidatorAddressCodec returns the app validator address codec.
@@ -207,28 +229,10 @@ func (k Keeper) GetAllDelegatorDelegations(goCtx context.Context, delegator sdk.
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
 func (k Keeper) GetAllSDKDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	// TODO asmyt denom
-	msgbz := []byte(`{"GetAddressByDenom":{"denom":"asmyt"}}`)
-	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
-		Sender:   wasmxtypes.ROLE_BANK,
-		Contract: wasmxtypes.ROLE_BANK,
-		Msg:      msgbz,
-	})
+	derc20Address, err := k.GetDERC20Address(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var resp1 wasmxtypes.ContractResponse
-	err = json.Unmarshal(res1.Data, &resp1)
-	if err != nil {
-		return nil, err
-	}
-	var qaddrResp types.QueryAddressByDenomResponse
-	err = json.Unmarshal(resp1.Data, &qaddrResp)
-	if err != nil {
-		return nil, err
-	}
-	derc20Address := qaddrResp.Address
 	k.WasmxKeeper.IterateContractState(ctx, derc20Address, func(key []byte, value []byte) bool {
 		if !strings.HasPrefix(string(key), types.STAKING_DELEGATOR_TO_DELEGATION_KEY) {
 			return false
@@ -432,4 +436,30 @@ func WriteValidators(ctx sdk.Context, keeper *Keeper) (vals []cmttypes.GenesisVa
 	}
 
 	return
+}
+
+// GetAllSDKDelegations returns all delegations used during genesis dump
+// TODO: remove this func, change all usage for iterate functionality [sdk comment]
+func (k Keeper) GetDERC20Address(ctx sdk.Context) (derc20Address sdk.AccAddress, err error) {
+	// TODO asmyt denom
+	msgbz := []byte(`{"GetAddressByDenom":{"denom":"asmyt"}}`)
+	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp1 wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp1)
+	if err != nil {
+		return nil, err
+	}
+	var qaddrResp types.QueryAddressByDenomResponse
+	err = json.Unmarshal(resp1.Data, &qaddrResp)
+	if err != nil {
+		return nil, err
+	}
+	return qaddrResp.Address, nil
 }
