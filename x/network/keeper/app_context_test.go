@@ -25,7 +25,6 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
@@ -541,8 +540,14 @@ func (s *AppContext) WasmxQueryDebugRaw(account simulation.Account, contract sdk
 	return data.Data, resp.MemorySnapshot, err
 }
 
-func (s *AppContext) SubmitGovProposal(sender simulation.Account, content v1beta1.Content, deposit sdk.Coins) *abci.ExecTxResult {
-	proposalMsg, err := v1beta1.NewMsgSubmitProposal(content, deposit, sender.Address)
+func (s *AppContext) SubmitGovProposal(
+	sender simulation.Account,
+	msgs []sdk.Msg,
+	deposit sdk.Coins,
+	metadata, title, summary string,
+	expedited bool,
+) *abci.ExecTxResult {
+	proposalMsg, err := govtypes1.NewMsgSubmitProposal(msgs, deposit, sender.Address.String(), metadata, title, summary, expedited)
 	s.S.Require().NoError(err)
 	resp, err := s.DeliverTx(sender, proposalMsg)
 	s.S.Require().NoError(err)
@@ -558,9 +563,15 @@ func (s *AppContext) SubmitGovProposal(sender simulation.Account, content v1beta
 	return resp
 }
 
-func (s *AppContext) PassGovProposal(valAccount, sender simulation.Account, content v1beta1.Content) {
+func (s *AppContext) PassGovProposal(
+	valAccount,
+	sender simulation.Account,
+	msgs []sdk.Msg,
+	metadata, title, summary string,
+	expedited bool,
+) {
 	deposit := sdk.NewCoins(sdk.NewCoin(s.Denom, sdkmath.NewInt(1_000_000_000_000)))
-	resp := s.SubmitGovProposal(sender, content, deposit)
+	resp := s.SubmitGovProposal(sender, msgs, deposit, metadata, title, summary, expedited)
 
 	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
 	s.S.Require().NoError(err)
@@ -568,19 +579,10 @@ func (s *AppContext) PassGovProposal(valAccount, sender simulation.Account, cont
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
 
-	// msgs, err := s.ParseProposal(proposal)
-	// s.S.Require().NoError(err)
-	// msg3, ok := msgs[0].(*govtypes1.MsgExecLegacyContent)
-	// s.S.Require().True(ok)
-	// textProp, ok := msg3.Content.GetCachedValue().(*v1beta1.TextProposal)
-	// s.S.Require().True(ok)
-	// s.S.Require().Equal(content.GetTitle(), textProp.Title)
-	// s.S.Require().Equal(content.GetDescription(), textProp.Description)
-
-	voteMsg := v1beta1.NewMsgVote(valAccount.Address, proposalId, v1beta1.OptionYes)
+	voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
 	resp, err = s.DeliverTx(valAccount, voteMsg)
 	s.S.Require().NoError(err)
-	s.S.Require().True(resp.IsOK(), resp.GetEvents())
+	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
 
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})

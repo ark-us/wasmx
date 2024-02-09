@@ -492,7 +492,7 @@ func initGenFiles(
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = app.BaseDenom
 	// TODO make this bigger once we have our own governance contract
 	votingP := time.Minute * 2
-	cosmosmodGenState.Gov.Params.VotingPeriod = &votingP
+	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
 	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
 
 	var crisisGenState crisistypes.GenesisState

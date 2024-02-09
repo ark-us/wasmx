@@ -5,6 +5,7 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 func (msg MsgRegisterOAuthClient) Route() string {
@@ -26,14 +27,6 @@ func (msg MsgRegisterOAuthClient) ValidateBasic() error {
 	}
 
 	return validateString(msg.Domain)
-}
-
-func (msg MsgRegisterOAuthClient) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Owner)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
 }
 
 func (msg MsgEditOAuthClient) Route() string {
@@ -60,14 +53,6 @@ func (msg MsgEditOAuthClient) ValidateBasic() error {
 	return validateString(msg.Domain)
 }
 
-func (msg MsgEditOAuthClient) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Owner)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
-}
-
 func (msg MsgDeregisterOAuthClient) Route() string {
 	return RouterKey
 }
@@ -84,28 +69,12 @@ func (msg MsgDeregisterOAuthClient) ValidateBasic() error {
 	return validateUint64(msg.ClientId)
 }
 
-func (msg MsgDeregisterOAuthClient) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Owner)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
-}
-
 func (msg MsgRegisterRoute) Route() string {
 	return RouterKey
 }
 
 func (msg MsgRegisterRoute) Type() string {
 	return "register-route"
-}
-
-func (msg MsgRegisterRoute) GetSigners() []sdk.AccAddress {
-	authority, err := sdk.AccAddressFromBech32(msg.Authority)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{authority}
 }
 
 func (msg MsgRegisterRoute) ValidateBasic() error {
@@ -128,6 +97,14 @@ func (msg MsgRegisterRoute) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
 		return errorsmod.Wrap(err, "contract address")
 	}
+
+	if string(msg.Path[0]) != "/" {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "path must start with /")
+	}
+
+	if len(msg.Path) > 1 && string(msg.Path[len(msg.Path)-1]) == "/" {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "path must not end with /")
+	}
 	return nil
 }
 
@@ -137,14 +114,6 @@ func (msg MsgDeregisterRoute) Route() string {
 
 func (msg MsgDeregisterRoute) Type() string {
 	return "deregister-route"
-}
-
-func (msg MsgDeregisterRoute) GetSigners() []sdk.AccAddress {
-	authority, err := sdk.AccAddressFromBech32(msg.Authority)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{authority}
 }
 
 func (msg MsgDeregisterRoute) ValidateBasic() error {

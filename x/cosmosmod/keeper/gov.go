@@ -1,13 +1,47 @@
 package keeper
 
 import (
+	"encoding/json"
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+
+	types "mythos/v1/x/cosmosmod/types"
+	networktypes "mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 func (k Keeper) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*govtypes.QueryProposalResponse, error) {
-	k.Logger(ctx).Error("Proposal not implemented")
-	return &govtypes.QueryProposalResponse{}, nil
+	reqbz, err := k.JSONCodec().MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetProposal":%s}`, string(reqbz)))
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_GOVERNANCE,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	var internalResp types.QueryProposalResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &internalResp)
+	if err != nil {
+		return nil, err
+	}
+	proposal, err := types.CosmosProposalFromInternal(k.JSONCodec(), *internalResp.Proposal)
+	if err != nil {
+		return nil, err
+	}
+	return &govtypes.QueryProposalResponse{Proposal: proposal}, nil
 }
 
 func (k Keeper) Proposals(ctx sdk.Context, req *govtypes.QueryProposalsRequest) (*govtypes.QueryProposalsResponse, error) {
@@ -26,8 +60,35 @@ func (k Keeper) Votes(ctx sdk.Context, req *govtypes.QueryVotesRequest) (*govtyp
 }
 
 func (k Keeper) Params(ctx sdk.Context, req *govtypes.QueryParamsRequest) (*govtypes.QueryParamsResponse, error) {
-	k.Logger(ctx).Error("Params not implemented")
-	return &govtypes.QueryParamsResponse{}, nil
+	reqbz, err := k.JSONCodec().MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetParams":%s}`, string(reqbz)))
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_GOVERNANCE,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	var internalResp types.QueryParamsResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &internalResp)
+	if err != nil {
+		return nil, err
+	}
+	params, err := types.CosmosParamsFromInternal(internalResp.Params)
+	if err != nil {
+		return nil, err
+	}
+	return &govtypes.QueryParamsResponse{Params: params}, nil
 }
 
 func (k Keeper) Deposit(ctx sdk.Context, req *govtypes.QueryDepositRequest) (*govtypes.QueryDepositResponse, error) {

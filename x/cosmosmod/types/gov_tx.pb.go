@@ -7,6 +7,8 @@ import (
 	context "context"
 	fmt "fmt"
 	_ "github.com/cosmos/cosmos-proto"
+	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
+	types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/cosmos/cosmos-sdk/types/msgservice"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -16,7 +18,9 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	io "io"
 	math "math"
+	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -30,30 +34,106 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// MsgSubmitProposal the same as govv1.MsgSubmitProposal, except messages are raw bytes
+type MsgSubmitProposal struct {
+	// messages are the arbitrary messages to be executed if proposal passes.
+	Messages [][]byte `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	// initial_deposit is the deposit value that must be paid at proposal submission.
+	InitialDeposit github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,2,rep,name=initial_deposit,json=initialDeposit,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"initial_deposit"`
+	// proposer is the account address of the proposer.
+	Proposer string `protobuf:"bytes,3,opt,name=proposer,proto3" json:"proposer,omitempty"`
+	// metadata is any arbitrary metadata attached to the proposal.
+	Metadata string `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// title is the title of the proposal.
+	//
+	// Since: cosmos-sdk 0.47
+	Title string `protobuf:"bytes,5,opt,name=title,proto3" json:"title,omitempty"`
+	// summary is the summary of the proposal
+	//
+	// Since: cosmos-sdk 0.47
+	Summary string `protobuf:"bytes,6,opt,name=summary,proto3" json:"summary,omitempty"`
+	// expedited defines if the proposal is expedited or not
+	//
+	// Since: cosmos-sdk 0.50
+	Expedited bool `protobuf:"varint,7,opt,name=expedited,proto3" json:"expedited,omitempty"`
+}
+
+func (m *MsgSubmitProposal) Reset()         { *m = MsgSubmitProposal{} }
+func (m *MsgSubmitProposal) String() string { return proto.CompactTextString(m) }
+func (*MsgSubmitProposal) ProtoMessage()    {}
+func (*MsgSubmitProposal) Descriptor() ([]byte, []int) {
+	return fileDescriptor_978362013277d780, []int{0}
+}
+func (m *MsgSubmitProposal) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgSubmitProposal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgSubmitProposal.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgSubmitProposal) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgSubmitProposal.Merge(m, src)
+}
+func (m *MsgSubmitProposal) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgSubmitProposal) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgSubmitProposal.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgSubmitProposal proto.InternalMessageInfo
+
+func init() {
+	proto.RegisterType((*MsgSubmitProposal)(nil), "mythos.cosmosmod.v1.MsgSubmitProposal")
+}
+
 func init() { proto.RegisterFile("mythos/cosmosmod/v1/gov_tx.proto", fileDescriptor_978362013277d780) }
 
 var fileDescriptor_978362013277d780 = []byte{
-	// 309 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x52, 0xc8, 0xad, 0x2c, 0xc9,
-	0xc8, 0x2f, 0xd6, 0x4f, 0xce, 0x2f, 0xce, 0x05, 0xa1, 0x14, 0xfd, 0x32, 0x43, 0xfd, 0xf4, 0xfc,
-	0xb2, 0xf8, 0x92, 0x0a, 0xbd, 0x82, 0xa2, 0xfc, 0x92, 0x7c, 0x21, 0x61, 0x88, 0x0a, 0x3d, 0xb8,
-	0x0a, 0xbd, 0x32, 0x43, 0x29, 0x91, 0xf4, 0xfc, 0xf4, 0x7c, 0xb0, 0xbc, 0x3e, 0x88, 0x05, 0x51,
-	0x2a, 0x25, 0x09, 0x51, 0x13, 0x0f, 0x91, 0x80, 0x70, 0xa0, 0x52, 0xe2, 0x10, 0x9e, 0x7e, 0x6e,
-	0x71, 0x3a, 0xc8, 0x86, 0xdc, 0xe2, 0x74, 0xa8, 0x84, 0x60, 0x62, 0x6e, 0x66, 0x5e, 0xbe, 0x3e,
-	0x98, 0x84, 0x0a, 0x89, 0x41, 0xd5, 0xa6, 0xe7, 0x97, 0x81, 0xd4, 0xc2, 0x5c, 0x62, 0x74, 0x8e,
-	0x89, 0x8b, 0xcd, 0xb7, 0x38, 0xdd, 0x3d, 0xbf, 0x4c, 0x28, 0x86, 0x8b, 0x2f, 0xb8, 0x34, 0x29,
-	0x37, 0xb3, 0x24, 0xa0, 0x28, 0xbf, 0x20, 0xbf, 0x38, 0x31, 0x47, 0x48, 0x01, 0xea, 0x40, 0xbd,
-	0xf4, 0xfc, 0x32, 0xbd, 0x32, 0x43, 0x3d, 0xdf, 0xe2, 0x74, 0x54, 0x15, 0x52, 0x1a, 0x84, 0x54,
-	0x04, 0xa5, 0x16, 0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x0a, 0xd9, 0x71, 0xb1, 0x84, 0xe5, 0x97, 0xa4,
-	0x0a, 0x89, 0x61, 0xea, 0x00, 0x89, 0x4b, 0xc9, 0x61, 0x17, 0x87, 0xeb, 0x0f, 0xe3, 0xe2, 0x01,
-	0xf1, 0xc3, 0x53, 0x33, 0xd3, 0x33, 0x4a, 0x52, 0x53, 0x84, 0x70, 0xa8, 0x87, 0xc9, 0x4b, 0xa9,
-	0xe1, 0x97, 0x87, 0x9b, 0xeb, 0xce, 0xc5, 0xee, 0x92, 0x5a, 0x90, 0x5f, 0x9c, 0x59, 0x22, 0x24,
-	0x89, 0xa9, 0x05, 0x2a, 0x25, 0xa5, 0x88, 0x53, 0x0a, 0x66, 0x90, 0x14, 0x6b, 0xc3, 0xf3, 0x0d,
-	0x5a, 0x8c, 0x4e, 0x96, 0x27, 0x1e, 0xca, 0x31, 0x9c, 0x78, 0x24, 0xc7, 0x78, 0xe1, 0x91, 0x1c,
-	0xe3, 0x83, 0x47, 0x72, 0x8c, 0x13, 0x1e, 0xcb, 0x31, 0x5c, 0x78, 0x2c, 0xc7, 0x70, 0xe3, 0xb1,
-	0x1c, 0x43, 0x94, 0x34, 0x34, 0x69, 0x94, 0x19, 0xea, 0x57, 0x20, 0xa5, 0x8f, 0x92, 0xca, 0x82,
-	0xd4, 0xe2, 0x24, 0x36, 0x70, 0x94, 0x18, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x45, 0x7f, 0xc5,
-	0x89, 0x40, 0x02, 0x00, 0x00,
+	// 557 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x53, 0xcd, 0x8b, 0xd3, 0x40,
+	0x1c, 0x6d, 0xb6, 0xdb, 0x8f, 0x1d, 0xcb, 0xca, 0x8e, 0x65, 0x4d, 0xa3, 0x64, 0xa3, 0x07, 0x09,
+	0x85, 0x4d, 0xcc, 0xea, 0x45, 0x0f, 0x82, 0x55, 0xdc, 0xd3, 0x82, 0x64, 0x61, 0x05, 0x11, 0xca,
+	0xa4, 0x19, 0xa6, 0x83, 0x4d, 0x26, 0x64, 0xa6, 0xa1, 0xbd, 0x89, 0xc7, 0x3d, 0x88, 0x67, 0xff,
+	0x02, 0xf1, 0xd4, 0x83, 0x7f, 0x44, 0x4f, 0xb2, 0x78, 0xf2, 0xe4, 0x47, 0x7b, 0xe8, 0xbf, 0x21,
+	0x49, 0x26, 0xf1, 0xa3, 0xae, 0x0b, 0x21, 0xc9, 0xfb, 0xbd, 0xf7, 0x66, 0xde, 0x6f, 0x3e, 0x80,
+	0x11, 0x4c, 0xc5, 0x90, 0x71, 0x7b, 0xc0, 0x78, 0x90, 0x3e, 0xbe, 0x9d, 0x38, 0x36, 0x61, 0x49,
+	0x5f, 0x4c, 0xac, 0x28, 0x66, 0x82, 0xc1, 0x2b, 0xb9, 0xc2, 0x2a, 0x15, 0x56, 0xe2, 0x68, 0x6d,
+	0xc2, 0x08, 0xcb, 0x78, 0x3b, 0xfd, 0xcb, 0xa5, 0x5a, 0x27, 0xd7, 0xf4, 0x73, 0x22, 0x07, 0x92,
+	0xd2, 0x73, 0x64, 0x7b, 0x88, 0x63, 0x3b, 0x71, 0x3c, 0x2c, 0x90, 0x63, 0x0f, 0x18, 0x0d, 0x25,
+	0x7f, 0x55, 0xf2, 0x01, 0x27, 0x69, 0x82, 0x80, 0x13, 0x49, 0xec, 0xa0, 0x80, 0x86, 0xcc, 0xce,
+	0xde, 0xb2, 0xb4, 0x2b, 0xb5, 0x84, 0x25, 0xa9, 0xb6, 0x48, 0x7a, 0xf3, 0x4d, 0x15, 0xec, 0x1c,
+	0x71, 0x72, 0x3c, 0xf6, 0x02, 0x2a, 0x9e, 0xc6, 0x2c, 0x62, 0x1c, 0x8d, 0xa0, 0x06, 0x9a, 0x01,
+	0xe6, 0x1c, 0x11, 0xcc, 0x55, 0xc5, 0xa8, 0x9a, 0x2d, 0xb7, 0xc4, 0xf0, 0x54, 0x01, 0x97, 0x69,
+	0x48, 0x05, 0x45, 0xa3, 0xbe, 0x8f, 0x23, 0xc6, 0xa9, 0x50, 0x37, 0x8c, 0xaa, 0x79, 0xe9, 0xa0,
+	0x23, 0xfb, 0xb5, 0xd2, 0xc0, 0x96, 0x0c, 0x6c, 0x3d, 0x62, 0x34, 0xec, 0x3d, 0x99, 0x7f, 0xdd,
+	0xab, 0x7c, 0xf8, 0xb6, 0x67, 0x12, 0x2a, 0x86, 0x63, 0xcf, 0x1a, 0xb0, 0x40, 0xf6, 0x2a, 0x3f,
+	0xfb, 0xdc, 0x7f, 0x69, 0x8b, 0x69, 0x84, 0x79, 0x66, 0xe0, 0xef, 0x56, 0xb3, 0x6e, 0x6b, 0x84,
+	0x09, 0x1a, 0x4c, 0xfb, 0x69, 0xcb, 0xfc, 0xfd, 0x6a, 0xd6, 0x55, 0xdc, 0x6d, 0x39, 0xf3, 0xe3,
+	0x7c, 0x62, 0x78, 0x17, 0x34, 0xa3, 0x2c, 0x34, 0x8e, 0xd5, 0xaa, 0xa1, 0x98, 0x5b, 0x3d, 0xf5,
+	0xf3, 0xc7, 0xfd, 0xb6, 0xcc, 0xf1, 0xd0, 0xf7, 0x63, 0xcc, 0xf9, 0xb1, 0x88, 0x69, 0x48, 0xdc,
+	0x52, 0x99, 0xb7, 0x27, 0x90, 0x8f, 0x04, 0x52, 0x37, 0x53, 0x97, 0x5b, 0x62, 0xd8, 0x06, 0x35,
+	0x41, 0xc5, 0x08, 0xab, 0xb5, 0x8c, 0xc8, 0x01, 0x54, 0x41, 0x83, 0x8f, 0x83, 0x00, 0xc5, 0x53,
+	0xb5, 0x9e, 0xd5, 0x0b, 0x08, 0xaf, 0x83, 0x2d, 0x3c, 0x89, 0xb0, 0x4f, 0x05, 0xf6, 0xd5, 0x86,
+	0xa1, 0x98, 0x4d, 0xf7, 0x57, 0xe1, 0xfe, 0xed, 0xd7, 0xab, 0x59, 0xb7, 0x9c, 0xf8, 0x74, 0x35,
+	0xeb, 0xea, 0x7f, 0x9c, 0x9a, 0xb5, 0xa5, 0x3f, 0xf8, 0xb4, 0x01, 0xea, 0x47, 0x9c, 0x1c, 0xb2,
+	0x04, 0xbe, 0x00, 0xdb, 0x7f, 0xed, 0x8b, 0x51, 0xac, 0x30, 0x61, 0x89, 0x95, 0x38, 0xd6, 0x9a,
+	0x5d, 0x33, 0x2f, 0x52, 0xb8, 0x98, 0x47, 0x2c, 0xe4, 0x18, 0x3e, 0x00, 0x9b, 0x27, 0x4c, 0x60,
+	0xb8, 0xbb, 0xee, 0x48, 0xeb, 0x9a, 0xfe, 0xef, 0x7a, 0xe9, 0x3f, 0x01, 0xad, 0x14, 0x3f, 0xc3,
+	0x94, 0x0c, 0x05, 0xf6, 0xe1, 0x39, 0xfa, 0x82, 0xd7, 0x6e, 0xfd, 0x9f, 0x2f, 0xc7, 0x3d, 0x04,
+	0x8d, 0x62, 0x77, 0x3b, 0xeb, 0x16, 0x49, 0x69, 0x37, 0xce, 0xa5, 0x8a, 0x81, 0xb4, 0xda, 0xab,
+	0xf4, 0xc8, 0xf4, 0xee, 0xcd, 0x7f, 0xe8, 0x95, 0xf9, 0x42, 0x57, 0xce, 0x16, 0xba, 0xf2, 0x7d,
+	0xa1, 0x2b, 0x6f, 0x97, 0x7a, 0xe5, 0x6c, 0xa9, 0x57, 0xbe, 0x2c, 0xf5, 0xca, 0xf3, 0x6b, 0xf2,
+	0x2e, 0x27, 0x8e, 0x3d, 0xf9, 0xed, 0x42, 0x67, 0x27, 0xd1, 0xab, 0x67, 0x77, 0xe4, 0xce, 0xcf,
+	0x00, 0x00, 0x00, 0xff, 0xff, 0x88, 0x2f, 0x1f, 0xcb, 0xf1, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -255,3 +335,493 @@ var _MsgGov_serviceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "mythos/cosmosmod/v1/gov_tx.proto",
 }
+
+func (m *MsgSubmitProposal) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgSubmitProposal) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgSubmitProposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Expedited {
+		i--
+		if m.Expedited {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x38
+	}
+	if len(m.Summary) > 0 {
+		i -= len(m.Summary)
+		copy(dAtA[i:], m.Summary)
+		i = encodeVarintGovTx(dAtA, i, uint64(len(m.Summary)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Title) > 0 {
+		i -= len(m.Title)
+		copy(dAtA[i:], m.Title)
+		i = encodeVarintGovTx(dAtA, i, uint64(len(m.Title)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Metadata) > 0 {
+		i -= len(m.Metadata)
+		copy(dAtA[i:], m.Metadata)
+		i = encodeVarintGovTx(dAtA, i, uint64(len(m.Metadata)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.Proposer) > 0 {
+		i -= len(m.Proposer)
+		copy(dAtA[i:], m.Proposer)
+		i = encodeVarintGovTx(dAtA, i, uint64(len(m.Proposer)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.InitialDeposit) > 0 {
+		for iNdEx := len(m.InitialDeposit) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.InitialDeposit[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGovTx(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Messages) > 0 {
+		for iNdEx := len(m.Messages) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Messages[iNdEx])
+			copy(dAtA[i:], m.Messages[iNdEx])
+			i = encodeVarintGovTx(dAtA, i, uint64(len(m.Messages[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func encodeVarintGovTx(dAtA []byte, offset int, v uint64) int {
+	offset -= sovGovTx(v)
+	base := offset
+	for v >= 1<<7 {
+		dAtA[offset] = uint8(v&0x7f | 0x80)
+		v >>= 7
+		offset++
+	}
+	dAtA[offset] = uint8(v)
+	return base
+}
+func (m *MsgSubmitProposal) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Messages) > 0 {
+		for _, b := range m.Messages {
+			l = len(b)
+			n += 1 + l + sovGovTx(uint64(l))
+		}
+	}
+	if len(m.InitialDeposit) > 0 {
+		for _, e := range m.InitialDeposit {
+			l = e.Size()
+			n += 1 + l + sovGovTx(uint64(l))
+		}
+	}
+	l = len(m.Proposer)
+	if l > 0 {
+		n += 1 + l + sovGovTx(uint64(l))
+	}
+	l = len(m.Metadata)
+	if l > 0 {
+		n += 1 + l + sovGovTx(uint64(l))
+	}
+	l = len(m.Title)
+	if l > 0 {
+		n += 1 + l + sovGovTx(uint64(l))
+	}
+	l = len(m.Summary)
+	if l > 0 {
+		n += 1 + l + sovGovTx(uint64(l))
+	}
+	if m.Expedited {
+		n += 2
+	}
+	return n
+}
+
+func sovGovTx(x uint64) (n int) {
+	return (math_bits.Len64(x|1) + 6) / 7
+}
+func sozGovTx(x uint64) (n int) {
+	return sovGovTx(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *MsgSubmitProposal) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGovTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgSubmitProposal: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgSubmitProposal: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Messages", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Messages = append(m.Messages, make([]byte, postIndex-iNdEx))
+			copy(m.Messages[len(m.Messages)-1], dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InitialDeposit", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InitialDeposit = append(m.InitialDeposit, types.Coin{})
+			if err := m.InitialDeposit[len(m.InitialDeposit)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Proposer", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Proposer = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Metadata", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Metadata = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Title", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Title = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Summary", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Summary = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Expedited", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Expedited = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGovTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGovTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func skipGovTx(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
+	iNdEx := 0
+	depth := 0
+	for iNdEx < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return 0, ErrIntOverflowGovTx
+			}
+			if iNdEx >= l {
+				return 0, io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		wireType := int(wire & 0x7)
+		switch wireType {
+		case 0:
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				iNdEx++
+				if dAtA[iNdEx-1] < 0x80 {
+					break
+				}
+			}
+		case 1:
+			iNdEx += 8
+		case 2:
+			var length int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowGovTx
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				length |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if length < 0 {
+				return 0, ErrInvalidLengthGovTx
+			}
+			iNdEx += length
+		case 3:
+			depth++
+		case 4:
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupGovTx
+			}
+			depth--
+		case 5:
+			iNdEx += 4
+		default:
+			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
+		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthGovTx
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
+	}
+	return 0, io.ErrUnexpectedEOF
+}
+
+var (
+	ErrInvalidLengthGovTx        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowGovTx          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupGovTx = fmt.Errorf("proto: unexpected end of group")
+)

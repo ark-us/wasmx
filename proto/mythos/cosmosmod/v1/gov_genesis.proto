@@ -1,0 +1,36 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/gov/v1/gov.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/gov/v1beta1/gov.proto";
+import "cosmos/gov/v1beta1/genesis.proto";
+import "mythos/cosmosmod/v1/gov.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+
+// GovGenesisState defines the gov module's genesis state.
+message GovGenesisState {
+    // starting_proposal_id is the ID of the starting proposal.
+    uint64 starting_proposal_id = 1;
+    // deposits defines all the deposits present at genesis.
+    repeated cosmos.gov.v1.Deposit deposits = 2;
+    // votes defines all the votes present at genesis.
+    repeated cosmos.gov.v1.Vote votes = 3;
+    // proposals defines all the proposals present at genesis.
+    repeated GovProposal proposals = 4;
+    // params defines all the paramaters of x/gov module.
+    //
+    // Since: cosmos-sdk 0.47
+    GovParams params = 8;
+    // The constitution allows builders to lay a foundation and define purpose.
+    // This is an immutable string set in genesis.
+    // There are no amendments, to go outside of scope, just fork.
+    // constitution is an immutable string in genesis for a chain builder to lay out their vision, ideas and ideals.
+    //
+    // Since: cosmos-sdk 0.50
+    string constitution = 9;
+}

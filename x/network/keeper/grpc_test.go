@@ -10,6 +10,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simulation "github.com/cosmos/cosmos-sdk/types/simulation"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	// ibctesting "mythos/v1/testutil/ibc"
 
@@ -435,8 +436,11 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// Register contract role proposal
 	newlabel := wasmxtypes.CONSENSUS_TENDERMINT + "2"
-	proposal := wasmxtypes.NewRegisterRoleProposal("Register consensus", "Register consensus", "consensus", newlabel, newConsensus.String())
-	appA.PassGovProposal(valAccount, sender, proposal)
+	title := "Register consensus"
+	description := "Register consensus"
+	authority := authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE).String()
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
@@ -453,7 +457,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// execute next block
 
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 10)
 
 	return
 	// migrate contract
@@ -563,8 +567,10 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 
 	// Register contract role proposal
 	newlabel := wasmxtypes.CONSENSUS_AVA_SNOWMAN + "2"
-	proposal := wasmxtypes.NewRegisterRoleProposal("Register consensus", "Register consensus", "consensus", newlabel, newConsensus.String())
-	appA.PassGovProposal(valAccount, sender, proposal)
+	title := "Register consensus"
+	description := "Register consensus"
+	proposal := &wasmxtypes.MsgRegisterRole{Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)

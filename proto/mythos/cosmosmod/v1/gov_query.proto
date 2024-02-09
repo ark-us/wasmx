@@ -10,6 +10,7 @@ import "amino/amino.proto";
 import "cosmos/gov/v1/gov.proto";
 import "cosmos/gov/v1/query.proto";
 import "cosmos/query/v1/query.proto";
+import "mythos/cosmosmod/v1/gov.proto";
 
 option go_package = "mythos/v1/x/cosmosmod/types";
 option (gogoproto.goproto_getters_all) = false;
@@ -55,4 +56,9 @@ service QueryGov {
     rpc TallyResult(cosmos.gov.v1.QueryTallyResultRequest) returns (cosmos.gov.v1.QueryTallyResultResponse) {
         option (google.api.http).get = "/cosmos/gov/v1/proposals/{proposal_id}/tally";
     }
+}
+
+// QueryParamsResponse is the response type for the Query/Params RPC method.
+message QueryParamsResponse {
+    GovParams params = 4;
 }

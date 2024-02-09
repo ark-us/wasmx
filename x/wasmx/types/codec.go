@@ -6,7 +6,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
@@ -31,12 +30,6 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgExecuteEth{},
 		&MsgRegisterRole{},
 		&MsgDeregisterRole{},
-	)
-
-	registry.RegisterImplementations(
-		(*govv1beta1.Content)(nil),
-		&RegisterRoleProposal{},
-		&DeregisterRoleProposal{},
 	)
 
 	registry.RegisterImplementations(

@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	networktypes "mythos/v1/x/network/types"
@@ -65,7 +68,7 @@ func (k Keeper) MintCoins(goCtx context.Context, moduleName string, amounts sdk.
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Debug("MintCoins", moduleName, amounts)
 	msg := &banktypes.Balance{
-		Address: moduleName,
+		Address: authtypes.NewModuleAddress(moduleName).String(),
 		Coins:   amounts,
 	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
@@ -158,6 +161,7 @@ func (k Keeper) SendCoinsFromAccountToModule(
 // It will panic if the module account does not exist or is unauthorized.
 func (k Keeper) BurnCoins(goCtx context.Context, moduleName string, amounts sdk.Coins) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	// authtypes.NewModuleAddress(moduleName).String()
 	k.Logger(ctx).Error("BurnCoins not implemented")
 	return nil
 }

@@ -20,8 +20,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
 	wasmxapp "mythos/v1/app"
@@ -90,10 +88,10 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	bankGenesis.Supply = totalSupply
 	bankGenesis.Balances = balances
 
-	govGenesis := govtypes1.DefaultGenesisState()
+	govGenesis := cosmosmodtypes.DefaultGovGenesisState()
 	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BaseDenom, sdkmath.NewInt(1_000_000_000)))
 	votingPeriod := time.Millisecond * 500
-	govGenesis.Params.VotingPeriod = &votingPeriod
+	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
 
 	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis)
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)

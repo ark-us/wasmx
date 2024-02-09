@@ -82,6 +82,11 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
 
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[{"hook":"EndBlock","modules":["%s"]}]}`, ROLE_CONSENSUS, ROLE_GOVERNANCE, ROLE_GOVERNANCE))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
+	}
+
 	return []SystemContract{
 		{
 			Address:     ADDR_ECRECOVER,
@@ -292,7 +297,7 @@ func DefaultSystemContracts() SystemContracts {
 		{
 			Address:     ADDR_HOOKS,
 			Label:       HOOKS_v001,
-			InitMessage: initMsg,
+			InitMessage: hooksInitMsg,
 			Pinned:      false,
 			Role:        ROLE_HOOKS,
 			StorageType: ContractStorageType_CoreConsensus,

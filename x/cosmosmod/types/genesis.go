@@ -5,6 +5,7 @@ import (
 	fmt "fmt"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -14,7 +15,7 @@ import (
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov govtypes1.GenesisState) *GenesisState {
+func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState) *GenesisState {
 	return &GenesisState{
 		Staking: staking,
 		Bank:    bank,
@@ -126,13 +127,26 @@ func DefaultBankGenesisState(denomUnit string, baseDenomUnit uint32, denomName s
 	return NewBankGenesisState(banktypes.DefaultParams(), []banktypes.Balance{}, sdk.Coins{}, DefaultBankDenoms(denomUnit, baseDenomUnit, denomName), []banktypes.SendEnabled{})
 }
 
+// DefaultGovGenesisState returns a default bank module genesis state.
+func DefaultGovGenesisState() *GovGenesisState {
+	govstate := govtypes1.DefaultGenesisState()
+	return &GovGenesisState{
+		StartingProposalId: govstate.StartingProposalId,
+		Deposits:           govstate.Deposits,
+		Votes:              govstate.Votes,
+		Proposals:          make([]*GovProposal, 0),
+		Params:             CosmosParamsToInternal(govstate.Params),
+		Constitution:       govstate.Constitution,
+	}
+}
+
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
 func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, denomName string) *GenesisState {
 	return &GenesisState{
 		Staking: *DefaultStakingGenesisState(),
 		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit, denomName),
-		Gov:     *govtypes1.DefaultGenesisState(),
+		Gov:     *DefaultGovGenesisState(),
 	}
 }
 
@@ -145,7 +159,7 @@ func (gs GenesisState) Validate() error {
 	if err := gs.Bank.Validate(); err != nil {
 		return err
 	}
-	if err := govtypes1.ValidateGenesis(&gs.Gov); err != nil {
+	if err := gs.Gov.Validate(); err != nil {
 		return err
 	}
 	return nil
@@ -266,6 +280,123 @@ func validateGenesisStateValidators(validators []stakingtypes.Validator) error {
 		}
 
 		addrMap[strKey] = true
+	}
+
+	return nil
+}
+
+// ValidateGenesis validates the provided gov genesis state to ensure the
+// expected invariants holds. (i.e. params in correct bounds, no duplicate validators)
+func (gs GovGenesisState) Validate() error {
+	if gs.StartingProposalId == 0 {
+		return errors.New("starting proposal id must be greater than 0")
+	}
+
+	return gs.Params.ValidateBasic()
+}
+
+// ValidateBasic performs basic validation on governance parameters.
+func (p GovParams) ValidateBasic() error {
+	minDeposit := sdk.Coins(p.MinDeposit)
+	if minDeposit.Empty() || !minDeposit.IsValid() {
+		return fmt.Errorf("invalid minimum deposit: %s", minDeposit)
+	}
+
+	if minExpeditedDeposit := sdk.Coins(p.ExpeditedMinDeposit); minExpeditedDeposit.Empty() || !minExpeditedDeposit.IsValid() {
+		return fmt.Errorf("invalid expedited minimum deposit: %s", minExpeditedDeposit)
+	} else if minExpeditedDeposit.IsAllLTE(minDeposit) {
+		return fmt.Errorf("expedited minimum deposit must be greater than minimum deposit: %s", minExpeditedDeposit)
+	}
+
+	if p.MaxDepositPeriod <= 0 {
+		return fmt.Errorf("maximum deposit period must be positive: %d", p.MaxDepositPeriod)
+	}
+
+	quorum, err := sdkmath.LegacyNewDecFromStr(p.Quorum)
+	if err != nil {
+		return fmt.Errorf("invalid quorum string: %w", err)
+	}
+	if quorum.IsNegative() {
+		return fmt.Errorf("quorom cannot be negative: %s", quorum)
+	}
+	if quorum.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("quorom too large: %s", p.Quorum)
+	}
+
+	threshold, err := sdkmath.LegacyNewDecFromStr(p.Threshold)
+	if err != nil {
+		return fmt.Errorf("invalid threshold string: %w", err)
+	}
+	if !threshold.IsPositive() {
+		return fmt.Errorf("vote threshold must be positive: %s", threshold)
+	}
+	if threshold.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("vote threshold too large: %s", threshold)
+	}
+
+	expeditedThreshold, err := sdkmath.LegacyNewDecFromStr(p.ExpeditedThreshold)
+	if err != nil {
+		return fmt.Errorf("invalid expedited threshold string: %w", err)
+	}
+	if !threshold.IsPositive() {
+		return fmt.Errorf("expedited vote threshold must be positive: %s", threshold)
+	}
+	if threshold.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("expedited vote threshold too large: %s", threshold)
+	}
+	if expeditedThreshold.LTE(threshold) {
+		return fmt.Errorf("expedited vote threshold %s, must be greater than the regular threshold %s", expeditedThreshold, threshold)
+	}
+
+	vetoThreshold, err := sdkmath.LegacyNewDecFromStr(p.VetoThreshold)
+	if err != nil {
+		return fmt.Errorf("invalid vetoThreshold string: %w", err)
+	}
+	if !vetoThreshold.IsPositive() {
+		return fmt.Errorf("veto threshold must be positive: %s", vetoThreshold)
+	}
+	if vetoThreshold.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("veto threshold too large: %s", vetoThreshold)
+	}
+
+	if p.VotingPeriod <= 0 {
+		return fmt.Errorf("voting period must be positive: %s", p.VotingPeriod)
+	}
+
+	if p.ExpeditedVotingPeriod <= 0 {
+		return fmt.Errorf("expedited voting period must be positive: %s", p.ExpeditedVotingPeriod)
+	}
+	if p.ExpeditedVotingPeriod >= p.VotingPeriod {
+		return fmt.Errorf("expedited voting period %s must be strictly less that the regular voting period %s", p.ExpeditedVotingPeriod, p.VotingPeriod)
+	}
+
+	minInitialDepositRatio, err := sdkmath.LegacyNewDecFromStr(p.MinInitialDepositRatio)
+	if err != nil {
+		return fmt.Errorf("invalid mininum initial deposit ratio of proposal: %w", err)
+	}
+	if minInitialDepositRatio.IsNegative() {
+		return fmt.Errorf("mininum initial deposit ratio of proposal must be positive: %s", minInitialDepositRatio)
+	}
+	if minInitialDepositRatio.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("mininum initial deposit ratio of proposal is too large: %s", minInitialDepositRatio)
+	}
+
+	proposalCancelRate, err := sdkmath.LegacyNewDecFromStr(p.ProposalCancelRatio)
+	if err != nil {
+		return fmt.Errorf("invalid burn rate of cancel proposal: %w", err)
+	}
+	if proposalCancelRate.IsNegative() {
+		return fmt.Errorf("burn rate of cancel proposal must be positive: %s", proposalCancelRate)
+	}
+	if proposalCancelRate.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("burn rate of cancel proposal is too large: %s", proposalCancelRate)
+	}
+
+	if len(p.ProposalCancelDest) != 0 {
+		_, err := sdk.AccAddressFromBech32(p.ProposalCancelDest)
+		if err != nil {
+			return fmt.Errorf("deposits destination address is invalid: %s", p.ProposalCancelDest)
+		}
 	}
 
 	return nil

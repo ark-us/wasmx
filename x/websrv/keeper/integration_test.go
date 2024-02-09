@@ -44,8 +44,10 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
 
 	// Register route proposal
-	registerRouteProposal := types.NewRegisterRouteProposal("Register /", "because", "/", contractAddress.String())
-	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
+	title := "Register /"
+	description := "because"
+	registerRouteProposal := &types.MsgRegisterRoute{Title: title, Description: description, Path: "/", ContractAddress: contractAddress.String()}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{registerRouteProposal}, "", title, description, false)
 
 	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/"}}}
 	response, err := HandleContractRoute(appA, req)
@@ -55,8 +57,10 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	s.Require().Equal("Hello from contract. Path: /", string(response.Content))
 
 	// Register route proposal
-	registerRouteProposal = types.NewRegisterRouteProposal("Register /arg1/arg2", "because", "/arg1/arg2", contractAddress.String())
-	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
+	title = "Register /arg1/arg2"
+	description = "because"
+	registerRouteProposal = &types.MsgRegisterRoute{Title: title, Description: description, Path: "/arg1/arg2", ContractAddress: contractAddress.String()}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{registerRouteProposal}, "", title, description, false)
 
 	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/arg1/arg2"}}}
 	response, err = HandleContractRoute(appA, req)
@@ -99,8 +103,10 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	deps := []string{contractAddressHex}
 
 	// Register route proposal
-	registerRouteProposal := types.NewRegisterRouteProposal("Register /", "because", "/", contractAddressRoot.String())
-	appA.PassGovProposal(valAccount, sender, registerRouteProposal)
+	title := "Register /"
+	description := "because"
+	registerRouteProposal := &types.MsgRegisterRoute{Title: title, Description: description, Path: "/", ContractAddress: contractAddressRoot.String()}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{registerRouteProposal}, "", title, description, false)
 
 	resp, err := appA.App.WebsrvKeeper.ContractByRoute(appA.Context(), &types.QueryContractByRouteRequest{Path: "/"})
 	s.Require().NoError(err)

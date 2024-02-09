@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	sdkmath "cosmossdk.io/math"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -299,14 +300,20 @@ func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	var msg cdctypes.Any
+	ctx.CosmosHandler.JSONCodec().UnmarshalJSON(reqbz, &msg)
+
 	// TODO events? add to context?
-	_, _, err = ctx.CosmosHandler.ExecuteCosmosMsgAnyBz(reqbz)
+	_, _, err = ctx.CosmosHandler.ExecuteCosmosMsgAny(&msg)
 	errmsg := ""
 	success := 0
 	if err != nil {
 		errmsg = err.Error()
 		success = 1
 	}
+	// else {
+	// 	ctx.Ctx.EventManager().EmitEvents(evs)
+	// }
 	response := vmtypes.CallResponse{
 		Success: uint8(success),
 		Data:    []byte(errmsg),
@@ -539,12 +546,15 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		Data:      []byte(data.Data),
 		Sender:    ctx.Env.Contract.Address.String(),
 	}
-	// TODO evs?
+	// TODO events
 	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
 	errmsg := ""
 	if err != nil {
 		errmsg = err.Error()
 	}
+	// else {
+	// 	ctx.Ctx.EventManager().EmitEvents(evs)
+	// }
 	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
 	if res != nil {
 		err = rres.Unmarshal(res)
@@ -781,6 +791,22 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxEmitCosmosEvents(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	evsbz, err := readMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var data []sdk.Event
+	err = json.Unmarshal(evsbz, &data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.Ctx.EventManager().EmitEvents(data)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("wasmx")
 	functype_i32i32_ := wasmedge.NewFunctionType(
@@ -817,6 +843,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
+	env.AddFunction("emitCosmosEvents", wasmedge.NewFunction(functype_i32_, wasmxEmitCosmosEvents, context, 0))
 	env.AddFunction("getReturnData", wasmedge.NewFunction(functype__i32, wasmxGetReturnData, context, 0))
 	env.AddFunction("getFinishData", wasmedge.NewFunction(functype__i32, wasmxGetFinishData, context, 0))
 	env.AddFunction("setFinishData", wasmedge.NewFunction(functype_i32_, wasmxSetFinishData, context, 0))

@@ -10,10 +10,6 @@
 - [mythos/websrv/v1/genesis.proto](#mythos/websrv/v1/genesis.proto)
     - [GenesisState](#mythos.websrv.v1.GenesisState)
   
-- [mythos/websrv/v1/proposal.proto](#mythos/websrv/v1/proposal.proto)
-    - [DeregisterRouteProposal](#mythos.websrv.v1.DeregisterRouteProposal)
-    - [RegisterRouteProposal](#mythos.websrv.v1.RegisterRouteProposal)
-  
 - [mythos/websrv/v1/query.proto](#mythos/websrv/v1/query.proto)
     - [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo)
     - [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest)
@@ -98,59 +94,6 @@ GenesisState defines the websrv module's genesis state.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | `params` | [Params](#mythos.websrv.v1.Params) |  |  |
-
-
-
-
-
- <!-- end messages -->
-
- <!-- end enums -->
-
- <!-- end HasExtensions -->
-
- <!-- end services -->
-
-
-
-<a name="mythos/websrv/v1/proposal.proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## mythos/websrv/v1/proposal.proto
-
-
-
-<a name="mythos.websrv.v1.DeregisterRouteProposal"></a>
-
-### DeregisterRouteProposal
-DisallowCosmosMessagesProposal is a gov Content type to remove a previously
-allowed Cosmos message or query to be called from the EVM
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.RegisterRouteProposal"></a>
-
-### RegisterRouteProposal
-RegisterRouteProposal is a gov Content type to register a web server route
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
 
 
 

@@ -83,14 +83,6 @@ func (msg MsgStoreCode) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgStoreCode) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
-}
-
 func (msg MsgDeployCode) Route() string {
 	return RouterKey
 }
@@ -118,14 +110,6 @@ func (msg MsgDeployCode) ValidateBasic() error {
 	}
 
 	return nil
-}
-
-func (msg MsgDeployCode) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
 }
 
 func (msg MsgInstantiateContract) Route() string {
@@ -159,14 +143,6 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgInstantiateContract) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
-}
-
 func (msg MsgCompileContract) Route() string {
 	return RouterKey
 }
@@ -184,14 +160,6 @@ func (msg MsgCompileContract) ValidateBasic() error {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
 	return nil
-}
-
-func (msg MsgCompileContract) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
 }
 
 func (msg MsgExecuteContract) Route() string {
@@ -221,14 +189,6 @@ func (msg MsgExecuteContract) ValidateBasic() error {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
-}
-
-func (msg MsgExecuteContract) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
 }
 
 func (msg MsgExecuteWithOriginContract) Route() string {
@@ -261,14 +221,6 @@ func (msg MsgExecuteWithOriginContract) ValidateBasic() error {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
 	}
 	return nil
-}
-
-func (msg MsgExecuteWithOriginContract) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
 }
 
 func (msg MsgExecuteDelegateContract) Route() string {
@@ -307,14 +259,6 @@ func (msg MsgExecuteDelegateContract) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgExecuteDelegateContract) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
-}
-
 var _ sdk.Msg = &MsgInstantiateContract2{}
 
 func (msg MsgInstantiateContract2) Route() string {
@@ -351,14 +295,6 @@ func (msg MsgInstantiateContract2) ValidateBasic() error {
 	return nil
 }
 
-func (msg MsgInstantiateContract2) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
-}
-
 func (msg MsgExecuteEth) Route() string {
 	return RouterKey
 }
@@ -378,14 +314,6 @@ func (msg MsgExecuteEth) ValidateBasic() error {
 
 func (msg MsgExecuteEth) GetSignBytes() []byte {
 	panic("MsgExecuteEth verifies ETH signature")
-}
-
-func (msg MsgExecuteEth) GetSigners() []sdk.AccAddress {
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{senderAddr}
 }
 
 // AsTransaction creates an Ethereum Transaction type from the msg fields
@@ -495,14 +423,6 @@ func (msg MsgRegisterRole) Type() string {
 	return "register-role"
 }
 
-func (msg MsgRegisterRole) GetSigners() []sdk.AccAddress {
-	authority, err := sdk.AccAddressFromBech32(msg.Authority)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{authority}
-}
-
 func (msg MsgRegisterRole) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
 		return sdkerr.Wrap(err, "authority")
@@ -536,14 +456,6 @@ func (msg MsgDeregisterRole) Route() string {
 
 func (msg MsgDeregisterRole) Type() string {
 	return "deregister-role"
-}
-
-func (msg MsgDeregisterRole) GetSigners() []sdk.AccAddress {
-	authority, err := sdk.AccAddressFromBech32(msg.Authority)
-	if err != nil { // should never happen as valid basic rejects invalid addresses
-		panic(err.Error())
-	}
-	return []sdk.AccAddress{authority}
 }
 
 func (msg MsgDeregisterRole) ValidateBasic() error {

@@ -37,9 +37,10 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	newlabel := types.INTERPRETER_EVM_SHANGHAI + "2"
 
 	// Register contract role proposal
-	proposal := types.NewRegisterRoleProposal("Register interpreter", "Register interpreter", "interpreter", newlabel, interpreterAddress.String())
-
-	appA.PassGovProposal(valAccount, sender, proposal)
+	title := "Register interpreter"
+	description := "Register interpreter"
+	proposal := &types.MsgRegisterRole{Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddress.String()}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress)
 	s.Require().Equal(newlabel, resp)

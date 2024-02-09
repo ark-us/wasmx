@@ -18,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"golang.org/x/sync/errgroup"
 
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -132,6 +133,10 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, appOpts,
 		bam.SetChainID(chainID),
 	)
+	for acc := range maccPerms {
+		addr := authtypes.NewModuleAddress(acc).String()
+		app.Logger().Info("module address", acc, addr)
+	}
 	return app, app.DefaultGenesis()
 }
 

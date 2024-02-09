@@ -10,11 +10,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	address "github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
-	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	"mythos/v1/x/websrv/types"
 )
@@ -81,12 +81,22 @@ func NewRegisterRouteProposalCmd() *cobra.Command {
 				return err
 			}
 
+			// authority, _ := cmd.Flags().GetString(FlagAuthority)
+			// if authority != "" {
+			// 	if _, err = ac.StringToBytes(authority); err != nil {
+			// 		return fmt.Errorf("invalid authority address: %w", err)
+			// 	}
+			// } else {
+			// 	authority = sdk.AccAddress(address.Module("gov")).String()
+			// }
+
 			path := args[0]
 			contractAddress := args[1]
 			from := clientCtx.GetFromAddress()
-			content := types.NewRegisterRouteProposal(title, description, path, contractAddress)
+			authority := sdk.AccAddress(address.Module("gov")).String()
+			content := &types.MsgRegisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
-			msg, err := govv1beta1.NewMsgSubmitProposal(content, deposit, from)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
 			if err != nil {
 				return err
 			}
@@ -149,9 +159,10 @@ func NewDeregisterRouteProposalCmd() *cobra.Command {
 			path := args[0]
 			contractAddress := args[1]
 			from := clientCtx.GetFromAddress()
-			content := types.NewDeregisterRouteProposal(title, description, path, contractAddress)
+			authority := sdk.AccAddress(address.Module("gov")).String()
+			content := &types.MsgDeregisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
-			msg, err := govv1beta1.NewMsgSubmitProposal(content, deposit, from)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
 			if err != nil {
 				return err
 			}
