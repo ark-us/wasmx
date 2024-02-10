@@ -1,4 +1,4 @@
-package keeper_test
+package wasmx
 
 import (
 	"encoding/hex"
@@ -582,7 +582,7 @@ func (s *AppContext) PassGovProposal(
 	voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
 	resp, err = s.DeliverTx(valAccount, voteMsg)
 	s.S.Require().NoError(err)
-	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
+	s.S.Require().True(resp.IsOK(), resp.GetEvents())
 	s.S.Commit()
 
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
