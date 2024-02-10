@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
+	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/types"
 )
 
@@ -93,7 +94,7 @@ func NewRegisterRouteProposalCmd() *cobra.Command {
 			path := args[0]
 			contractAddress := args[1]
 			from := clientCtx.GetFromAddress()
-			authority := sdk.AccAddress(address.Module("gov")).String()
+			authority := sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)).String()
 			content := &types.MsgRegisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
 			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)

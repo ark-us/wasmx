@@ -1,7 +1,6 @@
 package ibctesting
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -124,9 +123,9 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	valAddr := sdk.ValAddress(senderAddress.Bytes())
 	valStr, err := valAddrCodec.BytesToString(valAddr)
 	require.NoError(t, err)
-	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
+	// TODO _validator, err
+	_, err = stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
 	require.NoError(t, err)
-	fmt.Println("--TODO", _validator)
 
 	// TODO ?
 	// _validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)

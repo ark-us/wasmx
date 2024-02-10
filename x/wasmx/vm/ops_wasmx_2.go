@@ -786,7 +786,7 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.GetContext().Logger().Info(msg, parts...)
+	ctx.GetContext().Logger().Debug(msg, parts...)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

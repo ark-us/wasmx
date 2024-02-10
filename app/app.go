@@ -726,16 +726,6 @@ func New(
 		app.mm,
 		map[string]module.AppModuleBasic{
 			genutiltypes.ModuleName: genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
-			// TODO remove
-			// wasmxmoduletypes.ROLE_GOVERNANCE: gov.NewAppModuleBasic(
-			// 	[]govclient.ProposalHandler{
-			// 		paramsclient.ProposalHandler,
-			// 		websrvclient.RegisterRouteProposalHandler,
-			// 		websrvclient.DeregisterRouteProposalHandler,
-			// 		wasmxclient.RegisterRoleProposalHandler,
-			// 		wasmxclient.DeregisterRoleProposalHandler,
-			// 	},
-			// ),
 		})
 	// TODO - do we need this?
 	// app.BasicModuleManager.RegisterLegacyAminoCodec(cdc)

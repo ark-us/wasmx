@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -56,7 +57,8 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 			label := args[1]
 			contractAddress := args[2]
 			from := clientCtx.GetFromAddress()
-			content := &types.MsgRegisterRole{Title: title, Description: description, Role: role, Label: label, ContractAddress: contractAddress}
+			authority := sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)).String()
+			content := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: role, Label: label, ContractAddress: contractAddress}
 
 			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
 			if err != nil {
@@ -121,7 +123,8 @@ func NewDeregisterRoleProposalCmd() *cobra.Command {
 
 			contractAddress := args[0]
 			from := clientCtx.GetFromAddress()
-			content := &types.MsgDeregisterRole{Title: title, Description: description, ContractAddress: contractAddress}
+			authority := sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)).String()
+			content := &types.MsgDeregisterRole{Authority: authority, Title: title, Description: description, ContractAddress: contractAddress}
 
 			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
 			if err != nil {
