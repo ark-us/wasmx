@@ -320,7 +320,7 @@ func (s *AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*ab
 		return nil, err
 	}
 
-	s.S.Require().Equal(len(res.TxResults), 1)
+	s.S.Require().Equal(1, len(res.TxResults))
 	return res.TxResults[0], nil
 }
 

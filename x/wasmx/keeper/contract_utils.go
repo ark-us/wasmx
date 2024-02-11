@@ -254,15 +254,16 @@ func (k *Keeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.
 	}
 	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
 	msg := banktypes.NewMsgSend(fromAddr, toAddr, coins)
-	msgbz, err := k.cdc.MarshalJSON(msg)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return err
 	}
+	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
 	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		return err
 	}
-	_, err = k.execute(ctx, bankAddress, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
+	_, err = k.execute(ctx, bankAddress, bankAddress, execmsg, nil, nil)
 	return err
 }
 
@@ -276,10 +277,11 @@ func (k *Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) 
 		return sdk.Coin{}, err
 	}
 	msg := banktypes.NewQueryBalanceRequest(addr, denom)
-	msgbz, err := k.cdc.MarshalJSON(msg)
+	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return sdk.Coin{}, err
 	}
+	msgbz := []byte(fmt.Sprintf(`{"GetBalance":%s}`, string(bankmsgbz)))
 	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		return sdk.Coin{}, err
@@ -288,8 +290,12 @@ func (k *Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) 
 	if err != nil {
 		return sdk.Coin{}, err
 	}
-	fmt.Println("---getbalanc2z", string(resp.Data))
-	return sdk.Coin{}, nil
+	var response banktypes.QueryBalanceResponse
+	err = k.cdc.UnmarshalJSON(resp.Data, &response)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+	return *response.Balance, nil
 }
 
 func (k *Keeper) AllBalances(ctx sdk.Context, addr sdk.AccAddress) (sdk.Coins, error) {

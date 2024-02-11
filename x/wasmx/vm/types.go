@@ -15,7 +15,7 @@ import (
 
 var (
 	// 0, 1, 2 are used by wasmedge for success, terminate, fail
-	Result_OutOfGas = wasmedge.NewResult(wasmedge.ErrCategory_UserLevel, 10)
+	// Result_OutOfGas = wasmedge.NewResult(wasmedge.ErrCategory_UserLevel, 10)
 
 	LOG_TYPE_WASMX = "wasmx"
 )

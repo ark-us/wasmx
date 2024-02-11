@@ -286,6 +286,17 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		privKey,
 		[]string{fmt.Sprintf(`%s@localhost:8090`, addr.String())},
 	)
+	if err != nil {
+		return err
+	}
+	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
+	appA := suite.AppContext()
+	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
+		Msg:      msg,
+	})
+	suite.raftToLeader()
 	return err
 }
 
@@ -420,16 +431,14 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
 	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
 	msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
-	respbz, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
+	_, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
-	log.Printf("* FinalizeBlock END: %+v", string(respbz.Data))
 
 	lastBlock := suite.App().LastBlockHeight()
-	log.Printf("-lastBlock: %+v", lastBlock)
 	return suite.GetBlock(suite.chain.GetContext(), lastBlock)
 }
 
@@ -487,6 +496,23 @@ func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.Res
 		return nil, err
 	}
 	return &blockResultData, nil
+}
+
+func (suite *KeeperTestSuite) raftToLeader() {
+	// lastInterval := suite.GetLastInterval(suite.chain.GetContext())
+	currentState := suite.GetCurrentState(suite.chain.GetContext())
+	// get consensus version
+	if currentState != "#RAFT-FULL-1.initialized.Follower" {
+		return
+	}
+	msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":%s}`, "1"))
+	_, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
+		Msg:      msg1,
+	})
+	suite.Require().NoError(err)
+	return
 }
 
 func (suite *KeeperTestSuite) commitBlock(res *abci.ResponseFinalizeBlock) {

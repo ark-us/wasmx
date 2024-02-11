@@ -9,6 +9,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
@@ -39,7 +40,8 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	// Register contract role proposal
 	title := "Register interpreter"
 	description := "Register interpreter"
-	proposal := &types.MsgRegisterRole{Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddress.String()}
+	authority := authtypes.NewModuleAddress(types.ROLE_GOVERNANCE).String()
+	proposal := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddress.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress)

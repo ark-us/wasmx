@@ -34,16 +34,22 @@ func BankGetBalance(ctx *Context, addr sdk.AccAddress, denom string) (sdk.Coin, 
 		addr = alias
 	}
 	msg := banktypes.NewQueryBalanceRequest(addr, denom)
-	msgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
+	bankmsgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
 	if err != nil {
 		return sdk.Coin{}, err
 	}
+	msgbz := []byte(fmt.Sprintf(`{"GetBalance":%s}`, string(bankmsgbz)))
 	res, err := BankCall(ctx, msgbz, true)
 	if err != nil {
 		return sdk.Coin{}, err
 	}
-	fmt.Println("---getbalance", string(res))
-	return sdk.Coin{}, nil
+	var response banktypes.QueryBalanceResponse
+	err = ctx.CosmosHandler.JSONCodec().UnmarshalJSON(res, &response)
+	if err != nil {
+		return sdk.Coin{}, err
+	}
+
+	return *response.Balance, nil
 }
 
 func BankSendCoin(ctx *Context, from sdk.AccAddress, to sdk.AccAddress, amount sdk.Coins) error {
@@ -56,10 +62,11 @@ func BankSendCoin(ctx *Context, from sdk.AccAddress, to sdk.AccAddress, amount s
 		to = aliasTo
 	}
 	msg := banktypes.NewMsgSend(from, to, amount)
-	msgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
+	bankmsgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
 	if err != nil {
 		return err
 	}
+	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
 	_, err = BankCall(ctx, msgbz, false)
 	return err
 }

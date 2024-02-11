@@ -409,15 +409,8 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := raftContract.String()
 
-	// storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
-	// call start() on RAFT consensus
-	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
-	_, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
-		Sender:   raftContractBech32,
-		Contract: raftContractBech32,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
+	var msg1 []byte
+	var err error
 
 	// Candidate -> Leader
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
@@ -569,7 +562,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	newlabel := wasmxtypes.CONSENSUS_AVA_SNOWMAN + "2"
 	title := "Register consensus"
 	description := "Register consensus"
-	proposal := &wasmxtypes.MsgRegisterRole{Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: appA.App.WasmxKeeper.GetAuthority(), Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)

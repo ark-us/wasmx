@@ -824,7 +824,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contr
 
 // Execute executes the contract instance
 func (k *Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string, isdebug bool) (*types.ContractResponse, error) {
-	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "execute")
+	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "query")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
