@@ -26,7 +26,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 	// getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -77,7 +77,7 @@ func (suite *KeeperTestSuite) TestAliasContract() {
 	getRegisterHash := "337e8247"
 	// getRegisterMessage := "2f6da104"
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -113,7 +113,7 @@ func (suite *KeeperTestSuite) TestAliasContractHandler() {
 	senderEthHex := types.EvmAddressFromAcc(senderEth)
 	senderHex := types.EvmAddressFromAcc(sender.Address)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 
 	handler := appA.App.WasmxKeeper.ContractHandler()
 
@@ -161,7 +161,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	aliasEthAddr := sdk.AccAddress(appA.Hex2bz(types.ADDR_ALIAS_ETH))
 
 	// We only fund sender

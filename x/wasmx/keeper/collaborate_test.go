@@ -10,7 +10,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	"mythos/v1/x/wasmx/keeper/testutil"
+	testutil "mythos/v1/testutil/wasmx"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -30,7 +30,7 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 

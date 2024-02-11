@@ -31,7 +31,7 @@ var (
 // 	sender := suite.GetRandomAccount()
 // 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-// 	appA := s.GetAppContext(s.chainA)
+// 	appA := s.AppContext()
 // 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 // 	suite.Commit()
 
@@ -52,7 +52,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -80,7 +80,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -107,7 +107,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -198,7 +198,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -218,7 +218,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 
 	data = []byte(`{"getChainId":[]}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal(appA.Chain.ChainID, string(resp))
+	s.Require().Equal(appA.Chain.ChainId, string(resp))
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)

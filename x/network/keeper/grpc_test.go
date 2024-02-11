@@ -227,7 +227,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	qrespbz = appA.QueryDecode(qresp.Data)
 	// TODO commit the txs
 	suite.Require().Equal(``, string(qrespbz))
-
+	log.Print("ending test")
 	time.Sleep(10 * time.Second)
 }
 

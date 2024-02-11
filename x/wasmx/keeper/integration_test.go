@@ -19,7 +19,7 @@ package keeper_test
 // 	sender := suite.GetRandomAccount()
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 
-// 	appA := s.GetAppContext(s.chainA)
+// 	appA := s.AppContext()
 // 	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
 // 	suite.Commit()
 

@@ -17,7 +17,7 @@ func (suite *KeeperTestSuite) TestFSM_Semaphore() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -45,7 +45,7 @@ func (suite *KeeperTestSuite) TestFSM_ERC20() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(100_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), owner.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -115,7 +115,7 @@ func (suite *KeeperTestSuite) TestFSM_Timer() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(100_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), owner.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))

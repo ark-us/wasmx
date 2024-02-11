@@ -33,7 +33,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	s.Require().NoError(err)
 	proxyAddress := sdk.AccAddress(proxyAddressBz)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
@@ -93,7 +93,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	sender2AddressEvm := types.EvmAddressFromAcc(sender2.Address)
 	initBalance := sdkmath.NewInt(1000_000_000).MulRaw(1000000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))

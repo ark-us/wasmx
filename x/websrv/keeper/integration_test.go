@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	"mythos/v1/x/wasmx/keeper/testutil"
+	testutil "mythos/v1/testutil/wasmx"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/types"
 )
@@ -27,12 +27,12 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	valAccount := simulation.Account{
-		PrivKey: s.chainA.SenderPrivKey,
-		PubKey:  s.chainA.SenderPrivKey.PubKey(),
-		Address: s.chainA.SenderAccount.GetAddress(),
+		PrivKey: s.Chain().SenderPrivKey,
+		PubKey:  s.Chain().SenderPrivKey.PubKey(),
+		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
@@ -82,12 +82,12 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(2_000_000_000_000)
 	valAccount := simulation.Account{
-		PrivKey: s.chainA.SenderPrivKey,
-		PubKey:  s.chainA.SenderPrivKey.PubKey(),
-		Address: s.chainA.SenderAccount.GetAddress(),
+		PrivKey: s.Chain().SenderPrivKey,
+		PubKey:  s.Chain().SenderPrivKey.PubKey(),
+		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))

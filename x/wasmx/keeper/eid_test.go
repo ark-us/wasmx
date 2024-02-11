@@ -52,7 +52,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -156,7 +156,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	var calldata string
 	var qres string
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -245,7 +245,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -282,7 +282,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -311,7 +311,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -400,7 +400,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() 
 	initBalance := sdkmath.NewInt(1000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -478,7 +478,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	// replaceAccount(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
 	// replaceAccount := "7b7ceb53"
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -578,7 +578,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 	// replaceAccount(uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
 	// replaceAccount := "7b7ceb53"
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 

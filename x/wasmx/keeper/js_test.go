@@ -36,7 +36,7 @@ func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -51,7 +51,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -89,7 +89,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -116,7 +116,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -145,7 +145,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	depsJs := []string{types.INTERPRETER_JS}
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -178,7 +178,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 

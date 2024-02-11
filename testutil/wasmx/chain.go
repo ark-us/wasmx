@@ -403,8 +403,8 @@ func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinaliz
 	for _, tx := range txs {
 		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"newTransaction","params":[{"key":"transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
 		_, err := suite.chain.App.NetworkKeeper.ExecuteContract(suite.chain.GetContext(), &types.MsgExecuteContract{
-			Sender:   "consensus",
-			Contract: "consensus",
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,
 		})
 		suite.Require().NoError(err)
@@ -421,8 +421,8 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
 	msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
 	respbz, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
-		Sender:   "consensus",
-		Contract: "consensus",
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)

@@ -175,7 +175,7 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
@@ -236,7 +236,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 	recipient := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
@@ -285,7 +285,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	}
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), deployer.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
@@ -323,7 +323,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	recipient := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
@@ -388,7 +388,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
@@ -538,7 +538,7 @@ func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}

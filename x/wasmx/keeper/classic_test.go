@@ -131,7 +131,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	// "f78d2c3c": "extcodesize_(address)",
 	// "6e35da83": "extcodesize_(uint256)",
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -375,7 +375,7 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 	getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -417,7 +417,7 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	fiboevm, err := hex.DecodeString(testdata.Fibonacci)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -491,7 +491,7 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	evmcode, err := hex.DecodeString(testdata.CallRevert)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -511,7 +511,7 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 
 	// contract has funds, so the inner call succeeds, but tx fails
 	// the inner call sends funds to the 0x1111 address, that does not yet exist
-	appA = s.GetAppContext(s.chainA)
+	appA = s.AppContext()
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -531,7 +531,7 @@ func (suite *KeeperTestSuite) TestEwasmNestedGeneralCall() {
 	evmcode, err := hex.DecodeString(testdata.CallGeneral)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -569,7 +569,7 @@ func (suite *KeeperTestSuite) TestEwasmCallNested() {
 	evmbin_deep, err := hex.DecodeString(testdata.CallNestedDeep)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -597,7 +597,7 @@ func (suite *KeeperTestSuite) TestEwasmStaticCall() {
 	evmcode_inner, err := hex.DecodeString(testdata.CallStaticInner)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -631,7 +631,7 @@ func (suite *KeeperTestSuite) TestEwasmDelegateCall() {
 	evmcode, err := hex.DecodeString(testdata.CallDelegate)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -654,7 +654,7 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	evmcode, err := hex.DecodeString(testdata.Fibonacci)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -679,7 +679,7 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	evmcode, err := hex.DecodeString(testdata.Fibonacci)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -721,7 +721,7 @@ func (suite *KeeperTestSuite) TestEwasmSwitchJump() {
 	evmcode, err := hex.DecodeString(testdata.Switch)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -740,7 +740,7 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 	evmcode, err := hex.DecodeString(testdata.Logs)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -763,7 +763,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate1() {
 	evmcode, err := hex.DecodeString(testdata.Create)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	createHex := "780900dc"
@@ -820,7 +820,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 	evmcode, err := hex.DecodeString(testdata.Create)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 	create2Hex := "cb858002"
@@ -882,7 +882,7 @@ func (suite *KeeperTestSuite) TestEwasmOrigin() {
 	evmcode, err := hex.DecodeString(testdata.CallStatic)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -908,7 +908,7 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 	evmcode, err := hex.DecodeString(testdata.ERC20)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -972,7 +972,7 @@ func (suite *KeeperTestSuite) TestContractTransfer() {
 	evmcode, err := hex.DecodeString(testdata.Transfer)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
@@ -998,7 +998,7 @@ func (suite *KeeperTestSuite) TestKeccak256() {
 	evmcode, err := hex.DecodeString(testdata.Keccak256Test)
 	s.Require().NoError(err)
 
-	appA := s.GetAppContext(s.chainA)
+	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	suite.Commit()
 
