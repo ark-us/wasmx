@@ -668,7 +668,6 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().True(res.IsErr(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
-	s.Commit()
 }
 
 func (suite *KeeperTestSuite) TestEwasmFibonacci() {

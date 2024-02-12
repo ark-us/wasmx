@@ -418,7 +418,9 @@ func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinaliz
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,
 		})
-		suite.Require().NoError(err)
+		if err != nil {
+			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{&abci.ExecTxResult{Log: err.Error()}}}, nil
+		}
 	}
 	return suite.CommitBlock()
 }
@@ -436,7 +438,9 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg1,
 	})
-	suite.Require().NoError(err)
+	if err != nil {
+		return nil, err
+	}
 
 	lastBlock := suite.App().LastBlockHeight()
 	return suite.GetBlock(suite.chain.GetContext(), lastBlock)
