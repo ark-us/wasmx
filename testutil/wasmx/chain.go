@@ -419,7 +419,7 @@ func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinaliz
 			Msg:      msg,
 		})
 		if err != nil {
-			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{&abci.ExecTxResult{Log: err.Error()}}}, nil
+			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{&abci.ExecTxResult{Code: 11, Log: err.Error()}}}, nil
 		}
 	}
 	return suite.CommitBlock()
