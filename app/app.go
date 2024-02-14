@@ -407,6 +407,8 @@ func New(
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
+		app.goRoutineGroup,
+		app.goContextParent,
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],

@@ -199,14 +199,16 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(to)
 
 	newctx := &Context{
-		Ctx:            tempCtx,
-		GasMeter:       ctx.GasMeter,
-		ContractStore:  contractStore,
-		CosmosHandler:  newCosmosHandler,
-		ContractRouter: newrouter,
-		App:            ctx.App,
-		NativeHandler:  ctx.NativeHandler,
-		dbIterators:    map[int32]dbm.Iterator{},
+		goRoutineGroup:  ctx.goRoutineGroup,
+		goContextParent: ctx.goContextParent,
+		Ctx:             tempCtx,
+		GasMeter:        ctx.GasMeter,
+		ContractStore:   contractStore,
+		CosmosHandler:   newCosmosHandler,
+		ContractRouter:  newrouter,
+		App:             ctx.App,
+		NativeHandler:   ctx.NativeHandler,
+		dbIterators:     map[int32]dbm.Iterator{},
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,

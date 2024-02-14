@@ -1,9 +1,12 @@
 package vm
 
 import (
+	"context"
+
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -81,20 +84,22 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 type ContractRouter = map[string]*ContractContext
 
 type Context struct {
-	Ctx            sdk.Context
-	GasMeter       types.GasMeter
-	Env            *types.Env
-	ContractRouter ContractRouter
-	ContractStore  prefix.Store
-	CosmosHandler  types.WasmxCosmosHandler
-	App            types.Application
-	NativeHandler  NativePrecompileHandler
-	ReturnData     []byte
-	FinishData     []byte
-	CurrentCallId  uint32
-	Logs           []WasmxLog
-	Messages       []cw8types.SubMsg `json:"messages"`
-	dbIterators    map[int32]dbm.Iterator
+	goRoutineGroup  *errgroup.Group
+	goContextParent context.Context
+	Ctx             sdk.Context
+	GasMeter        types.GasMeter
+	Env             *types.Env
+	ContractRouter  ContractRouter
+	ContractStore   prefix.Store
+	CosmosHandler   types.WasmxCosmosHandler
+	App             types.Application
+	NativeHandler   NativePrecompileHandler
+	ReturnData      []byte
+	FinishData      []byte
+	CurrentCallId   uint32
+	Logs            []WasmxLog
+	Messages        []cw8types.SubMsg `json:"messages"`
+	dbIterators     map[int32]dbm.Iterator
 }
 
 func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {

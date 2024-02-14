@@ -1,12 +1,14 @@
 package vm
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"golang.org/x/exp/slices"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -215,6 +217,8 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
+	goRoutineGroup *errgroup.Group,
+	goContextParent context.Context,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -241,15 +245,17 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		App:            app,
-		ContractRouter: contractRouter,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
+		goRoutineGroup:  goRoutineGroup,
+		goContextParent: goContextParent,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		App:             app,
+		ContractRouter:  contractRouter,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -298,6 +304,8 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
+	goRoutineGroup *errgroup.Group,
+	goContextParent context.Context,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -324,15 +332,17 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		ContractRouter: contractRouter,
-		App:            app,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
+		goRoutineGroup:  goRoutineGroup,
+		goContextParent: goContextParent,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		ContractRouter:  contractRouter,
+		App:             app,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
