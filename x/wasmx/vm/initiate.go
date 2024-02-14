@@ -151,6 +151,8 @@ type ExecuteFunctionInterface func(context *Context, contractVm *wasmedge.VM, fu
 
 var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
+var DependenciesMap = map[string]bool{}
+
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
@@ -175,6 +177,18 @@ func init() {
 	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
 	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
 	ExecuteFunctionHandler[types.INTERPRETER_FSM] = ExecuteFSM
+
+	DependenciesMap[types.EWASM_VM_EXPORT] = true
+	DependenciesMap[types.WASMX_VM_EXPORT] = true
+	DependenciesMap[types.SYS_VM_EXPORT] = true
+	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
+}
+
+func SetSystemDepHandler(
+	key string,
+	handler func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error),
+) {
+	SystemDepHandler[key] = handler
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {

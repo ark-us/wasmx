@@ -84,8 +84,8 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 type ContractRouter = map[string]*ContractContext
 
 type Context struct {
-	goRoutineGroup  *errgroup.Group
-	goContextParent context.Context
+	GoRoutineGroup  *errgroup.Group
+	GoContextParent context.Context
 	Ctx             sdk.Context
 	GasMeter        types.GasMeter
 	Env             *types.Env

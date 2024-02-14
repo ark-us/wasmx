@@ -148,6 +148,8 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	)
 	mapp := app.New(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
 	k := keeper.NewKeeper(
+		g,
+		goctx,
 		cdc,
 		storeKey,
 		memStoreKey,

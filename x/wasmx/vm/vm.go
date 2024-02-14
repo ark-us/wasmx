@@ -135,18 +135,18 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	for _, mexport := range exports {
 		fname := mexport.GetExternalName()
 		var dep string
-		if strings.Contains(fname, types.EWASM_VM_EXPORT) {
-			dep = parseDependency(fname, types.EWASM_VM_EXPORT)
-		} else if strings.Contains(fname, types.WASMX_VM_EXPORT) {
-			dep = parseDependency(fname, types.WASMX_VM_EXPORT)
-		} else if strings.Contains(fname, types.SYS_VM_EXPORT) {
-			dep = parseDependency(fname, types.SYS_VM_EXPORT)
-		} else if strings.Contains(fname, types.WASMX_CONS_VM_EXPORT) {
-			dep = parseDependency(fname, types.SYS_VM_EXPORT)
-		} else if fname == types.EWASM_ENV_0 {
+		for key, ok := range DependenciesMap {
+			if !ok {
+				continue
+			}
+			if strings.Contains(fname, key) {
+				dep = parseDependencyOrHexAddr(fname, key)
+			}
+		}
+		if fname == types.EWASM_ENV_0 {
 			dep = types.EWASM_ENV_1
 		} else if fname == types.CW_ENV_8 {
-			dep = parseDependency(fname, types.CW_VM_EXPORT)
+			dep = parseDependencyOrHexAddr(fname, types.CW_VM_EXPORT)
 		}
 		if dep != "" {
 			err := VerifyEnv(dep, imports)
@@ -165,7 +165,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 		var dep string
 
 		if strings.Contains(fname, types.WASI_VM_EXPORT) {
-			dep = parseDependency(fname, types.WASI_VM_EXPORT)
+			dep = parseDependencyOrHexAddr(fname, types.WASI_VM_EXPORT)
 		}
 
 		if dep != "" {
@@ -205,7 +205,7 @@ func AotCompile(inPath string, outPath string) error {
 }
 
 // Returns the hex address of the interpreter if exists or the version string
-func parseDependency(contractVersion string, part string) string {
+func parseDependencyOrHexAddr(contractVersion string, part string) string {
 	dep := contractVersion
 	if strings.Contains(contractVersion, part) {
 		v := contractVersion[len(part):]
@@ -245,8 +245,8 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		goRoutineGroup:  goRoutineGroup,
-		goContextParent: goContextParent,
+		GoRoutineGroup:  goRoutineGroup,
+		GoContextParent: goContextParent,
 		Ctx:             ctx,
 		GasMeter:        gasMeter,
 		Env:             &env,
@@ -332,8 +332,8 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		goRoutineGroup:  goRoutineGroup,
-		goContextParent: goContextParent,
+		GoRoutineGroup:  goRoutineGroup,
+		GoContextParent: goContextParent,
 		Ctx:             ctx,
 		GasMeter:        gasMeter,
 		Env:             &env,
