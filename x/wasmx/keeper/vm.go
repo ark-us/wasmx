@@ -135,8 +135,9 @@ func (k *WasmxEngine) Execute(
 	return data, 0, nil
 }
 
-func (k *WasmxEngine) ExecuteEventual(
+func (k *WasmxEngine) ExecuteEntryPoint(
 	ctx sdk.Context,
+	contractEntryPoint string,
 	codeInfo *types.CodeInfo,
 	env types.Env,
 	executeMsg []byte,
@@ -153,9 +154,9 @@ func (k *WasmxEngine) ExecuteEventual(
 
 	// TODO if it has interpreter deps
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_TIMED, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, k.app)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, contractEntryPoint, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, k.app)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_TIMED, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, k.app)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, contractEntryPoint, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, k.app)
 	}
 
 	if err != nil {

@@ -13,7 +13,6 @@ var HOST_WASMX_ENV_EXPORT = "wasmx_p2p_"
 
 var HOST_WASMX_ENV_P2P = "p2p"
 
-var ENTRY_POINT_P2P_MSG = "p2pReceiveMessage"
 
 type Peer struct {
 	Id   string `json:"id"`

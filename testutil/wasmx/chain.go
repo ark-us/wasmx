@@ -433,7 +433,7 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
 	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
 	msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
-	_, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
+	_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg1,
@@ -510,7 +510,7 @@ func (suite *KeeperTestSuite) raftToLeader() {
 		return
 	}
 	msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":%s}`, "1"))
-	_, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
+	_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg1,

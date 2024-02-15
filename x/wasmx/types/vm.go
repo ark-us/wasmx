@@ -48,6 +48,7 @@ var (
 	ENTRY_POINT_QUERY       = "query"
 	ENTRY_POINT_REPLY       = "reply"
 	ENTRY_POINT_TIMED       = "eventual"
+	ENTRY_POINT_P2P_MSG     = "p2pmsg"
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.

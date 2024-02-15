@@ -207,7 +207,7 @@ func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) 
 }
 
 func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
-	if funcName != types.ENTRY_POINT_INSTANTIATE && funcName != types.ENTRY_POINT_TIMED {
+	if funcName != types.ENTRY_POINT_INSTANTIATE && funcName != types.ENTRY_POINT_TIMED && funcName != types.ENTRY_POINT_P2P_MSG {
 		funcName = "main"
 	}
 	return contractVm.Execute(funcName)
@@ -218,8 +218,8 @@ func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName stri
 }
 
 func ExecuteFSM(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
-	if funcName == types.ENTRY_POINT_TIMED {
-		return contractVm.Execute(types.ENTRY_POINT_TIMED)
+	if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
+		return contractVm.Execute(funcName)
 	}
 	return contractVm.Execute("main")
 }

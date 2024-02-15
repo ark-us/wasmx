@@ -35,7 +35,7 @@ func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract)
 	}, nil
 }
 
-func (k *Keeper) ExecuteEventual(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, entryPoint string, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
@@ -50,7 +50,7 @@ func (k *Keeper) ExecuteEventual(ctx sdk.Context, msg *types.MsgExecuteContract)
 		return nil, err
 	}
 
-	resp, err := k.wasmxKeeper.ExecuteEventual(ctx, contractAddress, senderAddr, execmsgbz, nil)
+	resp, err := k.wasmxKeeper.ExecuteEntryPoint(ctx, entryPoint, contractAddress, senderAddr, execmsgbz, nil)
 	if err != nil {
 		return nil, err
 	}

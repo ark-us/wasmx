@@ -649,7 +649,7 @@ func ExecuteWasi(context *Context, contractVm *wasmedge.VM, funcName string, arg
 		if !found {
 			return nil, nil
 		}
-	} else if funcName == types.ENTRY_POINT_TIMED {
+	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
 		res, err = contractVm.Execute(funcName)
 	} else {
 		// WASI command - no args, no return

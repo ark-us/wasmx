@@ -3,10 +3,12 @@ package keeper
 import (
 	"context"
 	"fmt"
-	"mythos/v1/x/network/types"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // TODO this must not be called from outside, only from wasmx... (authority)
@@ -83,7 +85,7 @@ func (k *Keeper) startTimeoutInternal(
 			Contract: msg.Contract,
 			Msg:      msg.Args,
 		}
-		res, err := k.ExecuteEventual(ctx, msg)
+		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_TIMED, msg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("Closing eventual thread", "description", description, err.Error())

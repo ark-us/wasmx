@@ -132,7 +132,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
 
-	respbz, err := appA.App.NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+	respbz, err := appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -414,7 +414,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// Candidate -> Leader
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
-	_, err = suite.App().NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: raftContractBech32,
 		Msg:      msg1,
@@ -507,7 +507,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	suite.Require().NoError(err)
 
 	msg1 = []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
-	_, err = appA.App.NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   tendermintContract.String(),
 		Contract: tendermintContract.String(),
 		Msg:      msg1,
@@ -545,7 +545,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 
 	// Candidate -> Leader
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
-	_, err = suite.App().NetworkKeeper.ExecuteEventual(appA.Context(), &types.MsgExecuteContract{
+	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: raftContractBech32,
 		Msg:      msg1,
