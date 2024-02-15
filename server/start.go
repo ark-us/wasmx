@@ -54,6 +54,7 @@ import (
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
 	networktypes "mythos/v1/x/network/types"
+	networkvm "mythos/v1/x/network/vm"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -357,6 +358,8 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
+	// for network p2p streams
+	ctx = networkvm.WithP2PEmptyContext(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)

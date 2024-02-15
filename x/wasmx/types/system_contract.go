@@ -47,6 +47,9 @@ var ADDR_HOOKS = "0x0000000000000000000000000000000000000034"
 var ADDR_GOV = "0x0000000000000000000000000000000000000035"
 var ADDR_GOV_CONT = "0x0000000000000000000000000000000000000038"
 var ADDR_AUTH = "0x0000000000000000000000000000000000000039"
+var ADDR_CONSENSUS_RAFTP2P_LIBRARY = "0x0000000000000000000000000000000000000036"
+var ADDR_CONSENSUS_RAFTP2P = "0x0000000000000000000000000000000000000037"
+
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func DefaultSystemContracts() SystemContracts {
@@ -349,6 +352,15 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
+			Address:     ADDR_CONSENSUS_RAFTP2P_LIBRARY,
+			Label:       "raftp2p_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
 			Address:     ADDR_CONSENSUS_TENDERMINT_LIBRARY,
 			Label:       "tendermint_library",
 			InitMessage: initMsg,
@@ -362,9 +374,18 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       CONSENSUS_RAFT,
 			InitMessage: raftInitMsg,
 			Pinned:      false,
-			Role:        ROLE_CONSENSUS,
+			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFT_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_CONSENSUS_RAFTP2P,
+			Label:       CONSENSUS_RAFTP2P,
+			InitMessage: raftInitMsg,
+			Pinned:      false,
+			Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFTP2P_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
 			Address:     ADDR_CONSENSUS_TENDERMINT,

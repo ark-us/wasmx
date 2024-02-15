@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"mythos/v1/x/network/types"
+	p2pvm "mythos/v1/x/network/vm"
 )
 
 type (
@@ -32,6 +33,10 @@ type (
 		authority string
 	}
 )
+
+func init() {
+	p2pvm.Setup()
+}
 
 func NewKeeper(
 	goRoutineGroup *errgroup.Group,

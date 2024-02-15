@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -274,6 +275,14 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper(), suite.App().BaseApp)
 
 	addr := sdk.AccAddress(vals[0].PubKey.Bytes())
+	currentState := suite.GetCurrentState(suite.chain.GetContext())
+
+	peers := []string{}
+	if strings.Contains(currentState, "RAFT-FULL") {
+		peers = []string{fmt.Sprintf(`%s@localhost:8090`, addr.String())}
+	} else if strings.Contains(currentState, "RAFT-P2P") {
+		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, addr.String())}
+	}
 	err = networkkeeper.InitConsensusContract(
 		suite.App(),
 		suite.App().Logger(),
@@ -284,7 +293,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		res.AppVersion,
 		pubKey,
 		privKey,
-		[]string{fmt.Sprintf(`%s@localhost:8090`, addr.String())},
+		peers,
 	)
 	if err != nil {
 		return err
@@ -419,7 +428,7 @@ func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinaliz
 			Msg:      msg,
 		})
 		if err != nil {
-			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{&abci.ExecTxResult{Code: 11, Log: err.Error()}}}, nil
+			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 		}
 	}
 	return suite.CommitBlock()

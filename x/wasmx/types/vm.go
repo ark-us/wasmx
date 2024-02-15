@@ -204,6 +204,7 @@ var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 var STORAGE_CHAIN = "storage_chain"
 
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
+var CONSENSUS_RAFTP2P = "consensus_raftp2p_0.0.1"
 
 var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
 

@@ -19,7 +19,7 @@ func InstantiateWasmxConsensusJson(context *vmtypes.Context, contractVm *wasmedg
 	return cleanups, nil
 }
 
-func init() {
+func Setup() {
 	vmtypes.DependenciesMap[HOST_WASMX_ENV_EXPORT] = true
 	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_P2P_VER1, InstantiateWasmxConsensusJson)
 	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_P2P_VER1] = true
