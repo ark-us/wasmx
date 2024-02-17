@@ -129,9 +129,9 @@ func (m msgServer) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PRec
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	msg2 := &types.MsgExecuteContract{
-		Sender:   msg.Sender,
-		Contract: msg.Contract,
-		Msg:      msg.Data,
+		// Sender:   msg.Sender,
+		// Contract: msg.Contract,
+		// Msg:      msg.Data,
 	}
 	_, err := m.Keeper.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, msg2)
 
