@@ -303,17 +303,15 @@ func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFram
 	var msg cdctypes.Any
 	ctx.CosmosHandler.JSONCodec().UnmarshalJSON(reqbz, &msg)
 
-	// TODO events? add to context?
-	_, _, err = ctx.CosmosHandler.ExecuteCosmosMsgAny(&msg)
+	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsgAny(&msg)
 	errmsg := ""
 	success := 0
 	if err != nil {
 		errmsg = err.Error()
 		success = 1
+	} else {
+		ctx.Ctx.EventManager().EmitEvents(evs)
 	}
-	// else {
-	// 	ctx.Ctx.EventManager().EmitEvents(evs)
-	// }
 	response := vmtypes.CallResponse{
 		Success: uint8(success),
 		Data:    []byte(errmsg),
@@ -546,15 +544,13 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		Data:      []byte(data.Data),
 		Sender:    ctx.Env.Contract.Address.String(),
 	}
-	// TODO events
-	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
 	errmsg := ""
 	if err != nil {
 		errmsg = err.Error()
+	} else {
+		ctx.Ctx.EventManager().EmitEvents(evs)
 	}
-	// else {
-	// 	ctx.Ctx.EventManager().EmitEvents(evs)
-	// }
 	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
 	if res != nil {
 		err = rres.Unmarshal(res)

@@ -31,7 +31,6 @@ func (k Keeper) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*
 	if err != nil {
 		return nil, err
 	}
-
 	var internalResp types.QueryProposalResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &internalResp)
 	if err != nil {
@@ -45,8 +44,38 @@ func (k Keeper) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*
 }
 
 func (k Keeper) Proposals(ctx sdk.Context, req *govtypes.QueryProposalsRequest) (*govtypes.QueryProposalsResponse, error) {
-	k.Logger(ctx).Error("Proposals not implemented")
-	return &govtypes.QueryProposalsResponse{}, nil
+	reqbz, err := k.JSONCodec().MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetProposals":%s}`, string(reqbz)))
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_GOVERNANCE,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	var internalResp types.QueryProposalsResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &internalResp)
+	if err != nil {
+		return nil, err
+	}
+	proposals := make(govtypes.Proposals, len(internalResp.Proposals))
+	for i, proposal := range internalResp.Proposals {
+		prop, err := types.CosmosProposalFromInternal(k.JSONCodec(), *proposal)
+		if err != nil {
+			return nil, err
+		}
+		proposals[i] = prop
+	}
+	return &govtypes.QueryProposalsResponse{Proposals: proposals}, nil
 }
 
 func (k Keeper) Vote(ctx sdk.Context, req *govtypes.QueryVoteRequest) (*govtypes.QueryVoteResponse, error) {
@@ -102,6 +131,29 @@ func (k Keeper) Deposits(ctx sdk.Context, req *govtypes.QueryDepositsRequest) (*
 }
 
 func (k Keeper) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRequest) (*govtypes.QueryTallyResultResponse, error) {
-	k.Logger(ctx).Error("TallyResult not implemented")
-	return &govtypes.QueryTallyResultResponse{}, nil
+	reqbz, err := k.JSONCodec().MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetTallyResult":%s}`, string(reqbz)))
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_GOVERNANCE,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	var internalResp govtypes.QueryTallyResultResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &internalResp)
+	if err != nil {
+		return nil, err
+	}
+	return &internalResp, nil
 }

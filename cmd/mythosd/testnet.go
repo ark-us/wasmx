@@ -40,6 +40,7 @@ import (
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	app "mythos/v1/app"
@@ -490,6 +491,7 @@ func initGenFiles(
 	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = app.BondBaseDenom
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = app.BaseDenom
+	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(app.BaseDenom, math.NewInt(50000000)))
 	// TODO make this bigger once we have our own governance contract
 	votingP := time.Minute * 2
 	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
@@ -497,9 +499,13 @@ func initGenFiles(
 
 	var crisisGenState crisistypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState)
-
 	crisisGenState.ConstantFee.Denom = app.BaseDenom
 	appGenState[crisistypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&crisisGenState)
+
+	var mintGenState minttypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[minttypes.ModuleName], &mintGenState)
+	mintGenState.Params.MintDenom = app.BaseDenom
+	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
 	// var wasmxGenState wasmxtypes.GenesisState
 	// clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)

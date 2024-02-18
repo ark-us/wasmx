@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -272,6 +273,10 @@ func parseInstantiateArgs(rawCodeID, initMsg string, kr keyring.Keyring, sender 
 	if label == "" {
 		return nil, errors.New("label is required on all contracts")
 	}
+	msgbz, err := wasmxMsgWrap(initMsg)
+	if err != nil {
+		return nil, err
+	}
 
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
@@ -279,7 +284,7 @@ func parseInstantiateArgs(rawCodeID, initMsg string, kr keyring.Keyring, sender 
 		CodeId: codeID,
 		Label:  label,
 		Funds:  amount,
-		Msg:    []byte(initMsg),
+		Msg:    msgbz,
 	}
 	return &msg, nil
 }
@@ -324,12 +329,15 @@ func parseExecuteArgs(contractAddr string, execMsg string, sender sdk.AccAddress
 	if err != nil {
 		return types.MsgExecuteContract{}, err
 	}
-
+	msgbz, err := wasmxMsgWrap(execMsg)
+	if err != nil {
+		return types.MsgExecuteContract{}, err
+	}
 	return types.MsgExecuteContract{
 		Sender:   sender.String(),
 		Contract: contractAddr,
 		Funds:    amount,
-		Msg:      []byte(execMsg),
+		Msg:      msgbz,
 	}, nil
 }
 
@@ -372,4 +380,13 @@ $ %s tx wasmx compile 1 --from mykey
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
+}
+
+func wasmxMsgWrap(jsonmsg string) ([]byte, error) {
+	msg := types.WasmxExecutionMessage{Data: []byte(jsonmsg)}
+	msgbz, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	return msgbz, nil
 }

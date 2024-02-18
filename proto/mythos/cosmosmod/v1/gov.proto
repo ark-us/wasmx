@@ -6,6 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
 import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
 import "cosmos/gov/v1/gov.proto";
 import "amino/amino.proto";
 import "cosmos/gov/v1/tx.proto";
@@ -80,6 +81,16 @@ message QueryProposalResponse {
     // proposal is the requested governance proposal.
     GovProposal proposal = 1;
 }
+
+// QueryProposalsResponse is the response type for the Query/Proposals RPC
+// method.
+message QueryProposalsResponse {
+    // proposals defines all the requested governance proposals.
+    repeated GovProposal proposals = 1;
+
+    // pagination defines the pagination in the response.
+    cosmos.base.query.v1beta1.PageResponse pagination = 2;
+  }
 
 // Params defines the parameters for the x/gov module.
 // Since: cosmos-sdk 0.47
