@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "cosmos/staking/v1beta1/genesis.proto";
 import "cosmos/bank/v1beta1/genesis.proto";
 import "cosmos/gov/v1/genesis.proto";
+import "cosmos/auth/v1beta1/genesis.proto";
 import "mythos/cosmosmod/v1/bank_genesis.proto";
 import "mythos/cosmosmod/v1/staking_genesis.proto";
 import "mythos/cosmosmod/v1/gov_genesis.proto";
@@ -16,4 +17,5 @@ message GenesisState {
     StakingGenesisState staking = 1 [(gogoproto.nullable) = false];
     BankGenesisState bank = 2 [(gogoproto.nullable) = false];
     GovGenesisState gov = 3 [(gogoproto.nullable) = false];
+    cosmos.auth.v1beta1.GenesisState auth = 4 [(gogoproto.nullable) = false];
 }
