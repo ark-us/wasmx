@@ -217,6 +217,7 @@ var DERC20_v001 = "derc20json"
 
 var HOOKS_v001 = "hooks_0.0.1"
 var GOV_v001 = "gov_0.0.1"
+var GOV_CONT_v001 = "gov_cont_0.0.1"
 var AUTH_v001 = "auth_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"

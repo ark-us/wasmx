@@ -147,6 +147,32 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 			Admins:  []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
 			Minters: []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
 		},
+		{
+			Metadata: banktypes.Metadata{
+				Description: "arbitration token",
+				DenomUnits: []*banktypes.DenomUnit{
+					{
+						Denom:    "arb",
+						Exponent: baseDenomUnit,
+						Aliases:  []string{},
+					},
+					{
+						Denom:    "aarb",
+						Exponent: 1,
+						Aliases:  []string{},
+					},
+				},
+				Base:    "aarb",
+				Display: "ARBITRATION",
+				Name:    "ARBITRATION",
+				Symbol:  "arb",
+				URI:     "",
+				URIHash: "",
+			},
+			CodeId:  uint64(erc20jsonCodeId),
+			Admins:  []string{wasmxtypes.ROLE_GOVERNANCE},
+			Minters: []string{wasmxtypes.ROLE_GOVERNANCE},
+		},
 	}
 }
 
