@@ -96,30 +96,39 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 // AppModule implements the AppModule interface that defines the inter-dependent methods that modules need to implement
 type AppModule struct {
 	AppModuleBasic
-	keeper keeper.Keeper
-	app    networktypes.BaseApp
+	bank    keeper.KeeperBank
+	staking keeper.KeeperStaking
+	gov     keeper.KeeperGov
+	auth    keeper.KeeperAuth
+	app     networktypes.BaseApp
 }
 
 func NewAppModule(
 	cdc codec.Codec,
-	keeper keeper.Keeper,
+	bank keeper.KeeperBank,
+	staking keeper.KeeperStaking,
+	gov keeper.KeeperGov,
+	auth keeper.KeeperAuth,
 	app networktypes.BaseApp,
 ) AppModule {
 	return AppModule{
 		AppModuleBasic: NewAppModuleBasic(cdc),
-		keeper:         keeper,
+		bank:           bank,
+		staking:        staking,
+		gov:            gov,
+		auth:           auth,
 		app:            app,
 	}
 }
 
 // RegisterServices registers a gRPC query service to respond to the module-specific gRPC queries
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgBankServer(cfg.MsgServer(), keeper.NewMsgBankServerImpl(&am.keeper))
-	types.RegisterMsgStakingServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.keeper))
-	types.RegisterMsgGovServer(cfg.MsgServer(), keeper.NewMsgGovServerImpl(&am.keeper))
-	types.RegisterQueryBankServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.keeper))
-	types.RegisterQueryStakingServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.keeper))
-	types.RegisterQueryGovServer(cfg.QueryServer(), keeper.NewQuerierGov(&am.keeper))
+	types.RegisterMsgBankServer(cfg.MsgServer(), keeper.NewMsgBankServerImpl(&am.bank))
+	types.RegisterMsgStakingServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.staking))
+	types.RegisterMsgGovServer(cfg.MsgServer(), keeper.NewMsgGovServerImpl(&am.gov))
+	types.RegisterQueryBankServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.bank))
+	types.RegisterQueryStakingServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.staking))
+	types.RegisterQueryGovServer(cfg.QueryServer(), keeper.NewQuerierGov(&am.gov))
 }
 
 // RegisterInvariants registers the invariants of the module. If an invariant deviates from its predicted value, the InvariantRegistry triggers appropriate logic (most often the chain will be halted)
@@ -131,12 +140,12 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 	// Initialize global index to index in genesis state
 	cdc.MustUnmarshalJSON(gs, &genState)
 
-	return InitGenesis(ctx, am.keeper, genState)
+	return InitGenesis(ctx, am.bank, am.gov, am.staking, am.auth, genState)
 }
 
 // ExportGenesis returns the module's exported genesis state as raw JSON bytes.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	genState := ExportGenesis(ctx, am.keeper)
+	genState := ExportGenesis(ctx, am.bank, am.gov, am.staking, am.auth)
 	return cdc.MustMarshalJSON(genState)
 }
 

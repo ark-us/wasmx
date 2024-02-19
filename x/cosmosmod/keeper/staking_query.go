@@ -11,12 +11,12 @@ import (
 
 // QuerierStaking is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
 type QuerierStaking struct {
-	*Keeper
+	Keeper *KeeperStaking
 }
 
 var _ types.QueryStakingServer = QuerierStaking{}
 
-func NewQuerierStaking(keeper *Keeper) QuerierStaking {
+func NewQuerierStaking(keeper *KeeperStaking) QuerierStaking {
 	return QuerierStaking{Keeper: keeper}
 }
 

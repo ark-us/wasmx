@@ -11,12 +11,12 @@ import (
 
 // QuerierGov is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
 type QuerierGov struct {
-	*Keeper
+	Keeper *KeeperGov
 }
 
 var _ types.QueryGovServer = QuerierGov{}
 
-func NewQuerierGov(keeper *Keeper) QuerierGov {
+func NewQuerierGov(keeper *KeeperGov) QuerierGov {
 	return QuerierGov{Keeper: keeper}
 }
 

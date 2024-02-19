@@ -45,6 +45,7 @@ var ADDR_STAKING = "0x0000000000000000000000000000000000000030"
 var ADDR_BANK = "0x0000000000000000000000000000000000000031"
 var ADDR_HOOKS = "0x0000000000000000000000000000000000000034"
 var ADDR_GOV = "0x0000000000000000000000000000000000000035"
+var ADDR_AUTH = "0x0000000000000000000000000000000000000038"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -309,6 +310,15 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_GOVERNANCE,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_AUTH,
+			Label:       AUTH_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_AUTH,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

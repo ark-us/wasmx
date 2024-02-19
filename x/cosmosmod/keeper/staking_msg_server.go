@@ -13,11 +13,11 @@ import (
 )
 
 type msgStakingServer struct {
-	*Keeper
+	Keeper *KeeperStaking
 }
 
 // NewMsgStakingServerImpl returns an implementation of the MsgServer interface
-func NewMsgStakingServerImpl(keeper *Keeper) types.MsgStakingServer {
+func NewMsgStakingServerImpl(keeper *KeeperStaking) types.MsgStakingServer {
 	return &msgStakingServer{
 		Keeper: keeper,
 	}

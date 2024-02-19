@@ -93,7 +93,9 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
 
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis)
+	authGenesis = authtypes.DefaultGenesisState()
+
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis)
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation

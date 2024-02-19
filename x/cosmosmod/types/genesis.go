@@ -7,6 +7,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -15,11 +16,12 @@ import (
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState) *GenesisState {
+func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState, auth authtypes.GenesisState) *GenesisState {
 	return &GenesisState{
 		Staking: staking,
 		Bank:    bank,
 		Gov:     gov,
+		Auth:    auth,
 	}
 }
 
@@ -147,6 +149,7 @@ func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, denomName strin
 		Staking: *DefaultStakingGenesisState(),
 		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit, denomName),
 		Gov:     *DefaultGovGenesisState(),
+		Auth:    *authtypes.DefaultGenesisState(),
 	}
 }
 
@@ -160,6 +163,9 @@ func (gs GenesisState) Validate() error {
 		return err
 	}
 	if err := gs.Gov.Validate(); err != nil {
+		return err
+	}
+	if err := authtypes.ValidateGenesis(gs.Auth); err != nil {
 		return err
 	}
 	return nil

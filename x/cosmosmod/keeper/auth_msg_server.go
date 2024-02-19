@@ -11,11 +11,11 @@ import (
 )
 
 type msgAuthServer struct {
-	*Keeper
+	Keeper *KeeperAuth
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgAuthServerImpl(keeper *Keeper) types.MsgAuthServer {
+func NewMsgAuthServerImpl(keeper *KeeperAuth) types.MsgAuthServer {
 	return &msgAuthServer{
 		Keeper: keeper,
 	}
@@ -35,9 +35,10 @@ func (m msgAuthServer) UpdateParams(goCtx context.Context, msg *authtypes.MsgUpd
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	if err := m.Keeper.SetParams(ctx, msg.Params); err != nil {
-		return nil, err
-	}
+	m.Keeper.Logger(ctx).Error("Auth.UpdateParams not implemented")
+	// if err := m.Keeper.SetParams(ctx, msg.Params); err != nil {
+	// 	return nil, err
+	// }
 
 	return &authtypes.MsgUpdateParamsResponse{}, nil
 }

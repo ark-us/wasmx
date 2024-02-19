@@ -10,11 +10,11 @@ import (
 )
 
 type msgBankServer struct {
-	*Keeper
+	Keeper *KeeperBank
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgBankServerImpl(keeper *Keeper) types.MsgBankServer {
+func NewMsgBankServerImpl(keeper *KeeperBank) types.MsgBankServer {
 	return &msgBankServer{
 		Keeper: keeper,
 	}

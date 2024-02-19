@@ -8,6 +8,7 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -19,47 +20,52 @@ import (
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.
-func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) []abci.ValidatorUpdate {
-	// initialize bank
+func InitGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, staking keeper.KeeperStaking, auth keeper.KeeperAuth, genState types.GenesisState) []abci.ValidatorUpdate {
+	InitGenesisBank(ctx, bank, genState.Bank)
+	InitGenesisGov(ctx, gov, genState.Gov)
+	InitGenesisAuth(ctx, auth, genState.Auth)
+	return InitGenesisStaking(ctx, staking, genState.Staking)
+}
+
+func InitGenesisBank(ctx sdk.Context, k keeper.KeeperBank, genState types.BankGenesisState) {
 	k.Logger(ctx).Info("initializing bank genesis")
-	bankGenesis := genState.Bank
-	bankmsgjson, err := k.JSONCodec().MarshalJSON(&bankGenesis)
+	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
 	if err != nil {
 		panic(err)
 	}
-	bankmsgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(bankmsgjson)))
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
 	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
-		Msg:      bankmsgbz,
+		Msg:      msgbz,
 	})
 	if err != nil {
 		panic(err)
 	}
 	k.Logger(ctx).Info("initialized bank genesis")
+}
 
-	// initialize gov
+func InitGenesisGov(ctx sdk.Context, k keeper.KeeperGov, genState types.GovGenesisState) {
 	k.Logger(ctx).Info("initializing gov genesis")
-	govGenesis := genState.Gov
-	govmsgjson, err := k.JSONCodec().MarshalJSON(&govGenesis)
+	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
 	if err != nil {
 		panic(err)
 	}
-	govmsgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(govmsgjson)))
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
 	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
-		Msg:      govmsgbz,
+		Msg:      msgbz,
 	})
 	if err != nil {
 		panic(err)
 	}
 	k.Logger(ctx).Info("initialized gov genesis")
+}
 
-	// initialize staking
+func InitGenesisStaking(ctx sdk.Context, k keeper.KeeperStaking, genState types.StakingGenesisState) []abci.ValidatorUpdate {
 	k.Logger(ctx).Info("initializing staking genesis")
-	stakingGenesis := genState.Staking
-	msgjson, err := k.JSONCodec().MarshalJSON(&stakingGenesis)
+	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
 	if err != nil {
 		panic(err)
 	}
@@ -99,12 +105,33 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 			Power:  upd.Power,
 		}
 	}
-
 	return updates
 }
 
+// TODO
+// permAddrs    map[string]types.PermissionsForAddress
+// bech32Prefix string
+func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState authtypes.GenesisState) {
+	k.Logger(ctx).Info("initializing auth genesis")
+	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
+	if err != nil {
+		panic(err)
+	}
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_AUTH,
+		Contract: wasmxtypes.ROLE_AUTH,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		panic(err)
+	}
+	k.Logger(ctx).Info("initialized auth genesis")
+}
+
+// TODO
 // ExportGenesis returns the module's exported genesis
-func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *stakingtypes.GenesisState {
+func ExportGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, staking keeper.KeeperStaking, auth keeper.KeeperAuth) *stakingtypes.GenesisState {
 	genState := &stakingtypes.GenesisState{}
 	// k.IterateSystemContracts(ctx, func(contract types.SystemContract) bool {
 	// 	genState.SystemContracts = append(genState.SystemContracts, contract)

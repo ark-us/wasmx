@@ -17,12 +17,12 @@ import (
 
 // QuerierBank is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
 type QuerierBank struct {
-	*Keeper
+	Keeper *KeeperBank
 }
 
 var _ types.QueryBankServer = QuerierBank{}
 
-func NewQuerierBank(keeper *Keeper) QuerierBank {
+func NewQuerierBank(keeper *KeeperBank) QuerierBank {
 	return QuerierBank{Keeper: keeper}
 }
 
@@ -37,19 +37,19 @@ func (k QuerierBank) AllBalances(goCtx context.Context, req *banktypes.QueryAllB
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	addr, err := k.ak.AddressCodec().StringToBytes(req.Address)
+	addr, err := k.Keeper.ak.AddressCodec().StringToBytes(req.Address)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid address: %s", err.Error())
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	msg := banktypes.NewQueryAllBalancesRequest(addr, nil, false)
-	bankmsgbz, err := k.cdc.MarshalJSON(msg)
+	bankmsgbz, err := k.Keeper.cdc.MarshalJSON(msg)
 	if err != nil {
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"GetAllBalances":%s}`, string(bankmsgbz)))
-	resp, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+	resp, err := k.Keeper.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,
@@ -64,7 +64,7 @@ func (k QuerierBank) AllBalances(goCtx context.Context, req *banktypes.QueryAllB
 	}
 
 	var response banktypes.QueryAllBalancesResponse
-	err = k.cdc.UnmarshalJSON(contractResp.Data, &response)
+	err = k.Keeper.cdc.UnmarshalJSON(contractResp.Data, &response)
 	if err != nil {
 		return nil, err
 	}

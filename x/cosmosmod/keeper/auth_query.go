@@ -11,12 +11,12 @@ import (
 
 // QuerierBank is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
 type QuerierAuth struct {
-	*Keeper
+	Keeper *KeeperAuth
 }
 
 var _ types.QueryAuthServer = QuerierAuth{}
 
-func NewQuerierAuth(keeper *Keeper) QuerierAuth {
+func NewQuerierAuth(keeper *KeeperAuth) QuerierAuth {
 	return QuerierAuth{Keeper: keeper}
 }
 

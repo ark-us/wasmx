@@ -13,11 +13,11 @@ import (
 )
 
 type msgGovServer struct {
-	*Keeper
+	Keeper *KeeperGov
 }
 
 // NewMsgGovServerImpl returns an implementation of the MsgServer interface
-func NewMsgGovServerImpl(keeper *Keeper) types.MsgGovServer {
+func NewMsgGovServerImpl(keeper *KeeperGov) types.MsgGovServer {
 	return &msgGovServer{
 		Keeper: keeper,
 	}
