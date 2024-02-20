@@ -57,7 +57,7 @@ func (h *WasmxCosmosHandler) GetAccount(addr sdk.AccAddress) sdk.AccountI {
 	if found {
 		addr = aliasAddr
 	}
-	acc := h.Keeper.accountKeeper.GetAccount(h.Ctx, addr)
+	acc := h.Keeper.GetAccount(h.Ctx, addr)
 	return acc
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {

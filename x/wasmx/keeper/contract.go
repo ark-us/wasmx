@@ -429,27 +429,6 @@ func (k *Keeper) instantiateInternal(
 		return nil, nil, types.ErrDuplicate.Wrap("instance with this contract address already exists")
 	}
 
-	// check account
-	// every cosmos module can define custom account types when needed. The cosmos-sdk comes with extension points
-	// to support this and a set of base and vesting account types that we integrated in our default lists.
-	// But not all account types of other modules are known or may make sense for contracts, therefore we kept this
-	// decision logic also very flexible and extendable. We provide new options to overwrite the default settings via WithAcceptedAccountTypesOnContractInstantiation and
-	// WithPruneAccountTypesOnContractInstantiation as constructor arguments
-	existingAcct := k.accountKeeper.GetAccount(ctx, contractAddress)
-	if existingAcct != nil {
-		if existingAcct.GetSequence() != 0 || existingAcct.GetPubKey() != nil {
-			return nil, nil, types.ErrAccountExists.Wrap("address is claimed by external account")
-		}
-
-		// consider an account in the wasmx namespace spam and overwrite it.
-		k.Logger(ctx).Info("pruning existing account for contract instantiation", "address", contractAddress.String())
-		contractAccount := k.accountKeeper.NewAccountWithAddress(ctx, contractAddress)
-		k.accountKeeper.SetAccount(ctx, contractAccount)
-	} else {
-		// create an empty account (so we don't have issues later)
-		contractAccount := k.accountKeeper.NewAccountWithAddress(ctx, contractAddress)
-		k.accountKeeper.SetAccount(ctx, contractAccount)
-	}
 	// deposit initial contract funds
 	if !deposit.IsZero() {
 		if err := k.TransferCoins(ctx, creator, contractAddress, deposit); err != nil {
@@ -512,6 +491,30 @@ func (k *Keeper) instantiateInternal(
 	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, nil, sdkerr.Wrap(err, "instantiate dispatch")
+	}
+
+	// we run this logic after instantiation, to be able to initiate the auth contract at genesis
+
+	// check account
+	// every cosmos module can define custom account types when needed. The cosmos-sdk comes with extension points
+	// to support this and a set of base and vesting account types that we integrated in our default lists.
+	// But not all account types of other modules are known or may make sense for contracts, therefore we kept this
+	// decision logic also very flexible and extendable. We provide new options to overwrite the default settings via WithAcceptedAccountTypesOnContractInstantiation and
+	// WithPruneAccountTypesOnContractInstantiation as constructor arguments
+	existingAcct := k.GetAccount(ctx, contractAddress)
+	if existingAcct != nil {
+		if existingAcct.GetSequence() != 0 || existingAcct.GetPubKey() != nil {
+			return nil, nil, types.ErrAccountExists.Wrap("address is claimed by external account")
+		}
+
+		// consider an account in the wasmx namespace spam and overwrite it.
+		k.Logger(ctx).Info("pruning existing account for contract instantiation", "address", contractAddress.String())
+		contractAccount := k.NewAccountWithAddress(ctx, contractAddress)
+		k.SetAccount(ctx, contractAccount)
+	} else {
+		// create an empty account (so we don't have issues later)
+		contractAccount := k.NewAccountWithAddress(ctx, contractAddress)
+		k.SetAccount(ctx, contractAccount)
 	}
 
 	return contractAddress, res.Data, nil

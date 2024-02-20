@@ -404,33 +404,6 @@ func New(
 	// this line is used by starport scaffolding # stargate/app/scopedKeeper
 
 	// add keepers
-	app.AccountKeeper = cosmosmodkeeper.NewKeeperAuth(
-		appCodec,
-		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
-		&app.WasmxKeeper,
-		app.NetworkKeeper,
-		app.actionExecutor,
-		// TODO what authority?
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
-		app.interfaceRegistry,
-		authcodec.NewBech32Codec(Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
-		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
-
-		// authtypes.ProtoBaseAccount,
-		// runtime.NewKVStoreService(keys[authtypes.StoreKey]),
-		// maccPerms,
-		// Bech32PrefixAccAddr,
-	)
-
-	app.AuthzKeeper = authzkeeper.NewKeeper(
-		runtime.NewKVStoreService(keys[authzkeeper.StoreKey]),
-		appCodec,
-		app.MsgServiceRouter(),
-		app.AccountKeeper,
-	)
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
@@ -441,11 +414,8 @@ func New(
 		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],
 		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
-		app.AccountKeeper,
 		// TODO?
-		// app.BankKeeper,
 		// app.TransferKeeper,
-		// stakingKeeper,
 		distrkeeper.NewQuerier(app.DistrKeeper),
 		// app.IBCKeeper.ChannelKeeper,
 		wasmconfig,
@@ -474,8 +444,34 @@ func New(
 		// TODO remove authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
-
 	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
+
+	app.AccountKeeper = cosmosmodkeeper.NewKeeperAuth(
+		appCodec,
+		appCodec,
+		keys[cosmosmodtypes.StoreKey], // TODO remove
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		// TODO what authority?
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		app.interfaceRegistry,
+		authcodec.NewBech32Codec(Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
+		maccPerms,
+
+		// authtypes.ProtoBaseAccount,
+		// runtime.NewKVStoreService(keys[authtypes.StoreKey]),
+		// Bech32PrefixAccAddr,
+	)
+	app.AuthzKeeper = authzkeeper.NewKeeper(
+		runtime.NewKVStoreService(keys[authzkeeper.StoreKey]),
+		appCodec,
+		app.MsgServiceRouter(),
+		app.AccountKeeper,
+	)
 
 	app.StakingKeeper = cosmosmodkeeper.NewKeeperStaking(
 		appCodec,

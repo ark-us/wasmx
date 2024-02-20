@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	networkkeeper "mythos/v1/x/network/keeper"
@@ -19,13 +20,11 @@ import (
 
 type (
 	KeeperAuth struct {
-		addressCodec      address.Codec
 		jsoncdc           codec.JSONCodec
 		cdc               codec.Codec
 		storeKey          storetypes.StoreKey
 		paramstore        paramtypes.Subspace
 		InterfaceRegistry cdctypes.InterfaceRegistry
-		ak                types.AccountKeeper
 		WasmxKeeper       types.WasmxKeeper
 		NetworkKeeper     networkkeeper.Keeper
 		actionExecutor    *networkkeeper.ActionExecutor
@@ -36,6 +35,8 @@ type (
 
 		validatorAddressCodec addresscodec.Codec
 		consensusAddressCodec addresscodec.Codec
+		addressCodec          address.Codec
+		permAddrs             map[string]authtypes.PermissionsForAddress
 	}
 )
 
@@ -52,10 +53,16 @@ func NewKeeperAuth(
 	validatorAddressCodec addresscodec.Codec,
 	consensusAddressCodec addresscodec.Codec,
 	addressCodec address.Codec,
+	maccPerms map[string][]string,
 ) *KeeperAuth {
 	// set KeyTable if it has not already been set
 	if !ps.HasKeyTable() {
 		ps = ps.WithKeyTable(types.ParamKeyTable())
+	}
+
+	permAddrs := make(map[string]authtypes.PermissionsForAddress)
+	for name, perms := range maccPerms {
+		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
 	}
 
 	keeper := &KeeperAuth{
@@ -71,6 +78,7 @@ func NewKeeperAuth(
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
 		addressCodec:          addressCodec,
+		permAddrs:             permAddrs,
 	}
 	return keeper
 }

@@ -72,6 +72,10 @@ func (k *Keeper) ActivateSystemContract(
 	}
 
 	contractAddress := types.AccAddressFromHex(contract.Address)
+	// register role first, to be able to initialize the account keeper
+	if contract.Role != "" {
+		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
+	}
 	if contract.Native {
 		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, contract.InitMessage, contract.Label)
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
@@ -90,10 +94,7 @@ func (k *Keeper) ActivateSystemContract(
 			return sdkerr.Wrap(err, "instantiate system contract: "+contract.Label)
 		}
 	}
-	if contract.Role != "" {
-		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
-	}
-	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contract.Address, "code_id", codeID)
+	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddress.String(), "hex_address", contract.Address, "code_id", codeID)
 	return nil
 }
 

@@ -40,8 +40,6 @@ type (
 		wasmVMResponseHandler cw8types.WasmVMResponseHandler
 		wasmVMQueryHandler    cw8.WasmVMQueryHandler
 
-		accountKeeper types.AccountKeeper
-		// bank          types.BankKeeper
 		cch *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
 		queryGasLimit uint64
@@ -67,8 +65,6 @@ func NewKeeper(
 	metaConsKey storetypes.StoreKey,
 	singleConsKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
-	accountKeeper types.AccountKeeper,
-	// bankKeeper types.BankKeeper,
 	// portSource cw8types.ICS20TransferPortSource,
 	// stakingKeeper types.StakingKeeper,
 	distrKeeper types.DistributionKeeper,
@@ -143,8 +139,6 @@ func NewKeeper(
 		grpcQueryRouter:   grpcQueryRouter,
 		denom:             denom,
 
-		accountKeeper: accountKeeper,
-		// bank:          bankKeeper,
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		gasRegister:   NewDefaultWasmGasRegister(),
 		wasmvm:        wasmvm,

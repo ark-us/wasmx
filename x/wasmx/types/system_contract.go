@@ -89,6 +89,16 @@ func DefaultSystemContracts() SystemContracts {
 	}
 
 	return []SystemContract{
+		// auth needs to be initialized first (account keeper)
+		{
+			Address:     ADDR_AUTH,
+			Label:       AUTH_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_AUTH,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
 		{
 			Address:     ADDR_ECRECOVER,
 			Label:       "ecrecover",
@@ -310,15 +320,6 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_GOVERNANCE,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_AUTH,
-			Label:       AUTH_v001,
-			InitMessage: initMsg,
-			Pinned:      false,
-			Role:        ROLE_AUTH,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

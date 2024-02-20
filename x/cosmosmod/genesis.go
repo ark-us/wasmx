@@ -8,7 +8,6 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -111,7 +110,7 @@ func InitGenesisStaking(ctx sdk.Context, k keeper.KeeperStaking, genState types.
 // TODO
 // permAddrs    map[string]types.PermissionsForAddress
 // bech32Prefix string
-func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState authtypes.GenesisState) {
+func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState types.AuthGenesisState) {
 	k.Logger(ctx).Info("initializing auth genesis")
 	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
 	if err != nil {

@@ -473,17 +473,6 @@ func initGenFiles(
 	numValidators int,
 ) error {
 	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
-	// set the accounts in the genesis state
-	var authGenState authtypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[authtypes.ModuleName], &authGenState)
-
-	accounts, err := authtypes.PackAccounts(genAccounts)
-	if err != nil {
-		return err
-	}
-
-	authGenState.Accounts = accounts
-	appGenState[authtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&authGenState)
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
@@ -495,6 +484,15 @@ func initGenFiles(
 	// TODO make this bigger once we have our own governance contract
 	votingP := time.Minute * 2
 	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
+
+	// set the accounts in the genesis state
+	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(clientCtx.Codec, cosmosmodGenState.Auth.Params, genAccounts)
+	if err != nil {
+		return err
+	}
+	cosmosmodGenState.Auth = *authGenesis
+
+	// set cosmosmod genesis
 	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
 
 	var crisisGenState crisistypes.GenesisState
