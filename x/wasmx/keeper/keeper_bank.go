@@ -46,6 +46,9 @@ func (k *Keeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.
 		toAddr = aliasTo
 	}
 	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
+	if err != nil {
+		return err
+	}
 	msg := banktypes.NewMsgSend(fromAddr, toAddr, coins)
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {

@@ -17,6 +17,21 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
+func (suite *KeeperTestSuite) TestSendingCoinsToNewAccount() {
+	sender := suite.GetRandomAccount()
+	newacc := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1000_000_000)
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	_ = appA.ExecuteContract(sender, newacc.Address, types.WasmxExecutionMessage{Data: []byte{}}, sdk.Coins{sdk.NewCoin(appA.Denom, sdkmath.NewInt(1_000_000))}, nil)
+
+	realBalance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), newacc.Address, appA.Denom)
+	s.Require().NoError(err)
+	s.Require().Equal(sdk.NewCoin(appA.Denom, sdkmath.NewInt(1_000_000)), realBalance)
+}
+
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)

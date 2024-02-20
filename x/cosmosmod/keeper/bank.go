@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -32,16 +31,6 @@ func (k KeeperBank) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAdd
 	})
 	if err != nil {
 		return err
-	}
-	// TODO replace account keeper
-	// Create account if recipient does not exist.
-	//
-	// NOTE: This should ultimately be removed in favor a more flexible approach
-	// such as delegated fee messages.
-	accExists := k.ak.HasAccount(ctx, toAddr)
-	if !accExists {
-		defer telemetry.IncrCounter(1, "new", "account")
-		k.ak.SetAccount(ctx, k.ak.NewAccountWithAddress(ctx, toAddr))
 	}
 
 	// bech32 encoding is expensive! Only do it once for fromAddr

@@ -25,5 +25,5 @@ message QueryAccountResponse {
 }
 
 message QueryHasAccountResponse {
-    bool value = 1;
+    bool found = 1;
 }

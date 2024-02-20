@@ -79,7 +79,7 @@ func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool 
 	if err != nil {
 		panic(err)
 	}
-	return response.Value
+	return response.Found
 }
 
 func (k KeeperAuth) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.AccountI {

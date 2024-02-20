@@ -14,12 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
-	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
 
 func (k *Keeper) Create(ctx sdk.Context, creator sdk.AccAddress, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {
@@ -567,31 +565,12 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
-		coinType := ctx.Value(cchtypes.CONTEXT_COIN_TYPE_KEY)
-		if coinType == nil {
-			return nil, sdkerr.Wrap(types.ErrInvalid, "missing contract instance and missing CONTEXT_COIN_TYPE_KEY")
-		}
 		// This can be just an ethcall sending value
-		key := coinType.(uint32)
-		if key == cchtypes.COIN_TYPE_ETH && !coins.IsZero() {
-			aliasAddr, found := k.GetAlias(ctx, contractAddress)
-			if found {
-				contractAddress = aliasAddr
-			}
-
-			bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
-			msg := banktypes.NewMsgSend(caller, contractAddress, coins)
-			msgbz, err := k.cdc.MarshalJSON(msg)
-			if err != nil {
-				return nil, err
-			}
-			execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
-			if err != nil {
-				return nil, err
-			}
-			_, err = k.execute(ctx, bankAddress, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
-			return nil, err
+		// we do not fail, to maintain compatibility with EVM
+		if coins.IsZero() {
+			return nil, nil
 		}
+		err := k.SendCoins(ctx, caller, contractAddress, coins)
 		return nil, err
 	}
 
