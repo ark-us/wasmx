@@ -5,22 +5,20 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
-	"mythos/v1/x/cosmosmod/types"
 )
 
 type msgBankServer struct {
-	*Keeper
+	Keeper *KeeperBank
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgBankServerImpl(keeper *Keeper) types.MsgBankServer {
+func NewMsgBankServerImpl(keeper *KeeperBank) banktypes.MsgServer {
 	return &msgBankServer{
 		Keeper: keeper,
 	}
 }
 
-var _ types.MsgBankServer = msgBankServer{}
+var _ banktypes.MsgServer = msgBankServer{}
 
 func (m msgBankServer) Send(goCtx context.Context, msg *banktypes.MsgSend) (*banktypes.MsgSendResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)

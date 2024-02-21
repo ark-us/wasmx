@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
@@ -13,17 +16,17 @@ import (
 )
 
 type msgGovServer struct {
-	*Keeper
+	Keeper *KeeperGov
 }
 
 // NewMsgGovServerImpl returns an implementation of the MsgServer interface
-func NewMsgGovServerImpl(keeper *Keeper) types.MsgGovServer {
+func NewMsgGovServerImpl(keeper *KeeperGov) govtypes1.MsgServer {
 	return &msgGovServer{
 		Keeper: keeper,
 	}
 }
 
-var _ types.MsgGovServer = msgGovServer{}
+var _ govtypes1.MsgServer = msgGovServer{}
 
 func (m msgGovServer) SubmitProposal(goCtx context.Context, msg *govtypes1.MsgSubmitProposal) (*govtypes1.MsgSubmitProposalResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -108,4 +111,18 @@ func (m msgGovServer) Deposit(goCtx context.Context, msg *govtypes1.MsgDeposit) 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	m.Keeper.Logger(ctx).Error("Deposit not implemented")
 	return &govtypes1.MsgDepositResponse{}, nil
+}
+
+func (m msgGovServer) CancelProposal(goCtx context.Context, msg *govtypes1.MsgCancelProposal) (*govtypes1.MsgCancelProposalResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	m.Keeper.Logger(ctx).Error("CancelProposal not implemented")
+	return &govtypes1.MsgCancelProposalResponse{}, nil
+}
+
+func (m msgGovServer) ExecLegacyContent(context.Context, *govtypes1.MsgExecLegacyContent) (*govtypes1.MsgExecLegacyContentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecLegacyContent not implemented")
+}
+
+func (m msgGovServer) UpdateParams(context.Context, *govtypes1.MsgUpdateParams) (*govtypes1.MsgUpdateParamsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateParams not implemented")
 }

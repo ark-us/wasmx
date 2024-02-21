@@ -57,7 +57,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	validatorAddr := sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()).String()
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","peers":["%s@0.0.0.0:8090"]}`, validatorAddr))
 
-	vals, err := suite.App().CosmosmodKeeper.GetAllValidators(appA.Context())
+	vals, err := suite.App().StakingKeeper.GetAllValidators(appA.Context())
 	suite.Require().NoError(err)
 	s.Require().Equal(1, len(vals))
 

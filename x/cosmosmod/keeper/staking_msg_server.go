@@ -7,23 +7,22 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"mythos/v1/x/cosmosmod/types"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 type msgStakingServer struct {
-	*Keeper
+	Keeper *KeeperStaking
 }
 
 // NewMsgStakingServerImpl returns an implementation of the MsgServer interface
-func NewMsgStakingServerImpl(keeper *Keeper) types.MsgStakingServer {
+func NewMsgStakingServerImpl(keeper *KeeperStaking) stakingtypes.MsgServer {
 	return &msgStakingServer{
 		Keeper: keeper,
 	}
 }
 
-var _ types.MsgStakingServer = msgStakingServer{}
+var _ stakingtypes.MsgServer = msgStakingServer{}
 
 func (m msgStakingServer) CreateValidator(goCtx context.Context, msg *stakingtypes.MsgCreateValidator) (*stakingtypes.MsgCreateValidatorResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)

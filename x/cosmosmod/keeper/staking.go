@@ -26,14 +26,14 @@ import (
 )
 
 // BondedRatio the fraction of the staking tokens which are currently bonded
-func (k Keeper) BondedRatio(goCtx context.Context) (math.LegacyDec, error) {
+func (k KeeperStaking) BondedRatio(goCtx context.Context) (math.LegacyDec, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("BondedRatio not implemented")
 	return math.LegacyOneDec(), nil
 }
 
 // StakingTokenSupply staking tokens from the total supply
-func (k Keeper) StakingTokenSupply(goCtx context.Context) (math.Int, error) {
+func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	derc20Address, err := k.GetDERC20Address(ctx)
 	if err != nil {
@@ -62,17 +62,17 @@ func (k Keeper) StakingTokenSupply(goCtx context.Context) (math.Int, error) {
 }
 
 // ValidatorAddressCodec returns the app validator address codec.
-func (k Keeper) ValidatorAddressCodec() addresscodec.Codec {
+func (k KeeperStaking) ValidatorAddressCodec() addresscodec.Codec {
 	return k.validatorAddressCodec
 }
 
 // ConsensusAddressCodec returns the app consensus address codec.
-func (k Keeper) ConsensusAddressCodec() addresscodec.Codec {
+func (k KeeperStaking) ConsensusAddressCodec() addresscodec.Codec {
 	return k.consensusAddressCodec
 }
 
 // Delegation gets the delegation interface for a particular set of delegator and validator addresses
-func (k Keeper) Delegation(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (stakingtypes.DelegationI, error) {
+func (k KeeperStaking) Delegation(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (stakingtypes.DelegationI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	msgbz := []byte(fmt.Sprintf(`{"GetDelegation":{"delegator_addr":"%s","validator_addr":"%s"}}`, addrDel.String(), addrVal.String()))
 	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
@@ -97,7 +97,7 @@ func (k Keeper) Delegation(goCtx context.Context, addrDel sdk.AccAddress, addrVa
 }
 
 // GetAllValidators gets the set of all validators with no limits, used during genesis dump
-func (k Keeper) GetAllValidators(goCtx context.Context) (validators []stakingtypes.Validator, err error) {
+func (k KeeperStaking) GetAllValidators(goCtx context.Context) (validators []stakingtypes.Validator, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	msgbz := []byte(`{"GetAllValidators":{}}`)
 	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
@@ -122,14 +122,14 @@ func (k Keeper) GetAllValidators(goCtx context.Context) (validators []stakingtyp
 }
 
 // IsValidatorJailed checks and returns boolean of a validator status jailed or not.
-func (k Keeper) IsValidatorJailed(goCtx context.Context, addr sdk.ConsAddress) (bool, error) {
+func (k KeeperStaking) IsValidatorJailed(goCtx context.Context, addr sdk.ConsAddress) (bool, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("IsValidatorJailed not implemented")
 	return false, nil
 }
 
 // IterateValidators iterates through the validator set and perform the provided function
-func (k Keeper) IterateValidators(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
+func (k KeeperStaking) IterateValidators(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
 	// TODO more efficient - can we iterate on the contract storage directly?
 	validators, err := k.GetAllValidators(goCtx)
 	if err != nil {
@@ -151,14 +151,14 @@ func (k Keeper) IterateValidators(goCtx context.Context, fn func(index int64, va
 }
 
 // jail a validator
-func (k Keeper) Jail(goCtx context.Context, consAddr sdk.ConsAddress) error {
+func (k KeeperStaking) Jail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("Jail not implemented")
 	return nil
 }
 
 // MaxValidators - Maximum number of validators
-func (k Keeper) MaxValidators(goCtx context.Context) (uint32, error) {
+func (k KeeperStaking) MaxValidators(goCtx context.Context) (uint32, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("MaxValidators not implemented")
 	return 100, nil
@@ -166,28 +166,28 @@ func (k Keeper) MaxValidators(goCtx context.Context) (uint32, error) {
 
 // Infraction was committed at the current height or at a past height,
 // but not at a height in the future
-func (k Keeper) Slash(goCtx context.Context, consAddr sdk.ConsAddress, infractionHeight, power int64, slashFactor math.LegacyDec) (math.Int, error) {
+func (k KeeperStaking) Slash(goCtx context.Context, consAddr sdk.ConsAddress, infractionHeight, power int64, slashFactor math.LegacyDec) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("Slash not implemented")
 	return math.ZeroInt(), nil
 }
 
 // SlashWithInfractionReason implementation doesn't require the infraction (types.Infraction) to work but is required by Interchain Security.
-func (k Keeper) SlashWithInfractionReason(goCtx context.Context, consAddr sdk.ConsAddress, infractionHeight, power int64, slashFactor math.LegacyDec, _ stakingtypes.Infraction) (math.Int, error) {
+func (k KeeperStaking) SlashWithInfractionReason(goCtx context.Context, consAddr sdk.ConsAddress, infractionHeight, power int64, slashFactor math.LegacyDec, _ stakingtypes.Infraction) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("SlashWithInfractionReason not implemented")
 	return k.Slash(goCtx, consAddr, infractionHeight, power, slashFactor)
 }
 
 // unjail a validator
-func (k Keeper) Unjail(goCtx context.Context, consAddr sdk.ConsAddress) error {
+func (k KeeperStaking) Unjail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("Unjail not implemented")
 	return nil
 }
 
 // Validator gets the Validator interface for a particular address
-func (k Keeper) Validator(goCtx context.Context, address sdk.ValAddress) (stakingtypes.ValidatorI, error) {
+func (k KeeperStaking) Validator(goCtx context.Context, address sdk.ValAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	msgbz := []byte(fmt.Sprintf(`{"GetValidator":{"validator_addr":"%s"}}`, address.String()))
 	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
@@ -212,14 +212,14 @@ func (k Keeper) Validator(goCtx context.Context, address sdk.ValAddress) (stakin
 }
 
 // ValidatorByConsAddr gets the validator interface for a particular pubkey
-func (k Keeper) ValidatorByConsAddr(goCtx context.Context, addr sdk.ConsAddress) (stakingtypes.ValidatorI, error) {
+func (k KeeperStaking) ValidatorByConsAddr(goCtx context.Context, addr sdk.ConsAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("ValidatorByConsAddr not implemented")
 	return nil, nil
 }
 
 // GetAllDelegatorDelegations returns all delegations of a delegator
-func (k Keeper) GetAllDelegatorDelegations(goCtx context.Context, delegator sdk.AccAddress) ([]stakingtypes.Delegation, error) {
+func (k KeeperStaking) GetAllDelegatorDelegations(goCtx context.Context, delegator sdk.AccAddress) ([]stakingtypes.Delegation, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("GetAllDelegatorDelegations not implemented")
 	return make([]stakingtypes.Delegation, 0), nil
@@ -227,7 +227,7 @@ func (k Keeper) GetAllDelegatorDelegations(goCtx context.Context, delegator sdk.
 
 // GetAllSDKDelegations returns all delegations used during genesis dump
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
-func (k Keeper) GetAllSDKDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
+func (k KeeperStaking) GetAllSDKDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	derc20Address, err := k.GetDERC20Address(ctx)
 	if err != nil {
@@ -252,7 +252,7 @@ func (k Keeper) GetAllSDKDelegations(goCtx context.Context) (delegations []staki
 }
 
 // IterateDelegations iterates through all of the delegations from a delegator
-func (k Keeper) IterateDelegations(goCtx context.Context, delAddr sdk.AccAddress,
+func (k KeeperStaking) IterateDelegations(goCtx context.Context, delAddr sdk.AccAddress,
 	fn func(index int64, del stakingtypes.DelegationI) (stop bool),
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -261,35 +261,35 @@ func (k Keeper) IterateDelegations(goCtx context.Context, delAddr sdk.AccAddress
 }
 
 // GetHistoricalInfo gets the historical info at a given height
-func (k Keeper) GetHistoricalInfo(goCtx context.Context, height int64) (stakingtypes.HistoricalInfo, error) {
+func (k KeeperStaking) GetHistoricalInfo(goCtx context.Context, height int64) (stakingtypes.HistoricalInfo, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("GetHistoricalInfo not implemented")
 	return stakingtypes.HistoricalInfo{}, nil
 }
 
 // UnbondingTime - The time duration for unbonding
-func (k Keeper) UnbondingTime(goCtx context.Context) (time.Duration, error) {
+func (k KeeperStaking) UnbondingTime(goCtx context.Context) (time.Duration, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("UnbondingTime not implemented")
 	return time.Minute, nil
 }
 
 // GetParams gets the x/staking module parameters.
-func (k Keeper) GetParams(goCtx context.Context) (params stakingtypes.Params, err error) {
+func (k KeeperStaking) GetParams(goCtx context.Context) (params stakingtypes.Params, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("GetParams not implemented")
 	return stakingtypes.Params{}, nil
 }
 
 // IterateBondedValidatorsByPower iterates through the bonded validator set and perform the provided function
-func (k Keeper) IterateBondedValidatorsByPower(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
+func (k KeeperStaking) IterateBondedValidatorsByPower(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("IterateBondedValidatorsByPower not implemented")
 	return nil
 }
 
 // TotalBondedTokens total staking tokens supply which is bonded
-func (k Keeper) TotalBondedTokens(goCtx context.Context) (math.Int, error) {
+func (k KeeperStaking) TotalBondedTokens(goCtx context.Context) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("TotalBondedTokens not implemented")
 	return math.ZeroInt(), nil
@@ -307,7 +307,7 @@ func (k Keeper) TotalBondedTokens(goCtx context.Context) (math.Int, error) {
 // CONTRACT: Only validators with non-zero power or zero-power that were bonded
 // at the previous block height or were removed from the validator set entirely
 // are returned to CometBFT.
-func (k Keeper) ApplyAndReturnValidatorSetUpdates(goCtx context.Context) (updates []abci.ValidatorUpdate, err error) {
+func (k KeeperStaking) ApplyAndReturnValidatorSetUpdates(goCtx context.Context) (updates []abci.ValidatorUpdate, err error) {
 	// TODO replace this mechanism
 	validators, err := k.GetAllValidators(goCtx)
 	if err != nil {
@@ -338,63 +338,63 @@ func (k Keeper) ApplyAndReturnValidatorSetUpdates(goCtx context.Context) (update
 }
 
 // GetAllDelegations returns all delegations used during genesis dump.
-func (k Keeper) GetAllDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
+func (k KeeperStaking) GetAllDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("GetAllDelegations not implemented")
 	return make([]stakingtypes.Delegation, 0), err
 }
 
 // IterateRedelegations iterates through all redelegations.
-func (k Keeper) IterateRedelegations(goCtx context.Context, fn func(index int64, red stakingtypes.Redelegation) (stop bool)) error {
+func (k KeeperStaking) IterateRedelegations(goCtx context.Context, fn func(index int64, red stakingtypes.Redelegation) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("IterateRedelegations not implemented")
 	return nil
 }
 
 // SetRedelegation sets a redelegation and associated index.
-func (k Keeper) SetRedelegation(goCtx context.Context, red stakingtypes.Redelegation) error {
+func (k KeeperStaking) SetRedelegation(goCtx context.Context, red stakingtypes.Redelegation) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("SetRedelegation not implemented")
 	return nil
 }
 
 // IterateUnbondingDelegations iterates through all of the unbonding delegations.
-func (k Keeper) IterateUnbondingDelegations(goCtx context.Context, fn func(index int64, ubd stakingtypes.UnbondingDelegation) (stop bool)) error {
+func (k KeeperStaking) IterateUnbondingDelegations(goCtx context.Context, fn func(index int64, ubd stakingtypes.UnbondingDelegation) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("IterateUnbondingDelegations not implemented")
 	return nil
 }
 
 // SetUnbondingDelegation sets the unbonding delegation and associated index.
-func (k Keeper) SetUnbondingDelegation(goCtx context.Context, ubd stakingtypes.UnbondingDelegation) error {
+func (k KeeperStaking) SetUnbondingDelegation(goCtx context.Context, ubd stakingtypes.UnbondingDelegation) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("SetUnbondingDelegation not implemented")
 	return nil
 }
 
 // GetValidator gets a single validator
-func (k Keeper) GetValidator(goCtx context.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, err error) {
+func (k KeeperStaking) GetValidator(goCtx context.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("GetValidator not implemented")
 	return stakingtypes.Validator{}, nil
 }
 
 // SetValidator sets the main record holding validator details
-func (k Keeper) SetValidator(goCtx context.Context, validator stakingtypes.Validator) error {
+func (k KeeperStaking) SetValidator(goCtx context.Context, validator stakingtypes.Validator) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("SetValidator not implemented")
 	return nil
 }
 
 // IterateLastValidators iterates through the active validator set and perform the provided function
-func (k Keeper) IterateLastValidators(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
+func (k KeeperStaking) IterateLastValidators(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("IterateLastValidators not implemented")
 	return nil
 }
 
 // SetValidatorByConsAddr sets a validator by conesensus address
-func (k Keeper) SetValidatorByConsAddr(goCtx context.Context, validator stakingtypes.Validator) error {
+func (k KeeperStaking) SetValidatorByConsAddr(goCtx context.Context, validator stakingtypes.Validator) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Error("SetValidatorByConsAddr not implemented")
 	return nil
@@ -404,12 +404,12 @@ func (k Keeper) SetValidatorByConsAddr(goCtx context.Context, validator stakingt
 // Currently, this returns a global variable that the app developer can tweak.
 // TODO: we might turn this into an on-chain param:
 // https://github.com/cosmos/cosmos-sdk/issues/8365
-func (k Keeper) PowerReduction(goCtx context.Context) math.Int {
+func (k KeeperStaking) PowerReduction(goCtx context.Context) math.Int {
 	return sdk.DefaultPowerReduction
 }
 
 // WriteValidators returns a slice of bonded genesis validators.
-func WriteValidators(ctx sdk.Context, keeper *Keeper) (vals []cmttypes.GenesisValidator, returnErr error) {
+func WriteValidators(ctx sdk.Context, keeper *KeeperStaking) (vals []cmttypes.GenesisValidator, returnErr error) {
 	err := keeper.IterateLastValidators(ctx, func(_ int64, validator stakingtypes.ValidatorI) (stop bool) {
 		pk, err := validator.ConsPubKey()
 		if err != nil {
@@ -440,7 +440,7 @@ func WriteValidators(ctx sdk.Context, keeper *Keeper) (vals []cmttypes.GenesisVa
 
 // GetAllSDKDelegations returns all delegations used during genesis dump
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
-func (k Keeper) GetDERC20Address(ctx sdk.Context) (derc20Address sdk.AccAddress, err error) {
+func (k KeeperStaking) GetDERC20Address(ctx sdk.Context) (derc20Address sdk.AccAddress, err error) {
 	// TODO asmyt denom
 	msgbz := []byte(`{"GetAddressByDenom":{"denom":"asmyt"}}`)
 	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{

@@ -35,10 +35,6 @@ var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.Testin
 // account. A Nop logger is set in SimApp.
 func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState := DefaultTestingAppInit(chainID, index)
-	// set genesis accounts
-	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
-	genesisState[authtypes.ModuleName] = app.AppCodec().MustMarshalJSON(authGenesis)
-
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
 
@@ -93,7 +89,12 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
 
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis)
+	// set genesis accounts
+	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(app.AppCodec(), authtypes.DefaultParams(), genAccs)
+	if err != nil {
+		panic(err)
+	}
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis)
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation

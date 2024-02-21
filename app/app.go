@@ -35,7 +35,6 @@ import (
 
 	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
 
-	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -63,21 +62,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/cosmos/cosmos-sdk/x/auth"
 
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
-
-	authsims "github.com/cosmos/cosmos-sdk/x/auth/simulation"
 
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 
-	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
@@ -264,12 +257,12 @@ type App struct {
 	clessKeys map[string]*storetypes.ConsensuslessStoreKey
 
 	// keepers
-	AccountKeeper    authkeeper.AccountKeeper
+	AccountKeeper    *cosmosmodkeeper.KeeperAuth
 	AuthzKeeper      authzkeeper.Keeper
 	CapabilityKeeper *capabilitykeeper.Keeper
-	BankKeeper       *cosmosmodkeeper.Keeper
-	StakingKeeper    *cosmosmodkeeper.Keeper
-	GovKeeper        *cosmosmodkeeper.Keeper
+	BankKeeper       *cosmosmodkeeper.KeeperBank
+	StakingKeeper    *cosmosmodkeeper.KeeperStaking
+	GovKeeper        *cosmosmodkeeper.KeeperGov
 	SlashingKeeper   slashingkeeper.Keeper
 	MintKeeper       mintkeeper.Keeper
 	DistrKeeper      distrkeeper.Keeper
@@ -345,7 +338,7 @@ func New(
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 
 	keys := storetypes.NewKVStoreKeys(
-		authtypes.StoreKey, authz.ModuleName, crisistypes.StoreKey,
+		authz.ModuleName, crisistypes.StoreKey,
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		paramstypes.StoreKey, consensusparamtypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, circuittypes.StoreKey,
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
@@ -411,22 +404,6 @@ func New(
 	// this line is used by starport scaffolding # stargate/app/scopedKeeper
 
 	// add keepers
-	app.AccountKeeper = authkeeper.NewAccountKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[authtypes.StoreKey]),
-		authtypes.ProtoBaseAccount,
-		maccPerms,
-		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
-		Bech32PrefixAccAddr,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
-	)
-
-	app.AuthzKeeper = authzkeeper.NewKeeper(
-		runtime.NewKVStoreService(keys[authzkeeper.StoreKey]),
-		appCodec,
-		app.MsgServiceRouter(),
-		app.AccountKeeper,
-	)
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
@@ -437,11 +414,8 @@ func New(
 		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],
 		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
-		app.AccountKeeper,
 		// TODO?
-		// app.BankKeeper,
 		// app.TransferKeeper,
-		// stakingKeeper,
 		distrkeeper.NewQuerier(app.DistrKeeper),
 		// app.IBCKeeper.ChannelKeeper,
 		wasmconfig,
@@ -470,13 +444,39 @@ func New(
 		// TODO remove authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
-
 	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
-	app.CosmosmodKeeper = cosmosmodkeeper.NewKeeper(
+	app.AccountKeeper = cosmosmodkeeper.NewKeeperAuth(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey],
+		keys[cosmosmodtypes.StoreKey], // TODO remove
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		// TODO what authority?
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		app.interfaceRegistry,
+		authcodec.NewBech32Codec(Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
+		maccPerms,
+
+		// authtypes.ProtoBaseAccount,
+		// runtime.NewKVStoreService(keys[authtypes.StoreKey]),
+		// Bech32PrefixAccAddr,
+	)
+	app.AuthzKeeper = authzkeeper.NewKeeper(
+		runtime.NewKVStoreService(keys[authzkeeper.StoreKey]),
+		appCodec,
+		app.MsgServiceRouter(),
+		app.AccountKeeper,
+	)
+
+	app.StakingKeeper = cosmosmodkeeper.NewKeeperStaking(
+		appCodec,
+		appCodec,
+		keys[cosmosmodtypes.StoreKey], // TODO remove
 		app.GetSubspace(cosmosmodtypes.ModuleName),
 		app.AccountKeeper,
 		&app.WasmxKeeper,
@@ -488,11 +488,38 @@ func New(
 		authcodec.NewBech32Codec(Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
-	app.StakingKeeper = app.CosmosmodKeeper
-	app.BankKeeper = app.CosmosmodKeeper
-	app.GovKeeper = app.CosmosmodKeeper
+	app.BankKeeper = cosmosmodkeeper.NewKeeperBank(
+		appCodec,
+		appCodec,
+		keys[cosmosmodtypes.StoreKey], // TODO remove
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		app.AccountKeeper,
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		// TODO what authority?
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		app.interfaceRegistry,
+		authcodec.NewBech32Codec(Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+	)
+	app.GovKeeper = cosmosmodkeeper.NewKeeperGov(
+		appCodec,
+		appCodec,
+		keys[cosmosmodtypes.StoreKey], // TODO remove
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		app.AccountKeeper,
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		// TODO what authority?
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		app.interfaceRegistry,
+		authcodec.NewBech32Codec(Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+	)
 
-	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.StakingKeeper, app)
+	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, app)
 
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec,
@@ -687,9 +714,6 @@ func New(
 			app.AccountKeeper, app.StakingKeeper, app,
 			encodingConfig.TxConfig,
 		),
-		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
-		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
-		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, minttypes.DefaultInflationCalculationFn, app.GetSubspace(minttypes.ModuleName)),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName), app.interfaceRegistry),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
@@ -746,7 +770,6 @@ func New(
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
-		authtypes.ModuleName,
 		crisistypes.ModuleName,
 		ibctransfertypes.ModuleName,
 		ibcexported.ModuleName,
@@ -756,7 +779,6 @@ func New(
 		feegrant.ModuleName,
 		group.ModuleName,
 		paramstypes.ModuleName,
-		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
@@ -769,7 +791,6 @@ func New(
 		ibcexported.ModuleName,
 		icatypes.ModuleName,
 		capabilitytypes.ModuleName,
-		authtypes.ModuleName,
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
 		minttypes.ModuleName,
@@ -780,7 +801,6 @@ func New(
 		group.ModuleName,
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
-		vestingtypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
@@ -796,7 +816,6 @@ func New(
 	genesisModuleOrder := []string{
 		// sdk
 		capabilitytypes.ModuleName,
-		authtypes.ModuleName,
 
 		// mythos
 		wasmxmoduletypes.ModuleName,
@@ -814,7 +833,6 @@ func New(
 		group.ModuleName,
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
-		vestingtypes.ModuleName,
 		consensusparamtypes.ModuleName,
 		circuittypes.ModuleName,
 		// ibc
@@ -858,9 +876,7 @@ func New(
 	//
 	// NOTE: this is not required apps that don't use the simulator for fuzz testing
 	// transactions
-	overrideModules := map[string]module.AppModuleSimulation{
-		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
-	}
+	overrideModules := map[string]module.AppModuleSimulation{}
 	app.sm = module.NewSimulationManagerFromAppModules(app.mm.Modules, overrideModules)
 	app.sm.RegisterStoreDecoders()
 
@@ -1181,8 +1197,6 @@ func GetMaccPerms() map[string][]string {
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
-
-	paramsKeeper.Subspace(authtypes.ModuleName)
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)

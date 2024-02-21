@@ -5,18 +5,16 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-
-	"mythos/v1/x/cosmosmod/types"
 )
 
 // QuerierGov is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
 type QuerierGov struct {
-	*Keeper
+	Keeper *KeeperGov
 }
 
-var _ types.QueryGovServer = QuerierGov{}
+var _ govtypes.QueryServer = QuerierGov{}
 
-func NewQuerierGov(keeper *Keeper) QuerierGov {
+func NewQuerierGov(keeper *KeeperGov) QuerierGov {
 	return QuerierGov{Keeper: keeper}
 }
 
@@ -58,4 +56,9 @@ func (k QuerierGov) Deposits(goCtx context.Context, req *govtypes.QueryDepositsR
 func (k QuerierGov) TallyResult(goCtx context.Context, req *govtypes.QueryTallyResultRequest) (*govtypes.QueryTallyResultResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	return k.Keeper.TallyResult(ctx, req)
+}
+
+func (k QuerierGov) Constitution(goCtx context.Context, req *govtypes.QueryConstitutionRequest) (*govtypes.QueryConstitutionResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return k.Keeper.Constitution(ctx, req)
 }

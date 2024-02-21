@@ -12,7 +12,7 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
-func (k Keeper) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*govtypes.QueryProposalResponse, error) {
+func (k KeeperGov) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*govtypes.QueryProposalResponse, error) {
 	reqbz, err := k.JSONCodec().MarshalJSON(req)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (k Keeper) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*
 	return &govtypes.QueryProposalResponse{Proposal: proposal}, nil
 }
 
-func (k Keeper) Proposals(ctx sdk.Context, req *govtypes.QueryProposalsRequest) (*govtypes.QueryProposalsResponse, error) {
+func (k KeeperGov) Proposals(ctx sdk.Context, req *govtypes.QueryProposalsRequest) (*govtypes.QueryProposalsResponse, error) {
 	reqbz, err := k.JSONCodec().MarshalJSON(req)
 	if err != nil {
 		return nil, err
@@ -78,17 +78,17 @@ func (k Keeper) Proposals(ctx sdk.Context, req *govtypes.QueryProposalsRequest) 
 	return &govtypes.QueryProposalsResponse{Proposals: proposals}, nil
 }
 
-func (k Keeper) Vote(ctx sdk.Context, req *govtypes.QueryVoteRequest) (*govtypes.QueryVoteResponse, error) {
+func (k KeeperGov) Vote(ctx sdk.Context, req *govtypes.QueryVoteRequest) (*govtypes.QueryVoteResponse, error) {
 	k.Logger(ctx).Error("Vote not implemented")
 	return &govtypes.QueryVoteResponse{}, nil
 }
 
-func (k Keeper) Votes(ctx sdk.Context, req *govtypes.QueryVotesRequest) (*govtypes.QueryVotesResponse, error) {
+func (k KeeperGov) Votes(ctx sdk.Context, req *govtypes.QueryVotesRequest) (*govtypes.QueryVotesResponse, error) {
 	k.Logger(ctx).Error("Votes not implemented")
 	return &govtypes.QueryVotesResponse{}, nil
 }
 
-func (k Keeper) Params(ctx sdk.Context, req *govtypes.QueryParamsRequest) (*govtypes.QueryParamsResponse, error) {
+func (k KeeperGov) Params(ctx sdk.Context, req *govtypes.QueryParamsRequest) (*govtypes.QueryParamsResponse, error) {
 	reqbz, err := k.JSONCodec().MarshalJSON(req)
 	if err != nil {
 		return nil, err
@@ -120,17 +120,17 @@ func (k Keeper) Params(ctx sdk.Context, req *govtypes.QueryParamsRequest) (*govt
 	return &govtypes.QueryParamsResponse{Params: params}, nil
 }
 
-func (k Keeper) Deposit(ctx sdk.Context, req *govtypes.QueryDepositRequest) (*govtypes.QueryDepositResponse, error) {
+func (k KeeperGov) Deposit(ctx sdk.Context, req *govtypes.QueryDepositRequest) (*govtypes.QueryDepositResponse, error) {
 	k.Logger(ctx).Error("Deposit not implemented")
 	return &govtypes.QueryDepositResponse{}, nil
 }
 
-func (k Keeper) Deposits(ctx sdk.Context, req *govtypes.QueryDepositsRequest) (*govtypes.QueryDepositsResponse, error) {
+func (k KeeperGov) Deposits(ctx sdk.Context, req *govtypes.QueryDepositsRequest) (*govtypes.QueryDepositsResponse, error) {
 	k.Logger(ctx).Error("Deposits not implemented")
 	return &govtypes.QueryDepositsResponse{}, nil
 }
 
-func (k Keeper) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRequest) (*govtypes.QueryTallyResultResponse, error) {
+func (k KeeperGov) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRequest) (*govtypes.QueryTallyResultResponse, error) {
 	reqbz, err := k.JSONCodec().MarshalJSON(req)
 	if err != nil {
 		return nil, err
@@ -156,4 +156,9 @@ func (k Keeper) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultReque
 		return nil, err
 	}
 	return &internalResp, nil
+}
+
+func (k KeeperGov) Constitution(ctx sdk.Context, req *govtypes.QueryConstitutionRequest) (*govtypes.QueryConstitutionResponse, error) {
+	k.Logger(ctx).Error("Constitution not implemented")
+	return &govtypes.QueryConstitutionResponse{}, nil
 }

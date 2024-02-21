@@ -128,7 +128,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	appContext.Denom = app.BaseDenom
 
 	t := suite.T()
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().CosmosmodKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }

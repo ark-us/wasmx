@@ -3,28 +3,23 @@ package types
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/msgservice"
 
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(govtypes.MsgSubmitProposal{}, "/cosmos.gov.v1.MsgSubmitProposal", nil)
-	cdc.RegisterConcrete(govtypes.MsgVote{}, "/cosmos.gov.v1.MsgVote", nil)
-	cdc.RegisterConcrete(govtypes.MsgVoteWeighted{}, "/cosmos.gov.v1.MsgVoteWeighted", nil)
-	cdc.RegisterConcrete(govtypes.MsgDeposit{}, "/cosmos.gov.v1.MsgDeposit", nil)
+	govtypes.RegisterLegacyAminoCodec(cdc)
+	banktypes.RegisterLegacyAminoCodec(cdc)
+	authtypes.RegisterLegacyAminoCodec(cdc)
+	stakingtypes.RegisterLegacyAminoCodec(cdc)
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
-	registry.RegisterImplementations(
-		(*sdk.Msg)(nil),
-		&govtypes.MsgSubmitProposal{},
-		&govtypes.MsgVote{},
-		&govtypes.MsgVoteWeighted{},
-		&govtypes.MsgDeposit{},
-	)
-
-	msgservice.RegisterMsgServiceDesc(registry, &_MsgStaking_serviceDesc)
-	msgservice.RegisterMsgServiceDesc(registry, &_MsgBank_serviceDesc)
+	govtypes.RegisterInterfaces(registry)
+	banktypes.RegisterInterfaces(registry)
+	authtypes.RegisterInterfaces(registry)
+	stakingtypes.RegisterInterfaces(registry)
 }

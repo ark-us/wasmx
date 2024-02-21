@@ -6,7 +6,10 @@ import (
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
+	codec "github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -15,11 +18,12 @@ import (
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState) *GenesisState {
+func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState, auth AuthGenesisState) *GenesisState {
 	return &GenesisState{
 		Staking: staking,
 		Bank:    bank,
 		Gov:     gov,
+		Auth:    auth,
 	}
 }
 
@@ -41,6 +45,30 @@ func NewStakingGenesisState(params stakingtypes.Params, validators []stakingtype
 		Validators:  validators,
 		Delegations: delegations,
 	}
+}
+
+// NewAuthGenesisState returns a default staking module genesis state.
+func NewAuthGenesisState(params authtypes.Params, accounts []*AnyAccount) *AuthGenesisState {
+	return &AuthGenesisState{
+		Params:   params,
+		Accounts: accounts,
+	}
+}
+
+// NewAuthGenesisState returns a default staking module genesis state.
+func NewAuthGenesisStateFromCosmos(cdc codec.Codec, params authtypes.Params, accounts []authtypes.GenesisAccount) (*AuthGenesisState, error) {
+	accs := make([]*AnyAccount, len(accounts))
+	for i, account := range accounts {
+		acc, err := AccountIToAnyAccount(account, cdc)
+		if err != nil {
+			return nil, err
+		}
+		accs[i] = acc
+	}
+	return &AuthGenesisState{
+		Params:   params,
+		Accounts: accs,
+	}, nil
 }
 
 // DefaultStakingGenesisState returns a default bank module genesis state.
@@ -140,6 +168,38 @@ func DefaultGovGenesisState() *GovGenesisState {
 	}
 }
 
+// DefaultAuthGenesisState returns a default bank module genesis state.
+func DefaultAuthGenesisState() *AuthGenesisState {
+	state := authtypes.DefaultGenesisState()
+	accounts := make([]*AnyAccount, len(state.Accounts))
+	for i, acc := range state.Accounts {
+		// val := acc.GetCachedValue()
+		accounts[i] = AnyToAnyAccount(acc)
+	}
+	return &AuthGenesisState{
+		Params:   state.Params,
+		Accounts: accounts,
+	}
+}
+
+func AnyToAnyAccount(acc *cdctypes.Any) *AnyAccount {
+	return &AnyAccount{
+		TypeUrl: acc.GetTypeUrl(),
+		Value:   acc.GetValue(),
+	}
+}
+
+func AccountIToAnyAccount(acc sdk.AccountI, cdc codec.Codec) (*AnyAccount, error) {
+	bz, err := cdc.MarshalJSON(acc)
+	if err != nil {
+		return nil, err
+	}
+	return &AnyAccount{
+		TypeUrl: sdk.MsgTypeURL(acc),
+		Value:   bz,
+	}, nil
+}
+
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
 func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, denomName string) *GenesisState {
@@ -147,6 +207,7 @@ func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, denomName strin
 		Staking: *DefaultStakingGenesisState(),
 		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit, denomName),
 		Gov:     *DefaultGovGenesisState(),
+		Auth:    *DefaultAuthGenesisState(),
 	}
 }
 
@@ -160,6 +221,9 @@ func (gs GenesisState) Validate() error {
 		return err
 	}
 	if err := gs.Gov.Validate(); err != nil {
+		return err
+	}
+	if err := gs.Auth.Validate(); err != nil {
 		return err
 	}
 	return nil
@@ -399,5 +463,22 @@ func (p GovParams) ValidateBasic() error {
 		}
 	}
 
+	return nil
+}
+
+// Validate performs basic validation of auth genesis data returning an
+// error for any failed validation criteria.
+func (gs AuthGenesisState) Validate() error {
+	if err := gs.Params.Validate(); err != nil {
+		return err
+	}
+
+	// TODO validation
+	// genAccs, err := authtypes.UnpackAccounts(gs.Accounts)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// return authtypes.ValidateGenAccounts(genAccs)
 	return nil
 }
