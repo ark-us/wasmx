@@ -157,3 +157,8 @@ func (k KeeperGov) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRe
 	}
 	return &internalResp, nil
 }
+
+func (k KeeperGov) Constitution(ctx sdk.Context, req *govtypes.QueryConstitutionRequest) (*govtypes.QueryConstitutionResponse, error) {
+	k.Logger(ctx).Error("Constitution not implemented")
+	return &govtypes.QueryConstitutionResponse{}, nil
+}

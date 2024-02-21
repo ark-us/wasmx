@@ -16,6 +16,10 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	networktypes "mythos/v1/x/network/types"
 
@@ -72,9 +76,9 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the module
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	types.RegisterQueryBankHandlerClient(context.Background(), mux, types.NewQueryBankClient(clientCtx))
-	types.RegisterQueryStakingHandlerClient(context.Background(), mux, types.NewQueryStakingClient(clientCtx))
-	types.RegisterQueryGovHandlerClient(context.Background(), mux, types.NewQueryGovClient(clientCtx))
+	banktypes.RegisterQueryHandlerClient(context.Background(), mux, banktypes.NewQueryClient(clientCtx))
+	stakingtypes.RegisterQueryHandlerClient(context.Background(), mux, stakingtypes.NewQueryClient(clientCtx))
+	govtypes1.RegisterQueryHandlerClient(context.Background(), mux, govtypes1.NewQueryClient(clientCtx))
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
@@ -123,12 +127,15 @@ func NewAppModule(
 
 // RegisterServices registers a gRPC query service to respond to the module-specific gRPC queries
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgBankServer(cfg.MsgServer(), keeper.NewMsgBankServerImpl(&am.bank))
-	types.RegisterMsgStakingServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.staking))
-	types.RegisterMsgGovServer(cfg.MsgServer(), keeper.NewMsgGovServerImpl(&am.gov))
-	types.RegisterQueryBankServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.bank))
-	types.RegisterQueryStakingServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.staking))
-	types.RegisterQueryGovServer(cfg.QueryServer(), keeper.NewQuerierGov(&am.gov))
+	banktypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgBankServerImpl(&am.bank))
+	stakingtypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.staking))
+	govtypes1.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgGovServerImpl(&am.gov))
+	authtypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgAuthServerImpl(&am.auth))
+
+	banktypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.bank))
+	stakingtypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.staking))
+	govtypes1.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierGov(&am.gov))
+	authtypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierAuth(&am.auth))
 }
 
 // RegisterInvariants registers the invariants of the module. If an invariant deviates from its predicted value, the InvariantRegistry triggers appropriate logic (most often the chain will be halted)

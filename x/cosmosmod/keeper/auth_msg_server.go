@@ -6,8 +6,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-
-	"mythos/v1/x/cosmosmod/types"
 )
 
 type msgAuthServer struct {
@@ -15,13 +13,13 @@ type msgAuthServer struct {
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgAuthServerImpl(keeper *KeeperAuth) types.MsgAuthServer {
+func NewMsgAuthServerImpl(keeper *KeeperAuth) authtypes.MsgServer {
 	return &msgAuthServer{
 		Keeper: keeper,
 	}
 }
 
-var _ types.MsgAuthServer = msgAuthServer{}
+var _ authtypes.MsgServer = msgAuthServer{}
 
 func (m msgAuthServer) UpdateParams(goCtx context.Context, msg *authtypes.MsgUpdateParams) (*authtypes.MsgUpdateParamsResponse, error) {
 	if m.Keeper.authority != msg.Authority {

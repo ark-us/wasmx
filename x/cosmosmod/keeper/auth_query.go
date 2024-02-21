@@ -3,10 +3,12 @@ package keeper
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-
-	"mythos/v1/x/cosmosmod/types"
 )
 
 // QuerierBank is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -14,7 +16,7 @@ type QuerierAuth struct {
 	Keeper *KeeperAuth
 }
 
-var _ types.QueryAuthServer = QuerierAuth{}
+var _ authtypes.QueryServer = QuerierAuth{}
 
 func NewQuerierAuth(keeper *KeeperAuth) QuerierAuth {
 	return QuerierAuth{Keeper: keeper}
@@ -27,9 +29,16 @@ func (k QuerierAuth) Accounts(goCtx context.Context, req *authtypes.QueryAccount
 }
 
 func (k QuerierAuth) Account(goCtx context.Context, req *authtypes.QueryAccountRequest) (*authtypes.QueryAccountResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("Auth.Account not implemented")
-	return &authtypes.QueryAccountResponse{}, nil
+	addr, err := sdk.AccAddressFromBech32(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	account := k.Keeper.GetAccount(goCtx, addr)
+	any, err := codectypes.NewAnyWithValue(account)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
+	return &authtypes.QueryAccountResponse{Account: any}, nil
 }
 
 func (k QuerierAuth) AccountAddressByID(goCtx context.Context, req *authtypes.QueryAccountAddressByIDRequest) (*authtypes.QueryAccountAddressByIDResponse, error) {

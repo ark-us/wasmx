@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"mythos/v1/x/cosmosmod/types"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -20,7 +19,7 @@ type QuerierBank struct {
 	Keeper *KeeperBank
 }
 
-var _ types.QueryBankServer = QuerierBank{}
+var _ banktypes.QueryServer = QuerierBank{}
 
 func NewQuerierBank(keeper *KeeperBank) QuerierBank {
 	return QuerierBank{Keeper: keeper}

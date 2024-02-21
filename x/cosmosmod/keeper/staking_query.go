@@ -5,8 +5,6 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
-	"mythos/v1/x/cosmosmod/types"
 )
 
 // QuerierStaking is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -14,7 +12,7 @@ type QuerierStaking struct {
 	Keeper *KeeperStaking
 }
 
-var _ types.QueryStakingServer = QuerierStaking{}
+var _ stakingtypes.QueryServer = QuerierStaking{}
 
 func NewQuerierStaking(keeper *KeeperStaking) QuerierStaking {
 	return QuerierStaking{Keeper: keeper}
