@@ -408,6 +408,34 @@ func (k KeeperStaking) PowerReduction(goCtx context.Context) math.Int {
 	return sdk.DefaultPowerReduction
 }
 
+func (k KeeperStaking) Pool(goCtx context.Context, req *stakingtypes.QueryPoolRequest) (*stakingtypes.QueryPoolResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	reqbz, err := k.JSONCodec().MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetPool":%s}`, string(reqbz)))
+	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	var internalResp stakingtypes.QueryPoolResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &internalResp)
+	if err != nil {
+		return nil, err
+	}
+	return &internalResp, nil
+}
+
 // WriteValidators returns a slice of bonded genesis validators.
 func WriteValidators(ctx sdk.Context, keeper *KeeperStaking) (vals []cmttypes.GenesisValidator, returnErr error) {
 	err := keeper.IterateLastValidators(ctx, func(_ int64, validator stakingtypes.ValidatorI) (stop bool) {

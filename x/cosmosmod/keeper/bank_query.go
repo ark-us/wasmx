@@ -84,14 +84,60 @@ func (k QuerierBank) SpendableBalanceByDenom(goCtx context.Context, req *banktyp
 
 func (k QuerierBank) TotalSupply(goCtx context.Context, req *banktypes.QueryTotalSupplyRequest) (*banktypes.QueryTotalSupplyResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("TotalSupply not implemented")
-	return &banktypes.QueryTotalSupplyResponse{}, nil
+	reqbz, err := k.Keeper.cdc.MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"TotalSupply":%s}`, string(reqbz)))
+	resp, err := k.Keeper.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var contractResp wasmxtypes.ContractResponse
+	err = json.Unmarshal(resp.Data, &contractResp)
+	if err != nil {
+		return nil, err
+	}
+
+	var response banktypes.QueryTotalSupplyResponse
+	err = k.Keeper.cdc.UnmarshalJSON(contractResp.Data, &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
 }
 
 func (k QuerierBank) SupplyOf(goCtx context.Context, req *banktypes.QuerySupplyOfRequest) (*banktypes.QuerySupplyOfResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("SupplyOf not implemented")
-	return &banktypes.QuerySupplyOfResponse{}, nil
+	reqbz, err := k.Keeper.cdc.MarshalJSON(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetSupplyOf":%s}`, string(reqbz)))
+	resp, err := k.Keeper.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_BANK,
+		Contract: wasmxtypes.ROLE_BANK,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var contractResp wasmxtypes.ContractResponse
+	err = json.Unmarshal(resp.Data, &contractResp)
+	if err != nil {
+		return nil, err
+	}
+
+	var response banktypes.QuerySupplyOfResponse
+	err = k.Keeper.cdc.UnmarshalJSON(contractResp.Data, &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
 }
 
 func (k QuerierBank) Params(goCtx context.Context, req *banktypes.QueryParamsRequest) (*banktypes.QueryParamsResponse, error) {
