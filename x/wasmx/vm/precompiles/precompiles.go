@@ -88,6 +88,9 @@ var (
 	//go:embed 35.gov_0.0.1.wasm
 	gov_contract []byte
 
+	//go:embed 37.gov_cont_0.0.1.wasm
+	gov_cont_contract []byte
+
 	//go:embed 38.auth_0.0.1.wasm
 	auth_contract []byte
 
@@ -160,6 +163,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = hooks_contract
 	case types.GOV_v001:
 		wasmbin = gov_contract
+	case types.GOV_CONT_v001:
+		wasmbin = gov_cont_contract
 	case types.AUTH_v001:
 		wasmbin = auth_contract
 	}

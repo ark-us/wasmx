@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -401,6 +402,8 @@ func (c *ABCIClient) TxSearch(
 	}
 	c.logger.Debug("ABCIClient.TxSearch", "query", q.String())
 
+	// TODO events
+
 	// cometbft/state/txindex/kv
 	// get a list of conditions (like "tx.height > 5")
 	conditions := q.Syntax()
@@ -424,10 +427,64 @@ func (c *ABCIClient) TxSearch(
 		}
 	}
 
-	// TODO ordering, pagination
-	totalCount := 0
-	apiResults := make([]*rpctypes.ResultTx, 0)
-	return &rpctypes.ResultTxSearch{Txs: apiResults, TotalCount: totalCount}, nil
+	topics := make([]string, 0)
+	for _, c := range conditions {
+		topic := fmt.Sprintf("%s=%s", c.Tag, c.Arg.String())
+		topics = append(topics, topic)
+	}
+	apiResults, err := c.TxsByEvents(ctx, topics)
+	if err != nil {
+		return nil, err
+	}
+	return &rpctypes.ResultTxSearch{Txs: apiResults, TotalCount: len(apiResults)}, nil
+}
+
+func (c *ABCIClient) TxsByEvents(ctx context.Context, topics []string) ([]*rpctypes.ResultTx, error) {
+	c.logger.Debug("ABCIClient.TxsByEvents", "topics", topics)
+
+	txhashes := make([]string, 0)
+	for _, topic := range topics {
+		key := types.GetTopicDataKey(topic)
+		resp, err := c.fsmQuery(key)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Data) == 0 {
+			continue
+		}
+		var indexedTxs []string
+		err = json.Unmarshal(resp.Data, &indexedTxs)
+		if err != nil {
+			return nil, err
+		}
+
+		// intersection
+		if len(txhashes) == 0 {
+			txhashes = indexedTxs
+		} else {
+			txhashesTemp := make([]string, 0)
+			for _, hash := range indexedTxs {
+				if slices.Contains(txhashes, hash) {
+					txhashesTemp = append(txhashesTemp, hash)
+				}
+			}
+			txhashes = txhashesTemp
+		}
+	}
+
+	results := make([]*rpctypes.ResultTx, 0)
+	for _, hash := range txhashes {
+		hashbz, err := base64.StdEncoding.DecodeString(hash)
+		if err != nil {
+			continue
+		}
+		result, err := c.Tx(ctx, hashbz, false)
+		if err != nil {
+			continue
+		}
+		results = append(results, result)
+	}
+	return results, nil
 }
 
 func (c *ABCIClient) BlockSearch(

@@ -101,9 +101,7 @@ func (k QuerierStaking) HistoricalInfo(goCtx context.Context, req *stakingtypes.
 }
 
 func (k QuerierStaking) Pool(goCtx context.Context, req *stakingtypes.QueryPoolRequest) (*stakingtypes.QueryPoolResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("Pool not implemented")
-	return &stakingtypes.QueryPoolResponse{}, nil
+	return k.Keeper.Pool(goCtx, req)
 }
 
 func (k QuerierStaking) Params(goCtx context.Context, req *stakingtypes.QueryParamsRequest) (*stakingtypes.QueryParamsResponse, error) {

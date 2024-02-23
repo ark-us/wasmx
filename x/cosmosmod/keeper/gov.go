@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
 	types "mythos/v1/x/cosmosmod/types"
@@ -75,17 +76,17 @@ func (k KeeperGov) Proposals(ctx sdk.Context, req *govtypes.QueryProposalsReques
 		}
 		proposals[i] = prop
 	}
-	return &govtypes.QueryProposalsResponse{Proposals: proposals}, nil
+	return &govtypes.QueryProposalsResponse{Proposals: proposals, Pagination: internalResp.Pagination}, nil
 }
 
 func (k KeeperGov) Vote(ctx sdk.Context, req *govtypes.QueryVoteRequest) (*govtypes.QueryVoteResponse, error) {
 	k.Logger(ctx).Error("Vote not implemented")
-	return &govtypes.QueryVoteResponse{}, nil
+	return &govtypes.QueryVoteResponse{Vote: nil}, nil
 }
 
 func (k KeeperGov) Votes(ctx sdk.Context, req *govtypes.QueryVotesRequest) (*govtypes.QueryVotesResponse, error) {
 	k.Logger(ctx).Error("Votes not implemented")
-	return &govtypes.QueryVotesResponse{}, nil
+	return &govtypes.QueryVotesResponse{Votes: make([]*govtypes.Vote, 0), Pagination: &query.PageResponse{Total: 0}}, nil
 }
 
 func (k KeeperGov) Params(ctx sdk.Context, req *govtypes.QueryParamsRequest) (*govtypes.QueryParamsResponse, error) {
@@ -127,7 +128,7 @@ func (k KeeperGov) Deposit(ctx sdk.Context, req *govtypes.QueryDepositRequest) (
 
 func (k KeeperGov) Deposits(ctx sdk.Context, req *govtypes.QueryDepositsRequest) (*govtypes.QueryDepositsResponse, error) {
 	k.Logger(ctx).Error("Deposits not implemented")
-	return &govtypes.QueryDepositsResponse{}, nil
+	return &govtypes.QueryDepositsResponse{Deposits: make([]*govtypes.Deposit, 0), Pagination: &query.PageResponse{Total: 0}}, nil
 }
 
 func (k KeeperGov) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRequest) (*govtypes.QueryTallyResultResponse, error) {
@@ -155,6 +156,11 @@ func (k KeeperGov) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRe
 	if err != nil {
 		return nil, err
 	}
+	tally, err := types.CosmosTallyFromInternal(internalResp.Tally)
+	if err != nil {
+		return nil, err
+	}
+	internalResp.Tally = tally
 	return &internalResp, nil
 }
 

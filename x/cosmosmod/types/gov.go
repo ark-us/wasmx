@@ -1,6 +1,8 @@
 package types
 
 import (
+	fmt "fmt"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -19,11 +21,15 @@ func CosmosProposalFromInternal(cdc codec.JSONCodec, proposal GovProposal) (*gov
 		}
 		anymsgs[i] = &anymsg
 	}
+	tally, err := CosmosTallyFromInternal(proposal.FinalTallyResult)
+	if err != nil {
+		return nil, err
+	}
 	return &govtypes.Proposal{
 		Messages:         anymsgs,
 		Id:               proposal.Id,
 		Status:           proposal.Status,
-		FinalTallyResult: proposal.FinalTallyResult,
+		FinalTallyResult: tally,
 		SubmitTime:       proposal.SubmitTime,
 		DepositEndTime:   proposal.DepositEndTime,
 		TotalDeposit:     proposal.TotalDeposit,
@@ -36,6 +42,30 @@ func CosmosProposalFromInternal(cdc codec.JSONCodec, proposal GovProposal) (*gov
 		Expedited:        proposal.Expedited,
 		FailedReason:     proposal.FailedReason,
 	}, nil
+}
+
+func CosmosTallyFromInternal(tally *govtypes.TallyResult) (*govtypes.TallyResult, error) {
+	yes, ok := new(big.Int).SetString(tally.YesCount, 0)
+	if !ok {
+		return nil, fmt.Errorf("could not parse tally yes_count")
+	}
+	no, ok := new(big.Int).SetString(tally.NoCount, 0)
+	if !ok {
+		return nil, fmt.Errorf("could not parse tally no_count")
+	}
+	abstain, ok := new(big.Int).SetString(tally.AbstainCount, 0)
+	if !ok {
+		return nil, fmt.Errorf("could not parse tally abstain_count")
+	}
+	veto, ok := new(big.Int).SetString(tally.NoWithVetoCount, 0)
+	if !ok {
+		return nil, fmt.Errorf("could not parse tally no_with_veto_count")
+	}
+	tally.YesCount = yes.String()
+	tally.NoCount = no.String()
+	tally.AbstainCount = abstain.String()
+	tally.NoWithVetoCount = veto.String()
+	return tally, nil
 }
 
 func CosmosProposalToInternal(cdc codec.JSONCodec, proposal govtypes.Proposal) (*GovProposal, error) {

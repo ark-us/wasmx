@@ -43,6 +43,10 @@ type BlockEntry struct {
 	Result         []byte `json:"result"` // ResponseFinalizeBlock
 }
 
+func GetTopicDataKey(topic string) string {
+	return DATA_INDEXER + topic
+}
+
 func GetTxKey(hash []byte) string {
 	return TX_INDEXER + base64.StdEncoding.EncodeToString(hash)
 }

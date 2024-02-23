@@ -45,8 +45,8 @@ var ADDR_STAKING = "0x0000000000000000000000000000000000000030"
 var ADDR_BANK = "0x0000000000000000000000000000000000000031"
 var ADDR_HOOKS = "0x0000000000000000000000000000000000000034"
 var ADDR_GOV = "0x0000000000000000000000000000000000000035"
-var ADDR_AUTH = "0x0000000000000000000000000000000000000038"
-
+var ADDR_GOV_CONT = "0x0000000000000000000000000000000000000038"
+var ADDR_AUTH = "0x0000000000000000000000000000000000000039"
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func DefaultSystemContracts() SystemContracts {
@@ -84,6 +84,13 @@ func DefaultSystemContracts() SystemContracts {
 	}
 
 	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[{"hook":"EndBlock","modules":["%s"]}]}`, ROLE_CONSENSUS, ROLE_GOVERNANCE, ROLE_GOVERNANCE))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
+	}
+
+	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
+	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
+	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1425,"defaultY":1000}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
 	}
@@ -318,6 +325,15 @@ func DefaultSystemContracts() SystemContracts {
 			Address:     ADDR_GOV,
 			Label:       GOV_v001,
 			InitMessage: initMsg,
+			Pinned:      false,
+			// Role:        ROLE_GOVERNANCE,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_GOV_CONT,
+			Label:       GOV_CONT_v001,
+			InitMessage: govInitMsg,
 			Pinned:      false,
 			Role:        ROLE_GOVERNANCE,
 			StorageType: ContractStorageType_CoreConsensus,
