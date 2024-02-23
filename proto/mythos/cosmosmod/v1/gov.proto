@@ -218,10 +218,16 @@ message ProposalOption {
         (gogoproto.nullable)   = false,
         (amino.dont_omitempty) = true
     ];
+    bytes weight = 5 [
+        (cosmos_proto.scalar)  = "cosmos.Int",
+        (gogoproto.customtype) = "cosmossdk.io/math.Int",
+        (gogoproto.nullable)   = false,
+        (amino.dont_omitempty) = true
+    ];
 
-    string title = 5;
-    string summary = 6;
-    string metadata = 7;
+    string title = 6;
+    string summary = 7;
+    string metadata = 8;
 }
 
 message ProposalVoteStatus {

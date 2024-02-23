@@ -33,9 +33,9 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	suite.Require().NoError(err)
 	propext := suite.getPropExtended(appA)
 	suite.Require().Equal(true, propext.VoteStatus.Changed)
-	suite.Require().Equal(uint32(1), propext.Winner)
+	suite.Require().Equal(uint32(2), propext.Winner)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":1,"voter":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata"}}`, sender.Address.String()))
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata"}}`, sender.Address.String()))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -45,7 +45,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	propext = suite.getPropExtended(appA)
 	suite.Require().Equal(false, propext.VoteStatus.Changed)
-	suite.Require().Equal(uint32(1), propext.Winner)
+	suite.Require().Equal(uint32(2), propext.Winner)
 
 	proposal, err := suite.App().GovKeeper.Proposal(appA.Context(), &govtypes.QueryProposalRequest{ProposalId: 1})
 	suite.Require().NoError(err)
@@ -73,9 +73,9 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	propext = suite.getPropExtended(appA)
 	suite.Require().Equal(false, propext.VoteStatus.Changed)
-	suite.Require().Equal(uint32(1), propext.Winner)
+	suite.Require().Equal(uint32(2), propext.Winner)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"0x200000","arbitrationAmount":"0x0","metadata":"metadata"}}`, sender.Address.String()))
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"0x200000","arbitrationAmount":"0x0","metadata":"metadata"}}`, sender.Address.String()))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -85,7 +85,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	propext = suite.getPropExtended(appA)
 	suite.Require().Equal(true, propext.VoteStatus.Changed)
-	suite.Require().Equal(uint32(2), propext.Winner)
+	suite.Require().Equal(uint32(3), propext.Winner)
 
 	tally, err = suite.App().GovKeeper.TallyResult(appA.Context(), &govtypes.QueryTallyResultRequest{ProposalId: 1})
 	suite.Require().NoError(err)
