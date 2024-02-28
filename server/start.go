@@ -222,6 +222,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 		return err
 	}
 
+	ctx = networkvm.WithP2PEmptyContext(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)

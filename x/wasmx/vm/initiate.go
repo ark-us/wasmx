@@ -191,6 +191,13 @@ func SetSystemDepHandler(
 	SystemDepHandler[key] = handler
 }
 
+func SetExecuteFunctionHandler(
+	key string,
+	handler ExecuteFunctionInterface,
+) {
+	ExecuteFunctionHandler[key] = handler
+}
+
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
 	if len(systemDeps) > 0 {
 		depName := systemDeps[0].Label

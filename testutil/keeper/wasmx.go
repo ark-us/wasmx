@@ -36,6 +36,8 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+
+	networkvm "mythos/v1/x/network/vm"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
@@ -62,6 +64,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
+	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 

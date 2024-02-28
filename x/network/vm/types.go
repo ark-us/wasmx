@@ -22,6 +22,10 @@ type ContextKey string
 
 const P2PContextKey ContextKey = "p2p-context"
 
+type Context struct {
+	Context *vmtypes.Context
+}
+
 type P2PMessage struct {
 	Msg             []byte         `json:"msg"`
 	ContractAddress sdk.AccAddress `json:"contract_address"`
@@ -54,7 +58,10 @@ type ConnectPeerRequest struct {
 	Peer       string `json:"peer"`
 }
 
-type ConnectPeerResponse struct{}
+type ConnectPeerResponse struct {
+	Data  []byte `json:"data"`
+	Error string `json:"error"`
+}
 
 type SendMessageToPeersRequest struct {
 	Msg        []byte   `json:"msg"`
@@ -88,7 +95,7 @@ type CalldataStart struct {
 }
 
 func WithP2PEmptyContext(ctx context.Context) context.Context {
-	p2pctx := &P2PContext{Streams: make(map[string]network.Stream)}
+	p2pctx := &P2PContext{Streams: map[string]network.Stream{}}
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 
