@@ -3,24 +3,21 @@ package vm
 import (
 	_ "embed"
 
-	"encoding/base64"
 	"encoding/json"
 
 	"bufio"
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	host "github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	multiaddr "github.com/multiformats/go-multiaddr"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
-
-	host "github.com/libp2p/go-libp2p/core/host"
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 
@@ -29,21 +26,20 @@ import (
 )
 
 func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--StartNodeWithIdentity--")
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--StartNodeWithIdentity--", string(requestbz))
 	var req StartNodeWithIdentityRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 
-	node, err := startNodeWithIdentityInternal(req.PrivateKey, req.Port, req.ProtocolId)
+	node, err := startNodeWithIdentityInternal(req.PrivateKey, req.Port)
 	if err != nil {
+		ctx.Context.Ctx.Logger().Error("start p2p node with identity failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	p2pctx, err := GetP2PContext(ctx.Context)
@@ -62,6 +58,7 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	ctx.Context.Ctx.Logger().Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs)
 	node.SetStreamHandler(protocol.ID(req.ProtocolId), ctx.handleStream)
 
 	response := StartNodeWithIdentityResponse{Error: "", Data: make([]byte, 0)}
@@ -79,14 +76,12 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 }
 
 func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--ConnectPeer--")
 	response := ConnectPeerResponse{}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--ConnectPeer--", string(requestbz))
 	var req ConnectPeerRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -100,6 +95,7 @@ func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	stream, err := connectPeerInternal(*p2pctx.Node, req.ProtocolId, req.Peer)
 	if err != nil {
+		ctx.Context.Ctx.Logger().Info("connect to peer failed", "peer", req.Peer, "protocol_id", req.ProtocolId, "error", err.Error())
 		response.Error = err.Error()
 	} else {
 		p2pctx.Streams[req.Peer] = stream
@@ -108,16 +104,15 @@ func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params 
 			intervalEnded := make(chan bool, 1)
 			defer close(intervalEnded)
 			go func(ctx *Context, p2pctx_ *P2PContext) {
-				fmt.Printf("goroutine peer connect started: %s", req.Peer)
-				defer fmt.Printf("goroutine peer connect finished: %s", req.Peer)
+				fmt.Println("goroutine peer connect started:", req.Peer)
+				defer fmt.Println("goroutine peer connect finished:", req.Peer)
 
 				stream, found := p2pctx_.Streams[req.Peer]
-				ctx.listenPeerStream(stream, req.Peer)
-				fmt.Println("connect peer err", err)
-				if err != nil {
+				if !found {
+					fmt.Println("stream not found: ", req.Peer)
 					intervalEnded <- true
 				}
-
+				ctx.listenPeerStream(stream, req.Peer)
 			}(ctx, p2pctx)
 
 			select {
@@ -144,62 +139,39 @@ func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params 
 
 // sends to all connected peers
 func SendMessage(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--SendMessage--")
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--SendMessage--", string(requestbz))
 
 	var req SendMessageRequest
 	err = json.Unmarshal(requestbz, &req)
-	fmt.Println("--SendMessage err--", err)
-	fmt.Println("--SendMessage req--", req)
 	if err != nil {
-		fmt.Println("--SendMessage is err!--", err)
+		ctx.Context.Ctx.Logger().Debug("could not unmarshal SendMessageRequest", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--SendMessage 11--")
 
-	msgWithAddr := P2PMessage{Msg: req.Msg, ContractAddress: ctx.Context.Env.Contract.Address}
-	msgWithAddrBz, err := json.Marshal(&msgWithAddr)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
 		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
+	peers := []string{}
+	for peeraddr := range p2pctx.Streams {
+		peers = append(peers, peeraddr)
+	}
 
-	ctx.Context.GoRoutineGroup.Go(func() error {
-		intervalEnded := make(chan bool, 1)
-		defer close(intervalEnded)
-		go func(p2pctx_ *P2PContext) {
-			fmt.Println("goroutine send message started")
-			defer fmt.Println("goroutine send message finished")
-
-			for peeraddr, stream := range p2pctx_.Streams {
-				err := sendMessageToPeersInternal(*p2pctx_.Node, stream, peeraddr, msgWithAddrBz)
-				fmt.Println("send message err", err)
-				if err != nil {
-					intervalEnded <- true
-				}
-			}
-
-			// intervalEnded <- true
-		}(p2pctx)
-
-		select {
-		case <-ctx.Context.GoContextParent.Done():
-			return nil
-		case <-intervalEnded:
-			return nil
-		}
-	})
-
-	fmt.Println("--SendMessage 22--")
+	reqPeers := SendMessageToPeersRequest{
+		Contract:   req.Contract,
+		Msg:        req.Msg,
+		ProtocolId: req.ProtocolId,
+		Peers:      peers,
+	}
+	err = sendMessageToPeersCommon(ctx, reqPeers)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 
 	response := SendMessageResponse{}
 	responsebz, err := json.Marshal(response)
@@ -212,83 +184,25 @@ func SendMessage(_context interface{}, callframe *wasmedge.CallingFrame, params 
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	fmt.Println("--SendMessage END--")
 	return returns, wasmedge.Result_Success
 }
 
 func SendMessageToPeers(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--SendMessageToPeers--")
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--SendMessageToPeers--", string(requestbz))
-
 	var req SendMessageToPeersRequest
 	err = json.Unmarshal(requestbz, &req)
-	fmt.Println("--SendMessageToPeers err--", err)
-	fmt.Println("--SendMessageToPeers req--", req)
 	if err != nil {
-		fmt.Println("--SendMessageToPeers is err!--", err)
+		ctx.Context.Ctx.Logger().Error("send message to peers failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--SendMessageToPeers 11--")
-	p2pctx, err := GetP2PContext(ctx.Context)
+	err = sendMessageToPeersCommon(ctx, req)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
-
-	for _, peer := range req.Peers {
-		_, found := p2pctx.Streams[peer]
-		if !found {
-			stream, err := connectPeerInternal(*p2pctx.Node, req.ProtocolId, peer)
-			if err != nil {
-				fmt.Println("--connectPeerInternal is err!--", err)
-				return nil, wasmedge.Result_Fail
-			}
-			p2pctx.Streams[peer] = stream
-		}
-	}
-
-	ctx.Context.GoRoutineGroup.Go(func() error {
-		intervalEnded := make(chan bool, 1)
-		defer close(intervalEnded)
-		go func(p2pctx_ *P2PContext) {
-			fmt.Printf("goroutine peers send message started: %s", req.Peers)
-			defer fmt.Printf("goroutine peers send message finished: %s", req.Peers)
-
-			for _, peer := range req.Peers {
-				stream, found := p2pctx_.Streams[peer]
-				if !found {
-					fmt.Println("stream not found: ", peer)
-					intervalEnded <- true
-				}
-				err := sendMessageToPeersInternal(*p2pctx_.Node, stream, peer, req.Msg)
-				fmt.Println("send message err", err)
-				if err != nil {
-					intervalEnded <- true
-				}
-			}
-
-			// intervalEnded <- true
-		}(p2pctx)
-
-		select {
-		case <-ctx.Context.GoContextParent.Done():
-			return nil
-		case <-intervalEnded:
-			return nil
-		}
-		return nil
-	})
-
-	// for _, peer := range req.Peers {
-	// 	sendMessageToPeersInternal(*ctx.node, req.ProtocolId, peer, req.Msg)
-	// }
-
-	fmt.Println("--SendMessageToPeers 22--")
 
 	response := SendMessageToPeersResponse{}
 	responsebz, err := json.Marshal(response)
@@ -301,12 +215,10 @@ func SendMessageToPeers(_context interface{}, callframe *wasmedge.CallingFrame, 
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	fmt.Println("--SendMessageToPeers END--")
 	return returns, wasmedge.Result_Success
 }
 
 func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	fmt.Println("--CloseNode--")
 	ctx := _context.(*Context)
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
@@ -345,16 +257,13 @@ func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	return env
 }
 
-func startNodeWithIdentityInternal(_pk []byte, port string, protocolID string) (host.Host, error) {
+func startNodeWithIdentityInternal(_pk []byte, port string) (host.Host, error) {
 	pk := ed25519.PrivKey(_pk)
 	pkcrypto, err := crypto.UnmarshalEd25519PrivateKey(pk)
 	if err != nil {
 		return nil, err
 	}
 	identity := libp2p.Identity(pkcrypto)
-
-	// start a libp2p node that listens on a random local TCP port,
-	// but without running the built-in ping protocol
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/"+port),
 		libp2p.Ping(false),
@@ -373,12 +282,10 @@ func connectPeerInternal(node host.Host, protocolID string, peeraddrstr string) 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--connectPeerInternal peeraddr--", peeraddr)
 	peer, err := peerstore.AddrInfoFromP2pAddr(peeraddr)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--connectPeerInternal peer--", peer)
 	if err := node.Connect(ctx, *peer); err != nil {
 		return nil, err
 	}
@@ -386,24 +293,22 @@ func connectPeerInternal(node host.Host, protocolID string, peeraddrstr string) 
 	// open a stream, this stream will be handled by handleStream other end
 	stream, err := node.NewStream(ctx, peer.ID, protocol.ID(protocolID))
 	if err != nil {
-		fmt.Println("Stream open failed", err)
 		return nil, err
 	}
 	return stream, nil
 }
 
-func sendMessageToPeersInternal(node host.Host, stream network.Stream, peeraddrstr string, msg []byte) error {
-	fmt.Println("--sendMessageToPeersInternal--", string(msg))
+func sendMessageToPeersInternal(stream network.Stream, msg P2PMessage) error {
+	msgbz, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	fmt.Println("--sendMessageToPeersInternal - Connected to:", peeraddrstr)
-
-	err := writeData(rw, msg)
+	err = writeData(rw, msgbz)
 	return err
 }
 
 func writeData(rw *bufio.ReadWriter, msg []byte) error {
-	fmt.Println("writing stream data: ", string(msg))
-	// _, err := rw.Write(msg)
 	_, err := rw.WriteString(string(msg) + "\n")
 	if err != nil {
 		fmt.Println("Error writing to buffer")
@@ -417,27 +322,61 @@ func writeData(rw *bufio.ReadWriter, msg []byte) error {
 	return nil
 }
 
-func writeDataStd(rw *bufio.ReadWriter, msg string) {
-	fmt.Println("writing stream data: ", msg)
-	stdReader := bufio.NewReader(os.Stdin)
+func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error {
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		return nil
+	}
 
-	for {
-		fmt.Print("> ")
-		sendData, err := stdReader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading from stdin")
-			panic(err)
-		}
-
-		_, err = rw.WriteString(fmt.Sprintf("%s\n", sendData))
-		if err != nil {
-			fmt.Println("Error writing to buffer")
-			panic(err)
-		}
-		err = rw.Flush()
-		if err != nil {
-			fmt.Println("Error flushing buffer")
-			panic(err)
+	for _, peer := range req.Peers {
+		_, found := p2pctx.Streams[peer]
+		if !found {
+			stream, err := connectPeerInternal(*p2pctx.Node, req.ProtocolId, peer)
+			if err != nil {
+				ctx.Context.Ctx.Logger().Error("connect to peer failed", "peer", peer, "error", err.Error())
+				return nil
+			}
+			p2pctx.Streams[peer] = stream
 		}
 	}
+
+	msgReq := P2PMessage{
+		Msg:             req.Msg,
+		ContractAddress: req.Contract,
+		SenderAddress:   ctx.Context.Env.Contract.Address,
+	}
+
+	ctx.Context.GoRoutineGroup.Go(func() error {
+		intervalEnded := make(chan bool, 1)
+		defer close(intervalEnded)
+		go func(p2pctx_ *P2PContext) {
+			// fmt.Println("goroutine peers send message started", req.Peers)
+			// defer fmt.Println("goroutine peers send message finished", req.Peers)
+
+			for _, peer := range req.Peers {
+				stream, found := p2pctx_.Streams[peer]
+				if !found {
+					fmt.Println("stream not found: ", peer)
+					intervalEnded <- true
+				}
+				err := sendMessageToPeersInternal(stream, msgReq)
+				if err != nil {
+					fmt.Println("send message to peers failed", peer, err)
+					intervalEnded <- true
+				}
+			}
+
+			// intervalEnded <- true
+		}(p2pctx)
+
+		select {
+		case <-ctx.Context.GoContextParent.Done():
+			return nil
+		case <-intervalEnded:
+			return nil
+		}
+	})
+
+	return nil
 }

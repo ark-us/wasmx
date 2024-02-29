@@ -35,7 +35,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 		// continue
 	}
 
-	description := fmt.Sprintf("timed action: delay %dms, contract %s, args: %s ", msg.Delay, msg.Contract, string(msg.Args))
+	description := fmt.Sprintf("delay %dms, contract %s, args: %s ", msg.Delay, msg.Contract, string(msg.Args))
 
 	// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 	intervalEnded := make(chan bool, 1)
@@ -43,7 +43,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(intervalEnded)
 	defer close(errCh)
 	go func() {
-		k.actionExecutor.GetLogger().Info("eventual execution starting", "description", description)
+		k.actionExecutor.GetLogger().Info("eventual execution triggered", "description", description)
 		err := k.startTimeoutInternal(description, msg)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err)
@@ -58,7 +58,6 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 		k.actionExecutor.GetLogger().Error("eventual execution failed to start", "error", err.Error())
 		return err
 	case <-intervalEnded:
-		k.actionExecutor.GetLogger().Info("intervalEnded", "description", description)
 		return nil
 	}
 }
@@ -77,6 +76,7 @@ func (k *Keeper) startTimeoutInternal(
 	default:
 		// continue
 	}
+	k.actionExecutor.GetLogger().Info("eventual execution started", "description", description)
 
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)

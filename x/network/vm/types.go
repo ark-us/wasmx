@@ -29,6 +29,7 @@ type Context struct {
 type P2PMessage struct {
 	Msg             []byte         `json:"msg"`
 	ContractAddress sdk.AccAddress `json:"contract_address"`
+	SenderAddress   sdk.AccAddress `json:"sender_address"`
 }
 
 type Peer struct {
@@ -64,15 +65,18 @@ type ConnectPeerResponse struct {
 }
 
 type SendMessageToPeersRequest struct {
-	Msg        []byte   `json:"msg"`
-	ProtocolId string   `json:"protocolId"`
-	Peers      []string `json:"peers"`
+	Contract   sdk.AccAddress `json:"contract"`
+	Msg        []byte         `json:"msg"`
+	ProtocolId string         `json:"protocolId"`
+	Peers      []string       `json:"peers"`
 }
 
 type SendMessageToPeersResponse struct{}
 
 type SendMessageRequest struct {
-	Msg []byte `json:"msg"`
+	Contract   sdk.AccAddress `json:"contract"`
+	Msg        []byte         `json:"msg"`
+	ProtocolId string         `json:"protocolId"`
 }
 
 type SendMessageResponse struct{}

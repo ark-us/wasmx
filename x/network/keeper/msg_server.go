@@ -126,18 +126,5 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 }
 
 func (m msgServer) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	msg2 := &types.MsgExecuteContract{
-		// Sender:   msg.Sender,
-		// Contract: msg.Contract,
-		// Msg:      msg.Data,
-	}
-	_, err := m.Keeper.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, msg2)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.MsgP2PReceiveMessageResponse{}, nil
+	return m.Keeper.P2PReceiveMessage(goCtx, msg)
 }

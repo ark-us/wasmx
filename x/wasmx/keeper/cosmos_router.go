@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 
 	sdkerr "cosmossdk.io/errors"
@@ -226,13 +227,12 @@ func safeHandler(ctx sdk.Context, msg sdk.Msg, handler func(ctx sdk.Context, req
 			// and make them EVM errors
 			switch x := r.(type) {
 			case string:
-				err = errors.New(x)
+				err = fmt.Errorf("failed to execute Cosmos message: %s", x)
 			case error:
 				err = sdkerr.Wrapf(x, "failed to execute Cosmos message")
 			default:
 				// Fallback err
 				err = sdkerr.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
-
 			}
 			// invalidate rep
 			res = nil

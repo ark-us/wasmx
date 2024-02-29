@@ -43,6 +43,11 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	libp2p "github.com/libp2p/go-libp2p"
+	crypto "github.com/libp2p/go-libp2p/core/crypto"
+
+	pvm "github.com/cometbft/cometbft/privval"
+
 	app "mythos/v1/app"
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
@@ -67,6 +72,7 @@ var (
 	flagRPCAddress        = "rpc.address"
 	flagAPIAddress        = "api.address"
 	flagPrintMnemonic     = "print-mnemonic"
+	flagP2P               = "libp2p"
 )
 
 type initArgs struct {
@@ -81,6 +87,7 @@ type initArgs struct {
 	startingIPAddress string
 	sameMachine       bool
 	noCors            bool
+	p2p               bool
 }
 
 type startArgs struct {
@@ -101,6 +108,8 @@ type startArgs struct {
 	jsonRpcEnable    bool
 	jsonRpcAddress   string
 	jsonRpcWsAddress string
+
+	p2p bool
 }
 
 func addTestnetFlagsToCmd(cmd *cobra.Command) {
@@ -109,6 +118,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().String(flags.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
 	cmd.Flags().String(sdkserver.FlagMinGasPrices, fmt.Sprintf("0.000006%s", app.BaseDenom), "Minimum gas prices to accept for transactions; All fees in a tx must meet this minimum (e.g. 10000amyt)")
 	cmd.Flags().String(flags.FlagKeyAlgorithm, string(hd.Secp256k1Type), "Key signing algorithm to generate keys for")
+	cmd.Flags().Bool(flagP2P, false, "wether the consensus algorithm uses libp2p or not")
 }
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
@@ -164,6 +174,7 @@ Example:
 			args.noCors, _ = cmd.Flags().GetBool(flagNoCors)
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
+			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
 			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
 		},
@@ -209,6 +220,7 @@ Example:
 			args.jsonRpcEnable, _ = cmd.Flags().GetBool(jsonrpcflags.JsonRpcEnable)
 			args.jsonRpcAddress, _ = cmd.Flags().GetString(jsonrpcflags.JsonRpcAddress)
 			args.jsonRpcWsAddress, _ = cmd.Flags().GetString(jsonrpcflags.JsonRpcWsAddress)
+			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
 			return startTestnet(cmd, args)
 		},
@@ -352,10 +364,51 @@ func initTestnetFiles(
 		}
 
 		host := fmt.Sprintf("%s@%s:%s", addr.String(), nodeIPs[i], "8090")
-		if args.sameMachine {
+		if args.sameMachine && !args.p2p {
 			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 			host = fmt.Sprintf("%s@%s", addr.String(), ipaddr)
 		}
+
+		if args.p2p {
+			privValid := pvm.LoadOrGenFilePV(nodeConfig.PrivValidatorKeyFile(), nodeConfig.PrivValidatorStateFile())
+			pk := privValid.Key.PrivKey.Bytes()
+			pkcrypto, err := crypto.UnmarshalEd25519PrivateKey(pk)
+			if err != nil {
+				return err
+			}
+			identity := libp2p.Identity(pkcrypto)
+			p2pPort := "5001"
+
+			if args.sameMachine {
+				ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(5001+i), 1)
+				ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
+				parts := strings.Split(ipaddr, ":")
+				node, err := libp2p.New(
+					libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", parts[0], parts[1])),
+					libp2p.Ping(false),
+					identity,
+				)
+				if err != nil {
+					return err
+				}
+				p2pid := node.ID()
+				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", addr.String(), parts[0], parts[1], p2pid)
+			} else {
+				ipaddr := nodeIPs[i]
+				ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
+				node, err := libp2p.New(
+					libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", ipaddr, p2pPort)),
+					libp2p.Ping(false),
+					identity,
+				)
+				if err != nil {
+					return err
+				}
+				p2pid := node.ID()
+				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", addr.String(), nodeIPs[i], p2pPort, p2pid)
+			}
+		}
+
 		valaddr[i] = addr
 		networkIps[i] = host
 	}

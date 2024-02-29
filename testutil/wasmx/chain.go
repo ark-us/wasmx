@@ -512,20 +512,17 @@ func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.Res
 }
 
 func (suite *KeeperTestSuite) raftToLeader() {
-	// lastInterval := suite.GetLastInterval(suite.chain.GetContext())
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 	// get consensus version
-	if currentState != "#RAFT-FULL-1.initialized.Follower" {
-		return
+	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "initialized.Follower") {
+		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, "1"))
+		_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg1,
+		})
+		suite.Require().NoError(err)
 	}
-	msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":%s}`, "1"))
-	_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
-		Sender:   wasmxtypes.ROLE_CONSENSUS,
-		Contract: wasmxtypes.ROLE_CONSENSUS,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	return
 }
 
 func (suite *KeeperTestSuite) commitBlock(res *abci.ResponseFinalizeBlock) {
