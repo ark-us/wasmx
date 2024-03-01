@@ -22,7 +22,7 @@ import (
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
-func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func Ewasm_wrapper(context interface{}, _ *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	wrapper := context.(EwasmFunctionWrapper)
 	fmt.Println("Go: ewasm_wrapper entering", wrapper.Name, params)
 	returns, err := wrapper.Vm.Execute(wrapper.Name, params...)
@@ -260,14 +260,14 @@ func ExecuteWasmInterpreted(
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
 		contractContext := buildExecutionContextClassic(dep)
-		if err != nil {
+		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-	if err != nil {
+	if selfContext == nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
@@ -359,15 +359,15 @@ func ExecuteWasm(
 
 	for _, dep := range dependencies {
 		contractContext := buildExecutionContextClassic(dep)
-		if err != nil {
+		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-	if err != nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
+	if selfContext == nil {
+		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
 

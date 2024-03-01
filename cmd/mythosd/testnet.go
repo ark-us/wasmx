@@ -134,6 +134,7 @@ func NewTestnetCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.Genesi
 
 	testnetCmd.AddCommand(testnetStartCmd())
 	testnetCmd.AddCommand(testnetInitFilesCmd(mbm, genBalIterator))
+	testnetCmd.AddCommand(testnetAddNodeCmd(mbm, genBalIterator))
 
 	return testnetCmd
 }
@@ -177,6 +178,60 @@ Example:
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
 			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
+		},
+	}
+
+	addTestnetFlagsToCmd(cmd)
+	cmd.Flags().String(flagNodeDirPrefix, "node", "Prefix the directory name for each node with (node results in node0, node1, ...)")
+	cmd.Flags().String(flagNodeDaemonHome, "mythosd", "Home directory of the node's daemon configuration")
+	cmd.Flags().String(flagStartingIPAddress, "192.168.0.1", "Starting IP address (192.168.0.1 results in persistent peers list ID0@192.168.0.1:46656, ID1@192.168.0.2:46656, ...)")
+	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
+	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
+	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
+
+	return cmd
+}
+
+func testnetAddNodeCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "add-node [node_index] [leader_uri]",
+		Args:  cobra.ExactArgs(2),
+		Short: "Initialize config directories & files for a new testnet node in an already initialized testnet",
+		Long: `add-node will setup one directory and populate it with
+necessary files (private validator, genesis, config, etc.)
+
+Example:
+	mythosd testnet add-node 2 "mythos12vh8m68santvwvvez7s8668mnmjtm93jy6e8m7@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWDE3DBBmziE7twUVeAshN2gmNFtEpw2xtwZE3LRo9kxsf"  --output-dir ./.testnets
+	`,
+		RunE: func(cmd *cobra.Command, args_ []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+
+			args := initArgs{}
+			args.outputDir, _ = cmd.Flags().GetString(flagOutputDir)
+			args.keyringBackend, _ = cmd.Flags().GetString(flags.FlagKeyringBackend)
+			args.chainID, _ = cmd.Flags().GetString(flags.FlagChainID)
+			args.minGasPrices, _ = cmd.Flags().GetString(sdkserver.FlagMinGasPrices)
+			args.nodeDirPrefix, _ = cmd.Flags().GetString(flagNodeDirPrefix)
+			args.nodeDaemonHome, _ = cmd.Flags().GetString(flagNodeDaemonHome)
+			args.startingIPAddress, _ = cmd.Flags().GetString(flagStartingIPAddress)
+			args.sameMachine, _ = cmd.Flags().GetBool(flagSameMachine)
+			args.noCors, _ = cmd.Flags().GetBool(flagNoCors)
+			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
+			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
+			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
+
+			nodeIndex, err := strconv.Atoi(args_[0])
+			if err != nil {
+				panic(err)
+			}
+			leaderURI := args_[1]
+
+			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args, nodeIndex, leaderURI)
 		},
 	}
 
@@ -264,6 +319,57 @@ func initTestnetFiles(
 	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 ) error {
+	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, 0, "")
+}
+
+func testnetAddNode(
+	clientCtx client.Context,
+	cmd *cobra.Command,
+	nodeConfig *tmconfig.Config,
+	mbm module.BasicManager,
+	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
+	valAddrCodec runtime.ValidatorAddressCodec,
+	args initArgs,
+	nodeIndex int,
+	leaderURI string,
+) error {
+	args.numValidators = nodeIndex + 1
+	args.sameMachine = true
+	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, nodeIndex, leaderURI)
+	if err != nil {
+		return err
+	}
+	// copy genesis from node0 into our node
+	nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, 0)
+	nodeDir := filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
+	nodeConfig.SetRoot(nodeDir)
+	genesisFile0 := nodeConfig.GenesisFile()
+
+	nodeDirName = fmt.Sprintf("%s%d", args.nodeDirPrefix, nodeIndex)
+	nodeDir = filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
+	nodeConfig.SetRoot(nodeDir)
+	genesisFileNew := nodeConfig.GenesisFile()
+
+	bz, err := os.ReadFile(genesisFile0)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(genesisFileNew, bz, 0o644)
+	return err
+}
+
+// initTestnetFiles initializes testnet files for a testnet to be run in a separate process
+func initTestnetFilesInternal(
+	clientCtx client.Context,
+	cmd *cobra.Command,
+	nodeConfig *tmconfig.Config,
+	mbm module.BasicManager,
+	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
+	valAddrCodec runtime.ValidatorAddressCodec,
+	args initArgs,
+	nodeIndexStart int,
+	leaderURI string,
+) error {
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
 	}
@@ -283,20 +389,18 @@ func initTestnetFiles(
 		appConfig.API.EnableUnsafeCORS = true
 	}
 
-	var (
-		genAccounts []authtypes.GenesisAccount
-		genBalances []banktypes.Balance
-		genFiles    []string
-	)
+	genAccounts := make([]authtypes.GenesisAccount, args.numValidators)
+	genBalances := make([]banktypes.Balance, args.numValidators)
+	genFiles := make([]string, args.numValidators)
 
-	var networkIps = make([]string, args.numValidators)
+	networkIps := make([]string, args.numValidators)
 	valaddr := make([]sdk.AccAddress, args.numValidators)
 	nodeDirNames := make([]string, args.numValidators)
 	nodeDirs := make([]string, args.numValidators)
 	kbs := make([]keyring.Keyring, args.numValidators)
 	inBuf := bufio.NewReader(cmd.InOrStdin())
 	// generate private keys, node IDs, and initial transactions
-	for i := 0; i < args.numValidators; i++ {
+	for i := nodeIndexStart; i < args.numValidators; i++ {
 		nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, i)
 		nodeDir := filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
 
@@ -331,7 +435,7 @@ func initTestnetFiles(
 			return err
 		}
 
-		genFiles = append(genFiles, nodeConfig.GenesisFile())
+		genFiles[i] = nodeConfig.GenesisFile()
 
 		kb, err := keyring.New(sdk.KeyringServiceName(), args.keyringBackend, nodeDir, inBuf, clientCtx.Codec)
 		if err != nil {
@@ -413,8 +517,12 @@ func initTestnetFiles(
 		networkIps[i] = host
 	}
 	networkIpsStr := strings.Join(networkIps, ",")
+	networkIpsStr = strings.Trim(networkIpsStr, ",")
+	if leaderURI != "" {
+		networkIpsStr = networkIpsStr + "," + leaderURI
+	}
 
-	for i := 0; i < args.numValidators; i++ {
+	for i := nodeIndexStart; i < args.numValidators; i++ {
 		gentxsDir := filepath.Join(args.outputDir, "gentxs")
 		nodeDirName := nodeDirNames[i]
 		nodeDir := nodeDirs[i]
@@ -430,8 +538,8 @@ func initTestnetFiles(
 			sdk.NewCoin(app.BaseDenom, accStakingTokens),
 		}
 
-		genBalances = append(genBalances, banktypes.Balance{Address: addr.String(), Coins: coins.Sort()})
-		genAccounts = append(genAccounts, authtypes.NewBaseAccount(addr, nil, 0, 0))
+		genBalances[i] = banktypes.Balance{Address: addr.String(), Coins: coins.Sort()}
+		genAccounts[i] = authtypes.NewBaseAccount(addr, nil, 0, 0)
 
 		valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addr))
 		if err != nil {
@@ -494,22 +602,23 @@ func initTestnetFiles(
 			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
 			appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 		}
-		appConfigCopy.Network.Id = int32(i)
+		appConfigCopy.Network.Id = int32(i - nodeIndexStart)
 		appConfigCopy.Network.Ips = networkIpsStr
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
 	}
 
-	if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
-		return err
-	}
-
-	err = collectGenFiles(
-		clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
-		args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine,
-	)
-	if err != nil {
-		return err
+	if nodeIndexStart == 0 {
+		if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
+			return err
+		}
+		err = collectGenFiles(
+			clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
+			args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeIndexStart,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	cmd.PrintErrf("Successfully initialized %d node directories\n", args.numValidators)
@@ -587,12 +696,12 @@ func initGenFiles(
 func collectGenFiles(
 	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
 	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator cosmosmodtypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool,
+	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator cosmosmodtypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool, nodeIndexStart int,
 ) error {
 	var appState json.RawMessage
 	genTime := tmtime.Now()
 
-	for i := 0; i < numValidators; i++ {
+	for i := nodeIndexStart; i < numValidators; i++ {
 		nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
 		nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
 		gentxsDir := filepath.Join(outputDir, "gentxs")

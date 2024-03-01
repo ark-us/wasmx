@@ -15,6 +15,9 @@ mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet
 # same machine validators
 mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors
 
+# add new node to existing testnet
+mythosd testnet add-node 1 --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true  --nocors --libp2p
+
 mythosd start --home=./testnet/node0/mythosd --p2p.laddr tcp://127.0.0.1:26756
 
 mythosd start --home=./testnet/node1/mythosd --p2p.laddr tcp://127.0.0.1:26757
