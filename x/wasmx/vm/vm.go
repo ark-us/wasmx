@@ -1,12 +1,14 @@
 package vm
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"golang.org/x/exp/slices"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -20,7 +22,7 @@ import (
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
-func ewasm_wrapper(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func Ewasm_wrapper(context interface{}, _ *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	wrapper := context.(EwasmFunctionWrapper)
 	fmt.Println("Go: ewasm_wrapper entering", wrapper.Name, params)
 	returns, err := wrapper.Vm.Execute(wrapper.Name, params...)
@@ -133,18 +135,18 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	for _, mexport := range exports {
 		fname := mexport.GetExternalName()
 		var dep string
-		if strings.Contains(fname, types.EWASM_VM_EXPORT) {
-			dep = parseDependency(fname, types.EWASM_VM_EXPORT)
-		} else if strings.Contains(fname, types.WASMX_VM_EXPORT) {
-			dep = parseDependency(fname, types.WASMX_VM_EXPORT)
-		} else if strings.Contains(fname, types.SYS_VM_EXPORT) {
-			dep = parseDependency(fname, types.SYS_VM_EXPORT)
-		} else if strings.Contains(fname, types.WASMX_CONS_VM_EXPORT) {
-			dep = parseDependency(fname, types.SYS_VM_EXPORT)
-		} else if fname == types.EWASM_ENV_0 {
+		for key, ok := range DependenciesMap {
+			if !ok {
+				continue
+			}
+			if strings.Contains(fname, key) {
+				dep = parseDependencyOrHexAddr(fname, key)
+			}
+		}
+		if fname == types.EWASM_ENV_0 {
 			dep = types.EWASM_ENV_1
 		} else if fname == types.CW_ENV_8 {
-			dep = parseDependency(fname, types.CW_VM_EXPORT)
+			dep = parseDependencyOrHexAddr(fname, types.CW_VM_EXPORT)
 		}
 		if dep != "" {
 			err := VerifyEnv(dep, imports)
@@ -163,7 +165,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 		var dep string
 
 		if strings.Contains(fname, types.WASI_VM_EXPORT) {
-			dep = parseDependency(fname, types.WASI_VM_EXPORT)
+			dep = parseDependencyOrHexAddr(fname, types.WASI_VM_EXPORT)
 		}
 
 		if dep != "" {
@@ -203,7 +205,7 @@ func AotCompile(inPath string, outPath string) error {
 }
 
 // Returns the hex address of the interpreter if exists or the version string
-func parseDependency(contractVersion string, part string) string {
+func parseDependencyOrHexAddr(contractVersion string, part string) string {
 	dep := contractVersion
 	if strings.Contains(contractVersion, part) {
 		v := contractVersion[len(part):]
@@ -215,6 +217,8 @@ func parseDependency(contractVersion string, part string) string {
 }
 
 func ExecuteWasmInterpreted(
+	goRoutineGroup *errgroup.Group,
+	goContextParent context.Context,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -241,27 +245,29 @@ func ExecuteWasmInterpreted(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		App:            app,
-		ContractRouter: contractRouter,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
+		GoRoutineGroup:  goRoutineGroup,
+		GoContextParent: goContextParent,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		App:             app,
+		ContractRouter:  contractRouter,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
 		contractContext := buildExecutionContextClassic(dep)
-		if err != nil {
+		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-	if err != nil {
+	if selfContext == nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
@@ -298,6 +304,8 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
+	goRoutineGroup *errgroup.Group,
+	goContextParent context.Context,
 	ctx sdk.Context,
 	funcName string,
 	env types.Env,
@@ -324,15 +332,17 @@ func ExecuteWasm(
 
 	var contractRouter ContractRouter = make(map[string]*ContractContext)
 	context := &Context{
-		Ctx:            ctx,
-		GasMeter:       gasMeter,
-		Env:            &env,
-		ContractStore:  kvstore,
-		CosmosHandler:  cosmosHandler,
-		ContractRouter: contractRouter,
-		App:            app,
-		NativeHandler:  NativeMap,
-		dbIterators:    map[int32]dbm.Iterator{},
+		GoRoutineGroup:  goRoutineGroup,
+		GoContextParent: goContextParent,
+		Ctx:             ctx,
+		GasMeter:        gasMeter,
+		Env:             &env,
+		ContractStore:   kvstore,
+		CosmosHandler:   cosmosHandler,
+		ContractRouter:  contractRouter,
+		App:             app,
+		NativeHandler:   NativeMap,
+		dbIterators:     map[int32]dbm.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
@@ -349,15 +359,15 @@ func ExecuteWasm(
 
 	for _, dep := range dependencies {
 		contractContext := buildExecutionContextClassic(dep)
-		if err != nil {
+		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
 		}
 		context.ContractRouter[dep.Address.String()] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-	if err != nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
+	if selfContext == nil {
+		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for self %s", env.Contract.Address.String())
 	}
 	context.ContractRouter[env.Contract.Address.String()] = selfContext
 

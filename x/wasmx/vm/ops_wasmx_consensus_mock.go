@@ -1,6 +1,10 @@
 package vm
 
-import "github.com/second-state/WasmEdge-go/wasmedge"
+import (
+	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+)
 
 func BuildWasmxConsensusJson1Mock(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("consensus")
@@ -30,7 +34,7 @@ func BuildWasmxConsensusJson1Mock(context *Context) *wasmedge.Module {
 func MockCheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	ptr, err := allocateWriteMem(ctx, callframe, make([]byte, 0))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -40,7 +44,7 @@ func MockCheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params 
 func MockPrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	ptr, err := allocateWriteMem(ctx, callframe, make([]byte, 0))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -50,7 +54,7 @@ func MockPrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame,
 func MockProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	ptr, err := allocateWriteMem(ctx, callframe, make([]byte, 0))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -60,7 +64,7 @@ func MockProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame,
 func MockFinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	ptr, err := allocateWriteMem(ctx, callframe, make([]byte, 0))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -70,7 +74,7 @@ func MockFinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, p
 func MockCommit(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	ptr, err := allocateWriteMem(ctx, callframe, make([]byte, 0))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -80,7 +84,7 @@ func MockCommit(_context interface{}, callframe *wasmedge.CallingFrame, params [
 func MockRollbackToVersion(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	ptr, err := allocateWriteMem(ctx, callframe, make([]byte, 0))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

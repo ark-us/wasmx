@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
+	mem "mythos/v1/x/wasmx/vm/memory/common"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
@@ -43,7 +43,7 @@ func getGasLeft(context interface{}, callframe *wasmedge.CallingFrame, params []
 func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	keybz, err := readMem(callframe, params[0], int32(32))
+	keybz, err := mem.ReadMem(callframe, params[0], int32(32))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -51,7 +51,7 @@ func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params [
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
-	err = writeMem(callframe, data, params[1])
+	err = mem.WriteMem(callframe, data, params[1])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -61,11 +61,11 @@ func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params [
 // SSTORE key_ptr: i32, value_ptr: i32,
 func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	keybz, err := readMem(callframe, params[0], int32(32))
+	keybz, err := mem.ReadMem(callframe, params[0], int32(32))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	valuebz, err := readMem(callframe, params[1], int32(32))
+	valuebz, err := mem.ReadMem(callframe, params[1], int32(32))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -82,7 +82,7 @@ func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	writeBigInt(callframe, balance.Amount.BigInt(), params[0])
+	mem.WriteBigInt(callframe, balance.Amount.BigInt(), params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -90,7 +90,7 @@ func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []
 // BALANCE value_ptr: i32, result_ptr: i32,
 func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addressbz, err := readMem(callframe, params[0], int32(32))
+	addressbz, err := mem.ReadMem(callframe, params[0], int32(32))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -98,7 +98,7 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	writeBigInt(callframe, balance.Amount.BigInt(), params[1])
+	mem.WriteBigInt(callframe, balance.Amount.BigInt(), params[1])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -108,7 +108,7 @@ func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.Contract.Address)
-	err := writeMem(callframe, addr.Bytes(), params[0])
+	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -120,7 +120,7 @@ func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []i
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender)
-	err := writeMem(callframe, addr.Bytes(), params[0])
+	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -130,7 +130,7 @@ func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []i
 // CALLVALUE  result_ptr: i32
 func getCallValue(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	writeBigInt(callframe, ctx.Env.CurrentCall.Funds, params[0])
+	mem.WriteBigInt(callframe, ctx.Env.CurrentCall.Funds, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -149,8 +149,8 @@ func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params 
 	ctx := context.(*Context)
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
-	part := readAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
-	err := writeMem(callframe, part, params[0])
+	part := mem.ReadAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
+	err := mem.WriteMem(callframe, part, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -172,7 +172,7 @@ func returnDataCopy(context interface{}, callframe *wasmedge.CallingFrame, param
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := ctx.ReturnData[dataStart:dataLen]
-	err := writeMem(callframe, part, params[0])
+	err := mem.WriteMem(callframe, part, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -201,8 +201,8 @@ func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	returns := make([]interface{}, 0)
 	codePtr := params[1].(int32)
 	dataLen := params[2].(int32)
-	part := readAndFillWithZero(ctx.Env.Contract.Bytecode, codePtr, dataLen)
-	err := writeMem(callframe, part, params[0])
+	part := mem.ReadAndFillWithZero(ctx.Env.Contract.Bytecode, codePtr, dataLen)
+	err := mem.WriteMem(callframe, part, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -219,12 +219,12 @@ func externalCodeCopy(context interface{}, callframe *wasmedge.CallingFrame, par
 func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addressbz, err := readMem(callframe, params[0], int32(32))
+	addressbz, err := mem.ReadMem(callframe, params[0], int32(32))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	data := ctx.CosmosHandler.GetCodeHash(vmtypes.CleanupAddress(addressbz))
-	err = writeMem(callframe, data, params[1])
+	err = mem.WriteMem(callframe, data, params[1])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -234,7 +234,7 @@ func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, 
 // GASPRICE result_ptr: i32
 func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	writeBigInt(callframe, ctx.Env.Transaction.GasPrice, params[0])
+	mem.WriteBigInt(callframe, ctx.Env.Transaction.GasPrice, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -244,7 +244,7 @@ func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params [
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin)
-	err := writeMem(callframe, addr.Bytes(), params[0])
+	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -264,7 +264,7 @@ func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, par
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.Block.Proposer)
-	err := writeMem(callframe, addr.Bytes(), params[0])
+	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -277,7 +277,7 @@ func getBlockHash(context interface{}, callframe *wasmedge.CallingFrame, params 
 	returns := make([]interface{}, 0)
 	blockNumber := params[0].(int64)
 	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
-	err := writeMem(callframe, data, params[1])
+	err := mem.WriteMem(callframe, data, params[1])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -307,7 +307,7 @@ func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, pa
 func getBlockDifficulty(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := writeMem(callframe, data, params[0])
+	err := mem.WriteMem(callframe, data, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -319,7 +319,7 @@ func prevrandao(context interface{}, callframe *wasmedge.CallingFrame, params []
 	// TODO random
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := writeMem(callframe, data, params[0])
+	err := mem.WriteMem(callframe, data, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -329,7 +329,7 @@ func prevrandao(context interface{}, callframe *wasmedge.CallingFrame, params []
 // CHAINID result_ptr: i32
 func getChainId(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	writeBigInt(callframe, ctx.Env.Chain.ChainId, params[0])
+	mem.WriteBigInt(callframe, ctx.Env.Chain.ChainId, params[0])
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -338,7 +338,7 @@ func getChainId(context interface{}, callframe *wasmedge.CallingFrame, params []
 func getBaseFee(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := writeMem(callframe, data, params[0])
+	err := mem.WriteMem(callframe, data, params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -352,18 +352,18 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := readMem(callframe, params[1], int32(32))
+	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	value, err := readBigInt(callframe, params[2], int32(32))
+	value, err := mem.ReadBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	calldata, err := readMem(callframe, params[3], params[4])
+	calldata, err := mem.ReadMem(callframe, params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -398,7 +398,7 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		}
 	}
 	returns[0] = success
-	err = writeMemBoundBySize(callframe, returnData, params[5], params[6])
+	err = mem.WriteMemBoundBySize(callframe, returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -412,18 +412,18 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := readMem(callframe, params[1], int32(32))
+	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	value, err := readBigInt(callframe, params[2], int32(32))
+	value, err := mem.ReadBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	calldata, err := readMem(callframe, params[3], params[4])
+	calldata, err := mem.ReadMem(callframe, params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -453,7 +453,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	}
 	returns[0] = success
 
-	err = writeMemBoundBySize(callframe, returnData, params[5], params[6])
+	err = mem.WriteMemBoundBySize(callframe, returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -467,13 +467,13 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := readMem(callframe, params[1], int32(32))
+	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	calldata, err := readMem(callframe, params[2], params[3])
+	calldata, err := mem.ReadMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -503,7 +503,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	}
 	returns[0] = success
 
-	err = writeMemBoundBySize(callframe, returnData, params[4], params[5])
+	err = mem.WriteMemBoundBySize(callframe, returnData, params[4], params[5])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -519,13 +519,13 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := readMem(callframe, params[1], int32(32))
+	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	calldata, err := readMem(callframe, params[2], params[3])
+	calldata, err := mem.ReadMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -553,7 +553,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	returns[0] = success
 
-	err = writeMemBoundBySize(callframe, returnData, params[4], params[5])
+	err = mem.WriteMemBoundBySize(callframe, returnData, params[4], params[5])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
@@ -565,11 +565,11 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 func create(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	value, err := readBigInt(callframe, params[0], int32(32))
+	value, err := mem.ReadBigInt(callframe, params[0], int32(32))
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	data, err := readMem(callframe, params[1], params[2])
+	data, err := mem.ReadMem(callframe, params[1], params[2])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -597,7 +597,7 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	err = writeMem(callframe, paddLeftTo32(contractAddress.Bytes()), params[3])
+	err = mem.WriteMem(callframe, mem.PaddLeftTo32(contractAddress.Bytes()), params[3])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -608,15 +608,15 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 func create2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	value, err := readBigInt(callframe, params[0], int32(32))
+	value, err := mem.ReadBigInt(callframe, params[0], int32(32))
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	data, err := readMem(callframe, params[1], params[2])
+	data, err := mem.ReadMem(callframe, params[1], params[2])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	salt, err := readMem(callframe, params[3], int32(32))
+	salt, err := mem.ReadMem(callframe, params[3], int32(32))
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -644,7 +644,7 @@ func create2(context interface{}, callframe *wasmedge.CallingFrame, params []int
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	err = writeMem(callframe, paddLeftTo32(contractAddress.Bytes()), params[3])
+	err = mem.WriteMem(callframe, mem.PaddLeftTo32(contractAddress.Bytes()), params[3])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
@@ -660,7 +660,7 @@ func selfDestruct(context interface{}, callframe *wasmedge.CallingFrame, params 
 // LOG data_ptr: i32, data_len: i32, topic_count: i32, topic_ptr1: i32, topic_ptr2: i32, topic_ptr3: i32, topic_ptr4: i32
 func ewasmLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	data, err := readMem(callframe, params[0], params[1])
+	data, err := mem.ReadMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -674,7 +674,7 @@ func ewasmLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
 
 	for i := 0; i < topicCount; i++ {
-		topic, err := readMem(callframe, topicPtrs[i], int32(32))
+		topic, err := mem.ReadMem(callframe, topicPtrs[i], int32(32))
 		if err != nil {
 			return nil, wasmedge.Result_Fail
 		}
@@ -690,7 +690,7 @@ func ewasmLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 // RETURN data_ptr: i32, data_len: i32
 func finish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	result, err := readMem(callframe, params[0], params[1])
+	result, err := mem.ReadMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -711,7 +711,7 @@ func stop(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 // REVERT data_ptr: i32, data_len: i32
 func revert(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	result, err := readMem(callframe, params[0], params[1])
+	result, err := mem.ReadMem(callframe, params[0], params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -879,123 +879,4 @@ func BuildEwasmEnv(context *Context) *wasmedge.Module {
 	ewasmEnv.AddFunction("ethereum_debugPrintMemHex", wasmedge.NewFunction(functype_i32i32_, debugPrintMemHex, context, 0))
 
 	return ewasmEnv
-}
-
-func readMem(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) ([]byte, error) {
-	ptr := pointer.(int32)
-	length := size.(int32)
-	mem := callframe.GetMemoryByIndex(0)
-	if mem == nil {
-		return nil, fmt.Errorf("could not find memory")
-	}
-
-	data, err := mem.GetData(uint(ptr), uint(length))
-	if err != nil {
-		return nil, err
-	}
-	result := make([]byte, length)
-	copy(result, data)
-	return result, nil
-}
-
-func writeMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}) error {
-	ptr := pointer.(int32)
-	length := len(data)
-	if length == 0 {
-		return nil
-	}
-	mem := callframe.GetMemoryByIndex(0)
-	if mem == nil {
-		return fmt.Errorf("no memory found")
-	}
-	err := mem.SetData(data, uint(ptr), uint(length))
-	return err
-}
-
-func writeMemBoundBySize(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}, size interface{}) error {
-	length := size.(int32)
-	if len(data) < int(length) {
-		length = int32(len(data))
-	}
-	return writeMem(callframe, data[0:length], pointer)
-}
-
-func writeBigInt(callframe *wasmedge.CallingFrame, value *big.Int, pointer interface{}) error {
-	data := value.FillBytes(make([]byte, 32))
-	return writeMem(callframe, data, pointer)
-}
-
-func readBigInt(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (*big.Int, error) {
-	data, err := readMem(callframe, pointer, size)
-	if err != nil {
-		return nil, err
-	}
-	x := new(big.Int)
-	x.SetBytes(data)
-	return x, nil
-}
-
-func readI64(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int64, error) {
-	x, err := readBigInt(callframe, pointer, size)
-	if err != nil {
-		return 0, err
-	}
-	if !x.IsInt64() {
-		return 0, fmt.Errorf("readI32 overflow")
-	}
-	return x.Int64(), nil
-}
-
-func readI32(callframe *wasmedge.CallingFrame, pointer interface{}, size interface{}) (int32, error) {
-	xi64, err := readI64(callframe, pointer, size)
-	if err != nil {
-		return 0, err
-	}
-	xi32 := int32(xi64)
-	if xi64 > int64(xi32) {
-		return 0, fmt.Errorf("readI32 overflow")
-	}
-	return xi32, nil
-}
-
-func readAndFillWithZero(data []byte, start int32, length int32) []byte {
-	dataLen := int32(len(data))
-	end := start + length
-	var value []byte
-	if end >= dataLen {
-		if len(data) > 0 {
-			value = data[start:]
-		}
-		value = padWithZeros(value, int(length))
-	} else {
-		value = data[start:end]
-	}
-	return value
-}
-
-func paddRightToMultiple32(data []byte) []byte {
-	length := len(data)
-	c := length % 32
-	if c > 0 {
-		data = append(data, bytes.Repeat([]byte{0}, 32-c)...)
-	}
-	return data
-}
-
-func paddLeftTo32(data []byte) []byte {
-	length := len(data)
-	if length >= 32 {
-		return data
-	}
-	data = append(bytes.Repeat([]byte{0}, 32-length), data...)
-	return data
-}
-
-func padWithZeros(data []byte, targetLen int) []byte {
-	dataLen := len(data)
-	if targetLen <= dataLen {
-		return data
-	}
-	data = append(data, bytes.Repeat([]byte{0}, targetLen-dataLen)...)
-	return data
 }

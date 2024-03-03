@@ -28,7 +28,8 @@ import (
 // BondedRatio the fraction of the staking tokens which are currently bonded
 func (k KeeperStaking) BondedRatio(goCtx context.Context) (math.LegacyDec, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("BondedRatio not implemented")
+	// TODO
+	k.Logger(ctx).Debug("BondedRatio not implemented")
 	return math.LegacyOneDec(), nil
 }
 

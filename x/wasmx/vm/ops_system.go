@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 )
 
 type SysContext struct {
@@ -22,7 +24,7 @@ func timeNow(context interface{}, callframe *wasmedge.CallingFrame, params []int
 		magnitude = 0
 	}
 	timed := time.Now().UnixNano() / int64(math.Pow10(int(9-magnitude)))
-	ptr, err := allocateWriteMem(ctx.ctx, callframe, big.NewInt(timed).FillBytes(make([]byte, 32)))
+	ptr, err := asmem.AllocateWriteMem(ctx.ctx.MustGetVmFromContext(), callframe, big.NewInt(timed).FillBytes(make([]byte, 32)))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

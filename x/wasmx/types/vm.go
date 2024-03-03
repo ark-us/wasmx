@@ -48,6 +48,7 @@ var (
 	ENTRY_POINT_QUERY       = "query"
 	ENTRY_POINT_REPLY       = "reply"
 	ENTRY_POINT_TIMED       = "eventual"
+	ENTRY_POINT_P2P_MSG     = "p2pmsg"
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
@@ -203,6 +204,7 @@ var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 var STORAGE_CHAIN = "storage_chain"
 
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
+var CONSENSUS_RAFTP2P = "consensus_raftp2p_0.0.1"
 
 var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
 

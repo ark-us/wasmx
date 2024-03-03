@@ -26,6 +26,8 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
+
+	networkvm "mythos/v1/x/network/vm"
 )
 
 func init() {
@@ -83,6 +85,7 @@ func Setup(
 	logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
+	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
@@ -125,6 +128,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
+	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	app := New(
@@ -152,6 +156,7 @@ func NewTestNetworkFixture() network.TestFixture {
 	logger := log.NewNopLogger()
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
+	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	app := New(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)

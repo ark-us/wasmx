@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,6 +12,9 @@ import (
 	//nolint
 
 	wt "mythos/v1/testutil/wasmx"
+	"mythos/v1/x/cosmosmod/types"
+	networktypes "mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions
@@ -28,4 +32,21 @@ func TestKeeperTestSuite(t *testing.T) {
 	// Run Ginkgo integration tests
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Keeper Suite")
+}
+
+func (suite *KeeperTestSuite) getPropExtended(appA wt.AppContext) *types.ProposalExtended {
+	msg := []byte(`{"GetProposalExtended":{"proposal_id":1}}`)
+	resp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_GOVERNANCE,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      msg,
+	})
+	suite.Require().NoError(err)
+	var qresp wasmxtypes.ContractResponse
+	err = json.Unmarshal(resp.Data, &qresp)
+	suite.Require().NoError(err)
+	var propext types.QueryProposalExtendedResponse
+	err = appA.App.AppCodec().UnmarshalJSON(qresp.Data, &propext)
+	suite.Require().NoError(err)
+	return propext.Proposal
 }

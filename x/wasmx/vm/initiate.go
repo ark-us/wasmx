@@ -151,6 +151,8 @@ type ExecuteFunctionInterface func(context *Context, contractVm *wasmedge.VM, fu
 
 var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
+var DependenciesMap = map[string]bool{}
+
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
@@ -175,6 +177,25 @@ func init() {
 	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
 	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
 	ExecuteFunctionHandler[types.INTERPRETER_FSM] = ExecuteFSM
+
+	DependenciesMap[types.EWASM_VM_EXPORT] = true
+	DependenciesMap[types.WASMX_VM_EXPORT] = true
+	DependenciesMap[types.SYS_VM_EXPORT] = true
+	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
+}
+
+func SetSystemDepHandler(
+	key string,
+	handler func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error),
+) {
+	SystemDepHandler[key] = handler
+}
+
+func SetExecuteFunctionHandler(
+	key string,
+	handler ExecuteFunctionInterface,
+) {
+	ExecuteFunctionHandler[key] = handler
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
@@ -193,7 +214,7 @@ func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) 
 }
 
 func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
-	if funcName != types.ENTRY_POINT_INSTANTIATE && funcName != types.ENTRY_POINT_TIMED {
+	if funcName != types.ENTRY_POINT_INSTANTIATE && funcName != types.ENTRY_POINT_TIMED && funcName != types.ENTRY_POINT_P2P_MSG {
 		funcName = "main"
 	}
 	return contractVm.Execute(funcName)
@@ -204,8 +225,8 @@ func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName stri
 }
 
 func ExecuteFSM(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
-	if funcName == types.ENTRY_POINT_TIMED {
-		return contractVm.Execute(types.ENTRY_POINT_TIMED)
+	if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
+		return contractVm.Execute(funcName)
 	}
 	return contractVm.Execute("main")
 }

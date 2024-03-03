@@ -407,6 +407,8 @@ func New(
 
 	wasmconfig := wasmxmoduletypes.DefaultWasmConfig()
 	app.WasmxKeeper = *wasmxmodulekeeper.NewKeeper(
+		app.goRoutineGroup,
+		app.goContextParent,
 		appCodec,
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
@@ -519,7 +521,7 @@ func New(
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
 
-	cosmosmodModule := cosmosmod.NewAppModule(appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, app)
+	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, app)
 
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec,

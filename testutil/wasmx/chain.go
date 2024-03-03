@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -274,6 +275,14 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper(), suite.App().BaseApp)
 
 	addr := sdk.AccAddress(vals[0].PubKey.Bytes())
+	currentState := suite.GetCurrentState(suite.chain.GetContext())
+
+	peers := []string{}
+	if strings.Contains(currentState, "RAFT-FULL") {
+		peers = []string{fmt.Sprintf(`%s@localhost:8090`, addr.String())}
+	} else if strings.Contains(currentState, "RAFT-P2P") {
+		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, addr.String())}
+	}
 	err = networkkeeper.InitConsensusContract(
 		suite.App(),
 		suite.App().Logger(),
@@ -284,7 +293,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		res.AppVersion,
 		pubKey,
 		privKey,
-		[]string{fmt.Sprintf(`%s@localhost:8090`, addr.String())},
+		peers,
 	)
 	if err != nil {
 		return err
@@ -419,7 +428,7 @@ func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinaliz
 			Msg:      msg,
 		})
 		if err != nil {
-			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{&abci.ExecTxResult{Code: 11, Log: err.Error()}}}, nil
+			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 		}
 	}
 	return suite.CommitBlock()
@@ -433,7 +442,7 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
 	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
 	msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
-	_, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
+	_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg1,
@@ -503,20 +512,32 @@ func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.Res
 }
 
 func (suite *KeeperTestSuite) raftToLeader() {
-	// lastInterval := suite.GetLastInterval(suite.chain.GetContext())
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 	// get consensus version
-	if currentState != "#RAFT-FULL-1.initialized.Follower" {
-		return
+	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "initialized.Follower") {
+		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, "1"))
+		_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg1,
+		})
+		suite.Require().NoError(err)
+
+		// raft p2p
+		currentState = suite.GetCurrentState(suite.chain.GetContext())
+		if strings.Contains(currentState, "Candidate") {
+			lastInterval := suite.GetLastInterval(suite.chain.GetContext())
+			msg1 = []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
+			_, err = suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+				Sender:   wasmxtypes.ROLE_CONSENSUS,
+				Contract: wasmxtypes.ROLE_CONSENSUS,
+				Msg:      msg1,
+			})
+			suite.Require().NoError(err)
+		}
+		currentState = suite.GetCurrentState(suite.chain.GetContext())
+		suite.Require().Contains(currentState, "Leader")
 	}
-	msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":%s}`, "1"))
-	_, err := suite.chain.App.NetworkKeeper.ExecuteEventual(suite.chain.GetContext(), &types.MsgExecuteContract{
-		Sender:   wasmxtypes.ROLE_CONSENSUS,
-		Contract: wasmxtypes.ROLE_CONSENSUS,
-		Msg:      msg1,
-	})
-	suite.Require().NoError(err)
-	return
 }
 
 func (suite *KeeperTestSuite) commitBlock(res *abci.ResponseFinalizeBlock) {

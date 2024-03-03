@@ -12,6 +12,7 @@ import (
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 
 	app "mythos/v1/app"
+	networkvm "mythos/v1/x/network/vm"
 )
 
 func init() {
@@ -42,6 +43,7 @@ func BenchmarkSimulation(b *testing.B) {
 
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
+	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 

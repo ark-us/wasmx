@@ -95,7 +95,6 @@ func (m msgGovServer) VoteWeighted(goCtx context.Context, msg *govtypes1.MsgVote
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"VoteWeighted":%s}`, string(msgjson)))
-	fmt.Println("-VoteWeighted-", string(msgbz))
 	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.Voter,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -109,7 +108,19 @@ func (m msgGovServer) VoteWeighted(goCtx context.Context, msg *govtypes1.MsgVote
 
 func (m msgGovServer) Deposit(goCtx context.Context, msg *govtypes1.MsgDeposit) (*govtypes1.MsgDepositResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	m.Keeper.Logger(ctx).Error("Deposit not implemented")
+	msgjson, err := m.Keeper.JSONCodec().MarshalJSON(msg)
+	if err != nil {
+		return nil, err
+	}
+	msgbz := []byte(fmt.Sprintf(`{"Deposit":%s}`, string(msgjson)))
+	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   msg.Depositor,
+		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &govtypes1.MsgDepositResponse{}, nil
 }
 

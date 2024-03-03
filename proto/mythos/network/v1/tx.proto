@@ -33,6 +33,10 @@ service Msg {
 
     // QueryContract
     // rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
+
+    // P2PReceiveMessage
+    rpc P2PReceiveMessage(MsgP2PReceiveMessageRequest) returns (MsgP2PReceiveMessageResponse);
+
 }
 
 message MsgGrpcSendRequest {
@@ -124,3 +128,13 @@ message MsgQueryContract {
 message MsgQueryContractResponse {
     bytes data = 1;
 }
+
+message MsgP2PReceiveMessageRequest {
+    option (cosmos.msg.v1.signer) = "sender";
+    // this will always be the network module
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+	bytes data = 3;
+}
+
+message MsgP2PReceiveMessageResponse {}

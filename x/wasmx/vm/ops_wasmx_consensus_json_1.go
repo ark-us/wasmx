@@ -6,12 +6,14 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
+
+	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 )
 
 // PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
 func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := readMemFromPtr(callframe, params[0])
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -30,7 +32,7 @@ func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -43,7 +45,7 @@ func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 // ProcessProposal(*abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error)
 func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := readMemFromPtr(callframe, params[0])
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -61,7 +63,7 @@ func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -74,7 +76,7 @@ func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 // FinalizeBlock(*abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error)
 func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := readMemFromPtr(callframe, params[0])
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -101,7 +103,7 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, respwrapbz)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respwrapbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -122,7 +124,7 @@ func Commit(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -139,7 +141,7 @@ func RollbackToVersion(_context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		errMsg = err.Error()
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, []byte(errMsg))
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(errMsg))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -151,7 +153,7 @@ func RollbackToVersion(_context interface{}, callframe *wasmedge.CallingFrame, p
 
 func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := readMemFromPtr(callframe, params[0])
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -169,7 +171,7 @@ func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []in
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := allocateWriteMem(ctx, callframe, respbz)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

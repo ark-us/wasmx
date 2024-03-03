@@ -64,6 +64,9 @@ var (
 	//go:embed 2a.raft_library.wasm
 	raft_library []byte
 
+	//go:embed 36.raftp2p_library.wasm
+	raftp2p_library []byte
+
 	//go:embed 2b.tendermint_library.wasm
 	tendermint_library []byte
 
@@ -137,12 +140,16 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = state_machine
 	case types.CONSENSUS_RAFT:
 		wasmbin = []byte(ConsensusRaftv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFT_LIBRARY)))
+	case types.CONSENSUS_RAFTP2P:
+		wasmbin = []byte(ConsensusRaftP2Pv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFTP2P_LIBRARY)))
 	case types.CONSENSUS_TENDERMINT:
 		wasmbin = []byte(ConsensusTendermintv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_TENDERMINT_LIBRARY)))
 	case types.CONSENSUS_AVA_SNOWMAN:
 		wasmbin = []byte(ConsensusAvaSnowmanv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY)))
 	case "raft_library":
 		wasmbin = raft_library
+	case "raftp2p_library":
+		wasmbin = raftp2p_library
 	case "tendermint_library":
 		wasmbin = tendermint_library
 	case "ava_snowman_library":

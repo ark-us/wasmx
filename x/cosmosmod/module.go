@@ -8,6 +8,7 @@ import (
 	// this line is used by starport scaffolding # 1
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/cobra"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
@@ -23,6 +24,7 @@ import (
 
 	networktypes "mythos/v1/x/network/types"
 
+	"mythos/v1/x/cosmosmod/client/cli"
 	"mythos/v1/x/cosmosmod/keeper"
 	"mythos/v1/x/cosmosmod/types"
 )
@@ -38,11 +40,12 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
-	cdc codec.BinaryCodec
+	cdc  codec.BinaryCodec
+	ccdc codec.Codec
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc}
+func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec) AppModuleBasic {
+	return AppModuleBasic{cdc: cdc, ccdc: ccdc}
 }
 
 // Name returns the name of the module as a string
@@ -82,16 +85,14 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
-// func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-// 	// TODO
-// 	// return cli.GetTxCmd()
-// }
+func (a AppModuleBasic) GetTxCmd() *cobra.Command {
+	return cli.NewTxCmd(a.ccdc.InterfaceRegistry().SigningContext().ValidatorAddressCodec(), a.ccdc.InterfaceRegistry().SigningContext().AddressCodec())
+}
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this root command are used by end-users to generate new queries to the subset of the state defined by the module
-// func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-// 	// TODO
-// 	// return cli.GetQueryCmd(types.StoreKey)
-// }
+func (a AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return cli.GetQueryCmd(a.ccdc.InterfaceRegistry().SigningContext().AddressCodec())
+}
 
 // ----------------------------------------------------------------------------
 // AppModule
@@ -109,6 +110,7 @@ type AppModule struct {
 
 func NewAppModule(
 	cdc codec.Codec,
+	ccdc codec.Codec,
 	bank keeper.KeeperBank,
 	staking keeper.KeeperStaking,
 	gov keeper.KeeperGov,
@@ -116,7 +118,7 @@ func NewAppModule(
 	app networktypes.BaseApp,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc),
+		AppModuleBasic: NewAppModuleBasic(cdc, ccdc),
 		bank:           bank,
 		staking:        staking,
 		gov:            gov,
