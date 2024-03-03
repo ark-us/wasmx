@@ -47,7 +47,7 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 
 	select {
 	case err := <-errCh:
-		k.actionExecutor.GetLogger().Error("p2p message receival failed to start", "error", err.Error())
+		k.actionExecutor.GetLogger().Error("p2p message receival failed", "error", err.Error())
 		return err
 	case <-intervalEnded:
 		return nil

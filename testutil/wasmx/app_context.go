@@ -583,7 +583,6 @@ func (s *AppContext) PassGovProposal(
 
 	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
 	s.S.Require().NoError(err)
-	fmt.Println("--DepositVote--")
 	msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valAccount.Address.String()))
 	msg11 := types.WasmxExecutionMessage{Data: msg1}
 	msgbz, err := json.Marshal(msg11)
@@ -595,11 +594,8 @@ func (s *AppContext) PassGovProposal(
 	}
 
 	resp, err = s.DeliverTx(valAccount, voteMsg)
-	fmt.Println("--DepositVote err--", err, resp)
-	fmt.Println("--DepositVote events--", resp.GetLog(), resp.GetEvents())
-
 	s.S.Require().NoError(err)
-	s.S.Require().True(resp.IsOK(), resp.GetEvents())
+	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
 
 	resp, err = s.DeliverTx(valAccount, voteMsg)

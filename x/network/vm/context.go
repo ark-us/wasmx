@@ -54,7 +54,9 @@ out:
 	for {
 		msgbz, err := rw.ReadBytes('\n')
 		if err != nil {
-			logger.Error("Error reading from buffer", "error", err.Error(), "peer", frompeer)
+			if err.Error() != ERROR_STREAM_RESET {
+				logger.Error("Error reading from buffer", "error", err.Error(), "peer", frompeer)
+			}
 			// remove stream if this is a direct peer stream
 			if frompeer != STREAM_MAIN {
 				p2pctx, err := GetP2PContext(ctx)

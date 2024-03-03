@@ -522,6 +522,21 @@ func (suite *KeeperTestSuite) raftToLeader() {
 			Msg:      msg1,
 		})
 		suite.Require().NoError(err)
+
+		// raft p2p
+		currentState = suite.GetCurrentState(suite.chain.GetContext())
+		if strings.Contains(currentState, "Candidate") {
+			lastInterval := suite.GetLastInterval(suite.chain.GetContext())
+			msg1 = []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
+			_, err = suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+				Sender:   wasmxtypes.ROLE_CONSENSUS,
+				Contract: wasmxtypes.ROLE_CONSENSUS,
+				Msg:      msg1,
+			})
+			suite.Require().NoError(err)
+		}
+		currentState = suite.GetCurrentState(suite.chain.GetContext())
+		suite.Require().Contains(currentState, "Leader")
 	}
 }
 

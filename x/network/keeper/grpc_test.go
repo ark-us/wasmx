@@ -298,7 +298,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	})
 	suite.Require().NoError(err)
 	qrespbz := appA.QueryDecode(qresp.Data)
-	suite.Require().Equal(string(qrespbz), "[\"0.0.0.0:8090\"]")
+	suite.Require().Equal("[\"0.0.0.0:8090\"]", string(qrespbz))
 
 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{

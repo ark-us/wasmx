@@ -329,7 +329,7 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       GOV_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
-			// Role:        ROLE_GOVERNANCE,
+			Role:        ROLE_GOVERNANCE,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

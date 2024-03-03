@@ -7,7 +7,6 @@ import (
 
 	"bufio"
 	"context"
-	"fmt"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -285,8 +284,8 @@ func connectAndListenPeerInternal(ctx *Context, req ConnectPeerRequest) (network
 		intervalEnded := make(chan bool, 1)
 		defer close(intervalEnded)
 		go func(ctx *Context, p2pctx_ *P2PContext) {
-			fmt.Println("goroutine peer connect started:", req.Peer)
-			defer fmt.Println("goroutine peer connect finished:", req.Peer)
+			ctx.Context.Ctx.Logger().Info("goroutine peer connect started", "peer", req.Peer)
+			defer ctx.Context.Ctx.Logger().Info("goroutine peer connect finished", "peer", req.Peer)
 
 			stream, found := p2pctx_.Streams[req.Peer]
 			if !found {
