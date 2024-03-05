@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -71,6 +72,8 @@ type Config struct {
 type MythosApp interface {
 	GetNetworkKeeper() *Keeper
 	GetActionExecutor() *ActionExecutor
+	GetGoContextParent() context.Context
+	GetGoRoutineGroup() *errgroup.Group
 	// GetTKey(storeKey string) *storetypes.TransientStoreKey
 	// GetMKey(storeKey string) *storetypes.MemoryStoreKey
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
@@ -151,7 +154,7 @@ func NewGRPCServer(
 		// fmt.Println("* resInit", resInit)
 	}
 	// start the node
-	err = StartNode(bapp, logger, networkServer)
+	err = StartNode(bapp, mythosapp, logger, networkServer)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -370,6 +373,10 @@ func initChain(
 	if err != nil {
 		return nil, err
 	}
+	mythosapp, err := GetMythosApp(app)
+	if err != nil {
+		return nil, err
+	}
 
 	req := &abci.RequestInitChain{
 		Time:            genDoc.GenesisTime,
@@ -424,7 +431,7 @@ func initChain(
 	// peers := strings.Split(svrCtx.Config.P2P.PersistentPeers, ",")
 	peers := strings.Split(cfgAll.Network.Ips, ",")
 
-	err = InitConsensusContract(bapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, res.AppVersion, pubKey, privKey, peers)
+	err = InitConsensusContract(bapp, mythosapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, res.AppVersion, pubKey, privKey, peers)
 	if err != nil {
 		return nil, err
 	}
@@ -438,6 +445,7 @@ type PrivKey interface {
 
 func InitConsensusContract(
 	bapp types.BaseApp,
+	mythosapp MythosApp,
 	consensusLogger log.Logger,
 	cfgNetwork networkconfig.NetworkConfig,
 	networkServer MsgServerInternal,
@@ -475,70 +483,70 @@ func InitConsensusContract(
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
 	// setup the consensus contract
-	err := SetupNode(cfgNetwork, bapp, consensusLogger, networkServer, initChainSetup)
+	err := SetupNode(bapp, mythosapp, cfgNetwork, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func StartNode(bapp types.BaseApp, logger log.Logger, networkServer MsgServerInternal) error {
-	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, logger, bapp.LastBlockHeight(), false)
-	if err != nil {
-		return err
+func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, networkServer MsgServerInternal) error {
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+		msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
+		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
 	}
 
-	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-		Sender:   wasmxtypes.ROLE_CONSENSUS,
-		Contract: wasmxtypes.ROLE_CONSENSUS,
-		Msg:      msg,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	actionExecutor := mythosapp.GetActionExecutor()
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), actionExecutor.GetApp().LastBlockHeight(), cb)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func SetupNode(netcfg networkconfig.NetworkConfig, bapp types.BaseApp, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
-	// TODO do I need to replace CreateQueryContext with ActionExecutor?
-	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, logger, bapp.LastBlockHeight(), false)
-	if err != nil {
-		return err
+func SetupNode(bapp types.BaseApp, mythosapp MythosApp, netcfg networkconfig.NetworkConfig, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+
+		initbz, err := json.Marshal(initChainSetup)
+		if err != nil {
+			return nil, err
+		}
+		initData := base64.StdEncoding.EncodeToString(initbz)
+
+		// peers are joined by comma
+		nodeIps := strings.Split(netcfg.Ips, ",")
+		peersbz, err := json.Marshal(nodeIps)
+		if err != nil {
+			return nil, err
+		}
+		peers := string(peersbz)
+		peers = strings.Replace(peers, `"`, `\"`, -1)
+
+		// TODO node IPS!!!
+		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
+		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
 	}
 
-	initbz, err := json.Marshal(initChainSetup)
-	if err != nil {
-		return err
-	}
-	initData := base64.StdEncoding.EncodeToString(initbz)
-
-	// peers are joined by comma
-	nodeIps := strings.Split(netcfg.Ips, ",")
-	peersbz, err := json.Marshal(nodeIps)
-	if err != nil {
-		return err
-	}
-	peers := string(peersbz)
-	peers = strings.Replace(peers, `"`, `\"`, -1)
-
-	// TODO node IPS!!!
-	msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
-	_, err = networkServer.ExecuteContract(sdkCtx, &types.MsgExecuteContract{
-		Sender:   wasmxtypes.ROLE_CONSENSUS,
-		Contract: wasmxtypes.ROLE_CONSENSUS,
-		Msg:      msg,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	actionExecutor := mythosapp.GetActionExecutor()
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), actionExecutor.GetApp().LastBlockHeight(), cb)
 	if err != nil {
 		return err
 	}

@@ -1225,8 +1225,17 @@ func (app *App) SimulationManager() *module.SimulationManager {
 func (app *App) GetNetworkKeeper() *networkmodulekeeper.Keeper {
 	return &app.NetworkKeeper
 }
+
 func (app *App) GetActionExecutor() *networkmodulekeeper.ActionExecutor {
 	return app.actionExecutor
+}
+
+func (app *App) GetGoContextParent() context.Context {
+	return app.goContextParent
+}
+
+func (app *App) GetGoRoutineGroup() *errgroup.Group {
+	return app.goRoutineGroup
 }
 
 func Exit(s string) {
