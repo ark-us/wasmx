@@ -280,10 +280,11 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	peers := []string{}
 	if strings.Contains(currentState, "RAFT-FULL") {
 		peers = []string{fmt.Sprintf(`%s@localhost:8090`, addr.String())}
-	} else if strings.Contains(currentState, "RAFT-P2P") {
+	} else if strings.Contains(currentState, "-P2P") {
 		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, addr.String())}
 	}
 	err = networkkeeper.InitConsensusContract(
+		suite.App(),
 		suite.App(),
 		suite.App().Logger(),
 		*cfgNetwork,
@@ -439,9 +440,19 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 	blockDelay := suite.GetBlockDelay(suite.chain.GetContext())
 
+	if lastInterval == "" {
+		lastInterval = "0"
+	}
+
+	if strings.Contains(currentState, "Tendermint-P2P") && strings.Contains(currentState, "Proposer") {
+		parts := strings.Split(currentState, ".")
+		currentState = strings.Join(parts[0:(len(parts)-1)], ".")
+	}
+
 	// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
 	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
 	msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
+
 	_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
@@ -39,8 +40,10 @@ type Peer struct {
 }
 
 type P2PContext struct {
-	Node    *host.Host
-	Streams map[string]network.Stream
+	Node      *host.Host
+	PubSub    *pubsub.PubSub
+	ChatRooms map[string]*ChatRoom
+	Streams   map[string]network.Stream
 }
 
 type StartNodeWithIdentityRequest struct {
@@ -73,6 +76,22 @@ type SendMessageToPeersRequest struct {
 
 type SendMessageToPeersResponse struct{}
 
+type ConnectChatRoomRequest struct {
+	ProtocolId string `json:"protocolId"`
+	Topic      string `json:"topic"`
+}
+
+type ConnectChatRoomResponse struct{}
+
+type SendMessageToChatRoomRequest struct {
+	Contract   sdk.AccAddress `json:"contract"`
+	Msg        []byte         `json:"msg"`
+	ProtocolId string         `json:"protocolId"`
+	Topic      string         `json:"topic"`
+}
+
+type SendMessageToChatRoomResponse struct{}
+
 type SendMessageRequest struct {
 	Contract   sdk.AccAddress `json:"contract"`
 	Msg        []byte         `json:"msg"`
@@ -99,7 +118,7 @@ type CalldataStart struct {
 }
 
 func WithP2PEmptyContext(ctx context.Context) context.Context {
-	p2pctx := &P2PContext{Streams: map[string]network.Stream{}}
+	p2pctx := &P2PContext{Streams: map[string]network.Stream{}, ChatRooms: map[string]*ChatRoom{}}
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 

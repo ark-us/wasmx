@@ -2,6 +2,7 @@ package vm
 
 import (
 	_ "embed"
+	"fmt"
 
 	"encoding/json"
 
@@ -14,7 +15,13 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+
 	multiaddr "github.com/multiformats/go-multiaddr"
+
+	"cosmossdk.io/log"
+
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
@@ -186,6 +193,68 @@ func SendMessageToPeers(_context interface{}, callframe *wasmedge.CallingFrame, 
 	return returns, wasmedge.Result_Success
 }
 
+func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req ConnectChatRoomRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("send message to chat room failed", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	_, err = connectToChatRoom(ctx, req.ProtocolId, req.Topic)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	response := ConnectChatRoomResponse{}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req SendMessageToChatRoomRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("send message to chat room failed", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	err = sendMessageToChatRoomInternal(ctx, req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	response := SendMessageToChatRoomResponse{}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	p2pctx, err := GetP2PContext(ctx.Context)
@@ -222,6 +291,8 @@ func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	env.AddFunction("ConnectPeer", wasmedge.NewFunction(functype_i32_i32, ConnectPeer, ctx, 0))
 	env.AddFunction("SendMessage", wasmedge.NewFunction(functype_i32_i32, SendMessage, ctx, 0))
 	env.AddFunction("SendMessageToPeers", wasmedge.NewFunction(functype_i32_i32, SendMessageToPeers, ctx, 0))
+	env.AddFunction("ConnectChatRoom", wasmedge.NewFunction(functype_i32_i32, ConnectChatRoom, ctx, 0))
+	env.AddFunction("SendMessageToChatRoom", wasmedge.NewFunction(functype_i32_i32, SendMessageToChatRoom, ctx, 0))
 	return env
 }
 
@@ -359,6 +430,95 @@ func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error
 				}
 			}
 		}
+	}
+	return nil
+}
+
+// DiscoveryNotifee gets notified when we find a new peer via mDNS discovery
+type DiscoveryNotifee struct {
+	Node    host.Host
+	Logger  log.Logger
+	Context context.Context
+}
+
+// HandlePeerFound connects to peers discovered via mDNS. Once they're connected,
+// the PubSub system will automatically start interacting with them if they also
+// support PubSub.
+func (n *DiscoveryNotifee) HandlePeerFound(pi peerstore.AddrInfo) {
+	n.Logger.Info("discovered new peer", "ID", pi.ID)
+	err := n.Node.Connect(n.Context, pi)
+	if err != nil {
+		n.Logger.Info("error connecting to peer", "ID", pi.ID, "error", err)
+	}
+}
+
+// setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
+// This lets us automatically discover peers on the same LAN and connect to them.
+func setupDiscovery(ctx context.Context, node host.Host, logger log.Logger, discoveryServiceTag string) error {
+	// setup mDNS discovery to find local peers
+	s := mdns.NewMdnsService(node, discoveryServiceTag, &DiscoveryNotifee{Node: node, Logger: logger, Context: ctx})
+	return s.Start()
+}
+
+func connectToChatRoom(ctx *Context, protocolId string, topic string) (*ChatRoom, error) {
+	goctx := ctx.Context.GoContextParent
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		return nil, err
+	}
+	ps := p2pctx.PubSub
+	if ps == nil {
+		// create a new PubSub service using the GossipSub router
+		ps, err = pubsub.NewGossipSub(goctx, *p2pctx.Node)
+		if err != nil {
+			return nil, err
+		}
+		p2pctx.PubSub = ps
+	}
+
+	// setup local mDNS discovery
+	logger := ctx.Context.Ctx.Logger()
+	if err := setupDiscovery(goctx, *p2pctx.Node, logger, protocolId); err != nil {
+		return nil, err
+	}
+
+	// join the chat room
+	// TODO node moniker?
+	nick := (*p2pctx.Node).ID().String()
+	cr, err := JoinChatRoom(ctx, ps, (*p2pctx.Node).ID(), nick, topic)
+	if err != nil {
+		return nil, err
+	}
+	p2pctx.ChatRooms[topic] = cr
+	return cr, nil
+}
+
+func sendMessageToChatRoomInternal(ctx *Context, req SendMessageToChatRoomRequest) error {
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		return nil
+	}
+
+	msgReq := P2PMessage{
+		Msg:             req.Msg,
+		ContractAddress: req.Contract,
+		SenderAddress:   ctx.Context.Env.Contract.Address,
+	}
+	msgbz, err := json.Marshal(msgReq)
+	if err != nil {
+		return err
+	}
+	cr, ok := p2pctx.ChatRooms[req.Topic]
+	if !ok {
+		cr, err = connectToChatRoom(ctx, req.ProtocolId, req.Topic)
+		if err != nil {
+			return err
+		}
+	}
+	err = cr.Publish(msgbz)
+	if err != nil {
+		return err
 	}
 	return nil
 }

@@ -207,6 +207,7 @@ var CONSENSUS_RAFT = "consensus_raft_0.0.1"
 var CONSENSUS_RAFTP2P = "consensus_raftp2p_0.0.1"
 
 var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
+var CONSENSUS_TENDERMINTP2P = "consensus_tendermintp2p_0.0.1"
 
 var CONSENSUS_AVA_SNOWMAN = "consensus_ava_snowman_0.0.1"
 

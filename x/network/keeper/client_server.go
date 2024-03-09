@@ -523,17 +523,8 @@ func SetupNode(bapp types.BaseApp, mythosapp MythosApp, netcfg networkconfig.Net
 		}
 		initData := base64.StdEncoding.EncodeToString(initbz)
 
-		// peers are joined by comma
-		nodeIps := strings.Split(netcfg.Ips, ",")
-		peersbz, err := json.Marshal(nodeIps)
-		if err != nil {
-			return nil, err
-		}
-		peers := string(peersbz)
-		peers = strings.Replace(peers, `"`, `\"`, -1)
-
 		// TODO node IPS!!!
-		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"nodeIPs","value":"%s"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, peers, initData))
+		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, initData))
 		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,

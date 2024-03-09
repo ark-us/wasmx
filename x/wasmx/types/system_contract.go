@@ -49,6 +49,8 @@ var ADDR_GOV_CONT = "0x0000000000000000000000000000000000000038"
 var ADDR_AUTH = "0x0000000000000000000000000000000000000039"
 var ADDR_CONSENSUS_RAFTP2P_LIBRARY = "0x0000000000000000000000000000000000000036"
 var ADDR_CONSENSUS_RAFTP2P = "0x0000000000000000000000000000000000000037"
+var ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY = "0x0000000000000000000000000000000000000040"
+var ADDR_CONSENSUS_TENDERMINTP2P = "0x0000000000000000000000000000000000000041"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -64,13 +66,13 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal storageInitMsg message")
 	}
 
-	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
+	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
 	}
 
-	// TODO remove nodeIPs, we have peers in genesis init
-	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":10000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
+	// TODO remove validatorNodesInfo, we have peers in genesis init
+	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":10000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
 	}
@@ -370,6 +372,15 @@ func DefaultSystemContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
+			Address:     ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY,
+			Label:       "tendermintp2p_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
 			Address:     ADDR_CONSENSUS_RAFT,
 			Label:       CONSENSUS_RAFT,
 			InitMessage: raftInitMsg,
@@ -383,7 +394,7 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       CONSENSUS_RAFTP2P,
 			InitMessage: raftInitMsg,
 			Pinned:      false,
-			Role:        ROLE_CONSENSUS,
+			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFTP2P_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -395,6 +406,15 @@ func DefaultSystemContracts() SystemContracts {
 			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINT_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_CONSENSUS_TENDERMINTP2P,
+			Label:       CONSENSUS_TENDERMINTP2P,
+			InitMessage: tendermintInitMsg,
+			Pinned:      false,
+			Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
 			Address:     ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY,
