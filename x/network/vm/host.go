@@ -3,6 +3,7 @@ package vm
 import (
 	_ "embed"
 	"fmt"
+	"time"
 
 	"encoding/json"
 
@@ -441,15 +442,33 @@ type DiscoveryNotifee struct {
 	Context context.Context
 }
 
+var TRY_RECONNECT = 10
+var RECONNECT_TIMEOUT = time.Second * 2
+
 // HandlePeerFound connects to peers discovered via mDNS. Once they're connected,
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
 func (n *DiscoveryNotifee) HandlePeerFound(pi peerstore.AddrInfo) {
 	n.Logger.Info("discovered new peer", "ID", pi.ID)
-	err := n.Node.Connect(n.Context, pi)
+	// err := n.Node.Connect(n.Context, pi)
+	err := tryPeerConnect(context.Background(), n, pi, 0)
 	if err != nil {
+		fmt.Printf("error connecting to peer %s: %s\n", pi.ID, err)
 		n.Logger.Info("error connecting to peer", "ID", pi.ID, "error", err)
 	}
+}
+
+func tryPeerConnect(ctx context.Context, n *DiscoveryNotifee, pi peerstore.AddrInfo, retryCount int32) error {
+	err := n.Node.Connect(ctx, pi)
+	if err != nil {
+		if retryCount < int32(TRY_RECONNECT) {
+			time.Sleep(RECONNECT_TIMEOUT)
+			return tryPeerConnect(ctx, n, pi, retryCount+1)
+		} else {
+			return err
+		}
+	}
+	return nil
 }
 
 // setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
