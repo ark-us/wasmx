@@ -15,6 +15,9 @@ const ChatRoomBufSize = 128
 // can be published to the topic with ChatRoom.Publish, and received
 // messages are pushed to the Messages channel.
 type ChatRoom struct {
+	// Messages is a channel of messages received from other peers in the chat room
+	Messages chan *ChatMessage
+
 	ctx   *Context
 	ps    *pubsub.PubSub
 	topic *pubsub.Topic
@@ -55,6 +58,7 @@ func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, nickname stri
 		self:     selfID,
 		nick:     nickname,
 		roomName: roomName,
+		Messages: make(chan *ChatMessage, ChatRoomBufSize),
 	}
 
 	// start reading messages from the subscription in a loop
@@ -107,7 +111,8 @@ func readLoop(cr *ChatRoom) {
 		if err != nil {
 			continue
 		}
-		cr.ctx.handleMessage(cm.Message)
+		// send valid messages onto the Messages channel
+		cr.Messages <- cm
 	}
 }
 

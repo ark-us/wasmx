@@ -39,9 +39,15 @@ type Peer struct {
 	Host string `json:"host"`
 }
 
+type MdnsService interface {
+	Start() error
+	Close() error
+}
+
 type P2PContext struct {
 	Node      *host.Host
 	PubSub    *pubsub.PubSub
+	Mdns      MdnsService
 	ChatRooms map[string]*ChatRoom
 	Streams   map[string]network.Stream
 }

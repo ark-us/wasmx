@@ -3,6 +3,7 @@ package vm
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"time"
 
 	"encoding/json"
@@ -67,6 +68,11 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 	}
 	ctx.Context.Ctx.Logger().Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs)
 	node.SetStreamHandler(protocol.ID(req.ProtocolId), ctx.handleStream)
+
+	err = connectGossipSub(ctx, p2pctx, req.ProtocolId)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 
 	response := StartNodeWithIdentityResponse{Error: "", Data: make([]byte, 0)}
 	responsebz, err := json.Marshal(response)
@@ -206,7 +212,7 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 		ctx.Context.Ctx.Logger().Error("send message to chat room failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
-	_, err = connectToChatRoom(ctx, req.ProtocolId, req.Topic)
+	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -237,7 +243,22 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 		ctx.Context.Ctx.Logger().Error("send message to chat room failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
-	err = sendMessageToChatRoomInternal(ctx, req)
+
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+
+	cr, found := p2pctx.ChatRooms[req.Topic]
+	if !found {
+		cr, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+	}
+
+	err = sendMessageToChatRoomInternal(ctx, cr, req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -451,9 +472,10 @@ var RECONNECT_TIMEOUT = time.Second * 2
 func (n *DiscoveryNotifee) HandlePeerFound(pi peerstore.AddrInfo) {
 	n.Logger.Info("discovered new peer", "ID", pi.ID)
 	// err := n.Node.Connect(n.Context, pi)
-	err := tryPeerConnect(context.Background(), n, pi, 0)
+	// context.Background()
+	err := tryPeerConnect(n.Context, n, pi, 0)
 	if err != nil {
-		fmt.Printf("error connecting to peer %s: %s\n", pi.ID, err)
+		fmt.Println("error connecting to peer", pi.ID, err)
 		n.Logger.Info("error connecting to peer", "ID", pi.ID, "error", err)
 	}
 }
@@ -471,40 +493,87 @@ func tryPeerConnect(ctx context.Context, n *DiscoveryNotifee, pi peerstore.AddrI
 	return nil
 }
 
-// setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
-// This lets us automatically discover peers on the same LAN and connect to them.
-func setupDiscovery(ctx context.Context, node host.Host, logger log.Logger, discoveryServiceTag string) error {
-	// setup mDNS discovery to find local peers
-	s := mdns.NewMdnsService(node, discoveryServiceTag, &DiscoveryNotifee{Node: node, Logger: logger, Context: ctx})
-	return s.Start()
-}
-
-func connectToChatRoom(ctx *Context, protocolId string, topic string) (*ChatRoom, error) {
-	goctx := ctx.Context.GoContextParent
+func connectChatRoomAndListen(ctx *Context, protocolId string, topic string) (*ChatRoom, error) {
 	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		return nil, err
+	}
+
+	err = connectGossipSub(ctx, p2pctx, protocolId)
 	if err != nil {
 		return nil, err
 	}
-	ps := p2pctx.PubSub
-	if ps == nil {
+
+	cr, err := connectChatRoomInternal(ctx, p2pctx, *p2pctx.Node, protocolId, topic)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.Context.GoRoutineGroup.Go(func() error {
+		intervalEnded := make(chan bool, 1)
+		defer close(intervalEnded)
+		go func(ctx_ *Context, p2pctx_ *P2PContext) {
+			fmt.Println("goroutine room connect started", topic)
+			defer fmt.Println("goroutine room connect finished", topic)
+
+			cr, found := p2pctx_.ChatRooms[topic]
+			if !found {
+				ctx.Context.Ctx.Logger().Debug("chat room not found: ", "topic", topic)
+				intervalEnded <- true
+			}
+			err := listenChatRoomStream(cr)
+			if err != nil {
+				fmt.Println("connect room found, err", found, err)
+				intervalEnded <- true
+			}
+
+		}(ctx, p2pctx)
+
+		select {
+		case <-ctx.Context.GoContextParent.Done():
+			return nil
+		case <-intervalEnded:
+			return nil
+		}
+	})
+	return cr, nil
+}
+
+// DiscoveryServiceTag is used in our mDNS advertisements to discover other chat peers.
+const DiscoveryServiceTag = "pubsub-chat-example"
+
+func connectGossipSub(ctx *Context, p2pctx *P2PContext, protocolId string) error {
+	goctx := ctx.Context.GoContextParent
+	// ctx := context.Background()
+	if p2pctx.PubSub == nil {
 		// create a new PubSub service using the GossipSub router
-		ps, err = pubsub.NewGossipSub(goctx, *p2pctx.Node)
+		// we can use pubsub.NewJSONTracer to trace messages
+		ps, err := pubsub.NewGossipSub(goctx, *p2pctx.Node)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		p2pctx.PubSub = ps
 	}
 
-	// setup local mDNS discovery
-	logger := ctx.Context.Ctx.Logger()
-	if err := setupDiscovery(goctx, *p2pctx.Node, logger, protocolId); err != nil {
-		return nil, err
+	// setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
+	// This lets us automatically discover peers on the same LAN and connect to them.
+	if p2pctx.Mdns == nil {
+		// setup local mDNS discovery
+		logger := ctx.Context.Ctx.Logger()
+		s := mdns.NewMdnsService(*p2pctx.Node, DiscoveryServiceTag, &DiscoveryNotifee{Node: *p2pctx.Node, Logger: logger, Context: goctx})
+		err := s.Start()
+		if err != nil {
+			return err
+		}
+		p2pctx.Mdns = s
 	}
+	return nil
+}
 
-	// join the chat room
-	// TODO node moniker?
-	nick := (*p2pctx.Node).ID().String()
-	cr, err := JoinChatRoom(ctx, ps, (*p2pctx.Node).ID(), nick, topic)
+func connectChatRoomInternal(ctx *Context, p2pctx *P2PContext, node host.Host, protocolId string, topic string) (*ChatRoom, error) {
+	nick := defaultNick(node.ID())
+	cr, err := JoinChatRoom(ctx, p2pctx.PubSub, node.ID(), nick, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -512,13 +581,24 @@ func connectToChatRoom(ctx *Context, protocolId string, topic string) (*ChatRoom
 	return cr, nil
 }
 
-func sendMessageToChatRoomInternal(ctx *Context, req SendMessageToChatRoomRequest) error {
-	p2pctx, err := GetP2PContext(ctx.Context)
-	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
-		return nil
-	}
+func listenChatRoomStream(cr *ChatRoom) error {
+	go readDataChatRoomStd(cr)
+	return nil
+}
 
+func readDataChatRoomStd(cr *ChatRoom) {
+	fmt.Println("reading stream data from room: ", cr.roomName)
+	for {
+		select {
+		case m := <-cr.Messages:
+			cr.ctx.handleMessage(m.Message)
+		case <-cr.ctx.Context.GoContextParent.Done():
+			return
+		}
+	}
+}
+
+func sendMessageToChatRoomInternal(ctx *Context, cr *ChatRoom, req SendMessageToChatRoomRequest) error {
 	msgReq := P2PMessage{
 		Msg:             req.Msg,
 		ContractAddress: req.Contract,
@@ -528,16 +608,20 @@ func sendMessageToChatRoomInternal(ctx *Context, req SendMessageToChatRoomReques
 	if err != nil {
 		return err
 	}
-	cr, ok := p2pctx.ChatRooms[req.Topic]
-	if !ok {
-		cr, err = connectToChatRoom(ctx, req.ProtocolId, req.Topic)
-		if err != nil {
-			return err
-		}
-	}
 	err = cr.Publish(msgbz)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// defaultNick generates a nickname based on the last 8 chars of a peer ID.
+func defaultNick(p peerstore.ID) string {
+	return fmt.Sprintf("%s-%s", os.Getenv("USER"), shortID(p))
+}
+
+// shortID returns the last 8 chars of a base58-encoded peer id.
+func shortID(p peerstore.ID) string {
+	pretty := p.String()
+	return pretty[len(pretty)-8:]
 }
