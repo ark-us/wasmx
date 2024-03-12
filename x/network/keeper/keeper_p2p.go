@@ -35,7 +35,7 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 	defer close(intervalEnded)
 	defer close(errCh)
 	go func() {
-		k.actionExecutor.GetLogger().Debug("p2p message receival started")
+		k.actionExecutor.GetLogger().Debug("p2p message receival started", "sender", msg.Sender, "data", string(msg.Data))
 		err := k.p2pReceiveMessageInternal(msg)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("p2p message receival failed", "err", err)
