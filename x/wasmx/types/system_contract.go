@@ -71,8 +71,12 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
 	}
 
-	// TODO remove validatorNodesInfo, we have peers in genesis init
-	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":15000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
+	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":15000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+	}
+
+	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"5000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":5000},{"key":"timeoutPrevote","value":5000},{"key":"timeoutPrecommit","value":5000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
 	}
@@ -88,7 +92,13 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
 
-	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[{"hook":"EndBlock","modules":["%s"]}]}`, ROLE_CONSENSUS, ROLE_GOVERNANCE, ROLE_GOVERNANCE))})
+	hookEndBlock := fmt.Sprintf(`{"hook":"%s","modules":["%s"]}`, HOOK_END_BLOCK, ROLE_GOVERNANCE)
+	hookCreateValidator := fmt.Sprintf(`{"hook":"%s","modules":[]}`, HOOK_CREATE_VALIDATOR)
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[%s,%s]}`,
+		ROLE_CONSENSUS, ROLE_GOVERNANCE,
+		hookEndBlock,
+		hookCreateValidator,
+	))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
 	}
@@ -410,7 +420,7 @@ func DefaultSystemContracts() SystemContracts {
 		{
 			Address:     ADDR_CONSENSUS_TENDERMINTP2P,
 			Label:       CONSENSUS_TENDERMINTP2P,
-			InitMessage: tendermintInitMsg,
+			InitMessage: tendermintP2PInitMsg,
 			Pinned:      false,
 			Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,

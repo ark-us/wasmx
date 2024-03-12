@@ -213,8 +213,17 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 		return nil, wasmedge.Result_Fail
 	}
 	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
+	// TODO send error to contract
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		if err.Error() != ERROR_CTX_CANCELED {
+			ctx.Context.Ctx.Logger().Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
+			return nil, wasmedge.Result_Fail
+		}
+		// remove chat room; it will be reconnected when needed
+		p2pctx, err := GetP2PContext(ctx.Context)
+		if err == nil {
+			delete(p2pctx.ChatRooms, req.Topic)
+		}
 	}
 
 	response := ConnectChatRoomResponse{}
@@ -254,13 +263,23 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 	if !found {
 		cr, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 		if err != nil {
-			return nil, wasmedge.Result_Fail
+			if err.Error() != ERROR_CTX_CANCELED {
+				ctx.Context.Ctx.Logger().Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
+				return nil, wasmedge.Result_Fail
+			}
+			// remove chat room; it will be reconnected when needed
+			p2pctx, err := GetP2PContext(ctx.Context)
+			if err == nil {
+				delete(p2pctx.ChatRooms, req.Topic)
+			}
 		}
 	}
-
-	err = sendMessageToChatRoomInternal(ctx, cr, req)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
+	// TODO send errors to contract
+	if cr != nil {
+		err = sendMessageToChatRoomInternal(ctx, cr, req)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
 	}
 
 	response := SendMessageToChatRoomResponse{}

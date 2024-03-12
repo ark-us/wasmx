@@ -444,10 +444,10 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 		lastInterval = "0"
 	}
 
-	if strings.Contains(currentState, "Tendermint-P2P") && strings.Contains(currentState, "Proposer") {
-		parts := strings.Split(currentState, ".")
-		currentState = strings.Join(parts[0:(len(parts)-1)], ".")
-	}
+	// if strings.Contains(currentState, "Tendermint-P2P") && strings.Contains(currentState, "Proposer") {
+	// 	parts := strings.Split(currentState, ".")
+	// 	currentState = strings.Join(parts[0:(len(parts)-1)], ".")
+	// }
 
 	// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
 	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
