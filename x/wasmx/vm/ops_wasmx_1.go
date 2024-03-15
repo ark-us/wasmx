@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	dbm "github.com/cometbft/cometbft-db"
+
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
@@ -91,6 +93,80 @@ func wasmxStorageLoad(context interface{}, callframe *wasmedge.CallingFrame, par
 	// if len(data) == 0 {
 	// 	data = make([]byte, 32)
 	// }
+	newptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = newptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxStorageLoadRange(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StorageRange
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	values := make([][]byte, 0)
+	var iter dbm.Iterator
+	if req.Reverse {
+		iter = ctx.ContractStore.ReverseIterator(req.StartKey, req.EndKey)
+	} else {
+		iter = ctx.ContractStore.Iterator(req.StartKey, req.EndKey)
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		values = append(values, iter.Value())
+	}
+	data, err := json.Marshal(values)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	newptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, data)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = newptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxStorageLoadRangePairs(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StorageRange
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	pairs := make([]StoragePair, 0)
+	var iter dbm.Iterator
+	if req.Reverse {
+		iter = ctx.ContractStore.ReverseIterator(req.StartKey, req.EndKey)
+	} else {
+		iter = ctx.ContractStore.Iterator(req.StartKey, req.EndKey)
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		pair := StoragePair{Key: iter.Key(), Value: iter.Value()}
+		pairs = append(pairs, pair)
+	}
+	response := StoragePairs{Values: pairs}
+	data, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
 	newptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -290,6 +366,8 @@ func BuildWasmxEnv1(context *Context) *wasmedge.Module {
 	env.AddFunction("getAddress", wasmedge.NewFunction(functype__i32, wasmxGetAddress, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
+	env.AddFunction("storageLoadRange", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoadRange, context, 0))
+	env.AddFunction("storageLoadRangePairs", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoadRangePairs, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
 	env.AddFunction("getReturnData", wasmedge.NewFunction(functype__i32, wasmxGetReturnData, context, 0))
 	env.AddFunction("getFinishData", wasmedge.NewFunction(functype__i32, wasmxGetFinishData, context, 0))

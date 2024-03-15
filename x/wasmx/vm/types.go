@@ -143,3 +143,18 @@ type WasmxLog struct {
 	Topics           [][32]byte
 	Type             string
 }
+
+type StorageRange struct {
+	StartKey []byte `json:"start_key"`
+	EndKey   []byte `json:"end_key"`
+	Reverse  bool   `json:"reverse"`
+}
+
+type StoragePair struct {
+	Key   []byte `json:"key"`
+	Value []byte `json:"value"`
+}
+
+type StoragePairs struct {
+	Values []StoragePair `json:"values"`
+}
