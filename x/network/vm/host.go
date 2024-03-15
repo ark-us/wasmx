@@ -88,6 +88,28 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 	return returns, wasmedge.Result_Success
 }
 
+func GetNodeInfo(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+	node := *p2pctx.Node
+	response := NodeInfo{Id: node.ID().String(), Ip: node.Addrs()[0].String()}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	response := ConnectPeerResponse{}
 	ctx := _context.(*Context)
