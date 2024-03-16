@@ -493,10 +493,10 @@ func InitConsensusContract(
 func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, networkServer MsgServerInternal) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-		msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
+		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))
 		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Sender:   wasmxtypes.ROLE_HOOKS_NONC,
+			Contract: wasmxtypes.ROLE_HOOKS_NONC,
 			Msg:      msg,
 		})
 		if err != nil {

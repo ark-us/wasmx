@@ -51,6 +51,7 @@ var ADDR_CONSENSUS_RAFTP2P_LIBRARY = "0x0000000000000000000000000000000000000036
 var ADDR_CONSENSUS_RAFTP2P = "0x0000000000000000000000000000000000000037"
 var ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY = "0x0000000000000000000000000000000000000040"
 var ADDR_CONSENSUS_TENDERMINTP2P = "0x0000000000000000000000000000000000000041"
+var ADDR_HOOKS_NONC = "0x0000000000000000000000000000000000000043"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -94,8 +95,8 @@ func DefaultSystemContracts() SystemContracts {
 
 	hookEndBlock := fmt.Sprintf(`{"hook":"%s","modules":["%s"]}`, HOOK_END_BLOCK, ROLE_GOVERNANCE)
 	hookCreateValidator := fmt.Sprintf(`{"hook":"%s","modules":[]}`, HOOK_CREATE_VALIDATOR)
-	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[%s,%s]}`,
-		ROLE_CONSENSUS, ROLE_GOVERNANCE,
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s"],"registrations":[%s,%s]}`,
+		ROLE_HOOKS, ROLE_CONSENSUS, ROLE_GOVERNANCE,
 		hookEndBlock,
 		hookCreateValidator,
 	))})
@@ -103,11 +104,20 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
 	}
 
+	hookStartNode := fmt.Sprintf(`{"hook":"%s","modules":["%s","%s"]}`, HOOK_START_NODE, ROLE_CONSENSUS)
+	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[%s]}`,
+		ROLE_HOOKS_NONC, ROLE_CONSENSUS,
+		hookStartNode,
+	))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
+	}
+
 	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
 	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
 	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
+		panic("DefaultSystemContracts: cannot marshal govInitMsg message")
 	}
 
 	return []SystemContract{
@@ -334,6 +344,15 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_HOOKS,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_HOOKS_NONC,
+			Label:       HOOKS_v001,
+			InitMessage: hooksInitMsgNonC,
+			Pinned:      false,
+			Role:        ROLE_HOOKS_NONC,
+			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{
