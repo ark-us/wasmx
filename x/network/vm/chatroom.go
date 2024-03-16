@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"encoding/json"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 
@@ -16,7 +16,7 @@ const ChatRoomBufSize = 128
 // messages are pushed to the Messages channel.
 type ChatRoom struct {
 	// Messages is a channel of messages received from other peers in the chat room
-	Messages chan *ChatMessage
+	Messages chan *ChatRoomMessage
 
 	ctx   *Context
 	ps    *pubsub.PubSub
@@ -25,19 +25,11 @@ type ChatRoom struct {
 
 	roomName string
 	self     peer.ID
-	nick     string
-}
-
-// ChatMessage gets converted to/from JSON and sent in the body of pubsub messages.
-type ChatMessage struct {
-	Message    []byte
-	SenderID   string
-	SenderNick string
 }
 
 // JoinChatRoom tries to subscribe to the PubSub topic for the room name, returning
 // a ChatRoom on success.
-func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, nickname string, roomName string) (*ChatRoom, error) {
+func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, roomName string) (*ChatRoom, error) {
 	// join the pubsub topic
 	topic, err := ps.Join(topicName(roomName))
 	if err != nil {
@@ -56,9 +48,8 @@ func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, nickname stri
 		topic:    topic,
 		sub:      sub,
 		self:     selfID,
-		nick:     nickname,
 		roomName: roomName,
-		Messages: make(chan *ChatMessage, ChatRoomBufSize),
+		Messages: make(chan *ChatRoomMessage, ChatRoomBufSize),
 	}
 
 	// start reading messages from the subscription in a loop
@@ -68,17 +59,8 @@ func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, nickname stri
 
 // Publish sends a message to the pubsub topic.
 func (cr *ChatRoom) Publish(message []byte) error {
-	m := ChatMessage{
-		Message:    message,
-		SenderID:   cr.self.String(),
-		SenderNick: cr.nick,
-	}
-	msgBytes, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
 	ctx := cr.ctx.Context.GoContextParent
-	return cr.topic.Publish(ctx, msgBytes)
+	return cr.topic.Publish(ctx, message)
 }
 
 func (cr *ChatRoom) ListPeers() []peer.ID {
@@ -106,11 +88,13 @@ func readLoop(cr *ChatRoom) {
 		if msg.ReceivedFrom == cr.self {
 			continue
 		}
-		cm := new(ChatMessage)
-		err = json.Unmarshal(msg.Data, cm)
-		if err != nil {
-			continue
+		cm := &ChatRoomMessage{
+			ContractMsg: msg.Data,
+			RoomId:      cr.roomName,
+			Sender:      NodeInfo{Id: msg.ReceivedFrom.String()},
+			Timestamp:   time.Now(),
 		}
+
 		// send valid messages onto the Messages channel
 		cr.Messages <- cm
 	}

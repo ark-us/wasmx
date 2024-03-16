@@ -350,6 +350,7 @@ func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
 	env.AddFunction("StartNodeWithIdentity", wasmedge.NewFunction(functype_i32_i32, StartNodeWithIdentity, ctx, 0))
+	env.AddFunction("GetNodeInfo", wasmedge.NewFunction(functype__i32, GetNodeInfo, ctx, 0))
 	env.AddFunction("CloseNode", wasmedge.NewFunction(functype__i32, CloseNode, ctx, 0))
 	env.AddFunction("ConnectPeer", wasmedge.NewFunction(functype_i32_i32, ConnectPeer, ctx, 0))
 	env.AddFunction("SendMessage", wasmedge.NewFunction(functype_i32_i32, SendMessage, ctx, 0))
@@ -439,7 +440,7 @@ func connectAndListenPeerInternal(ctx *Context, req ConnectPeerRequest) (network
 	return stream, nil
 }
 
-func sendMessageToPeersInternal(stream network.Stream, msg P2PMessage) error {
+func sendMessageToPeersInternal(stream network.Stream, msg ContractMessage) error {
 	msgbz, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -468,7 +469,7 @@ func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error
 		return nil
 	}
 
-	msgReq := P2PMessage{
+	msgReq := ContractMessage{
 		Msg:             req.Msg,
 		ContractAddress: req.Contract,
 		SenderAddress:   ctx.Context.Env.Contract.Address,
@@ -613,8 +614,7 @@ func connectGossipSub(ctx *Context, p2pctx *P2PContext, protocolId string) error
 }
 
 func connectChatRoomInternal(ctx *Context, p2pctx *P2PContext, node host.Host, protocolId string, topic string) (*ChatRoom, error) {
-	nick := defaultNick(node.ID())
-	cr, err := JoinChatRoom(ctx, p2pctx.PubSub, node.ID(), nick, topic)
+	cr, err := JoinChatRoom(ctx, p2pctx.PubSub, node.ID(), topic)
 	if err != nil {
 		return nil, err
 	}
@@ -632,7 +632,7 @@ func readDataChatRoomStd(cr *ChatRoom) {
 	for {
 		select {
 		case m := <-cr.Messages:
-			cr.ctx.handleMessage(m.Message)
+			cr.ctx.handleChatRoomMessage(m)
 		case <-cr.ctx.Context.GoContextParent.Done():
 			return
 		}
@@ -640,7 +640,7 @@ func readDataChatRoomStd(cr *ChatRoom) {
 }
 
 func sendMessageToChatRoomInternal(ctx *Context, cr *ChatRoom, req SendMessageToChatRoomRequest) error {
-	msgReq := P2PMessage{
+	msgReq := ContractMessage{
 		Msg:             req.Msg,
 		ContractAddress: req.Contract,
 		SenderAddress:   ctx.Context.Env.Contract.Address,

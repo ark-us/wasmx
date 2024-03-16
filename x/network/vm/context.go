@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "cosmossdk.io/log"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	network "github.com/libp2p/go-libp2p/core/network"
 
 	networktypes "mythos/v1/x/network/types"
@@ -19,27 +21,57 @@ var STREAM_MAIN = "mainstream"
 func (c *Context) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Context.Ctx.Logger(), rw, STREAM_MAIN, c.handleMessage)
+	go readDataStd(c.Context, c.Context.Ctx.Logger(), rw, STREAM_MAIN, c.handleContractMessage)
 }
 
 // peer stream
 func (c *Context) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Context.Ctx.Logger(), rw, peeraddrstr, c.handleMessage)
+	go readDataStd(c.Context, c.Context.Ctx.Logger(), rw, peeraddrstr, c.handleContractMessage)
 	c.Context.Ctx.Logger().Debug("Connected to:", peeraddrstr)
 }
 
-func (c *Context) handleMessage(msgbz []byte) {
-	var msg P2PMessage
+func (c *Context) handleContractMessage(msgbz []byte, frompeer string) {
+	var msg ContractMessage
 	err := json.Unmarshal(msgbz, &msg)
 	if err != nil {
-		c.Context.Ctx.Logger().Debug(fmt.Sprintf("p2p message unmarshal failed: %s; err: %s", string(msgbz), err.Error()))
+		c.Context.Ctx.Logger().Debug(fmt.Sprintf("ContractMessage unmarshal failed: %s; err: %s", string(msgbz), err.Error()))
 	}
+	netmsg := P2PMessage{
+		Message:   msg.Msg,
+		Timestamp: time.Now(),
+		RoomId:    "",
+		Sender:    NodeInfo{Ip: frompeer},
+	}
+	c.handleMessage(netmsg, msg.ContractAddress, msg.SenderAddress)
+}
+
+func (c *Context) handleChatRoomMessage(crmsg *ChatRoomMessage) {
+	var msg ContractMessage
+	err := json.Unmarshal(crmsg.ContractMsg, &msg)
+	if err != nil {
+		c.Context.Ctx.Logger().Debug(fmt.Sprintf("chat room message unmarshal failed: %s; err: %s", string(crmsg.ContractMsg), err.Error()))
+	}
+	netmsg := P2PMessage{
+		Message:   msg.Msg,
+		Timestamp: crmsg.Timestamp,
+		RoomId:    crmsg.RoomId,
+		Sender:    crmsg.Sender,
+	}
+	c.handleMessage(netmsg, msg.ContractAddress, msg.SenderAddress)
+}
+
+func (c *Context) handleMessage(netmsg P2PMessage, contractAddress sdk.AccAddress, senderAddress sdk.AccAddress) {
+	netmsgbz, err := json.Marshal(netmsg)
+	if err != nil {
+		c.Context.Ctx.Logger().Error("cannot marshall P2PMessage", "error", err.Error())
+	}
+	c.Context.Ctx.Logger().Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddress.String(), "contract", contractAddress.String())
 
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{
-		Sender:   msg.SenderAddress.String(),
-		Contract: msg.ContractAddress.String(),
-		Data:     msg.Msg,
+		Sender:   senderAddress.String(),
+		Contract: contractAddress.String(),
+		Data:     netmsgbz,
 	}
 	_, _, err = c.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
@@ -47,7 +79,7 @@ func (c *Context) handleMessage(msgbz []byte) {
 	}
 }
 
-func readDataStd(ctx *vmtypes.Context, logger log.Logger, rw *bufio.ReadWriter, frompeer string, handleMessage func(msg []byte)) {
+func readDataStd(ctx *vmtypes.Context, logger log.Logger, rw *bufio.ReadWriter, frompeer string, handleMessage func(msg []byte, frompeer string)) {
 	logger.Debug("reading stream data from peer", "peer", frompeer)
 	goCtx := ctx.GoContextParent
 out:
@@ -71,7 +103,7 @@ out:
 			return
 		}
 		if string(msgbz) != "\n" {
-			handleMessage(msgbz)
+			handleMessage(msgbz, frompeer)
 		}
 
 		// if parent context is closing, stop receiving messages

@@ -2,9 +2,11 @@ package keeper
 
 import (
 	"context"
-	"mythos/v1/x/network/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"mythos/v1/x/network/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 func (k *Keeper) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
@@ -62,8 +64,7 @@ func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageReques
 			Contract: msg.Contract,
 			Msg:      msg.Data,
 		}
-		// res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, msg)
-		res, err := k.ExecuteContract(ctx, msg)
+		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, msg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("closing p2p message receival thread", err.Error())
