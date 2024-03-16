@@ -51,6 +51,7 @@ var ADDR_CONSENSUS_RAFTP2P_LIBRARY = "0x0000000000000000000000000000000000000036
 var ADDR_CONSENSUS_RAFTP2P = "0x0000000000000000000000000000000000000037"
 var ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY = "0x0000000000000000000000000000000000000040"
 var ADDR_CONSENSUS_TENDERMINTP2P = "0x0000000000000000000000000000000000000041"
+var ADDR_CHAT = "0x0000000000000000000000000000000000000042"
 var ADDR_HOOKS_NONC = "0x0000000000000000000000000000000000000043"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
@@ -104,7 +105,7 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
 	}
 
-	hookStartNode := fmt.Sprintf(`{"hook":"%s","modules":["%s","%s"]}`, HOOK_START_NODE, ROLE_CONSENSUS)
+	hookStartNode := fmt.Sprintf(`{"hook":"%s","modules":["%s","%s"]}`, HOOK_START_NODE, ROLE_CONSENSUS, ROLE_CHAT)
 	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[%s]}`,
 		ROLE_HOOKS_NONC, ROLE_CONSENSUS,
 		hookStartNode,
@@ -462,6 +463,15 @@ func DefaultSystemContracts() SystemContracts {
 			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_CHAT,
+			Label:       CHAT_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_CHAT,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_SYS_PROXY,

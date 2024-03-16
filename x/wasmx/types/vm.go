@@ -184,6 +184,8 @@ var ROLE_INTERPRETER_FSM = "interpreter_state_machine"
 
 var ROLE_LIBRARY = "deplibrary"
 
+var ROLE_CHAT = "chat"
+
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
 // encoding = ""
@@ -223,6 +225,7 @@ var HOOKS_v001 = "hooks_0.0.1"
 var GOV_v001 = "gov_0.0.1"
 var GOV_CONT_v001 = "gov_cont_0.0.1"
 var AUTH_v001 = "auth_0.0.1"
+var CHAT_v001 = "chat_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

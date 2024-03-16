@@ -100,6 +100,9 @@ var (
 	//go:embed 38.auth_0.0.1.wasm
 	auth_contract []byte
 
+	//go:embed 42.chat_0.0.1.wasm
+	chat_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -181,6 +184,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = gov_cont_contract
 	case types.AUTH_v001:
 		wasmbin = auth_contract
+	case types.CHAT_v001:
+		wasmbin = chat_contract
 	}
 	return wasmbin
 }
