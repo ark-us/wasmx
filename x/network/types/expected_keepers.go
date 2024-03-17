@@ -13,10 +13,12 @@ type WasmxKeeper interface {
 	ExecuteEntryPoint(ctx sdk.Context, entryPoint string, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error)
 	ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (wasmxtypes.ContractInfo, wasmxtypes.CodeInfo, []byte, error)
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
+	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
 }
 
 type WasmxWrapper interface {
 	ExecuteContract(ctx sdk.Context, req *MsgExecuteContract) (*MsgExecuteContractResponse, error)
 	// QueryContract
 	QueryContract(ctx sdk.Context, req *MsgQueryContract) (*MsgQueryContractResponse, error)
+	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
 }

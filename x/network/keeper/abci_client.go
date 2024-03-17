@@ -102,13 +102,61 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 
 	// TODO use ctx from params?
 	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+
+		sdktx, err := c.bapp.TxDecode(tx)
+		if len(sdktx.GetMsgs()) > 0 {
+			// we just take the first one
+			msg := sdktx.GetMsgs()[0]
+			var contractAddress sdk.AccAddress
+			// msgEthTx, ok := msg.(*wasmxtypes.MsgExecuteEth)
+			// if ok {
+			// 	ethTx := msgEthTx.AsTransaction()
+			// 	to := ethTx.To()
+			// 	contractAddress = wasmxtypes.AccAddressFromEvm(*to)
+			// } else {
+			msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
+			if ok {
+				contractAddress, err = sdk.AccAddressFromBech32(msgExec.Contract)
+			}
+			// }
+			// if consensusless contract -> just execute it
+			// whitelist of contracts exposed like this - just chat
+			if len(contractAddress.Bytes()) > 0 {
+				contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
+
+				// whitelist is in hex
+				addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress).Hex()
+
+				if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
+					c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddress.String())
+
+					// we sent directly to the contract
+					var wmsg wasmxtypes.WasmxExecutionMessage
+					err := json.Unmarshal(msgExec.Msg, &wmsg)
+					if err != nil {
+						return nil, err
+					}
+					rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
+						Sender:   msgExec.Sender,
+						Contract: msgExec.Contract,
+						Msg:      wmsg.Data,
+						// TODO Deps
+					})
+					if err != nil {
+						return nil, err
+					}
+					return rresp, nil
+				}
+			}
+		}
+
 		msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-		rresp, err := c.nk.ExecuteContract(sdk.UnwrapSDKContext(goctx), &types.MsgExecuteContract{
+		rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,
 		})
-		// fmt.Println("* ABCIClient BroadcastTxAsync ExecuteContract", rresp, err)
 		if err != nil {
 			return nil, err
 		}

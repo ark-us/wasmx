@@ -57,9 +57,6 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 		data = address.Bytes()
 	} else {
 		contractAddr := types.AccAddressFromEvm(*to)
-		if err != nil {
-			sdkerr.Wrap(err, "ExecuteEth could not parse contract address")
-		}
 		msg := types.WasmxExecutionMessage{Data: tx.Data()}
 		msgbz, err := json.Marshal(msg)
 		if err != nil {

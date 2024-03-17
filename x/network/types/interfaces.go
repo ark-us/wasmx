@@ -20,6 +20,8 @@ type BaseApp interface {
 	NewUncachedContext(isCheckTx bool, header cmtproto.Header) sdk.Context
 	LastBlockHeight() int64
 	LastCommitID() storetypes.CommitID
+	TxDecode(txBytes []byte) (sdk.Tx, error)
+	TxEncode(tx sdk.Tx) ([]byte, error)
 
 	Info(*abci.RequestInfo) (*abci.ResponseInfo, error)
 	Query(context.Context, *abci.RequestQuery) (*abci.ResponseQuery, error)

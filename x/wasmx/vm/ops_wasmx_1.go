@@ -76,7 +76,6 @@ func wasmxStorageStore(context interface{}, callframe *wasmedge.CallingFrame, pa
 
 	ctx := context.(*Context)
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmx")
-
 	ctx.ContractStore.Set(key, data)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -114,11 +113,20 @@ func wasmxStorageLoadRange(context interface{}, callframe *wasmedge.CallingFrame
 		return nil, wasmedge.Result_Fail
 	}
 	values := make([][]byte, 0)
+	startKey := req.StartKey
+	endKey := req.EndKey
+	if len(startKey) == 0 {
+		startKey = nil
+	}
+	if len(endKey) == 0 {
+		endKey = nil
+	}
+
 	var iter dbm.Iterator
 	if req.Reverse {
-		iter = ctx.ContractStore.ReverseIterator(req.StartKey, req.EndKey)
+		iter = ctx.ContractStore.ReverseIterator(startKey, endKey)
 	} else {
-		iter = ctx.ContractStore.Iterator(req.StartKey, req.EndKey)
+		iter = ctx.ContractStore.Iterator(startKey, endKey)
 	}
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
