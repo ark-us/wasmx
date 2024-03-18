@@ -171,6 +171,7 @@ var ROLE_STORAGE = "storage"
 var ROLE_STAKING = "staking"
 var ROLE_BANK = "bank"
 var ROLE_HOOKS = "hooks"
+var ROLE_HOOKS_NONC = "hooks_nonconsensus"
 var ROLE_GOVERNANCE = "gov"
 var ROLE_AUTH = "auth"
 var ROLE_INTERPRETER = "interpreter"
@@ -182,6 +183,8 @@ var ROLE_INTERPRETER_JS = "interpreter_javascript"
 var ROLE_INTERPRETER_FSM = "interpreter_state_machine"
 
 var ROLE_LIBRARY = "deplibrary"
+
+var ROLE_CHAT = "chat"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -207,6 +210,7 @@ var CONSENSUS_RAFT = "consensus_raft_0.0.1"
 var CONSENSUS_RAFTP2P = "consensus_raftp2p_0.0.1"
 
 var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
+var CONSENSUS_TENDERMINTP2P = "consensus_tendermintp2p_0.0.1"
 
 var CONSENSUS_AVA_SNOWMAN = "consensus_ava_snowman_0.0.1"
 
@@ -221,6 +225,7 @@ var HOOKS_v001 = "hooks_0.0.1"
 var GOV_v001 = "gov_0.0.1"
 var GOV_CONT_v001 = "gov_cont_0.0.1"
 var AUTH_v001 = "auth_0.0.1"
+var CHAT_v001 = "chat_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

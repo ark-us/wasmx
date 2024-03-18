@@ -43,13 +43,13 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(intervalEnded)
 	defer close(errCh)
 	go func() {
-		k.actionExecutor.GetLogger().Info("eventual execution triggered", "description", description)
+		k.actionExecutor.GetLogger().Debug("eventual execution triggered", "description", description)
 		err := k.startTimeoutInternal(description, msg)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err)
 			errCh <- err
 		}
-		k.actionExecutor.GetLogger().Info("eventual execution ended", "description", description)
+		k.actionExecutor.GetLogger().Debug("eventual execution ended", "description", description)
 		intervalEnded <- true
 	}()
 
@@ -76,7 +76,7 @@ func (k *Keeper) startTimeoutInternal(
 	default:
 		// continue
 	}
-	k.actionExecutor.GetLogger().Info("eventual execution started", "description", description)
+	k.actionExecutor.GetLogger().Debug("eventual execution started", "description", description)
 
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)

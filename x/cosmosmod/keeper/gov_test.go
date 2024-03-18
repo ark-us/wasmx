@@ -110,7 +110,7 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
 
-	msg1 := []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
+	msg1 := []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
@@ -121,7 +121,7 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 
 	// migrate contract
 	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_RAFTP2P)
-	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"nodeIPs","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
+	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
 	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(raftInitMsg)}, "newconsensus", nil)
 
@@ -144,7 +144,7 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	// check that the setup was done on the new contract
 
 	// Check each simulated node has the correct context:
-	msg1 = []byte(`{"getContextValue":{"key":"nodeIPs"}}`)
+	msg1 = []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
 		Sender:   newConsensus.String(),
 		Contract: newConsensus.String(),

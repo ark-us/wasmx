@@ -3,7 +3,9 @@ package vm
 import (
 	"context"
 	"fmt"
+	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
@@ -26,21 +28,47 @@ type Context struct {
 	Context *vmtypes.Context
 }
 
-type P2PMessage struct {
+// internal use
+type ContractMessage struct {
 	Msg             []byte         `json:"msg"`
 	ContractAddress sdk.AccAddress `json:"contract_address"`
 	SenderAddress   sdk.AccAddress `json:"sender_address"`
 }
 
-type Peer struct {
+// sent to contracts
+type P2PMessage struct {
+	RoomId    string    `json:"roomId"`
+	Message   []byte    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+	Sender    NodeInfo  `json:"sender"`
+}
+
+// internal use
+type ChatRoomMessage struct {
+	ContractMsg []byte    `json:"msg"`
+	RoomId      string    `json:"roomId"`
+	Timestamp   time.Time `json:"timestamp"`
+	Sender      NodeInfo  `json:"sender"`
+}
+
+type NodeInfo struct {
 	Id   string `json:"id"`
-	Port string `json:"port"`
 	Host string `json:"host"`
+	Port string `json:"port"`
+	Ip   string `json:"ip"` // can be empty if host is set
+}
+
+type MdnsService interface {
+	Start() error
+	Close() error
 }
 
 type P2PContext struct {
-	Node    *host.Host
-	Streams map[string]network.Stream
+	Node      *host.Host
+	PubSub    *pubsub.PubSub
+	Mdns      MdnsService
+	ChatRooms map[string]*ChatRoom
+	Streams   map[string]network.Stream
 }
 
 type StartNodeWithIdentityRequest struct {
@@ -73,6 +101,22 @@ type SendMessageToPeersRequest struct {
 
 type SendMessageToPeersResponse struct{}
 
+type ConnectChatRoomRequest struct {
+	ProtocolId string `json:"protocolId"`
+	Topic      string `json:"topic"`
+}
+
+type ConnectChatRoomResponse struct{}
+
+type SendMessageToChatRoomRequest struct {
+	Contract   sdk.AccAddress `json:"contract"`
+	Msg        []byte         `json:"msg"`
+	ProtocolId string         `json:"protocolId"`
+	Topic      string         `json:"topic"`
+}
+
+type SendMessageToChatRoomResponse struct{}
+
 type SendMessageRequest struct {
 	Contract   sdk.AccAddress `json:"contract"`
 	Msg        []byte         `json:"msg"`
@@ -82,10 +126,10 @@ type SendMessageRequest struct {
 type SendMessageResponse struct{}
 
 type MsgStart struct {
-	PrivateKey []byte `json:"pk"`
-	ProtocolId string `json:"protocolId"`
-	Node       Peer   `json:"node"`
-	Peers      []Peer `json:"peers"`
+	PrivateKey []byte     `json:"pk"`
+	ProtocolId string     `json:"protocolId"`
+	Node       NodeInfo   `json:"node"`
+	Peers      []NodeInfo `json:"peers"`
 }
 
 type MsgStart2 struct {
@@ -99,7 +143,7 @@ type CalldataStart struct {
 }
 
 func WithP2PEmptyContext(ctx context.Context) context.Context {
-	p2pctx := &P2PContext{Streams: map[string]network.Stream{}}
+	p2pctx := &P2PContext{Streams: map[string]network.Stream{}, ChatRooms: map[string]*ChatRoom{}}
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 

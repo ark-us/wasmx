@@ -20,6 +20,10 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
+var (
+	FlagFrom = "from"
+)
+
 func GetQueryCmd(queryRoute string) *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
@@ -30,6 +34,7 @@ func GetQueryCmd(queryRoute string) *cobra.Command {
 		SilenceUsage:               true,
 	}
 	queryCmd.AddCommand(
+		GetCmdGetContractCall(),
 		GetCmdListCode(),
 		GetCmdListContractByCode(),
 		GetCmdQueryCode(),
@@ -310,7 +315,6 @@ func GetCmdGetContractState() *cobra.Command {
 	cmd.AddCommand(
 		GetCmdGetContractStateAll(),
 		GetCmdGetContractStateRaw(),
-		GetCmdGetContractCall(),
 	)
 	return cmd
 }
@@ -401,7 +405,7 @@ func GetCmdGetContractStateRaw() *cobra.Command {
 func GetCmdGetContractCall() *cobra.Command {
 	decoder := newArgDecoder(asciiDecodeString)
 	cmd := &cobra.Command{
-		Use:   "smart [bech32_address] [query]",
+		Use:   "call [bech32_address] [query]",
 		Short: "Calls contract with given address with query data and prints the returned result",
 		Long:  "Calls contract with given address with query data and prints the returned result",
 		Args:  cobra.ExactArgs(2),
@@ -426,13 +430,22 @@ func GetCmdGetContractCall() *cobra.Command {
 			if !json.Valid(queryData) {
 				return errors.New("query data must be json")
 			}
+			msgbz, err := wasmxMsgWrap(args[1])
+			if err != nil {
+				return fmt.Errorf("wrap query data %s", err)
+			}
+			sender := clientCtx.GetFromAddress().String()
+			if sender == "" {
+				sender = args[0]
+			}
 
 			queryClient := types.NewQueryClient(clientCtx)
 			res, err := queryClient.SmartContractCall(
 				context.Background(),
 				&types.QuerySmartContractCallRequest{
+					Sender:    sender,
 					Address:   args[0],
-					QueryData: queryData,
+					QueryData: msgbz,
 				},
 			)
 			if err != nil {
@@ -444,6 +457,11 @@ func GetCmdGetContractCall() *cobra.Command {
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
 	flags.AddQueryFlagsToCmd(cmd)
+	f := cmd.Flags()
+	if cmd.Flag(FlagFrom) == nil { // avoid flag redefinition when it's already been added by AutoCLI
+		f.String(FlagFrom, "", "Name or address of private key with which to sign")
+	}
+	flags.AddKeyringFlags(f)
 	return cmd
 }
 

@@ -98,14 +98,14 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 // Returns 0 on success, 1 on failure and 2 on revert
 func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	if types.IsSystemAddress(req.To) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From) {
-		return int32(1), nil
+		return int32(1), []byte(`cannot call system contract`)
 	}
 	depContext := GetContractContext(ctx, req.To)
 	// ! we return success here in case the contract does not exist
 	// an empty transaction to any account should succeed (evm way)
 	// even with value 0 & no calldata
 	if depContext == nil {
-		return int32(0), nil
+		return int32(0), []byte(`cannot get contract context`)
 	}
 
 	// deterministic contracts cannot transact with or query non-deterministic contracts
@@ -116,16 +116,19 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
 			// deterministic contracts can read from metaconsensus
 			if toStorageType == types.ContractStorageType_MetaConsensus && !req.IsQuery {
-				ctx.Ctx.Logger().Debug("deterministic contract tried to execute meta consensus contract", "from", req.From.String(), "to", req.To.String())
-				return int32(1), nil
+				errmsg := "deterministic contract tried to execute meta consensus contract"
+				ctx.Ctx.Logger().Debug(errmsg, "from", req.From.String(), "to", req.To.String())
+				errmsg += fmt.Sprintf(": from %s, to %s", req.From.String(), req.To.String())
+				return int32(1), []byte(errmsg)
 			}
 			if toStorageType != types.ContractStorageType_MetaConsensus {
-				ctx.Ctx.Logger().Debug("deterministic contract tried to execute non-deterministic contract", "from", req.From.String(), "to", req.To.String())
-				return int32(1), nil
+				errmsg := "deterministic contract tried to execute non-deterministic contract"
+				ctx.Ctx.Logger().Debug(errmsg, "from", req.From.String(), "to", req.To.String())
+				errmsg += fmt.Sprintf(": from %s, to %s", req.From.String(), req.To.String())
+				return int32(1), []byte(errmsg)
 			}
 		}
 	}
-
 	callContext := types.MessageInfo{
 		Origin:   ctx.Env.CurrentCall.Origin,
 		Sender:   req.From,

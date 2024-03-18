@@ -839,6 +839,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("getAddress", wasmedge.NewFunction(functype__i32, wasmxGetAddress, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))
 	env.AddFunction("storageStore", wasmedge.NewFunction(functype_i32i32_, wasmxStorageStore, context, 0))
+	env.AddFunction("storageLoadRange", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoadRange, context, 0))
+	env.AddFunction("storageLoadRangePairs", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoadRangePairs, context, 0))
 	env.AddFunction("log", wasmedge.NewFunction(functype_i32_, wasmxLog, context, 0))
 	env.AddFunction("emitCosmosEvents", wasmedge.NewFunction(functype_i32_, wasmxEmitCosmosEvents, context, 0))
 	env.AddFunction("getReturnData", wasmedge.NewFunction(functype__i32, wasmxGetReturnData, context, 0))

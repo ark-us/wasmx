@@ -10,6 +10,10 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
+func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo {
+	return k.wasmxKeeper.GetContractInfo(ctx, contractAddress)
+}
+
 func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {

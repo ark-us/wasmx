@@ -39,6 +39,15 @@ func (m msgStakingServer) CreateValidator(goCtx context.Context, msg *stakingtyp
 	if err != nil {
 		return nil, err
 	}
+
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			stakingtypes.EventTypeCreateValidator,
+			sdk.NewAttribute(stakingtypes.AttributeKeyValidator, msg.ValidatorAddress),
+			sdk.NewAttribute(sdk.AttributeKeyAmount, msg.Value.String()),
+		),
+	})
+
 	return &stakingtypes.MsgCreateValidatorResponse{}, nil
 }
 
