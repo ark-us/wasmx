@@ -410,6 +410,7 @@ func New(
 		app.goRoutineGroup,
 		app.goContextParent,
 		appCodec,
+		encodingConfig.TxConfig,
 		keys[wasmxmoduletypes.StoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
 		tkeys[wasmxmoduletypes.TStoreKey],

@@ -10,6 +10,7 @@ import (
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,6 +31,7 @@ const contractMemoryLimit = 32
 type (
 	Keeper struct {
 		cdc                   codec.Codec
+		txConfig              client.TxConfig
 		storeKey              storetypes.StoreKey
 		memKey                storetypes.StoreKey
 		tKey                  storetypes.StoreKey
@@ -63,6 +65,7 @@ func NewKeeper(
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	cdc codec.Codec,
+	txConfig client.TxConfig,
 	storeKey storetypes.StoreKey,
 	memKey storetypes.StoreKey,
 	tKey storetypes.StoreKey,
@@ -132,6 +135,7 @@ func NewKeeper(
 
 	keeper := &Keeper{
 		cdc:               cdc,
+		txConfig:          txConfig,
 		storeKey:          storeKey,
 		memKey:            memKey,
 		tKey:              tKey,

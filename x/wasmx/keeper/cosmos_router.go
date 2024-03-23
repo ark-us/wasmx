@@ -31,6 +31,10 @@ func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
 func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
+func (h *WasmxCosmosHandler) DecodeCosmosTx(bz []byte) ([]byte, error) {
+	return h.Keeper.DecodeCosmosTx(bz)
+}
+
 func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error) {
 	return h.Keeper.ExecuteCosmosMsgAny(h.Ctx, any, h.ContractAddress)
 }
@@ -164,6 +168,18 @@ func (k *Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery)
 		return nil, err
 	}
 	return res.Value, nil
+}
+
+func (h *Keeper) DecodeCosmosTx(bz []byte) ([]byte, error) {
+	tx, err := h.txConfig.TxDecoder()(bz)
+	if err != nil {
+		return nil, err
+	}
+	txbz, err := h.txConfig.TxJSONEncoder()(tx)
+	if err != nil {
+		return nil, err
+	}
+	return txbz, nil
 }
 
 func (k *Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
