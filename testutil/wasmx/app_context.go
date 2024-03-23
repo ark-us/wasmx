@@ -1,6 +1,7 @@
 package wasmx
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -35,6 +36,7 @@ import (
 
 	app "mythos/v1/app"
 	"mythos/v1/crypto/ethsecp256k1"
+	network "mythos/v1/x/network/keeper"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	wasmxutils "mythos/v1/x/wasmx/rpc/backend"
 	"mythos/v1/x/wasmx/types"
@@ -339,6 +341,26 @@ func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, 
 func (s *AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result, error) {
 	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
 	return s.App.BaseApp.Simulate(bz)
+}
+
+func (s *AppContext) BroadcastTxAsync(account simulation.Account, msgs ...sdk.Msg) (*abci.ExecTxResult, error) {
+	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
+
+	abciClient := network.NewABCIClient(s.App.BaseApp, s.App.Logger(), &s.App.NetworkKeeper, nil, nil, s.App.GetActionExecutor())
+
+	res, err := abciClient.BroadcastTxAsync(context.TODO(), bz)
+	if err != nil {
+		return nil, err
+	}
+	s.S.CommitBlock()
+
+	resp := &abci.ExecTxResult{
+		Code:      res.Code,
+		Data:      res.Data,
+		Log:       res.Log,
+		Codespace: res.Codespace,
+	}
+	return resp, nil
 }
 
 func (s *AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []string) uint64 {

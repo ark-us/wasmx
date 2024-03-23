@@ -1,6 +1,8 @@
 package types
 
 import (
+	context "context"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -14,6 +16,8 @@ type WasmxKeeper interface {
 	ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (wasmxtypes.ContractInfo, wasmxtypes.CodeInfo, []byte, error)
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
 	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
+
+	SmartContractCall(c context.Context, req *wasmxtypes.QuerySmartContractCallRequest) (rsp *wasmxtypes.QuerySmartContractCallResponse, err error)
 }
 
 type WasmxWrapper interface {

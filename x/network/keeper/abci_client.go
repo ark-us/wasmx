@@ -103,12 +103,13 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 	// TODO use ctx from params?
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-
 		sdktx, err := c.bapp.TxDecode(tx)
+
 		if len(sdktx.GetMsgs()) > 0 {
-			// we just take the first one
+			// we just take the first one // TODO fixme
 			msg := sdktx.GetMsgs()[0]
 			var contractAddress sdk.AccAddress
+			// TODO all messages, like MsgExecuteEth
 			// msgEthTx, ok := msg.(*wasmxtypes.MsgExecuteEth)
 			// if ok {
 			// 	ethTx := msgEthTx.AsTransaction()
@@ -118,6 +119,9 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 			msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
 			if ok {
 				contractAddress, err = sdk.AccAddressFromBech32(msgExec.Contract)
+				if err != nil {
+					return nil, err
+				}
 			}
 			// }
 			// if consensusless contract -> just execute it
@@ -132,17 +136,12 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 					c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddress.String())
 
 					// we sent directly to the contract
-					var wmsg wasmxtypes.WasmxExecutionMessage
-					err := json.Unmarshal(msgExec.Msg, &wmsg)
-					if err != nil {
-						return nil, err
-					}
 					rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
-						Sender:   msgExec.Sender,
-						Contract: msgExec.Contract,
-						Msg:      wmsg.Data,
-						// TODO Deps
+						Sender:   msgExec.Sender, // sender will be taken from decoded tx
+						Contract: contractAddress.String(),
+						Msg:      []byte(fmt.Sprintf(`{"HandleTx":"%s"}`, base64.StdEncoding.EncodeToString(tx))),
 					})
+
 					if err != nil {
 						return nil, err
 					}
