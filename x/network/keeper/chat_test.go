@@ -68,6 +68,11 @@ func (suite *KeeperTestSuite) TestChat() {
 	_, err := suite.broadcastMessage(msg, sender, chatAddress)
 	suite.Require().NoError(err)
 
+	// we just need sender2 to send a transaction, in order to have its public key registered
+	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)
+	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+	appA.ExecuteContract(sender2, contractAddress, internalmsg, nil, nil)
+
 	msg = []byte(`{"GetRooms":{}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
 		Sender:   sender.Address.String(),
@@ -115,6 +120,7 @@ func (suite *KeeperTestSuite) TestChat() {
 
 	msg = []byte(`{"GetBlocks":{"roomId":"room101"}}`)
 	qrespbz = suite.queryChat(sender, chatAddress, msg)
+	blocksbz := qrespbz
 	var blocks []ChatBlock
 	err = json.Unmarshal(qrespbz, &blocks)
 	suite.Require().NoError(err)
@@ -128,6 +134,19 @@ func (suite *KeeperTestSuite) TestChat() {
 	suite.Require().Equal(12, len(messages))
 	suite.Require().Equal("hello1", messages[0].Message)
 	suite.Require().Equal("hello12", messages[11].Message)
+
+	// Test chat verifier
+	appA = s.AppContext()
+	verifierAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CHAT_VERIFIER)
+	msg = []byte(fmt.Sprintf(`{"VerifyConversation":{"blocks":%s}}`, string(blocksbz)))
+	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
+		Sender:   sender.Address.String(),
+		Contract: verifierAddress.String(),
+		Msg:      msg,
+	})
+	suite.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	suite.Require().Equal(uint8(1), qrespbz[0])
 }
 
 func (suite *KeeperTestSuite) getBlock(sender simulation.Account, room string, index int64, contractAddress sdk.AccAddress) ChatBlock {

@@ -53,6 +53,7 @@ var ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY = "0x0000000000000000000000000000000000
 var ADDR_CONSENSUS_TENDERMINTP2P = "0x0000000000000000000000000000000000000041"
 var ADDR_CHAT = "0x0000000000000000000000000000000000000042"
 var ADDR_HOOKS_NONC = "0x0000000000000000000000000000000000000043"
+var ADDR_CHAT_VERIFIER = "0x0000000000000000000000000000000000000044"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -471,6 +472,14 @@ func DefaultSystemContracts() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_CHAT,
 			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_CHAT_VERIFIER,
+			Label:       CHAT_VERIFIER_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
 		{
