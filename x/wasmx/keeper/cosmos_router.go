@@ -15,6 +15,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	verifysig "mythos/v1/crypto/verifysig"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 )
@@ -33,6 +34,9 @@ func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]b
 }
 func (h *WasmxCosmosHandler) DecodeCosmosTx(bz []byte) ([]byte, error) {
 	return h.Keeper.DecodeCosmosTx(bz)
+}
+func (h *WasmxCosmosHandler) VerifyCosmosTx(bz []byte) (bool, error) {
+	return h.Keeper.VerifyCosmosTx(h.Ctx, bz)
 }
 
 func (h *WasmxCosmosHandler) ExecuteCosmosMsgAny(any *cdctypes.Any) ([]sdk.Event, []byte, error) {
@@ -180,6 +184,20 @@ func (h *Keeper) DecodeCosmosTx(bz []byte) ([]byte, error) {
 		return nil, err
 	}
 	return txbz, nil
+}
+
+func (h *Keeper) VerifyCosmosTx(ctx sdk.Context, bz []byte) (bool, error) {
+	tx, err := h.txConfig.TxDecoder()(bz)
+	if err != nil {
+		return false, err
+	}
+	ak := NewAccountKeeperVerifySig(h)
+	valid, err := verifysig.VerifySignature(ctx, ak, tx, false, h.txConfig.SignModeHandler())
+
+	if err != nil {
+		return false, err
+	}
+	return valid, nil
 }
 
 func (k *Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {

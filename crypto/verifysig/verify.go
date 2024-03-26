@@ -1,0 +1,119 @@
+package verifysig
+
+import (
+	"context"
+	"fmt"
+
+	"google.golang.org/protobuf/types/known/anypb"
+
+	errorsmod "cosmossdk.io/errors"
+	txsigning "cosmossdk.io/x/tx/signing"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	sdkante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+)
+
+type AccountKeeper interface {
+	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+}
+
+// TODO use this for AnteHandler.NewSigVerificationDecorator
+func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool, signModeHandler *txsigning.HandlerMap) (isValid bool, err error) {
+	sigTx, ok := tx.(authsigning.Tx)
+	if !ok {
+		return false, errorsmod.Wrap(sdkerrors.ErrTxDecode, "invalid transaction type")
+	}
+
+	// stdSigs contains the sequence number, account number, and signatures.
+	// When simulating, this would just be a 0-length slice.
+	sigs, err := sigTx.GetSignaturesV2()
+	if err != nil {
+		return false, err
+	}
+
+	signers, err := sigTx.GetSigners()
+	if err != nil {
+		return false, err
+	}
+
+	// check that signer length and signature length are the same
+	if len(sigs) != len(signers) {
+		return false, errorsmod.Wrapf(sdkerrors.ErrUnauthorized, "invalid number of signer;  expected: %d, got %d", len(signers), len(sigs))
+	}
+
+	for i, sig := range sigs {
+		acc, err := GetSignerAcc(ctx, ak, signers[i])
+		if err != nil {
+			return false, err
+		}
+
+		// retrieve pubkey
+		pubKey := acc.GetPubKey()
+		if !simulate && pubKey == nil {
+			return false, errorsmod.Wrap(sdkerrors.ErrInvalidPubKey, "pubkey on account is not set")
+		}
+
+		// Check account sequence number.
+		if sig.Sequence != acc.GetSequence() {
+			return false, errorsmod.Wrapf(
+				sdkerrors.ErrWrongSequence,
+				"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,
+			)
+		}
+
+		// retrieve signer data
+		genesis := ctx.BlockHeight() == 0
+		chainID := ctx.ChainID()
+		var accNum uint64
+		if !genesis {
+			accNum = acc.GetAccountNumber()
+		}
+
+		// no need to verify signatures on recheck tx
+		if !simulate && !ctx.IsReCheckTx() {
+			anyPk, _ := codectypes.NewAnyWithValue(pubKey)
+
+			signerData := txsigning.SignerData{
+				Address:       acc.GetAddress().String(),
+				ChainID:       chainID,
+				AccountNumber: accNum,
+				Sequence:      acc.GetSequence(),
+				PubKey: &anypb.Any{
+					TypeUrl: anyPk.TypeUrl,
+					Value:   anyPk.Value,
+				},
+			}
+			adaptableTx, ok := tx.(authsigning.V2AdaptableTx)
+			if !ok {
+				return false, fmt.Errorf("expected tx to implement V2AdaptableTx, got %T", tx)
+			}
+			txData := adaptableTx.GetSigningTxData()
+			err = authsigning.VerifySignature(ctx, pubKey, signerData, sig.Data, signModeHandler, txData)
+			if err != nil {
+				var errMsg string
+				if sdkante.OnlyLegacyAminoSigners(sig.Data) {
+					// If all signers are using SIGN_MODE_LEGACY_AMINO, we rely on VerifySignature to check account sequence number,
+					// and therefore communicate sequence number as a potential cause of error.
+					errMsg = fmt.Sprintf("signature verification failed; please verify account number (%d), sequence (%d) and chain-id (%s)", accNum, acc.GetSequence(), chainID)
+				} else {
+					errMsg = fmt.Sprintf("signature verification failed; please verify account number (%d) and chain-id (%s): (%s)", accNum, chainID, err.Error())
+				}
+				return false, errorsmod.Wrap(sdkerrors.ErrUnauthorized, errMsg)
+
+			}
+		}
+	}
+	return true, nil
+}
+
+// GetSignerAcc returns an account for a given address that is expected to sign
+// a transaction.
+func GetSignerAcc(ctx sdk.Context, ak AccountKeeper, addr sdk.AccAddress) (sdk.AccountI, error) {
+	if acc := ak.GetAccount(ctx, addr); acc != nil {
+		return acc, nil
+	}
+
+	return nil, errorsmod.Wrapf(sdkerrors.ErrUnknownAddress, "account %s does not exist", addr)
+}

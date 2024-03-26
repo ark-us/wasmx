@@ -7,6 +7,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"golang.org/x/sync/errgroup"
+
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
@@ -15,7 +17,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"golang.org/x/sync/errgroup"
 
 	cw8 "mythos/v1/x/wasmx/cw8"
 	cw8types "mythos/v1/x/wasmx/cw8/types"

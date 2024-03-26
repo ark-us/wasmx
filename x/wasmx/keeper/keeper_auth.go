@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -8,8 +9,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
 	// secp256k1 "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 
+	verifysig "mythos/v1/crypto/verifysig"
 	cosmosmod "mythos/v1/x/cosmosmod/types"
 	"mythos/v1/x/wasmx/types"
 )
@@ -98,9 +101,9 @@ func (k *Keeper) NewAccountWithAddress(ctx sdk.Context, addr sdk.AccAddress) sdk
 		TypeUrl: sdk.MsgTypeURL(&acc),
 		Value:   accbz,
 	}}
-	bankmsgbz, err := k.cdc.MarshalJSON(&msg)
+	accmsgbz, err := k.cdc.MarshalJSON(&msg)
 
-	msgbz := []byte(fmt.Sprintf(`{"SetAccount":%s}`, string(bankmsgbz)))
+	msgbz := []byte(fmt.Sprintf(`{"SetAccount":%s}`, string(accmsgbz)))
 	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		panic(err)
@@ -110,4 +113,17 @@ func (k *Keeper) NewAccountWithAddress(ctx sdk.Context, addr sdk.AccAddress) sdk
 		panic(err)
 	}
 	return k.GetAccount(ctx, addr)
+}
+
+type AccountKeeperVerifySig struct {
+	k *Keeper
+}
+
+func NewAccountKeeperVerifySig(keeper *Keeper) verifysig.AccountKeeper {
+	return AccountKeeperVerifySig{k: keeper}
+}
+
+func (ak AccountKeeperVerifySig) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.AccountI {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return ak.k.GetAccount(ctx, addr)
 }

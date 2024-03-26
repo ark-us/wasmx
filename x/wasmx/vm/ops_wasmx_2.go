@@ -346,6 +346,30 @@ func wasmxDecodeCosmosTxToJson(_context interface{}, callframe *wasmedge.Calling
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxVerifyCosmosTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	valid, err := ctx.CosmosHandler.VerifyCosmosTx(reqbz)
+	resp := VerifyCosmosTxResponse{Valid: valid, Error: ""}
+	if err != nil {
+		resp.Error = err.Error()
+	}
+	respbz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
@@ -894,6 +918,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("executeCosmosMsg", wasmedge.NewFunction(functype_i32_i32, wasmxExecuteCosmosMsg, context, 0))
 	env.AddFunction("decodeCosmosTxToJson", wasmedge.NewFunction(functype_i32_i32, wasmxDecodeCosmosTxToJson, context, 0))
+	env.AddFunction("verifyCosmosTx", wasmedge.NewFunction(functype_i32_i32, wasmxVerifyCosmosTx, context, 0))
 
 	// TODO move externalCall, grpcRequest, startTimeout to only system API
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))

@@ -145,11 +145,11 @@ func (k KeeperAuth) SetAccount(goCtx context.Context, acc sdk.AccountI) {
 		TypeUrl: sdk.MsgTypeURL(acc),
 		Value:   accbz,
 	}}
-	bankmsgbz, err := k.cdc.MarshalJSON(&msg)
+	accmsgbz, err := k.cdc.MarshalJSON(&msg)
 	if err != nil {
 		panic(err) // TODO eventually catch this
 	}
-	data := strings.ReplaceAll(string(bankmsgbz), `"pub_key":null`, `"pub_key":{"@type":"","key":""}`)
+	data := strings.ReplaceAll(string(accmsgbz), `"pub_key":null`, `"pub_key":{"@type":"","key":""}`)
 	msgbz := []byte(fmt.Sprintf(`{"SetAccount":%s}`, data))
 	execmsg, err := json.Marshal(wasmxtypes.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {

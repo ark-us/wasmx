@@ -158,3 +158,8 @@ type StoragePair struct {
 type StoragePairs struct {
 	Values []StoragePair `json:"values"`
 }
+
+type VerifyCosmosTxResponse struct {
+	Valid bool   `json:"valid"`
+	Error string `json:"error"`
+}
