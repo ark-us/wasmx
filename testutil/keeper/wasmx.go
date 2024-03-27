@@ -154,6 +154,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		g,
 		goctx,
 		cdc,
+		encodingConfig.TxConfig,
 		storeKey,
 		memStoreKey,
 		tStoreKey,
