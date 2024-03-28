@@ -10,17 +10,17 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 
 ```
 
-mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --nocors
+mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --nocors --libp2p
 
 # same machine validators
-mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors
+mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors  --libp2p
 
 # add new node to existing testnet
-mythosd testnet add-node 1 --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true  --nocors --libp2p
+mythosd testnet add-node 2 "mythos167eea4stw39as3tjsc5mryqsusyt6hhs62mq07@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWAcvC67ydPNLzd7jsnKr47yngw6H5rVr86etnySDd9aXP" --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
 
-mythosd start --home=./testnet/node0/mythosd --p2p.laddr tcp://127.0.0.1:26756
+mythosd start --home=./testnet/node0/mythosd
 
-mythosd start --home=./testnet/node1/mythosd --p2p.laddr tcp://127.0.0.1:26757
+mythosd start --home=./testnet/node1/mythosd
 
 ```
 
