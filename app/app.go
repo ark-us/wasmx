@@ -38,7 +38,7 @@ import (
 	"cosmossdk.io/x/upgrade"
 
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/gogoproto/proto"
+	// "github.com/cosmos/gogoproto/proto"
 
 	// upgradeclient "cosmossdk.io/x/upgrade/client"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
@@ -60,7 +60,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/types/msgservice"
+
+	// "github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/version"
 
 	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
@@ -913,16 +914,17 @@ func New(
 
 	// At startup, after all modules have been registered, check that all prot
 	// annotations are correct.
-	protoFiles, err := proto.MergedRegistry()
-	if err != nil {
-		panic(err)
-	}
-	err = msgservice.ValidateProtoAnnotations(protoFiles)
-	if err != nil {
-		// Once we switch to using protoreflect-based antehandlers, we might
-		// want to panic here instead of logging a warning.
-		fmt.Fprintln(os.Stderr, err.Error())
-	}
+	// TODO reenable this! fix the libp2p proto issue
+	// protoFiles, err := proto.MergedRegistry()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// err = msgservice.ValidateProtoAnnotations(protoFiles)
+	// if err != nil {
+	// 	// Once we switch to using protoreflect-based antehandlers, we might
+	// 	// want to panic here instead of logging a warning.
+	// 	fmt.Fprintln(os.Stderr, err.Error())
+	// }
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
