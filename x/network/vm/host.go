@@ -517,7 +517,6 @@ func (n *DiscoveryNotifee) HandlePeerFound(pi peerstore.AddrInfo) {
 	// context.Background()
 	err := tryPeerConnect(n.Context, n, pi, 0)
 	if err != nil {
-		fmt.Println("error connecting to peer", pi.ID, err)
 		n.Logger.Info("error connecting to peer", "ID", pi.ID, "error", err)
 	}
 }
@@ -556,17 +555,17 @@ func connectChatRoomAndListen(ctx *Context, protocolId string, topic string) (*C
 		intervalEnded := make(chan bool, 1)
 		defer close(intervalEnded)
 		go func(ctx_ *Context, p2pctx_ *P2PContext) {
-			fmt.Println("goroutine room connect started", topic)
-			defer fmt.Println("goroutine room connect finished", topic)
+			ctx_.Context.Ctx.Logger().Info("room connection started", "topic", topic)
+			defer ctx_.Context.Ctx.Logger().Info("room connection successful", "topic", topic)
 
 			cr, found := p2pctx_.ChatRooms[topic]
 			if !found {
-				ctx.Context.Ctx.Logger().Debug("chat room not found: ", "topic", topic)
+				ctx_.Context.Ctx.Logger().Debug("chat room not found: ", "topic", topic)
 				intervalEnded <- true
 			}
 			err := listenChatRoomStream(cr)
 			if err != nil {
-				fmt.Println("connect room found, err", found, err)
+				ctx_.Context.Ctx.Logger().Error("could not connect to room", "topic", topic, "error", err)
 				intervalEnded <- true
 			}
 
@@ -628,7 +627,6 @@ func listenChatRoomStream(cr *ChatRoom) error {
 }
 
 func readDataChatRoomStd(cr *ChatRoom) {
-	fmt.Println("reading stream data from room: ", cr.roomName)
 	for {
 		select {
 		case m := <-cr.Messages:
