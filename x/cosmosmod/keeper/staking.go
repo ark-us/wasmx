@@ -29,7 +29,7 @@ import (
 func (k KeeperStaking) BondedRatio(goCtx context.Context) (math.LegacyDec, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	// TODO
-	k.Logger(ctx).Debug("BondedRatio not implemented")
+	k.Logger(ctx).Debug("KeeperStaking.BondedRatio not implemented")
 	return math.LegacyOneDec(), nil
 }
 
@@ -74,6 +74,14 @@ func (k KeeperStaking) ConsensusAddressCodec() addresscodec.Codec {
 
 // Delegation gets the delegation interface for a particular set of delegator and validator addresses
 func (k KeeperStaking) Delegation(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (stakingtypes.DelegationI, error) {
+	validatorsResp, err := k.DelegationInternal(goCtx, addrDel, addrVal)
+	if err != nil {
+		return nil, err
+	}
+	return validatorsResp.DelegationResponse.Delegation, nil
+}
+
+func (k KeeperStaking) DelegationInternal(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (*stakingtypes.QueryDelegationResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	msgbz := []byte(fmt.Sprintf(`{"GetDelegation":{"delegator_addr":"%s","validator_addr":"%s"}}`, addrDel.String(), addrVal.String()))
 	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
@@ -94,7 +102,7 @@ func (k KeeperStaking) Delegation(goCtx context.Context, addrDel sdk.AccAddress,
 	if err != nil {
 		return nil, err
 	}
-	return validatorsResp.DelegationResponse.Delegation, nil
+	return &validatorsResp, nil
 }
 
 // GetAllValidators gets the set of all validators with no limits, used during genesis dump
@@ -125,7 +133,7 @@ func (k KeeperStaking) GetAllValidators(goCtx context.Context) (validators []sta
 // IsValidatorJailed checks and returns boolean of a validator status jailed or not.
 func (k KeeperStaking) IsValidatorJailed(goCtx context.Context, addr sdk.ConsAddress) (bool, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("IsValidatorJailed not implemented")
+	k.Logger(ctx).Error("KeeperStaking.IsValidatorJailed not implemented")
 	return false, nil
 }
 
@@ -154,14 +162,14 @@ func (k KeeperStaking) IterateValidators(goCtx context.Context, fn func(index in
 // jail a validator
 func (k KeeperStaking) Jail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("Jail not implemented")
+	k.Logger(ctx).Error("KeeperStaking.Jail not implemented")
 	return nil
 }
 
 // MaxValidators - Maximum number of validators
 func (k KeeperStaking) MaxValidators(goCtx context.Context) (uint32, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("MaxValidators not implemented")
+	k.Logger(ctx).Error("KeeperStaking.MaxValidators not implemented")
 	return 100, nil
 }
 
@@ -169,21 +177,21 @@ func (k KeeperStaking) MaxValidators(goCtx context.Context) (uint32, error) {
 // but not at a height in the future
 func (k KeeperStaking) Slash(goCtx context.Context, consAddr sdk.ConsAddress, infractionHeight, power int64, slashFactor math.LegacyDec) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("Slash not implemented")
+	k.Logger(ctx).Error("KeeperStaking.Slash not implemented")
 	return math.ZeroInt(), nil
 }
 
 // SlashWithInfractionReason implementation doesn't require the infraction (types.Infraction) to work but is required by Interchain Security.
 func (k KeeperStaking) SlashWithInfractionReason(goCtx context.Context, consAddr sdk.ConsAddress, infractionHeight, power int64, slashFactor math.LegacyDec, _ stakingtypes.Infraction) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SlashWithInfractionReason not implemented")
+	k.Logger(ctx).Error("KeeperStaking.SlashWithInfractionReason not implemented")
 	return k.Slash(goCtx, consAddr, infractionHeight, power, slashFactor)
 }
 
 // unjail a validator
 func (k KeeperStaking) Unjail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("Unjail not implemented")
+	k.Logger(ctx).Error("KeeperStaking.Unjail not implemented")
 	return nil
 }
 
@@ -215,14 +223,14 @@ func (k KeeperStaking) Validator(goCtx context.Context, address sdk.ValAddress) 
 // ValidatorByConsAddr gets the validator interface for a particular pubkey
 func (k KeeperStaking) ValidatorByConsAddr(goCtx context.Context, addr sdk.ConsAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("ValidatorByConsAddr not implemented")
+	k.Logger(ctx).Error("KeeperStaking.ValidatorByConsAddr not implemented")
 	return nil, nil
 }
 
 // GetAllDelegatorDelegations returns all delegations of a delegator
 func (k KeeperStaking) GetAllDelegatorDelegations(goCtx context.Context, delegator sdk.AccAddress) ([]stakingtypes.Delegation, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetAllDelegatorDelegations not implemented")
+	k.Logger(ctx).Error("KeeperStaking.GetAllDelegatorDelegations not implemented")
 	return make([]stakingtypes.Delegation, 0), nil
 }
 
@@ -257,42 +265,42 @@ func (k KeeperStaking) IterateDelegations(goCtx context.Context, delAddr sdk.Acc
 	fn func(index int64, del stakingtypes.DelegationI) (stop bool),
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("IterateDelegations not implemented")
+	k.Logger(ctx).Error("KeeperStaking.IterateDelegations not implemented")
 	return nil
 }
 
 // GetHistoricalInfo gets the historical info at a given height
 func (k KeeperStaking) GetHistoricalInfo(goCtx context.Context, height int64) (stakingtypes.HistoricalInfo, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetHistoricalInfo not implemented")
+	k.Logger(ctx).Error("KeeperStaking.GetHistoricalInfo not implemented")
 	return stakingtypes.HistoricalInfo{}, nil
 }
 
 // UnbondingTime - The time duration for unbonding
 func (k KeeperStaking) UnbondingTime(goCtx context.Context) (time.Duration, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("UnbondingTime not implemented")
+	k.Logger(ctx).Error("KeeperStaking.UnbondingTime not implemented")
 	return time.Minute, nil
 }
 
 // GetParams gets the x/staking module parameters.
 func (k KeeperStaking) GetParams(goCtx context.Context) (params stakingtypes.Params, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetParams not implemented")
+	k.Logger(ctx).Error("KeeperStaking.GetParams not implemented")
 	return stakingtypes.Params{}, nil
 }
 
 // IterateBondedValidatorsByPower iterates through the bonded validator set and perform the provided function
 func (k KeeperStaking) IterateBondedValidatorsByPower(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("IterateBondedValidatorsByPower not implemented")
+	k.Logger(ctx).Error("KeeperStaking.IterateBondedValidatorsByPower not implemented")
 	return nil
 }
 
 // TotalBondedTokens total staking tokens supply which is bonded
 func (k KeeperStaking) TotalBondedTokens(goCtx context.Context) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("TotalBondedTokens not implemented")
+	k.Logger(ctx).Error("KeeperStaking.TotalBondedTokens not implemented")
 	return math.ZeroInt(), nil
 }
 
@@ -341,63 +349,63 @@ func (k KeeperStaking) ApplyAndReturnValidatorSetUpdates(goCtx context.Context) 
 // GetAllDelegations returns all delegations used during genesis dump.
 func (k KeeperStaking) GetAllDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetAllDelegations not implemented")
+	k.Logger(ctx).Error("KeeperStaking.GetAllDelegations not implemented")
 	return make([]stakingtypes.Delegation, 0), err
 }
 
 // IterateRedelegations iterates through all redelegations.
 func (k KeeperStaking) IterateRedelegations(goCtx context.Context, fn func(index int64, red stakingtypes.Redelegation) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("IterateRedelegations not implemented")
+	k.Logger(ctx).Error("KeeperStaking.IterateRedelegations not implemented")
 	return nil
 }
 
 // SetRedelegation sets a redelegation and associated index.
 func (k KeeperStaking) SetRedelegation(goCtx context.Context, red stakingtypes.Redelegation) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SetRedelegation not implemented")
+	k.Logger(ctx).Error("KeeperStaking.SetRedelegation not implemented")
 	return nil
 }
 
 // IterateUnbondingDelegations iterates through all of the unbonding delegations.
 func (k KeeperStaking) IterateUnbondingDelegations(goCtx context.Context, fn func(index int64, ubd stakingtypes.UnbondingDelegation) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("IterateUnbondingDelegations not implemented")
+	k.Logger(ctx).Error("KeeperStaking.IterateUnbondingDelegations not implemented")
 	return nil
 }
 
 // SetUnbondingDelegation sets the unbonding delegation and associated index.
 func (k KeeperStaking) SetUnbondingDelegation(goCtx context.Context, ubd stakingtypes.UnbondingDelegation) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SetUnbondingDelegation not implemented")
+	k.Logger(ctx).Error("KeeperStaking.SetUnbondingDelegation not implemented")
 	return nil
 }
 
 // GetValidator gets a single validator
 func (k KeeperStaking) GetValidator(goCtx context.Context, addr sdk.ValAddress) (validator stakingtypes.Validator, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("GetValidator not implemented")
+	k.Logger(ctx).Error("KeeperStaking.GetValidator not implemented")
 	return stakingtypes.Validator{}, nil
 }
 
 // SetValidator sets the main record holding validator details
 func (k KeeperStaking) SetValidator(goCtx context.Context, validator stakingtypes.Validator) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SetValidator not implemented")
+	k.Logger(ctx).Error("KeeperStaking.SetValidator not implemented")
 	return nil
 }
 
 // IterateLastValidators iterates through the active validator set and perform the provided function
 func (k KeeperStaking) IterateLastValidators(goCtx context.Context, fn func(index int64, validator stakingtypes.ValidatorI) (stop bool)) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("IterateLastValidators not implemented")
+	k.Logger(ctx).Error("KeeperStaking.IterateLastValidators not implemented")
 	return nil
 }
 
 // SetValidatorByConsAddr sets a validator by conesensus address
 func (k KeeperStaking) SetValidatorByConsAddr(goCtx context.Context, validator stakingtypes.Validator) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("SetValidatorByConsAddr not implemented")
+	k.Logger(ctx).Error("KeeperStaking.SetValidatorByConsAddr not implemented")
 	return nil
 }
 

@@ -53,25 +53,25 @@ func (m msgStakingServer) CreateValidator(goCtx context.Context, msg *stakingtyp
 
 func (m msgStakingServer) EditValidator(goCtx context.Context, msg *stakingtypes.MsgEditValidator) (*stakingtypes.MsgEditValidatorResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	m.Keeper.Logger(ctx).Error("EditValidator not implemented")
+	m.Keeper.Logger(ctx).Error("msgStakingServer.EditValidator not implemented")
 	return &stakingtypes.MsgEditValidatorResponse{}, nil
 }
 
 func (m msgStakingServer) Delegate(goCtx context.Context, msg *stakingtypes.MsgDelegate) (*stakingtypes.MsgDelegateResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	m.Keeper.Logger(ctx).Error("Delegate not implemented")
+	m.Keeper.Logger(ctx).Error("msgStakingServer.Delegate not implemented")
 	return &stakingtypes.MsgDelegateResponse{}, nil
 }
 
 func (m msgStakingServer) BeginRedelegate(goCtx context.Context, msg *stakingtypes.MsgBeginRedelegate) (*stakingtypes.MsgBeginRedelegateResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	m.Keeper.Logger(ctx).Error("BeginRedelegate not implemented")
+	m.Keeper.Logger(ctx).Error("msgStakingServer.BeginRedelegate not implemented")
 	return &stakingtypes.MsgBeginRedelegateResponse{}, nil
 }
 
 func (m msgStakingServer) Undelegate(goCtx context.Context, msg *stakingtypes.MsgUndelegate) (*stakingtypes.MsgUndelegateResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	m.Keeper.Logger(ctx).Error("Undelegate not implemented")
+	m.Keeper.Logger(ctx).Error("msgStakingServer.Undelegate not implemented")
 	return &stakingtypes.MsgUndelegateResponse{}, nil
 }
 
@@ -83,6 +83,6 @@ func (m msgStakingServer) CancelUnbondingDelegation(goCtx context.Context, msg *
 
 func (m msgStakingServer) UpdateParams(goCtx context.Context, msg *stakingtypes.MsgUpdateParams) (*stakingtypes.MsgUpdateParamsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	m.Keeper.Logger(ctx).Error("UpdateParams not implemented")
+	m.Keeper.Logger(ctx).Error("msgStakingServer.UpdateParams not implemented")
 	return &stakingtypes.MsgUpdateParamsResponse{}, nil
 }

@@ -27,7 +27,7 @@ func NewQuerierBank(keeper *KeeperBank) QuerierBank {
 
 func (k QuerierBank) Balance(goCtx context.Context, req *banktypes.QueryBalanceRequest) (*banktypes.QueryBalanceResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("Balance not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.Balance not implemented")
 	return &banktypes.QueryBalanceResponse{}, nil
 }
 
@@ -72,13 +72,13 @@ func (k QuerierBank) AllBalances(goCtx context.Context, req *banktypes.QueryAllB
 
 func (k QuerierBank) SpendableBalances(goCtx context.Context, req *banktypes.QuerySpendableBalancesRequest) (*banktypes.QuerySpendableBalancesResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("SpendableBalances not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.SpendableBalances not implemented")
 	return &banktypes.QuerySpendableBalancesResponse{}, nil
 }
 
 func (k QuerierBank) SpendableBalanceByDenom(goCtx context.Context, req *banktypes.QuerySpendableBalanceByDenomRequest) (*banktypes.QuerySpendableBalanceByDenomResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("SpendableBalanceByDenom not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.SpendableBalanceByDenom not implemented")
 	return &banktypes.QuerySpendableBalanceByDenomResponse{}, nil
 }
 
@@ -142,36 +142,36 @@ func (k QuerierBank) SupplyOf(goCtx context.Context, req *banktypes.QuerySupplyO
 
 func (k QuerierBank) Params(goCtx context.Context, req *banktypes.QueryParamsRequest) (*banktypes.QueryParamsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("Params not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.Params not implemented")
 	return &banktypes.QueryParamsResponse{}, nil
 }
 
 func (k QuerierBank) DenomMetadata(goCtx context.Context, req *banktypes.QueryDenomMetadataRequest) (*banktypes.QueryDenomMetadataResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("DenomMetadata not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.DenomMetadata not implemented")
 	return &banktypes.QueryDenomMetadataResponse{}, nil
 }
 
 func (k QuerierBank) DenomMetadataByQueryString(goCtx context.Context, req *banktypes.QueryDenomMetadataByQueryStringRequest) (*banktypes.QueryDenomMetadataByQueryStringResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("DenomMetadataByQueryString not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.DenomMetadataByQueryString not implemented")
 	return &banktypes.QueryDenomMetadataByQueryStringResponse{}, nil
 }
 
 func (k QuerierBank) DenomsMetadata(goCtx context.Context, req *banktypes.QueryDenomsMetadataRequest) (*banktypes.QueryDenomsMetadataResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("DenomsMetadata not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.DenomsMetadata not implemented")
 	return &banktypes.QueryDenomsMetadataResponse{}, nil
 }
 
 func (k QuerierBank) DenomOwners(goCtx context.Context, req *banktypes.QueryDenomOwnersRequest) (*banktypes.QueryDenomOwnersResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("DenomOwners not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.DenomOwners not implemented")
 	return &banktypes.QueryDenomOwnersResponse{}, nil
 }
 
 func (k QuerierBank) SendEnabled(goCtx context.Context, req *banktypes.QuerySendEnabledRequest) (*banktypes.QuerySendEnabledResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("SendEnabled not implemented")
+	k.Keeper.Logger(ctx).Error("QuerierBank.SendEnabled not implemented")
 	return &banktypes.QuerySendEnabledResponse{}, nil
 }

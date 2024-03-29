@@ -48,9 +48,8 @@ func (k QuerierAuth) AccountAddressByID(goCtx context.Context, req *authtypes.Qu
 }
 
 func (k QuerierAuth) Params(goCtx context.Context, req *authtypes.QueryParamsRequest) (*authtypes.QueryParamsResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("Auth.Params not implemented")
-	return &authtypes.QueryParamsResponse{}, nil
+	params := k.Keeper.GetParams(goCtx)
+	return &authtypes.QueryParamsResponse{Params: params}, nil
 }
 
 func (k QuerierAuth) ModuleAccounts(goCtx context.Context, req *authtypes.QueryModuleAccountsRequest) (*authtypes.QueryModuleAccountsResponse, error) {
