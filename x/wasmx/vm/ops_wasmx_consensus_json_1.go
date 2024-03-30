@@ -52,6 +52,7 @@ func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 	var req abci.RequestProcessProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
 		return nil, wasmedge.Result_Fail
 	}
 	resp, err := ctx.GetApplication().ProcessProposal(&req)
