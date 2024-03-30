@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -281,39 +282,40 @@ func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.Result
 		blockHeight, err = c.LatestBlockHeight(ctx)
 		c.logger.Debug("ABCIClient.Block", "latest height", blockHeight)
 		if err != nil {
-			return nil, err
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 		}
 	} else {
 		blockHeight = *height
 	}
+	c.logger.Debug("ABCIClient.Block", "height", blockHeight)
 
 	// get indexed tx
 	key := types.GetBlockKey(blockHeight)
 	resp, err := c.fsmQuery(key)
 	if err != nil {
-		return nil, err
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 	}
 
 	if len(resp.Data) == 0 {
-		return nil, fmt.Errorf("block (%d) not found", height)
+		return nil, fmt.Errorf("block (%d) not found", blockHeight)
 	}
 
 	var entry types.BlockEntry
 	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
-		return nil, err
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 	}
 
 	var b abci.RequestProcessProposal
 	err = json.Unmarshal(entry.Data, &b)
 	if err != nil {
-		return nil, err
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 	}
 
 	var header cmttypes.Header
 	err = json.Unmarshal(entry.Header, &header)
 	if err != nil {
-		return nil, err
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 	}
 
 	// TODO fixme
