@@ -88,7 +88,7 @@ func (k QuerierBank) TotalSupply(goCtx context.Context, req *banktypes.QueryTota
 	if err != nil {
 		return nil, err
 	}
-	msgbz := []byte(fmt.Sprintf(`{"TotalSupply":%s}`, string(reqbz)))
+	msgbz := []byte(fmt.Sprintf(`{"GetTotalSupply":%s}`, string(reqbz)))
 	resp, err := k.Keeper.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
