@@ -150,6 +150,9 @@ func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.Acc
 func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
 	return h.Keeper.GetAddressOrRole(ctx, addressOrRole)
 }
+func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string {
+	return h.Keeper.GetRoleByContractAddress(ctx, addr)
+}
 
 func (h *WasmxCosmosHandler) WithNewAddress(addr sdk.AccAddress) types.WasmxCosmosHandler {
 	return h.Keeper.newCosmosHandler(h.Ctx, addr)

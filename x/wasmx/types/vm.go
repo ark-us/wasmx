@@ -113,6 +113,7 @@ type WasmxCosmosHandler interface {
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 	WithNewAddress(addr sdk.AccAddress) WasmxCosmosHandler
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
+	GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string
 	JSONCodec() codec.JSONCodec
 	GetAlias(addr sdk.AccAddress) (sdk.AccAddress, bool)
 }

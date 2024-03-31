@@ -106,3 +106,16 @@ func (k *Keeper) SetRoleLabelByContract(ctx sdk.Context, contractAddress sdk.Acc
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetRoleContractPrefix(contractAddress), []byte(label))
 }
+
+// GetRoleByContractAddress
+func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, contractAddress sdk.AccAddress) string {
+	label := k.GetRoleLabelByContract(ctx, contractAddress)
+	if label == "" {
+		return ""
+	}
+	role := k.GetRoleByLabel(ctx, label)
+	if role == nil {
+		return ""
+	}
+	return role.Role
+}

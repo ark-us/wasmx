@@ -295,6 +295,26 @@ func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFram
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxGetRoleByAddress(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	addrbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr := sdk.AccAddress(addrbz)
+	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, addr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(role))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
@@ -915,6 +935,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
 
 	env.AddFunction("getAddressByRole", wasmedge.NewFunction(functype_i32_i32, wasmxGetAddressByRole, context, 0))
+	env.AddFunction("getRoleByAddress", wasmedge.NewFunction(functype_i32_i32, wasmxGetRoleByAddress, context, 0))
 
 	env.AddFunction("executeCosmosMsg", wasmedge.NewFunction(functype_i32_i32, wasmxExecuteCosmosMsg, context, 0))
 	env.AddFunction("decodeCosmosTxToJson", wasmedge.NewFunction(functype_i32_i32, wasmxDecodeCosmosTxToJson, context, 0))
