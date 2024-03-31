@@ -95,22 +95,20 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
 
-	hookEndBlock := fmt.Sprintf(`{"hook":"%s","modules":["%s"]}`, HOOK_END_BLOCK, ROLE_GOVERNANCE)
-	hookCreateValidator := fmt.Sprintf(`{"hook":"%s","modules":[]}`, HOOK_CREATE_VALIDATOR)
-	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s"],"registrations":[%s,%s]}`,
-		ROLE_HOOKS, ROLE_CONSENSUS, ROLE_GOVERNANCE,
-		hookEndBlock,
-		hookCreateValidator,
-	))})
+	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks message")
+	}
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
 	}
 
-	hookStartNode := fmt.Sprintf(`{"hook":"%s","modules":["%s","%s"]}`, HOOK_START_NODE, ROLE_CONSENSUS, ROLE_CHAT)
-	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[%s]}`,
-		ROLE_HOOKS_NONC, ROLE_CONSENSUS,
-		hookStartNode,
-	))})
+	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
+	}
+	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
 	}
