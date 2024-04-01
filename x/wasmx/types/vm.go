@@ -230,6 +230,8 @@ var HOOKS_v001 = "hooks_0.0.1"
 var GOV_v001 = "gov_0.0.1"
 var GOV_CONT_v001 = "gov_cont_0.0.1"
 var AUTH_v001 = "auth_0.0.1"
+var SLASHING_v001 = "slashing_0.0.1"
+var DISTRIBUTION_v001 = "distribution_0.0.1"
 var CHAT_v001 = "chat_0.0.1"
 var CHAT_VERIFIER_v001 = "chat_verifier_0.0.1"
 

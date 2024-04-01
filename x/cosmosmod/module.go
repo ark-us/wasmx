@@ -19,7 +19,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	networktypes "mythos/v1/x/network/types"
@@ -74,7 +76,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 	if err := cdc.UnmarshalJSON(bz, &genState); err != nil {
 		return fmt.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
 	}
-	return genState.Staking.Validate()
+	return genState.Validate()
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the module
@@ -82,6 +84,8 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 	banktypes.RegisterQueryHandlerClient(context.Background(), mux, banktypes.NewQueryClient(clientCtx))
 	stakingtypes.RegisterQueryHandlerClient(context.Background(), mux, stakingtypes.NewQueryClient(clientCtx))
 	govtypes1.RegisterQueryHandlerClient(context.Background(), mux, govtypes1.NewQueryClient(clientCtx))
+	slashingtypes.RegisterQueryHandlerClient(context.Background(), mux, slashingtypes.NewQueryClient(clientCtx))
+	distributiontypes.RegisterQueryHandlerClient(context.Background(), mux, distributiontypes.NewQueryClient(clientCtx))
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
@@ -101,11 +105,13 @@ func (a AppModuleBasic) GetQueryCmd() *cobra.Command {
 // AppModule implements the AppModule interface that defines the inter-dependent methods that modules need to implement
 type AppModule struct {
 	AppModuleBasic
-	bank    keeper.KeeperBank
-	staking keeper.KeeperStaking
-	gov     keeper.KeeperGov
-	auth    keeper.KeeperAuth
-	app     networktypes.BaseApp
+	bank         keeper.KeeperBank
+	staking      keeper.KeeperStaking
+	gov          keeper.KeeperGov
+	auth         keeper.KeeperAuth
+	slashing     keeper.KeeperSlashing
+	distribution keeper.KeeperDistribution
+	app          networktypes.BaseApp
 }
 
 func NewAppModule(
@@ -115,6 +121,8 @@ func NewAppModule(
 	staking keeper.KeeperStaking,
 	gov keeper.KeeperGov,
 	auth keeper.KeeperAuth,
+	slashing keeper.KeeperSlashing,
+	distribution keeper.KeeperDistribution,
 	app networktypes.BaseApp,
 ) AppModule {
 	return AppModule{
@@ -123,6 +131,8 @@ func NewAppModule(
 		staking:        staking,
 		gov:            gov,
 		auth:           auth,
+		slashing:       slashing,
+		distribution:   distribution,
 		app:            app,
 	}
 }
@@ -133,11 +143,15 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	stakingtypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgStakingServerImpl(&am.staking))
 	govtypes1.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgGovServerImpl(&am.gov))
 	authtypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgAuthServerImpl(&am.auth))
+	slashingtypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgSlashingServerImpl(&am.slashing))
+	distributiontypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgDistributionServerImpl(&am.distribution))
 
 	banktypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierBank(&am.bank))
 	stakingtypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierStaking(&am.staking))
 	govtypes1.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierGov(&am.gov))
 	authtypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierAuth(&am.auth))
+	slashingtypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierSlashing(&am.slashing))
+	distributiontypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQuerierDistribution(&am.distribution))
 }
 
 // RegisterInvariants registers the invariants of the module. If an invariant deviates from its predicted value, the InvariantRegistry triggers appropriate logic (most often the chain will be halted)
@@ -149,12 +163,12 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 	// Initialize global index to index in genesis state
 	cdc.MustUnmarshalJSON(gs, &genState)
 
-	return InitGenesis(ctx, am.bank, am.gov, am.staking, am.auth, genState)
+	return InitGenesis(ctx, am.bank, am.gov, am.staking, am.auth, am.slashing, am.distribution, genState)
 }
 
 // ExportGenesis returns the module's exported genesis state as raw JSON bytes.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	genState := ExportGenesis(ctx, am.bank, am.gov, am.staking, am.auth)
+	genState := ExportGenesis(ctx, am.bank, am.gov, am.staking, am.auth, am.slashing, am.distribution)
 	return cdc.MustMarshalJSON(genState)
 }
 

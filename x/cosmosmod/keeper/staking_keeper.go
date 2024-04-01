@@ -74,7 +74,7 @@ func NewKeeperStaking(
 }
 
 func (k *KeeperStaking) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.StakingModuleName()))
 }
 
 // GetAuthority returns the module's authority.

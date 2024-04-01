@@ -54,6 +54,8 @@ var ADDR_CONSENSUS_TENDERMINTP2P = "0x0000000000000000000000000000000000000041"
 var ADDR_CHAT = "0x0000000000000000000000000000000000000042"
 var ADDR_HOOKS_NONC = "0x0000000000000000000000000000000000000043"
 var ADDR_CHAT_VERIFIER = "0x0000000000000000000000000000000000000044"
+var ADDR_SLASHING = "0x0000000000000000000000000000000000000045"
+var ADDR_DISTRIBUTION = "0x0000000000000000000000000000000000000046"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -316,6 +318,24 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: bankInitMsg,
 			Pinned:      false,
 			Role:        ROLE_BANK,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_SLASHING,
+			Label:       SLASHING_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_SLASHING,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_DISTRIBUTION,
+			Label:       DISTRIBUTION_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_DISTRIBUTION,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

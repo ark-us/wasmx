@@ -9,6 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -20,11 +22,14 @@ import (
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.
-func InitGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, staking keeper.KeeperStaking, auth keeper.KeeperAuth, genState types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, staking keeper.KeeperStaking, auth keeper.KeeperAuth, slashing keeper.KeeperSlashing, distribution keeper.KeeperDistribution, genState types.GenesisState) []abci.ValidatorUpdate {
 	InitGenesisBank(ctx, bank, genState.Bank)
 	InitGenesisGov(ctx, gov, genState.Gov)
 	InitGenesisAuth(ctx, auth, genState.Auth)
-	return InitGenesisStaking(ctx, staking, genState.Staking)
+	updates := InitGenesisStaking(ctx, staking, genState.Staking)
+	InitGenesisSlashing(ctx, slashing, genState.Slashing)
+	InitGenesisDistribution(ctx, distribution, genState.Distribution)
+	return updates
 }
 
 func InitGenesisBank(ctx sdk.Context, k keeper.KeeperBank, genState types.BankGenesisState) {
@@ -130,10 +135,47 @@ func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState types.AuthGe
 	k.Logger(ctx).Info("initialized auth genesis")
 }
 
+func InitGenesisSlashing(ctx sdk.Context, k keeper.KeeperSlashing, genState slashingtypes.GenesisState) {
+	k.Logger(ctx).Info("initializing slashing genesis")
+	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
+	if err != nil {
+		panic(err)
+	}
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_SLASHING,
+		Contract: wasmxtypes.ROLE_SLASHING,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		panic(err)
+	}
+	k.Logger(ctx).Info("initialized slashing genesis")
+}
+
+func InitGenesisDistribution(ctx sdk.Context, k keeper.KeeperDistribution, genState distributiontypes.GenesisState) {
+	k.Logger(ctx).Info("initializing distribution genesis")
+	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
+	if err != nil {
+		panic(err)
+	}
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_DISTRIBUTION,
+		Contract: wasmxtypes.ROLE_DISTRIBUTION,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		panic(err)
+	}
+	k.Logger(ctx).Info("initialized distribution genesis")
+}
+
 // TODO
 // ExportGenesis returns the module's exported genesis
-func ExportGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, staking keeper.KeeperStaking, auth keeper.KeeperAuth) *stakingtypes.GenesisState {
+func ExportGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, staking keeper.KeeperStaking, auth keeper.KeeperAuth, slashing keeper.KeeperSlashing, distribution keeper.KeeperDistribution) *stakingtypes.GenesisState {
 	genState := &stakingtypes.GenesisState{}
+	// TODO
 	// k.IterateSystemContracts(ctx, func(contract types.SystemContract) bool {
 	// 	genState.SystemContracts = append(genState.SystemContracts, contract)
 	// 	return false
