@@ -276,6 +276,21 @@ func wasmxGetBlockHash(_context interface{}, callframe *wasmedge.CallingFrame, p
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxGetCurrentBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	bz, err := json.Marshal(ctx.Env.Block)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	rolebz, err := asmem.ReadMemFromPtr(callframe, params[0])
@@ -753,6 +768,24 @@ func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+func ed25519PubToHex(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	pubkeybz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	pubKey := ed25519.PubKey(pubkeybz)
+	hexAddr := pubKey.Address()
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hexAddr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 // addr_canonicalize(string) -> ArrayBuffer;
 func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
@@ -911,6 +944,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("finish", wasmedge.NewFunction(functype_i32_, wasmxFinish, context, 0))
 	env.AddFunction("revert", wasmedge.NewFunction(functype_i32_, wasmxRevert, context, 0))
 	env.AddFunction("getBlockHash", wasmedge.NewFunction(functype_i32_i32, wasmxGetBlockHash, context, 0))
+	env.AddFunction("getCurrentBlock", wasmedge.NewFunction(functype__i32, wasmxGetCurrentBlock, context, 0))
 	env.AddFunction("getAccount", wasmedge.NewFunction(functype_i32_i32, getAccount, context, 0))
 	env.AddFunction("getBalance", wasmedge.NewFunction(functype_i32_i32, wasmxGetBalance, context, 0))
 	env.AddFunction("call", wasmedge.NewFunction(functype_i32_i32, wasmxCall, context, 0))
@@ -930,6 +964,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("ed25519Sign", wasmedge.NewFunction(functype_i32i32_i32, ed25519Sign, context, 0))
 	env.AddFunction("ed25519Verify", wasmedge.NewFunction(functype_i32i32i32_i32, ed25519Verify, context, 0))
+	env.AddFunction("ed25519PubToHex", wasmedge.NewFunction(functype_i32_i32, ed25519PubToHex, context, 0))
 
 	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
