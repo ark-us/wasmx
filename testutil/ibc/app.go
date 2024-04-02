@@ -18,6 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
@@ -37,6 +38,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	app, genesisState := DefaultTestingAppInit(chainID, index)
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
+	signingInfos := make([]slashingtypes.SigningInfo, 0, len(valSet.Validators))
 
 	bondAmt := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
@@ -89,12 +91,15 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
 
+	slashingGenesis := cosmosmodtypes.DefaultSlashingGenesisState()
+	slashingGenesis.SigningInfos = signingInfos
+
 	// set genesis accounts
 	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(app.AppCodec(), authtypes.DefaultParams(), genAccs)
 	if err != nil {
 		panic(err)
 	}
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis)
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis, *slashingGenesis, *cosmosmodtypes.DefaultDistributionGenesisState())
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation

@@ -84,8 +84,6 @@ import (
 
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-
 	// distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	runtimeservices "github.com/cosmos/cosmos-sdk/runtime/services"
 
@@ -96,8 +94,6 @@ import (
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-
-	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -119,10 +115,6 @@ import (
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-
-	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 
@@ -259,14 +251,15 @@ type App struct {
 
 	// keepers
 	AccountKeeper    *cosmosmodkeeper.KeeperAuth
-	AuthzKeeper      authzkeeper.Keeper
 	CapabilityKeeper *capabilitykeeper.Keeper
 	BankKeeper       *cosmosmodkeeper.KeeperBank
 	StakingKeeper    *cosmosmodkeeper.KeeperStaking
 	GovKeeper        *cosmosmodkeeper.KeeperGov
-	SlashingKeeper   slashingkeeper.Keeper
-	MintKeeper       mintkeeper.Keeper
-	DistrKeeper      distrkeeper.Keeper
+	SlashingKeeper   *cosmosmodkeeper.KeeperSlashing
+	DistrKeeper      *cosmosmodkeeper.KeeperDistribution
+
+	AuthzKeeper authzkeeper.Keeper
+	MintKeeper  mintkeeper.Keeper
 
 	CrisisKeeper          *crisiskeeper.Keeper
 	UpgradeKeeper         *upgradekeeper.Keeper
@@ -420,7 +413,7 @@ func New(
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		// TODO?
 		// app.TransferKeeper,
-		distrkeeper.NewQuerier(app.DistrKeeper),
+		// distrkeeper.NewQuerier(app.DistrKeeper),
 		// app.IBCKeeper.ChannelKeeper,
 		wasmconfig,
 		homePath,
@@ -522,9 +515,38 @@ func New(
 		authcodec.NewBech32Codec(Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 	)
+	app.DistrKeeper = cosmosmodkeeper.NewKeeperDistribution(
+		appCodec,
+		appCodec,
+		keys[cosmosmodtypes.StoreKey], // TODO remove
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		app.AccountKeeper,
+		app.BankKeeper,
+		app.StakingKeeper,
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		// TODO what authority?
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		authtypes.FeeCollectorName,
+		app.interfaceRegistry,
+		authcodec.NewBech32Codec(Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+	)
+	app.SlashingKeeper = cosmosmodkeeper.NewKeeperSlashing(
+		appCodec,
+		appCodec,
+		keys[cosmosmodtypes.StoreKey], // TODO remove
+		app.GetSubspace(cosmosmodtypes.ModuleName),
+		app.StakingKeeper,
+		&app.WasmxKeeper,
+		app.NetworkKeeper,
+		app.actionExecutor,
+		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+	)
+	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, *app.SlashingKeeper, *app.DistrKeeper, app)
 
-	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, app)
-
+	// TODO remove
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[minttypes.StoreKey]),
@@ -532,24 +554,6 @@ func New(
 		app.AccountKeeper,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
-	)
-
-	app.DistrKeeper = distrkeeper.NewKeeper(
-		appCodec,
-		runtime.NewKVStoreService(keys[distrtypes.StoreKey]),
-		app.AccountKeeper,
-		app.BankKeeper,
-		app.StakingKeeper,
-		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
-	)
-
-	app.SlashingKeeper = slashingkeeper.NewKeeper(
-		appCodec,
-		cdc,
-		runtime.NewKVStoreService(keys[slashingtypes.StoreKey]),
-		app.StakingKeeper,
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 
@@ -563,6 +567,7 @@ func New(
 		app.AccountKeeper.AddressCodec(),
 	)
 
+	// TODO remove
 	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuittypes.StoreKey]), authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(), app.AccountKeeper.AddressCodec())
 	app.BaseApp.SetCircuitBreaker(&app.CircuitKeeper)
 
@@ -719,8 +724,6 @@ func New(
 			encodingConfig.TxConfig,
 		),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, minttypes.DefaultInflationCalculationFn, app.GetSubspace(minttypes.ModuleName)),
-		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName), app.interfaceRegistry),
-		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
 		upgrade.NewAppModule(app.UpgradeKeeper, app.AccountKeeper.AddressCodec()),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		params.NewAppModule(app.ParamsKeeper),
@@ -1204,7 +1207,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
-	paramsKeeper.Subspace(slashingtypes.ModuleName)
+	// paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)

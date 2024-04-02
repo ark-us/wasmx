@@ -132,9 +132,11 @@ func (k KeeperStaking) GetAllValidators(goCtx context.Context) (validators []sta
 
 // IsValidatorJailed checks and returns boolean of a validator status jailed or not.
 func (k KeeperStaking) IsValidatorJailed(goCtx context.Context, addr sdk.ConsAddress) (bool, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("KeeperStaking.IsValidatorJailed not implemented")
-	return false, nil
+	validator, err := k.ValidatorByConsAddr(goCtx, addr)
+	if err != nil {
+		return false, err
+	}
+	return validator.IsJailed(), nil
 }
 
 // IterateValidators iterates through the validator set and perform the provided function
@@ -223,8 +225,26 @@ func (k KeeperStaking) Validator(goCtx context.Context, address sdk.ValAddress) 
 // ValidatorByConsAddr gets the validator interface for a particular pubkey
 func (k KeeperStaking) ValidatorByConsAddr(goCtx context.Context, addr sdk.ConsAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("KeeperStaking.ValidatorByConsAddr not implemented")
-	return nil, nil
+	msgbz := []byte(fmt.Sprintf(`{"ValidatorByConsAddr":{"validator_addr":"%s"}}`, addr.String()))
+	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	var validatorsResp stakingtypes.QueryValidatorResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &validatorsResp)
+	if err != nil {
+		return nil, err
+	}
+	return validatorsResp.Validator, nil
 }
 
 // GetAllDelegatorDelegations returns all delegations of a delegator

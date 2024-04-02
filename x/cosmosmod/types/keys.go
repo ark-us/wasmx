@@ -1,5 +1,9 @@
 package types
 
+import (
+	wasmxtypes "mythos/v1/x/wasmx/types"
+)
+
 const (
 	// ModuleName defines the module name
 	ModuleName = "cosmosmod"
@@ -20,3 +24,27 @@ var (
 	KeyParamsPrefix = []byte{paramsPrefix}
 	KeyOtherPrefix  = []byte{otherPrefix}
 )
+
+func BankModuleName() string {
+	return ModuleName + "_" + wasmxtypes.ROLE_BANK
+}
+
+func AuthModuleName() string {
+	return ModuleName + "_" + wasmxtypes.ROLE_AUTH
+}
+
+func GovModuleName() string {
+	return ModuleName + "_" + wasmxtypes.ROLE_GOVERNANCE
+}
+
+func StakingModuleName() string {
+	return ModuleName + "_" + wasmxtypes.ROLE_STAKING
+}
+
+func SlashingModuleName() string {
+	return ModuleName + "_" + wasmxtypes.ROLE_SLASHING
+}
+
+func DistributionModuleName() string {
+	return ModuleName + "_" + wasmxtypes.ROLE_DISTRIBUTION
+}

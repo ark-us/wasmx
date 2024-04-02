@@ -318,26 +318,28 @@ func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.Result
 		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 	}
 
+	var lastCommit cmttypes.Commit
+	err = json.Unmarshal(entry.LastCommit, &lastCommit)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+	}
+	var evidence cmttypes.EvidenceData
+	err = json.Unmarshal(entry.Evidence, &evidence)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+	}
+
 	// TODO fixme
 	blockId := cmttypes.BlockID{
 		Hash:          b.Hash,
 		PartSetHeader: cmttypes.PartSetHeader{Total: 0, Hash: b.Hash[0:3]},
 	}
 
-	lastCommit := cmttypes.Commit{
-		Height:     blockHeight,
-		Round:      b.ProposedLastCommit.Round,
-		BlockID:    blockId,
-		Signatures: make([]cmttypes.CommitSig, 0),
-	}
-
-	evidence := make([]cmttypes.Evidence, 0)
-
 	txs := make([]cmttypes.Tx, len(b.Txs))
 	for i, tx := range b.Txs {
 		txs[i] = cmttypes.Tx(tx)
 	}
-	block := cmttypes.MakeBlock(b.Height, txs, &lastCommit, evidence)
+	block := cmttypes.MakeBlock(b.Height, txs, &lastCommit, evidence.Evidence)
 	block.ChainID = c.bapp.ChainID()
 	block.AppHash = header.AppHash
 	block.ConsensusHash = header.ConsensusHash

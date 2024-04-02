@@ -473,9 +473,9 @@ func InitConsensusContract(
 		// We update the last results hash with the empty hash, to conform with RFC-6962.
 		LastResultsHash:  merkle.HashFromByteSlices(nil),
 		Version:          version,
-		ValidatorAddress: pubKey.Address(),
-		ValidatorPrivKey: privKey.Bytes(),
-		ValidatorPubKey:  pubKey.Bytes(),
+		ValidatorAddress: pubKey.Address(), // hexbytes
+		ValidatorPrivKey: privKey.Bytes(),  // consensus privkey
+		ValidatorPubKey:  pubKey.Bytes(),   // consensus pubkey
 		Peers:            peers,
 	}
 

@@ -16,20 +16,14 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	// ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
@@ -90,32 +84,13 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	require.True(t, ok)
 	// 	return r
 	// }
-	maccPerms := map[string][]string{
-		authtypes.FeeCollectorName:     nil,
-		distrtypes.ModuleName:          nil,
-		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
-	}
-	accountKeeper := authkeeper.NewAccountKeeper(
-		cdc,
-		runtime.NewKVStoreService(storetypes.NewKVStoreKey(authtypes.StoreKey)), // target store
-		// subspace(authtypes.ModuleName),
-		authtypes.ProtoBaseAccount, // prototype
-		maccPerms,
-		authcodec.NewBech32Codec(app.Bech32PrefixAccAddr),
-		app.Bech32PrefixAccAddr,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
-	bankKeeper := bankkeeper.NewBaseKeeper(
-		cdc,
-		runtime.NewKVStoreService(storetypes.NewKVStoreKey(banktypes.StoreKey)),
-		accountKeeper,
-		// subspace(banktypes.ModuleName),
-		make(map[string]bool),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		logger,
-	)
+	// maccPerms := map[string][]string{
+	// 	authtypes.FeeCollectorName:     nil,
+	// 	distrtypes.ModuleName:          nil,
+	// 	stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
+	// 	stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+	// 	ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+	// }
 	// transferKeeper := ibctransferkeeper.NewKeeper(
 	// 	cdc,
 	// 	storetypes.NewKVStoreKey(ibctransfertypes.StoreKey),
@@ -129,26 +104,6 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	nil, //scopedTransferKeeper,
 	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	// )
-	stakingKeeper := stakingkeeper.NewKeeper(
-		cdc,
-		runtime.NewKVStoreService(storetypes.NewKVStoreKey(stakingtypes.StoreKey)),
-		accountKeeper,
-		bankKeeper,
-		// subspace(stakingtypes.ModuleName),
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		authcodec.NewBech32Codec(app.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(app.Bech32PrefixConsAddr),
-	)
-	distrKeeper := distrkeeper.NewKeeper(
-		cdc,
-		runtime.NewKVStoreService(storetypes.NewKVStoreKey(distrtypes.StoreKey)),
-		// subspace(distrtypes.ModuleName),
-		accountKeeper,
-		bankKeeper,
-		stakingKeeper,
-		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	)
 	mapp := app.New(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
 	k := keeper.NewKeeper(
 		g,
@@ -163,7 +118,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		paramsSubspace,
 		// transferKeeper,
 		// stakingKeeper,
-		distrkeeper.NewQuerier(distrKeeper),
+		// distrkeeper.NewQuerier(distrKeeper),
 		// nil,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,

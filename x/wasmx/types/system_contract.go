@@ -54,6 +54,8 @@ var ADDR_CONSENSUS_TENDERMINTP2P = "0x0000000000000000000000000000000000000041"
 var ADDR_CHAT = "0x0000000000000000000000000000000000000042"
 var ADDR_HOOKS_NONC = "0x0000000000000000000000000000000000000043"
 var ADDR_CHAT_VERIFIER = "0x0000000000000000000000000000000000000044"
+var ADDR_SLASHING = "0x0000000000000000000000000000000000000045"
+var ADDR_DISTRIBUTION = "0x0000000000000000000000000000000000000046"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -95,22 +97,20 @@ func DefaultSystemContracts() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
 
-	hookEndBlock := fmt.Sprintf(`{"hook":"%s","modules":["%s"]}`, HOOK_END_BLOCK, ROLE_GOVERNANCE)
-	hookCreateValidator := fmt.Sprintf(`{"hook":"%s","modules":[]}`, HOOK_CREATE_VALIDATOR)
-	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s"],"registrations":[%s,%s]}`,
-		ROLE_HOOKS, ROLE_CONSENSUS, ROLE_GOVERNANCE,
-		hookEndBlock,
-		hookCreateValidator,
-	))})
+	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks message")
+	}
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
 	}
 
-	hookStartNode := fmt.Sprintf(`{"hook":"%s","modules":["%s","%s"]}`, HOOK_START_NODE, ROLE_CONSENSUS, ROLE_CHAT)
-	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s"],"registrations":[%s]}`,
-		ROLE_HOOKS_NONC, ROLE_CONSENSUS,
-		hookStartNode,
-	))})
+	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
+	}
+	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
 	}
@@ -318,6 +318,24 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: bankInitMsg,
 			Pinned:      false,
 			Role:        ROLE_BANK,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_SLASHING,
+			Label:       SLASHING_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_SLASHING,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_DISTRIBUTION,
+			Label:       DISTRIBUTION_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_DISTRIBUTION,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

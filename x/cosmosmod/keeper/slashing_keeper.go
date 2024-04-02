@@ -3,14 +3,12 @@ package keeper
 import (
 	"fmt"
 
-	"cosmossdk.io/core/address"
 	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	networkkeeper "mythos/v1/x/network/keeper"
@@ -19,12 +17,13 @@ import (
 )
 
 type (
-	KeeperAuth struct {
+	KeeperSlashing struct {
 		jsoncdc           codec.JSONCodec
 		cdc               codec.Codec
 		storeKey          storetypes.StoreKey
 		paramstore        paramtypes.Subspace
 		InterfaceRegistry cdctypes.InterfaceRegistry
+		sk                *KeeperStaking
 		WasmxKeeper       types.WasmxKeeper
 		NetworkKeeper     networkkeeper.Keeper
 		actionExecutor    *networkkeeper.ActionExecutor
@@ -35,63 +34,48 @@ type (
 
 		validatorAddressCodec addresscodec.Codec
 		consensusAddressCodec addresscodec.Codec
-		addressCodec          address.Codec
-		permAddrs             map[string]authtypes.PermissionsForAddress
 	}
 )
 
-func NewKeeperAuth(
+func NewKeeperSlashing(
 	jsoncdc codec.JSONCodec,
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
+	sk *KeeperStaking,
 	wasmxKeeper types.WasmxKeeper,
 	networkKeeper networkkeeper.Keeper,
 	actionExecutor *networkkeeper.ActionExecutor,
 	authority string,
-	interfaceRegistry cdctypes.InterfaceRegistry,
-	validatorAddressCodec addresscodec.Codec,
-	consensusAddressCodec addresscodec.Codec,
-	addressCodec address.Codec,
-	maccPerms map[string][]string,
-) *KeeperAuth {
+) *KeeperSlashing {
 	// set KeyTable if it has not already been set
 	if !ps.HasKeyTable() {
 		ps = ps.WithKeyTable(types.ParamKeyTable())
 	}
 
-	permAddrs := make(map[string]authtypes.PermissionsForAddress)
-	for name, perms := range maccPerms {
-		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
-	}
-
-	keeper := &KeeperAuth{
-		jsoncdc:               jsoncdc,
-		cdc:                   cdc,
-		storeKey:              storeKey,
-		paramstore:            ps,
-		WasmxKeeper:           wasmxKeeper,
-		NetworkKeeper:         networkKeeper,
-		actionExecutor:        actionExecutor,
-		authority:             authority,
-		InterfaceRegistry:     interfaceRegistry,
-		validatorAddressCodec: validatorAddressCodec,
-		consensusAddressCodec: consensusAddressCodec,
-		addressCodec:          addressCodec,
-		permAddrs:             permAddrs,
+	keeper := &KeeperSlashing{
+		jsoncdc:        jsoncdc,
+		cdc:            cdc,
+		storeKey:       storeKey,
+		paramstore:     ps,
+		sk:             sk,
+		WasmxKeeper:    wasmxKeeper,
+		NetworkKeeper:  networkKeeper,
+		actionExecutor: actionExecutor,
+		authority:      authority,
 	}
 	return keeper
 }
 
-func (k *KeeperAuth) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.AuthModuleName()))
+func (k *KeeperSlashing) Logger(ctx sdk.Context) log.Logger {
+	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.SlashingModuleName()))
 }
 
 // GetAuthority returns the module's authority.
-func (k *KeeperAuth) GetAuthority() string {
+func (k *KeeperSlashing) GetAuthority() string {
 	return k.authority
 }
 
-func (k *KeeperAuth) JSONCodec() codec.JSONCodec {
+func (k *KeeperSlashing) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
 }

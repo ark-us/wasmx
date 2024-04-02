@@ -11,19 +11,23 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState, auth AuthGenesisState) *GenesisState {
+func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState, auth AuthGenesisState, slashing slashingtypes.GenesisState, distrib distributiontypes.GenesisState) *GenesisState {
 	return &GenesisState{
-		Staking: staking,
-		Bank:    bank,
-		Gov:     gov,
-		Auth:    auth,
+		Staking:      staking,
+		Bank:         bank,
+		Gov:          gov,
+		Auth:         auth,
+		Slashing:     slashing,
+		Distribution: distrib,
 	}
 }
 
@@ -52,6 +56,40 @@ func NewAuthGenesisState(params authtypes.Params, accounts []*AnyAccount) *AuthG
 	return &AuthGenesisState{
 		Params:   params,
 		Accounts: accounts,
+	}
+}
+
+// NewSlashingGenesisState returns a default staking module genesis state.
+func NewSlashingGenesisState(params slashingtypes.Params, signingInfos []slashingtypes.SigningInfo, missedBlocks []slashingtypes.ValidatorMissedBlocks) *slashingtypes.GenesisState {
+	return &slashingtypes.GenesisState{
+		Params:       params,
+		SigningInfos: signingInfos,
+		MissedBlocks: missedBlocks,
+	}
+}
+
+// NewDistributingGenesisState returns a default staking module genesis state.
+func NewDistributingGenesisState(
+	params distributiontypes.Params,
+	feePool distributiontypes.FeePool,
+	delegatorWithdrawInfos []distributiontypes.DelegatorWithdrawInfo,
+	previousProposer string,
+	outstandingRewards []distributiontypes.ValidatorOutstandingRewardsRecord,
+	validatorAccumulatedCommissions []distributiontypes.ValidatorAccumulatedCommissionRecord,
+	validatorCurrentRewards []distributiontypes.ValidatorCurrentRewardsRecord,
+	delegatorStartingInfos []distributiontypes.DelegatorStartingInfoRecord,
+	validatorSlashEvents []distributiontypes.ValidatorSlashEventRecord,
+) *distributiontypes.GenesisState {
+	return &distributiontypes.GenesisState{
+		Params:                          params,
+		FeePool:                         feePool,
+		DelegatorWithdrawInfos:          delegatorWithdrawInfos,
+		PreviousProposer:                previousProposer,
+		OutstandingRewards:              outstandingRewards,
+		ValidatorAccumulatedCommissions: validatorAccumulatedCommissions,
+		ValidatorCurrentRewards:         validatorCurrentRewards,
+		DelegatorStartingInfos:          delegatorStartingInfos,
+		ValidatorSlashEvents:            validatorSlashEvents,
 	}
 }
 
@@ -192,6 +230,16 @@ func DefaultGovGenesisState() *GovGenesisState {
 		Params:             CosmosParamsToInternal(govstate.Params),
 		Constitution:       govstate.Constitution,
 	}
+}
+
+// DefaultSlashingGenesisState returns a default bank module genesis state.
+func DefaultSlashingGenesisState() *slashingtypes.GenesisState {
+	return slashingtypes.DefaultGenesisState()
+}
+
+// DefaultDistributionGenesisState returns a default bank module genesis state.
+func DefaultDistributionGenesisState() *distributiontypes.GenesisState {
+	return distributiontypes.DefaultGenesisState()
 }
 
 // DefaultAuthGenesisState returns a default bank module genesis state.

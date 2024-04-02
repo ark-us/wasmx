@@ -18,8 +18,6 @@ import (
 
 	//nolint
 
-	"github.com/ethereum/go-ethereum/common"
-
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -34,7 +32,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/go-bip39"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -175,7 +172,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 	senderPrivKey := secp256k1.GenPrivKey()
 	acc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), senderPrivKey.PubKey(), 0, 0)
 
-	senderAddress := common.BytesToAddress(senderPrivKey.PubKey().Address().Bytes())
+	// senderAddress := common.BytesToAddress(senderPrivKey.PubKey().Address().Bytes())
 
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
@@ -184,6 +181,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 		Coins:   sdk.NewCoins(sdk.NewCoin(app.BaseDenom, amount)),
 	}
 
+	valOperatorAddress := sdk.ValAddress(validator.Address)
 	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainId, 0, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
@@ -234,38 +232,24 @@ func (suite *KeeperTestSuite) SetupApp() {
 	ctx := chain.GetContext()
 	mapp.AccountKeeper.SetAccount(ctx, acc)
 
-	valAddrCodec := txConfig.SigningContext().ValidatorAddressCodec()
-	valAddr := sdk.ValAddress(senderAddress.Bytes())
-	valStr, err := valAddrCodec.BytesToString(valAddr)
-	require.NoError(t, err)
-	_validator, err := stakingtypes.NewValidator(valStr, senderPrivKey.PubKey(), stakingtypes.Description{})
-	require.NoError(t, err)
-	// TODO
-	// _validator = stakingkeeper.TestingUpdateValidator(mapp.StakingKeeper, ctx, _validator, true)
-	// mapp.StakingKeeper.Hooks().AfterValidatorCreated(ctx, valAddr)
-
-	err = mapp.StakingKeeper.SetValidatorByConsAddr(ctx, _validator)
-	require.NoError(t, err)
-	mapp.StakingKeeper.SetValidator(ctx, _validator)
-
 	_, err = mapp.Commit()
 	require.NoError(t, err)
 
 	suite.chain = chain
-	err = suite.InitConsensusContract(resInit, pubKey, privVal.PrivKey)
+	err = suite.InitConsensusContract(resInit, pubKey, privVal.PrivKey, valOperatorAddress)
 	require.NoError(t, err)
 }
 
-func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, pubKey crypto.PubKey, privKey networkkeeper.PrivKey) error {
+func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, pubKey crypto.PubKey, privKey networkkeeper.PrivKey, valOperatorAddress sdk.ValAddress) error {
 	res, err := suite.App().Info(networkkeeper.RequestInfo)
 	if err != nil {
 		return fmt.Errorf("error calling Info: %v", err)
 	}
-	vals, err := cmttypes.PB2TM.ValidatorUpdates(resInit.Validators)
-	if err != nil {
-		return err
-	}
-
+	// vals, err := cmttypes.PB2TM.ValidatorUpdates(resInit.Validators)
+	// if err != nil {
+	// 	return err
+	// }
+	// valOperatorAddress := sdk.AccAddress(vals[0].PubKey.Bytes())
 	consensusParams := cmttypes.ConsensusParamsFromProto(*app.DefaultTestingConsensusParams)
 	if resInit.ConsensusParams != nil {
 		consensusParams = consensusParams.Update(resInit.ConsensusParams)
@@ -274,14 +258,13 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	cfgNetwork := networkconfig.DefaultNetworkConfigConfig()
 	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper(), suite.App().BaseApp)
 
-	addr := sdk.AccAddress(vals[0].PubKey.Bytes())
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 
 	peers := []string{}
 	if strings.Contains(currentState, "RAFT-FULL") {
-		peers = []string{fmt.Sprintf(`%s@localhost:8090`, addr.String())}
+		peers = []string{fmt.Sprintf(`%s@localhost:8090`, valOperatorAddress.String())}
 	} else if strings.Contains(currentState, "-P2P") {
-		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, addr.String())}
+		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valOperatorAddress.String())}
 	}
 	err = networkkeeper.InitConsensusContract(
 		suite.App(),
@@ -519,6 +502,19 @@ func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.Res
 	if err != nil {
 		return nil, err
 	}
+
+	var header cmttypes.Header
+	err = json.Unmarshal(entry.Header, &header)
+	if err != nil {
+		return nil, err
+	}
+
+	var lastCommit cmttypes.Commit
+	err = json.Unmarshal(entry.LastCommit, &lastCommit)
+	if err != nil {
+		return nil, err
+	}
+
 	return &blockResultData, nil
 }
 

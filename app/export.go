@@ -123,48 +123,52 @@ func (app *App) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []str
 
 	// reinitialize all validators
 	err = app.StakingKeeper.IterateValidators(ctx, func(_ int64, val stakingtypes.ValidatorI) (stop bool) {
-		valBz, err := app.StakingKeeper.ValidatorAddressCodec().StringToBytes(val.GetOperator())
-		if err != nil {
-			panic(err)
-		}
-		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
-		scraps, err := app.DistrKeeper.GetValidatorOutstandingRewardsCoins(ctx, valBz)
-		if err != nil {
-			panic(err)
-		}
-		feePool, err := app.DistrKeeper.FeePool.Get(ctx)
-		if err != nil {
-			panic(err)
-		}
-		feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
-		if err := app.DistrKeeper.FeePool.Set(ctx, feePool); err != nil {
-			panic(err)
-		}
+		// TODO
+		// valBz, err := app.StakingKeeper.ValidatorAddressCodec().StringToBytes(val.GetOperator())
+		// if err != nil {
+		// 	panic(err)
+		// }
 
-		if err := app.DistrKeeper.Hooks().AfterValidatorCreated(ctx, valBz); err != nil {
-			panic(err)
-		}
+		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
+		// scraps, err := app.DistrKeeper.GetValidatorOutstandingRewardsCoins(ctx, valBz)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// feePool, err := app.DistrKeeper.FeePool.Get(ctx)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
+		// if err := app.DistrKeeper.FeePool.Set(ctx, feePool); err != nil {
+		// 	panic(err)
+		// }
+
+		// TODO export should be done from a contract
+		// if err := app.DistrKeeper.Hooks().AfterValidatorCreated(ctx, valBz); err != nil {
+		// 	panic(err)
+		// }
 		return false
 	})
 
-	// reinitialize all delegations
-	for _, del := range dels {
-		valAddr, err := sdk.ValAddressFromBech32(del.ValidatorAddress)
-		if err != nil {
-			panic(err)
-		}
-		delAddr := sdk.MustAccAddressFromBech32(del.DelegatorAddress)
+	// TODO
+	// // reinitialize all delegations
+	// for _, del := range dels {
+	// 	valAddr, err := sdk.ValAddressFromBech32(del.ValidatorAddress)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	delAddr := sdk.MustAccAddressFromBech32(del.DelegatorAddress)
 
-		if err := app.DistrKeeper.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr); err != nil {
-			// never called as BeforeDelegationCreated always returns nil
-			panic(fmt.Errorf("error while incrementing period: %w", err))
-		}
+	// 	if err := app.DistrKeeper.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr); err != nil {
+	// 		// never called as BeforeDelegationCreated always returns nil
+	// 		panic(fmt.Errorf("error while incrementing period: %w", err))
+	// 	}
 
-		if err := app.DistrKeeper.Hooks().AfterDelegationModified(ctx, delAddr, valAddr); err != nil {
-			// never called as AfterDelegationModified always returns nil
-			panic(fmt.Errorf("error while creating a new delegation period record: %w", err))
-		}
-	}
+	// 	if err := app.DistrKeeper.Hooks().AfterDelegationModified(ctx, delAddr, valAddr); err != nil {
+	// 		// never called as AfterDelegationModified always returns nil
+	// 		panic(fmt.Errorf("error while creating a new delegation period record: %w", err))
+	// 	}
+	// }
 
 	// reset context height
 	ctx = ctx.WithBlockHeight(height)

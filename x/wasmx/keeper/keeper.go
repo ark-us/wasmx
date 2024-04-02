@@ -73,9 +73,10 @@ func NewKeeper(
 	metaConsKey storetypes.StoreKey,
 	singleConsKey storetypes.StoreKey,
 	ps paramtypes.Subspace,
+	// TODO
 	// portSource cw8types.ICS20TransferPortSource,
 	// stakingKeeper types.StakingKeeper,
-	distrKeeper types.DistributionKeeper,
+	// distrKeeper types.DistributionKeeper,
 	// channelKeeper types.ChannelKeeper,
 	wasmConfig types.WasmConfig,
 	homeDir string,
