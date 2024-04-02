@@ -26,9 +26,15 @@ func InitGenesis(ctx sdk.Context, bank keeper.KeeperBank, gov keeper.KeeperGov, 
 	InitGenesisBank(ctx, bank, genState.Bank)
 	InitGenesisGov(ctx, gov, genState.Gov)
 	InitGenesisAuth(ctx, auth, genState.Auth)
-	updates := InitGenesisStaking(ctx, staking, genState.Staking)
+
+	// we instantiate slashing before staking because we currently run
+	// some actions from ApplyAndReturnValidatorSetUpdates
+	// in staking genesis init, which calls slashing hooks
 	InitGenesisSlashing(ctx, slashing, genState.Slashing)
 	InitGenesisDistribution(ctx, distribution, genState.Distribution)
+
+	updates := InitGenesisStaking(ctx, staking, genState.Staking)
+
 	return updates
 }
 

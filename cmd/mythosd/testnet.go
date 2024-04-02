@@ -474,6 +474,8 @@ func initTestnetFilesInternal(
 		}
 
 		if args.p2p {
+			valStr := addr.String()
+
 			privValid := pvm.LoadOrGenFilePV(nodeConfig.PrivValidatorKeyFile(), nodeConfig.PrivValidatorStateFile())
 			pk := privValid.Key.PrivKey.Bytes()
 			pkcrypto, err := crypto.UnmarshalEd25519PrivateKey(pk)
@@ -496,7 +498,7 @@ func initTestnetFilesInternal(
 					return err
 				}
 				p2pid := node.ID()
-				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", addr.String(), parts[0], parts[1], p2pid)
+				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr, parts[0], parts[1], p2pid)
 			} else {
 				ipaddr := nodeIPs[i]
 				ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
@@ -509,7 +511,7 @@ func initTestnetFilesInternal(
 					return err
 				}
 				p2pid := node.ID()
-				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", addr.String(), nodeIPs[i], p2pPort, p2pid)
+				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr, nodeIPs[i], p2pPort, p2pid)
 			}
 		}
 
