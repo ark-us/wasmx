@@ -69,8 +69,6 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 		}
 		// (genAccs[0].GetAddress().String(), valAddr, sdkmath.LegacyOneDec())
 		delegations = append(delegations, delegation)
-
-		vaddr := sdk.ConsAddress(pk.Address())
 	}
 
 	// set validators and delegations
