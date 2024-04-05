@@ -137,7 +137,9 @@ func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState types.AuthGe
 	if err != nil {
 		panic(err)
 	}
+	// this should just create the feecollector account
 	k.GetModuleAccount(ctx, authtypes.FeeCollectorName)
+
 	k.Logger(ctx).Info("initialized auth genesis")
 }
 

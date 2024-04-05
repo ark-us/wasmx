@@ -29,54 +29,45 @@ func (k QuerierDistribution) Params(goCtx context.Context, req *distributiontype
 
 func (k QuerierDistribution) ValidatorDistributionInfo(goCtx context.Context, req *distributiontypes.QueryValidatorDistributionInfoRequest) (*distributiontypes.QueryValidatorDistributionInfoResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.ValidatorDistributionInfo not implemented")
-	return nil, nil
+	return k.Keeper.ValidatorDistributionInfo(ctx, req)
 }
 
 func (k QuerierDistribution) ValidatorOutstandingRewards(goCtx context.Context, req *distributiontypes.QueryValidatorOutstandingRewardsRequest) (*distributiontypes.QueryValidatorOutstandingRewardsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.ValidatorOutstandingRewards not implemented")
-	return nil, nil
+	return k.Keeper.ValidatorOutstandingRewards(ctx, req)
 }
 
 func (k QuerierDistribution) ValidatorCommission(goCtx context.Context, req *distributiontypes.QueryValidatorCommissionRequest) (*distributiontypes.QueryValidatorCommissionResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.ValidatorCommission not implemented")
-	return nil, nil
+	return k.Keeper.ValidatorCommission(ctx, req)
 }
 
 func (k QuerierDistribution) ValidatorSlashes(goCtx context.Context, req *distributiontypes.QueryValidatorSlashesRequest) (*distributiontypes.QueryValidatorSlashesResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.ValidatorSlashes not implemented")
-	return nil, nil
+	return k.Keeper.ValidatorSlashes(ctx, req)
 }
 
 func (k QuerierDistribution) DelegationRewards(goCtx context.Context, req *distributiontypes.QueryDelegationRewardsRequest) (*distributiontypes.QueryDelegationRewardsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.DelegationRewards not implemented")
-	return nil, nil
+	return k.Keeper.DelegationRewards(ctx, req)
 }
 
 func (k QuerierDistribution) DelegationTotalRewards(goCtx context.Context, req *distributiontypes.QueryDelegationTotalRewardsRequest) (*distributiontypes.QueryDelegationTotalRewardsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.DelegationTotalRewards not implemented")
-	return nil, nil
+	return k.Keeper.DelegationTotalRewards(ctx, req)
 }
 
 func (k QuerierDistribution) DelegatorValidators(goCtx context.Context, req *distributiontypes.QueryDelegatorValidatorsRequest) (*distributiontypes.QueryDelegatorValidatorsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.DelegatorValidators not implemented")
-	return nil, nil
+	return k.Keeper.DelegatorValidators(ctx, req)
 }
 
 func (k QuerierDistribution) DelegatorWithdrawAddress(goCtx context.Context, req *distributiontypes.QueryDelegatorWithdrawAddressRequest) (*distributiontypes.QueryDelegatorWithdrawAddressResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.DelegatorWithdrawAddress not implemented")
-	return nil, nil
+	return k.Keeper.DelegatorWithdrawAddress(ctx, req)
 }
 
 func (k QuerierDistribution) CommunityPool(goCtx context.Context, req *distributiontypes.QueryCommunityPoolRequest) (*distributiontypes.QueryCommunityPoolResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Debug("KeeperDistribution.CommunityPool not implemented")
-	return nil, nil
+	return k.Keeper.CommunityPool(ctx, req)
 }

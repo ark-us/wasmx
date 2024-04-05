@@ -84,13 +84,17 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	require.True(t, ok)
 	// 	return r
 	// }
-	// maccPerms := map[string][]string{
-	// 	authtypes.FeeCollectorName:     nil,
-	// 	distrtypes.ModuleName:          nil,
-	// 	stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
-	// 	stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
-	// 	ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
-	// }
+	maccPerms := map[string][]string{
+		authtypes.FeeCollectorName:     nil,
+		distrtypes.ModuleName:          nil,
+		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
+	}
+	permAddrs := make(map[string]authtypes.PermissionsForAddress)
+	for name, perms := range maccPerms {
+		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
+	}
 	// transferKeeper := ibctransferkeeper.NewKeeper(
 	// 	cdc,
 	// 	storetypes.NewKVStoreKey(ibctransfertypes.StoreKey),
@@ -123,6 +127,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
 		app.BaseDenom,
+		permAddrs,
 		app.MakeEncodingConfig().InterfaceRegistry,
 		nil,
 		nil,

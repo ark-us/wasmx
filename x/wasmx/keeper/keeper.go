@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	cw8 "mythos/v1/x/wasmx/cw8"
@@ -50,6 +51,7 @@ type (
 		queryGasLimit uint64
 		gasRegister   GasRegister
 		denom         string
+		permAddrs     map[string]authtypes.PermissionsForAddress
 
 		wasmvm  *WasmxEngine
 		tempDir string
@@ -81,6 +83,7 @@ func NewKeeper(
 	wasmConfig types.WasmConfig,
 	homeDir string,
 	denom string,
+	permAddrs map[string]authtypes.PermissionsForAddress,
 	interfaceRegistry cdctypes.InterfaceRegistry,
 	msgRouter *baseapp.MsgServiceRouter,
 	grpcQueryRouter *baseapp.GRPCQueryRouter,
@@ -148,6 +151,7 @@ func NewKeeper(
 		msgRouter:         msgRouter,
 		grpcQueryRouter:   grpcQueryRouter,
 		denom:             denom,
+		permAddrs:         permAddrs,
 
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		gasRegister:   NewDefaultWasmGasRegister(),

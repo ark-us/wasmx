@@ -148,7 +148,17 @@ func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.Acc
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
 func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
-	return h.Keeper.GetAddressOrRole(ctx, addressOrRole)
+	addr, err := h.Keeper.GetAddressOrRole(ctx, addressOrRole)
+	if err == nil {
+		return addr, nil
+	}
+	// TODO we need this for the feeCollector
+	// this should be replaced with a wasmx-alias contract
+	acc, found := h.Keeper.permAddrs[addressOrRole]
+	if found {
+		return acc.GetAddress(), nil
+	}
+	return nil, err
 }
 func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string {
 	return h.Keeper.GetRoleByContractAddress(ctx, addr)

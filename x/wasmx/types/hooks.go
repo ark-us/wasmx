@@ -38,7 +38,7 @@ var DEFAULT_HOOKS = []Hook{
 	Hook{
 		Name:          HOOK_END_BLOCK,
 		SourceModule:  ROLE_CONSENSUS,
-		TargetModules: []string{ROLE_GOVERNANCE},
+		TargetModules: []string{ROLE_GOVERNANCE, ROLE_DISTRIBUTION},
 	},
 	Hook{
 		Name:          HOOK_CREATE_VALIDATOR,

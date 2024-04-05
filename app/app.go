@@ -352,6 +352,12 @@ func New(
 		panic(err)
 	}
 
+	// TODO replace NewPermissionsForAddress with address by role
+	permAddrs := make(map[string]authtypes.PermissionsForAddress)
+	for name, perms := range maccPerms {
+		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
+	}
+
 	app := &App{
 		BaseApp:           bApp,
 		cdc:               cdc,
@@ -418,6 +424,7 @@ func New(
 		wasmconfig,
 		homePath,
 		BaseDenom,
+		permAddrs,
 		app.interfaceRegistry,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
@@ -457,7 +464,7 @@ func New(
 		authcodec.NewBech32Codec(Bech32PrefixValAddr),
 		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
 		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
-		maccPerms,
+		permAddrs,
 
 		// authtypes.ProtoBaseAccount,
 		// runtime.NewKVStoreService(keys[authtypes.StoreKey]),
@@ -527,6 +534,7 @@ func New(
 		app.NetworkKeeper,
 		app.actionExecutor,
 		// TODO what authority?
+		// TODO we have addressByRole now
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		authtypes.FeeCollectorName,
 		app.interfaceRegistry,

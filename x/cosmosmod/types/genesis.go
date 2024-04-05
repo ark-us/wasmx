@@ -157,7 +157,7 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 			},
 			CodeId:  uint64(erc20jsonCodeId),
 			Admins:  []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_GOVERNANCE},
-			Minters: []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_GOVERNANCE},
+			Minters: []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_GOVERNANCE, wasmxtypes.ROLE_DISTRIBUTION},
 		},
 		{
 			Metadata: banktypes.Metadata{
@@ -184,6 +184,32 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 			CodeId:  uint64(derc20jsonCodeId),
 			Admins:  []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
 			Minters: []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+		},
+		{
+			Metadata: banktypes.Metadata{
+				Description: "rewards token",
+				DenomUnits: []*banktypes.DenomUnit{
+					{
+						Denom:    fmt.Sprintf("r%s", denomUnit),
+						Exponent: baseDenomUnit,
+						Aliases:  []string{},
+					},
+					{
+						Denom:    fmt.Sprintf("ar%s", denomUnit),
+						Exponent: 1,
+						Aliases:  []string{},
+					},
+				},
+				Base:    fmt.Sprintf("ar%s", denomUnit),
+				Display: strings.ToUpper(fmt.Sprintf("r%s", denomUnit)),
+				Name:    strings.ToUpper(fmt.Sprintf("r%s", denomUnit)),
+				Symbol:  fmt.Sprintf("r%s", denomUnit),
+				URI:     "",
+				URIHash: "",
+			},
+			CodeId:  uint64(erc20jsonCodeId),
+			Admins:  []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			Minters: []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
 		},
 		{
 			Metadata: banktypes.Metadata{

@@ -53,16 +53,11 @@ func NewKeeperAuth(
 	validatorAddressCodec addresscodec.Codec,
 	consensusAddressCodec addresscodec.Codec,
 	addressCodec address.Codec,
-	maccPerms map[string][]string,
+	permAddrs map[string]authtypes.PermissionsForAddress,
 ) *KeeperAuth {
 	// set KeyTable if it has not already been set
 	if !ps.HasKeyTable() {
 		ps = ps.WithKeyTable(types.ParamKeyTable())
-	}
-
-	permAddrs := make(map[string]authtypes.PermissionsForAddress)
-	for name, perms := range maccPerms {
-		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
 	}
 
 	keeper := &KeeperAuth{

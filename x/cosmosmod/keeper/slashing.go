@@ -50,24 +50,7 @@ func (k KeeperSlashing) Params(ctx sdk.Context) (*slashingtypes.Params, error) {
 }
 
 func (k KeeperSlashing) SigningInfo(ctx sdk.Context, req *slashingtypes.QuerySigningInfoRequest) (*slashingtypes.ValidatorSigningInfo, error) {
-	msgbz, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	msgbz2 := []byte(fmt.Sprintf(`{"SigningInfo":%s}`, string(msgbz)))
-	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
-		Sender:   wasmxtypes.ROLE_SLASHING,
-		Contract: wasmxtypes.ROLE_SLASHING,
-		Msg:      msgbz2,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(res1.Data, &resp)
-	if err != nil {
-		return nil, err
-	}
+	resp, err := k.ContractModuleCall(ctx, "SigningInfo", req)
 	var cresp slashingtypes.QuerySigningInfoResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -77,24 +60,7 @@ func (k KeeperSlashing) SigningInfo(ctx sdk.Context, req *slashingtypes.QuerySig
 }
 
 func (k KeeperSlashing) SigningInfos(ctx sdk.Context, req *slashingtypes.QuerySigningInfosRequest) (*slashingtypes.QuerySigningInfosResponse, error) {
-	msgbz, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	msgbz2 := []byte(fmt.Sprintf(`{"SigningInfos":%s}`, string(msgbz)))
-	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
-		Sender:   wasmxtypes.ROLE_SLASHING,
-		Contract: wasmxtypes.ROLE_SLASHING,
-		Msg:      msgbz2,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(res1.Data, &resp)
-	if err != nil {
-		return nil, err
-	}
+	resp, err := k.ContractModuleCall(ctx, "SigningInfos", req)
 	var cresp slashingtypes.QuerySigningInfosResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -179,4 +145,26 @@ func (k KeeperSlashing) SetValidatorSigningInfo(goCtx context.Context, address s
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Debug("KeeperSlashing.SetValidatorSigningInfo not implemented")
 	return nil
+}
+
+func (k KeeperSlashing) ContractModuleCall(ctx sdk.Context, fname string, req interface{}) (*wasmxtypes.ContractResponse, error) {
+	msgbz, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz2 := []byte(fmt.Sprintf(`{"%s":%s}`, fname, string(msgbz)))
+	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_SLASHING,
+		Contract: wasmxtypes.ROLE_SLASHING,
+		Msg:      msgbz2,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

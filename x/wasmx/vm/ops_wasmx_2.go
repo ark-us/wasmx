@@ -768,6 +768,7 @@ func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+// TODO replace this with sha256.Sum256(bz)[:20]
 func ed25519PubToHex(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	pubkeybz, err := asmem.ReadMemFromPtr(callframe, params[0])
