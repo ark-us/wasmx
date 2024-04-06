@@ -25,6 +25,8 @@ func BuildWasmxConsensusJson1Mock(context *Context) *wasmedge.Module {
 	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, MockPrepareProposal, context, 0))
 	env.AddFunction("ProcessProposal", wasmedge.NewFunction(functype_i32_i32, MockProcessProposal, context, 0))
 	env.AddFunction("FinalizeBlock", wasmedge.NewFunction(functype_i32_i32, MockFinalizeBlock, context, 0))
+	env.AddFunction("BeginBlock", wasmedge.NewFunction(functype_i32_i32, MockFinalizeBlock, context, 0))
+	env.AddFunction("EndBlock", wasmedge.NewFunction(functype_i32_i32, MockFinalizeBlock, context, 0))
 	env.AddFunction("Commit", wasmedge.NewFunction(functype__i32, MockCommit, context, 0))
 	env.AddFunction("RollbackToVersion", wasmedge.NewFunction(functype_i64_i32, MockRollbackToVersion, context, 0))
 

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -996,17 +997,46 @@ func (app *App) setPostHandler() {
 func (app *App) Name() string { return app.BaseApp.Name() }
 
 // PreBlocker application updates every pre block
-func (app *App) PreBlocker(ctx sdk.Context, _ *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
+func (app *App) PreBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*sdk.ResponsePreBlock, error) {
 	return app.mm.PreBlock(ctx)
 }
 
 // BeginBlocker application updates every begin block
-func (app *App) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
+func (app *App) BeginBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (sdk.BeginBlock, error) {
+	if app.LastBlockHeight() > 1 {
+		reqbz, err := json.Marshal(req)
+		if err != nil {
+			return sdk.BeginBlock{}, fmt.Errorf("BeginBlocker cannot marshal RequestFinalizeBlock: %s", err.Error())
+		}
+		reqbas64 := base64.StdEncoding.EncodeToString(reqbz)
+		msgbz := []byte(fmt.Sprintf(`{"RunHook":{"hook":"BeginBlock","data":"%s"}}`, reqbas64))
+		_, err = app.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+			Sender:   wasmxmoduletypes.ROLE_CONSENSUS, // TODO role baseapp ?
+			Contract: wasmxmoduletypes.ROLE_HOOKS,
+			Msg:      msgbz,
+		})
+		if err != nil {
+			return sdk.BeginBlock{}, fmt.Errorf("BeginBlock wasmx call failed: %s", err.Error())
+		}
+	}
 	return app.mm.BeginBlock(ctx)
 }
 
 // EndBlocker application updates every end block
-func (app *App) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
+func (app *App) EndBlocker(ctx sdk.Context, metadata []byte) (sdk.EndBlock, error) {
+	// only first block
+	if app.LastBlockHeight() > 1 {
+		metabase64 := base64.StdEncoding.EncodeToString(metadata)
+		msgbz := []byte(fmt.Sprintf(`{"RunHook":{"hook":"EndBlock","data":"%s"}}`, metabase64))
+		_, err := app.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+			Sender:   wasmxmoduletypes.ROLE_CONSENSUS, // TODO role baseapp ?
+			Contract: wasmxmoduletypes.ROLE_HOOKS,
+			Msg:      msgbz,
+		})
+		if err != nil {
+			return sdk.EndBlock{}, fmt.Errorf("EndBlock wasmx call failed: %s", err.Error())
+		}
+	}
 	return app.mm.EndBlock(ctx)
 }
 
