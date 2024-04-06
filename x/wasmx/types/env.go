@@ -3,9 +3,7 @@ package types
 import (
 	bytes "bytes"
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -143,24 +141,24 @@ type ContractDependency struct {
 	StorageType   ContractStorageType
 }
 
-func (u RawBytes) MarshalJSON() ([]byte, error) {
-	var result string
-	if u == nil {
-		result = "null"
-	} else {
-		result = strings.Join(strings.Fields(fmt.Sprintf("%d", u)), ",")
-	}
-	return []byte(result), nil
-}
+// func (u RawBytes) MarshalJSON() ([]byte, error) {
+// 	var result string
+// 	if u == nil {
+// 		result = "null"
+// 	} else {
+// 		result = strings.Join(strings.Fields(fmt.Sprintf("%d", u)), ",")
+// 	}
+// 	return []byte(result), nil
+// }
 
-func (m ChainInfo) MarshalJSON() ([]byte, error) {
-	var chainId []byte = m.ChainId.FillBytes(make([]byte, 32))
-	return json.Marshal(map[string]interface{}{
-		"denom":       m.Denom,
-		"chainId":     chainId,
-		"chainIdFull": m.ChainIdFull,
-	})
-}
+// func (m ChainInfo) MarshalJSON() ([]byte, error) {
+// 	var chainId []byte = m.ChainId.FillBytes(make([]byte, 32))
+// 	return json.Marshal(map[string]interface{}{
+// 		"denom":       m.Denom,
+// 		"chainId":     chainId,
+// 		"chainIdFull": m.ChainIdFull,
+// 	})
+// }
 
 // func (m *ChainInfo) UnmarshalJSON(data []byte) error {
 // 	var value map[string]interface{}
@@ -176,52 +174,52 @@ func (m ChainInfo) MarshalJSON() ([]byte, error) {
 // 	return nil
 // }
 
-func (m BlockInfo) MarshalJSON() ([]byte, error) {
-	var height []byte = big.NewInt(int64(m.Height)).FillBytes(make([]byte, 32))
-	var timestamp []byte = big.NewInt(int64(m.Timestamp)).FillBytes(make([]byte, 32))
-	var gasLimit []byte = big.NewInt(int64(m.GasLimit)).FillBytes(make([]byte, 32))
-	var proposer []byte = PaddLeftTo32(m.Proposer.Bytes())
-	return json.Marshal(map[string]interface{}{
-		"height":    height,
-		"timestamp": timestamp,
-		"gasLimit":  gasLimit,
-		"hash":      m.Hash,
-		"proposer":  proposer,
-	})
-}
+// func (m BlockInfo) MarshalJSON() ([]byte, error) {
+// 	var height []byte = big.NewInt(int64(m.Height)).FillBytes(make([]byte, 32))
+// 	var timestamp []byte = big.NewInt(int64(m.Timestamp)).FillBytes(make([]byte, 32))
+// 	var gasLimit []byte = big.NewInt(int64(m.GasLimit)).FillBytes(make([]byte, 32))
+// 	var proposer []byte = PaddLeftTo32(m.Proposer.Bytes())
+// 	return json.Marshal(map[string]interface{}{
+// 		"height":    height,
+// 		"timestamp": timestamp,
+// 		"gasLimit":  gasLimit,
+// 		"hash":      m.Hash,
+// 		"proposer":  proposer,
+// 	})
+// }
 
-func (m TransactionInfo) MarshalJSON() ([]byte, error) {
-	var gasPrice []byte = m.GasPrice.FillBytes(make([]byte, 32))
-	return json.Marshal(map[string]interface{}{
-		"index":    m.Index,
-		"gasPrice": gasPrice,
-	})
-}
+// func (m TransactionInfo) MarshalJSON() ([]byte, error) {
+// 	var gasPrice []byte = m.GasPrice.FillBytes(make([]byte, 32))
+// 	return json.Marshal(map[string]interface{}{
+// 		"index":    m.Index,
+// 		"gasPrice": gasPrice,
+// 	})
+// }
 
-func (m EnvContractInfo) MarshalJSON() ([]byte, error) {
-	var address []byte = PaddLeftTo32(m.Address.Bytes())
-	return json.Marshal(map[string]interface{}{
-		"address":  address,
-		"codeHash": m.CodeHash,
-		// "bytecode": m.Bytecode,
-		"codeId": m.CodeId,
-		"deps":   m.SystemDeps,
-	})
-}
+// func (m EnvContractInfo) MarshalJSON() ([]byte, error) {
+// 	var address []byte = PaddLeftTo32(m.Address.Bytes())
+// 	return json.Marshal(map[string]interface{}{
+// 		"address":  address,
+// 		"codeHash": m.CodeHash,
+// 		// "bytecode": m.Bytecode,
+// 		"codeId": m.CodeId,
+// 		"deps":   m.SystemDeps,
+// 	})
+// }
 
-func (m MessageInfo) MarshalJSON() ([]byte, error) {
-	var origin []byte = PaddLeftTo32(m.Origin.Bytes())
-	var sender []byte = PaddLeftTo32(m.Sender.Bytes())
-	var funds []byte = m.Funds.FillBytes(make([]byte, 32))
-	var gasLimit []byte = m.GasLimit.FillBytes(make([]byte, 32))
-	return json.Marshal(map[string]interface{}{
-		"origin":   origin,
-		"sender":   sender,
-		"funds":    funds,
-		"gasLimit": gasLimit,
-		"callData": m.CallData,
-	})
-}
+// func (m MessageInfo) MarshalJSON() ([]byte, error) {
+// 	var origin []byte = PaddLeftTo32(m.Origin.Bytes())
+// 	var sender []byte = PaddLeftTo32(m.Sender.Bytes())
+// 	var funds []byte = m.Funds.FillBytes(make([]byte, 32))
+// 	var gasLimit []byte = m.GasLimit.FillBytes(make([]byte, 32))
+// 	return json.Marshal(map[string]interface{}{
+// 		"origin":   origin,
+// 		"sender":   sender,
+// 		"funds":    funds,
+// 		"gasLimit": gasLimit,
+// 		"callData": m.CallData,
+// 	})
+// }
 
 func PaddLeftTo32(data []byte) []byte {
 	length := len(data)

@@ -177,6 +177,8 @@ import (
 
 	wasmxmoduletypes "mythos/v1/x/wasmx/types"
 
+	networktypes "mythos/v1/x/network/types"
+
 	websrvmodule "mythos/v1/x/websrv"
 
 	websrvmodulekeeper "mythos/v1/x/websrv/keeper"
@@ -352,12 +354,6 @@ func New(
 		panic(err)
 	}
 
-	// TODO replace NewPermissionsForAddress with address by role
-	permAddrs := make(map[string]authtypes.PermissionsForAddress)
-	for name, perms := range maccPerms {
-		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
-	}
-
 	app := &App{
 		BaseApp:           bApp,
 		cdc:               cdc,
@@ -371,6 +367,13 @@ func New(
 		goRoutineGroup:    goRoutineGroup,
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
+	}
+
+	// TODO replace NewPermissionsForAddress with address by role
+	permAddrs := make(map[string]authtypes.PermissionsForAddress)
+	for name, perms := range maccPerms {
+		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
+		app.Logger().Info("module address", name, permAddrs[name].GetAddress().String())
 	}
 
 	app.ParamsKeeper = initParamsKeeper(
@@ -795,6 +798,7 @@ func New(
 		group.ModuleName,
 		paramstypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		networktypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
@@ -817,6 +821,7 @@ func New(
 		paramstypes.ModuleName,
 		upgradetypes.ModuleName,
 		wasmxmoduletypes.ModuleName,
+		networktypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers

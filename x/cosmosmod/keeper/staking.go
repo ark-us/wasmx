@@ -83,17 +83,7 @@ func (k KeeperStaking) Delegation(goCtx context.Context, addrDel sdk.AccAddress,
 
 func (k KeeperStaking) DelegationInternal(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (*stakingtypes.QueryDelegationResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msgbz := []byte(fmt.Sprintf(`{"GetDelegation":{"delegator_addr":"%s","validator_addr":"%s"}}`, addrDel.String(), addrVal.String()))
-	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
-		Sender:   wasmxtypes.ROLE_STAKING,
-		Contract: wasmxtypes.ROLE_STAKING,
-		Msg:      msgbz,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(res.Data, &resp)
+	resp, err := k.ContractModuleQuery(ctx, "GetDelegation", &stakingtypes.QueryDelegationRequest{DelegatorAddr: addrDel.String(), ValidatorAddr: addrVal.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -306,8 +296,13 @@ func (k KeeperStaking) UnbondingTime(goCtx context.Context) (time.Duration, erro
 // GetParams gets the x/staking module parameters.
 func (k KeeperStaking) GetParams(goCtx context.Context) (params stakingtypes.Params, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("KeeperStaking.GetParams not implemented")
-	return stakingtypes.Params{}, nil
+	resp, err := k.ContractModuleQuery(ctx, "Params", &stakingtypes.QueryParamsRequest{})
+	var cresp stakingtypes.QueryParamsResponse
+	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
+	if err != nil {
+		return stakingtypes.Params{}, err
+	}
+	return cresp.Params, nil
 }
 
 // IterateBondedValidatorsByPower iterates through the bonded validator set and perform the provided function
@@ -519,4 +514,48 @@ func (k KeeperStaking) GetDERC20Address(ctx sdk.Context) (derc20Address sdk.AccA
 		return nil, err
 	}
 	return qaddrResp.Address, nil
+}
+
+func (k KeeperStaking) ContractModuleQuery(ctx sdk.Context, fname string, req interface{}) (*wasmxtypes.ContractResponse, error) {
+	msgbz, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz2 := []byte(fmt.Sprintf(`{"%s":%s}`, fname, string(msgbz)))
+	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz2,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (k KeeperStaking) ContractModuleExecution(ctx sdk.Context, fname string, req interface{}) (*wasmxtypes.ContractResponse, error) {
+	msgbz, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	msgbz2 := []byte(fmt.Sprintf(`{"%s":%s}`, fname, string(msgbz)))
+	res1, err := k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		Sender:   wasmxtypes.ROLE_STAKING,
+		Contract: wasmxtypes.ROLE_STAKING,
+		Msg:      msgbz2,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(res1.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

@@ -125,7 +125,9 @@ func (k QuerierStaking) Pool(goCtx context.Context, req *stakingtypes.QueryPoolR
 }
 
 func (k QuerierStaking) Params(goCtx context.Context, req *stakingtypes.QueryParamsRequest) (*stakingtypes.QueryParamsResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("QuerierStaking.Params not implemented")
-	return &stakingtypes.QueryParamsResponse{}, nil
+	params, err := k.Keeper.GetParams(goCtx)
+	if err != nil {
+		return nil, err
+	}
+	return &stakingtypes.QueryParamsResponse{Params: params}, nil
 }
