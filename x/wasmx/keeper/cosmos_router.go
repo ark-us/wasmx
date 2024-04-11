@@ -138,7 +138,7 @@ func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, prov
 
 func (h *WasmxCosmosHandler) Execute(contractAddress sdk.AccAddress, sender sdk.AccAddress, execmsg []byte, value *big.Int, deps []string) (res []byte, err error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
-	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps)
+	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps, false)
 }
 
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {

@@ -34,8 +34,11 @@ func Ewasm_wrapper(context interface{}, _ *wasmedge.CallingFrame, params []inter
 }
 
 func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
+	// TODO
+	// wasmedge.SetLogOff()
 	wasmedge.SetLogErrorLevel()
 	// wasmedge.SetLogDebugLevel()
+
 	conf := wasmedge.NewConfigure()
 	// conf.SetStatisticsInstructionCounting(true)
 	// conf.SetStatisticsTimeMeasuring(true)
@@ -230,6 +233,7 @@ func ExecuteWasmInterpreted(
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 	isdebug bool,
+	inBackground bool,
 	app types.Application,
 ) (types.ContractResponse, error) {
 	var err error
@@ -280,11 +284,29 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, err
 	}
 	selfContext.Vm = contractVm
+
 	setExecutionBytecode(context, contractVm, funcName)
 	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
-
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
+
+	if inBackground {
+		err = types.AddBackgroundProcesses(goContextParent, &types.BackgroundProcess{
+			Label:      env.Contract.Address.String(),
+			ContractVm: contractVm,
+			ExecuteHandler: func(funcName_ string) ([]byte, error) {
+				_, err := executeHandler(context, contractVm, funcName_, make([]interface{}, 0))
+				if err != nil {
+					return nil, err
+				}
+				return context.FinishData, nil
+			},
+		})
+		if err != nil {
+			return types.ContractResponse{}, err
+		}
+	}
+
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
@@ -317,6 +339,7 @@ func ExecuteWasm(
 	systemDeps []types.SystemDep,
 	dependencies []types.ContractDependency,
 	isdebug bool,
+	inBackground bool,
 	app types.Application,
 ) (types.ContractResponse, error) {
 	var err error
@@ -386,6 +409,22 @@ func ExecuteWasm(
 	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	if inBackground {
+		err = types.AddBackgroundProcesses(goContextParent, &types.BackgroundProcess{
+			Label:      env.Contract.Address.String(),
+			ContractVm: contractVm,
+			ExecuteHandler: func(funcName_ string) ([]byte, error) {
+				_, err := executeHandler(context, contractVm, funcName_, make([]interface{}, 0))
+				if err != nil {
+					return nil, err
+				}
+				return context.FinishData, nil
+			},
+		})
+		if err != nil {
+			return types.ContractResponse{}, err
+		}
+	}
 
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	if err != nil {

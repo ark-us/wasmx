@@ -59,7 +59,7 @@ func (k *Keeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.
 	if err != nil {
 		return err
 	}
-	_, err = k.execute(ctx, bankAddress, bankAddress, execmsg, nil, nil)
+	_, err = k.execute(ctx, bankAddress, bankAddress, execmsg, nil, nil, false)
 	return err
 }
 

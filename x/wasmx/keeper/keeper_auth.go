@@ -41,7 +41,7 @@ func (k *Keeper) SetAccount(ctx sdk.Context, acc sdk.AccountI) error {
 	if err != nil {
 		return err
 	}
-	_, err = k.execute(ctx, modaddr, modaddr, execmsg, nil, nil)
+	_, err = k.execute(ctx, modaddr, modaddr, execmsg, nil, nil, false)
 	return err
 }
 
@@ -108,7 +108,7 @@ func (k *Keeper) NewAccountWithAddress(ctx sdk.Context, addr sdk.AccAddress) sdk
 	if err != nil {
 		panic(err)
 	}
-	_, err = k.execute(ctx, modaddr, modaddr, execmsg, nil, nil)
+	_, err = k.execute(ctx, modaddr, modaddr, execmsg, nil, nil, false)
 	if err != nil {
 		panic(err)
 	}

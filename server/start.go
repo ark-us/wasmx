@@ -55,6 +55,8 @@ import (
 	networkflags "mythos/v1/x/network/server/flags"
 	networktypes "mythos/v1/x/network/types"
 	networkvm "mythos/v1/x/network/vm"
+
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -222,6 +224,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 		return err
 	}
 
+	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = networkvm.WithP2PEmptyContext(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
@@ -360,6 +363,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	}
 
 	// for network p2p streams
+	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = networkvm.WithP2PEmptyContext(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)

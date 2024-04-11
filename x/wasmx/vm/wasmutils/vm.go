@@ -21,11 +21,11 @@ func InstantiateWasm(contractVm *wasmedge.VM, filePath string, wasmbuffer []byte
 	}
 	err = contractVm.Validate()
 	if err != nil {
-		return sdkerrors.Wrapf(err, "wasm validate failed")
+		return sdkerrors.Wrapf(err, "wasm module VM validate failed")
 	}
 	err = contractVm.Instantiate()
 	if err != nil {
-		return sdkerrors.Wrapf(err, "wasm instantiate failed")
+		return sdkerrors.Wrapf(err, "wasm module VM instantiate failed")
 	}
 	return nil
 }

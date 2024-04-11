@@ -155,7 +155,7 @@ func (k KeeperAuth) SetAccount(goCtx context.Context, acc sdk.AccountI) {
 	if err != nil {
 		panic(err) // TODO eventually catch this
 	}
-	_, err = k.WasmxKeeper.Execute(ctx, modaddr, modaddr, execmsg, nil, nil)
+	_, err = k.WasmxKeeper.Execute(ctx, modaddr, modaddr, execmsg, nil, nil, false)
 	if err != nil {
 		panic(err) // TODO eventually catch this
 	}
@@ -184,7 +184,7 @@ func (k KeeperAuth) NewAccountWithAddress(goCtx context.Context, addr sdk.AccAdd
 	if err != nil {
 		panic(err)
 	}
-	_, err = k.WasmxKeeper.Execute(ctx, modaddr, modaddr, execmsg, nil, nil)
+	_, err = k.WasmxKeeper.Execute(ctx, modaddr, modaddr, execmsg, nil, nil, false)
 	if err != nil {
 		panic(err)
 	}

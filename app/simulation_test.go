@@ -13,6 +13,7 @@ import (
 
 	app "mythos/v1/app"
 	networkvm "mythos/v1/x/network/vm"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 func init() {
@@ -43,6 +44,7 @@ func BenchmarkSimulation(b *testing.B) {
 
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
+	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)

@@ -656,6 +656,37 @@ type StartTimeoutRequest struct {
 	Args     []byte `json:"args"`
 }
 
+type StartBackgroundProcessRequest struct {
+	Contract string `json:"contract"`
+	Args     []byte `json:"args"`
+}
+
+type StartBackgroundProcessResponse struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
+}
+
+type WriteToBackgroundProcessRequest struct {
+	Contract string `json:"contract"`
+	Data     []byte `json:"data"`
+	PtrFunc  string `json:"ptrFunc"`
+}
+
+type WriteToBackgroundProcessResponse struct {
+	Error string `json:"error"`
+}
+
+type ReadFromBackgroundProcessRequest struct {
+	Contract string `json:"contract"`
+	PtrFunc  string `json:"ptrFunc"`
+	LenFunc  string `json:"lenFunc"`
+}
+
+type ReadFromBackgroundProcessResponse struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
+}
+
 // TODO move this to a restricted role
 // startTimeout(req: ArrayBuffer): i32
 func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -688,6 +719,176 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 		return nil, wasmedge.Result_Fail
 	}
 	return returns, wasmedge.Result_Success
+}
+
+// startBackgroundProcess(ArrayBuffer): ArrayBuffer
+func wasmxStartBackgroundProcess(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 0)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StartBackgroundProcessRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	msgtosend := &networktypes.MsgStartBackgroundProcessRequest{
+		Sender:   ctx.Env.Contract.Address.String(), // TODO wasmx?
+		Contract: req.Contract,
+		Args:     req.Args,
+	}
+	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	var resp networktypes.MsgStartBackgroundProcessResponse
+	err = resp.Unmarshal(res)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	return returns, wasmedge.Result_Success
+}
+
+// writeToBackgroundProcess(ArrayBuffer): ArrayBuffer
+func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req WriteToBackgroundProcessRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	resp := WriteToBackgroundProcessResponse{
+		Error: "",
+	}
+
+	contractAddress, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.Contract)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
+	if err != nil {
+		resp.Error = err.Error()
+		ptr, err := prepareResponse(ctx, callframe, &resp)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+		returns[0] = ptr
+		return returns, wasmedge.Result_Success
+	}
+	proc, ok := procc.Processes[contractAddress.String()]
+	if !ok {
+		resp.Error = "process not existent"
+		ptr, err := prepareResponse(ctx, callframe, &resp)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+		returns[0] = ptr
+		return returns, wasmedge.Result_Success
+	}
+
+	mod := proc.ContractVm.GetActiveModule()
+	ptrGlobal := mod.FindGlobal(req.PtrFunc).GetValue()
+	dataptr := uint(ptrGlobal.(int32))
+
+	activeMemory := mod.FindMemory("memory")
+	err = activeMemory.SetData(req.Data, dataptr, uint(len(req.Data)))
+	if err != nil {
+		resp.Error = err.Error()
+	}
+
+	ptr, err := prepareResponse(ctx, callframe, &resp)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+// readFromBackgroundProcess(ArrayBuffer): ArrayBuffer
+func wasmxReadFromBackgroundProcess(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req ReadFromBackgroundProcessRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	resp := ReadFromBackgroundProcessResponse{
+		Data:  []byte{},
+		Error: "",
+	}
+
+	contractAddress, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.Contract)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
+	if err != nil {
+		resp.Error = err.Error()
+		ptr, err := prepareResponse(ctx, callframe, &resp)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+		returns[0] = ptr
+		return returns, wasmedge.Result_Success
+	}
+	proc, ok := procc.Processes[contractAddress.String()]
+	if !ok {
+		resp.Error = "process not existent"
+		ptr, err := prepareResponse(ctx, callframe, &resp)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+		returns[0] = ptr
+		return returns, wasmedge.Result_Success
+	}
+	mod := proc.ContractVm.GetActiveModule()
+	lengthGlobal := mod.FindGlobal(req.LenFunc).GetValue()
+	reslen := uint(lengthGlobal.(int32))
+
+	ptrGlobal := mod.FindGlobal(req.PtrFunc).GetValue()
+	resptr := uint(ptrGlobal.(int32))
+
+	activeMemory := mod.FindMemory("memory")
+	byteArray, err := activeMemory.GetData(resptr, reslen)
+	if err != nil {
+		resp.Error = err.Error()
+	} else {
+		resp.Data = byteArray
+	}
+	ptr, err := prepareResponse(ctx, callframe, &resp)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func prepareResponse(ctx *Context, callframe *wasmedge.CallingFrame, resp interface{}) (int32, error) {
+	respbz, err := json.Marshal(&resp)
+	if err != nil {
+		return 0, nil
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	if err != nil {
+		return 0, err
+	}
+	return ptr, nil
 }
 
 type MerkleSlices struct {
@@ -981,6 +1182,9 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
 	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32_, wasmxStartTimeout, context, 0))
+	env.AddFunction("startBackgroundProcess", wasmedge.NewFunction(functype_i32_, wasmxStartBackgroundProcess, context, 0))
+	env.AddFunction("writeToBackgroundProcess", wasmedge.NewFunction(functype_i32_i32, wasmxWriteToBackgroundProcess, context, 0))
+	env.AddFunction("readFromBackgroundProcess", wasmedge.NewFunction(functype_i32_i32, wasmxReadFromBackgroundProcess, context, 0))
 
 	return env
 }

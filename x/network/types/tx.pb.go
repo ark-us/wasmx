@@ -268,6 +268,85 @@ func (m *MsgStartTimeoutResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MsgStartTimeoutResponse proto.InternalMessageInfo
 
+// MsgStartBackgroundProcessRequest
+type MsgStartBackgroundProcessRequest struct {
+	// this will always be the wasmx module // TODO authority
+	Sender string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
+	// contract address
+	Contract string `protobuf:"bytes,2,opt,name=contract,proto3" json:"contract,omitempty"`
+	Args     []byte `protobuf:"bytes,3,opt,name=args,proto3" json:"args,omitempty"`
+}
+
+func (m *MsgStartBackgroundProcessRequest) Reset()         { *m = MsgStartBackgroundProcessRequest{} }
+func (m *MsgStartBackgroundProcessRequest) String() string { return proto.CompactTextString(m) }
+func (*MsgStartBackgroundProcessRequest) ProtoMessage()    {}
+func (*MsgStartBackgroundProcessRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{6}
+}
+func (m *MsgStartBackgroundProcessRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgStartBackgroundProcessRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgStartBackgroundProcessRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgStartBackgroundProcessRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgStartBackgroundProcessRequest.Merge(m, src)
+}
+func (m *MsgStartBackgroundProcessRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgStartBackgroundProcessRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgStartBackgroundProcessRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgStartBackgroundProcessRequest proto.InternalMessageInfo
+
+// MsgStartBackgroundProcessResponse
+type MsgStartBackgroundProcessResponse struct {
+}
+
+func (m *MsgStartBackgroundProcessResponse) Reset()         { *m = MsgStartBackgroundProcessResponse{} }
+func (m *MsgStartBackgroundProcessResponse) String() string { return proto.CompactTextString(m) }
+func (*MsgStartBackgroundProcessResponse) ProtoMessage()    {}
+func (*MsgStartBackgroundProcessResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a2a856802fa4b5f0, []int{7}
+}
+func (m *MsgStartBackgroundProcessResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgStartBackgroundProcessResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgStartBackgroundProcessResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgStartBackgroundProcessResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgStartBackgroundProcessResponse.Merge(m, src)
+}
+func (m *MsgStartBackgroundProcessResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgStartBackgroundProcessResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgStartBackgroundProcessResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgStartBackgroundProcessResponse proto.InternalMessageInfo
+
 // ExecuteContract
 type MsgExecuteContract struct {
 	// Sender is the that actor that signed the messages
@@ -282,7 +361,7 @@ func (m *MsgExecuteContract) Reset()         { *m = MsgExecuteContract{} }
 func (m *MsgExecuteContract) String() string { return proto.CompactTextString(m) }
 func (*MsgExecuteContract) ProtoMessage()    {}
 func (*MsgExecuteContract) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a2a856802fa4b5f0, []int{6}
+	return fileDescriptor_a2a856802fa4b5f0, []int{8}
 }
 func (m *MsgExecuteContract) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -320,7 +399,7 @@ func (m *MsgExecuteContractResponse) Reset()         { *m = MsgExecuteContractRe
 func (m *MsgExecuteContractResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgExecuteContractResponse) ProtoMessage()    {}
 func (*MsgExecuteContractResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a2a856802fa4b5f0, []int{7}
+	return fileDescriptor_a2a856802fa4b5f0, []int{9}
 }
 func (m *MsgExecuteContractResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -362,7 +441,7 @@ func (m *MsgQueryContract) Reset()         { *m = MsgQueryContract{} }
 func (m *MsgQueryContract) String() string { return proto.CompactTextString(m) }
 func (*MsgQueryContract) ProtoMessage()    {}
 func (*MsgQueryContract) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a2a856802fa4b5f0, []int{8}
+	return fileDescriptor_a2a856802fa4b5f0, []int{10}
 }
 func (m *MsgQueryContract) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -400,7 +479,7 @@ func (m *MsgQueryContractResponse) Reset()         { *m = MsgQueryContractRespon
 func (m *MsgQueryContractResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgQueryContractResponse) ProtoMessage()    {}
 func (*MsgQueryContractResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a2a856802fa4b5f0, []int{9}
+	return fileDescriptor_a2a856802fa4b5f0, []int{11}
 }
 func (m *MsgQueryContractResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -440,7 +519,7 @@ func (m *MsgP2PReceiveMessageRequest) Reset()         { *m = MsgP2PReceiveMessag
 func (m *MsgP2PReceiveMessageRequest) String() string { return proto.CompactTextString(m) }
 func (*MsgP2PReceiveMessageRequest) ProtoMessage()    {}
 func (*MsgP2PReceiveMessageRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a2a856802fa4b5f0, []int{10}
+	return fileDescriptor_a2a856802fa4b5f0, []int{12}
 }
 func (m *MsgP2PReceiveMessageRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -476,7 +555,7 @@ func (m *MsgP2PReceiveMessageResponse) Reset()         { *m = MsgP2PReceiveMessa
 func (m *MsgP2PReceiveMessageResponse) String() string { return proto.CompactTextString(m) }
 func (*MsgP2PReceiveMessageResponse) ProtoMessage()    {}
 func (*MsgP2PReceiveMessageResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_a2a856802fa4b5f0, []int{11}
+	return fileDescriptor_a2a856802fa4b5f0, []int{13}
 }
 func (m *MsgP2PReceiveMessageResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -512,6 +591,8 @@ func init() {
 	proto.RegisterType((*MsgGrpcReceiveRequestResponse)(nil), "mythos.network.v1.MsgGrpcReceiveRequestResponse")
 	proto.RegisterType((*MsgStartTimeoutRequest)(nil), "mythos.network.v1.MsgStartTimeoutRequest")
 	proto.RegisterType((*MsgStartTimeoutResponse)(nil), "mythos.network.v1.MsgStartTimeoutResponse")
+	proto.RegisterType((*MsgStartBackgroundProcessRequest)(nil), "mythos.network.v1.MsgStartBackgroundProcessRequest")
+	proto.RegisterType((*MsgStartBackgroundProcessResponse)(nil), "mythos.network.v1.MsgStartBackgroundProcessResponse")
 	proto.RegisterType((*MsgExecuteContract)(nil), "mythos.network.v1.MsgExecuteContract")
 	proto.RegisterType((*MsgExecuteContractResponse)(nil), "mythos.network.v1.MsgExecuteContractResponse")
 	proto.RegisterType((*MsgQueryContract)(nil), "mythos.network.v1.MsgQueryContract")
@@ -523,46 +604,50 @@ func init() {
 func init() { proto.RegisterFile("mythos/network/v1/tx.proto", fileDescriptor_a2a856802fa4b5f0) }
 
 var fileDescriptor_a2a856802fa4b5f0 = []byte{
-	// 620 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x55, 0xbf, 0x6f, 0xd3, 0x4e,
-	0x14, 0xcf, 0x7d, 0xdd, 0x56, 0xed, 0xfb, 0x56, 0xa2, 0x3d, 0x95, 0xd6, 0x35, 0xd4, 0xaa, 0x22,
-	0x81, 0x42, 0xa4, 0xda, 0xfd, 0x81, 0x84, 0xd4, 0x8d, 0x22, 0xc4, 0x64, 0xa9, 0xb8, 0x4c, 0x2c,
-	0x95, 0xb1, 0x4f, 0x87, 0x05, 0xf6, 0x19, 0xdf, 0x25, 0x4d, 0xb6, 0x8a, 0x91, 0x89, 0xbf, 0x82,
-	0xb9, 0x03, 0x12, 0x0c, 0x8c, 0x0c, 0x1d, 0x2b, 0xa6, 0x8e, 0xd0, 0x0e, 0xf9, 0x37, 0x90, 0x7d,
-	0x17, 0xd3, 0xc4, 0x4e, 0xc8, 0x14, 0xb1, 0x58, 0xf7, 0xee, 0x7d, 0xde, 0x7b, 0x9f, 0xcf, 0xdd,
-	0xf3, 0x3b, 0x30, 0xa2, 0xae, 0x78, 0xcd, 0xb8, 0x1d, 0x13, 0x71, 0xc2, 0xd2, 0x37, 0x76, 0x7b,
-	0xc7, 0x16, 0x1d, 0x2b, 0x49, 0x99, 0x60, 0x78, 0x59, 0xfa, 0x2c, 0xe5, 0xb3, 0xda, 0x3b, 0xc6,
-	0x0a, 0x65, 0x94, 0xe5, 0x5e, 0x3b, 0x5b, 0x49, 0xa0, 0xb1, 0xee, 0x33, 0x1e, 0x31, 0x7e, 0x2c,
-	0x1d, 0xd2, 0x50, 0xae, 0x35, 0x69, 0xd9, 0x11, 0xa7, 0x59, 0xee, 0x88, 0x53, 0xe5, 0x58, 0xf6,
-	0xa2, 0x30, 0x66, 0x76, 0xfe, 0x95, 0x5b, 0xf5, 0x4b, 0x04, 0xd8, 0xe1, 0xf4, 0x59, 0x9a, 0xf8,
-	0x47, 0x24, 0x0e, 0x5c, 0xf2, 0xae, 0x45, 0xb8, 0xc0, 0xdb, 0x30, 0xc7, 0x49, 0x1c, 0x90, 0x54,
-	0x47, 0x9b, 0xa8, 0xb1, 0x70, 0xa0, 0xff, 0xf8, 0xbc, 0xb5, 0xa2, 0x8a, 0x3c, 0x0e, 0x82, 0x94,
-	0x70, 0x7e, 0x24, 0xd2, 0x30, 0xa6, 0xae, 0xc2, 0xe1, 0x87, 0x30, 0xef, 0xb3, 0x58, 0xa4, 0x9e,
-	0x2f, 0xf4, 0xff, 0xfe, 0x12, 0x53, 0x20, 0xf1, 0x06, 0x40, 0x98, 0x1c, 0x7b, 0xd2, 0xab, 0x6b,
-	0x59, 0x9c, 0xbb, 0x10, 0x26, 0x0a, 0x8e, 0x31, 0xcc, 0x04, 0x9e, 0xf0, 0xf4, 0x99, 0x4d, 0xd4,
-	0x58, 0x74, 0xf3, 0x35, 0x36, 0x60, 0x9e, 0xc4, 0x3e, 0x0b, 0xc2, 0x98, 0xea, 0xb3, 0x79, 0x40,
-	0x61, 0xef, 0xff, 0xff, 0xbe, 0x77, 0xd6, 0x54, 0x8c, 0xea, 0xdb, 0x60, 0x94, 0x95, 0xb9, 0x84,
-	0x27, 0x2c, 0xe6, 0xa4, 0x48, 0x8d, 0xfe, 0xa4, 0xae, 0x7f, 0x43, 0x70, 0x5b, 0x85, 0xb8, 0xc4,
-	0x27, 0x61, 0x9b, 0x4c, 0xfb, 0x3c, 0xfa, 0xac, 0xb4, 0x11, 0x82, 0x67, 0xc6, 0x09, 0xde, 0x83,
-	0x8d, 0x4a, 0xf6, 0x63, 0x35, 0x7f, 0x41, 0xb0, 0xea, 0x70, 0x7a, 0x24, 0xbc, 0x54, 0xbc, 0x08,
-	0x23, 0xc2, 0x5a, 0x62, 0xda, 0xa2, 0x57, 0x60, 0x36, 0x20, 0x6f, 0xbd, 0x6e, 0xae, 0x5a, 0x73,
-	0xa5, 0x91, 0x91, 0xf5, 0x52, 0xca, 0xfb, 0x77, 0x9f, 0xad, 0x07, 0xe5, 0xae, 0xc3, 0x5a, 0x89,
-	0xb8, 0x14, 0x5a, 0xff, 0x2a, 0xbb, 0xfa, 0x69, 0x87, 0xf8, 0x2d, 0x41, 0x9e, 0xf4, 0x0b, 0x4d,
-	0x4b, 0xd0, 0x12, 0x68, 0x11, 0xa7, 0xea, 0x12, 0xb3, 0xe5, 0x7e, 0xe3, 0x06, 0xf1, 0x0f, 0xbd,
-	0xb3, 0xa6, 0x7e, 0xe2, 0xf1, 0xa8, 0x63, 0x97, 0x39, 0xaa, 0xae, 0x1d, 0xda, 0x1d, 0x7b, 0x83,
-	0xa7, 0x08, 0x96, 0x1c, 0x4e, 0x9f, 0xb7, 0x48, 0xda, 0x2d, 0xa4, 0xae, 0x0e, 0x4a, 0x2d, 0x04,
-	0x19, 0xc3, 0x82, 0xc6, 0xd2, 0xbe, 0x3f, 0x44, 0x7b, 0xb5, 0xa0, 0x3d, 0x50, 0xad, 0x6e, 0x81,
-	0x3e, 0xbc, 0x37, 0x96, 0xf2, 0x27, 0x04, 0x77, 0x1c, 0x4e, 0x0f, 0x77, 0x0f, 0x55, 0xa7, 0x3a,
-	0x84, 0x73, 0x8f, 0xfe, 0x0b, 0xbf, 0xdb, 0x60, 0x8f, 0x99, 0x70, 0xb7, 0x9a, 0xa7, 0x14, 0xb7,
-	0xfb, 0x5d, 0x03, 0xcd, 0xe1, 0x14, 0x53, 0xb8, 0x35, 0x3c, 0x42, 0xef, 0x59, 0xa5, 0x51, 0x6e,
-	0x95, 0xe7, 0x91, 0xb1, 0x35, 0x11, 0xac, 0x38, 0x4d, 0x02, 0x8b, 0x37, 0x3b, 0x1e, 0x3f, 0xa8,
-	0x0e, 0xaf, 0xf8, 0x9d, 0x8d, 0xe6, 0x24, 0x50, 0x55, 0x26, 0x01, 0x5c, 0x31, 0x05, 0x1b, 0xa3,
-	0xb9, 0x0e, 0x22, 0x8d, 0xed, 0x49, 0x91, 0x45, 0x45, 0x01, 0xcb, 0xa5, 0x63, 0xc6, 0x56, 0x75,
-	0x9a, 0x51, 0x7d, 0x63, 0xd8, 0x13, 0xe3, 0x65, 0x55, 0x63, 0xf6, 0xb4, 0x77, 0xd6, 0x44, 0x07,
-	0x8f, 0xce, 0x7f, 0x99, 0xb5, 0xf3, 0x2b, 0x13, 0x5d, 0x5c, 0x99, 0xe8, 0xe7, 0x95, 0x89, 0x3e,
-	0x5e, 0x9b, 0xb5, 0x8b, 0x6b, 0xb3, 0x76, 0x79, 0x6d, 0xd6, 0x5e, 0xae, 0xab, 0xf7, 0xba, 0xbd,
-	0x63, 0x77, 0x8a, 0x47, 0x5b, 0x74, 0x13, 0xc2, 0x5f, 0xcd, 0xe5, 0xaf, 0xe8, 0xde, 0xef, 0x00,
-	0x00, 0x00, 0xff, 0xff, 0x34, 0xb2, 0x6f, 0xc2, 0xd3, 0x07, 0x00, 0x00,
+	// 675 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x96, 0x4f, 0x6f, 0xd3, 0x3e,
+	0x18, 0xc7, 0xeb, 0x5f, 0xbb, 0x69, 0x7b, 0x7e, 0x93, 0xd8, 0xac, 0xd1, 0x65, 0x81, 0x45, 0xa3,
+	0x08, 0x54, 0x2a, 0x2d, 0xd9, 0x3f, 0x09, 0x69, 0x37, 0x86, 0x10, 0xa7, 0x4a, 0x23, 0xe3, 0xc4,
+	0x65, 0x0a, 0x89, 0x65, 0xa2, 0x91, 0x38, 0xc4, 0x6e, 0xd7, 0xde, 0x26, 0xb8, 0x71, 0xe2, 0x55,
+	0x70, 0xe1, 0xb2, 0x03, 0x12, 0x1c, 0x78, 0x01, 0x13, 0xa7, 0x89, 0xd3, 0x8e, 0xb0, 0x1d, 0xf6,
+	0x36, 0x50, 0x63, 0x37, 0xac, 0x4d, 0x1a, 0xca, 0x65, 0x70, 0x89, 0xec, 0x3c, 0x7f, 0xfc, 0xfd,
+	0xd8, 0x7e, 0x6c, 0x83, 0x1e, 0x74, 0xc5, 0x0b, 0xc6, 0xad, 0x90, 0x88, 0x03, 0x16, 0xef, 0x5b,
+	0xed, 0x35, 0x4b, 0x74, 0xcc, 0x28, 0x66, 0x82, 0xe1, 0x39, 0x69, 0x33, 0x95, 0xcd, 0x6c, 0xaf,
+	0xe9, 0xf3, 0x94, 0x51, 0x96, 0x58, 0xad, 0x5e, 0x4b, 0x3a, 0xea, 0x8b, 0x2e, 0xe3, 0x01, 0xe3,
+	0x7b, 0xd2, 0x20, 0x3b, 0xca, 0xb4, 0x20, 0x7b, 0x56, 0xc0, 0x69, 0x2f, 0x77, 0xc0, 0xa9, 0x32,
+	0xcc, 0x39, 0x81, 0x1f, 0x32, 0x2b, 0xf9, 0xca, 0x5f, 0xb5, 0x53, 0x04, 0xb8, 0xc9, 0xe9, 0xe3,
+	0x38, 0x72, 0x77, 0x49, 0xe8, 0xd9, 0xe4, 0x55, 0x8b, 0x70, 0x81, 0x57, 0x61, 0x92, 0x93, 0xd0,
+	0x23, 0xb1, 0x86, 0x96, 0x51, 0x7d, 0x7a, 0x5b, 0xfb, 0xf6, 0x71, 0x65, 0x5e, 0x0d, 0xf2, 0xc0,
+	0xf3, 0x62, 0xc2, 0xf9, 0xae, 0x88, 0xfd, 0x90, 0xda, 0xca, 0x0f, 0x6f, 0xc2, 0x94, 0xcb, 0x42,
+	0x11, 0x3b, 0xae, 0xd0, 0xfe, 0xfb, 0x4d, 0x4c, 0xea, 0x89, 0x97, 0x00, 0xfc, 0x68, 0xcf, 0x91,
+	0x56, 0xad, 0xdc, 0x8b, 0xb3, 0xa7, 0xfd, 0x48, 0xb9, 0x63, 0x0c, 0x15, 0xcf, 0x11, 0x8e, 0x56,
+	0x59, 0x46, 0xf5, 0x19, 0x3b, 0x69, 0x63, 0x1d, 0xa6, 0x48, 0xe8, 0x32, 0xcf, 0x0f, 0xa9, 0x36,
+	0x91, 0x04, 0xa4, 0xfd, 0xad, 0xff, 0x5f, 0x5f, 0x1c, 0x35, 0x94, 0xa2, 0xda, 0x2a, 0xe8, 0x59,
+	0x32, 0x9b, 0xf0, 0x88, 0x85, 0x9c, 0xa4, 0xa9, 0xd1, 0xaf, 0xd4, 0xb5, 0x2f, 0x08, 0xae, 0xab,
+	0x10, 0x9b, 0xb8, 0xc4, 0x6f, 0x93, 0xab, 0x9e, 0x8f, 0xbe, 0xaa, 0xf2, 0x08, 0xe0, 0x4a, 0x11,
+	0xf0, 0x06, 0x2c, 0xe5, 0xaa, 0x2f, 0x64, 0xfe, 0x84, 0xa0, 0xda, 0xe4, 0x74, 0x57, 0x38, 0xb1,
+	0x78, 0xea, 0x07, 0x84, 0xb5, 0xc4, 0x55, 0x43, 0xcf, 0xc3, 0x84, 0x47, 0x5e, 0x3a, 0xdd, 0x84,
+	0xba, 0x6c, 0xcb, 0x4e, 0x4f, 0xac, 0x13, 0x53, 0xde, 0x5f, 0xfb, 0x5e, 0x7b, 0x10, 0x77, 0x11,
+	0x16, 0x32, 0xc2, 0x25, 0x68, 0xed, 0x03, 0x82, 0xe5, 0xbe, 0x6d, 0xdb, 0x71, 0xf7, 0x69, 0xcc,
+	0x5a, 0xa1, 0xb7, 0x13, 0x33, 0x97, 0x70, 0xfe, 0x17, 0xd6, 0x34, 0x01, 0x29, 0x8f, 0x02, 0xb9,
+	0x0d, 0xb7, 0x0a, 0xc4, 0x2a, 0xa4, 0xcf, 0xb2, 0x50, 0x1f, 0x75, 0x88, 0xdb, 0x12, 0xe4, 0x61,
+	0x3f, 0xf9, 0x55, 0x41, 0xcc, 0x42, 0x39, 0xe0, 0x54, 0x31, 0xf4, 0x9a, 0x5b, 0xf5, 0x4b, 0x08,
+	0x6f, 0x2f, 0x8e, 0x1a, 0xda, 0x81, 0xc3, 0x83, 0x8e, 0x95, 0xd5, 0xa8, 0x0a, 0x71, 0xe8, 0x6f,
+	0xe1, 0xa6, 0x3c, 0x44, 0x30, 0xdb, 0xe4, 0xf4, 0x49, 0x8b, 0xc4, 0xdd, 0x14, 0xb5, 0x3a, 0x88,
+	0x9a, 0x02, 0xe9, 0xc3, 0x40, 0x85, 0xb2, 0xef, 0x0e, 0xc9, 0xae, 0xa6, 0xb2, 0x07, 0x46, 0xab,
+	0x99, 0xa0, 0x0d, 0xff, 0x2b, 0x94, 0xfc, 0x1e, 0xc1, 0x8d, 0x26, 0xa7, 0x3b, 0xeb, 0x3b, 0xaa,
+	0xf8, 0x9a, 0x84, 0x73, 0x87, 0xfe, 0x0b, 0x27, 0xc8, 0xe0, 0x6e, 0x33, 0xe0, 0x66, 0xbe, 0x4e,
+	0x09, 0xb7, 0xfe, 0xb5, 0x02, 0xe5, 0x26, 0xa7, 0x98, 0xc2, 0xb5, 0xe1, 0x5b, 0xe1, 0x8e, 0x99,
+	0xb9, 0x9d, 0xcc, 0xec, 0x11, 0xab, 0xaf, 0x8c, 0xe5, 0x96, 0xce, 0x26, 0x81, 0x99, 0xcb, 0x45,
+	0x8c, 0xef, 0xe5, 0x87, 0xe7, 0x9c, 0x50, 0x7a, 0x63, 0x1c, 0x57, 0x35, 0xcc, 0x1b, 0x04, 0xd5,
+	0xfc, 0x1a, 0xc3, 0x1b, 0x05, 0x69, 0x46, 0x1d, 0x1f, 0xfa, 0xe6, 0x9f, 0x05, 0x29, 0x15, 0x11,
+	0xe0, 0x9c, 0xeb, 0xa5, 0x3e, 0x7a, 0xc6, 0x06, 0x3d, 0xf5, 0xd5, 0x71, 0x3d, 0xd3, 0x11, 0x05,
+	0xcc, 0x65, 0x16, 0x1b, 0x9b, 0xf9, 0x69, 0x46, 0xed, 0x5e, 0xdd, 0x1a, 0xdb, 0x5f, 0x8e, 0xaa,
+	0x4f, 0x1c, 0x5e, 0x1c, 0x35, 0xd0, 0xf6, 0xfd, 0xe3, 0x1f, 0x46, 0xe9, 0xf8, 0xcc, 0x40, 0x27,
+	0x67, 0x06, 0xfa, 0x7e, 0x66, 0xa0, 0x77, 0xe7, 0x46, 0xe9, 0xe4, 0xdc, 0x28, 0x9d, 0x9e, 0x1b,
+	0xa5, 0x67, 0x8b, 0xea, 0x21, 0xd4, 0x5e, 0xb3, 0x3a, 0xe9, 0x6b, 0x48, 0x74, 0x23, 0xc2, 0x9f,
+	0x4f, 0x26, 0xcf, 0x93, 0x8d, 0x9f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x58, 0x22, 0x21, 0x22, 0x2c,
+	0x09, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -581,6 +666,7 @@ type MsgClient interface {
 	GrpcSendRequest(ctx context.Context, in *MsgGrpcSendRequest, opts ...grpc.CallOption) (*MsgGrpcSendRequestResponse, error)
 	// StartTimeout
 	StartTimeout(ctx context.Context, in *MsgStartTimeoutRequest, opts ...grpc.CallOption) (*MsgStartTimeoutResponse, error)
+	StartBackgroundProcess(ctx context.Context, in *MsgStartBackgroundProcessRequest, opts ...grpc.CallOption) (*MsgStartBackgroundProcessResponse, error)
 	// GrpcReceiveRequest
 	GrpcReceiveRequest(ctx context.Context, in *MsgGrpcReceiveRequest, opts ...grpc.CallOption) (*MsgGrpcReceiveRequestResponse, error)
 	// P2PReceiveMessage
@@ -613,6 +699,15 @@ func (c *msgClient) StartTimeout(ctx context.Context, in *MsgStartTimeoutRequest
 	return out, nil
 }
 
+func (c *msgClient) StartBackgroundProcess(ctx context.Context, in *MsgStartBackgroundProcessRequest, opts ...grpc.CallOption) (*MsgStartBackgroundProcessResponse, error) {
+	out := new(MsgStartBackgroundProcessResponse)
+	err := c.cc.Invoke(ctx, "/mythos.network.v1.Msg/StartBackgroundProcess", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *msgClient) GrpcReceiveRequest(ctx context.Context, in *MsgGrpcReceiveRequest, opts ...grpc.CallOption) (*MsgGrpcReceiveRequestResponse, error) {
 	out := new(MsgGrpcReceiveRequestResponse)
 	err := c.cc.Invoke(ctx, "/mythos.network.v1.Msg/GrpcReceiveRequest", in, out, opts...)
@@ -637,6 +732,7 @@ type MsgServer interface {
 	GrpcSendRequest(context.Context, *MsgGrpcSendRequest) (*MsgGrpcSendRequestResponse, error)
 	// StartTimeout
 	StartTimeout(context.Context, *MsgStartTimeoutRequest) (*MsgStartTimeoutResponse, error)
+	StartBackgroundProcess(context.Context, *MsgStartBackgroundProcessRequest) (*MsgStartBackgroundProcessResponse, error)
 	// GrpcReceiveRequest
 	GrpcReceiveRequest(context.Context, *MsgGrpcReceiveRequest) (*MsgGrpcReceiveRequestResponse, error)
 	// P2PReceiveMessage
@@ -652,6 +748,9 @@ func (*UnimplementedMsgServer) GrpcSendRequest(ctx context.Context, req *MsgGrpc
 }
 func (*UnimplementedMsgServer) StartTimeout(ctx context.Context, req *MsgStartTimeoutRequest) (*MsgStartTimeoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartTimeout not implemented")
+}
+func (*UnimplementedMsgServer) StartBackgroundProcess(ctx context.Context, req *MsgStartBackgroundProcessRequest) (*MsgStartBackgroundProcessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartBackgroundProcess not implemented")
 }
 func (*UnimplementedMsgServer) GrpcReceiveRequest(ctx context.Context, req *MsgGrpcReceiveRequest) (*MsgGrpcReceiveRequestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GrpcReceiveRequest not implemented")
@@ -696,6 +795,24 @@ func _Msg_StartTimeout_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MsgServer).StartTimeout(ctx, req.(*MsgStartTimeoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_StartBackgroundProcess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgStartBackgroundProcessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).StartBackgroundProcess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mythos.network.v1.Msg/StartBackgroundProcess",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).StartBackgroundProcess(ctx, req.(*MsgStartBackgroundProcessRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -747,6 +864,10 @@ var _Msg_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StartTimeout",
 			Handler:    _Msg_StartTimeout_Handler,
+		},
+		{
+			MethodName: "StartBackgroundProcess",
+			Handler:    _Msg_StartBackgroundProcess_Handler,
 		},
 		{
 			MethodName: "GrpcReceiveRequest",
@@ -995,6 +1116,73 @@ func (m *MsgStartTimeoutResponse) MarshalTo(dAtA []byte) (int, error) {
 }
 
 func (m *MsgStartTimeoutResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgStartBackgroundProcessRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgStartBackgroundProcessRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgStartBackgroundProcessRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Args) > 0 {
+		i -= len(m.Args)
+		copy(dAtA[i:], m.Args)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Args)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Contract) > 0 {
+		i -= len(m.Contract)
+		copy(dAtA[i:], m.Contract)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Contract)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Sender) > 0 {
+		i -= len(m.Sender)
+		copy(dAtA[i:], m.Sender)
+		i = encodeVarintTx(dAtA, i, uint64(len(m.Sender)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MsgStartBackgroundProcessResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgStartBackgroundProcessResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgStartBackgroundProcessResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1333,6 +1521,36 @@ func (m *MsgStartTimeoutRequest) Size() (n int) {
 }
 
 func (m *MsgStartTimeoutResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *MsgStartBackgroundProcessRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Sender)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Contract)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	l = len(m.Args)
+	if l > 0 {
+		n += 1 + l + sovTx(uint64(l))
+	}
+	return n
+}
+
+func (m *MsgStartBackgroundProcessResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2199,6 +2417,204 @@ func (m *MsgStartTimeoutResponse) Unmarshal(dAtA []byte) error {
 		}
 		if fieldNum <= 0 {
 			return fmt.Errorf("proto: MsgStartTimeoutResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgStartBackgroundProcessRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgStartBackgroundProcessRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgStartBackgroundProcessRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Sender = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Contract", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Contract = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Args", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTx
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTx
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTx
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Args = append(m.Args[:0], dAtA[iNdEx:postIndex]...)
+			if m.Args == nil {
+				m.Args = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipTx(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthTx
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgStartBackgroundProcessResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowTx
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgStartBackgroundProcessResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgStartBackgroundProcessResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:

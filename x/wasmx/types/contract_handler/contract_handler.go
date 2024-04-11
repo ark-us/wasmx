@@ -30,7 +30,7 @@ type ContractHandler interface {
 type KeeperInterface interface {
 	GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool)
 	Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
-	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error)
+	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
 }
 
 // role => handler
@@ -107,7 +107,7 @@ func (m ContractHandlerMap) Execute(ctx sdk.Context, req ContractHandlerMessage)
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "role not registered")
 	}
 
-	response, err := m.Keeper.Execute(ctx, contractAddress, req.Sender, msgbz, nil, nil)
+	response, err := m.Keeper.Execute(ctx, contractAddress, req.Sender, msgbz, nil, nil, false)
 	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "execution failed: %s", err.Error())
 	}

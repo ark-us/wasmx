@@ -62,7 +62,7 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 		if err != nil {
 			sdkerr.Wrap(err, "ExecuteEth could not marshal data")
 		}
-		data, err = m.Keeper.Execute(ctx, contractAddr, senderAddr, msgbz, funds, nil)
+		data, err = m.Keeper.Execute(ctx, contractAddr, senderAddr, msgbz, funds, nil, false)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +231,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	data, err := m.Keeper.Execute(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds, msg.Dependencies)
+	data, err := m.Keeper.Execute(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds, msg.Dependencies, false)
 	if err != nil {
 		return nil, err
 	}

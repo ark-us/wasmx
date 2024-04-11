@@ -29,7 +29,7 @@ func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract)
 		return nil, err
 	}
 
-	resp, err := k.wasmxKeeper.Execute(ctx, contractAddress, senderAddr, execmsgbz, nil, nil)
+	resp, err := k.wasmxKeeper.Execute(ctx, contractAddress, senderAddr, execmsgbz, nil, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, entryPoint string, msg *type
 		return nil, err
 	}
 
-	resp, err := k.wasmxKeeper.ExecuteEntryPoint(ctx, entryPoint, contractAddress, senderAddr, execmsgbz, nil)
+	resp, err := k.wasmxKeeper.ExecuteEntryPoint(ctx, entryPoint, contractAddress, senderAddr, execmsgbz, nil, false)
 	if err != nil {
 		return nil, err
 	}

@@ -53,8 +53,8 @@ func (k *Keeper) Instantiate2(ctx sdk.Context, codeId uint64, senderAddr sdk.Acc
 	return k.instantiate2(ctx, codeId, senderAddr, msg, funds, salt, fixMsg, label)
 }
 
-func (k *Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string) ([]byte, error) {
-	return k.execute(ctx, contractAddr, senderAddr, msg, funds, dependencies)
+func (k *Keeper) Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error) {
+	return k.execute(ctx, contractAddr, senderAddr, msg, funds, dependencies, inBackground)
 }
 
 func (k *Keeper) ExecuteWithOrigin(ctx sdk.Context, originAddr sdk.AccAddress, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins) ([]byte, error) {
@@ -531,6 +531,7 @@ func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath stri
 
 	codeInfo.Pinned = true
 	k.storeCodeInfo(ctx, codeId, *codeInfo)
+	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypePinCode,
@@ -552,6 +553,7 @@ func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 
 	codeInfo.Pinned = false
 	k.storeCodeInfo(ctx, codeId, *codeInfo)
+	k.Logger(ctx).Info("contract AOT compiled module removed ", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeUnpinCode,
@@ -561,7 +563,7 @@ func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 }
 
 // Execute executes the contract instance
-func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string) ([]byte, error) {
+func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, coins sdk.Coins, dependencies []string, inBackground bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
@@ -608,7 +610,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -634,7 +636,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 }
 
 // Execute executes the contract instance
-func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string) ([]byte, error) {
+func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string, inBackground bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "ExecuteEntryPoint")
 	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
@@ -669,7 +671,7 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps)
+	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -782,7 +784,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contr
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, nil)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, nil, false)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
