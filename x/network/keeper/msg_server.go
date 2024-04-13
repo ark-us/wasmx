@@ -128,7 +128,7 @@ func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeou
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the background process is for ?
 func (m msgServer) StartBackgroundProcess(goCtx context.Context, msg *types.MsgStartBackgroundProcessRequest) (*types.MsgStartBackgroundProcessResponse, error) {
-	// TODO only started from wasmx?
+	// TODO only started from wasmx, only by system contracts
 	return m.Keeper.StartBackgroundProcess(goCtx, msg)
 }
 

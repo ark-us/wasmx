@@ -106,6 +106,6 @@ var DEFAULT_HOOKS_NONC = []Hook{
 	Hook{
 		Name:          HOOK_START_NODE,
 		SourceModule:  ROLE_HOOKS_NONC,
-		TargetModules: []string{ROLE_CONSENSUS, ROLE_CHAT},
+		TargetModules: []string{ROLE_CONSENSUS, ROLE_CHAT, ROLE_TIME},
 	},
 }

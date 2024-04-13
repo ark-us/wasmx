@@ -56,6 +56,8 @@ var ADDR_HOOKS_NONC = "0x0000000000000000000000000000000000000043"
 var ADDR_CHAT_VERIFIER = "0x0000000000000000000000000000000000000044"
 var ADDR_SLASHING = "0x0000000000000000000000000000000000000045"
 var ADDR_DISTRIBUTION = "0x0000000000000000000000000000000000000046"
+var ADDR_TIME = "0x0000000000000000000000000000000000000047"
+var ADDR_LEVEL0 = "0x0000000000000000000000000000000000000048"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -120,6 +122,11 @@ func DefaultSystemContracts() SystemContracts {
 	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal govInitMsg message")
+	}
+
+	timeInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"chain_id":"time_666-1","interval_ms":100}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal timeInitMsg message")
 	}
 
 	return []SystemContract{
@@ -498,6 +505,24 @@ func DefaultSystemContracts() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_TIME,
+			Label:       TIME_v001,
+			InitMessage: timeInitMsg,
+			Pinned:      false,
+			Role:        ROLE_TIME,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LEVEL0,
+			Label:       LEVEL0_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			// Role:        ROLE_TIME,
+			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{

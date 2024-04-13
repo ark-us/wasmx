@@ -112,6 +112,12 @@ var (
 	//go:embed 44.chat_verifier_0.0.1.wasm
 	chat_verifier_contract []byte
 
+	//go:embed 47.time_0.0.1.wasm
+	time_contract []byte
+
+	//go:embed 48.level0_0.0.1.wasm
+	level0_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -201,6 +207,10 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = chat_contract
 	case types.CHAT_VERIFIER_v001:
 		wasmbin = chat_verifier_contract
+	case types.TIME_v001:
+		wasmbin = time_contract
+	case types.LEVEL0_v001:
+		wasmbin = level0_contract
 	}
 	return wasmbin
 }

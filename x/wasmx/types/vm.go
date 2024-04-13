@@ -190,6 +190,7 @@ var ROLE_INTERPRETER_FSM = "interpreter_state_machine"
 var ROLE_LIBRARY = "deplibrary"
 
 var ROLE_CHAT = "chat"
+var ROLE_TIME = "time"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -234,6 +235,8 @@ var SLASHING_v001 = "slashing_0.0.1"
 var DISTRIBUTION_v001 = "distribution_0.0.1"
 var CHAT_v001 = "chat_0.0.1"
 var CHAT_VERIFIER_v001 = "chat_verifier_0.0.1"
+var TIME_v001 = "time_0.0.1"
+var LEVEL0_v001 = "level0_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

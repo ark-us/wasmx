@@ -2,10 +2,12 @@ package keeper_test
 
 import (
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -138,4 +140,75 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	data = []byte(`{"get":{"key":"hello"}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(string(qres), "sammy")
+}
+
+func (suite *KeeperTestSuite) TestWasmxTime() {
+	SkipCIExpensiveTests(suite.T(), "TestWasmxTime")
+
+	wasmbin := precompiles.GetPrecompileByLabel(types.TIME_v001)
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1000_000_000)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "time", nil)
+
+	data := []byte(``)
+	msg := &types.WasmxExecutionMessage{Data: data}
+	msgbz, err := json.Marshal(msg)
+	s.Require().NoError(err)
+	_, err = appA.App.WasmxKeeper.ExecuteEntryPoint(appA.Context(), "time", contractAddress, sender.Address, msgbz, nil, false)
+	s.Require().NoError(err)
+
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	time.Sleep(time.Second * 15)
+	// time.Sleep(time.Minute * 10)
+}
+
+func (suite *KeeperTestSuite) TestWasmxLevel0() {
+	SkipCIExpensiveTests(suite.T(), "TestWasmxLevel0")
+
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1000_000_000)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	suite.Commit()
+
+	timeAddress := types.AccAddressFromHex(types.ADDR_TIME)
+	level0Address := types.AccAddressFromHex(types.ADDR_LEVEL0)
+
+	// start time chain
+	msgexec := types.WasmxExecutionMessage{Data: []byte(`{"StartNode":{}}`)}
+	msgbz, err := json.Marshal(&msgexec)
+	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, sender.Address, msgbz, nil, nil, false)
+	suite.Require().NoError(err)
+
+	time.Sleep(time.Second * 10)
+
+	contractAddress := types.AccAddressFromHex(types.ADDR_IDENTITY)
+	internalmsg := types.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+	msgbz, err = json.Marshal(internalmsg)
+	suite.Require().NoError(err)
+	msg := &types.MsgExecuteContract{
+		Sender:       sender.Address.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
+	suite.Require().NoError(err)
+	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	txstr := base64.StdEncoding.EncodeToString(tx)
+
+	data := fmt.Sprintf(`{"newTransaction":{"transaction":"%s"}}`, txstr)
+	msgexec = types.WasmxExecutionMessage{Data: []byte(data)}
+	msgbz, err = json.Marshal(&msgexec)
+	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), level0Address, sender.Address, msgbz, nil, nil, false)
+	suite.Require().NoError(err)
 }
