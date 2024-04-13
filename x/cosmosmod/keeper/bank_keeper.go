@@ -5,11 +5,9 @@ import (
 
 	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
-	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	networkkeeper "mythos/v1/x/network/keeper"
 
@@ -20,8 +18,6 @@ type (
 	KeeperBank struct {
 		jsoncdc           codec.JSONCodec
 		cdc               codec.Codec
-		storeKey          storetypes.StoreKey
-		paramstore        paramtypes.Subspace
 		InterfaceRegistry cdctypes.InterfaceRegistry
 		ak                types.AccountKeeper
 		WasmxKeeper       types.WasmxKeeper
@@ -40,8 +36,6 @@ type (
 func NewKeeperBank(
 	jsoncdc codec.JSONCodec,
 	cdc codec.Codec,
-	storeKey storetypes.StoreKey,
-	ps paramtypes.Subspace,
 	accountKeeper types.AccountKeeper,
 	wasmxKeeper types.WasmxKeeper,
 	networkKeeper networkkeeper.Keeper,
@@ -51,16 +45,9 @@ func NewKeeperBank(
 	validatorAddressCodec addresscodec.Codec,
 	consensusAddressCodec addresscodec.Codec,
 ) *KeeperBank {
-	// set KeyTable if it has not already been set
-	if !ps.HasKeyTable() {
-		ps = ps.WithKeyTable(types.ParamKeyTable())
-	}
-
 	keeper := &KeeperBank{
 		jsoncdc:               jsoncdc,
 		cdc:                   cdc,
-		storeKey:              storeKey,
-		paramstore:            ps,
 		ak:                    accountKeeper,
 		WasmxKeeper:           wasmxKeeper,
 		NetworkKeeper:         networkKeeper,
