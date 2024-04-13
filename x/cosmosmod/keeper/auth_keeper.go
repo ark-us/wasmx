@@ -6,12 +6,10 @@ import (
 	"cosmossdk.io/core/address"
 	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
-	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	networkkeeper "mythos/v1/x/network/keeper"
 
@@ -22,8 +20,6 @@ type (
 	KeeperAuth struct {
 		jsoncdc           codec.JSONCodec
 		cdc               codec.Codec
-		storeKey          storetypes.StoreKey
-		paramstore        paramtypes.Subspace
 		InterfaceRegistry cdctypes.InterfaceRegistry
 		WasmxKeeper       types.WasmxKeeper
 		NetworkKeeper     networkkeeper.Keeper
@@ -43,8 +39,6 @@ type (
 func NewKeeperAuth(
 	jsoncdc codec.JSONCodec,
 	cdc codec.Codec,
-	storeKey storetypes.StoreKey,
-	ps paramtypes.Subspace,
 	wasmxKeeper types.WasmxKeeper,
 	networkKeeper networkkeeper.Keeper,
 	actionExecutor *networkkeeper.ActionExecutor,
@@ -55,16 +49,9 @@ func NewKeeperAuth(
 	addressCodec address.Codec,
 	permAddrs map[string]authtypes.PermissionsForAddress,
 ) *KeeperAuth {
-	// set KeyTable if it has not already been set
-	if !ps.HasKeyTable() {
-		ps = ps.WithKeyTable(types.ParamKeyTable())
-	}
-
 	keeper := &KeeperAuth{
 		jsoncdc:               jsoncdc,
 		cdc:                   cdc,
-		storeKey:              storeKey,
-		paramstore:            ps,
 		WasmxKeeper:           wasmxKeeper,
 		NetworkKeeper:         networkKeeper,
 		actionExecutor:        actionExecutor,

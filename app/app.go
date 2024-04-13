@@ -336,7 +336,7 @@ func New(
 
 	keys := storetypes.NewKVStoreKeys(
 		authz.ModuleName, crisistypes.StoreKey,
-		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
+		minttypes.StoreKey,
 		paramstypes.StoreKey, consensusparamtypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, circuittypes.StoreKey,
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
 		icacontrollertypes.StoreKey,
@@ -457,8 +457,6 @@ func New(
 	app.AccountKeeper = cosmosmodkeeper.NewKeeperAuth(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
 		app.actionExecutor,
@@ -484,8 +482,6 @@ func New(
 	app.StakingKeeper = cosmosmodkeeper.NewKeeperStaking(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
 		app.AccountKeeper,
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
@@ -499,8 +495,6 @@ func New(
 	app.BankKeeper = cosmosmodkeeper.NewKeeperBank(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
 		app.AccountKeeper,
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
@@ -514,8 +508,6 @@ func New(
 	app.GovKeeper = cosmosmodkeeper.NewKeeperGov(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
 		app.AccountKeeper,
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
@@ -529,8 +521,6 @@ func New(
 	app.DistrKeeper = cosmosmodkeeper.NewKeeperDistribution(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
 		app.StakingKeeper,
@@ -548,8 +538,6 @@ func New(
 	app.SlashingKeeper = cosmosmodkeeper.NewKeeperSlashing(
 		appCodec,
 		appCodec,
-		keys[cosmosmodtypes.StoreKey], // TODO remove
-		app.GetSubspace(cosmosmodtypes.ModuleName),
 		app.StakingKeeper,
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
@@ -1245,19 +1233,17 @@ func GetMaccPerms() map[string][]string {
 	return dupMaccPerms
 }
 
+// remove this; params are keps in each contract
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 	paramsKeeper.Subspace(minttypes.ModuleName)
-	paramsKeeper.Subspace(distrtypes.ModuleName)
-	// paramsKeeper.Subspace(slashingtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibcexported.ModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 	paramsKeeper.Subspace(wasmxmoduletypes.ModuleName)
-	paramsKeeper.Subspace(cosmosmodtypes.ModuleName)
 	paramsKeeper.Subspace(networkmoduletypes.ModuleName)
 	paramsKeeper.Subspace(websrvmoduletypes.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
