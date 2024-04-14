@@ -58,6 +58,7 @@ var ADDR_SLASHING = "0x0000000000000000000000000000000000000045"
 var ADDR_DISTRIBUTION = "0x0000000000000000000000000000000000000046"
 var ADDR_TIME = "0x0000000000000000000000000000000000000047"
 var ADDR_LEVEL0 = "0x0000000000000000000000000000000000000048"
+var ADDR_LEVELN = "0x0000000000000000000000000000000000000049"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -519,6 +520,15 @@ func DefaultSystemContracts() SystemContracts {
 		{
 			Address:     ADDR_LEVEL0,
 			Label:       LEVEL0_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			// Role:        ROLE_TIME,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LEVELN,
+			Label:       LEVELN_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
 			// Role:        ROLE_TIME,

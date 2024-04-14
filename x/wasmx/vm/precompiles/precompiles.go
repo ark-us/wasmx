@@ -118,6 +118,9 @@ var (
 	//go:embed 48.level0_0.0.1.wasm
 	level0_contract []byte
 
+	//go:embed 49.leveln_0.0.1.wasm
+	leveln_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -211,6 +214,8 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = time_contract
 	case types.LEVEL0_v001:
 		wasmbin = level0_contract
+	case types.LEVELN_v001:
+		wasmbin = leveln_contract
 	}
 	return wasmbin
 }

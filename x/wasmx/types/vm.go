@@ -237,6 +237,7 @@ var CHAT_v001 = "chat_0.0.1"
 var CHAT_VERIFIER_v001 = "chat_verifier_0.0.1"
 var TIME_v001 = "time_0.0.1"
 var LEVEL0_v001 = "level0_0.0.1"
+var LEVELN_v001 = "leveln_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"
