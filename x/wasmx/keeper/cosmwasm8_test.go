@@ -181,7 +181,7 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	value := 2
@@ -242,7 +242,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	instantiateMsg := CW20InstantiateMsg{
@@ -291,7 +291,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(deployer, wasmbin, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	instantiateMsg := CW20InstantiateMsg{
@@ -329,7 +329,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "cwSimpleContract", nil)
@@ -394,7 +394,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "wasm_reflect", nil)
@@ -544,7 +544,7 @@ func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "crypto_verify", nil)

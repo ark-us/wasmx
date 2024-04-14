@@ -95,7 +95,7 @@ type QueryPlugins struct {
 }
 
 type contractMetaDataSource interface {
-	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
+	GetContractInfo(ctx sdk.Context, chainId string, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
 }
 
 type wasmQueryKeeper interface {
@@ -563,7 +563,7 @@ func WasmQuerier(k wasmQueryKeeper) func(ctx sdk.Context, request *cw8types.Wasm
 			if err != nil {
 				return nil, errorsmod.Wrap(sdkerrors.ErrInvalidAddress, contractAddr)
 			}
-			info := k.GetContractInfo(ctx, addr)
+			info := k.GetContractInfo(ctx, ctx.ChainID(), addr)
 			if info == nil {
 				return nil, cw8types.ErrNoSuchContractFn(contractAddr).
 					Wrapf("address %s", contractAddr)

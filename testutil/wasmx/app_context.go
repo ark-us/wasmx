@@ -376,7 +376,7 @@ func (s *AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps [
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
 
-	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
+	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), s.Context().ChainID(), codeId)
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(bytecode, wasmbin)
 	return codeId
@@ -397,7 +397,7 @@ func (s *AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
 
-	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
+	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), s.Context().ChainID(), codeId)
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(bytecode, wasmbin)
 	return codeId
@@ -603,7 +603,7 @@ func (s *AppContext) PassGovProposal(
 
 	// voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
 
-	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
+	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), s.Context().ChainID(), types.ROLE_GOVERNANCE)
 	s.S.Require().NoError(err)
 	msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valAccount.Address.String()))
 	msg11 := types.WasmxExecutionMessage{Data: msg1}

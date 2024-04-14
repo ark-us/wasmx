@@ -28,7 +28,7 @@ type ContractHandler interface {
 }
 
 type KeeperInterface interface {
-	GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool)
+	GetContractAddressByRole(ctx sdk.Context, chainId string, role string) (sdk.AccAddress, bool)
 	Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
 	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
 }
@@ -64,7 +64,7 @@ func (m ContractHandlerMap) Query(ctx sdk.Context, req ContractHandlerMessage) (
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "json encoding failed: %s", err.Error())
 	}
 
-	contractAddress, found := m.Keeper.GetContractAddressByRole(ctx, req.Role)
+	contractAddress, found := m.Keeper.GetContractAddressByRole(ctx, ctx.ChainID(), req.Role)
 	if !found {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "role not registered")
 	}
@@ -102,7 +102,7 @@ func (m ContractHandlerMap) Execute(ctx sdk.Context, req ContractHandlerMessage)
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "json encoding failed: %s", err.Error())
 	}
 
-	contractAddress, found := m.Keeper.GetContractAddressByRole(ctx, req.Role)
+	contractAddress, found := m.Keeper.GetContractAddressByRole(ctx, ctx.ChainID(), req.Role)
 	if !found {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "role not registered")
 	}

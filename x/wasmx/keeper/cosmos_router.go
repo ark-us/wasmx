@@ -23,7 +23,6 @@ import (
 type WasmxCosmosHandler struct {
 	Ctx             sdk.Context
 	Keeper          *Keeper
-	ChainId         string
 	ContractAddress sdk.AccAddress
 }
 
@@ -71,14 +70,14 @@ func (h *WasmxCosmosHandler) GetAccount(addr sdk.AccAddress) sdk.AccountI {
 	return acc
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
-	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, h.ChainId, contractAddress)
+	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, h.Ctx.ChainID(), contractAddress)
 	if err != nil {
 		return types.EMPTY_BYTES32
 	}
 	return codeInfo.CodeHash
 }
 func (h *WasmxCosmosHandler) GetCode(contractAddress sdk.AccAddress) []byte {
-	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, h.ChainId, contractAddress)
+	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, h.Ctx.ChainID(), contractAddress)
 	if err != nil {
 		return []byte{}
 	}
@@ -93,7 +92,7 @@ func (h *WasmxCosmosHandler) GetCode(contractAddress sdk.AccAddress) []byte {
 }
 
 func (h *WasmxCosmosHandler) GetCodeInfo(contractAddress sdk.AccAddress) types.CodeInfo {
-	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, h.ChainId, contractAddress)
+	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, h.Ctx.ChainID(), contractAddress)
 	if err != nil {
 		return types.CodeInfo{CodeHash: types.EMPTY_BYTES32}
 	}
@@ -101,7 +100,7 @@ func (h *WasmxCosmosHandler) GetCodeInfo(contractAddress sdk.AccAddress) types.C
 }
 
 func (h *WasmxCosmosHandler) GetContractInstance(contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
-	return h.Keeper.ContractInstance(h.Ctx, h.ChainId, contractAddress)
+	return h.Keeper.ContractInstance(h.Ctx, h.Ctx.ChainID(), contractAddress)
 }
 
 // TODO
@@ -117,7 +116,7 @@ func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initM
 	if value != nil {
 		funds = sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	}
-	address, _, err := h.Keeper.Instantiate(h.Ctx, h.ChainId, codeId, creator, initMsg, funds, label)
+	address, _, err := h.Keeper.Instantiate(h.Ctx, codeId, creator, initMsg, funds, label)
 	if err != nil {
 		return nil, err
 	}
@@ -129,27 +128,27 @@ func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, init
 	if value != nil {
 		funds = sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	}
-	address, _, err := h.Keeper.Instantiate2(h.Ctx, h.ChainId, codeId, creator, initMsg, funds, salt, false, label)
+	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, funds, salt, false, label)
 	return address, err
 }
 func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
-	return h.Keeper.CreateInterpreted(h.Ctx, h.ChainId, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
+	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
 }
 
 func (h *WasmxCosmosHandler) Execute(contractAddress sdk.AccAddress, sender sdk.AccAddress, execmsg []byte, value *big.Int, deps []string) (res []byte, err error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
-	return h.Keeper.Execute(h.Ctx, h.ChainId, contractAddress, sender, execmsg, funds, deps, false)
+	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps, false)
 }
 
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
-	return h.Keeper.GetContractDependency(ctx, h.ChainId, addr)
+	return h.Keeper.GetContractDependency(ctx, addr)
 }
 func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool {
-	return h.Keeper.CanCallSystemContract(ctx, h.ChainId, addr)
+	return h.Keeper.CanCallSystemContract(ctx, ctx.ChainID(), addr)
 }
 func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
-	addr, err := h.Keeper.GetAddressOrRole(ctx, h.ChainId, addressOrRole)
+	addr, err := h.Keeper.GetAddressOrRole(ctx, ctx.ChainID(), addressOrRole)
 	if err == nil {
 		return addr, nil
 	}
@@ -162,19 +161,18 @@ func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole str
 	return nil, err
 }
 func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string {
-	return h.Keeper.GetRoleByContractAddress(ctx, h.ChainId, addr)
+	return h.Keeper.GetRoleByContractAddress(ctx, ctx.ChainID(), addr)
 }
 
 func (h *WasmxCosmosHandler) WithNewAddress(addr sdk.AccAddress) types.WasmxCosmosHandler {
-	return h.Keeper.newCosmosHandler(h.Ctx, h.ChainId, addr)
+	return h.Keeper.newCosmosHandler(h.Ctx, addr)
 }
 
-func (k *Keeper) newCosmosHandler(ctx sdk.Context, chainId string, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
+func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
 		Ctx:             ctx,
 		Keeper:          k,
 		ContractAddress: contractAddress,
-		ChainId:         chainId,
 	}
 }
 

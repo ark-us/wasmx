@@ -252,7 +252,7 @@ func (k KeeperStaking) GetAllSDKDelegations(goCtx context.Context) (delegations 
 	if err != nil {
 		return nil, err
 	}
-	k.WasmxKeeper.IterateContractState(ctx, derc20Address, func(key []byte, value []byte) bool {
+	k.WasmxKeeper.IterateContractState(ctx, ctx.ChainID(), derc20Address, func(key []byte, value []byte) bool {
 		if !strings.HasPrefix(string(key), types.STAKING_DELEGATOR_TO_DELEGATION_KEY) {
 			return false
 		}

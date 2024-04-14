@@ -218,7 +218,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
+	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -255,7 +255,7 @@ func (m msgServer) ExecuteWithOriginContract(goCtx context.Context, msg *types.M
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
+	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -368,7 +368,7 @@ func (m msgServer) DeregisterRole(goCtx context.Context, msg *types.MsgDeregiste
 		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
 	))
 
-	m.Keeper.DeregisterRole(ctx, contractAddress)
+	m.Keeper.DeregisterRole(ctx, ctx.ChainID(), contractAddress)
 
 	return &types.MsgDeregisterRoleResponse{}, nil
 }

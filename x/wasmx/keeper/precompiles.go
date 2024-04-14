@@ -50,7 +50,7 @@ func (k *Keeper) ActivateSystemContract(
 	var err error
 
 	if contract.Native {
-		codeID = k.autoIncrementID(ctx, types.KeyLastCodeID)
+		codeID = k.autoIncrementID(ctx, ctx.ChainID())
 		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr, contract.Deps, contract.Metadata)
 		k.storeCodeInfo(ctx, codeID, codeInfo)
 	} else {
@@ -74,11 +74,11 @@ func (k *Keeper) ActivateSystemContract(
 	contractAddress := types.AccAddressFromHex(contract.Address)
 	// register role first, to be able to initialize the account keeper
 	if contract.Role != "" {
-		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
+		k.RegisterRole(ctx, ctx.ChainID(), contract.Role, contract.Label, contractAddress)
 	}
 	if contract.Native {
 		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, contract.InitMessage, contract.Label)
-		k.storeContractInfo(ctx, contractAddress, &contractInfo)
+		k.storeContractInfo(ctx, ctx.ChainID(), contractAddress, &contractInfo)
 	} else {
 		_, err = k.instantiateWithAddress(
 			ctx,

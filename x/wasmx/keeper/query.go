@@ -111,7 +111,7 @@ func (k *Keeper) RawContractState(c context.Context, req *types.QueryRawContract
 		return nil, err
 	}
 
-	if !k.HasContractInfo(ctx, contractAddr) {
+	if !k.HasContractInfo(ctx, ctx.ChainID(), contractAddr) {
 		return nil, types.ErrNotFound
 	}
 	rsp := k.QueryRaw(ctx, contractAddr, req.QueryData)
@@ -170,7 +170,7 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 	if err := req.QueryData.ValidateBasic(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid query data")
 	}
-	contractAddr, err := k.GetAddressOrRole(ctx, req.Address)
+	contractAddr, err := k.GetAddressOrRole(ctx, ctx.ChainID(), req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 		}
 	}()
 
-	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
+	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, ctx.ChainID(), sender) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
@@ -279,7 +279,7 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 	if err != nil {
 		return nil, err
 	}
-	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
+	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, ctx.ChainID(), sender) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
@@ -301,7 +301,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 	if err := req.QueryData.ValidateBasic(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid query data")
 	}
-	contractAddr, err := k.GetAddressOrRole(ctx, req.Address)
+	contractAddr, err := k.GetAddressOrRole(ctx, ctx.ChainID(), req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +331,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 		}
 	}()
 
-	if !k.CanCallSystemContract(ctx, sender) {
+	if !k.CanCallSystemContract(ctx, ctx.ChainID(), sender) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "debug is non-deterministic and cannot be called as part of a transaction")
 	}
 	bz, memsnapshot, errMsg := k.QueryDebug(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
@@ -365,7 +365,8 @@ func (k *Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*
 	if req.CodeId == 0 {
 		return nil, sdkerr.Wrap(types.ErrInvalid, "code id")
 	}
-	res := k.GetCodeInfo(sdk.UnwrapSDKContext(c), req.CodeId)
+	ctx := sdk.UnwrapSDKContext(c)
+	res := k.GetCodeInfo(ctx, ctx.ChainID(), req.CodeId)
 	if res == nil {
 		return nil, types.ErrNotFound
 	}
@@ -404,7 +405,7 @@ func (k *Keeper) Codes(c context.Context, req *types.QueryCodesRequest) (*types.
 }
 
 func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper *Keeper) (*types.QueryContractInfoResponse, error) {
-	info := keeper.GetContractInfo(ctx, addr)
+	info := keeper.GetContractInfo(ctx, ctx.ChainID(), addr)
 	if info == nil {
 		return nil, types.ErrNotFound
 	}
@@ -418,13 +419,13 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper *Keeper) (*types.QueryCode
 	if codeID == 0 {
 		return nil, nil
 	}
-	res := keeper.GetCodeInfo(ctx, codeID)
+	res := keeper.GetCodeInfo(ctx, ctx.ChainID(), codeID)
 	if res == nil {
 		// nil, nil leads to 404 in rest handler
 		return nil, nil
 	}
 
-	code, err := keeper.GetByteCode(ctx, codeID)
+	code, err := keeper.GetByteCode(ctx, ctx.ChainID(), codeID)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "loading wasm code")
 	}
