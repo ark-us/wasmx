@@ -18,7 +18,7 @@ import (
 )
 
 func (k *Keeper) SetAccount(ctx sdk.Context, acc sdk.AccountI) error {
-	modaddr, err := k.GetAddressOrRole(ctx, types.ROLE_AUTH)
+	modaddr, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_AUTH)
 	if err != nil {
 		panic(err)
 	}

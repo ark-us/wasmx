@@ -227,7 +227,9 @@ func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
 				Block: RequestInfo.BlockVersion,
 				App:   res.AppVersion,
 			},
-			Network:       c.bapp.ChainID(),
+			// TODO client methods per chainId
+			Network: c.bapp.ChainID(),
+			// TODO
 			DefaultNodeID: "9111ccf0de42038bfc305123ee92a6b7eadda2cc",
 			ListenAddr:    c.config.Network.Address,
 			Version:       res.Version,
