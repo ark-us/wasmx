@@ -191,6 +191,8 @@ var ROLE_LIBRARY = "deplibrary"
 
 var ROLE_CHAT = "chat"
 var ROLE_TIME = "time"
+var ROLE_LEVEL0 = "level0"
+var ROLE_LEVELN = "leveln"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"

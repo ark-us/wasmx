@@ -62,74 +62,12 @@ var ADDR_LEVELN = "0x0000000000000000000000000000000000000049"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
-func DefaultSystemContracts() SystemContracts {
+func StarterPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal init message")
+		panic("SimplePrecompiles: cannot marshal init message")
 	}
-
-	storageInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"initialBlockIndex":1}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal storageInitMsg message")
-	}
-
-	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
-	}
-
-	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":15000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
-	}
-
-	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"5000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":5000},{"key":"timeoutPrevote","value":5000},{"key":"timeoutPrecommit","value":5000}],"initialState":"uninitialized"}}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
-	}
-
-	avaInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"sampleSize","value":"2"},{"key":"betaThreshold","value":2},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":80}],"initialState":"uninitialized"}}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
-	}
-	// TODO remove/replace minter
-	// note we use ROLE_BANK for redirected messages through cosmosmod
-	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s","%s","%s"]}`, ROLE_STAKING, ROLE_GOVERNANCE, ROLE_BANK, authtypes.NewModuleAddress("fee_collector").String(), authtypes.NewModuleAddress("mint").String()))})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
-	}
-
-	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooks message")
-	}
-	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
-	}
-
-	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
-	}
-	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
-	}
-
-	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
-	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
-	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal govInitMsg message")
-	}
-
-	timeInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"chain_id":"time_666-1","interval_ms":100}}`)})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal timeInitMsg message")
-	}
-
 	return []SystemContract{
 		// auth needs to be initialized first (account keeper)
 		{
@@ -141,6 +79,16 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
+	}
+}
+
+func SimplePrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("SimplePrecompiles: cannot marshal init message")
+	}
+	return []SystemContract{
 		{
 			Address:     ADDR_ECRECOVER,
 			Label:       "ecrecover",
@@ -223,55 +171,22 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
-		{
-			Address:     ADDR_SECP384R1,
-			Label:       "secp384r1",
-			InitMessage: initMsg,
-			Pinned:      false, //TODO
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_SECP384R1_REGISTRY,
-			Label:       "secp384r1_registry",
-			InitMessage: initMsg,
-			Pinned:      false, // TODO
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_SECRET_SHARING,
-			Label:       "secret_sharing",
-			InitMessage: initMsg,
-			Pinned:      false,
-			Native:      true,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
+	}
+}
+
+func InterpreterPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("CosmosPrecompiles: cannot marshal init message")
+	}
+	return []SystemContract{
 		{
 			Address:     ADDR_INTERPRETER_EVM_SHANGHAI,
 			Label:       INTERPRETER_EVM_SHANGHAI,
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_ALIAS_ETH,
-			Label:       "alias_eth",
-			InitMessage: initMsg,
-			Pinned:      false,
-			Role:        ROLE_ALIAS,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_PROXY_INTERFACES,
-			Label:       "proxy_interfaces",
-			InitMessage: initMsg,
-			Pinned:      false,
-			Native:      true,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -302,6 +217,21 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
+	}
+}
+
+func BasePrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal init message")
+	}
+
+	storageInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"initialBlockIndex":1}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal storageInitMsg message")
+	}
+	return []SystemContract{
 		{
 			Address:     ADDR_STORAGE_CHAIN,
 			Label:       STORAGE_CHAIN,
@@ -311,6 +241,109 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_MetaConsensus,
 			Deps:        []string{},
 		},
+		{
+			Address:     ADDR_ALIAS_ETH,
+			Label:       "alias_eth",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_ALIAS,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_PROXY_INTERFACES,
+			Label:       "proxy_interfaces",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Native:      true,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_SYS_PROXY,
+			Label:       "sys_proxy",
+			InitMessage: initMsg,
+			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+	}
+}
+
+func EIDPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("CosmosPrecompiles: cannot marshal init message")
+	}
+	return []SystemContract{
+		{
+			Address:     ADDR_SECP384R1,
+			Label:       "secp384r1",
+			InitMessage: initMsg,
+			Pinned:      false, //TODO
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_SECP384R1_REGISTRY,
+			Label:       "secp384r1_registry",
+			InitMessage: initMsg,
+			Pinned:      false, // TODO
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_SECRET_SHARING,
+			Label:       "secret_sharing",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Native:      true,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+	}
+}
+
+func CosmosPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("CosmosPrecompiles: cannot marshal init message")
+	}
+	// TODO remove/replace minter
+	// note we use ROLE_BANK for redirected messages through cosmosmod
+	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s","%s","%s"]}`, ROLE_STAKING, ROLE_GOVERNANCE, ROLE_BANK, authtypes.NewModuleAddress("fee_collector").String(), authtypes.NewModuleAddress("mint").String()))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
+	}
+
+	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks message")
+	}
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
+	}
+
+	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
+	}
+	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
+	}
+
+	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
+	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
+	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal govInitMsg message")
+	}
+
+	return []SystemContract{
 		{
 			Address:     ADDR_STAKING,
 			Label:       STAKING_v001,
@@ -329,24 +362,6 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
-		{
-			Address:     ADDR_SLASHING,
-			Label:       SLASHING_v001,
-			InitMessage: initMsg,
-			Pinned:      false,
-			Role:        ROLE_SLASHING,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_DISTRIBUTION,
-			Label:       DISTRIBUTION_v001,
-			InitMessage: initMsg,
-			Pinned:      false,
-			Role:        ROLE_DISTRIBUTION,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
 		// we only need to create, not initialize the erc20 contract
 		{
 			Address:     "",
@@ -362,6 +377,24 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       DERC20_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_SLASHING,
+			Label:       SLASHING_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_SLASHING,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_DISTRIBUTION,
+			Label:       DISTRIBUTION_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_DISTRIBUTION,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -401,6 +434,37 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
+	}
+}
+
+func ConsensusPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("ConsensusPrecompiles: cannot marshal init message")
+	}
+
+	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
+	}
+
+	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":15000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+	}
+
+	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"5000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":5000},{"key":"timeoutPrevote","value":5000},{"key":"timeoutPrecommit","value":5000}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+	}
+
+	avaInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"sampleSize","value":"2"},{"key":"betaThreshold","value":2},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":80}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
+	}
+
+	return []SystemContract{
 		{
 			Address:     ADDR_CONSENSUS_RAFT_LIBRARY,
 			Label:       "raft_library",
@@ -491,6 +555,16 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, ROLE_LIBRARY)},
 		},
+	}
+}
+
+func ChatPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("ChatPrecompiles: cannot marshal init message")
+	}
+	return []SystemContract{
 		{
 			Address:     ADDR_CHAT,
 			Label:       CHAT_v001,
@@ -508,6 +582,34 @@ func DefaultSystemContracts() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
+	}
+}
+
+func DefaultSystemContracts() SystemContracts {
+	precompiles := StarterPrecompiles()
+	precompiles = append(precompiles, SimplePrecompiles()...)
+	precompiles = append(precompiles, InterpreterPrecompiles()...)
+	precompiles = append(precompiles, BasePrecompiles()...)
+	precompiles = append(precompiles, EIDPrecompiles()...)
+	precompiles = append(precompiles, CosmosPrecompiles()...)
+	precompiles = append(precompiles, ConsensusPrecompiles()...)
+	precompiles = append(precompiles, ChatPrecompiles()...)
+	return precompiles
+}
+
+func DefaultTimeChainContracts() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("DefaultTimeChainContracts: cannot marshal init message")
+	}
+
+	timeInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"chain_id":"time_666-1","interval_ms":100}}`)})
+	if err != nil {
+		panic("DefaultTimeChainContracts: cannot marshal timeInitMsg message")
+	}
+
+	consensusPrecompile := []SystemContract{
 		{
 			Address:     ADDR_TIME,
 			Label:       TIME_v001,
@@ -522,7 +624,7 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       LEVEL0_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
-			// Role:        ROLE_TIME,
+			Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -531,19 +633,21 @@ func DefaultSystemContracts() SystemContracts {
 			Label:       LEVELN_v001,
 			InitMessage: initMsg,
 			Pinned:      false,
-			// Role:        ROLE_TIME,
+			Role:        ROLE_LEVELN,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
-		{
-			Address:     ADDR_SYS_PROXY,
-			Label:       "sys_proxy",
-			InitMessage: initMsg,
-			Pinned:      false,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
 	}
+
+	precompiles := StarterPrecompiles()
+	precompiles = append(precompiles, SimplePrecompiles()...)
+	precompiles = append(precompiles, InterpreterPrecompiles()...)
+	precompiles = append(precompiles, BasePrecompiles()...)
+	precompiles = append(precompiles, EIDPrecompiles()...)
+	precompiles = append(precompiles, CosmosPrecompiles()...)
+	precompiles = append(precompiles, consensusPrecompile...)
+	precompiles = append(precompiles, ChatPrecompiles()...)
+	return precompiles
 }
 
 func (p SystemContract) Validate() error {
