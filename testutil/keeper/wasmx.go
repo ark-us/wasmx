@@ -110,7 +110,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	nil, //scopedTransferKeeper,
 	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	// )
-	mapp := app.New(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
+	mapp := app.NewApp(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
 	k := keeper.NewKeeper(
 		g,
 		goctx,

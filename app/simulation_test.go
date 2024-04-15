@@ -49,7 +49,7 @@ func BenchmarkSimulation(b *testing.B) {
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 
-	app := app.New(
+	app := app.NewApp(
 		logger,
 		db,
 		nil,

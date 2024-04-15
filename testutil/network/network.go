@@ -57,7 +57,7 @@ func New(t *testing.T, configs ...network.Config) *network.Network {
 func DefaultConfig() network.Config {
 	encoding := app.MakeEncodingConfig()
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
-	tempApp := app.New(
+	tempApp := app.NewApp(
 		log.NewNopLogger(),
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
@@ -71,7 +71,7 @@ func DefaultConfig() network.Config {
 		InterfaceRegistry: encoding.InterfaceRegistry,
 		AccountRetriever:  authtypes.AccountRetriever{},
 		AppConstructor: func(val network.ValidatorI) servertypes.Application {
-			return app.New(
+			return app.NewApp(
 				val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{}, val.GetCtx().Config.RootDir, 0,
 				encoding,
 				simtestutil.EmptyAppOptions{},

@@ -79,7 +79,7 @@ func (m DefaultAppOptions) Set(key string, value interface{}) {
 }
 
 // Setup initializes a new Mythos. A Nop logger is set in Mythos.
-func Setup(
+func SetupApp(
 	isCheckTx bool,
 ) *App {
 	db := dbm.NewMemDB()
@@ -90,7 +90,7 @@ func Setup(
 	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	app := New(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
+	app := NewApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -134,7 +134,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	app := New(
+	app := NewApp(
 		logger,
 		db, nil, true, map[int64]bool{},
 		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, appOpts,
@@ -163,12 +163,12 @@ func NewTestNetworkFixture() network.TestFixture {
 	goctx = networkvm.WithP2PEmptyContext(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	app := New(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
+	app := NewApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
 		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
-		return New(
+		return NewApp(
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
 			DefaultNodeHome, 5, MakeEncodingConfig(),
 			appOpts,

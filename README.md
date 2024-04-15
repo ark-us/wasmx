@@ -106,8 +106,9 @@ CGO_LDFLAGS='-Wl,-rpath,/Users/user/.wasmedge/lib' go test --count=1 -short -v .
 * `26656` consensus p2p incoming connections - p2p.laddr (former cometbft port)
 * `26657` consensus RPC - HTTP server + JSON-RPC server - rpc.laddr (former cometbft port)
 * `26657/websocket` consensus RPC - websockets (former cometbft port)
-* `8090` network module
+* `8090` network module - smart contract GRPC requests
 * `8545` JSON-RPC
 * `8546` JSON-RPC websockets
 * `9999` websrv webserver
 * `6060` pprof
+* `5001` libp2p port
