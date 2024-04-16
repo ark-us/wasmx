@@ -342,8 +342,6 @@ func NewApp(
 		icacontrollertypes.StoreKey,
 		wasmxmoduletypes.StoreKey,
 		websrvmoduletypes.StoreKey,
-		networkmoduletypes.StoreKey,
-		cosmosmodtypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
@@ -442,11 +440,6 @@ func NewApp(
 		app.goRoutineGroup,
 		app.goContextParent,
 		appCodec,
-		keys[networkmoduletypes.StoreKey],
-		memKeys[networkmoduletypes.MemStoreKey],
-		tkeys[networkmoduletypes.TStoreKey],
-		clessKeys[networkmoduletypes.CLessStoreKey],
-		app.GetSubspace(networkmoduletypes.ModuleName),
 		&app.WasmxKeeper,
 		app.actionExecutor,
 		// TODO remove authority?
