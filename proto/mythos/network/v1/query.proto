@@ -13,10 +13,8 @@ option (gogoproto.equal_all) = false;
 
 // Query provides defines the gRPC querier service
 service Query {
-  // Params gets the module params
-  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/network/v1/params";
-  }
+  // QueryContract
+  // rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
 }
 
 // QueryParamsRequest is the request type for the Query/Params RPC method.
