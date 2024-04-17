@@ -43,7 +43,7 @@ message MsgMultiChainWrap {
 
     option (gogoproto.equal)           = false;
     option (gogoproto.goproto_getters) = true;
-    string chain_id = 1;
+    string multi_chain_id = 1;
     string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     google.protobuf.Any data = 3;
 }
