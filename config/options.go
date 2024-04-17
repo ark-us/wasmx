@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -71,7 +71,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(sdkserver.FlagIAVLCacheSize))),
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(sdkserver.FlagDisableIAVLFastNode))),
 		defaultMempool,
-		baseapp.SetChainID(chainID),
 		baseapp.SetQueryGasLimit(cast.ToUint64(appOpts.Get(sdkserver.FlagQueryGasLimit))),
+		baseapp.SetChainID(chainID),
 	}
 }

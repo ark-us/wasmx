@@ -327,7 +327,7 @@ func (a appCreator) newApp(
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
 	fmt.Println("---appCreator newApp--")
-	baseappOptions := DefaultBaseappOptions(appOpts)
+	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range cast.ToIntSlice(appOpts.Get(sdkserver.FlagUnsafeSkipUpgrades)) {

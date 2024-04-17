@@ -379,6 +379,7 @@ func NewApp(
 		panic(err)
 	}
 	app.chainCfg = chainCfg
+	cfg.SetGlobalChainConfig(chainId)
 
 	// TODO replace NewPermissionsForAddress with address by role
 	permAddrs := make(map[string]authtypes.PermissionsForAddress)

@@ -50,6 +50,8 @@ func SetGlobalChainConfig(chainId string) error {
 		return fmt.Errorf("chain_id configuration not found: %s", chainId)
 	}
 	config := sdk.GetConfig()
+	// TODO rewrite cosmos
+	sdk.SetAddrCacheEnabled(false)
 	SetBech32Prefixes(config, cfg)
 	return nil
 }
@@ -77,7 +79,7 @@ func GetChainConfig(chainId string) (*ChainConfig, error) {
 	if !ok {
 		// return nil, fmt.Errorf("chain_id configuration not found: %s", chainId)
 		// for initializing an empty application when starting the process
-		conf = PrefixesMap[MYTHOS_CHAIN_ID_TEST]
+		conf = PrefixesMap[MYTHOS_CHAIN_ID_TESTNET]
 	}
 	return &conf, nil
 }
@@ -88,8 +90,22 @@ var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 
 // TODO this needs to be in a contract
 func init() {
-	// mythos_7000-14
-	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = ChainConfig{
+	// PrefixesMap[MYTHOS_CHAIN_ID_TEST] = ChainConfig{
+	// 	Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
+	// 	Bech32PrefixAccPub:   Bech32PrefixAccPub,
+	// 	Bech32PrefixValAddr:  Bech32PrefixValAddr,
+	// 	Bech32PrefixValPub:   Bech32PrefixValPub,
+	// 	Bech32PrefixConsAddr: Bech32PrefixConsAddr,
+	// 	Bech32PrefixConsPub:  Bech32PrefixConsPub,
+	// 	Name:                 Name,
+	// 	HumanCoinUnit:        HumanCoinUnit,
+	// 	BaseDenom:            BaseDenom,
+	// 	DenomUnit:            DenomUnit,
+	// 	BaseDenomUnit:        BaseDenomUnit,
+	// 	BondBaseDenom:        BondBaseDenom,
+	// 	BondDenom:            BondDenom,
+	// }
+	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = ChainConfig{
 		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
 		Bech32PrefixAccPub:   Bech32PrefixAccPub,
 		Bech32PrefixValAddr:  Bech32PrefixValAddr,
@@ -104,7 +120,6 @@ func init() {
 		BondBaseDenom:        BondBaseDenom,
 		BondDenom:            BondDenom,
 	}
-	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = PrefixesMap[MYTHOS_CHAIN_ID_TEST]
 	PrefixesMap[LEVEL0_CHAIN_ID] = ChainConfig{
 		Bech32PrefixAccAddr:  "level0",
 		Bech32PrefixAccPub:   "level0pub",

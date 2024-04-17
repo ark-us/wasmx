@@ -9,14 +9,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	viper "github.com/spf13/viper"
 
 	abciserver "github.com/cometbft/cometbft/abci/server"
 	tcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
@@ -29,6 +28,7 @@ import (
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -235,23 +235,34 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 
-	for chainId, _ := range mcfg.PrefixesMap {
-		cpy := svrCtx.Viper.AllSettings()
-		options := viper.New()
-		err = options.MergeConfigMap(cpy)
-		if err != nil {
-			return err
-		}
-		fmt.Println("---build app--", chainId)
-		options.Set(flags.FlagChainID, chainId)
+	appOpts := svrCtx.Viper
+	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
+	// TODO reuse
+	encodingConfig := mapp.MakeEncodingConfig()
+	skipUpgradeHeights := make(map[int64]bool)
+	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
+		skipUpgradeHeights[int64(h)] = true
+	}
 
-		// SetGlobalChainConfig(chainId) // TODO ?
-		app := appCreator(svrCtx.Logger, db, traceWriter, options)
-		if err != nil {
-			return err
-		}
-		app_ := app.(*mapp.App)
-		bapps.Apps[chainId] = app_
+	for chainId, _ := range mcfg.PrefixesMap {
+
+		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
+
+		mcfg.SetGlobalChainConfig(chainId) // TODO ?
+		app := mapp.NewApp(
+			svrCtx.Logger,
+			db,
+			traceWriter,
+			true,
+			skipUpgradeHeights,
+			cast.ToString(appOpts.Get(flags.FlagHome)),
+			cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
+			encodingConfig,
+			appOpts,
+			baseappOptions...,
+		)
+
+		bapps.Apps[chainId] = app
 	}
 
 	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
@@ -399,23 +410,33 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 
+	appOpts := svrCtx.Viper
+	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
+	// TODO reuse
+	encodingConfig := mapp.MakeEncodingConfig()
+	skipUpgradeHeights := make(map[int64]bool)
+	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
+		skipUpgradeHeights[int64(h)] = true
+	}
+
 	for chainId, _ := range mcfg.PrefixesMap {
-		cpy := svrCtx.Viper.AllSettings()
-		options := viper.New()
-		err = options.MergeConfigMap(cpy)
-		if err != nil {
-			return err
-		}
-		fmt.Println("---startInProcess build app--", chainId)
-		options.Set(flags.FlagChainID, chainId)
 
 		// SetGlobalChainConfig(chainId) // TODO ?
-		app := appCreator(svrCtx.Logger, db, traceWriter, options)
-		if err != nil {
-			return err
-		}
-		app_ := app.(*mapp.App)
-		bapps.Apps[chainId] = app_
+		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
+		mcfg.SetGlobalChainConfig(chainId) // TODO ?
+		app := mapp.NewApp(
+			svrCtx.Logger,
+			db,
+			traceWriter,
+			true,
+			skipUpgradeHeights,
+			cast.ToString(appOpts.Get(flags.FlagHome)),
+			cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
+			encodingConfig,
+			appOpts,
+			baseappOptions...,
+		)
+		bapps.Apps[chainId] = app
 	}
 
 	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
