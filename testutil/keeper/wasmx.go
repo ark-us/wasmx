@@ -31,6 +31,7 @@ import (
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
+	config "mythos/v1/config"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -128,7 +129,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		// nil,
 		types.DefaultWasmConfig(),
 		app.DefaultNodeHome,
-		app.BaseDenom,
+		config.BaseDenom,
 		permAddrs,
 		app.MakeEncodingConfig().InterfaceRegistry,
 		nil,

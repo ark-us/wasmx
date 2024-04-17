@@ -12,7 +12,7 @@ import (
 )
 
 type msgServer struct {
-	App types.BaseApp
+	// App types.BaseApp
 	*Keeper
 }
 
@@ -25,7 +25,7 @@ type MsgServerInternal interface {
 func NewMsgServerImpl(keeper *Keeper, app types.BaseApp) MsgServerInternal {
 	return &msgServer{
 		Keeper: keeper,
-		App:    app,
+		// App:    app,
 	}
 }
 

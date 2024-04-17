@@ -27,13 +27,18 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 
+	config "mythos/v1/config"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 func init() {
 	cfg := sdk.GetConfig()
-	SetBech32Prefixes(cfg)
+	newcfg, err := config.GetChainConfig("mythos_1000-1")
+	if err != nil {
+		panic(err)
+	}
+	config.SetBech32Prefixes(cfg, *newcfg)
 }
 
 // DefaultTestingAppInit defines the IBC application used for testing

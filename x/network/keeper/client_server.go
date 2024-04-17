@@ -136,7 +136,7 @@ func NewGRPCServer(
 	}
 	networkServer := &msgServer{
 		Keeper: mythosapp.GetNetworkKeeper(),
-		App:    bapp,
+		// App:    bapp,
 	}
 
 	logger := svrCtx.Logger.With("module", "network")
@@ -219,10 +219,10 @@ func RegisterGRPCServer(
 	sapp servertypes.Application,
 	server *grpc.Server,
 ) (*msgServer, error) {
-	app, err := GetBaseApp(sapp)
-	if err != nil {
-		return nil, err
-	}
+	// app, err := GetBaseApp(sapp)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	mythosapp, err := GetMythosApp(sapp)
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func RegisterGRPCServer(
 	// NewMsgServerImpl
 	handler := &msgServer{
 		Keeper: mythosapp.GetNetworkKeeper(),
-		App:    app,
+		// App:    app,
 	}
 
 	desc := types.Network_Msg_serviceDesc

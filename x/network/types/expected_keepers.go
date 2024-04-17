@@ -17,6 +17,8 @@ type WasmxKeeper interface {
 	GetAddressOrRole(ctx sdk.Context, chainId string, addressOrRole string) (sdk.AccAddress, error)
 	GetContractInfo(ctx sdk.Context, chainId string, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
 
+	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error)
+
 	SmartContractCall(c context.Context, req *wasmxtypes.QuerySmartContractCallRequest) (rsp *wasmxtypes.QuerySmartContractCallResponse, err error)
 }
 

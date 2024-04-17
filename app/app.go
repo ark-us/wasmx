@@ -191,6 +191,8 @@ import (
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 
 	cosmosmod "mythos/v1/x/cosmosmod"
+
+	cfg "mythos/v1/config"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport
@@ -227,7 +229,7 @@ func init() {
 		panic(err)
 	}
 
-	DefaultNodeHome = filepath.Join(userHomeDir, "."+Name)
+	DefaultNodeHome = filepath.Join(userHomeDir, "."+cfg.Name)
 }
 
 // App extends an ABCI application, but with most of its parameters exported.
@@ -297,6 +299,9 @@ type App struct {
 	// sm is the simulation manager
 	sm           *module.SimulationManager
 	configurator module.Configurator
+
+	chainCfg *cfg.ChainConfig
+	apps     map[string]*App
 }
 
 // New returns a reference to an initialized blockchain app
@@ -323,7 +328,7 @@ func NewApp(
 	std.RegisterInterfaces(interfaceRegistry)
 
 	bApp := baseapp.NewBaseApp(
-		Name,
+		cfg.Name,
 		logger,
 		db,
 		encodingConfig.TxConfig.TxDecoder(),
@@ -340,7 +345,7 @@ func NewApp(
 		paramstypes.StoreKey, consensusparamtypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, circuittypes.StoreKey,
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
 		icacontrollertypes.StoreKey,
-		wasmxmoduletypes.StoreKey,
+		wasmxmoduletypes.GetStoreKey(bApp.ChainID()),
 		websrvmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
@@ -367,6 +372,13 @@ func NewApp(
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
 	}
+
+	chainId := bApp.ChainID()
+	chainCfg, err := cfg.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	app.chainCfg = chainCfg
 
 	// TODO replace NewPermissionsForAddress with address by role
 	permAddrs := make(map[string]authtypes.PermissionsForAddress)
@@ -425,7 +437,7 @@ func NewApp(
 		// app.IBCKeeper.ChannelKeeper,
 		wasmconfig,
 		homePath,
-		BaseDenom,
+		chainCfg.BaseDenom,
 		permAddrs,
 		app.interfaceRegistry,
 		app.MsgServiceRouter(),
@@ -456,9 +468,9 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
-		authcodec.NewBech32Codec(Bech32PrefixAccAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr),
 		permAddrs,
 
 		// authtypes.ProtoBaseAccount,
@@ -482,8 +494,8 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
 	)
 	app.BankKeeper = cosmosmodkeeper.NewKeeperBank(
 		appCodec,
@@ -495,8 +507,8 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
 	)
 	app.GovKeeper = cosmosmodkeeper.NewKeeperGov(
 		appCodec,
@@ -508,8 +520,8 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
 	)
 	app.DistrKeeper = cosmosmodkeeper.NewKeeperDistribution(
 		appCodec,
@@ -525,8 +537,8 @@ func NewApp(
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		authtypes.FeeCollectorName,
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(Bech32PrefixConsAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
+		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
 	)
 	app.SlashingKeeper = cosmosmodkeeper.NewKeeperSlashing(
 		appCodec,
@@ -854,7 +866,7 @@ func NewApp(
 	app.mm.RegisterInvariants(app.CrisisKeeper)
 
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
-	err := app.mm.RegisterServices(app.configurator)
+	err = app.mm.RegisterServices(app.configurator)
 	if err != nil {
 		panic(err)
 	}
@@ -1136,7 +1148,7 @@ func (app *App) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig
 	app.BasicModuleManager.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
 	// register app's OpenAPI routes.
-	docs.RegisterOpenAPIService(Name, apiSvr.Router)
+	docs.RegisterOpenAPIService(app.chainCfg.Name, apiSvr.Router)
 }
 
 // RegisterTxService implements the Application.RegisterTxService method.
@@ -1264,6 +1276,10 @@ func (app *App) GetGoContextParent() context.Context {
 
 func (app *App) GetGoRoutineGroup() *errgroup.Group {
 	return app.goRoutineGroup
+}
+
+func (app *App) GetMultiChainApp() (*MultiChainApp, error) {
+	return GetMultiChainApp(app.GetGoContextParent())
 }
 
 func Exit(s string) {

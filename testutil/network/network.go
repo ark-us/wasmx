@@ -27,6 +27,7 @@ import (
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 
 	app "mythos/v1/app"
+	config "mythos/v1/config"
 )
 
 type (
@@ -83,8 +84,8 @@ func DefaultConfig() network.Config {
 		TimeoutCommit:   2 * time.Second,
 		ChainID:         "chain-" + tmrand.NewRand().Str(6),
 		NumValidators:   1,
-		BondDenom:       app.BondBaseDenom,
-		MinGasPrices:    fmt.Sprintf("1%s", app.BaseDenom),
+		BondDenom:       config.BondBaseDenom,
+		MinGasPrices:    fmt.Sprintf("1%s", config.BaseDenom),
 		AccountTokens:   sdk.TokensFromConsensusPower(1000, sdk.DefaultPowerReduction),
 		StakingTokens:   sdk.TokensFromConsensusPower(500, sdk.DefaultPowerReduction),
 		BondedTokens:    sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),

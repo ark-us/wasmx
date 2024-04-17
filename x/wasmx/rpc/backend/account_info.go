@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	app "mythos/v1/app"
+	config "mythos/v1/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -89,7 +89,7 @@ func (b *Backend) GetBalance(_address common.Address, blockNrOrHash rpctypes.Blo
 	req := &banktypes.QueryBalanceRequest{
 		Address: address.String(),
 		// TODO
-		Denom: app.BaseDenom,
+		Denom: config.BaseDenom,
 	}
 
 	_, err = b.TendermintBlockByNumber(blockNum)

@@ -15,7 +15,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	"mythos/v1/app"
+	config "mythos/v1/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -49,7 +49,7 @@ func (b *Backend) DoCall(
 
 	funds := sdk.Coins{}
 	if args.Value != nil {
-		funds = sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
+		funds = sdk.NewCoins(sdk.NewCoin(config.BaseDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
 	}
 
 	req := wasmxtypes.QuerySmartContractCallRequest{
@@ -125,7 +125,7 @@ func (b *Backend) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 	}
 
 	// TODO denom from smart contract
-	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BaseDenom)
+	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), config.BaseDenom)
 	if err != nil {
 		b.logger.Error("failed to build cosmos tx", "error", err.Error())
 		return common.Hash{}, err
@@ -177,7 +177,7 @@ func (b *Backend) simulateTransaction(ctx context.Context, args rpctypes.Transac
 		value = args.Value.ToInt()
 	}
 	minGasPrice := b.cfg.GetMinGasPrices()
-	gasPrice := minGasPrice.AmountOf(app.BaseDenom).BigInt()
+	gasPrice := minGasPrice.AmountOf(config.BaseDenom).BigInt()
 	// gasPrice := big.NewInt(10000)
 	if args.GasPrice != nil {
 		gasPrice = args.GasPrice.ToInt()
@@ -203,7 +203,7 @@ func (b *Backend) simulateTransaction(ctx context.Context, args rpctypes.Transac
 	ethereumTx.Sender = wasmxtypes.AccAddressFromEvm(*args.From).String()
 
 	// TODO denom from smart contract
-	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), app.BaseDenom)
+	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), config.BaseDenom)
 	if err != nil {
 		b.logger.Error("failed to build cosmos tx", "error", err.Error())
 		return hexutil.Uint64(0), err

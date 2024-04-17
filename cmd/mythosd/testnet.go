@@ -49,6 +49,7 @@ import (
 	pvm "github.com/cometbft/cometbft/privval"
 
 	app "mythos/v1/app"
+	mcfg "mythos/v1/config"
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 	websrvflags "mythos/v1/x/websrv/server/flags"
@@ -116,7 +117,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().Int(flagNumValidators, 4, "Number of validators to initialize the testnet with")
 	cmd.Flags().StringP(flagOutputDir, "o", "./.testnets", "Directory to store initialization data for the testnet")
 	cmd.Flags().String(flags.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
-	cmd.Flags().String(sdkserver.FlagMinGasPrices, fmt.Sprintf("0.000006%s", app.BaseDenom), "Minimum gas prices to accept for transactions; All fees in a tx must meet this minimum (e.g. 10000amyt)")
+	cmd.Flags().String(sdkserver.FlagMinGasPrices, fmt.Sprintf("0.000006%s", mcfg.BaseDenom), "Minimum gas prices to accept for transactions; All fees in a tx must meet this minimum (e.g. 10000amyt)")
 	cmd.Flags().String(flags.FlagKeyAlgorithm, string(hd.Secp256k1Type), "Key signing algorithm to generate keys for")
 	cmd.Flags().Bool(flagP2P, false, "wether the consensus algorithm uses libp2p or not")
 }
@@ -535,9 +536,9 @@ func initTestnetFilesInternal(
 			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(p2pListenAddressMulti+i))
 		}
 
-		accStakingTokens := sdk.TokensFromConsensusPower(5000, app.PowerReduction)
+		accStakingTokens := sdk.TokensFromConsensusPower(5000, mcfg.PowerReduction)
 		coins := sdk.Coins{
-			sdk.NewCoin(app.BaseDenom, accStakingTokens),
+			sdk.NewCoin(mcfg.BaseDenom, accStakingTokens),
 		}
 
 		genBalances[i] = banktypes.Balance{Address: addr.String(), Coins: coins.Sort()}
@@ -547,11 +548,11 @@ func initTestnetFilesInternal(
 		if err != nil {
 			return err
 		}
-		valTokens := sdk.TokensFromConsensusPower(100, app.PowerReduction)
+		valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
 		createValMsg, err := stakingtypes.NewMsgCreateValidator(
 			valStr,
 			valPubKeys[i],
-			sdk.NewCoin(app.BaseDenom, valTokens),
+			sdk.NewCoin(mcfg.BaseDenom, valTokens),
 			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
 			stakingtypes.NewCommissionRates(math.LegacyOneDec(), math.LegacyOneDec(), math.LegacyOneDec()),
 			math.OneInt(),
@@ -642,9 +643,9 @@ func initGenFiles(
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
 	cosmosmodGenState.Bank.Balances = genBalances
-	cosmosmodGenState.Staking.Params.BondDenom = app.BondBaseDenom
-	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = app.BaseDenom
-	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(app.BaseDenom, math.NewInt(50000000)))
+	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
+	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = mcfg.BaseDenom
+	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(mcfg.BaseDenom, math.NewInt(50000000)))
 	// TODO make this bigger once we have our own governance contract
 	votingP := time.Minute * 2
 	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
@@ -661,12 +662,12 @@ func initGenFiles(
 
 	var crisisGenState crisistypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState)
-	crisisGenState.ConstantFee.Denom = app.BaseDenom
+	crisisGenState.ConstantFee.Denom = mcfg.BaseDenom
 	appGenState[crisistypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&crisisGenState)
 
 	var mintGenState minttypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[minttypes.ModuleName], &mintGenState)
-	mintGenState.Params.MintDenom = app.BaseDenom
+	mintGenState.Params.MintDenom = mcfg.BaseDenom
 	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
 	// var wasmxGenState wasmxtypes.GenesisState

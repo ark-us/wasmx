@@ -54,6 +54,8 @@ import (
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
+
+	mcfg "mythos/v1/config"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
@@ -88,7 +90,7 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, appOpts)
 
 	rootCmd := &cobra.Command{
-		Use:   app.Name + "d",
+		Use:   mcfg.Name + "d",
 		Short: "Start mythos node",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// set the default command outputs
@@ -142,7 +144,7 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	}
 
 	overwriteFlagDefaults(rootCmd, map[string]string{
-		flags.FlagChainID:        strings.ReplaceAll(app.Name, "-", ""),
+		flags.FlagChainID:        strings.ReplaceAll(mcfg.Name, "-", ""),
 		flags.FlagKeyringBackend: "test",
 	})
 
@@ -166,9 +168,9 @@ func initRootCmd(
 ) {
 	// Set config
 	cfg := sdk.GetConfig()
-	cfg.SetBech32PrefixForAccount(app.Bech32PrefixAccAddr, app.Bech32PrefixAccPub)
-	cfg.SetBech32PrefixForValidator(app.Bech32PrefixValAddr, app.Bech32PrefixValPub)
-	cfg.SetBech32PrefixForConsensusNode(app.Bech32PrefixConsAddr, app.Bech32PrefixConsPub)
+	cfg.SetBech32PrefixForAccount(mcfg.Bech32PrefixAccAddr, mcfg.Bech32PrefixAccPub)
+	cfg.SetBech32PrefixForValidator(mcfg.Bech32PrefixValAddr, mcfg.Bech32PrefixValPub)
+	cfg.SetBech32PrefixForConsensusNode(mcfg.Bech32PrefixConsAddr, mcfg.Bech32PrefixConsPub)
 	cfg.Seal()
 
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
