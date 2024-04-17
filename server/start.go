@@ -10,10 +10,13 @@ import (
 	"runtime"
 	"runtime/pprof"
 
+	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	viper "github.com/spf13/viper"
 
 	abciserver "github.com/cometbft/cometbft/abci/server"
 	tcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
@@ -37,6 +40,7 @@ import (
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	"github.com/cosmos/cosmos-sdk/server/types"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
@@ -56,6 +60,8 @@ import (
 	networktypes "mythos/v1/x/network/types"
 	networkvm "mythos/v1/x/network/vm"
 
+	mapp "mythos/v1/app"
+	mcfg "mythos/v1/config"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -226,12 +232,37 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = networkvm.WithP2PEmptyContext(ctx)
+	ctx, bapps := mapp.WithMultiChainAppEmpty(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
-	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-	if err != nil {
-		return err
+
+	for chainId, _ := range mcfg.PrefixesMap {
+		cpy := svrCtx.Viper.AllSettings()
+		options := viper.New()
+		err = options.MergeConfigMap(cpy)
+		if err != nil {
+			return err
+		}
+		fmt.Println("---build app--", chainId)
+		options.Set(flags.FlagChainID, chainId)
+
+		// SetGlobalChainConfig(chainId) // TODO ?
+		app := appCreator(svrCtx.Logger, db, traceWriter, options)
+		if err != nil {
+			return err
+		}
+		app_ := app.(*mapp.App)
+		bapps.Apps[chainId] = app_
 	}
+
+	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
+	// if err != nil {
+	// 	return err
+	// }
+
+	app_ := bapps.Apps[cast.ToString(svrCtx.Viper.Get(flags.FlagChainID))]
+	app := servertypes.Application(app_)
+
 	cmtApp := server.NewCometABCIWrapper(app)
 	svr, err := abciserver.NewServer(addr, transport, cmtApp)
 	if err != nil {
@@ -365,12 +396,36 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	// for network p2p streams
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = networkvm.WithP2PEmptyContext(ctx)
+	ctx, bapps := mapp.WithMultiChainAppEmpty(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
-	app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-	if err != nil {
-		return err
+
+	for chainId, _ := range mcfg.PrefixesMap {
+		cpy := svrCtx.Viper.AllSettings()
+		options := viper.New()
+		err = options.MergeConfigMap(cpy)
+		if err != nil {
+			return err
+		}
+		fmt.Println("---startInProcess build app--", chainId)
+		options.Set(flags.FlagChainID, chainId)
+
+		// SetGlobalChainConfig(chainId) // TODO ?
+		app := appCreator(svrCtx.Logger, db, traceWriter, options)
+		if err != nil {
+			return err
+		}
+		app_ := app.(*mapp.App)
+		bapps.Apps[chainId] = app_
 	}
+
+	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
+	// if err != nil {
+	// 	return err
+	// }
+
+	app_ := bapps.Apps[cast.ToString(svrCtx.Viper.Get(flags.FlagChainID))]
+	app := servertypes.Application(app_)
 
 	metrics, err := startTelemetry(config.Config)
 	if err != nil {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -29,7 +30,6 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
@@ -72,7 +72,7 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 		WithAccountRetriever(types.AccountRetriever{}).
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("")
-
+	fmt.Println("---init-NewRootCmd--")
 	logger := log.NewNopLogger()
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
@@ -81,14 +81,22 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir())
+	// appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
+	// appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
+	// tempBaseappOptions := DefaultBaseappOptions(appOpts)
+	fmt.Println("---tempApp--")
 	tempApp := app.NewApp(
 		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
 		cast.ToString(tempOpts.Get(flags.FlagHome)),
-		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, appOpts)
-
+		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, appOpts,
+		// tempBaseappOptions...,
+		// baseapp.SetChainID(mcfg.MYTHOS_CHAIN_ID_TESTNET),
+	)
+	fmt.Println("---tempApp DONE--")
 	rootCmd := &cobra.Command{
 		Use:   mcfg.Name + "d",
 		Short: "Start mythos node",
@@ -139,9 +147,12 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	autoCliOpts.Keyring, _ = keyring.NewAutoCLIKeyring(initClientCtx.Keyring)
 	autoCliOpts.ClientCtx = initClientCtx
 
+	fmt.Println("---NewRootCmd pre EnhanceRootCommand--")
+
 	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
 		panic(err)
 	}
+	fmt.Println("---NewRootCmd post EnhanceRootCommand--")
 
 	overwriteFlagDefaults(rootCmd, map[string]string{
 		flags.FlagChainID:        strings.ReplaceAll(mcfg.Name, "-", ""),
@@ -167,11 +178,12 @@ func initRootCmd(
 	basicManager module.BasicManager,
 ) {
 	// Set config
-	cfg := sdk.GetConfig()
-	cfg.SetBech32PrefixForAccount(mcfg.Bech32PrefixAccAddr, mcfg.Bech32PrefixAccPub)
-	cfg.SetBech32PrefixForValidator(mcfg.Bech32PrefixValAddr, mcfg.Bech32PrefixValPub)
-	cfg.SetBech32PrefixForConsensusNode(mcfg.Bech32PrefixConsAddr, mcfg.Bech32PrefixConsPub)
-	cfg.Seal()
+	// cfg := sdk.GetConfig()
+	// cfg.SetBech32PrefixForAccount(mcfg.Bech32PrefixAccAddr, mcfg.Bech32PrefixAccPub)
+	// cfg.SetBech32PrefixForValidator(mcfg.Bech32PrefixValAddr, mcfg.Bech32PrefixValPub)
+	// cfg.SetBech32PrefixForConsensusNode(mcfg.Bech32PrefixConsAddr, mcfg.Bech32PrefixConsPub)
+	// TODO we need to rewrite cosmos sdk to allow changing bech32 prefixes for multichain
+	// cfg.Seal()
 
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
@@ -314,6 +326,7 @@ func (a appCreator) newApp(
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
+	fmt.Println("---appCreator newApp--")
 	baseappOptions := DefaultBaseappOptions(appOpts)
 
 	skipUpgradeHeights := make(map[int64]bool)
@@ -346,6 +359,7 @@ func (a appCreator) appExport(
 	appOpts servertypes.AppOptions,
 	modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
+	fmt.Println("---appExport--")
 	homePath, ok := appOpts.Get(flags.FlagHome).(string)
 	if !ok || homePath == "" {
 		return servertypes.ExportedApp{}, errors.New("application home not set")

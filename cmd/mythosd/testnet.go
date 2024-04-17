@@ -157,6 +157,7 @@ Example:
 	mythosd testnet init-files --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
 	`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			fmt.Println("---init-files--")
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
@@ -181,15 +182,17 @@ Example:
 			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
 		},
 	}
+	fmt.Println("---init-files0--")
 
 	addTestnetFlagsToCmd(cmd)
+	fmt.Println("---init-files1--")
 	cmd.Flags().String(flagNodeDirPrefix, "node", "Prefix the directory name for each node with (node results in node0, node1, ...)")
 	cmd.Flags().String(flagNodeDaemonHome, "mythosd", "Home directory of the node's daemon configuration")
 	cmd.Flags().String(flagStartingIPAddress, "192.168.0.1", "Starting IP address (192.168.0.1 results in persistent peers list ID0@192.168.0.1:46656, ID1@192.168.0.2:46656, ...)")
 	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
 	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
-
+	fmt.Println("---init-files2--")
 	return cmd
 }
 
@@ -320,6 +323,7 @@ func initTestnetFiles(
 	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 ) error {
+	fmt.Println("--initTestnetFiles--")
 	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, 0, "")
 }
 
@@ -371,6 +375,7 @@ func initTestnetFilesInternal(
 	nodeIndexStart int,
 	leaderURI string,
 ) error {
+	fmt.Println("--initTestnetFilesInternal--")
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
 	}
@@ -622,6 +627,13 @@ func initTestnetFilesInternal(
 		if err != nil {
 			return err
 		}
+
+		// initialize level0
+		for i := nodeIndexStart; i < args.numValidators; i++ {
+			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccounts[i], genBalances[i], genFiles[i], args.numValidators); err != nil {
+				return err
+			}
+		}
 	}
 
 	cmd.PrintErrf("Successfully initialized %d node directories\n", args.numValidators)
@@ -744,6 +756,72 @@ func collectGenFiles(
 		}
 	}
 
+	return nil
+}
+
+func initGenFilesLevel0(
+	clientCtx client.Context,
+	mbm module.BasicManager,
+	chainID string,
+	genAccount authtypes.GenesisAccount,
+	genBalance banktypes.Balance,
+	genFile string,
+	numValidators int,
+) error {
+	fmt.Println("--initGenFilesLevel0 genFile--", genFile)
+	genFile = strings.Replace(genFile, ".json", "_"+chainID+".json", 1)
+	chaincfg, err := mcfg.GetChainConfig(chainID)
+	if err != nil {
+		panic(err)
+	}
+	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
+
+	var cosmosmodGenState cosmosmodtypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
+
+	cosmosmodGenState.Bank.Balances = []banktypes.Balance{genBalance}
+	cosmosmodGenState.Staking.Params.BondDenom = chaincfg.BondBaseDenom
+	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = chaincfg.BaseDenom
+	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, math.NewInt(50000000)))
+	// TODO make this bigger once we have our own governance contract
+	votingP := time.Minute * 2
+	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
+
+	// set the accounts in the genesis state
+	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(clientCtx.Codec, cosmosmodGenState.Auth.Params, []authtypes.GenesisAccount{genAccount})
+	if err != nil {
+		return err
+	}
+	cosmosmodGenState.Auth = *authGenesis
+
+	// set cosmosmod genesis
+	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
+
+	var crisisGenState crisistypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState)
+	crisisGenState.ConstantFee.Denom = chaincfg.BaseDenom
+	appGenState[crisistypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&crisisGenState)
+
+	var mintGenState minttypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[minttypes.ModuleName], &mintGenState)
+	mintGenState.Params.MintDenom = chaincfg.BaseDenom
+	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
+
+	appGenStateJSON, err := json.MarshalIndent(appGenState, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	genDoc := types.GenesisDoc{
+		ChainID:    chainID,
+		AppState:   appGenStateJSON,
+		Validators: nil,
+	}
+
+	// generate empty genesis file
+	if err := genDoc.SaveAs(genFile); err != nil {
+		return err
+	}
 	return nil
 }
 

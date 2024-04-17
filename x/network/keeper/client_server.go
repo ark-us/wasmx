@@ -27,6 +27,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 
 	// "github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -56,6 +57,7 @@ import (
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	mconfig "mythos/v1/config"
 	"mythos/v1/server/config"
 	networkconfig "mythos/v1/x/network/server/config"
 	"mythos/v1/x/network/types"
@@ -69,11 +71,19 @@ type Config struct {
 	MaxOpenConnections int
 }
 
+type MultiChainApp interface {
+	GetApps() map[string]MythosApp
+	GetApp(chainId string) (MythosApp, error)
+	SetApp(chainId string, app MythosApp)
+}
+
 type MythosApp interface {
 	GetNetworkKeeper() *Keeper
 	GetActionExecutor() *ActionExecutor
 	GetGoContextParent() context.Context
 	GetGoRoutineGroup() *errgroup.Group
+	GetMultiChainApp() (MultiChainApp, error)
+	GetBaseApp() *baseapp.BaseApp
 	// GetTKey(storeKey string) *storetypes.TransientStoreKey
 	// GetMKey(storeKey string) *storetypes.MemoryStoreKey
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
@@ -143,20 +153,33 @@ func NewGRPCServer(
 	client := NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor())
 	clientCtx = clientCtx.WithClient(client)
 
-	// load genesis state
-	// Run the InitChain logic
-	// setup node ips
-	if bapp.LastBlockHeight() == 0 {
-		_, err := initChain(svrCtx, clientCtx, cfg, app, privValidator, nodeKey, genesisDocProvider, metricsProvider, networkServer)
+	multiapp, err := mythosapp.GetMultiChainApp()
+	if err != nil {
+		return nil, nil, err
+	}
+	appMap := multiapp.GetApps()
+	for chainId, app := range appMap {
+		bapp := app.GetBaseApp()
+		sapp, ok := app.(servertypes.Application)
+		if !ok {
+			return nil, nil, fmt.Errorf("cannot get servertypes.Application")
+		}
+		mconfig.SetGlobalChainConfig(chainId)
+		// load genesis state
+		// Run the InitChain logic
+		// setup node ips
+		if bapp.LastBlockHeight() == 0 {
+			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, metricsProvider, networkServer)
+			if err != nil {
+				return nil, nil, err
+			}
+			// fmt.Println("* resInit", resInit)
+		}
+		// start the node
+		err = StartNode(bapp, mythosapp, logger, networkServer)
 		if err != nil {
 			return nil, nil, err
 		}
-		// fmt.Println("* resInit", resInit)
-	}
-	// start the node
-	err = StartNode(bapp, mythosapp, logger, networkServer)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	// ctx := sdk.UnwrapSDKContext(goCtx)
@@ -231,6 +254,7 @@ func RegisterGRPCServer(
 	// sapp.RegisterGRPCServer(server)
 	// return nil, nil
 
+	// TODO actionExecutors per chainId
 	actionExecutor := mythosapp.GetActionExecutor()
 
 	// Define an interceptor for all gRPC queries: this interceptor will create
@@ -241,6 +265,8 @@ func RegisterGRPCServer(
 		if !ok {
 			return nil, status.Error(codes.Internal, "unable to retrieve metadata")
 		}
+		fmt.Println("---network interceptor md--", md)
+		fmt.Println("---network interceptor req--", req)
 
 		// Get height header from the request context, if present.
 		var height int64
