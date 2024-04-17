@@ -39,7 +39,6 @@ import (
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
-	"github.com/cosmos/cosmos-sdk/server/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
@@ -67,7 +66,7 @@ import (
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
 // Tendermint.
-func StartCmd(appCreator types.AppCreator, defaultNodeHome string) *cobra.Command {
+func StartCmd(appCreator servertypes.AppCreator, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Run the full node",
@@ -207,7 +206,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	return cmd
 }
 
-func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error {
+func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) error {
 	addr := svrCtx.Viper.GetString(srvflags.Address)
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
 	home := svrCtx.Viper.GetString(flags.FlagHome)
@@ -288,7 +287,7 @@ func startStandAlone(svrCtx *server.Context, appCreator types.AppCreator) error 
 }
 
 // legacyAminoCdc is used for the legacy REST API
-func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator types.AppCreator) (err error) {
+func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator servertypes.AppCreator) (err error) {
 	cfg := svrCtx.Config
 	home := cfg.RootDir
 	logger := svrCtx.Logger
@@ -487,7 +486,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 			app,
 			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
 			nodeKey,
-			getGenDocProvider(cfg),
+			getGenDocProvider2(cfg),
 			node.DefaultMetricsProvider(cfg.Instrumentation),
 		)
 		if err != nil {
@@ -649,7 +648,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 func startCmtNode(
 	ctx context.Context,
 	cfg *cmtcfg.Config,
-	app types.Application,
+	app servertypes.Application,
 	svrCtx *server.Context,
 ) (tmNode *node.Node, cleanupFn func(), err error) {
 	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
@@ -690,7 +689,24 @@ func startCmtNode(
 // returns a function which returns the genesis doc from the genesis file.
 func getGenDocProvider(cfg *cmtcfg.Config) func() (*cmttypes.GenesisDoc, error) {
 	return func() (*cmttypes.GenesisDoc, error) {
-		appGenesis, err := genutiltypes.AppGenesisFromFile(cfg.GenesisFile())
+		genFile := cfg.GenesisFile()
+		appGenesis, err := genutiltypes.AppGenesisFromFile(genFile)
+		if err != nil {
+			return nil, err
+		}
+
+		return appGenesis.ToGenesisDoc()
+	}
+}
+
+// returns a function which returns the genesis doc from the genesis file.
+func getGenDocProvider2(cfg *cmtcfg.Config) func(chainId string) (*cmttypes.GenesisDoc, error) {
+	return func(chainId string) (*cmttypes.GenesisDoc, error) {
+		genFile := cfg.GenesisFile()
+		if chainId != "" {
+			genFile = strings.Replace(genFile, ".json", "_"+chainId+".json", 1)
+		}
+		appGenesis, err := genutiltypes.AppGenesisFromFile(genFile)
 		if err != nil {
 			return nil, err
 		}
@@ -705,7 +721,7 @@ func startGrpcServer(
 	config serverconfig.GRPCConfig,
 	clientCtx client.Context,
 	svrCtx *server.Context,
-	app types.Application,
+	app servertypes.Application,
 ) (*grpc.Server, client.Context, error) {
 	if !config.Enable {
 		// return grpcServer as nil if gRPC is disabled
@@ -765,7 +781,7 @@ func startAPIServer(
 	svrCfg serverconfig.Config,
 	clientCtx client.Context,
 	svrCtx *server.Context,
-	app types.Application,
+	app servertypes.Application,
 	home string,
 	grpcSrv *grpc.Server,
 	metrics *telemetry.Metrics,

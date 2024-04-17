@@ -8,7 +8,10 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmttypes "github.com/cometbft/cometbft/types"
 )
+
+type GenesisDocProvider func(string) (*cmttypes.GenesisDoc, error)
 
 type BaseApp interface {
 	Name() string

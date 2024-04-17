@@ -19,6 +19,7 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
 	"mythos/v1/server/config"
+	"mythos/v1/x/network/types"
 )
 
 func StartGRPCServer(
@@ -29,7 +30,7 @@ func StartGRPCServer(
 	app servertypes.Application,
 	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
-	genesisDocProvider node.GenesisDocProvider,
+	genesisDocProvider types.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
 ) (*grpc.Server, client.CometRPC, error) {
 	GRPCAddr := cfgAll.Network.Address

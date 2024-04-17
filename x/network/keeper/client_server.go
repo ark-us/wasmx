@@ -112,7 +112,7 @@ func NewGRPCServer(
 	app servertypes.Application,
 	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
-	genesisDocProvider node.GenesisDocProvider,
+	genesisDocProvider types.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
 ) (*grpc.Server, *ABCIClient, error) {
 	grpccfg := cfg.GRPC
@@ -169,7 +169,7 @@ func NewGRPCServer(
 		// Run the InitChain logic
 		// setup node ips
 		if bapp.LastBlockHeight() == 0 {
-			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, metricsProvider, networkServer)
+			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, chainId, metricsProvider, networkServer)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -331,8 +331,8 @@ func RegisterGRPCServer(
 	return handler, nil
 }
 
-func loadGenDoc(genesisDocProvider node.GenesisDocProvider) (*cmttypes.GenesisDoc, error) {
-	genDoc, err := genesisDocProvider()
+func loadGenDoc(genesisDocProvider types.GenesisDocProvider, chainId string) (*cmttypes.GenesisDoc, error) {
+	genDoc, err := genesisDocProvider(chainId)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +357,8 @@ func initChain(
 	app servertypes.Application,
 	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
-	genesisDocProvider node.GenesisDocProvider,
+	genesisDocProvider types.GenesisDocProvider,
+	chainId string,
 	metricsProvider node.MetricsProvider,
 	networkServer *msgServer,
 ) (*abci.ResponseInitChain, error) {
@@ -383,7 +384,7 @@ func initChain(
 	)
 
 	// check if network contract exists
-	genDoc, err := loadGenDoc(genesisDocProvider)
+	genDoc, err := loadGenDoc(genesisDocProvider, chainId)
 	if err != nil {
 		return nil, err
 	}
