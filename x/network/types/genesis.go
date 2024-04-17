@@ -1,25 +1,18 @@
 package types
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(params Params) GenesisState {
-	return GenesisState{
-		Params: params,
-	}
+func NewGenesisState() GenesisState {
+	return GenesisState{}
 }
 
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
 func DefaultGenesisState() *GenesisState {
-	return &GenesisState{
-		Params: DefaultParams(),
-	}
+	return &GenesisState{}
 }
 
 // Validate performs basic genesis state validation returning an error upon any
 // failure.
 func (gs GenesisState) Validate() error {
-	if err := gs.Params.Validate(); err != nil {
-		return err
-	}
 	return nil
 }

@@ -5,7 +5,6 @@ import "gogoproto/gogo.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/v1beta1/coin.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
-import "mythos/network/v1/params.proto";
 
 option go_package = "mythos/v1/x/network/types";
 option (gogoproto.goproto_getters_all) = false;
@@ -13,15 +12,35 @@ option (gogoproto.equal_all) = false;
 
 // Query provides defines the gRPC querier service
 service Query {
-  // QueryContract
-  // rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
+  // ContractCall
+  rpc ContractCall(QueryContractCallRequest) returns (QueryContractCallResponse) {
+    option (google.api.http).get =
+        "/network/v1/chain_id/contract/{address}/call/{query_data}";
+  }
 }
 
-// QueryParamsRequest is the request type for the Query/Params RPC method.
-message QueryParamsRequest {}
+// QueryContractCallRequest is the request type for the
+// Query/ContractCall RPC method
+message QueryContractCallRequest {
+  string chain_id = 1;
+  // Sender is the that actor that signed the messages
+  string sender = 2;
+  // Address is the address of the smart contract
+  string address = 3;
+  bytes query_data = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
+  // Funds coins that are transferred to the contract on execution
+  repeated cosmos.base.v1beta1.Coin funds = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+  // Array of either hex-encoded contract addresses or contract labels
+  // on which the execution of this message depends on
+  repeated string dependencies = 6;
+}
 
-// QueryParamsResponse is the response type for the Query/Params RPC method.
-message QueryParamsResponse {
-  // params defines the parameters of the module.
-  Params params = 1 [ (gogoproto.nullable) = false ];
+// QueryContractCallResponse is the response type for the
+// Query/ContractCall RPC method
+message QueryContractCallResponse {
+  // Data contains the json data returned from the smart contract
+  bytes data = 1 [ (gogoproto.casttype) = "RawContractMessage" ];
 }

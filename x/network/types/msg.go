@@ -3,7 +3,11 @@ package types
 import (
 	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
+
+type RawContractMessage = wasmxtypes.RawContractMessage
 
 func (msg MsgGrpcSendRequest) Route() string {
 	return RouterKey
