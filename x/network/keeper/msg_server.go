@@ -83,7 +83,7 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// set chainId
-	m.SetGlobalChainConfig(ctx, msg.ChainId)
+	m.SetGlobalChainConfig(ctx, msg.MultiChainId)
 
 	var sdkmsg sdk.Msg
 	err := m.cdc.UnpackAny(msg.Data, &sdkmsg)
