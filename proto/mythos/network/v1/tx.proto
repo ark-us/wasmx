@@ -5,6 +5,7 @@ import "gogoproto/gogo.proto";
 import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
 import "amino/amino.proto";
+import "google/protobuf/any.proto";
 
 option go_package = "mythos/v1/x/network/types";
 option (gogoproto.goproto_getters_all) = false;
@@ -23,22 +24,32 @@ service Msg {
 
     rpc StartBackgroundProcess(MsgStartBackgroundProcessRequest) returns (MsgStartBackgroundProcessResponse);
 
+    // MultiChainWrap
+    rpc MultiChainWrap(MsgMultiChainWrap) returns (MsgMultiChainWrapResponse);
+
     // this is external, for the grpc server
     // TODO remove from the message server, only keep for grpc?
 
     // GrpcReceiveRequest
     rpc GrpcReceiveRequest(MsgGrpcReceiveRequest) returns (MsgGrpcReceiveRequestResponse);
 
-    // internal methods
-    // ExecuteContract
-    // rpc ExecuteContract(MsgExecuteContract) returns (MsgExecuteContractResponse);
-
-    // QueryContract
-    // rpc QueryContract(MsgQueryContract) returns (MsgQueryContractResponse);
-
     // P2PReceiveMessage
     rpc P2PReceiveMessage(MsgP2PReceiveMessageRequest) returns (MsgP2PReceiveMessageResponse);
+}
 
+message MsgMultiChainWrap {
+    option (amino.name) = "network/MsgMultiChainWrap";
+    option (cosmos.msg.v1.signer) = "sender";
+
+    option (gogoproto.equal)           = false;
+    option (gogoproto.goproto_getters) = true;
+    string chain_id = 1;
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    google.protobuf.Any data = 3;
+}
+
+message MsgMultiChainWrapResponse {
+    bytes data = 1;
 }
 
 message MsgGrpcSendRequest {

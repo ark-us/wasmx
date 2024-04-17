@@ -79,6 +79,31 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 	}, nil
 }
 
+func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChainWrap) (*types.MsgMultiChainWrapResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	// set chainId
+	m.SetGlobalChainConfig(ctx, msg.ChainId)
+
+	var sdkmsg sdk.Msg
+	err := m.cdc.UnpackAny(msg.Data, &sdkmsg)
+	if err != nil {
+		return nil, err
+	}
+	owner, err := sdk.AccAddressFromBech32(msg.Sender)
+	if err != nil {
+		return nil, err
+	}
+	_, res, err := m.wasmxKeeper.ExecuteCosmosMsg(ctx, sdkmsg, owner)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MsgMultiChainWrapResponse{
+		Data: res,
+	}, nil
+}
+
 func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
