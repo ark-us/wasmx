@@ -15,7 +15,6 @@ import (
 // RegisterRole registers a contract
 func (k *Keeper) RegisterRole(
 	ctx sdk.Context,
-	chainId string,
 	role string,
 	label string,
 	contractAddress sdk.AccAddress,
@@ -25,9 +24,9 @@ func (k *Keeper) RegisterRole(
 		Label:           label,
 		ContractAddress: contractAddress.String(),
 	}
-	k.SetContractAddressByRole(ctx, chainId, role, contractAddress)
-	k.SetRoleByLabel(ctx, chainId, roleObj)
-	k.SetRoleLabelByContract(ctx, chainId, contractAddress, label)
+	k.SetContractAddressByRole(ctx, role, contractAddress)
+	k.SetRoleByLabel(ctx, roleObj)
+	k.SetRoleLabelByContract(ctx, contractAddress, label)
 	// TODO replace the previous role? if a role cannot hold 2 contracts?
 	// e.g. consensus
 	return nil
@@ -36,18 +35,17 @@ func (k *Keeper) RegisterRole(
 // DeregisterRole deregisters a contract
 func (k *Keeper) DeregisterRole(
 	ctx sdk.Context,
-	chainId string,
 	contractAddress sdk.AccAddress,
 ) error {
 	return fmt.Errorf("DeregisterRole not implemented")
 }
 
-func (k *Keeper) GetAddressOrRole(ctx sdk.Context, chainId string, addressOrRole string) (sdk.AccAddress, error) {
-	addr, found := k.GetContractAddressByRole(ctx, chainId, addressOrRole)
+func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
+	addr, found := k.GetContractAddressByRole(ctx, addressOrRole)
 	if found {
 		return addr, nil
 	}
-	role := k.GetRoleByLabel(ctx, chainId, addressOrRole)
+	role := k.GetRoleByLabel(ctx, addressOrRole)
 	if role != nil {
 		contractAddr, err := sdk.AccAddressFromBech32(addressOrRole)
 		if err != nil {
@@ -63,9 +61,9 @@ func (k *Keeper) GetAddressOrRole(ctx sdk.Context, chainId string, addressOrRole
 }
 
 // GetContractAddressByRole
-func (k *Keeper) GetContractAddressByRole(ctx sdk.Context, chainId string, role string) (sdk.AccAddress, bool) {
+func (k *Keeper) GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool) {
 	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(types.GetRolePrefix(chainId, role))
+	bz := store.Get(types.GetRolePrefix(role))
 	if bz == nil {
 		return nil, false
 	}
@@ -73,16 +71,16 @@ func (k *Keeper) GetContractAddressByRole(ctx sdk.Context, chainId string, role 
 }
 
 // SetContractAddressByRole
-func (k *Keeper) SetContractAddressByRole(ctx sdk.Context, chainId string, role string, contractAddress sdk.AccAddress) {
+func (k *Keeper) SetContractAddressByRole(ctx sdk.Context, role string, contractAddress sdk.AccAddress) {
 	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetRolePrefix(chainId, role), contractAddress.Bytes())
+	store.Set(types.GetRolePrefix(role), contractAddress.Bytes())
 }
 
 // GetRoleByLabel
-func (k *Keeper) GetRoleByLabel(ctx sdk.Context, chainId string, label string) *types.Role {
+func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.Role {
 	store := ctx.KVStore(k.storeKey)
 	var role types.Role
-	bz := store.Get(types.GetRoleLabelPrefix(chainId, label))
+	bz := store.Get(types.GetRoleLabelPrefix(label))
 	if bz == nil {
 		return nil
 	}
@@ -91,31 +89,31 @@ func (k *Keeper) GetRoleByLabel(ctx sdk.Context, chainId string, label string) *
 }
 
 // SetRoleByLabel
-func (k *Keeper) SetRoleByLabel(ctx sdk.Context, chainId string, role *types.Role) {
+func (k *Keeper) SetRoleByLabel(ctx sdk.Context, role *types.Role) {
 	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetRoleLabelPrefix(chainId, role.Label), k.cdc.MustMarshal(role))
+	store.Set(types.GetRoleLabelPrefix(role.Label), k.cdc.MustMarshal(role))
 }
 
 // GetRoleLabelByContract
-func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, chainId string, contractAddress sdk.AccAddress) string {
+func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress sdk.AccAddress) string {
 	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(types.GetRoleContractPrefix(chainId, contractAddress))
+	bz := store.Get(types.GetRoleContractPrefix(contractAddress))
 	return string(bz)
 }
 
 // SetRoleLabelByContract
-func (k *Keeper) SetRoleLabelByContract(ctx sdk.Context, chainId string, contractAddress sdk.AccAddress, label string) {
+func (k *Keeper) SetRoleLabelByContract(ctx sdk.Context, contractAddress sdk.AccAddress, label string) {
 	store := ctx.KVStore(k.storeKey)
-	store.Set(types.GetRoleContractPrefix(chainId, contractAddress), []byte(label))
+	store.Set(types.GetRoleContractPrefix(contractAddress), []byte(label))
 }
 
 // GetRoleByContractAddress
-func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, chainId string, contractAddress sdk.AccAddress) string {
-	label := k.GetRoleLabelByContract(ctx, chainId, contractAddress)
+func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, contractAddress sdk.AccAddress) string {
+	label := k.GetRoleLabelByContract(ctx, contractAddress)
 	if label == "" {
 		return ""
 	}
-	role := k.GetRoleByLabel(ctx, chainId, label)
+	role := k.GetRoleByLabel(ctx, label)
 	if role == nil {
 		return ""
 	}

@@ -154,14 +154,14 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(32, len(resp))
 	expectedContractAddress := sdk.AccAddress(vmtypes.CleanupAddress(resp))
-	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), expectedContractAddress)
+	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), expectedContractAddress)
 	s.Require().Nil(contractInfo)
 
 	// we actually execute the contract creation
 	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr := appA.GetContractAddressFromEvents(txresp.GetEvents())
 	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
-	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), createdContractAddress)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
 	// instantiate2
@@ -169,14 +169,14 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(32, len(resp))
 	expectedContractAddress = sdk.AccAddress(vmtypes.CleanupAddress(resp))
-	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), expectedContractAddress)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), expectedContractAddress)
 	s.Require().Nil(contractInfo)
 
 	// we actually execute the contract creation
 	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr = appA.GetContractAddressFromEvents(txresp.GetEvents())
 	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
-	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), createdContractAddress)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
 	data = []byte(`{"justError":[]}`)
@@ -241,14 +241,14 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(32, len(resp))
 	expectedContractAddress := sdk.AccAddress(vmtypes.CleanupAddress(resp))
-	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), expectedContractAddress)
+	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), expectedContractAddress)
 	s.Require().Nil(contractInfo)
 
 	// we actually execute the contract creation
 	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr := appA.GetContractAddressFromEvents(txresp.GetEvents())
 	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
-	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), createdContractAddress)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
 	// instantiate2
@@ -256,13 +256,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(32, len(resp))
 	expectedContractAddress = sdk.AccAddress(vmtypes.CleanupAddress(resp))
-	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), expectedContractAddress)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), expectedContractAddress)
 	s.Require().Nil(contractInfo)
 
 	// we actually execute the contract creation
 	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr = appA.GetContractAddressFromEvents(txresp.GetEvents())
 	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
-	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), appA.Context().ChainID(), createdContractAddress)
+	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 }

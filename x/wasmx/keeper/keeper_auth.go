@@ -18,7 +18,7 @@ import (
 )
 
 func (k *Keeper) SetAccount(ctx sdk.Context, acc sdk.AccountI) error {
-	modaddr, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_AUTH)
+	modaddr, err := k.GetAddressOrRole(ctx, types.ROLE_AUTH)
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +46,7 @@ func (k *Keeper) SetAccount(ctx sdk.Context, acc sdk.AccountI) error {
 }
 
 func (k *Keeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) sdk.AccountI {
-	modaddr, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_AUTH)
+	modaddr, err := k.GetAddressOrRole(ctx, types.ROLE_AUTH)
 	if err != nil {
 		panic(err)
 	}
@@ -87,7 +87,7 @@ func (k *Keeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) sdk.AccountI {
 }
 
 func (k *Keeper) NewAccountWithAddress(ctx sdk.Context, addr sdk.AccAddress) sdk.AccountI {
-	modaddr, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_AUTH)
+	modaddr, err := k.GetAddressOrRole(ctx, types.ROLE_AUTH)
 	if err != nil {
 		panic(err)
 	}

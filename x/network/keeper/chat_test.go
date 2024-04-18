@@ -61,7 +61,7 @@ func (suite *KeeperTestSuite) TestChat() {
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
-	chatAddress, found := appA.App.WasmxKeeper.GetContractAddressByRole(appA.Context(), appA.Context().ChainID(), wasmxtypes.ROLE_CHAT)
+	chatAddress, found := appA.App.WasmxKeeper.GetContractAddressByRole(appA.Context(), wasmxtypes.ROLE_CHAT)
 	s.Require().True(found)
 
 	msg := []byte(`{"JoinRoom":{"roomId":"room101"}}`)

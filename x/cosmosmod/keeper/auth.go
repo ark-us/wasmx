@@ -23,7 +23,7 @@ func (k KeeperAuth) SetParams(ctx sdk.Context, params authtypes.Params) error {
 
 func (k KeeperAuth) GetParams(goCtx context.Context) (params authtypes.Params) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), wasmxtypes.ROLE_AUTH)
+	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
 	if err != nil {
 		panic(err) // TODO catch this
 	}
@@ -55,7 +55,7 @@ func (k KeeperAuth) AddressCodec() address.Codec {
 
 func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), wasmxtypes.ROLE_AUTH)
+	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
 	if err != nil {
 		panic(err) // TODO catch this
 	}
@@ -84,7 +84,7 @@ func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool 
 
 func (k KeeperAuth) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.AccountI {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), wasmxtypes.ROLE_AUTH)
+	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
 	if err != nil {
 		panic(err) // TODO catch this
 	}
@@ -132,7 +132,7 @@ func (k KeeperAuth) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.A
 
 func (k KeeperAuth) SetAccount(goCtx context.Context, acc sdk.AccountI) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), wasmxtypes.ROLE_AUTH)
+	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
 	if err != nil {
 		panic(err) // TODO eventually catch this
 	}
@@ -163,7 +163,7 @@ func (k KeeperAuth) SetAccount(goCtx context.Context, acc sdk.AccountI) {
 
 func (k KeeperAuth) NewAccountWithAddress(goCtx context.Context, addr sdk.AccAddress) sdk.AccountI {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), wasmxtypes.ROLE_AUTH)
+	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
 	if err != nil {
 		panic(err)
 	}

@@ -45,7 +45,7 @@ func (k *Keeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.
 	if found {
 		toAddr = aliasTo
 	}
-	bankAddress, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_BANK)
+	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (k *Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) 
 	if found {
 		addr = aliasAddr
 	}
-	bankAddress, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_BANK)
+	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
 	if err != nil {
 		return sdk.Coin{}, err
 	}
@@ -99,7 +99,7 @@ func (k *Keeper) AllBalances(ctx sdk.Context, addr sdk.AccAddress) (sdk.Coins, e
 	if found {
 		addr = aliasAddr
 	}
-	bankAddress, err := k.GetAddressOrRole(ctx, ctx.ChainID(), types.ROLE_BANK)
+	bankAddress, err := k.GetAddressOrRole(ctx, types.ROLE_BANK)
 	if err != nil {
 		return nil, err
 	}

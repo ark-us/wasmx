@@ -52,7 +52,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	initvaluebz, err := hex.DecodeString(initvalue)
 	s.Require().NoError(err)
 	codeId2, contractAddress2 := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), appA.Context().ChainID(), codeId2)
+	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId2)
 	s.Require().NotNil(codeInfo)
 
 	getHex := `6d4ce63c`

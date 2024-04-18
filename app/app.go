@@ -339,13 +339,23 @@ func NewApp(
 	bApp.SetInterfaceRegistry(interfaceRegistry)
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 
+	chainId := bApp.ChainID()
+	chainCfg, err := cfg.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	cfg.SetGlobalChainConfig(chainId)
+
+	wasmxStoreKey := wasmxmoduletypes.GetStoreKey(chainId)
+	// TODO websrvStoreKey
+
 	keys := storetypes.NewKVStoreKeys(
 		authz.ModuleName, crisistypes.StoreKey,
 		minttypes.StoreKey,
 		paramstypes.StoreKey, consensusparamtypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, circuittypes.StoreKey,
 		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
 		icacontrollertypes.StoreKey,
-		wasmxmoduletypes.GetStoreKey(bApp.ChainID()),
+		wasmxStoreKey,
 		websrvmoduletypes.StoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
@@ -371,15 +381,8 @@ func NewApp(
 		goRoutineGroup:    goRoutineGroup,
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
+		chainCfg:          chainCfg,
 	}
-
-	chainId := bApp.ChainID()
-	chainCfg, err := cfg.GetChainConfig(chainId)
-	if err != nil {
-		panic(err)
-	}
-	app.chainCfg = chainCfg
-	cfg.SetGlobalChainConfig(chainId)
 
 	// TODO replace NewPermissionsForAddress with address by role
 	permAddrs := make(map[string]authtypes.PermissionsForAddress)
@@ -426,7 +429,7 @@ func NewApp(
 		app.goContextParent,
 		appCodec,
 		encodingConfig.TxConfig,
-		keys[wasmxmoduletypes.StoreKey],
+		keys[wasmxStoreKey],
 		memKeys[wasmxmoduletypes.MemStoreKey],
 		tkeys[wasmxmoduletypes.TStoreKey],
 		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],

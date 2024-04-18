@@ -11,15 +11,15 @@ import (
 )
 
 func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo {
-	return k.wasmxKeeper.GetContractInfo(ctx, ctx.ChainID(), contractAddress)
+	return k.wasmxKeeper.GetContractInfo(ctx, contractAddress)
 }
 
 func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
-	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender address or role: "+msg.Sender)
 	}
-	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Contract)
+	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract address or role: "+msg.Contract)
 	}
@@ -40,11 +40,11 @@ func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract)
 }
 
 func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, entryPoint string, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
-	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Contract)
+	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -65,11 +65,11 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, entryPoint string, msg *type
 }
 
 func (k *Keeper) QueryContract(ctx sdk.Context, msg *types.MsgQueryContract) (*types.MsgQueryContractResponse, error) {
-	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Contract)
+	contractAddress, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}

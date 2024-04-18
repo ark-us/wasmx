@@ -27,11 +27,11 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 	ctx sdk.Context,
 	msg *types.MsgStartBackgroundProcessRequest,
 ) error {
-	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Sender)
+	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, ctx.ChainID(), msg.Contract)
+	contractAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return sdkerr.Wrap(err, "contract")
 	}

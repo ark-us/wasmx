@@ -66,47 +66,47 @@ func KeyPrefix(p string) []byte {
 }
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
-func GetLastCodeIDKey(chainId string) []byte {
-	return append([]byte(chainId), KeyLastCodeID...)
+func GetLastCodeIDKey() []byte {
+	return KeyLastCodeID
 }
 
 // GetCodeRootKey constructs the key for retreiving the ID for the WASM code
-func GetCodeRootKey(chainId string) []byte {
-	return append([]byte(chainId), KeyCodePrefix...)
+func GetCodeRootKey() []byte {
+	return KeyCodePrefix
 }
 
 // GetCodeKey constructs the key for retreiving the ID for the WASM code
-func GetCodeKey(chainId string, codeID uint64) []byte {
+func GetCodeKey(codeID uint64) []byte {
 	contractIDBz := sdk.Uint64ToBigEndian(codeID)
-	return append(GetCodeRootKey(chainId), contractIDBz...)
+	return append(GetCodeRootKey(), contractIDBz...)
 }
 
 // GetContractAddressRootKey returns the key for the WASM contract instance
-func GetContractAddressRootKey(chainId string) []byte {
-	return append([]byte(chainId), KeyContractPrefix...)
+func GetContractAddressRootKey() []byte {
+	return KeyContractPrefix
 }
 
 // GetContractAddressKey returns the key for the WASM contract instance
-func GetContractAddressKey(chainId string, addr sdk.AccAddress) []byte {
-	return append(GetContractAddressRootKey(chainId), addr...)
+func GetContractAddressKey(addr sdk.AccAddress) []byte {
+	return append(KeyContractPrefix, addr...)
 }
 
 // GetContractStorePrefix returns the store prefix for the WASM contract instance
-func GetContractStorePrefix(chainId string, addr sdk.AccAddress) []byte {
-	return append(append([]byte(chainId), KeyContractStorePrefix...), addr...)
+func GetContractStorePrefix(addr sdk.AccAddress) []byte {
+	return append(KeyContractStorePrefix, addr...)
 }
 
 // GetRoleLabelPrefix returns the store prefix for the system roles
-func GetRolePrefix(chainId string, role string) []byte {
-	return append(append([]byte(chainId), KeyRolePrefix...), []byte(role)...)
+func GetRolePrefix(role string) []byte {
+	return append(KeyRolePrefix, []byte(role)...)
 }
 
 // GetRoleLabelPrefix returns the store prefix for the system roles
-func GetRoleLabelPrefix(chainId string, label string) []byte {
-	return append(append([]byte(chainId), KeyRoleLabelPrefix...), []byte(label)...)
+func GetRoleLabelPrefix(label string) []byte {
+	return append(KeyRoleLabelPrefix, []byte(label)...)
 }
 
 // GetRoleContractPrefix returns the store prefix for the system roles
-func GetRoleContractPrefix(chainId string, addr sdk.AccAddress) []byte {
-	return append(append([]byte(chainId), KeyRoleContractPrefix...), addr...)
+func GetRoleContractPrefix(addr sdk.AccAddress) []byte {
+	return append(KeyRoleContractPrefix, addr...)
 }
