@@ -231,7 +231,7 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = networkvm.WithP2PEmptyContext(ctx)
-	ctx, bapps := mapp.WithMultiChainAppEmpty(ctx)
+	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 
@@ -245,10 +245,8 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 	}
 
 	for chainId, _ := range mcfg.PrefixesMap {
-
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
-
-		mcfg.SetGlobalChainConfig(chainId) // TODO ?
+		mcfg.SetGlobalChainConfig(chainId)
 		app := mapp.NewApp(
 			svrCtx.Logger,
 			db,
@@ -265,12 +263,11 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 		bapps.Apps[chainId] = app
 	}
 
-	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-	// if err != nil {
-	// 	return err
-	// }
-
-	app_ := bapps.Apps[cast.ToString(svrCtx.Viper.Get(flags.FlagChainID))]
+	iapp_ := bapps.Apps[cast.ToString(svrCtx.Viper.Get(flags.FlagChainID))]
+	app_, ok := iapp_.(*mapp.App)
+	if !ok {
+		return fmt.Errorf("error App interface from multichainapp")
+	}
 	app := servertypes.Application(app_)
 
 	cmtApp := server.NewCometABCIWrapper(app)
@@ -406,7 +403,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	// for network p2p streams
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = networkvm.WithP2PEmptyContext(ctx)
-	ctx, bapps := mapp.WithMultiChainAppEmpty(ctx)
+	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 
@@ -420,10 +417,8 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	}
 
 	for chainId, _ := range mcfg.PrefixesMap {
-
-		// SetGlobalChainConfig(chainId) // TODO ?
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
-		mcfg.SetGlobalChainConfig(chainId) // TODO ?
+		mcfg.SetGlobalChainConfig(chainId)
 		app := mapp.NewApp(
 			svrCtx.Logger,
 			db,
@@ -439,13 +434,12 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		bapps.Apps[chainId] = app
 	}
 
-	// app := appCreator(svrCtx.Logger, db, traceWriter, svrCtx.Viper)
-	// if err != nil {
-	// 	return err
-	// }
-
-	app_ := bapps.Apps[cast.ToString(svrCtx.Viper.Get(flags.FlagChainID))]
-	app := servertypes.Application(app_)
+	mainChainId := mcfg.GetChainId(svrCtx.Viper)
+	mythosapp, ok := bapps.Apps[mainChainId].(*mapp.App)
+	if !ok {
+		return fmt.Errorf("cannot find app for chainId: %s", mainChainId)
+	}
+	app := servertypes.Application(mythosapp)
 
 	metrics, err := startTelemetry(config.Config)
 	if err != nil {
@@ -521,11 +515,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
 	}
-	mythosapp, ok := app.(networkgrpc.MythosApp)
-	if !ok {
-		return fmt.Errorf("failed to get MythosApp from server Application")
-	}
-
 	rpcClient = networkgrpc.NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor())
 
 	clientCtx = clientCtx.WithClient(rpcClient)

@@ -1,4 +1,4 @@
-package app
+package config
 
 import (
 	"context"
@@ -10,14 +10,14 @@ type ContextKey string
 const MultiChainAppKey ContextKey = "MultiChainApp"
 
 type MultiChainApp struct {
-	Apps map[string]*App
+	Apps map[string]interface{}
 }
 
-func (m *MultiChainApp) GetApps() map[string]*App {
+func (m *MultiChainApp) GetApps() map[string]interface{} {
 	return m.Apps
 }
 
-func (m *MultiChainApp) GetApp(chainId string) (*App, error) {
+func (m *MultiChainApp) GetApp(chainId string) (interface{}, error) {
 	app, ok := m.Apps[chainId]
 	if !ok {
 		return nil, fmt.Errorf("app not found for chainId: %s", chainId)
@@ -25,18 +25,18 @@ func (m *MultiChainApp) GetApp(chainId string) (*App, error) {
 	return app, nil
 }
 
-func (m *MultiChainApp) SetApp(chainId string, app *App) {
+func (m *MultiChainApp) SetApp(chainId string, app interface{}) {
 	m.Apps[chainId] = app
 }
 
-func NewMultiChainApp(apps map[string]*App) *MultiChainApp {
+func NewMultiChainApp(apps map[string]interface{}) *MultiChainApp {
 	return &MultiChainApp{
 		Apps: apps,
 	}
 }
 
 func WithMultiChainAppEmpty(ctx context.Context) (context.Context, *MultiChainApp) {
-	mapp := &MultiChainApp{Apps: map[string]*App{}}
+	mapp := &MultiChainApp{Apps: map[string]interface{}{}}
 	return context.WithValue(ctx, MultiChainAppKey, mapp), mapp
 }
 

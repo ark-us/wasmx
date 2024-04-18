@@ -318,24 +318,6 @@ func CosmosPrecompiles() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
 
-	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooks message")
-	}
-	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
-	}
-
-	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
-	}
-	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
-	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
-	}
-
 	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
 	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
 	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
@@ -399,24 +381,6 @@ func CosmosPrecompiles() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     ADDR_HOOKS,
-			Label:       HOOKS_v001,
-			InitMessage: hooksInitMsg,
-			Pinned:      false,
-			Role:        ROLE_HOOKS,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_HOOKS_NONC,
-			Label:       HOOKS_v001,
-			InitMessage: hooksInitMsgNonC,
-			Pinned:      false,
-			Role:        ROLE_HOOKS_NONC,
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
-		},
-		{
 			Address:     ADDR_GOV,
 			Label:       GOV_v001,
 			InitMessage: initMsg,
@@ -432,6 +396,46 @@ func CosmosPrecompiles() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_GOVERNANCE,
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+	}
+}
+
+func HookPrecompiles() SystemContracts {
+	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks message")
+	}
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
+	}
+
+	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
+	}
+	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
+	}
+	return []SystemContract{
+		{
+			Address:     ADDR_HOOKS,
+			Label:       HOOKS_v001,
+			InitMessage: hooksInitMsg,
+			Pinned:      false,
+			Role:        ROLE_HOOKS,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_HOOKS_NONC,
+			Label:       HOOKS_v001,
+			InitMessage: hooksInitMsgNonC,
+			Pinned:      false,
+			Role:        ROLE_HOOKS_NONC,
+			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 	}
@@ -591,6 +595,7 @@ func DefaultSystemContracts() SystemContracts {
 	precompiles = append(precompiles, InterpreterPrecompiles()...)
 	precompiles = append(precompiles, BasePrecompiles()...)
 	precompiles = append(precompiles, EIDPrecompiles()...)
+	precompiles = append(precompiles, HookPrecompiles()...)
 	precompiles = append(precompiles, CosmosPrecompiles()...)
 	precompiles = append(precompiles, ConsensusPrecompiles()...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
@@ -639,11 +644,57 @@ func DefaultTimeChainContracts() SystemContracts {
 		},
 	}
 
+	hooksNonC := []Hook{
+		Hook{
+			Name:          HOOK_START_NODE,
+			SourceModule:  ROLE_HOOKS_NONC,
+			TargetModules: []string{ROLE_CONSENSUS, ROLE_TIME},
+		},
+	}
+	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
+	if err != nil {
+		panic("DefaultTimeChainContracts: cannot marshal hooks message")
+	}
+	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
+	if err != nil {
+		panic("DefaultTimeChainContracts: cannot marshal hooksInitMsg message")
+	}
+
+	hooksnoncbz, err := json.Marshal(hooksNonC)
+	if err != nil {
+		panic("DefaultTimeChainContracts: cannot marshal hooks nonc message")
+	}
+	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
+	}
+	hooksPrecompiles := []SystemContract{
+		{
+			Address:     ADDR_HOOKS,
+			Label:       HOOKS_v001,
+			InitMessage: hooksInitMsg,
+			Pinned:      false,
+			Role:        ROLE_HOOKS,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_HOOKS_NONC,
+			Label:       HOOKS_v001,
+			InitMessage: hooksInitMsgNonC,
+			Pinned:      false,
+			Role:        ROLE_HOOKS_NONC,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+	}
+
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
 	precompiles = append(precompiles, InterpreterPrecompiles()...)
 	precompiles = append(precompiles, BasePrecompiles()...)
 	precompiles = append(precompiles, EIDPrecompiles()...)
+	precompiles = append(precompiles, hooksPrecompiles...)
 	precompiles = append(precompiles, CosmosPrecompiles()...)
 	precompiles = append(precompiles, consensusPrecompile...)
 	precompiles = append(precompiles, ChatPrecompiles()...)

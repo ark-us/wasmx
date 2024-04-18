@@ -31,21 +31,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 		panic(err)
 	}
 
-	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
-	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
-	if chainID == "" {
-		// fallback to genesis chain-id
-		reader, err := os.Open(filepath.Join(homeDir, "config", "genesis.json"))
-		if err != nil {
-			panic(err)
-		}
-		defer reader.Close()
-
-		chainID, err = genutiltypes.ParseChainIDFromGenesis(reader)
-		if err != nil {
-			panic(fmt.Errorf("failed to parse chain-id from genesis file: %w", err))
-		}
-	}
+	chainID := GetChainId(appOpts)
 
 	snapshotStore, err := sdkserver.GetSnapshotStore(appOpts)
 	if err != nil {
@@ -74,4 +60,23 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 		baseapp.SetQueryGasLimit(cast.ToUint64(appOpts.Get(sdkserver.FlagQueryGasLimit))),
 		baseapp.SetChainID(chainID),
 	}
+}
+
+func GetChainId(appOpts sdk.AppOptions) string {
+	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
+	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
+	if chainID == "" {
+		// fallback to genesis chain-id
+		reader, err := os.Open(filepath.Join(homeDir, "config", "genesis.json"))
+		if err != nil {
+			panic(err)
+		}
+		defer reader.Close()
+
+		chainID, err = genutiltypes.ParseChainIDFromGenesis(reader)
+		if err != nil {
+			panic(fmt.Errorf("failed to parse chain-id from genesis file: %w", err))
+		}
+	}
+	return chainID
 }

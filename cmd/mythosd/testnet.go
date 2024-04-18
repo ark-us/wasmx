@@ -58,6 +58,7 @@ import (
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 	// "mythos/v1/testutil/network"
 )
 
@@ -754,6 +755,9 @@ func collectGenFiles(
 		if err := genutil.ExportGenesisFileWithTime(genFile, chainID, nil, appState, genTime); err != nil {
 			return err
 		}
+
+		newGenFile := strings.Replace(genFile, ".json", "_"+chainID+".json", 1)
+		copyFile(genFile, newGenFile)
 	}
 
 	return nil
@@ -775,6 +779,11 @@ func initGenFilesLevel0(
 		panic(err)
 	}
 	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
+
+	var wasmxGenState wasmxtypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts()
+	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
@@ -918,6 +927,18 @@ func EnsureDir(dir string, mode os.FileMode) error {
 	err := os.MkdirAll(dir, mode)
 	if err != nil {
 		return fmt.Errorf("could not create directory %q: %w", dir, err)
+	}
+	return nil
+}
+
+func copyFile(sourceFile string, destinationFile string) error {
+	input, err := os.ReadFile(sourceFile)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(destinationFile, input, 0644)
+	if err != nil {
+		return err
 	}
 	return nil
 }

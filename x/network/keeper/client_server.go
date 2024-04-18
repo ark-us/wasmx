@@ -71,21 +71,13 @@ type Config struct {
 	MaxOpenConnections int
 }
 
-type MultiChainApp interface {
-	GetApps() map[string]MythosApp
-	GetApp(chainId string) (MythosApp, error)
-	SetApp(chainId string, app MythosApp)
-}
-
 type MythosApp interface {
 	GetNetworkKeeper() *Keeper
 	GetActionExecutor() *ActionExecutor
 	GetGoContextParent() context.Context
 	GetGoRoutineGroup() *errgroup.Group
-	GetMultiChainApp() (MultiChainApp, error)
+	GetMultiChainApp() (*mconfig.MultiChainApp, error)
 	GetBaseApp() *baseapp.BaseApp
-	// GetTKey(storeKey string) *storetypes.TransientStoreKey
-	// GetMKey(storeKey string) *storetypes.MemoryStoreKey
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
 }
 
@@ -132,6 +124,11 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
+	mythosapp2, err2 := GetMythosApp(app)
+	if err2 != nil {
+		return nil, nil, err2
+	}
+
 	_, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
@@ -158,7 +155,11 @@ func NewGRPCServer(
 		return nil, nil, err
 	}
 	appMap := multiapp.GetApps()
-	for chainId, app := range appMap {
+	for chainId, iapp := range appMap {
+		app, ok := iapp.(MythosApp)
+		if !ok {
+			return nil, nil, fmt.Errorf("cannot get MythosApp")
+		}
 		bapp := app.GetBaseApp()
 		sapp, ok := app.(servertypes.Application)
 		if !ok {

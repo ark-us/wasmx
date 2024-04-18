@@ -1282,8 +1282,8 @@ func (app *App) GetGoRoutineGroup() *errgroup.Group {
 	return app.goRoutineGroup
 }
 
-func (app *App) GetMultiChainApp() (*MultiChainApp, error) {
-	return GetMultiChainApp(app.GetGoContextParent())
+func (app *App) GetMultiChainApp() (*cfg.MultiChainApp, error) {
+	return cfg.GetMultiChainApp(app.GetGoContextParent())
 }
 
 func Exit(s string) {
