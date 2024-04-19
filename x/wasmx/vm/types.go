@@ -3,10 +3,12 @@ package vm
 import (
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	sdkerr "cosmossdk.io/errors"
+	log "cosmossdk.io/log"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -87,6 +89,7 @@ type Context struct {
 	GoRoutineGroup  *errgroup.Group
 	GoContextParent context.Context
 	Ctx             sdk.Context
+	Logger          func(ctx sdk.Context) log.Logger
 	GasMeter        types.GasMeter
 	Env             *types.Env
 	ContractRouter  ContractRouter

@@ -133,7 +133,7 @@ func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prov
 func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
 	mythosapp, ok := bapp.(MythosApp)
 	if !ok {
-		return fmt.Errorf("failed to get MythosApp from server Application")
+		return fmt.Errorf("commitCtx: failed to get MythosApp from server Application")
 	}
 
 	commitCacheCtx()

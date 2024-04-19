@@ -290,7 +290,7 @@ func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame
 // secp256k1_recover_pubkey(message_hash_ptr: u32, signature_ptr: u32, recovery_param: u32) -> u64;
 func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Error("cosmwasm8: secp256k1_recover_pubkey: Not implemented")
+	ctx.Logger(ctx.Ctx).Error("cosmwasm8: secp256k1_recover_pubkey: Not implemented")
 	// TODO
 	return nil, wasmedge.Result_Fail
 	msgHash, err := readMemFromPtrCw(callframe, params[0])
@@ -384,7 +384,7 @@ func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, 
 // /  - The empty case (no messages, no signatures and no public keys) returns true.
 func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Error("cosmwasm8: ed25519_batch_verify: Not implemented")
+	ctx.Logger(ctx.Ctx).Error("cosmwasm8: ed25519_batch_verify: Not implemented")
 	// TODO
 	return nil, wasmedge.Result_Fail
 
@@ -434,7 +434,7 @@ func cw_8_debug(context interface{}, callframe *wasmedge.CallingFrame, params []
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.GetContext().Logger().Debug("cosmwasm8: debug: " + string(msgBz))
+	ctx.Logger(ctx.Ctx).Debug("cosmwasm8: debug: " + string(msgBz))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -481,7 +481,7 @@ func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []
 	returns := make([]interface{}, 0)
 	ctx.FinishData = data
 	ctx.ReturnData = data
-	ctx.GetContext().Logger().Debug("cosmwasm8: abort: " + string(data))
+	ctx.Logger(ctx.Ctx).Debug("cosmwasm8: abort: " + string(data))
 	return returns, wasmedge.Result_Fail
 }
 

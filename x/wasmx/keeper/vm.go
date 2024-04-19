@@ -10,6 +10,7 @@ import (
 	"path"
 
 	sdkerr "cosmossdk.io/errors"
+	log "cosmossdk.io/log"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"golang.org/x/sync/errgroup"
@@ -25,6 +26,7 @@ type WasmxEngine struct {
 	SourcesDir      string
 	printDebug      bool
 	app             types.Application
+	Logger          func(ctx sdk.Context) log.Logger
 }
 
 func NewVM(
@@ -36,6 +38,7 @@ func NewVM(
 	printDebug bool,
 	cacheSize uint32,
 	app types.Application,
+	logger func(ctx sdk.Context) log.Logger,
 ) (*WasmxEngine, error) {
 	return &WasmxEngine{
 		goRoutineGroup:  goRoutineGroup,
@@ -44,6 +47,7 @@ func NewVM(
 		SourcesDir:      sourcesDir,
 		printDebug:      printDebug,
 		app:             app,
+		Logger:          logger,
 	}, nil
 }
 
@@ -96,10 +100,10 @@ func (k *WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false, false, k.app)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false, false, k.app)
 	} else {
 		// TODO gas
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false, false, k.app)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, nil, false, false, k.app)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -125,9 +129,9 @@ func (k *WasmxEngine) Execute(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
 	}
 
 	if err != nil {
@@ -156,9 +160,9 @@ func (k *WasmxEngine) ExecuteEntryPoint(
 
 	// TODO if it has interpreter deps
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, contractEntryPoint, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, contractEntryPoint, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, inBackground, k.app)
 	}
 
 	if err != nil {
@@ -189,9 +193,9 @@ func (k *WasmxEngine) Reply(
 	}
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, false, k.app)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, false, k.app)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, false, k.app)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, false, false, k.app)
 	}
 
 	if err != nil {
@@ -217,9 +221,9 @@ func (k *WasmxEngine) QueryExecute(
 	var data types.ContractResponse
 	var err error
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug, false, k.app)
+		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug, false, k.app)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug, false, k.app)
+		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, prefixStoreKey, store, storageType, cosmosHandler, gasMeter, systemDeps, dependencies, isdebug, false, k.app)
 	}
 
 	if err != nil {

@@ -737,7 +737,7 @@ func sendCosmosQuery(context interface{}, callframe *wasmedge.CallingFrame, para
 // value: i32
 func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Debug(fmt.Sprintf("Go: debugPrinti32: %d, %d", params[0].(int32), params[1].(int32)))
+	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrinti32: %d, %d", params[0].(int32), params[1].(int32)))
 	returns := make([]interface{}, 1)
 	returns[0] = params[0]
 	return returns, wasmedge.Result_Success
@@ -746,7 +746,7 @@ func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params
 // value: i64
 func debugPrinti64(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Debug(fmt.Sprintf("Go: debugPrinti64: %d, %d", params[0].(int64), params[1].(int32)))
+	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrinti64: %d, %d", params[0].(int64), params[1].(int32)))
 	returns := make([]interface{}, 1)
 	returns[0] = params[0]
 	return returns, wasmedge.Result_Success
@@ -759,7 +759,7 @@ func debugPrintMemHex(context interface{}, callframe *wasmedge.CallingFrame, par
 	mem := callframe.GetMemoryByIndex(0)
 	data, _ := mem.GetData(uint(pointer), uint(size))
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Debug(fmt.Sprintf("Go: debugPrintMemHex: %s", hex.EncodeToString(data)))
+	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrintMemHex: %s", hex.EncodeToString(data)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

@@ -128,7 +128,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app)
+	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger)
 	if err != nil {
 		panic(err)
 	}
@@ -177,7 +177,7 @@ func NewKeeper(
 }
 
 func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
+	return GetLogger(ctx)
 }
 
 // GetAuthority returns the module's authority.
@@ -191,6 +191,10 @@ func (k *Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
 
 func (k *Keeper) WasmVMResponseHandler() cw8types.WasmVMResponseHandler {
 	return k.wasmVMResponseHandler
+}
+
+func GetLogger(ctx sdk.Context) log.Logger {
+	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName), "chain_id", ctx.ChainID())
 }
 
 // 0755 = User:rwx Group:r-x World:r-x

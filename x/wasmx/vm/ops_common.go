@@ -205,6 +205,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		GoRoutineGroup:  ctx.GoRoutineGroup,
 		GoContextParent: ctx.GoContextParent,
 		Ctx:             tempCtx,
+		Logger:          ctx.Logger,
 		GasMeter:        ctx.GasMeter,
 		ContractStore:   contractStore,
 		CosmosHandler:   newCosmosHandler,
@@ -233,7 +234,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
 		success = int32(2)
-		newctx.GetContext().Logger().Debug(err.Error())
+		newctx.Logger(newctx.Ctx).Debug(err.Error())
 	} else {
 		success = int32(0)
 		if !req.IsQuery {

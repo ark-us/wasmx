@@ -293,14 +293,14 @@ func asAbort(context interface{}, callframe *wasmedge.CallingFrame, params []int
 	message, _ := asmem.ReadMemFromPtr(callframe, params[0])
 	fileName, _ := asmem.ReadMemFromPtr(callframe, params[1])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", asmem.ReadJsString(message), asmem.ReadJsString(fileName), params[2], params[3]))
+	ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", asmem.ReadJsString(message), asmem.ReadJsString(fileName), params[2], params[3]))
 	return wasmxRevert(context, callframe, params)
 }
 
 func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := asmem.ReadMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx: console.log: %s", asmem.ReadJsString(message)))
+	ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx: console.log: %s", asmem.ReadJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -308,7 +308,7 @@ func asConsoleLog(context interface{}, callframe *wasmedge.CallingFrame, params 
 func asConsoleInfo(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := asmem.ReadMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Info(fmt.Sprintf("wasmx: console.info: %s", asmem.ReadJsString(message)))
+	ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx: console.info: %s", asmem.ReadJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -316,7 +316,7 @@ func asConsoleInfo(context interface{}, callframe *wasmedge.CallingFrame, params
 func asConsoleError(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := asmem.ReadMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Error(fmt.Sprintf("wasmx: console.error: %s", asmem.ReadJsString(message)))
+	ctx.Logger(ctx.Ctx).Error(fmt.Sprintf("wasmx: console.error: %s", asmem.ReadJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }
@@ -324,7 +324,7 @@ func asConsoleError(context interface{}, callframe *wasmedge.CallingFrame, param
 func asConsoleDebug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	message, _ := asmem.ReadMemFromPtr(callframe, params[0])
 	ctx := context.(*Context)
-	ctx.GetContext().Logger().Debug(fmt.Sprintf("wasmx: console.debug: %s", asmem.ReadJsString(message)))
+	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("wasmx: console.debug: %s", asmem.ReadJsString(message)))
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

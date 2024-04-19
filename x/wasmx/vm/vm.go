@@ -13,6 +13,7 @@ import (
 	dbm "github.com/cometbft/cometbft-db"
 
 	sdkerr "cosmossdk.io/errors"
+	log "cosmossdk.io/log"
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -223,6 +224,7 @@ func ExecuteWasmInterpreted(
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	ctx sdk.Context,
+	logger func(ctx sdk.Context) log.Logger,
 	funcName string,
 	env types.Env,
 	msg []byte,
@@ -252,6 +254,7 @@ func ExecuteWasmInterpreted(
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
 		Ctx:             ctx,
+		Logger:          logger,
 		GasMeter:        gasMeter,
 		Env:             &env,
 		ContractStore:   kvstore,
@@ -329,6 +332,7 @@ func ExecuteWasm(
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	ctx sdk.Context,
+	logger func(ctx sdk.Context) log.Logger,
 	funcName string,
 	env types.Env,
 	msg []byte,
@@ -358,6 +362,7 @@ func ExecuteWasm(
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
 		Ctx:             ctx,
+		Logger:          logger,
 		GasMeter:        gasMeter,
 		Env:             &env,
 		ContractStore:   kvstore,
