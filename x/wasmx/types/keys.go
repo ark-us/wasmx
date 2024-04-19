@@ -57,10 +57,6 @@ var (
 	KeyLastCodeID = append(KeySequencePrefix, []byte("lastCodeId")...)
 )
 
-func GetStoreKey(chainId string) string {
-	return chainId + "_" + StoreKey
-}
-
 func KeyPrefix(p string) []byte {
 	return []byte(p)
 }

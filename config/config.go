@@ -84,7 +84,7 @@ func GetChainConfig(chainId string) (*ChainConfig, error) {
 	return &conf, nil
 }
 
-var LEVEL0_CHAIN_ID = "level0_0000-1"
+var LEVEL0_CHAIN_ID = "leveln_1000-1"
 var MYTHOS_CHAIN_ID_TEST = "mythos_1000-1"
 var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 
@@ -135,4 +135,8 @@ func init() {
 		BondBaseDenom:        "aslvl",
 		BondDenom:            "slvl",
 	}
+}
+
+func GetMultiChainStoreKey(chainId string, storeKey string) string {
+	return chainId + "_" + storeKey
 }

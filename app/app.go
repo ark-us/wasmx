@@ -346,17 +346,41 @@ func NewApp(
 	}
 	cfg.SetGlobalChainConfig(chainId)
 
-	wasmxStoreKey := wasmxmoduletypes.GetStoreKey(chainId)
-	// TODO websrvStoreKey
+	wasmxStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.StoreKey)
+	websrvStoreKey := cfg.GetMultiChainStoreKey(chainId, websrvmoduletypes.StoreKey)
+	crisisStoreKey := cfg.GetMultiChainStoreKey(chainId, crisistypes.StoreKey)
+	mintStoreKey := cfg.GetMultiChainStoreKey(chainId, minttypes.StoreKey)
+	paramsStoreKey := cfg.GetMultiChainStoreKey(chainId, paramstypes.StoreKey)
+	consensusParamsStoreKey := cfg.GetMultiChainStoreKey(chainId, consensusparamtypes.StoreKey)
+	ibcExportedStoreKey := cfg.GetMultiChainStoreKey(chainId, ibcexported.StoreKey)
+	upgradeStoreKey := cfg.GetMultiChainStoreKey(chainId, upgradetypes.StoreKey)
+	feegrantStoreKey := cfg.GetMultiChainStoreKey(chainId, feegrant.StoreKey)
+	evidenceStoreKey := cfg.GetMultiChainStoreKey(chainId, evidencetypes.StoreKey)
+	circuitStoreKey := cfg.GetMultiChainStoreKey(chainId, circuittypes.StoreKey)
+	ibcTransferStoreKey := cfg.GetMultiChainStoreKey(chainId, ibctransfertypes.StoreKey)
+	ibchostStoreKey := cfg.GetMultiChainStoreKey(chainId, icahosttypes.StoreKey)
+	capabilitiesStoreKey := cfg.GetMultiChainStoreKey(chainId, capabilitytypes.StoreKey)
+	groupStoreKey := cfg.GetMultiChainStoreKey(chainId, group.StoreKey)
+	icacontrollerStoreKey := cfg.GetMultiChainStoreKey(chainId, icacontrollertypes.StoreKey)
 
 	keys := storetypes.NewKVStoreKeys(
-		authz.ModuleName, crisistypes.StoreKey,
-		minttypes.StoreKey,
-		paramstypes.StoreKey, consensusparamtypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, circuittypes.StoreKey,
-		ibctransfertypes.StoreKey, icahosttypes.StoreKey, capabilitytypes.StoreKey, group.StoreKey,
-		icacontrollertypes.StoreKey,
+		authz.ModuleName,
+		crisisStoreKey,
+		mintStoreKey,
+		paramsStoreKey,
+		consensusParamsStoreKey,
+		ibcExportedStoreKey,
+		upgradeStoreKey,
+		feegrantStoreKey,
+		evidenceStoreKey,
+		circuitStoreKey,
+		ibcTransferStoreKey,
+		ibchostStoreKey,
+		capabilitiesStoreKey,
+		groupStoreKey,
+		icacontrollerStoreKey,
 		wasmxStoreKey,
-		websrvmoduletypes.StoreKey,
+		websrvStoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
@@ -394,14 +418,14 @@ func NewApp(
 	app.ParamsKeeper = initParamsKeeper(
 		appCodec,
 		cdc,
-		keys[paramstypes.StoreKey],
+		keys[paramsStoreKey],
 		tkeys[paramstypes.TStoreKey],
 	)
 
 	// set the BaseApp's parameter store
 	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[consensusparamtypes.StoreKey]),
+		runtime.NewKVStoreService(keys[consensusParamsStoreKey]),
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		runtime.EventService{},
 	)
@@ -410,7 +434,7 @@ func NewApp(
 	// add capability keeper and ScopeToModule for ibc module
 	app.CapabilityKeeper = capabilitykeeper.NewKeeper(
 		appCodec,
-		keys[capabilitytypes.StoreKey],
+		keys[capabilitiesStoreKey],
 		memKeys[capabilitytypes.MemStoreKey],
 	)
 
@@ -558,7 +582,7 @@ func NewApp(
 	// TODO remove
 	app.MintKeeper = mintkeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[minttypes.StoreKey]),
+		runtime.NewKVStoreService(keys[mintStoreKey]),
 		app.StakingKeeper,
 		app.AccountKeeper,
 		app.BankKeeper,
@@ -568,7 +592,7 @@ func NewApp(
 
 	app.CrisisKeeper = crisiskeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[crisistypes.StoreKey]),
+		runtime.NewKVStoreService(keys[crisisStoreKey]),
 		invCheckPeriod,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
@@ -577,7 +601,7 @@ func NewApp(
 	)
 
 	// TODO remove
-	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuittypes.StoreKey]), authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(), app.AccountKeeper.AddressCodec())
+	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuitStoreKey]), authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(), app.AccountKeeper.AddressCodec())
 	app.BaseApp.SetCircuitBreaker(&app.CircuitKeeper)
 
 	groupConfig := group.DefaultConfig()
@@ -586,7 +610,7 @@ func NewApp(
 		groupConfig.MaxMetadataLen = 1000
 	*/
 	app.GroupKeeper = groupkeeper.NewKeeper(
-		keys[group.StoreKey],
+		keys[groupStoreKey],
 		appCodec,
 		app.MsgServiceRouter(),
 		app.AccountKeeper,
@@ -595,13 +619,13 @@ func NewApp(
 
 	app.FeeGrantKeeper = feegrantkeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[feegrant.StoreKey]),
+		runtime.NewKVStoreService(keys[feegrantStoreKey]),
 		app.AccountKeeper,
 	)
 	// set the governance module account as the authority for conducting upgrades
 	app.UpgradeKeeper = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
-		runtime.NewKVStoreService(keys[upgradetypes.StoreKey]),
+		runtime.NewKVStoreService(keys[upgradeStoreKey]),
 		appCodec,
 		homePath,
 		app.BaseApp,
@@ -613,7 +637,7 @@ func NewApp(
 	// Create IBC Keeper
 	app.IBCKeeper = ibckeeper.NewKeeper(
 		appCodec,
-		keys[ibcexported.StoreKey],
+		keys[ibcExportedStoreKey],
 		app.GetSubspace(ibcexported.ModuleName),
 		app.StakingKeeper,
 		app.UpgradeKeeper,
@@ -624,7 +648,7 @@ func NewApp(
 	// Create Transfer Keepers
 	app.TransferKeeper = ibctransferkeeper.NewKeeper(
 		appCodec,
-		keys[ibctransfertypes.StoreKey],
+		keys[ibcTransferStoreKey],
 		app.GetSubspace(ibctransfertypes.ModuleName),
 		app.IBCKeeper.ChannelKeeper,
 		app.IBCKeeper.ChannelKeeper,
@@ -638,7 +662,7 @@ func NewApp(
 	transferIBCModule := transfer.NewIBCModule(app.TransferKeeper)
 
 	app.ICAHostKeeper = icahostkeeper.NewKeeper(
-		appCodec, keys[icahosttypes.StoreKey],
+		appCodec, keys[ibchostStoreKey],
 		app.GetSubspace(icahosttypes.SubModuleName),
 		app.IBCKeeper.ChannelKeeper,
 		app.IBCKeeper.ChannelKeeper,
@@ -649,7 +673,7 @@ func NewApp(
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 	)
 	app.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
-		appCodec, keys[icacontrollertypes.StoreKey],
+		appCodec, keys[icacontrollerStoreKey],
 		app.GetSubspace(icacontrollertypes.SubModuleName),
 		app.IBCKeeper.ChannelKeeper, // may be replaced with middleware such as ics29 fee
 		app.IBCKeeper.ChannelKeeper,
@@ -664,7 +688,7 @@ func NewApp(
 	// Create evidence Keeper for to register the IBC light client misbehaviour evidence route
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
-		runtime.NewKVStoreService(keys[evidencetypes.StoreKey]),
+		runtime.NewKVStoreService(keys[evidenceStoreKey]),
 		app.StakingKeeper,
 		app.SlashingKeeper,
 		app.AccountKeeper.AddressCodec(),
@@ -675,7 +699,7 @@ func NewApp(
 
 	app.WebsrvKeeper = *websrvmodulekeeper.NewKeeper(
 		appCodec,
-		keys[websrvmoduletypes.StoreKey],
+		keys[websrvStoreKey],
 		memKeys[websrvmoduletypes.MemStoreKey],
 		app.GetSubspace(websrvmoduletypes.ModuleName),
 		&app.WasmxKeeper,

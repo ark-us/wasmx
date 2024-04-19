@@ -178,7 +178,7 @@ func InterpreterPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
-		panic("CosmosPrecompiles: cannot marshal init message")
+		panic("InterpreterPrecompiles: cannot marshal init message")
 	}
 	return []SystemContract{
 		{
@@ -274,7 +274,7 @@ func EIDPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
-		panic("CosmosPrecompiles: cannot marshal init message")
+		panic("EIDPrecompiles: cannot marshal init message")
 	}
 	return []SystemContract{
 		{

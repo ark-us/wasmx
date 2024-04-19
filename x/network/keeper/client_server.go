@@ -124,11 +124,6 @@ func NewGRPCServer(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 	)
 
-	mythosapp2, err2 := GetMythosApp(app)
-	if err2 != nil {
-		return nil, nil, err2
-	}
-
 	_, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
