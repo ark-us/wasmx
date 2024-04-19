@@ -10,8 +10,9 @@ import (
 )
 
 func (k *Keeper) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.goRoutineGroup.Go(func() error {
-		err := k.p2pReceiveMessageInternalGoroutine(msg)
+		err := k.p2pReceiveMessageInternalGoroutine(msg, ctx.ChainID())
 		if err != nil {
 			k.actionExecutor.GetLogger().Error(err.Error())
 		}
@@ -22,6 +23,7 @@ func (k *Keeper) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PRecei
 
 func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 	msg *types.MsgP2PReceiveMessageRequest,
+	chainId string,
 ) error {
 	select {
 	case <-k.goContextParent.Done():
@@ -38,7 +40,7 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("p2p message receival started", "sender", msg.Sender, "data", string(msg.Data))
-		err := k.p2pReceiveMessageInternal(msg)
+		err := k.p2pReceiveMessageInternal(msg, chainId)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("p2p message receival failed", "err", err)
 			errCh <- err
@@ -56,7 +58,7 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 	}
 }
 
-func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageRequest) error {
+func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageRequest, chainId string) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := &types.MsgExecuteContract{
@@ -76,7 +78,13 @@ func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageReques
 		return res, nil
 	}
 	// disregard result
-	_, err := k.actionExecutor.Execute(k.goContextParent, k.actionExecutor.GetApp().LastBlockHeight(), cb)
-
-	return err
+	bapp, err := k.actionExecutor.GetApp(chainId)
+	if err != nil {
+		return err
+	}
+	_, err = k.actionExecutor.Execute(k.goContextParent, bapp.LastBlockHeight(), cb, chainId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

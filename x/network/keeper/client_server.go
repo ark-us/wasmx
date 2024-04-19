@@ -136,10 +136,10 @@ func NewGRPCServer(
 	if err != nil {
 		return nil, nil, err
 	}
-	networkServer := &msgServer{
-		Keeper: mythosapp.GetNetworkKeeper(),
-		// App:    bapp,
-	}
+	// networkServer := &msgServer{
+	// 	Keeper: mythosapp.GetNetworkKeeper(),
+	// 	// App:    bapp,
+	// }
 
 	logger := svrCtx.Logger.With("module", "network")
 	client := NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor())
@@ -164,6 +164,12 @@ func NewGRPCServer(
 		// load genesis state
 		// Run the InitChain logic
 		// setup node ips
+
+		networkServer := &msgServer{
+			Keeper: app.GetNetworkKeeper(),
+			// App:    bapp,
+		}
+
 		if bapp.LastBlockHeight() == 0 {
 			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, chainId, metricsProvider, networkServer)
 			if err != nil {
@@ -261,8 +267,10 @@ func RegisterGRPCServer(
 		if !ok {
 			return nil, status.Error(codes.Internal, "unable to retrieve metadata")
 		}
+		// TODO fixme set ChainId
 		fmt.Println("---network interceptor md--", md)
 		fmt.Println("---network interceptor req--", req)
+		chainId := ""
 
 		// Get height header from the request context, if present.
 		var height int64
@@ -291,7 +299,7 @@ func RegisterGRPCServer(
 			}
 			return handler(goctx, req)
 		}
-		return actionExecutor.Execute(grpcCtx, height, cb)
+		return actionExecutor.Execute(grpcCtx, height, cb, chainId)
 	}
 
 	// NewMsgServerImpl
@@ -514,6 +522,7 @@ func InitConsensusContract(
 }
 
 func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, networkServer MsgServerInternal) error {
+	chainId := bapp.ChainID()
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))
@@ -529,7 +538,11 @@ func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, netwo
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), actionExecutor.GetApp().LastBlockHeight(), cb)
+	bapp, err := actionExecutor.GetApp(chainId)
+	if err != nil {
+		return err
+	}
+	_, err = actionExecutor.Execute(mythosapp.GetGoContextParent(), bapp.LastBlockHeight(), cb, chainId)
 	if err != nil {
 		return err
 	}
@@ -537,6 +550,7 @@ func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, netwo
 }
 
 func SetupNode(bapp types.BaseApp, mythosapp MythosApp, netcfg networkconfig.NetworkConfig, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
+	chainId := bapp.ChainID()
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 
@@ -560,7 +574,11 @@ func SetupNode(bapp types.BaseApp, mythosapp MythosApp, netcfg networkconfig.Net
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), actionExecutor.GetApp().LastBlockHeight(), cb)
+	bapp, err := actionExecutor.GetApp(chainId)
+	if err != nil {
+		return err
+	}
+	_, err = actionExecutor.Execute(mythosapp.GetGoContextParent(), bapp.LastBlockHeight(), cb, chainId)
 	if err != nil {
 		return err
 	}

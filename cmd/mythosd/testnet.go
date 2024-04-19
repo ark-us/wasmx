@@ -450,6 +450,7 @@ func initTestnetFilesInternal(
 		if err != nil {
 			return err
 		}
+
 		nodeIDs[i], valPubKeys[i], err = genutil.InitializeNodeValidatorFiles(nodeConfig)
 		if err != nil {
 			_ = os.RemoveAll(args.outputDir)
@@ -629,6 +630,8 @@ func initTestnetFilesInternal(
 
 		// set this only after we get address bytes
 		mcfg.SetGlobalChainConfig(chainId)
+		level0EncodingConfig := app.MakeEncodingConfig()
+		valAddrCodec = level0EncodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()
 		for i := nodeIndexStart; i < args.numValidators; i++ {
 			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId)
 			nodeDirName := nodeDirNames[i]

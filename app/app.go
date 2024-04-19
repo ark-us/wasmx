@@ -306,6 +306,7 @@ type App struct {
 
 // New returns a reference to an initialized blockchain app
 func NewApp(
+	actionExecutor *networkmodulekeeper.ActionExecutor,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -406,6 +407,7 @@ func NewApp(
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
 		chainCfg:          chainCfg,
+		actionExecutor:    actionExecutor,
 	}
 
 	// TODO replace NewPermissionsForAddress with address by role
@@ -475,7 +477,7 @@ func NewApp(
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
 
-	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
+	// app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
 		app.goRoutineGroup,
 		app.goContextParent,

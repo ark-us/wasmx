@@ -52,6 +52,7 @@ import (
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
 	app "mythos/v1/app"
+	mcfg "mythos/v1/config"
 	"mythos/v1/server/config"
 	ibctesting "mythos/v1/testutil/ibc"
 	"mythos/v1/x/network/keeper"
@@ -123,7 +124,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	}
 	encodingConfig := app.MakeEncodingConfig()
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
-	appContext.Denom = app.BaseDenom
+	appContext.Denom = mcfg.BaseDenom
 
 	t := suite.T()
 	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
@@ -140,7 +141,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 	}
 	encodingConfig := app.MakeEncodingConfig()
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
-	appContext.Denom = app.BaseDenom
+	appContext.Denom = mcfg.BaseDenom
 
 	t := suite.T()
 	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
@@ -178,7 +179,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(app.BaseDenom, amount)),
+		Coins:   sdk.NewCoins(sdk.NewCoin(mcfg.BaseDenom, amount)),
 	}
 
 	valOperatorAddress := sdk.ValAddress(validator.Address)

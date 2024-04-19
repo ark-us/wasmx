@@ -12,6 +12,8 @@ import (
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 
 	app "mythos/v1/app"
+	mcfg "mythos/v1/config"
+	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -46,10 +48,14 @@ func BenchmarkSimulation(b *testing.B) {
 	g, goctx, _ := app.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := mcfg.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
+
 	app := app.NewApp(
+		actionExecutor,
 		logger,
 		db,
 		nil,

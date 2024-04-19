@@ -14,8 +14,9 @@ import (
 // TODO this must not be called from outside, only from wasmx... (authority)
 // maybe only from the contract that the interval is for?
 func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.goRoutineGroup.Go(func() error {
-		err := k.startTimeoutInternalGoroutine(msg)
+		err := k.startTimeoutInternalGoroutine(msg, ctx.ChainID())
 		if err != nil {
 			k.actionExecutor.GetLogger().Error(err.Error())
 		}
@@ -26,6 +27,7 @@ func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutR
 
 func (k *Keeper) startTimeoutInternalGoroutine(
 	msg *types.MsgStartTimeoutRequest,
+	chainId string,
 ) error {
 	select {
 	case <-k.goContextParent.Done():
@@ -35,7 +37,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 		// continue
 	}
 
-	description := fmt.Sprintf("delay %dms, contract %s, args: %s ", msg.Delay, msg.Contract, string(msg.Args))
+	description := fmt.Sprintf("chain_id=%s, delay %dms, contract %s, args: %s ", chainId, msg.Delay, msg.Contract, string(msg.Args))
 
 	// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 	intervalEnded := make(chan bool, 1)
@@ -44,7 +46,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("eventual execution triggered", "description", description)
-		err := k.startTimeoutInternal(description, msg)
+		err := k.startTimeoutInternal(description, msg, chainId)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err)
 			errCh <- err
@@ -65,6 +67,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 func (k *Keeper) startTimeoutInternal(
 	description string,
 	msg *types.MsgStartTimeoutRequest,
+	chainId string,
 ) error {
 	// sleep first and then load the context
 	time.Sleep(time.Duration(msg.Delay) * time.Millisecond)
@@ -97,7 +100,13 @@ func (k *Keeper) startTimeoutInternal(
 		return res, nil
 	}
 	// disregard result
-	_, err := k.actionExecutor.Execute(k.goContextParent, k.actionExecutor.GetApp().LastBlockHeight(), cb)
-
-	return err
+	bapp, err := k.actionExecutor.GetApp(chainId)
+	if err != nil {
+		return err
+	}
+	_, err = k.actionExecutor.Execute(k.goContextParent, bapp.LastBlockHeight(), cb, chainId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

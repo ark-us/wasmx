@@ -17,6 +17,7 @@ import (
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
+	cfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -153,16 +154,64 @@ func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ct
 	return nil
 }
 
+// type ActionExecutor struct {
+// 	mtx    sync.Mutex
+// 	bapp   types.BaseApp
+// 	logger log.Logger
+// }
+
+// func NewActionExecutor(bapp types.BaseApp, logger log.Logger) *ActionExecutor {
+// 	return &ActionExecutor{
+// 		bapp:   bapp,
+// 		logger: logger,
+// 	}
+// }
+
+// func (r *ActionExecutor) GetLogger() log.Logger {
+// 	return r.logger
+// }
+
+// func (r *ActionExecutor) GetApp() types.BaseApp {
+// 	return r.bapp
+// }
+
+// func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
+// 	r.mtx.Lock()
+// 	defer r.mtx.Unlock()
+
+// 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(r.bapp, r.logger, height, false)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if goCtx == nil {
+// 		goCtx = context.Background()
+// 	}
+// 	// goCtx, cancelFn := context.WithCancel(goCtx)
+// 	// defer cancelFn()
+// 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+// 	res, err := cb(goCtx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// we only commit if callback was successful
+// 	err = commitCtx(r.bapp, sdkCtx, commitCacheCtx, ctxcachems)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return res, nil
+// }
+
 type ActionExecutor struct {
-	mtx    sync.Mutex
-	bapp   types.BaseApp
-	logger log.Logger
+	mtx       sync.Mutex
+	multiapps *cfg.MultiChainApp
+	logger    log.Logger
 }
 
-func NewActionExecutor(bapp types.BaseApp, logger log.Logger) *ActionExecutor {
+func NewActionExecutor(multiapps *cfg.MultiChainApp, logger log.Logger) *ActionExecutor {
 	return &ActionExecutor{
-		bapp:   bapp,
-		logger: logger,
+		multiapps: multiapps,
+		logger:    logger,
 	}
 }
 
@@ -170,15 +219,46 @@ func (r *ActionExecutor) GetLogger() log.Logger {
 	return r.logger
 }
 
-func (r *ActionExecutor) GetApp() types.BaseApp {
-	return r.bapp
+func (r *ActionExecutor) GetMultiApp() *cfg.MultiChainApp {
+	return r.multiapps
 }
 
-func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
+func (r *ActionExecutor) GetMythosApp(chainId string) (MythosApp, error) {
+	iapp, err := r.multiapps.GetApp(chainId)
+	if err != nil {
+		return nil, err
+	}
+	app, ok := iapp.(MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("cannot get MythosApp")
+	}
+	return app, nil
+}
+
+func (r *ActionExecutor) GetApp(chainId string) (types.BaseApp, error) {
+	app, err := r.GetMythosApp(chainId)
+	if err != nil {
+		return nil, err
+	}
+	return app.GetBaseApp(), nil
+}
+
+func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error), chainId string) (any, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
-	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(r.bapp, r.logger, height, false)
+
+	cfg.SetGlobalChainConfig(chainId)
+
+	bapp, err := r.GetApp(chainId)
+	if err != nil {
+		return nil, err
+	}
+	if bapp.ChainID() != chainId {
+		return nil, fmt.Errorf("BaseApp ChainID %s is different than expected %s", bapp.ChainID(), chainId)
+	}
+
+	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, r.logger, height, false)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +274,7 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 	}
 
 	// we only commit if callback was successful
-	err = commitCtx(r.bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
 		return nil, err
 	}

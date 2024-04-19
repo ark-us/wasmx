@@ -35,6 +35,9 @@ func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]b
 func (h *WasmxCosmosHandler) DecodeCosmosTx(bz []byte) ([]byte, error) {
 	return h.Keeper.DecodeCosmosTx(bz)
 }
+func (h *WasmxCosmosHandler) AnyToBz(anyMsg *cdctypes.Any) ([]byte, error) {
+	return h.Keeper.AnyToBz(anyMsg)
+}
 func (h *WasmxCosmosHandler) VerifyCosmosTx(bz []byte) (bool, error) {
 	return h.Keeper.VerifyCosmosTx(h.Ctx, bz)
 }
@@ -197,6 +200,14 @@ func (h *Keeper) DecodeCosmosTx(bz []byte) ([]byte, error) {
 		return nil, err
 	}
 	return txbz, nil
+}
+
+func (k *Keeper) AnyToBz(anyMsg *cdctypes.Any) ([]byte, error) {
+	bz, err := k.cdc.Marshal(anyMsg)
+	if err != nil {
+		return nil, err
+	}
+	return bz, nil
 }
 
 func (h *Keeper) VerifyCosmosTx(ctx sdk.Context, bz []byte) (bool, error) {

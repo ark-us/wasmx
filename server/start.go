@@ -54,6 +54,7 @@ import (
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
 	networkgrpc "mythos/v1/x/network/keeper"
+	networkkeeper "mythos/v1/x/network/keeper"
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
 	networktypes "mythos/v1/x/network/types"
@@ -237,17 +238,19 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 
 	appOpts := svrCtx.Viper
 	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-	// TODO reuse
-	encodingConfig := mapp.MakeEncodingConfig()
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, svrCtx.Logger)
+
 	for chainId, _ := range mcfg.PrefixesMap {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		mcfg.SetGlobalChainConfig(chainId)
+		encodingConfig := mapp.MakeEncodingConfig()
 		app := mapp.NewApp(
+			actionExecutor,
 			svrCtx.Logger,
 			db,
 			traceWriter,
@@ -407,10 +410,10 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, svrCtx.Logger)
+
 	appOpts := svrCtx.Viper
 	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-	// TODO reuse
-	encodingConfig := mapp.MakeEncodingConfig()
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
 		skipUpgradeHeights[int64(h)] = true
@@ -419,7 +422,9 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	for chainId, _ := range mcfg.PrefixesMap {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		mcfg.SetGlobalChainConfig(chainId)
+		encodingConfig := mapp.MakeEncodingConfig()
 		app := mapp.NewApp(
+			actionExecutor,
 			svrCtx.Logger,
 			db,
 			traceWriter,

@@ -45,7 +45,7 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.Logger(ctx).Info("background process started", "description", description)
-		err := k.startBackgroundProcessInternal(description, contractAddr, senderAddr, msg.Args)
+		err := k.startBackgroundProcessInternal(ctx.ChainID(), description, contractAddr, senderAddr, msg.Args)
 		if err != nil {
 			k.Logger(ctx).Error("background process failed", "description", description, "err", err)
 			errCh <- err
@@ -67,6 +67,7 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 }
 
 func (k *Keeper) startBackgroundProcessInternal(
+	chainId string,
 	description string,
 	contractAddr sdk.AccAddress,
 	senderAddr sdk.AccAddress,
@@ -76,8 +77,12 @@ func (k *Keeper) startBackgroundProcessInternal(
 	if goCtx == nil {
 		return fmt.Errorf("goContextParent not set for background processes")
 	}
-	height := k.actionExecutor.GetApp().LastBlockHeight()
-	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(k.actionExecutor.bapp, k.actionExecutor.logger, height, false)
+	bapp, err := k.actionExecutor.GetApp(chainId)
+	if err != nil {
+		return err
+	}
+	height := bapp.LastBlockHeight()
+	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, k.actionExecutor.logger, height, false)
 	if err != nil {
 		return err
 	}
@@ -86,7 +91,7 @@ func (k *Keeper) startBackgroundProcessInternal(
 	ctx_ := sdk.UnwrapSDKContext(goCtx)
 	_, err = k.wasmxKeeper.Execute(ctx_, contractAddr, senderAddr, msgbz, nil, nil, true)
 	// we only commit if callback was successful
-	err = commitCtx(k.actionExecutor.bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
 		return err
 	}

@@ -97,6 +97,7 @@ type WasmxCosmosHandler interface {
 	ExecuteCosmosMsgAnyBz(msgbz []byte) ([]sdk.Event, []byte, error)
 	ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error)
 	DecodeCosmosTx(bz []byte) ([]byte, error)
+	AnyToBz(anyMsg *cdctypes.Any) ([]byte, error)
 	VerifyCosmosTx(bz []byte) (bool, error)
 	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
 	GetAccount(addr sdk.AccAddress) sdk.AccountI

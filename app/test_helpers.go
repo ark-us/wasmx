@@ -28,6 +28,7 @@ import (
 	tmtypes "github.com/cometbft/cometbft/types"
 
 	config "mythos/v1/config"
+	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -93,9 +94,12 @@ func SetupApp(
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	app := NewApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
+
+	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -137,9 +141,12 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 	app := NewApp(
+		actionExecutor,
 		logger,
 		db, nil, true, map[int64]bool{},
 		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, appOpts,
@@ -166,14 +173,17 @@ func NewTestNetworkFixture() network.TestFixture {
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	app := NewApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
+	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
 		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
 		return NewApp(
+			actionExecutor,
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
 			DefaultNodeHome, 5, MakeEncodingConfig(),
 			appOpts,

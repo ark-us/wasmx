@@ -52,6 +52,7 @@ import (
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 
@@ -78,16 +79,20 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	g, goctx, _ := app.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := mcfg.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir())
 	// appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
 	// appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
+
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
 	// tempBaseappOptions := DefaultBaseappOptions(appOpts)
 	fmt.Println("---tempApp--")
 	tempApp := app.NewApp(
+		actionExecutor,
 		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
@@ -187,8 +192,13 @@ func initRootCmd(
 
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
+	// TODO fixme - we initialize with an empty execution executor ..
+	// commands using this will not work
+	actionExecutor := networkkeeper.NewActionExecutor(nil, nil)
+
 	a := appCreator{
 		encodingConfig,
+		actionExecutor,
 	}
 
 	rootCmd.AddCommand(
@@ -317,6 +327,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 
 type appCreator struct {
 	encodingConfig appparams.EncodingConfig
+	actionExecutor *networkkeeper.ActionExecutor
 }
 
 // newApp creates a new Cosmos SDK app
@@ -335,6 +346,7 @@ func (a appCreator) newApp(
 	}
 
 	return app.NewApp(
+		a.actionExecutor,
 		logger,
 		db,
 		traceStore,
@@ -375,6 +387,7 @@ func (a appCreator) appExport(
 	appOpts = viperAppOpts
 
 	app := app.NewApp(
+		a.actionExecutor,
 		logger,
 		db,
 		traceStore,

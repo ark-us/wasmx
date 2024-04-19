@@ -162,7 +162,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 		}
 		return rresp, nil
 	}
-	_, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
+	_, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb, c.bapp.ChainID())
 	// TODO handle resp, err ?
 	if err != nil {
 		c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())
@@ -559,7 +559,7 @@ func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) 
 			Msg:      msg,
 		})
 	}
-	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
+	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb, c.bapp.ChainID())
 	if err != nil {
 		return nil, err
 	}
