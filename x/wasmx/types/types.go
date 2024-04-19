@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 
 	sdkerr "cosmossdk.io/errors"
@@ -74,7 +75,7 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 
 	chainId, err := ParseChainID(ctx.ChainID())
 	if err != nil {
-		panic("Chain ID cannot be parsed for wasmx")
+		panic(fmt.Sprintf("Chain ID cannot be parsed for wasmx: %s", err.Error()))
 	}
 
 	env := Env{

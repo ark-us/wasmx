@@ -33,7 +33,7 @@ func ParseChainID(chainID string) (*big.Int, error) {
 
 	matches := wasmxChainID.FindStringSubmatch(chainID)
 	if matches == nil || len(matches) != 4 || matches[1] == "" {
-		return nil, sdkerr.Wrapf(ErrInvalidChainID, "%s: %v", chainID, matches)
+		return nil, sdkerr.Wrapf(ErrInvalidChainID, "matches for %s: %v", chainID, matches)
 	}
 
 	// verify that the chain-id entered is a base 10 integer
