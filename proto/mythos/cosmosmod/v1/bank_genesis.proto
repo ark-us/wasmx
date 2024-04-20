@@ -44,4 +44,5 @@ message DenomDeploymentInfo {
     repeated string admins = 3;
     repeated string minters = 4;
     string contract = 5 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string base_denom = 6;
 }

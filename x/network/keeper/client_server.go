@@ -149,8 +149,11 @@ func NewGRPCServer(
 	if err != nil {
 		return nil, nil, err
 	}
-	appMap := multiapp.GetApps()
-	for chainId, iapp := range appMap {
+
+	// init all chains first and start them afterwards
+	// InitChain runs multiple contract executions that are not under ActionExecutor control; starting the chains while InitChain is not finished will start delayed executions that will intersect with InitChain executions
+	for _, chainId := range multiapp.ChainIds {
+		iapp, _ := multiapp.GetApp(chainId)
 		app, ok := iapp.(MythosApp)
 		if !ok {
 			return nil, nil, fmt.Errorf("cannot get MythosApp")
@@ -161,22 +164,30 @@ func NewGRPCServer(
 			return nil, nil, fmt.Errorf("cannot get servertypes.Application")
 		}
 		mconfig.SetGlobalChainConfig(chainId)
-		// load genesis state
-		// Run the InitChain logic
-		// setup node ips
-
-		networkServer := &msgServer{
-			Keeper: app.GetNetworkKeeper(),
-			// App:    bapp,
-		}
-
 		if bapp.LastBlockHeight() == 0 {
+			networkServer := &msgServer{
+				Keeper: app.GetNetworkKeeper(),
+			}
+
 			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, chainId, metricsProvider, networkServer)
 			if err != nil {
 				return nil, nil, err
 			}
-			// fmt.Println("* resInit", resInit)
 		}
+	}
+
+	for _, chainId := range multiapp.ChainIds {
+		iapp, _ := multiapp.GetApp(chainId)
+		app, ok := iapp.(MythosApp)
+		if !ok {
+			return nil, nil, fmt.Errorf("cannot get MythosApp")
+		}
+		bapp := app.GetBaseApp()
+		mconfig.SetGlobalChainConfig(chainId)
+		networkServer := &msgServer{
+			Keeper: app.GetNetworkKeeper(),
+		}
+
 		// start the node
 		err = StartNode(bapp, mythosapp, logger, networkServer)
 		if err != nil {

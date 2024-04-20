@@ -10,7 +10,8 @@ type ContextKey string
 const MultiChainAppKey ContextKey = "MultiChainApp"
 
 type MultiChainApp struct {
-	Apps map[string]interface{}
+	Apps     map[string]interface{}
+	ChainIds []string
 }
 
 func (m *MultiChainApp) GetApps() map[string]interface{} {
@@ -27,16 +28,18 @@ func (m *MultiChainApp) GetApp(chainId string) (interface{}, error) {
 
 func (m *MultiChainApp) SetApp(chainId string, app interface{}) {
 	m.Apps[chainId] = app
+	m.ChainIds = append(m.ChainIds, chainId)
 }
 
-func NewMultiChainApp(apps map[string]interface{}) *MultiChainApp {
+func NewMultiChainApp(apps map[string]interface{}, chainIds []string) *MultiChainApp {
 	return &MultiChainApp{
-		Apps: apps,
+		Apps:     apps,
+		ChainIds: chainIds,
 	}
 }
 
 func WithMultiChainAppEmpty(ctx context.Context) (context.Context, *MultiChainApp) {
-	mapp := &MultiChainApp{Apps: map[string]interface{}{}}
+	mapp := &MultiChainApp{Apps: map[string]interface{}{}, ChainIds: []string{}}
 	return context.WithValue(ctx, MultiChainAppKey, mapp), mapp
 }
 

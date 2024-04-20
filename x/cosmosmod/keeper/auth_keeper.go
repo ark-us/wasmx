@@ -66,7 +66,7 @@ func NewKeeperAuth(
 }
 
 func (k *KeeperAuth) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.AuthModuleName()))
+	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.AuthModuleName()), "chain_id", ctx.ChainID())
 }
 
 // GetAuthority returns the module's authority.

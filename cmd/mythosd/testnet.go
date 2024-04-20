@@ -742,8 +742,11 @@ func initGenFiles(
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
+	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(mcfg.DenomUnit, uint32(mcfg.BaseDenomUnit), mcfg.BaseDenom)
 	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
+	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
+	cosmosmodGenState.Distribution.BaseDenom = mcfg.BaseDenom
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = mcfg.BaseDenom
 	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(mcfg.BaseDenom, math.NewInt(50000000)))
 	// TODO make this bigger once we have our own governance contract
@@ -877,6 +880,8 @@ func initGenFilesLevel0(
 	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(chaincfg.DenomUnit, uint32(chaincfg.BaseDenomUnit), chaincfg.BaseDenom)
 	cosmosmodGenState.Bank.Balances = []banktypes.Balance{genBalance}
 	cosmosmodGenState.Staking.Params.BondDenom = chaincfg.BondBaseDenom
+	cosmosmodGenState.Staking.BaseDenom = chaincfg.BaseDenom
+	cosmosmodGenState.Distribution.BaseDenom = chaincfg.BaseDenom
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = chaincfg.BaseDenom
 	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, math.NewInt(50000000)))
 	// TODO make this bigger once we have our own governance contract

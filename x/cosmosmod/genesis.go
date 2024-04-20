@@ -9,7 +9,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
@@ -161,7 +160,7 @@ func InitGenesisSlashing(ctx sdk.Context, k keeper.KeeperSlashing, genState slas
 	k.Logger(ctx).Info("initialized slashing genesis")
 }
 
-func InitGenesisDistribution(ctx sdk.Context, k keeper.KeeperDistribution, genState distributiontypes.GenesisState) {
+func InitGenesisDistribution(ctx sdk.Context, k keeper.KeeperDistribution, genState types.DistributionGenesisState) {
 	k.Logger(ctx).Info("initializing distribution genesis")
 	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
 	if err != nil {

@@ -20,7 +20,7 @@ import (
 )
 
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState, auth AuthGenesisState, slashing slashingtypes.GenesisState, distrib distributiontypes.GenesisState) *GenesisState {
+func NewGenesisState(staking StakingGenesisState, bank BankGenesisState, gov GovGenesisState, auth AuthGenesisState, slashing slashingtypes.GenesisState, distrib DistributionGenesisState) *GenesisState {
 	return &GenesisState{
 		Staking:      staking,
 		Bank:         bank,
@@ -79,8 +79,9 @@ func NewDistributingGenesisState(
 	validatorCurrentRewards []distributiontypes.ValidatorCurrentRewardsRecord,
 	delegatorStartingInfos []distributiontypes.DelegatorStartingInfoRecord,
 	validatorSlashEvents []distributiontypes.ValidatorSlashEventRecord,
-) *distributiontypes.GenesisState {
-	return &distributiontypes.GenesisState{
+	baseDenom string,
+) *DistributionGenesisState {
+	return &DistributionGenesisState{
 		Params:                          params,
 		FeePool:                         feePool,
 		DelegatorWithdrawInfos:          delegatorWithdrawInfos,
@@ -90,6 +91,7 @@ func NewDistributingGenesisState(
 		ValidatorCurrentRewards:         validatorCurrentRewards,
 		DelegatorStartingInfos:          delegatorStartingInfos,
 		ValidatorSlashEvents:            validatorSlashEvents,
+		BaseDenom:                       baseDenom,
 	}
 }
 
@@ -181,9 +183,10 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 				URI:     "",
 				URIHash: "",
 			},
-			CodeId:  uint64(derc20jsonCodeId),
-			Admins:  []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
-			Minters: []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			CodeId:    uint64(derc20jsonCodeId),
+			Admins:    []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			Minters:   []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			BaseDenom: fmt.Sprintf("a%s", denomUnit),
 		},
 		{
 			Metadata: banktypes.Metadata{
@@ -207,9 +210,10 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string)
 				URI:     "",
 				URIHash: "",
 			},
-			CodeId:  uint64(erc20jsonCodeId),
-			Admins:  []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
-			Minters: []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			CodeId:    uint64(erc20jsonCodeId),
+			Admins:    []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			Minters:   []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			BaseDenom: fmt.Sprintf("a%s", denomUnit),
 		},
 		{
 			Metadata: banktypes.Metadata{
@@ -264,8 +268,20 @@ func DefaultSlashingGenesisState() *slashingtypes.GenesisState {
 }
 
 // DefaultDistributionGenesisState returns a default bank module genesis state.
-func DefaultDistributionGenesisState() *distributiontypes.GenesisState {
-	return distributiontypes.DefaultGenesisState()
+func DefaultDistributionGenesisState(baseDenom string) *DistributionGenesisState {
+	gen := distributiontypes.DefaultGenesisState()
+	return NewDistributingGenesisState(
+		gen.Params,
+		gen.FeePool,
+		gen.DelegatorWithdrawInfos,
+		gen.PreviousProposer,
+		gen.OutstandingRewards,
+		gen.ValidatorAccumulatedCommissions,
+		gen.ValidatorCurrentRewards,
+		gen.DelegatorStartingInfos,
+		gen.ValidatorSlashEvents,
+		baseDenom,
+	)
 }
 
 // DefaultAuthGenesisState returns a default bank module genesis state.

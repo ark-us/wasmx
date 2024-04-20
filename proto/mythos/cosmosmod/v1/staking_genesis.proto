@@ -44,6 +44,8 @@ message StakingGenesisState {
 
     // exported defines a bool to identify whether the chain dealing with exported or initialized genesis.
     bool exported = 8;
+
+    string base_denom = 9;
 }
 
 // Delegation represents the bond with tokens held by an account. It is

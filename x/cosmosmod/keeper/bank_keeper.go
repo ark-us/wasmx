@@ -61,7 +61,7 @@ func NewKeeperBank(
 }
 
 func (k *KeeperBank) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.BankModuleName()))
+	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.BankModuleName()), "chain_id", ctx.ChainID())
 }
 
 // GetAuthority returns the module's authority.

@@ -20,6 +20,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/cosmosmod/types"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -36,7 +37,11 @@ func (k KeeperStaking) BondedRatio(goCtx context.Context) (math.LegacyDec, error
 // StakingTokenSupply staking tokens from the total supply
 func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	derc20Address, err := k.GetDERC20Address(ctx)
+	config, err := mcfg.GetChainConfig(ctx.ChainID())
+	if err != nil {
+		return math.NewInt(0), fmt.Errorf("config not found for chain_id: %s", ctx.ChainID())
+	}
+	derc20Address, err := k.GetDERC20Address(ctx, config.BondBaseDenom)
 	if err != nil {
 		return math.NewInt(0), err
 	}
@@ -248,7 +253,11 @@ func (k KeeperStaking) GetAllDelegatorDelegations(goCtx context.Context, delegat
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
 func (k KeeperStaking) GetAllSDKDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	derc20Address, err := k.GetDERC20Address(ctx)
+	config, err := mcfg.GetChainConfig(ctx.ChainID())
+	if err != nil {
+		return nil, fmt.Errorf("config not found for chain_id: %s", ctx.ChainID())
+	}
+	derc20Address, err := k.GetDERC20Address(ctx, config.BondBaseDenom)
 	if err != nil {
 		return nil, err
 	}
@@ -492,9 +501,9 @@ func WriteValidators(ctx sdk.Context, keeper *KeeperStaking) (vals []cmttypes.Ge
 
 // GetAllSDKDelegations returns all delegations used during genesis dump
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
-func (k KeeperStaking) GetDERC20Address(ctx sdk.Context) (derc20Address sdk.AccAddress, err error) {
+func (k KeeperStaking) GetDERC20Address(ctx sdk.Context, bondDenom string) (derc20Address sdk.AccAddress, err error) {
 	// TODO asmyt denom
-	msgbz := []byte(`{"GetAddressByDenom":{"denom":"asmyt"}}`)
+	msgbz := []byte(fmt.Sprintf(`{"GetAddressByDenom":{"denom":"%s"}}`, bondDenom))
 	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
@@ -512,6 +521,9 @@ func (k KeeperStaking) GetDERC20Address(ctx sdk.Context) (derc20Address sdk.AccA
 	err = json.Unmarshal(resp1.Data, &qaddrResp)
 	if err != nil {
 		return nil, err
+	}
+	if len(qaddrResp.Address.Bytes()) == 0 {
+		return nil, fmt.Errorf("contract not found for bank denom: %s", bondDenom)
 	}
 	return qaddrResp.Address, nil
 }

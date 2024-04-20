@@ -245,7 +245,7 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 
 	actionExecutor := networkkeeper.NewActionExecutor(bapps, svrCtx.Logger)
 
-	for chainId, _ := range mcfg.PrefixesMap {
+	for _, chainId := range mcfg.ChainIdsInit {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		mcfg.SetGlobalChainConfig(chainId)
 		encodingConfig := mapp.MakeEncodingConfig()
@@ -262,11 +262,13 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 			appOpts,
 			baseappOptions...,
 		)
-
-		bapps.Apps[chainId] = app
+		bapps.SetApp(chainId, app)
 	}
 
-	iapp_ := bapps.Apps[cast.ToString(svrCtx.Viper.Get(flags.FlagChainID))]
+	iapp_, err := bapps.GetApp(cast.ToString(svrCtx.Viper.Get(flags.FlagChainID)))
+	if err != nil {
+		return err
+	}
 	app_, ok := iapp_.(*mapp.App)
 	if !ok {
 		return fmt.Errorf("error App interface from multichainapp")
@@ -419,7 +421,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	for chainId, _ := range mcfg.PrefixesMap {
+	for _, chainId := range mcfg.ChainIdsInit {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		mcfg.SetGlobalChainConfig(chainId)
 		encodingConfig := mapp.MakeEncodingConfig()
@@ -436,11 +438,15 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 			appOpts,
 			baseappOptions...,
 		)
-		bapps.Apps[chainId] = app
+		bapps.SetApp(chainId, app)
 	}
 
 	mainChainId := mcfg.GetChainId(svrCtx.Viper)
-	mythosapp, ok := bapps.Apps[mainChainId].(*mapp.App)
+	app_, err := bapps.GetApp(mainChainId)
+	if err != nil {
+		return err
+	}
+	mythosapp, ok := app_.(*mapp.App)
 	if !ok {
 		return fmt.Errorf("cannot find app for chainId: %s", mainChainId)
 	}

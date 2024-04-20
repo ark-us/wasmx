@@ -73,6 +73,7 @@ type ChainConfig struct {
 }
 
 var PrefixesMap = map[string]ChainConfig{}
+var ChainIdsInit = []string{}
 
 func GetChainConfig(chainId string) (*ChainConfig, error) {
 	conf, ok := PrefixesMap[chainId]
@@ -90,6 +91,10 @@ var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 
 // TODO this needs to be in a contract
 func init() {
+	ChainIdsInit = []string{
+		MYTHOS_CHAIN_ID_TESTNET,
+		LEVEL0_CHAIN_ID,
+	}
 	// PrefixesMap[MYTHOS_CHAIN_ID_TEST] = ChainConfig{
 	// 	Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
 	// 	Bech32PrefixAccPub:   Bech32PrefixAccPub,

@@ -240,7 +240,11 @@ func (r *ActionExecutor) GetApp(chainId string) (types.BaseApp, error) {
 	if err != nil {
 		return nil, err
 	}
-	return app.GetBaseApp(), nil
+	bapp, ok := app.(types.BaseApp)
+	if !ok {
+		return nil, fmt.Errorf("cannot get BaseApp")
+	}
+	return bapp, nil
 }
 
 func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error), chainId string) (any, error) {

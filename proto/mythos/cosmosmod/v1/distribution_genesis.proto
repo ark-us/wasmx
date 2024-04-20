@@ -1,0 +1,56 @@
+syntax = "proto3";
+package mythos.cosmosmod.v1;
+
+import "gogoproto/gogo.proto";
+import "amino/amino.proto";
+import "cosmos_proto/cosmos.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/distribution/v1beta1/distribution.proto";
+import "cosmos/distribution/v1beta1/genesis.proto";
+
+option go_package = "mythos/v1/x/cosmosmod/types";
+
+// DistributionGenesisState defines the distribution module's genesis state.
+message DistributionGenesisState {
+    option (gogoproto.equal)           = false;
+    option (gogoproto.goproto_getters) = false;
+
+    // params defines all the parameters of the module.
+    cosmos.distribution.v1beta1.Params params = 1 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the fee pool at genesis.
+    cosmos.distribution.v1beta1.FeePool fee_pool = 2 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the delegator withdraw infos at genesis.
+    repeated cosmos.distribution.v1beta1.DelegatorWithdrawInfo delegator_withdraw_infos = 3
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the previous proposer at genesis.
+    string previous_proposer = 4 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+
+    // fee_pool defines the outstanding rewards of all validators at genesis.
+    repeated cosmos.distribution.v1beta1.ValidatorOutstandingRewardsRecord outstanding_rewards = 5
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the accumulated commissions of all validators at genesis.
+    repeated cosmos.distribution.v1beta1.ValidatorAccumulatedCommissionRecord validator_accumulated_commissions = 6
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the historical rewards of all validators at genesis.
+    repeated cosmos.distribution.v1beta1.ValidatorHistoricalRewardsRecord validator_historical_rewards = 7
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the current rewards of all validators at genesis.
+    repeated cosmos.distribution.v1beta1.ValidatorCurrentRewardsRecord validator_current_rewards = 8
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the delegator starting infos at genesis.
+    repeated cosmos.distribution.v1beta1.DelegatorStartingInfoRecord delegator_starting_infos = 9
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    // fee_pool defines the validator slash events at genesis.
+    repeated cosmos.distribution.v1beta1.ValidatorSlashEventRecord validator_slash_events = 10
+        [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
+
+    string base_denom = 11;
+}
