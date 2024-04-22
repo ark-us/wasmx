@@ -91,6 +91,7 @@ var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 
 // TODO this needs to be in a contract
 func init() {
+	// last id is default ID for app
 	ChainIdsInit = []string{
 		MYTHOS_CHAIN_ID_TESTNET,
 		LEVEL0_CHAIN_ID,

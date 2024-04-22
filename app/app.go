@@ -363,9 +363,19 @@ func NewApp(
 	capabilitiesStoreKey := cfg.GetMultiChainStoreKey(chainId, capabilitytypes.StoreKey)
 	groupStoreKey := cfg.GetMultiChainStoreKey(chainId, group.StoreKey)
 	icacontrollerStoreKey := cfg.GetMultiChainStoreKey(chainId, icacontrollertypes.StoreKey)
+	authzStoreKey := cfg.GetMultiChainStoreKey(chainId, authzkeeper.StoreKey)
+
+	wasmxMemStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.MemStoreKey)
+	capabilitiesMemStoreKey := cfg.GetMultiChainStoreKey(chainId, capabilitytypes.MemStoreKey)
+
+	paramsTStoreKey := cfg.GetMultiChainStoreKey(chainId, paramstypes.TStoreKey)
+	wasmxTStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.TStoreKey)
+
+	wasmxMetaConsensusStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.MetaConsensusStoreKey)
+	wasmxSingleConsensusStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.SingleConsensusStoreKey)
 
 	keys := storetypes.NewKVStoreKeys(
-		authz.ModuleName,
+		authzStoreKey,
 		crisisStoreKey,
 		mintStoreKey,
 		paramsStoreKey,
@@ -384,9 +394,9 @@ func NewApp(
 		websrvStoreKey,
 		// this line is used by starport scaffolding # stargate/app/storeKey
 	)
-	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey, wasmxmoduletypes.TStoreKey)
-	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey, wasmxmoduletypes.MemStoreKey)
-	clessKeys := storetypes.NewConsensuslessStoreKeys(networkmoduletypes.CLessStoreKey, wasmxmoduletypes.MetaConsensusStoreKey, wasmxmoduletypes.SingleConsensusStoreKey)
+	tkeys := storetypes.NewTransientStoreKeys(paramsTStoreKey, wasmxTStoreKey)
+	memKeys := storetypes.NewMemoryStoreKeys(capabilitiesMemStoreKey, wasmxMemStoreKey)
+	clessKeys := storetypes.NewConsensuslessStoreKeys(wasmxMetaConsensusStoreKey, wasmxSingleConsensusStoreKey)
 
 	// register streaming services
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -421,7 +431,7 @@ func NewApp(
 		appCodec,
 		cdc,
 		keys[paramsStoreKey],
-		tkeys[paramstypes.TStoreKey],
+		tkeys[paramsTStoreKey],
 	)
 
 	// set the BaseApp's parameter store
@@ -437,7 +447,7 @@ func NewApp(
 	app.CapabilityKeeper = capabilitykeeper.NewKeeper(
 		appCodec,
 		keys[capabilitiesStoreKey],
-		memKeys[capabilitytypes.MemStoreKey],
+		memKeys[capabilitiesMemStoreKey],
 	)
 
 	// grant capabilities for the ibc and ibc-transfer modules
@@ -456,10 +466,10 @@ func NewApp(
 		appCodec,
 		encodingConfig.TxConfig,
 		keys[wasmxStoreKey],
-		memKeys[wasmxmoduletypes.MemStoreKey],
-		tkeys[wasmxmoduletypes.TStoreKey],
-		clessKeys[wasmxmoduletypes.MetaConsensusStoreKey],
-		clessKeys[wasmxmoduletypes.SingleConsensusStoreKey],
+		memKeys[wasmxMemStoreKey],
+		tkeys[wasmxTStoreKey],
+		clessKeys[wasmxMetaConsensusStoreKey],
+		clessKeys[wasmxSingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		// TODO?
 		// app.TransferKeeper,
@@ -508,7 +518,7 @@ func NewApp(
 		// Bech32PrefixAccAddr,
 	)
 	app.AuthzKeeper = authzkeeper.NewKeeper(
-		runtime.NewKVStoreService(keys[authzkeeper.StoreKey]),
+		runtime.NewKVStoreService(keys[authzStoreKey]),
 		appCodec,
 		app.MsgServiceRouter(),
 		app.AccountKeeper,
@@ -1128,31 +1138,36 @@ func (app *App) InterfaceRegistry() types.InterfaceRegistry {
 //
 // NOTE: This is solely to be used for testing purposes.
 func (app *App) GetKey(storeKey string) *storetypes.KVStoreKey {
-	return app.keys[storeKey]
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.keys[key]
 }
 
 // GetTKey returns the TransientStoreKey for the provided store key.
 //
 // NOTE: This is solely to be used for testing purposes.
 func (app *App) GetTKey(storeKey string) *storetypes.TransientStoreKey {
-	return app.tkeys[storeKey]
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.tkeys[key]
 }
 
 // Used by network module
 func (app *App) GetMKey(storeKey string) *storetypes.MemoryStoreKey {
-	return app.memKeys[storeKey]
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.memKeys[key]
 }
 
 // Used by network module
 func (app *App) GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey {
-	return app.clessKeys[storeKey]
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.clessKeys[key]
 }
 
 // GetMemKey returns the MemStoreKey for the provided mem key.
 //
 // NOTE: This is solely used for testing purposes.
 func (app *App) GetMemKey(storeKey string) *storetypes.MemoryStoreKey {
-	return app.memKeys[storeKey]
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.memKeys[key]
 }
 
 // GetSubspace returns a param subspace for a given module name.

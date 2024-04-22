@@ -36,7 +36,7 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 		return sdkerr.Wrap(err, "contract")
 	}
 
-	description := fmt.Sprintf("background process: contract %s, args: %s ", msg.Contract, string(msg.Args))
+	description := fmt.Sprintf("background process: chain_id %s, contract %s, args: %s ", ctx.ChainID(), msg.Contract, string(msg.Args))
 
 	// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 	intervalEnded := make(chan bool, 1)
@@ -77,6 +77,8 @@ func (k *Keeper) startBackgroundProcessInternal(
 	if goCtx == nil {
 		return fmt.Errorf("goContextParent not set for background processes")
 	}
+	// we cannot use the ActionExecutor, because it will block all other executions (lock)
+	// we need to start this process in its own goroutine
 	bapp, err := k.actionExecutor.GetApp(chainId)
 	if err != nil {
 		return err

@@ -212,8 +212,10 @@ func GetPrecompileByLabel(label string) []byte {
 		wasmbin = chat_verifier_contract
 	case types.TIME_v001:
 		wasmbin = time_contract
-	case types.LEVEL0_v001:
+	case "level0_library":
 		wasmbin = level0_contract
+	case types.LEVEL0_v001:
+		wasmbin = []byte(Level0P2Pv001(types.AccAddressFromHex(types.ADDR_LEVEL0_LIBRARY)))
 	case types.LEVELN_v001:
 		wasmbin = leveln_contract
 	}

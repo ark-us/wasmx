@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -955,7 +957,7 @@ func collectGenFilesLevel0(
 		return err
 	}
 
-	nodeAppState, err := genutil.GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, appGenesis, genBalIterator, genutiltypes.DefaultMessageValidator, valAddrCodec)
+	nodeAppState, err := GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, appGenesis, genBalIterator, genutiltypes.DefaultMessageValidator, valAddrCodec, genFile)
 	if err != nil {
 		return err
 	}
@@ -1079,4 +1081,47 @@ func copyFile(sourceFile string, destinationFile string) error {
 		return err
 	}
 	return nil
+}
+
+// GenAppStateFromConfig gets the genesis app state from the config
+func GenAppStateFromConfig(cdc codec.JSONCodec, txEncodingConfig client.TxEncodingConfig,
+	config *tmconfig.Config, initCfg genutiltypes.InitConfig, genesis *genutiltypes.AppGenesis, genBalIterator genutiltypes.GenesisBalancesIterator,
+	validator genutiltypes.MessageValidator, valAddrCodec runtime.ValidatorAddressCodec,
+	genFile string,
+) (appState json.RawMessage, err error) {
+	// process genesis transactions, else create default genesis.json
+	appGenTxs, persistentPeers, err := genutil.CollectTxs(
+		cdc, txEncodingConfig.TxJSONDecoder(), config.Moniker, initCfg.GenTxsDir, genesis, genBalIterator, validator, valAddrCodec)
+	if err != nil {
+		return appState, err
+	}
+
+	config.P2P.PersistentPeers = persistentPeers
+	tmconfig.WriteConfigFile(filepath.Join(config.RootDir, "config", "config.toml"), config)
+
+	// if there are no gen txs to be processed, return the default empty state
+	if len(appGenTxs) == 0 {
+		return appState, errors.New("there must be at least one genesis tx")
+	}
+
+	// create the app state
+	appGenesisState, err := genutiltypes.GenesisStateFromAppGenesis(genesis)
+	if err != nil {
+		return appState, err
+	}
+
+	appGenesisState, err = genutil.SetGenTxsInAppGenesisState(cdc, txEncodingConfig.TxJSONEncoder(), appGenesisState, appGenTxs)
+	if err != nil {
+		return appState, err
+	}
+
+	appState, err = json.MarshalIndent(appGenesisState, "", "  ")
+	if err != nil {
+		return appState, err
+	}
+
+	genesis.AppState = appState
+	err = genutil.ExportGenesisFile(genesis, genFile)
+
+	return appState, err
 }

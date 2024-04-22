@@ -58,7 +58,8 @@ var ADDR_SLASHING = "0x0000000000000000000000000000000000000045"
 var ADDR_DISTRIBUTION = "0x0000000000000000000000000000000000000046"
 var ADDR_TIME = "0x0000000000000000000000000000000000000047"
 var ADDR_LEVEL0 = "0x0000000000000000000000000000000000000048"
-var ADDR_LEVELN = "0x0000000000000000000000000000000000000049"
+var ADDR_LEVEL0_LIBRARY = "0x0000000000000000000000000000000000000049"
+var ADDR_LEVELN = "0x000000000000000000000000000000000000004a"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -614,6 +615,11 @@ func DefaultTimeChainContracts() SystemContracts {
 		panic("DefaultTimeChainContracts: cannot marshal timeInitMsg message")
 	}
 
+	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"maxLevel","value":0},{"key":"blockTimeout","value":5000},{"key":"currentLevel","value":0},{"key":"membersCount","value":1}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+	}
+
 	consensusPrecompile := []SystemContract{
 		{
 			Address:     ADDR_TIME,
@@ -625,13 +631,22 @@ func DefaultTimeChainContracts() SystemContracts {
 			Deps:        []string{},
 		},
 		{
+			Address:     ADDR_LEVEL0_LIBRARY,
+			Label:       "level0_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
 			Address:     ADDR_LEVEL0,
 			Label:       LEVEL0_v001,
-			InitMessage: initMsg,
+			InitMessage: level0InitMsg,
 			Pinned:      false,
 			Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
 			Address:     ADDR_LEVELN,
@@ -666,7 +681,7 @@ func DefaultTimeChainContracts() SystemContracts {
 	}
 	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
+		panic("DefaultTimeChainContracts: cannot marshal hooksInitMsgNonC message")
 	}
 	hooksPrecompiles := []SystemContract{
 		{
