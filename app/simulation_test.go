@@ -29,7 +29,7 @@ func init() {
 // `go test -benchmem -run=^$ -bench ^BenchmarkSimulation ./app -NumBlocks=200 -BlockSize 50 -Commit=true -Verbose=true -Enabled=true`
 func BenchmarkSimulation(b *testing.B) {
 	config := simcli.NewConfigFromFlags()
-	config.ChainID = "mythos_1000-1"
+	config.ChainID = mcfg.MYTHOS_CHAIN_ID_TEST
 	simcli.FlagEnabledValue = true
 	simcli.FlagCommitValue = true
 

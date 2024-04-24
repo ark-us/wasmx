@@ -5,6 +5,8 @@ import (
 	"time"
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
+
+	mcfg "mythos/v1/config"
 )
 
 var (
@@ -23,7 +25,11 @@ func NewCoordinator(t *testing.T, chainIds []string, index int32) *ibcgotesting.
 	ibcgotesting.DefaultTestingAppInit = ibcgotesting.SetupTestingApp
 
 	for _, chainID := range chainIds {
-		chains[chainID] = NewTestChain(t, coord, chainID, index)
+		config, err := mcfg.GetChainConfig(chainID)
+		if err != nil {
+			panic(err)
+		}
+		chains[chainID] = NewTestChain(t, coord, chainID, *config, index)
 	}
 
 	coord.Chains = chains

@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	// this line is used by starport scaffolding # 1
-
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/cobra"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
@@ -17,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	"mythos/v1/x/network/client/cli"
 	"mythos/v1/x/network/keeper"
 	"mythos/v1/x/network/types"
 )
@@ -74,16 +74,14 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 }
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
-// func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-// 	// TODO
-// 	// return cli.GetTxCmd()
-// }
+func (a AppModuleBasic) GetTxCmd() *cobra.Command {
+	return cli.GetTxCmd()
+}
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this root command are used by end-users to generate new queries to the subset of the state defined by the module
-// func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-// 	// TODO
-// 	// return cli.GetQueryCmd(types.StoreKey)
-// }
+func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return cli.GetQueryCmd()
+}
 
 // ----------------------------------------------------------------------------
 // AppModule

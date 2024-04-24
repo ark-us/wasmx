@@ -67,7 +67,7 @@ type ChainConfig struct {
 	HumanCoinUnit        string
 	BaseDenom            string
 	DenomUnit            string
-	BaseDenomUnit        int32
+	BaseDenomUnit        uint32
 	BondBaseDenom        string
 	BondDenom            string
 }
@@ -86,31 +86,31 @@ func GetChainConfig(chainId string) (*ChainConfig, error) {
 }
 
 var LEVEL0_CHAIN_ID = "leveln_1000-1"
-var MYTHOS_CHAIN_ID_TEST = "mythos_1000-1"
+var MYTHOS_CHAIN_ID_TEST = "mythos_7001-1"
 var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 
 // TODO this needs to be in a contract
 func init() {
-	// last id is default ID for app
+	// these chains are initialized by the testnet
 	ChainIdsInit = []string{
 		MYTHOS_CHAIN_ID_TESTNET,
 		LEVEL0_CHAIN_ID,
 	}
-	// PrefixesMap[MYTHOS_CHAIN_ID_TEST] = ChainConfig{
-	// 	Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
-	// 	Bech32PrefixAccPub:   Bech32PrefixAccPub,
-	// 	Bech32PrefixValAddr:  Bech32PrefixValAddr,
-	// 	Bech32PrefixValPub:   Bech32PrefixValPub,
-	// 	Bech32PrefixConsAddr: Bech32PrefixConsAddr,
-	// 	Bech32PrefixConsPub:  Bech32PrefixConsPub,
-	// 	Name:                 Name,
-	// 	HumanCoinUnit:        HumanCoinUnit,
-	// 	BaseDenom:            BaseDenom,
-	// 	DenomUnit:            DenomUnit,
-	// 	BaseDenomUnit:        BaseDenomUnit,
-	// 	BondBaseDenom:        BondBaseDenom,
-	// 	BondDenom:            BondDenom,
-	// }
+	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = ChainConfig{
+		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
+		Bech32PrefixAccPub:   Bech32PrefixAccPub,
+		Bech32PrefixValAddr:  Bech32PrefixValAddr,
+		Bech32PrefixValPub:   Bech32PrefixValPub,
+		Bech32PrefixConsAddr: Bech32PrefixConsAddr,
+		Bech32PrefixConsPub:  Bech32PrefixConsPub,
+		Name:                 Name,
+		HumanCoinUnit:        HumanCoinUnit,
+		BaseDenom:            BaseDenom,
+		DenomUnit:            DenomUnit,
+		BaseDenomUnit:        BaseDenomUnit,
+		BondBaseDenom:        BondBaseDenom,
+		BondDenom:            BondDenom,
+	}
 	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = ChainConfig{
 		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
 		Bech32PrefixAccPub:   Bech32PrefixAccPub,

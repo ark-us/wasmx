@@ -24,6 +24,7 @@ import (
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
 	wasmxapp "mythos/v1/app"
+	mcfg "mythos/v1/config"
 )
 
 // ChainIDPrefix defines the default chain ID prefix for Mythos test chains
@@ -41,7 +42,7 @@ func init() {
 //
 // Time management is handled by the Coordinator in order to ensure synchrony between chains.
 // Each update of any chain increments the block header time for all chains by 5 seconds.
-func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string, index int32) *ibcgotesting.TestChain {
+func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string, chaincfg mcfg.ChainConfig, index int32) *ibcgotesting.TestChain {
 	// generate validator private/public key
 	privVal := mock.NewPV()
 	pubKey, err := privVal.GetPubKey()
@@ -63,10 +64,10 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(wasmxapp.BaseDenom, amount)),
+		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
-	app, _ := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainID, index, balance)
+	app, _ := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainID, chaincfg, index, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 

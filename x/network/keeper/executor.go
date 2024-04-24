@@ -136,8 +136,8 @@ func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ct
 	if !ok {
 		return fmt.Errorf("commitCtx: failed to get MythosApp from server Application")
 	}
-
 	commitCacheCtx()
+
 	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.MetaConsensusStoreKey))
 	origtstore.(storetypes.CacheWrap).Write()
 
@@ -153,54 +153,6 @@ func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ct
 
 	return nil
 }
-
-// type ActionExecutor struct {
-// 	mtx    sync.Mutex
-// 	bapp   types.BaseApp
-// 	logger log.Logger
-// }
-
-// func NewActionExecutor(bapp types.BaseApp, logger log.Logger) *ActionExecutor {
-// 	return &ActionExecutor{
-// 		bapp:   bapp,
-// 		logger: logger,
-// 	}
-// }
-
-// func (r *ActionExecutor) GetLogger() log.Logger {
-// 	return r.logger
-// }
-
-// func (r *ActionExecutor) GetApp() types.BaseApp {
-// 	return r.bapp
-// }
-
-// func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
-// 	r.mtx.Lock()
-// 	defer r.mtx.Unlock()
-
-// 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(r.bapp, r.logger, height, false)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if goCtx == nil {
-// 		goCtx = context.Background()
-// 	}
-// 	// goCtx, cancelFn := context.WithCancel(goCtx)
-// 	// defer cancelFn()
-// 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
-// 	res, err := cb(goCtx)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// we only commit if callback was successful
-// 	err = commitCtx(r.bapp, sdkCtx, commitCacheCtx, ctxcachems)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return res, nil
-// }
 
 type ActionExecutor struct {
 	mtx       sync.Mutex

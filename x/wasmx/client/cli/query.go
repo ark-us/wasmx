@@ -68,7 +68,7 @@ func GetCmdLibVersion() *cobra.Command {
 
 // GetCmdBuildAddress build a contract address
 func GetCmdBuildAddress() *cobra.Command {
-	decoder := newArgDecoder(hex.DecodeString)
+	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use:     "build-address [code-hash] [creator-address] [salt-hex-encoded] [json_encoded_init_args (required when set as fixed)]",
 		Short:   "build contract address",
@@ -361,7 +361,7 @@ func GetCmdGetContractStateAll() *cobra.Command {
 }
 
 func GetCmdGetContractStateRaw() *cobra.Command {
-	decoder := newArgDecoder(hex.DecodeString)
+	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use:   "raw [bech32_address] [key]",
 		Short: "Prints out internal state for key of a contract given its address",
@@ -403,7 +403,7 @@ func GetCmdGetContractStateRaw() *cobra.Command {
 }
 
 func GetCmdGetContractCall() *cobra.Command {
-	decoder := newArgDecoder(asciiDecodeString)
+	decoder := NewArgDecoder(AsciiDecodeString)
 	cmd := &cobra.Command{
 		Use:   "call [bech32_address] [query]",
 		Short: "Calls contract with given address with query data and prints the returned result",
@@ -471,7 +471,7 @@ type argumentDecoder struct {
 	asciiF, hexF, b64F bool
 }
 
-func newArgDecoder(def func(string) ([]byte, error)) *argumentDecoder {
+func NewArgDecoder(def func(string) ([]byte, error)) *argumentDecoder {
 	return &argumentDecoder{dec: def}
 }
 
@@ -494,7 +494,7 @@ func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
 	}
 	switch found {
 	case 0:
-		return asciiDecodeString(s)
+		return AsciiDecodeString(s)
 	case 1:
 		return hex.DecodeString(s)
 	case 2:
@@ -504,7 +504,7 @@ func (a *argumentDecoder) DecodeString(s string) ([]byte, error) {
 	}
 }
 
-func asciiDecodeString(s string) ([]byte, error) {
+func AsciiDecodeString(s string) ([]byte, error) {
 	return []byte(s), nil
 }
 

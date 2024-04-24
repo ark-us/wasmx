@@ -194,7 +194,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 
 // InstantiateContract2Cmd will instantiate a contract from previously uploaded code with predicable address generated
 func InstantiateContract2Cmd() *cobra.Command {
-	decoder := newArgDecoder(hex.DecodeString)
+	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use: "instantiate2 [code_id_int64] [json_encoded_init_args] [salt] --label [text] --admin [address,optional] --amount [coins,optional] " +
 			"--fix-msg [bool,optional]",

@@ -2,6 +2,7 @@ package types
 
 import (
 	sdkerr "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -20,6 +21,24 @@ func (msg MsgGrpcSendRequest) Type() string {
 func (msg MsgGrpcSendRequest) ValidateBasic() error {
 	if len(msg.Data) == 0 {
 		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty request")
+	}
+	return nil
+}
+
+func (msg MsgMultiChainWrap) Route() string {
+	return RouterKey
+}
+
+func (msg MsgMultiChainWrap) Type() string {
+	return "multi-chain-wrap"
+}
+
+func (msg MsgMultiChainWrap) ValidateBasic() error {
+	if msg.Data == nil {
+		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty request")
+	}
+	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+		return sdkerr.Wrap(err, "sender")
 	}
 	return nil
 }

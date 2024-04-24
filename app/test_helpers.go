@@ -16,7 +16,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"golang.org/x/sync/errgroup"
@@ -34,12 +33,10 @@ import (
 )
 
 func init() {
-	cfg := sdk.GetConfig()
-	newcfg, err := config.GetChainConfig("mythos_1000-1")
+	err := config.SetGlobalChainConfig(config.MYTHOS_CHAIN_ID_TEST)
 	if err != nil {
 		panic(err)
 	}
-	config.SetBech32Prefixes(cfg, *newcfg)
 }
 
 // DefaultTestingAppInit defines the IBC application used for testing
@@ -112,7 +109,7 @@ func SetupApp(
 		// Initialize the chain
 		app.InitChain(
 			&abci.RequestInitChain{
-				ChainId:         "mythos_1000-1",
+				ChainId:         config.MYTHOS_CHAIN_ID_TEST,
 				Time:            time.Now().UTC(),
 				Validators:      []abci.ValidatorUpdate{},
 				ConsensusParams: DefaultTestingConsensusParams,
@@ -152,6 +149,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, appOpts,
 		bam.SetChainID(chainID),
 	)
+	bapps.SetApp(chainID, app)
 	for acc := range maccPerms {
 		addr := authtypes.NewModuleAddress(acc).String()
 		app.Logger().Info("module address", acc, addr)

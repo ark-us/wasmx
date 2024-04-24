@@ -173,6 +173,7 @@ func (s *AppContext) BuildEthTx(
 ) (*types.MsgExecuteEth, sdk.Coins, uint64) {
 	chainID, err := types.ParseChainID(s.Context().ChainID())
 	s.S.Require().NoError(err)
+	cfg := s.Chain.Config
 	ethSigner := ethtypes.LatestSignerForChainID(chainID)
 	from := common.BytesToAddress(priv.PubKey().Address().Bytes())
 	nonce := s.getNonce(from.Bytes())
@@ -184,7 +185,7 @@ func (s *AppContext) BuildEthTx(
 		Data:     data,
 		Value:    value,
 	}
-	fees := sdk.NewCoins(sdk.NewCoin(app.BaseDenom, sdkmath.NewIntFromBigInt(getFee(gasPrice, gasLimit))))
+	fees := sdk.NewCoins(sdk.NewCoin(cfg.BaseDenom, sdkmath.NewIntFromBigInt(getFee(gasPrice, gasLimit))))
 	ppriv, err := priv.ToECDSA()
 	s.S.Require().NoError(err)
 	ethTx, err := ethtypes.SignNewTx(ppriv, ethSigner, tx)
@@ -376,7 +377,7 @@ func (s *AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps [
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
 
-	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), s.Context().ChainID(), codeId)
+	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(bytecode, wasmbin)
 	return codeId
@@ -397,7 +398,7 @@ func (s *AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
 
-	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), s.Context().ChainID(), codeId)
+	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(bytecode, wasmbin)
 	return codeId
@@ -603,7 +604,7 @@ func (s *AppContext) PassGovProposal(
 
 	// voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
 
-	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), s.Context().ChainID(), types.ROLE_GOVERNANCE)
+	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
 	s.S.Require().NoError(err)
 	msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valAccount.Address.String()))
 	msg11 := types.WasmxExecutionMessage{Data: msg1}

@@ -24,6 +24,7 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
 	wasmxapp "mythos/v1/app"
+	mcfg "mythos/v1/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -34,7 +35,7 @@ var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.Testin
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
+func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, chaincfg mcfg.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState := DefaultTestingAppInit(chainID, index)
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
@@ -73,21 +74,21 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	// set validators and delegations
 	stakingParams := stakingtypes.DefaultParams()
-	stakingParams.BondDenom = wasmxapp.BondBaseDenom
+	stakingParams.BondDenom = chaincfg.BondBaseDenom
 	stakingGenesis := cosmosmodtypes.NewStakingGenesisState(stakingParams, validators, delegations)
 
 	// update total supply
 	totalSupply := sdk.NewCoins()
 	for _, b := range balances {
 		// add genesis acc tokens and delegated tokens to total supply
-		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(wasmxapp.BaseDenom, bondAmt))...)
+		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(chaincfg.BaseDenom, bondAmt))...)
 	}
-	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(wasmxapp.DenomUnit, wasmxapp.BaseDenomUnit, wasmxapp.Name)
+	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(chaincfg.DenomUnit, chaincfg.BaseDenomUnit, chaincfg.Name)
 	bankGenesis.Supply = totalSupply
 	bankGenesis.Balances = balances
 
 	govGenesis := cosmosmodtypes.DefaultGovGenesisState()
-	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(wasmxapp.BaseDenom, sdkmath.NewInt(1_000_000_000)))
+	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, sdkmath.NewInt(1_000_000_000)))
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
 
@@ -99,7 +100,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	if err != nil {
 		panic(err)
 	}
-	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis, *slashingGenesis, *cosmosmodtypes.DefaultDistributionGenesisState())
+	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis, *slashingGenesis, *cosmosmodtypes.DefaultDistributionGenesisState(chaincfg.BaseDenom))
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation

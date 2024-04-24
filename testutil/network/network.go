@@ -28,6 +28,9 @@ import (
 
 	app "mythos/v1/app"
 	config "mythos/v1/config"
+	networkkeeper "mythos/v1/x/network/keeper"
+	networkvm "mythos/v1/x/network/vm"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 type (
@@ -57,13 +60,26 @@ func New(t *testing.T, configs ...network.Config) *network.Network {
 // genesis and single validator. All other parameters are inherited from cosmos-sdk/testutil/network.DefaultConfig
 func DefaultConfig() network.Config {
 	encoding := app.MakeEncodingConfig()
-	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
+	logger := log.NewNopLogger()
+
+	appOpts := app.DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, tempDir())
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
+	g, goctx, _ := app.GetTestCtx(logger, true)
+	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
+	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
+	appOpts.Set("goroutineGroup", g)
+	appOpts.Set("goContextParent", goctx)
+
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 	tempApp := app.NewApp(
-		log.NewNopLogger(),
+		actionExecutor,
+		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
-		cast.ToString(tempOpts.Get(flags.FlagHome)),
-		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encoding, tempOpts)
+		cast.ToString(appOpts.Get(flags.FlagHome)),
+		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), encoding, appOpts)
 
 	return network.Config{
 		Codec:             encoding.Marshaler,
@@ -73,6 +89,7 @@ func DefaultConfig() network.Config {
 		AccountRetriever:  authtypes.AccountRetriever{},
 		AppConstructor: func(val network.ValidatorI) servertypes.Application {
 			return app.NewApp(
+				actionExecutor,
 				val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{}, val.GetCtx().Config.RootDir, 0,
 				encoding,
 				simtestutil.EmptyAppOptions{},

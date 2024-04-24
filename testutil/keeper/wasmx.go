@@ -32,6 +32,7 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
 	config "mythos/v1/config"
+	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -62,6 +63,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	g, goctx, _ := app.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 
@@ -111,7 +113,8 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	nil, //scopedTransferKeeper,
 	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	// )
-	mapp := app.NewApp(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
+	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
+	mapp := app.NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
 	k := keeper.NewKeeper(
 		g,
 		goctx,

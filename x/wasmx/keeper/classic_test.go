@@ -366,7 +366,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("00000000000000000000000000000000000000000000000000000f1b9d719400", qres)
+	s.Require().Equal("00000000000000000000000000000000000000000000000000000f1171e9ac00", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)

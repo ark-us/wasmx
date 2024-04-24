@@ -15,14 +15,14 @@ service Query {
   // ContractCall
   rpc ContractCall(QueryContractCallRequest) returns (QueryContractCallResponse) {
     option (google.api.http).get =
-        "/network/v1/chain_id/contract/{address}/call/{query_data}";
+        "/network/v1/{multi_chain_id}/contract/{address}/call/{query_data}";
   }
 }
 
 // QueryContractCallRequest is the request type for the
 // Query/ContractCall RPC method
 message QueryContractCallRequest {
-  string chain_id = 1;
+  string multi_chain_id = 1;
   // Sender is the that actor that signed the messages
   string sender = 2;
   // Address is the address of the smart contract

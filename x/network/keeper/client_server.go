@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -174,6 +175,8 @@ func NewGRPCServer(
 				return nil, nil, err
 			}
 		}
+		// TODO fixme (remove after sdk.AccAddress does not have hardcoded prefixes)
+		time.Sleep(time.Second * 2)
 	}
 
 	for _, chainId := range multiapp.ChainIds {
@@ -193,6 +196,8 @@ func NewGRPCServer(
 		if err != nil {
 			return nil, nil, err
 		}
+		// TODO fixme (remove after sdk.AccAddress does not have hardcoded prefixes)
+		time.Sleep(time.Second * 2)
 	}
 
 	// ctx := sdk.UnwrapSDKContext(goCtx)

@@ -73,6 +73,7 @@ type KeeperTestSuite struct {
 type TestChain struct {
 	T       *testing.T
 	ChainId string
+	Config  mcfg.ChainConfig
 	ctx     sdk.Context
 
 	App *app.App
@@ -156,7 +157,8 @@ func (suite *KeeperTestSuite) SetupTest() {
 
 func (suite *KeeperTestSuite) SetupApp() {
 	t := suite.T()
-	chainId := "mythos_7001-1"
+	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
+	chaincfg, err := mcfg.GetChainConfig(chainId)
 
 	// generate validator private/public key
 	privVal := mock.NewPV()
@@ -183,7 +185,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 	}
 
 	valOperatorAddress := sdk.ValAddress(validator.Address)
-	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainId, 0, balance)
+	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainId, *chaincfg, 0, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 
@@ -219,6 +221,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 	chain := TestChain{
 		T:             suite.T(),
 		ChainId:       chainId,
+		Config:        *chaincfg,
 		App:           mapp,
 		CurrentHeader: header,
 		TxConfig:      txConfig,
