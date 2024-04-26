@@ -170,6 +170,12 @@ func (k QuerierBank) DenomOwners(goCtx context.Context, req *banktypes.QueryDeno
 	return &banktypes.QueryDenomOwnersResponse{}, nil
 }
 
+func (k QuerierBank) DenomOwnersByQuery(goCtx context.Context, req *banktypes.QueryDenomOwnersByQueryRequest) (*banktypes.QueryDenomOwnersByQueryResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Keeper.Logger(ctx).Error("QuerierBank.DenomOwnersByQuery not implemented")
+	return &banktypes.QueryDenomOwnersByQueryResponse{}, nil
+}
+
 func (k QuerierBank) SendEnabled(goCtx context.Context, req *banktypes.QuerySendEnabledRequest) (*banktypes.QuerySendEnabledResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Keeper.Logger(ctx).Error("QuerierBank.SendEnabled not implemented")

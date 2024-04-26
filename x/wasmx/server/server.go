@@ -4,13 +4,17 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 	"golang.org/x/net/netutil"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	flags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 
 	ethlog "github.com/ethereum/go-ethereum/log"
@@ -39,17 +43,15 @@ func StartJsonRpc(
 	var tmWsClient *rpcclient.WSClient
 
 	logger := svrCtx.Logger.With("module", "geth")
-	ethlog.Root().SetHandler(ethlog.FuncHandler(func(r *ethlog.Record) error {
-		switch r.Lvl {
-		case ethlog.LvlTrace, ethlog.LvlDebug:
-			logger.Debug(r.Msg, r.Ctx...)
-		case ethlog.LvlInfo, ethlog.LvlWarn:
-			logger.Info(r.Msg, r.Ctx...)
-		case ethlog.LvlError, ethlog.LvlCrit:
-			logger.Error(r.Msg, r.Ctx...)
-		}
-		return nil
-	}))
+	logLevel := cast.ToString(svrCtx.Viper.Get(flags.FlagLogLevel))
+	switch logLevel {
+	case zerolog.DebugLevel.String():
+		ethlog.SetDefault(ethlog.NewLogger(ethlog.NewTerminalHandlerWithLevel(os.Stderr, ethlog.LevelDebug, true)))
+	case zerolog.InfoLevel.String():
+		ethlog.SetDefault(ethlog.NewLogger(ethlog.NewTerminalHandlerWithLevel(os.Stderr, ethlog.LevelInfo, true)))
+	case zerolog.ErrorLevel.String():
+		ethlog.SetDefault(ethlog.NewLogger(ethlog.NewTerminalHandlerWithLevel(os.Stderr, ethlog.LevelError, true)))
+	}
 
 	rpcServer := ethrpc.NewServer()
 
