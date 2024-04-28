@@ -37,7 +37,7 @@ func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -52,7 +52,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
@@ -90,7 +90,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
@@ -117,7 +117,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	depsJs := []string{types.INTERPRETER_JS}
@@ -146,7 +146,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 	depsJs := []string{types.INTERPRETER_JS}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
@@ -179,7 +179,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
@@ -201,7 +201,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
+	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
@@ -231,7 +231,8 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	// we actually execute the contract creation
 	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr := appA.GetContractAddressFromEvents(txresp.GetEvents())
-	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	createdContractAddress, err := appA.AddressStringToAccAddress(createdContractAddressStr)
+	s.Require().NoError(err)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
@@ -246,7 +247,8 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	// we actually execute the contract creation
 	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr = appA.GetContractAddressFromEvents(txresp.GetEvents())
-	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	createdContractAddress, err = appA.AddressStringToAccAddress(createdContractAddressStr)
+	s.Require().NoError(err)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 

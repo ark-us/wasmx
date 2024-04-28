@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"cosmossdk.io/core/address"
-	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -29,8 +28,8 @@ type (
 		// should be the x/gov module account.
 		authority string
 
-		validatorAddressCodec addresscodec.Codec
-		consensusAddressCodec addresscodec.Codec
+		validatorAddressCodec address.Codec
+		consensusAddressCodec address.Codec
 		addressCodec          address.Codec
 		permAddrs             map[string]authtypes.PermissionsForAddress
 	}
@@ -44,8 +43,8 @@ func NewKeeperAuth(
 	actionExecutor *networkkeeper.ActionExecutor,
 	authority string,
 	interfaceRegistry cdctypes.InterfaceRegistry,
-	validatorAddressCodec addresscodec.Codec,
-	consensusAddressCodec addresscodec.Codec,
+	validatorAddressCodec address.Codec,
+	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
 	permAddrs map[string]authtypes.PermissionsForAddress,
 ) *KeeperAuth {
@@ -76,4 +75,16 @@ func (k *KeeperAuth) GetAuthority() string {
 
 func (k *KeeperAuth) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
+}
+
+func (k *KeeperAuth) AddressCodec() address.Codec {
+	return k.addressCodec
+}
+
+func (k *KeeperAuth) ValidatorAddressCodec() address.Codec {
+	return k.validatorAddressCodec
+}
+
+func (k *KeeperAuth) ConsensusAddressCodec() address.Codec {
+	return k.consensusAddressCodec
 }

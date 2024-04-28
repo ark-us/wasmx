@@ -5,6 +5,7 @@ import (
 
 	// clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 
+	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -19,6 +20,9 @@ type BankViewKeeper interface {
 	GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins
 	GetBalance(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
 	GetSupply(ctx context.Context, denom string) sdk.Coin
+	AddressCodec() address.Codec
+	ValidatorAddressCodec() address.Codec
+	ConsensusAddressCodec() address.Codec
 }
 
 // Burner is a subset of the sdk bank keeper methods
@@ -44,6 +48,9 @@ type AccountKeeper interface {
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	// Set an account in the store.
 	SetAccount(ctx context.Context, acc sdk.AccountI)
+	AddressCodec() address.Codec
+	ValidatorAddressCodec() address.Codec
+	ConsensusAddressCodec() address.Codec
 }
 
 // DistributionKeeper defines a subset of methods implemented by the cosmos-sdk distribution keeper
@@ -67,6 +74,9 @@ type StakingKeeper interface {
 	// HasReceivingRedelegation check if validator is receiving a redelegation
 	HasReceivingRedelegation(ctx context.Context,
 		delAddr sdk.AccAddress, valDstAddr sdk.ValAddress) (bool, error)
+	AddressCodec() address.Codec
+	ValidatorAddressCodec() address.Codec
+	ConsensusAddressCodec() address.Codec
 }
 
 // ChannelKeeper defines the expected IBC channel keeper

@@ -25,7 +25,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	contractAddress := types.AccAddressFromHex(types.ADDR_IDENTITY)
@@ -43,7 +43,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverEthDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	contractAddress := types.AccAddressFromHex(types.ADDR_ECRECOVERETH)
@@ -124,7 +124,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	contractAddress := types.AccAddressFromHex(types.ADDR_ECRECOVER)
@@ -157,7 +157,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	contractAddress := types.AccAddressFromHex(types.ADDR_MODEXP)
@@ -221,7 +221,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	contractAddress := types.AccAddressFromHex(types.ADDR_SECRET_SHARING)

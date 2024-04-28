@@ -997,7 +997,7 @@ func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, pa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	data, err := addr_canonicalize(addrStrBz)
+	data, err := addr_canonicalize(ctx.CosmosHandler.AddressCodec(), addrStrBz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

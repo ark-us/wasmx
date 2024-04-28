@@ -31,7 +31,7 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx = ctx.WithValue(cchtypes.CONTEXT_COIN_TYPE_KEY, cchtypes.COIN_TYPE_ETH)
 	tx := msg.AsTransaction()
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
@@ -80,7 +80,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -107,7 +107,7 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -137,7 +137,7 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -166,7 +166,7 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -214,7 +214,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -247,11 +247,11 @@ func (m msgServer) ExecuteWithOriginContract(goCtx context.Context, msg *types.M
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	originAddr, err := sdk.AccAddressFromBech32(msg.Origin)
+	originAddr, err := m.AddressCodec().StringToBytes(msg.Origin)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "origin")
 	}
-	senderAddr, err := sdk.AccAddressFromBech32(msg.Sender)
+	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -282,19 +282,19 @@ func (m msgServer) ExecuteDelegateContract(goCtx context.Context, msg *types.Msg
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	originAddr, err := sdk.AccAddressFromBech32(msg.Origin)
+	originAddr, err := m.AddressCodec().StringToBytes(msg.Origin)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "origin")
 	}
-	callerAddr, err := sdk.AccAddressFromBech32(msg.Caller)
+	callerAddr, err := m.AddressCodec().StringToBytes(msg.Caller)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	codeContractAddr, err := sdk.AccAddressFromBech32(msg.CodeContract)
+	codeContractAddr, err := m.AddressCodec().StringToBytes(msg.CodeContract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "code_contract")
 	}
-	storageContractAddr, err := sdk.AccAddressFromBech32(msg.StorageContract)
+	storageContractAddr, err := m.AddressCodec().StringToBytes(msg.StorageContract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "storage_contract")
 	}
@@ -357,7 +357,7 @@ func (m msgServer) DeregisterRole(goCtx context.Context, msg *types.MsgDeregiste
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	contractAddress, err := m.AddressCodec().StringToBytes(msg.ContractAddress)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract address")
 	}

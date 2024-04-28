@@ -427,6 +427,10 @@ func NewApp(
 		app.Logger().Info("module address", name, permAddrs[name].GetAddress().String())
 	}
 
+	valCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr)
+	consCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr)
+	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+
 	app.ParamsKeeper = initParamsKeeper(
 		appCodec,
 		cdc,
@@ -483,6 +487,9 @@ func NewApp(
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		valCodec,
+		consCodec,
+		addrCodec,
 		app,
 	)
 	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
@@ -508,9 +515,9 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr),
+		valCodec,
+		consCodec,
+		addrCodec,
 		permAddrs,
 
 		// authtypes.ProtoBaseAccount,
@@ -534,8 +541,9 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
+		valCodec,
+		consCodec,
+		addrCodec,
 	)
 	app.BankKeeper = cosmosmodkeeper.NewKeeperBank(
 		appCodec,
@@ -547,8 +555,8 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
+		valCodec,
+		consCodec,
 	)
 	app.GovKeeper = cosmosmodkeeper.NewKeeperGov(
 		appCodec,
@@ -560,8 +568,8 @@ func NewApp(
 		// TODO what authority?
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
+		valCodec,
+		consCodec,
 	)
 	app.DistrKeeper = cosmosmodkeeper.NewKeeperDistribution(
 		appCodec,
@@ -577,8 +585,8 @@ func NewApp(
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
 		authtypes.FeeCollectorName,
 		app.interfaceRegistry,
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr),
-		authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr),
+		valCodec,
+		consCodec,
 	)
 	app.SlashingKeeper = cosmosmodkeeper.NewKeeperSlashing(
 		appCodec,
@@ -717,6 +725,7 @@ func NewApp(
 		&app.WasmxKeeper,
 		app.Query,
 		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		addrCodec,
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 

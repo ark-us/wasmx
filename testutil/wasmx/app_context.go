@@ -13,6 +13,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 
@@ -68,11 +69,33 @@ type AppContext struct {
 
 	// for generate test tx
 	ClientCtx client.Context
-
-	Denom  string
-	Faucet *wasmxkeeper.TestFaucet
+	Faucet    *wasmxkeeper.TestFaucet
 
 	FinalizeBlock func(txs [][]byte) (*abci.ResponseFinalizeBlock, error)
+}
+
+func (s *AppContext) AddressCodec() address.Codec {
+	return s.App.AccountKeeper.AddressCodec()
+}
+
+func (s *AppContext) ValidatorAddressCodec() address.Codec {
+	return s.App.AccountKeeper.ValidatorAddressCodec()
+}
+
+func (s *AppContext) ConsensusAddressCodec() address.Codec {
+	return s.App.AccountKeeper.ConsensusAddressCodec()
+}
+
+func (s *AppContext) AddressStringToAccAddress(addr string) (sdk.AccAddress, error) {
+	return s.AddressCodec().StringToBytes(addr)
+}
+
+func (s *AppContext) ValidatorAddressToAccAddress(addr string) (sdk.AccAddress, error) {
+	return s.ValidatorAddressCodec().StringToBytes(addr)
+}
+
+func (s *AppContext) ConsensusAddressToAccAddress(addr string) (sdk.AccAddress, error) {
+	return s.ConsensusAddressCodec().StringToBytes(addr)
 }
 
 func (s *AppContext) Context() sdk.Context {
@@ -107,7 +130,7 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 	s.S.Require().NoError(err)
 	feeAmount := parsedGasPrices.AmountOf("amyt").MulInt64(int64(DEFAULT_GAS_LIMIT)).RoundInt()
 
-	fees := &sdk.Coins{{Denom: s.Denom, Amount: feeAmount}}
+	fees := &sdk.Coins{{Denom: s.Chain.Config.BaseDenom, Amount: feeAmount}}
 	txBuilder.SetFeeAmount(*fees)
 	err = txBuilder.SetMsgs(msgs...)
 	s.S.Require().NoError(err)
@@ -427,7 +450,8 @@ func (s *AppContext) Deploy(sender simulation.Account, code []byte, deps []strin
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
 	contractAddressStr := s.GetContractAddressFromEvents(res.GetEvents())
-	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
+	contractAddress, err := s.App.WasmxKeeper.AddressCodec().StringToBytes(contractAddressStr)
+	s.S.Require().NoError(err)
 	return codeId, contractAddress
 }
 
@@ -450,7 +474,8 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 	contractAddressStr := s.GetContractAddressFromEvents(res.GetEvents())
-	contractAddress := sdk.MustAccAddressFromBech32(contractAddressStr)
+	contractAddress, err := s.App.WasmxKeeper.AddressCodec().StringToBytes(contractAddressStr)
+	s.S.Require().NoError(err)
 	return contractAddress
 }
 
@@ -593,7 +618,7 @@ func (s *AppContext) PassGovProposal(
 	metadata, title, summary string,
 	expedited bool,
 ) {
-	deposit := sdk.NewCoins(sdk.NewCoin(s.Denom, sdkmath.NewInt(1_000_000_000_000)))
+	deposit := sdk.NewCoins(sdk.NewCoin(s.Chain.Config.BaseDenom, sdkmath.NewInt(1_000_000_000_000)))
 	resp := s.SubmitGovProposal(sender, msgs, deposit, metadata, title, summary, expedited)
 
 	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())

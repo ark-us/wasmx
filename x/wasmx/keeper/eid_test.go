@@ -53,7 +53,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.ADDR_MODEXP}
@@ -157,7 +157,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	var qres string
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, curve384testbin, nil)
@@ -246,7 +246,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, curve384testbin, nil)
@@ -283,7 +283,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, curve384testbin, nil)
@@ -312,7 +312,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.Curve384Test)
@@ -401,7 +401,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() 
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.Curve384Test)
@@ -479,7 +479,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	// replaceAccount := "7b7ceb53"
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	registryAddress := sdk.AccAddress(appA.Hex2bz(types.ADDR_SECP384R1_REGISTRY))
@@ -579,7 +579,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 	// replaceAccount := "7b7ceb53"
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.WalletRegistry)

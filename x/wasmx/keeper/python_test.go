@@ -32,7 +32,7 @@ var (
 // 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 // 	appA := s.AppContext()
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 // 	suite.Commit()
 
 // 	pyInterpreterAddress := types.AccAddressFromHex(types.ADDR_INTERPRETER_PYTHON)
@@ -53,7 +53,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -81,7 +81,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -108,7 +108,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -130,7 +130,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
+	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
@@ -199,7 +199,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -222,7 +222,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Denom)
+	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 

@@ -29,7 +29,7 @@ func (m msgServer) RegisterOAuthClient(goCtx context.Context, msg *types.MsgRegi
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	owner, err := m.AddressCodec().StringToBytes(msg.Owner)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "owner")
 	}
@@ -68,7 +68,7 @@ func (m msgServer) EditOAuthClient(goCtx context.Context, msg *types.MsgEditOAut
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	_, err := sdk.AccAddressFromBech32(msg.Owner)
+	_, err := m.AddressCodec().StringToBytes(msg.Owner)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "owner")
 	}
@@ -103,7 +103,7 @@ func (m msgServer) DeregisterOAuthClient(goCtx context.Context, msg *types.MsgDe
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	owner, err := sdk.AccAddressFromBech32(msg.Owner)
+	owner, err := m.AddressCodec().StringToBytes(msg.Owner)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "owner")
 	}
@@ -132,7 +132,7 @@ func (m msgServer) RegisterRoute(goCtx context.Context, msg *types.MsgRegisterRo
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	contractAddress, err := m.AddressCodec().StringToBytes(msg.ContractAddress)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract address")
 	}
@@ -160,7 +160,7 @@ func (m msgServer) DeregisterRoute(goCtx context.Context, msg *types.MsgDeregist
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
-	contractAddress, err := sdk.AccAddressFromBech32(msg.ContractAddress)
+	contractAddress, err := m.AddressCodec().StringToBytes(msg.ContractAddress)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract address")
 	}

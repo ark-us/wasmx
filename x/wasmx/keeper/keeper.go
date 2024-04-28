@@ -9,6 +9,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	address "cosmossdk.io/core/address"
+	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
@@ -45,6 +47,9 @@ type (
 		grpcQueryRouter       *baseapp.GRPCQueryRouter
 		wasmVMResponseHandler cw8types.WasmVMResponseHandler
 		wasmVMQueryHandler    cw8.WasmVMQueryHandler
+		validatorAddressCodec addresscodec.Codec
+		consensusAddressCodec addresscodec.Codec
+		addressCodec          address.Codec
 
 		cch *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
@@ -88,6 +93,9 @@ func NewKeeper(
 	msgRouter *baseapp.MsgServiceRouter,
 	grpcQueryRouter *baseapp.GRPCQueryRouter,
 	authority string,
+	validatorAddressCodec addresscodec.Codec,
+	consensusAddressCodec addresscodec.Codec,
+	addressCodec address.Codec,
 	app types.Application,
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
@@ -139,19 +147,22 @@ func NewKeeper(
 	}
 
 	keeper := &Keeper{
-		cdc:               cdc,
-		txConfig:          txConfig,
-		storeKey:          storeKey,
-		memKey:            memKey,
-		tKey:              tKey,
-		metaConsKey:       metaConsKey,
-		singleConsKey:     singleConsKey,
-		paramstore:        ps,
-		interfaceRegistry: interfaceRegistry,
-		msgRouter:         msgRouter,
-		grpcQueryRouter:   grpcQueryRouter,
-		denom:             denom,
-		permAddrs:         permAddrs,
+		cdc:                   cdc,
+		txConfig:              txConfig,
+		storeKey:              storeKey,
+		memKey:                memKey,
+		tKey:                  tKey,
+		metaConsKey:           metaConsKey,
+		singleConsKey:         singleConsKey,
+		paramstore:            ps,
+		interfaceRegistry:     interfaceRegistry,
+		msgRouter:             msgRouter,
+		grpcQueryRouter:       grpcQueryRouter,
+		denom:                 denom,
+		permAddrs:             permAddrs,
+		validatorAddressCodec: validatorAddressCodec,
+		consensusAddressCodec: consensusAddressCodec,
+		addressCodec:          addressCodec,
 
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		gasRegister:   NewDefaultWasmGasRegister(),
@@ -191,6 +202,18 @@ func (k *Keeper) ContractHandler() *cchtypes.ContractHandlerMap {
 
 func (k *Keeper) WasmVMResponseHandler() cw8types.WasmVMResponseHandler {
 	return k.wasmVMResponseHandler
+}
+
+func (k *Keeper) AddressCodec() address.Codec {
+	return k.addressCodec
+}
+
+func (k *Keeper) ValidatorAddressCodec() address.Codec {
+	return k.validatorAddressCodec
+}
+
+func (k *Keeper) ConsensusAddressCodec() address.Codec {
+	return k.consensusAddressCodec
 }
 
 func GetLogger(ctx sdk.Context) log.Logger {

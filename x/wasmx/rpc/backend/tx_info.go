@@ -127,6 +127,7 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 	} else {
 		status = hexutil.Uint(ethtypes.ReceiptStatusSuccessful)
 	}
+
 	sender := wasmxtypes.EvmAddressFromAcc(sdk.MustAccAddressFromBech32(ethMsg.Sender))
 
 	// parse tx logs from events

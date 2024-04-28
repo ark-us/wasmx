@@ -176,7 +176,7 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -237,7 +237,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -286,7 +286,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), deployer.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), deployer.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -324,7 +324,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -341,15 +341,15 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	h.Write(preimageBz)
 	hashBz := h.Sum(nil)
 	hashHex := hex.EncodeToString(hashBz)
-	coins := sdk.NewCoins(sdk.NewCoin(appA.Denom, sdkmath.NewInt(10000000)))
+	coins := sdk.NewCoins(sdk.NewCoin(appA.Chain.Config.BaseDenom, sdkmath.NewInt(10000000)))
 
 	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
-	balanceContract, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Denom)
+	balanceContract, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 
-	balanceReceiver, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), recipient.Address, appA.Denom)
+	balanceReceiver, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), recipient.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 
 	s.Require().Equal(coins[0].Amount, balanceContract.Amount)
@@ -358,10 +358,10 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	data = fmt.Sprintf(`{"release":{"id":"swap1","preimage":"%s"}}`, preimage)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, nil, nil)
 
-	balanceContract, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Denom)
+	balanceContract, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 
-	balanceReceiver, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), recipient.Address, appA.Denom)
+	balanceReceiver, err = appA.App.WasmxKeeper.GetBalance(appA.Context(), recipient.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 
 	s.Require().Equal(coins[0].Amount, balanceReceiver.Amount)
@@ -389,7 +389,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -477,7 +477,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 				Bank: &cw8types.BankQuery{
 					Balance: &cw8types.BalanceQuery{
 						Address: contractAddress.String(),
-						Denom:   appA.Denom,
+						Denom:   appA.Chain.Config.BaseDenom,
 					},
 				},
 			},
@@ -539,7 +539,7 @@ func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 

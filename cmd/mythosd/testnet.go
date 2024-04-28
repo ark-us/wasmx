@@ -621,12 +621,8 @@ func initTestnetFilesInternal(
 			panic(err)
 		}
 
-		// TODO createValidatorTx
-
-		// genBalanceAddresses := make([][]byte, len(genBalances))
 		genBalanceCoins := make([]sdk.Coins, len(genBalances))
 		for i := 0; i < len(genBalances); i++ {
-			// genBalanceAddresses[i] = sdk.MustAccAddressFromBech32(genBalances[i].Address).Bytes()
 			genBalanceCoins[i] = genBalances[i].Coins
 		}
 

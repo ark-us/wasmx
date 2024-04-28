@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/store/prefix"
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -117,6 +118,9 @@ type WasmxCosmosHandler interface {
 	GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string
 	JSONCodec() codec.JSONCodec
 	GetAlias(addr sdk.AccAddress) (sdk.AccAddress, bool)
+	AddressCodec() address.Codec
+	ValidatorAddressCodec() address.Codec
+	ConsensusAddressCodec() address.Codec
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library

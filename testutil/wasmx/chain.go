@@ -67,7 +67,8 @@ import (
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	suite.Suite
-	chain TestChain
+	chain  TestChain
+	chains map[string]*TestChain
 }
 
 type TestChain struct {
@@ -104,6 +105,14 @@ func (chain *TestChain) GetContext() sdk.Context {
 	return chain.App.GetBaseApp().NewUncachedContext(false, chain.CurrentHeader)
 }
 
+func (suite *KeeperTestSuite) GetChain(chainId string) *TestChain {
+	chain, ok := suite.chains[chainId]
+	if !ok {
+		panic(fmt.Sprintf("cannot find chain: %s", chainId))
+	}
+	return chain
+}
+
 func (suite *KeeperTestSuite) Chain() TestChain {
 	return suite.chain
 }
@@ -125,10 +134,9 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	}
 	encodingConfig := app.MakeEncodingConfig()
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
-	appContext.Denom = mcfg.BaseDenom
 
 	t := suite.T()
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }
@@ -142,23 +150,28 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 	}
 	encodingConfig := app.MakeEncodingConfig()
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
-	appContext.Denom = mcfg.BaseDenom
-
 	t := suite.T()
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(appContext.Denom, sdkmath.NewInt(100_000_000_000)))
+	denom := appContext.Chain.Config.BaseDenom
+	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(denom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }
 
-// SetupTest creates a coordinator with 2 test chains.
 func (suite *KeeperTestSuite) SetupTest() {
-	suite.SetupApp()
+	suite.chains = map[string]*TestChain{}
+	mcfg.ChainIdsInit = []string{
+		mcfg.MYTHOS_CHAIN_ID_TEST,
+		mcfg.LEVEL0_CHAIN_ID,
+	}
+	for _, chainId := range mcfg.ChainIdsInit {
+		suite.SetupApp(chainId)
+	}
 }
 
-func (suite *KeeperTestSuite) SetupApp() {
+func (suite *KeeperTestSuite) SetupApp(chainId string) {
 	t := suite.T()
-	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	chaincfg, err := mcfg.GetChainConfig(chainId)
+	mcfg.SetGlobalChainConfig(chainId)
 
 	// generate validator private/public key
 	privVal := mock.NewPV()
@@ -181,7 +194,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddress().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(mcfg.BaseDenom, amount)),
+		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
 	valOperatorAddress := sdk.ValAddress(validator.Address)
@@ -240,6 +253,7 @@ func (suite *KeeperTestSuite) SetupApp() {
 	require.NoError(t, err)
 
 	suite.chain = chain
+	suite.chains[chainId] = &chain
 	err = suite.InitConsensusContract(resInit, pubKey, privVal.PrivKey, valOperatorAddress)
 	require.NoError(t, err)
 }

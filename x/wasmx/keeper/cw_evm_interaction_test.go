@@ -34,7 +34,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	proxyAddress := sdk.AccAddress(proxyAddressBz)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -94,9 +94,9 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	initBalance := sdkmath.NewInt(1000_000_000).MulRaw(1000000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -132,7 +132,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	// Mint Erc20 for sender2
 	calld, err = interfacesTestdata.Erc20Abi.Pack("mint", sender2AddressEvm, big.NewInt(200))
 	s.Require().NoError(err)
-	appA.ExecuteContract(sender2, contractAddressErc20, types.WasmxExecutionMessage{Data: calld}, sdk.NewCoins(sdk.NewCoin(appA.Denom, sdkmath.NewInt(200))), nil)
+	appA.ExecuteContract(sender2, contractAddressErc20, types.WasmxExecutionMessage{Data: calld}, sdk.NewCoins(sdk.NewCoin(appA.Chain.Config.BaseDenom, sdkmath.NewInt(200))), nil)
 
 	// Deploy AtomicSwap
 	evmcodeSwap, err := hex.DecodeString(testdata.AtomicSwap)

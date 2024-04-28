@@ -47,13 +47,13 @@ func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.Ac
 	}
 	role := k.GetRoleByLabel(ctx, addressOrRole)
 	if role != nil {
-		contractAddr, err := sdk.AccAddressFromBech32(addressOrRole)
+		contractAddr, err := k.AddressCodec().StringToBytes(addressOrRole)
 		if err != nil {
 			return nil, err
 		}
 		return contractAddr, nil
 	}
-	contractAddr, err := sdk.AccAddressFromBech32(addressOrRole)
+	contractAddr, err := k.AddressCodec().StringToBytes(addressOrRole)
 	if err != nil {
 		return nil, err
 	}

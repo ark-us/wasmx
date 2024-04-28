@@ -23,7 +23,7 @@ func (k *Keeper) ContractInfo(c context.Context, req *types.QueryContractInfoReq
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
-	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (k *Keeper) AllContractState(c context.Context, req *types.QueryAllContract
 	// if req == nil {
 	// 	return nil, status.Error(codes.InvalidArgument, "empty request")
 	// }
-	// contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	// contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
 	// if err != nil {
 	// 	return nil, err
 	// }
@@ -106,7 +106,7 @@ func (k *Keeper) RawContractState(c context.Context, req *types.QueryRawContract
 	}
 	ctx := sdk.UnwrapSDKContext(c)
 
-	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (k *Keeper) RawContractState(c context.Context, req *types.QueryRawContract
 // if err := req.QueryData.ValidateBasic(); err != nil {
 // 	return nil, status.Error(codes.InvalidArgument, "invalid query data")
 // }
-// contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+// contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
 // if err != nil {
 // 	return nil, err
 // }
@@ -174,7 +174,7 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 	if err != nil {
 		return nil, err
 	}
-	sender, err := sdk.AccAddressFromBech32(req.Sender)
+	sender, err := k.AddressCodec().StringToBytes(req.Sender)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 	if senderBech32 == "" {
 		senderBech32 = "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvvnu6d"
 	}
-	sender, err := sdk.AccAddressFromBech32(senderBech32)
+	sender, err := k.AddressCodec().StringToBytes(senderBech32)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 		return &types.QueryCallEthResponse{Data: []byte{}, GasUsed: ctx.GasMeter().GasConsumed()}, nil
 	}
 
-	contractAddr, err := sdk.AccAddressFromBech32(req.Address)
+	contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +305,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 	if err != nil {
 		return nil, err
 	}
-	sender, err := sdk.AccAddressFromBech32(req.Sender)
+	sender, err := k.AddressCodec().StringToBytes(req.Sender)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +440,7 @@ func (k *Keeper) ContractsByCreator(c context.Context, req *types.QueryContracts
 	// ctx := sdk.UnwrapSDKContext(c)
 	// contracts := make([]string, 0)
 
-	// creatorAddress, err := sdk.AccAddressFromBech32(req.CreatorAddress)
+	// creatorAddress, err := k.AddressCodec().StringToBytes(req.CreatorAddress)
 	// if err != nil {
 	// 	return nil, err
 	// }

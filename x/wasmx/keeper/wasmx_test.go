@@ -38,7 +38,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	sysAddressBz, err := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
@@ -116,7 +116,7 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -150,7 +150,7 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -176,7 +176,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	timeAddress := types.AccAddressFromHex(types.ADDR_TIME)

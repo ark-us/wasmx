@@ -3,6 +3,7 @@ package keeper
 import (
 	"fmt"
 
+	"cosmossdk.io/core/address"
 	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -28,6 +29,7 @@ type (
 		// should be the x/gov module account.
 		authority string
 
+		addressCodec          address.Codec
 		validatorAddressCodec addresscodec.Codec
 		consensusAddressCodec addresscodec.Codec
 	}
@@ -44,6 +46,7 @@ func NewKeeperStaking(
 	interfaceRegistry cdctypes.InterfaceRegistry,
 	validatorAddressCodec addresscodec.Codec,
 	consensusAddressCodec addresscodec.Codec,
+	addressCodec address.Codec,
 ) *KeeperStaking {
 	keeper := &KeeperStaking{
 		jsoncdc:               jsoncdc,
@@ -54,6 +57,7 @@ func NewKeeperStaking(
 		actionExecutor:        actionExecutor,
 		authority:             authority,
 		InterfaceRegistry:     interfaceRegistry,
+		addressCodec:          addressCodec,
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
 	}
@@ -71,4 +75,16 @@ func (k *KeeperStaking) GetAuthority() string {
 
 func (k *KeeperStaking) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
+}
+
+func (k *KeeperStaking) AddressCodec() address.Codec {
+	return k.addressCodec
+}
+
+func (k *KeeperStaking) ValidatorAddressCodec() address.Codec {
+	return k.validatorAddressCodec
+}
+
+func (k *KeeperStaking) ConsensusAddressCodec() address.Codec {
+	return k.consensusAddressCodec
 }

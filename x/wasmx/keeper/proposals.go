@@ -14,7 +14,7 @@ func (k *Keeper) RegisterRoleHandler(
 	label string,
 	contractAddressBech32 string,
 ) error {
-	contractAddress, err := sdk.AccAddressFromBech32(contractAddressBech32)
+	contractAddress, err := k.AddressCodec().StringToBytes(contractAddressBech32)
 	if err != nil {
 		return sdkerr.Wrap(err, "contract address")
 	}
@@ -54,7 +54,7 @@ func (k *Keeper) DeregisterRoleHandler(
 	ctx sdk.Context,
 	contractAddressBech32 string,
 ) error {
-	contractAddress, err := sdk.AccAddressFromBech32(contractAddressBech32)
+	contractAddress, err := k.AddressCodec().StringToBytes(contractAddressBech32)
 	if err != nil {
 		return err
 	}

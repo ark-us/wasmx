@@ -10,7 +10,7 @@ func (k *Keeper) RegisterRouteHandler(
 	path string,
 	contractAddressBech32 string,
 ) error {
-	contractAddress, err := sdk.AccAddressFromBech32(contractAddressBech32)
+	contractAddress, err := k.AddressCodec().StringToBytes(contractAddressBech32)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (k *Keeper) DeregisterRouteHandler(
 	path string,
 	contractAddressBech32 string,
 ) error {
-	contractAddress, err := sdk.AccAddressFromBech32(contractAddressBech32)
+	contractAddress, err := k.AddressCodec().StringToBytes(contractAddressBech32)
 	if err != nil {
 		return err
 	}

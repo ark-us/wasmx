@@ -24,7 +24,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -40,7 +40,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -71,7 +71,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
 	depsPy := []string{types.INTERPRETER_PYTHON}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, simpleStoragePy, depsPy)

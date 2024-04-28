@@ -59,8 +59,9 @@ func (suite *KeeperTestSuite) TestChat() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(10_000_000_000)
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	denom := appA.Chain.Config.BaseDenom
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 	chatAddress, found := appA.App.WasmxKeeper.GetContractAddressByRole(appA.Context(), wasmxtypes.ROLE_CHAT)
 	s.Require().True(found)
 

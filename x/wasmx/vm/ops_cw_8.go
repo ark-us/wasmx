@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 
+	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	dbm "github.com/cometbft/cometbft-db"
@@ -201,7 +202,7 @@ func cw_8_addr_validate(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	addr, err := addr_canonicalize(addrBz)
+	addr, err := addr_canonicalize(ctx.CosmosHandler.AddressCodec(), addrBz)
 	if err != nil {
 		return cwError(ctx, callframe, err.Error())
 	}
@@ -224,7 +225,7 @@ func cw_8_addr_canonicalize(context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	data, err := addr_canonicalize(addrBz)
+	data, err := addr_canonicalize(ctx.CosmosHandler.AddressCodec(), addrBz)
 	if err != nil {
 		return cwError(ctx, callframe, err.Error())
 	}
@@ -485,15 +486,15 @@ func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []
 	return returns, wasmedge.Result_Fail
 }
 
-func addr_canonicalize(addrUtf8 []byte) (sdk.AccAddress, error) {
+func addr_canonicalize(addressCodec address.Codec, addrUtf8 []byte) (sdk.AccAddress, error) {
 	if len(addrUtf8) == 0 {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "empty address")
 	}
-	addr, err := sdk.AccAddressFromBech32(string(addrUtf8))
+	addr, err := addressCodec.StringToBytes(string(addrUtf8))
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "invalid address")
 	}
-	if len(addr.Bytes()) > cw8types.MAX_LENGTH_HUMAN_ADDRESS {
+	if len(addr) > cw8types.MAX_LENGTH_HUMAN_ADDRESS {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "address too long")
 	}
 	return addr, nil

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -47,10 +46,6 @@ func (k KeeperAuth) GetParams(goCtx context.Context) (params authtypes.Params) {
 		panic(err)
 	}
 	return response.Params
-}
-
-func (k KeeperAuth) AddressCodec() address.Codec {
-	return k.addressCodec
 }
 
 func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool {

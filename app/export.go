@@ -69,7 +69,7 @@ func (app *App) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []str
 	allowedAddrsMap := make(map[string]bool)
 
 	for _, addr := range jailAllowedAddrs {
-		_, err := sdk.ValAddressFromBech32(addr)
+		_, err := app.WasmxKeeper.ValidatorAddressCodec().StringToBytes(addr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -101,12 +101,15 @@ func (app *App) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []str
 	}
 
 	for _, delegation := range dels {
-		valAddr, err := sdk.ValAddressFromBech32(delegation.ValidatorAddress)
+		valAddr, err := app.WasmxKeeper.ValidatorAddressCodec().StringToBytes(delegation.ValidatorAddress)
 		if err != nil {
 			panic(err)
 		}
 
-		delAddr := sdk.MustAccAddressFromBech32(delegation.DelegatorAddress)
+		delAddr, err := app.WasmxKeeper.AddressCodec().StringToBytes(delegation.DelegatorAddress)
+		if err != nil {
+			panic(err)
+		}
 
 		_, _ = app.DistrKeeper.WithdrawDelegationRewards(ctx, delAddr, valAddr)
 	}
@@ -153,11 +156,11 @@ func (app *App) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []str
 	// TODO
 	// // reinitialize all delegations
 	// for _, del := range dels {
-	// 	valAddr, err := sdk.ValAddressFromBech32(del.ValidatorAddress)
+	// 	valAddr, err := app.WasmxKeeper.ValidatorAddressCodec().StringToBytes(del.ValidatorAddress)
 	// 	if err != nil {
 	// 		panic(err)
 	// 	}
-	// 	delAddr := sdk.MustAccAddressFromBech32(del.DelegatorAddress)
+	// 	delAddr := app.WasmxKeeper.AddressCodec().StringToBytes(del.DelegatorAddress)
 
 	// 	if err := app.DistrKeeper.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr); err != nil {
 	// 		// never called as BeforeDelegationCreated always returns nil

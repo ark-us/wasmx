@@ -61,7 +61,7 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 		// Don't check signature on a simulation, because it may be sent by JSON-RPC
 		// through the gas estimation endpoint
 		if simulate && msgEthTx.Sender != "" {
-			sender, err := sdk.AccAddressFromBech32(msgEthTx.Sender)
+			sender, err := esvd.wasmxKeeper.AddressCodec().StringToBytes(msgEthTx.Sender)
 			if err != nil {
 				return ctx, errorsmod.Wrapf(err, "simulate transaction has invalid sender")
 			}

@@ -39,7 +39,7 @@ package keeper
 // 	if !strings.HasPrefix(portID, portIDPrefix) {
 // 		return nil, sdkerrors.Wrapf(types.ErrInvalid, "without prefix")
 // 	}
-// 	return sdk.AccAddressFromBech32(portID[len(portIDPrefix):])
+// 	return k.AddressCodec().StringToBytes(portID[len(portIDPrefix):])
 // }
 
 // // AuthenticateCapability wraps the scopedKeeper's AuthenticateCapability function

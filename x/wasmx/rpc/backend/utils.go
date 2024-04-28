@@ -9,6 +9,7 @@ import (
 
 	"cosmossdk.io/log"
 
+	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -23,10 +24,10 @@ import (
 )
 
 // GetLogsFromBlockResults returns the list of event logs from the tendermint block result response
-func GetLogsFromBlockResults(blockRes *tmrpctypes.ResultBlockResults) ([][]*ethtypes.Log, error) {
+func GetLogsFromBlockResults(addressCodec address.Codec, blockRes *tmrpctypes.ResultBlockResults) ([][]*ethtypes.Log, error) {
 	blockLogs := [][]*ethtypes.Log{}
 	for _, txResult := range blockRes.TxsResults {
-		logs, err := TxLogsFromEvents(txResult.Events)
+		logs, err := TxLogsFromEvents(addressCodec, txResult.Events)
 		if err != nil {
 			return nil, err
 		}
@@ -37,13 +38,13 @@ func GetLogsFromBlockResults(blockRes *tmrpctypes.ResultBlockResults) ([][]*etht
 }
 
 // TxLogsFromEvents parses ethereum logs from cosmos events for specific msg index
-func TxLogsFromEvents(events []abci.Event) ([]*ethtypes.Log, error) {
+func TxLogsFromEvents(addressCodec address.Codec, events []abci.Event) ([]*ethtypes.Log, error) {
 	var logs []*ethtypes.Log
 	for _, event := range events {
 		if event.Type != (wasmxtypes.CustomContractEventPrefix + wasmxtypes.EventTypeWasmxLog) {
 			continue
 		}
-		log, err := ParseTxLogsFromEvent(event)
+		log, err := ParseTxLogsFromEvent(addressCodec, event)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +55,7 @@ func TxLogsFromEvents(events []abci.Event) ([]*ethtypes.Log, error) {
 
 // TODO only ewasm logs?
 // ParseTxLogsFromEvent parse tx logs from one event
-func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
+func ParseTxLogsFromEvent(addressCodec address.Codec, event abci.Event) (*ethtypes.Log, error) {
 	var log ethtypes.Log
 	for _, attr := range event.Attributes {
 		// we now parse all wasmx logs, regardless of AttributeKeyEventType
@@ -65,7 +66,7 @@ func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
 			}
 			log.Index = uint(index)
 		} else if attr.Key == wasmxtypes.AttributeKeyContractAddr {
-			contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
+			contractAddress, err := addressCodec.StringToBytes(string(attr.Value))
 			if err != nil {
 				return nil, err
 			}
@@ -84,14 +85,14 @@ func ParseTxLogsFromEvent(event abci.Event) (*ethtypes.Log, error) {
 }
 
 // ContractAddressFromEvents returns a deployed contract address from cosmos events
-func ContractAddressFromEvents(events []abci.Event) *common.Address {
+func ContractAddressFromEvents(addressCodec address.Codec, events []abci.Event) *common.Address {
 	for _, event := range events {
 		if event.Type != wasmxtypes.EventTypeDeploy {
 			continue
 		}
 		for _, attr := range event.Attributes {
 			if attr.Key == wasmxtypes.AttributeKeyContractAddr {
-				contractAddress, err := sdk.AccAddressFromBech32(string(attr.Value))
+				contractAddress, err := addressCodec.StringToBytes(string(attr.Value))
 				if err != nil {
 					return nil
 				}

@@ -476,11 +476,11 @@ func wasi_bech32StringToBytes(context interface{}, callframe *wasmedge.CallingFr
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	addr, err := sdk.AccAddressFromBech32(string(addrbz))
+	addr, err := ctx.CosmosHandler.AddressCodec().StringToBytes(string(addrbz))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	data := types.PaddLeftTo32(addr.Bytes())
+	data := types.PaddLeftTo32(addr)
 	ptr, err := wasimem.WriteMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail

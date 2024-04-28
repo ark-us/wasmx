@@ -34,7 +34,7 @@ func (k *Keeper) RouteByContract(c context.Context, req *types.QueryRouteByContr
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
-	contractAddress, err := sdk.AccAddressFromBech32(req.ContractAddress)
+	contractAddress, err := k.AddressCodec().StringToBytes(req.ContractAddress)
 	if err != nil {
 		return nil, sdkerrors.ErrInvalidAddress
 	}
@@ -71,7 +71,7 @@ func (k *Keeper) GetOauthClientsByOwner(c context.Context, req *types.QueryGetOa
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
-	owner, err := sdk.AccAddressFromBech32(req.Owner)
+	owner, err := k.AddressCodec().StringToBytes(req.Owner)
 	if err != nil {
 		return nil, sdkerrors.ErrInvalidAddress
 	}

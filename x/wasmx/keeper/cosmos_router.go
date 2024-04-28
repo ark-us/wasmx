@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
@@ -28,6 +29,15 @@ type WasmxCosmosHandler struct {
 
 func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
 	h.Ctx = newctx
+}
+func (h *WasmxCosmosHandler) AddressCodec() address.Codec {
+	return h.Keeper.AddressCodec()
+}
+func (h *WasmxCosmosHandler) ValidatorAddressCodec() address.Codec {
+	return h.Keeper.ValidatorAddressCodec()
+}
+func (h *WasmxCosmosHandler) ConsensusAddressCodec() address.Codec {
+	return h.Keeper.ConsensusAddressCodec()
 }
 func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)

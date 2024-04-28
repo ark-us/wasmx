@@ -39,8 +39,9 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	denom := appA.Chain.Config.BaseDenom
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	_, err := appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
@@ -235,16 +236,17 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
@@ -315,16 +317,17 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_TENDERMINT)
@@ -395,15 +398,16 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := raftContract.String()
@@ -519,15 +523,16 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := raftContract.String()
@@ -637,8 +642,9 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	sender2 := suite.GetRandomAccount()
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 // 	appA := s.AppContext()
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-// 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+// denom := appA.Chain.Config.BaseDenom
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 // 	suite.Commit()
 
 // 	// ip1 := "tcp://localhost:8090"
@@ -653,7 +659,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	client2, conn2 := suite.GrpcClient(goctx2, ip2, app2)
 // 	defer conn1.Close()
 // 	defer conn2.Close()
-// 	// contractAddress := sdk.MustAccAddressFromBech32(consensusBech32)
+// 	// contractAddress, err := appA.AddressStringToAccAddress(consensusBech32)
 
 // 	initChainSetup := "eyJjaGFpbl9pZCI6Im15dGhvc183MDAwLTE0IiwiY29uc2Vuc3VzX3BhcmFtcyI6eyJibG9jayI6eyJtYXhfYnl0ZXMiOjIyMDIwMDk2LCJtYXhfZ2FzIjotMX0sImV2aWRlbmNlIjp7Im1heF9hZ2VfbnVtX2Jsb2NrcyI6MTAwMDAwLCJtYXhfYWdlX2R1cmF0aW9uIjoxNzI4MDAwMDAwMDAwMDAsIm1heF9ieXRlcyI6MTA0ODU3Nn0sInZhbGlkYXRvciI6eyJwdWJfa2V5X3R5cGVzIjpbImVkMjU1MTkiXX0sInZlcnNpb24iOnsiYXBwIjowfSwiYWJjaSI6eyJ2b3RlX2V4dGVuc2lvbnNfZW5hYmxlX2hlaWdodCI6MH19LCJ2YWxpZGF0b3JzIjpbeyJhZGRyZXNzIjoiODRFMjhCRThGODk4QzE5NTMxOEU1QTg0RDMxRERBMzU5NzlFMUMwQSIsInB1Yl9rZXkiOiI4aERqZkJqc1c4d3k3Z2MzVlNSZk9LMnVoTlljaWJIdDdHbkI3a2p3KytjPSIsInZvdGluZ19wb3dlciI6MTAwMDAwMDAwMDAwMDAwLCJwcm9wb3Nlcl9wcmlvcml0eSI6MH1dLCJhcHBfaGFzaCI6IjQ3REVRcGo4SEJTYSsvVEltVys1SkNldVFlUmttNU5NcEpXWkczaFN1RlU9IiwibGFzdF9yZXN1bHRzX2hhc2giOiI0N0RFUXBqOEhCU2ErL1RJbVcrNUpDZXVRZVJrbTVOTXBKV1pHM2hTdUZVPSIsImN1cnJlbnRfdmFsaWRhdG9yIjoiODRFMjhCRThGODk4QzE5NTMxOEU1QTg0RDMxRERBMzU5NzlFMUMwQSIsInZlcnNpb24iOnsiY29uc2Vuc3VzIjp7ImJsb2NrIjowLCJhcHAiOjB9LCJzb2Z0d2FyZSI6IiJ9fQ"
 // 	// await runFnOwner("run", machine, {event: {type: "setupNode", params: [{key: "currentNodeId", value: "0"},{key: "validatorNodesInfo", value: "[\"0.0.0.0:8090\"]"},{key: "initChainSetup", value: initChainSetup2}]}});
@@ -891,7 +897,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	sender := suite.GetAccountFromMnemonic(mnemonic)
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 // 	appA := s.GetAppContext(suite.chainA)
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+// denom := appA.Chain.Config.BaseDenom
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
 // 	suite.Commit()
 
 // 	// send tx

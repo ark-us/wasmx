@@ -974,7 +974,7 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 	if role == nil {
 		return types.SystemDep{}, fmt.Errorf("no role from label")
 	}
-	contractAddress, err := sdk.AccAddressFromBech32(role.ContractAddress)
+	contractAddress, err := k.addressCodec.StringToBytes(role.ContractAddress)
 	if err != nil {
 		return types.SystemDep{}, err
 	}

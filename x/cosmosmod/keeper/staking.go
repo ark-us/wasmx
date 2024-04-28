@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	addresscodec "cosmossdk.io/core/address"
 	errors "cosmossdk.io/errors"
 	math "cosmossdk.io/math"
 
@@ -65,16 +64,6 @@ func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, erro
 		return math.NewInt(0), err
 	}
 	return response.Supply.Amount, nil
-}
-
-// ValidatorAddressCodec returns the app validator address codec.
-func (k KeeperStaking) ValidatorAddressCodec() addresscodec.Codec {
-	return k.validatorAddressCodec
-}
-
-// ConsensusAddressCodec returns the app consensus address codec.
-func (k KeeperStaking) ConsensusAddressCodec() addresscodec.Codec {
-	return k.consensusAddressCodec
 }
 
 // Delegation gets the delegation interface for a particular set of delegator and validator addresses

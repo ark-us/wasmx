@@ -21,8 +21,8 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	appA := s.AppContext()
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	msg := []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":[],"proposer":"%s","initial_deposit":[{"denom":"amyt","amount":"0x100000"}],"metadata":"metadata","title":"title","summary":"summary","expedited":false}}`, sender.Address.String()))
 	_, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
@@ -106,9 +106,9 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	msg1 := []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{

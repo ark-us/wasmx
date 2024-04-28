@@ -121,7 +121,7 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, gs json.Ra
 	// Initialize global index to index in genesis state
 	cdc.MustUnmarshalJSON(gs, &genState)
 
-	bootstrapAccountAddr, err := sdk.AccAddressFromBech32(genState.BootstrapAccountAddress)
+	bootstrapAccountAddr, err := am.keeper.AddressCodec().StringToBytes(genState.BootstrapAccountAddress)
 	if err != nil {
 		panic(fmt.Sprintf("bootstrap account: %+v", err))
 	}

@@ -38,11 +38,11 @@ func (k QuerierStaking) Validators(goCtx context.Context, req *stakingtypes.Quer
 }
 
 func (k QuerierStaking) Validator(goCtx context.Context, req *stakingtypes.QueryValidatorRequest) (*stakingtypes.QueryValidatorResponse, error) {
-	addr, err := sdk.AccAddressFromBech32(req.ValidatorAddr)
+	addr, err := k.Keeper.AddressCodec().StringToBytes(req.ValidatorAddr)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	v, err := k.Keeper.Validator(goCtx, addr.Bytes())
+	v, err := k.Keeper.Validator(goCtx, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -63,15 +63,15 @@ func (k QuerierStaking) ValidatorUnbondingDelegations(goCtx context.Context, req
 }
 
 func (k QuerierStaking) Delegation(goCtx context.Context, req *stakingtypes.QueryDelegationRequest) (*stakingtypes.QueryDelegationResponse, error) {
-	delegator, err := sdk.AccAddressFromBech32(req.DelegatorAddr)
+	delegator, err := k.Keeper.AddressCodec().StringToBytes(req.DelegatorAddr)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	addrVal, err := sdk.AccAddressFromBech32(req.ValidatorAddr)
+	addrVal, err := k.Keeper.AddressCodec().StringToBytes(req.ValidatorAddr)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	delegation, err := k.Keeper.DelegationInternal(goCtx, delegator, addrVal.Bytes())
+	delegation, err := k.Keeper.DelegationInternal(goCtx, delegator, addrVal)
 	if err != nil {
 		return nil, err
 	}

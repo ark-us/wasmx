@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -24,7 +25,8 @@ type (
 		query      func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error)
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
-		authority string
+		authority    string
+		addressCodec address.Codec
 	}
 )
 
@@ -36,6 +38,7 @@ func NewKeeper(
 	wasmx types.WasmxKeeper,
 	query func(_ context.Context, req *abci.RequestQuery) (res *abci.ResponseQuery, err error),
 	authority string,
+	addressCodec address.Codec,
 
 ) *Keeper {
 	// set KeyTable if it has not already been set
@@ -44,13 +47,14 @@ func NewKeeper(
 	}
 
 	return &Keeper{
-		cdc:        cdc,
-		storeKey:   storeKey,
-		memKey:     memKey,
-		paramstore: ps,
-		wasmx:      wasmx,
-		query:      query,
-		authority:  authority,
+		cdc:          cdc,
+		storeKey:     storeKey,
+		memKey:       memKey,
+		paramstore:   ps,
+		wasmx:        wasmx,
+		query:        query,
+		authority:    authority,
+		addressCodec: addressCodec,
 	}
 }
 
@@ -61,4 +65,8 @@ func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
 // GetAuthority returns the module's authority.
 func (k *Keeper) GetAuthority() string {
 	return k.authority
+}
+
+func (k *Keeper) AddressCodec() address.Codec {
+	return k.addressCodec
 }

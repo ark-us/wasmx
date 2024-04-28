@@ -11,18 +11,18 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(10_000_000_000)
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	valAccount := suite.GetRandomAccount()
 	valAddr := sdk.ValAddress(valAccount.Address)
 
 	valFunds := sdkmath.NewInt(1000_000_000)
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	createValMsg, err := stakingtypes.NewMsgCreateValidator(
 		valAddr.String(),
 		valAccount.PubKey,
-		sdk.NewCoin(appA.Denom, valFunds),
+		sdk.NewCoin(appA.Chain.Config.BaseDenom, valFunds),
 		stakingtypes.NewDescription("", "", "", "", ""),
 		stakingtypes.NewCommissionRates(sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec()),
 		sdkmath.OneInt(),

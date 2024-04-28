@@ -29,7 +29,7 @@ func (k QuerierAuth) Accounts(goCtx context.Context, req *authtypes.QueryAccount
 }
 
 func (k QuerierAuth) Account(goCtx context.Context, req *authtypes.QueryAccountRequest) (*authtypes.QueryAccountResponse, error) {
-	addr, err := sdk.AccAddressFromBech32(req.Address)
+	addr, err := k.Keeper.AddressCodec().StringToBytes(req.Address)
 	if err != nil {
 		return nil, err
 	}

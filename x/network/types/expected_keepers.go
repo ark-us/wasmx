@@ -3,6 +3,7 @@ package types
 import (
 	context "context"
 
+	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -20,6 +21,10 @@ type WasmxKeeper interface {
 	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error)
 
 	SmartContractCall(c context.Context, req *wasmxtypes.QuerySmartContractCallRequest) (rsp *wasmxtypes.QuerySmartContractCallResponse, err error)
+
+	AddressCodec() address.Codec
+	ValidatorAddressCodec() address.Codec
+	ConsensusAddressCodec() address.Codec
 }
 
 type WasmxWrapper interface {

@@ -31,7 +31,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 	getHex2 := `d2178b08`
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -70,7 +70,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 	getHex := `6d4ce63c`
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -92,7 +92,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	setHex := `60fe47b1`
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -122,13 +122,13 @@ func (suite *KeeperTestSuite) TestConstructorTestBin() {
 	strmap := "e71a136a"
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	calld := "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000597364666173666761736b736b646d6664736b6e766b6d6c2c76642c2e6777656c2e72336c742c6b34336f702c65726c3b2c2e663b3b2e6673643b6c2c666c6b6d6766646b6e736b6a61646e6b6c6d73646c76642c6c3b732c6600000000000000"
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, "callwasm", nil)
-	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	res := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig)}, nil, nil)
