@@ -3,8 +3,10 @@ package keeper
 import (
 	"fmt"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -19,10 +21,14 @@ func (k *Keeper) RegisterRole(
 	label string,
 	contractAddress sdk.AccAddress,
 ) error {
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
 	roleObj := &types.Role{
 		Role:            role,
 		Label:           label,
-		ContractAddress: contractAddress.String(),
+		ContractAddress: contractAddressStr,
 	}
 	k.SetContractAddressByRole(ctx, role, contractAddress)
 	k.SetRoleByLabel(ctx, roleObj)

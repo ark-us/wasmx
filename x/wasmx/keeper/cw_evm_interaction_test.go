@@ -50,7 +50,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 		Symbol:   "TKN",
 		Decimals: 18,
 		InitialBalances: []Cw20Coin{
-			{Address: sender.Address.String(), Amount: "10000000000000000"},
+			{Address: appA.MustAccAddressToString(sender.Address), Amount: "10000000000000000"},
 		},
 	}
 	calld, err := json.Marshal(instantiateMsg)
@@ -75,13 +75,13 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	databz, err = vm.ProxyInterfacesAbi.Pack("EvmToJsonCall", contractAddressEvm, "transfer", calldbz)
 	s.Require().NoError(err)
 
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(sender.Address)))
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"10000000000000000"}`, string(qres))
 
 	appA.ExecuteContract(sender, proxyAddress, types.WasmxExecutionMessage{Data: databz}, nil, nil)
 
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, recipient.Address.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(recipient.Address)))
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"100"}`, string(qres))
 }
@@ -113,7 +113,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 		Symbol:   "TKN",
 		Decimals: 18,
 		InitialBalances: []Cw20Coin{
-			{Address: sender.Address.String(), Amount: "10000000000000000"},
+			{Address: appA.MustAccAddressToString(sender.Address), Amount: "10000000000000000"},
 		},
 	}
 	calld, err := json.Marshal(instantiateMsg)
@@ -157,7 +157,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	appA.ExecuteContract(sender2, contractAddressErc20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Approve AtomicSwap contract in cw20
-	appA.ExecuteContract(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"200"}}`, contractAddressSwap.String()))}, nil, nil)
+	appA.ExecuteContract(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"200"}}`, appA.MustAccAddressToString(contractAddressSwap)))}, nil, nil)
 
 	// Create swap
 	calld, err = atomicSwapAbi.Pack("create", "swap1", big.NewInt(0), []AtomicSwapBalance{
@@ -169,7 +169,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	appA.ExecuteContract(sender, contractAddressSwap, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Check CW20 balance
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, contractAddressSwap.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(contractAddressSwap)))
 	qres := appA.WasmxQueryRaw(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"100"}`, string(qres))
 
@@ -179,12 +179,12 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	appA.ExecuteContract(sender2, contractAddressSwap, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Check CW20 balance AtomicSwap
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, contractAddressSwap.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(contractAddressSwap)))
 	qres = appA.WasmxQueryRaw(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"0"}`, string(qres))
 
 	// Check CW20 balance sender2
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender2.Address.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(sender2.Address)))
 	qres = appA.WasmxQueryRaw(sender2, contractAddressCw20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"100"}`, string(qres))
 

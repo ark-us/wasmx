@@ -70,21 +70,21 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	}
 
 	// js -> py
-	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, contractAddressPy.String()))
+	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, appA.MustAccAddressToString(contractAddressPy)))
 	resp = appA.ExecuteContract(sender, contractAddressJs, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected = "multi-vm transaction: javascript -> python"
 	s.Require().Contains(string(resp.GetData()), expected)
 	checkLogs(appA, resp.GetEvents(), []string{types.INTERPRETER_JS, types.INTERPRETER_PYTHON}, []string{"multi-vm transaction: javascript", expected})
 
 	// py -> js
-	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, contractAddressJs.String()))
+	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, appA.MustAccAddressToString(contractAddressJs)))
 	resp = appA.ExecuteContract(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected = "multi-vm transaction: python -> javascript"
 	s.Require().Contains(string(resp.GetData()), expected)
 	checkLogs(appA, resp.GetEvents(), []string{types.INTERPRETER_PYTHON, types.INTERPRETER_JS}, []string{"multi-vm transaction: python", expected})
 
 	// py -> js -> go
-	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s","%s"]]}`, contractAddressJs.String(), contractAddressGo.String()))
+	data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s","%s"]]}`, appA.MustAccAddressToString(contractAddressJs), appA.MustAccAddressToString(contractAddressGo)))
 	resp = appA.ExecuteContract(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	expected = "multi-vm transaction: python -> javascript -> tinygo"
 	s.Require().Contains(string(resp.GetData()), expected)
@@ -94,7 +94,7 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	// // js -> evm
 	// // contractAddressEvm
 	// fmt.Println("====js -> evm=====")
-	// data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, contractAddressEvm.String()))
+	// data = []byte(fmt.Sprintf(`{"forward":["multi-vm transaction: ",["%s"]]}`, appA.MustAccAddressToString(contractAddressEvm)))
 	// resp = appA.ExecuteContract(sender, contractAddressJs, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	// get go
@@ -103,17 +103,17 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	s.Require().Equal("tinygo", string(qres))
 
 	// get py -> js
-	data = []byte(fmt.Sprintf(`{"forward_get":[["%s"]]}`, contractAddressJs.String()))
+	data = []byte(fmt.Sprintf(`{"forward_get":[["%s"]]}`, appA.MustAccAddressToString(contractAddressJs)))
 	qres = appA.WasmxQueryRaw(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("python -> javascript", string(qres))
 
 	// get js -> py
-	data = []byte(fmt.Sprintf(`{"forward_get":[["%s"]]}`, contractAddressPy.String()))
+	data = []byte(fmt.Sprintf(`{"forward_get":[["%s"]]}`, appA.MustAccAddressToString(contractAddressPy)))
 	qres = appA.WasmxQueryRaw(sender, contractAddressJs, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("javascript -> python", string(qres))
 
 	// get py -> js -> go
-	data = []byte(fmt.Sprintf(`{"forward_get":[["%s","%s"]]}`, contractAddressJs.String(), contractAddressGo.String()))
+	data = []byte(fmt.Sprintf(`{"forward_get":[["%s","%s"]]}`, appA.MustAccAddressToString(contractAddressJs), appA.MustAccAddressToString(contractAddressGo)))
 	qres = appA.WasmxQueryRaw(sender, contractAddressPy, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("python -> javascript -> tinygo", string(qres))
 }

@@ -3,7 +3,7 @@ package keeper
 import (
 	"fmt"
 
-	addresscodec "cosmossdk.io/core/address"
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -31,8 +31,9 @@ type (
 		authority        string
 		feeCollectorName string
 
-		validatorAddressCodec addresscodec.Codec
-		consensusAddressCodec addresscodec.Codec
+		validatorAddressCodec address.Codec
+		consensusAddressCodec address.Codec
+		addressCodec          address.Codec
 	}
 )
 
@@ -48,8 +49,9 @@ func NewKeeperDistribution(
 	authority string,
 	feeCollectorName string,
 	interfaceRegistry cdctypes.InterfaceRegistry,
-	validatorAddressCodec addresscodec.Codec,
-	consensusAddressCodec addresscodec.Codec,
+	validatorAddressCodec address.Codec,
+	consensusAddressCodec address.Codec,
+	addressCodec address.Codec,
 ) *KeeperDistribution {
 	keeper := &KeeperDistribution{
 		jsoncdc:               jsoncdc,
@@ -65,6 +67,7 @@ func NewKeeperDistribution(
 		InterfaceRegistry:     interfaceRegistry,
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
+		addressCodec:          addressCodec,
 	}
 	return keeper
 }
@@ -80,4 +83,16 @@ func (k *KeeperDistribution) GetAuthority() string {
 
 func (k *KeeperDistribution) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
+}
+
+func (k *KeeperDistribution) AddressCodec() address.Codec {
+	return k.addressCodec
+}
+
+func (k *KeeperDistribution) ValidatorAddressCodec() address.Codec {
+	return k.validatorAddressCodec
+}
+
+func (k *KeeperDistribution) ConsensusAddressCodec() address.Codec {
+	return k.consensusAddressCodec
 }

@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
+	mcfg "mythos/v1/config"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -31,7 +33,12 @@ func (k KeeperDistribution) SetWithdrawAddress(ctx sdk.Context, msg *distributio
 
 // withdraw validator commission
 func (k KeeperDistribution) WithdrawValidatorCommission(goCtx context.Context, valAddr sdk.ValAddress) (sdk.Coins, error) {
-	resp, err := k.WithdrawValidatorCommissionInternal(goCtx, &distributiontypes.MsgWithdrawValidatorCommission{ValidatorAddress: valAddr.String()})
+	valAddrStr, err := k.ValidatorAddressCodec().BytesToString(valAddr)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "validator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	resp, err := k.WithdrawValidatorCommissionInternal(goCtx, &distributiontypes.MsgWithdrawValidatorCommission{ValidatorAddress: valAddrStr})
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +60,19 @@ func (k KeeperDistribution) WithdrawValidatorCommissionInternal(goCtx context.Co
 func (k KeeperDistribution) WithdrawDelegationRewards(goCtx context.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress) (sdk.Coins, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Debug("KeeperDistribution.WithdrawDelegationRewards not implemented")
+
+	valAddrStr, err := k.ValidatorAddressCodec().BytesToString(valAddr)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "validator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+	delAddrStr, err := k.AddressCodec().BytesToString(delAddr)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "delegator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	resp, err := k.WithdrawDelegatorReward(goCtx, &distributiontypes.MsgWithdrawDelegatorReward{
-		DelegatorAddress: delAddr.String(),
-		ValidatorAddress: valAddr.String(),
+		DelegatorAddress: delAddrStr,
+		ValidatorAddress: valAddrStr,
 	})
 	if err != nil {
 		return nil, err
@@ -134,7 +151,13 @@ func (k KeeperDistribution) WithdrawDelegatorReward(goCtx context.Context, msg *
 // get outstanding rewards
 func (k KeeperDistribution) GetValidatorOutstandingRewardsCoins(goCtx context.Context, val sdk.ValAddress) (sdk.DecCoins, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	rewards, err := k.ValidatorOutstandingRewards(ctx, &distributiontypes.QueryValidatorOutstandingRewardsRequest{ValidatorAddress: val.String()})
+
+	valAddrStr, err := k.ValidatorAddressCodec().BytesToString(val)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "validator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	rewards, err := k.ValidatorOutstandingRewards(ctx, &distributiontypes.QueryValidatorOutstandingRewardsRequest{ValidatorAddress: valAddrStr})
 	if err != nil {
 		return nil, err
 	}

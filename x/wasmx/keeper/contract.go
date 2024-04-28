@@ -15,6 +15,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	mcfg "mythos/v1/config"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
@@ -297,9 +298,14 @@ func (k *Keeper) CreateInterpreted(
 	}
 	ctx.EventManager().EmitEvent(evt)
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return 0, checksum, contractAddress, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	evt2 := sdk.NewEvent(
 		types.EventTypeDeploy,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 	)
 	ctx.EventManager().EmitEvent(evt2)
 
@@ -480,13 +486,18 @@ func (k *Keeper) instantiateInternal(
 	// store contract before dispatch so that contract could be called back
 	k.storeContractInfo(ctx, contractAddress, &contractInfo)
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeInstantiate,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)),
 	))
 
-	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddressStr, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, nil, sdkerr.Wrap(err, "instantiate dispatch")
 	}
@@ -506,7 +517,7 @@ func (k *Keeper) instantiateInternal(
 		}
 
 		// consider an account in the wasmx namespace spam and overwrite it.
-		k.Logger(ctx).Info("pruning existing account for contract instantiation", "address", contractAddress.String())
+		k.Logger(ctx).Info("pruning existing account for contract instantiation", "address", contractAddressStr)
 		contractAccount := k.NewAccountWithAddress(ctx, contractAddress)
 		k.SetAccount(ctx, contractAccount)
 	} else {
@@ -617,12 +628,17 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress sdk.AccAddress, caller
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeExecute,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 	))
 
-	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddressStr, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "dispatch events")
 	}
@@ -678,12 +694,17 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeExecute,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 	))
 
-	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddressStr, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "dispatch events")
 	}
@@ -731,12 +752,17 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply cw
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		cw8types.EventTypeReply,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 	))
 
-	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddressStr, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "dispatch events")
 	}
@@ -793,12 +819,17 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin sdk.AccAddress, contr
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeExecute,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 	))
 
-	err = k.handleResponseEvents(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Events)
+	err = k.handleResponseEvents(ctx, contractAddressStr, contractInfo.IbcPortId, res.Attributes, res.Events)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "dispatch")
 	}
@@ -854,9 +885,14 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller s
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeExecute,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddressStr),
 	))
 
 	// data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
@@ -870,7 +906,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress sdk.AccAddress, caller s
 // handleResponseEvents processes the contract response data by emitting events
 func (k *Keeper) handleResponseEvents(
 	ctx sdk.Context,
-	contractAddr sdk.AccAddress,
+	contractAddrBech32 string,
 	ibcPort string,
 	attrs []types.EventAttribute,
 	evts types.Events,
@@ -880,14 +916,14 @@ func (k *Keeper) handleResponseEvents(
 	// emit all events from this contract itself
 	// these are not used
 	if len(attrs) != 0 {
-		wasmEvents, err := newWasmModuleEvent(attrs, contractAddr)
+		wasmEvents, err := newWasmModuleEvent(attrs, contractAddrBech32)
 		if err != nil {
 			return err
 		}
 		ctx.EventManager().EmitEvents(wasmEvents)
 	}
 	if len(evts) > 0 {
-		customEvents, err := newCustomEvents(evts, contractAddr)
+		customEvents, err := newCustomEvents(evts, contractAddrBech32)
 		if err != nil {
 			return err
 		}

@@ -19,6 +19,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
@@ -270,14 +271,24 @@ func ExecuteWasmInterpreted(
 		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
-		context.ContractRouter[dep.Address.String()] = contractContext
+		addrstr, err := cosmosHandler.AddressCodec().BytesToString(dep.Address)
+		if err != nil {
+			return types.ContractResponse{}, sdkerr.Wrapf(err, "dep: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+		}
+		context.ContractRouter[addrstr] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-	if selfContext == nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", env.Contract.Address.String())
+
+	contractstr, err := cosmosHandler.AddressCodec().BytesToString(env.Contract.Address)
+	if err != nil {
+		return types.ContractResponse{}, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
 	}
-	context.ContractRouter[env.Contract.Address.String()] = selfContext
+
+	if selfContext == nil {
+		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", contractstr)
+	}
+	context.ContractRouter[contractstr] = selfContext
 	contractVm, _cleanups, err := InitiateWasm(context, "", nil, systemDeps)
 	cleanups = append(cleanups, _cleanups...)
 	defer func() {
@@ -295,7 +306,7 @@ func ExecuteWasmInterpreted(
 
 	if inBackground {
 		err = types.AddBackgroundProcesses(goContextParent, &types.BackgroundProcess{
-			Label:      env.Contract.Address.String(),
+			Label:      contractstr,
 			ContractVm: contractVm,
 			ExecuteHandler: func(funcName_ string) ([]byte, error) {
 				_, err := executeHandler(context, contractVm, funcName_, make([]interface{}, 0))
@@ -390,14 +401,24 @@ func ExecuteWasm(
 		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
 		}
-		context.ContractRouter[dep.Address.String()] = contractContext
+		addrstr, err := cosmosHandler.AddressCodec().BytesToString(dep.Address)
+		if err != nil {
+			return types.ContractResponse{}, sdkerr.Wrapf(err, "dep: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+		}
+		context.ContractRouter[addrstr] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-	if selfContext == nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for self %s", env.Contract.Address.String())
+
+	contractstr, err := cosmosHandler.AddressCodec().BytesToString(env.Contract.Address)
+	if err != nil {
+		return types.ContractResponse{}, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
 	}
-	context.ContractRouter[env.Contract.Address.String()] = selfContext
+
+	if selfContext == nil {
+		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for self %s", contractstr)
+	}
+	context.ContractRouter[contractstr] = selfContext
 
 	contractVm, _cleanups, err := InitiateWasm(context, env.Contract.FilePath, nil, systemDeps)
 	cleanups = append(cleanups, _cleanups...)
@@ -416,7 +437,7 @@ func ExecuteWasm(
 	executeHandler := GetExecuteFunctionHandler(systemDeps)
 	if inBackground {
 		err = types.AddBackgroundProcesses(goContextParent, &types.BackgroundProcess{
-			Label:      env.Contract.Address.String(),
+			Label:      contractstr,
 			ContractVm: contractVm,
 			ExecuteHandler: func(funcName_ string) ([]byte, error) {
 				_, err := executeHandler(context, contractVm, funcName_, make([]interface{}, 0))
@@ -514,6 +535,11 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 	var events []types.Event
 	// module and contract address for the main transaction are added later
 	for i, log := range logs {
+		contractAddressStr, err := context.CosmosHandler.AddressCodec().BytesToString(log.ContractAddress)
+		if err != nil {
+			panic(sdkerr.Wrapf(err, "log contract: %s", mcfg.ERRORMSG_ACC_TOSTRING))
+		}
+
 		var attributes []types.EventAttribute
 		attributes = append(attributes, types.EventAttribute{
 			Key:   types.AttributeKeyIndex,
@@ -530,7 +556,7 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 		// logs can be from nested calls to other contracts
 		attributes = append(attributes, types.EventAttribute{
 			Key:   types.AttributeKeyCallContractAddress,
-			Value: log.ContractAddress.String(),
+			Value: contractAddressStr,
 		})
 		attributes = append(attributes, types.EventAttribute{
 			Key:   types.AttributeKeyDependency,

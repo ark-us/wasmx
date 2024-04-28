@@ -30,6 +30,7 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/go-bip39"
@@ -132,7 +133,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 		Chain:         chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := app.MakeEncodingConfig()
+	encodingConfig := app.MakeEncodingConfig(suite.App().GetChainCfg())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
 
 	t := suite.T()
@@ -148,7 +149,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 		Chain:         suite.chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := app.MakeEncodingConfig()
+	encodingConfig := app.MakeEncodingConfig(suite.App().GetChainCfg())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
 	t := suite.T()
 	denom := appContext.Chain.Config.BaseDenom
@@ -173,6 +174,9 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 	chaincfg, err := mcfg.GetChainConfig(chainId)
 	mcfg.SetGlobalChainConfig(chainId)
 
+	addrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
+	// valAddrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixValAddr)
+
 	// generate validator private/public key
 	privVal := mock.NewPV()
 	pubKey, err := privVal.GetPubKey()
@@ -192,8 +196,10 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
+	accstr, err := addrCodec.BytesToString(acc.GetAddress())
+
 	balance := banktypes.Balance{
-		Address: acc.GetAddress().String(),
+		Address: accstr,
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
@@ -278,11 +284,16 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 
+	valstr, err := suite.App().AddressCodec().BytesToString(valOperatorAddress)
+	if err != nil {
+		return err
+	}
+
 	peers := []string{}
 	if strings.Contains(currentState, "RAFT-FULL") {
-		peers = []string{fmt.Sprintf(`%s@localhost:8090`, valOperatorAddress.String())}
+		peers = []string{fmt.Sprintf(`%s@localhost:8090`, valstr)}
 	} else if strings.Contains(currentState, "-P2P") {
-		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valOperatorAddress.String())}
+		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valstr)}
 	}
 	err = networkkeeper.InitConsensusContract(
 		suite.App(),

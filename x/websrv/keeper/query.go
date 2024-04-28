@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	mcfg "mythos/v1/config"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/types"
 )
@@ -25,8 +26,12 @@ func (k *Keeper) ContractByRoute(c context.Context, req *types.QueryContractByRo
 		return nil, types.ErrEmptyRoute
 	}
 	contractAddress := k.GetRouteToContract(sdk.UnwrapSDKContext(c), req.Path)
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
 	return &types.QueryContractByRouteResponse{
-		ContractAddress: contractAddress.String(),
+		ContractAddress: contractAddressStr,
 	}, nil
 }
 

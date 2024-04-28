@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
+	address "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -70,8 +71,9 @@ func MultiChainTxExecuteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
-			msg, err := parseExecuteArgs(args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
+			msg, err := parseExecuteArgs(addrCodec, args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -88,7 +90,7 @@ func MultiChainTxExecuteCmd() *cobra.Command {
 	return cmd
 }
 
-func parseExecuteArgs(contractAddr string, execMsg string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgMultiChainWrap, error) {
+func parseExecuteArgs(addrCodec address.Codec, contractAddr string, execMsg string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgMultiChainWrap, error) {
 	amountStr, err := flags.GetString(flagAmount)
 	if err != nil {
 		return types.MsgMultiChainWrap{}, fmt.Errorf("amount: %s", err)
@@ -106,9 +108,13 @@ func parseExecuteArgs(contractAddr string, execMsg string, sender sdk.AccAddress
 	if err != nil {
 		return types.MsgMultiChainWrap{}, err
 	}
+	senderAddr, err := addrCodec.BytesToString(sender)
+	if err != nil {
+		return types.MsgMultiChainWrap{}, err
+	}
 
 	wasmxExecMsg := &wasmxtypes.MsgExecuteContract{
-		Sender:   sender.String(),
+		Sender:   senderAddr,
 		Contract: contractAddr,
 		Funds:    amount,
 		Msg:      msgbz,
@@ -120,7 +126,7 @@ func parseExecuteArgs(contractAddr string, execMsg string, sender sdk.AccAddress
 
 	return types.MsgMultiChainWrap{
 		MultiChainId: chainId,
-		Sender:       sender.String(),
+		Sender:       senderAddr,
 		Data:         wasmxExecAny,
 	}, nil
 }
@@ -147,7 +153,9 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 				return err
 			}
 
-			_, err = sdk.AccAddressFromBech32(args[0])
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+
+			_, err = addrCodec.StringToBytes(args[0])
 			if err != nil {
 				return err
 			}
@@ -166,7 +174,10 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("wrap query data %s", err)
 			}
-			sender := clientCtx.GetFromAddress().String()
+			sender, err := addrCodec.BytesToString(clientCtx.GetFromAddress())
+			if err != nil {
+				return fmt.Errorf("sender: %s", err)
+			}
 			if sender == "" {
 				sender = args[0]
 			}

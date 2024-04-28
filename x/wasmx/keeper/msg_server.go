@@ -123,10 +123,15 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 		return nil, err
 	}
 
+	addressAddr, err := m.AddressCodec().BytesToString(address)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
+
 	return &types.MsgDeployCodeResponse{
 		CodeId:   codeId,
 		Checksum: checksum,
-		Address:  address.String(),
+		Address:  addressAddr,
 	}, nil
 }
 
@@ -153,8 +158,13 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 		return nil, err
 	}
 
+	contractAddrStr, err := m.AddressCodec().BytesToString(contractAddr)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
+
 	return &types.MsgInstantiateContractResponse{
-		Address: contractAddr.String(),
+		Address: contractAddrStr,
 		Data:    data,
 	}, nil
 }
@@ -181,8 +191,13 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 		return nil, err
 	}
 
+	contractAddrStr, err := m.AddressCodec().BytesToString(contractAddr)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "contract")
+	}
+
 	return &types.MsgInstantiateContract2Response{
-		Address: contractAddr.String(),
+		Address: contractAddrStr,
 		Data:    data,
 	}, nil
 }
@@ -194,10 +209,15 @@ func (m msgServer) CompileContract(goCtx context.Context, msg *types.MsgCompileC
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	authority := m.Keeper.GetAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		sdk.EventTypeMessage,
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
+		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
 	))
 
 	err := m.Keeper.PinCode(ctx, msg.CodeId, "")
@@ -221,6 +241,9 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
+	}
+	if types.IsSystemAddress(contractAddr) {
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
 	// TODO make the dependencies unique - remove duplicates
@@ -258,6 +281,9 @@ func (m msgServer) ExecuteWithOriginContract(goCtx context.Context, msg *types.M
 	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
+	}
+	if types.IsSystemAddress(contractAddr) {
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -299,6 +325,13 @@ func (m msgServer) ExecuteDelegateContract(goCtx context.Context, msg *types.Msg
 		return nil, sdkerr.Wrap(err, "storage_contract")
 	}
 
+	if types.IsSystemAddress(codeContractAddr) {
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
+	}
+	if types.IsSystemAddress(storageContractAddr) {
+		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
+	}
+
 	if msg.Sender != msg.StorageContract {
 		return nil, sdkerr.Wrapf(types.ErrInvalidMsg, "execute delegate must be called from the storage contract: %s; it was called from: %s", msg.StorageContract, msg.Sender)
 	}
@@ -328,6 +361,10 @@ func (m msgServer) RegisterRole(goCtx context.Context, msg *types.MsgRegisterRol
 	authority := m.Keeper.GetAuthority()
 	if authority != msg.Authority {
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	}
+
+	if _, err := m.AddressCodec().StringToBytes(msg.ContractAddress); err != nil {
+		return nil, sdkerr.Wrap(err, "contract address")
 	}
 
 	err := m.Keeper.RegisterRoleHandler(ctx, msg.Role, msg.Label, msg.ContractAddress)

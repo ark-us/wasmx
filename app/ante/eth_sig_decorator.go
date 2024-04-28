@@ -6,6 +6,7 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
+	mcfg "mythos/v1/config"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -67,7 +68,11 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 			}
 			aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, sender)
 			if found {
-				msgEthTx.Sender = aliasAddr.String()
+				aliasAddrStr, err := esvd.wasmxKeeper.AddressCodec().BytesToString(aliasAddr)
+				if err != nil {
+					return ctx, errorsmod.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+				}
+				msgEthTx.Sender = aliasAddrStr
 			}
 			continue
 		}
@@ -82,8 +87,13 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 			return ctx, err
 		}
 
+		senderStr, err := esvd.wasmxKeeper.AddressCodec().BytesToString(sender)
+		if err != nil {
+			return ctx, errorsmod.Wrapf(err, "sender: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+		}
+
 		// set up the sender to the transaction field if not already
-		if msgEthTx.Sender != sender.String() {
+		if msgEthTx.Sender != senderStr {
 			return ctx, errorsmod.Wrapf(
 				errortypes.ErrUnauthorized,
 				"eth transaction signer does not match with Sender : %s",
@@ -93,7 +103,11 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 
 		aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, sender)
 		if found {
-			msgEthTx.Sender = aliasAddr.String()
+			aliasAddrStr, err := esvd.wasmxKeeper.AddressCodec().BytesToString(aliasAddr)
+			if err != nil {
+				return ctx, errorsmod.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+			}
+			msgEthTx.Sender = aliasAddrStr
 		}
 	}
 

@@ -20,7 +20,7 @@ func (k *Keeper) TransferCoins(parentCtx sdk.Context, fromAddr sdk.AccAddress, t
 	// 	return err
 	// }
 	// if k.BlockedAddr(toAddr) {
-	// 	return sdkerr.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr.String())
+	// 	return sdkerr.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr.String()) // TODO replace String()
 	// }
 
 	err := k.SendCoins(ctx, fromAddr, toAddr, amount)

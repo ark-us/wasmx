@@ -7,6 +7,7 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/precompiles"
 )
@@ -94,7 +95,12 @@ func (k *Keeper) ActivateSystemContract(
 			return sdkerr.Wrap(err, "instantiate system contract: "+contract.Label)
 		}
 	}
-	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddress.String(), "hex_address", contract.Address, "code_id", codeID)
+	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddressStr, "hex_address", contract.Address, "code_id", codeID)
 	return nil
 }
 

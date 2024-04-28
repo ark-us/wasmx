@@ -250,25 +250,25 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 		Symbol:   "TKN",
 		Decimals: 18,
 		InitialBalances: []Cw20Coin{
-			{Address: sender.Address.String(), Amount: "10000000000000000"},
+			{Address: appA.MustAccAddressToString(sender.Address), Amount: "10000000000000000"},
 		},
 	}
 	calld, err := json.Marshal(instantiateMsg)
 	s.Require().NoError(err)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: calld}, "cwSimpleContract", nil)
 
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(sender.Address)))
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"10000000000000000"}`, string(qres))
 
-	data := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, recipient.Address.String(), "2000000000000000"))
+	data := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, appA.MustAccAddressToString(recipient.Address), "2000000000000000"))
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, recipient.Address.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(recipient.Address)))
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"2000000000000000"}`, string(qres))
 
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(sender.Address)))
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"8000000000000000"}`, string(qres))
 }
@@ -299,8 +299,8 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 		Symbol:   "TKN",
 		Decimals: 18,
 		InitialBalances: []Cw20Coin{
-			{Address: deployer.Address.String(), Amount: "10000000000000000"},
-			{Address: sender.Address.String(), Amount: "10000000000000000"},
+			{Address: appA.MustAccAddressToString(deployer.Address), Amount: "10000000000000000"},
+			{Address: appA.MustAccAddressToString(sender.Address), Amount: "10000000000000000"},
 		},
 	}
 	calld, err := json.Marshal(instantiateMsg)
@@ -308,11 +308,11 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	contractAddress := appA.InstantiateCode(deployer, codeId, types.WasmxExecutionMessage{Data: calld}, "cwSimpleContract", nil)
 	contractEvmAddress := types.EvmAddressFromAcc(contractAddress)
 
-	databz := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, recipient.Address.String(), "2000000000000000"))
+	databz := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, appA.MustAccAddressToString(recipient.Address), "2000000000000000"))
 
 	appA.SendEthTx(priv, &contractEvmAddress, databz, nil, uint64(1000000), big.NewInt(10000), nil)
 
-	databz = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, sender.Address.String()))
+	databz = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(sender.Address)))
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: databz}, nil, nil)
 	suite.Require().Equal(`{"balance":"8000000000000000"}`, string(qres))
 }
@@ -343,7 +343,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	hashHex := hex.EncodeToString(hashBz)
 	coins := sdk.NewCoins(sdk.NewCoin(appA.Chain.Config.BaseDenom, sdkmath.NewInt(10000000)))
 
-	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
+	data := fmt.Sprintf(`{"create":{"id":"swap1","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, appA.MustAccAddressToString(recipient.Address))
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
 	balanceContract, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), contractAddress, appA.Chain.Config.BaseDenom)
@@ -370,13 +370,13 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{}}`)}, nil, nil)
 	suite.Require().Equal(`{"swaps":[]}`, string(qres))
 
-	data = fmt.Sprintf(`{"create":{"id":"swap2","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
+	data = fmt.Sprintf(`{"create":{"id":"swap2","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, appA.MustAccAddressToString(recipient.Address))
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{}}`)}, nil, nil)
 	suite.Require().Equal(`{"swaps":["swap2"]}`, string(qres))
 
-	data = fmt.Sprintf(`{"create":{"id":"swap3","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, recipient.Address.String())
+	data = fmt.Sprintf(`{"create":{"id":"swap3","hash":"%s","recipient":"%s","expires":{"at_height":10000}}}`, hashHex, appA.MustAccAddressToString(recipient.Address))
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(data)}, coins, nil)
 
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"list":{"start_after":"swap1","limit":2}}`)}, nil, nil)
@@ -412,7 +412,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	msgs[0] = cw8types.CosmosMsg{
 		Wasm: &cw8types.WasmMsg{
 			Execute: &cw8types.ExecuteMsg{
-				ContractAddr: contractAddressCounter.String(),
+				ContractAddr: appA.MustAccAddressToString(contractAddressCounter),
 				Msg:          msgbz,
 				Funds:        make(cw8types.Coins, 0),
 			},
@@ -440,7 +440,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 		Msg: cw8types.CosmosMsg{
 			Wasm: &cw8types.WasmMsg{
 				Execute: &cw8types.ExecuteMsg{
-					ContractAddr: contractAddressCounter.String(),
+					ContractAddr: appA.MustAccAddressToString(contractAddressCounter),
 					Msg:          msgbz,
 					Funds:        make(cw8types.Coins, 0),
 				},
@@ -461,7 +461,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 		ID: 2,
 		Result: cw8types.SubMsgResult{
 			Ok: &cw8types.SubMsgResponse{
-				Events: []cw8types.Event{{Type: "execute", Attributes: cw8types.EventAttributes{cw8types.EventAttribute{Key: "contract_address", Value: contractAddressCounter.String()}}}},
+				Events: []cw8types.Event{{Type: "execute", Attributes: cw8types.EventAttributes{cw8types.EventAttribute{Key: "contract_address", Value: appA.MustAccAddressToString(contractAddressCounter)}}}},
 				Data:   []byte{10, 8, 0, 0, 0, 0, 0, 0, 0, 4},
 			},
 		},
@@ -476,7 +476,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 			Request: cw8types.QueryRequest{
 				Bank: &cw8types.BankQuery{
 					Balance: &cw8types.BalanceQuery{
-						Address: contractAddress.String(),
+						Address: appA.MustAccAddressToString(contractAddress),
 						Denom:   appA.Chain.Config.BaseDenom,
 					},
 				},
@@ -502,7 +502,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 			Request: cw8types.QueryRequest{
 				Wasm: &cw8types.WasmQuery{
 					Smart: &cw8types.SmartQuery{
-						ContractAddr: contractAddressCounter.String(),
+						ContractAddr: appA.MustAccAddressToString(contractAddressCounter),
 						Msg:          queryWasmxBz,
 					},
 				},
@@ -520,7 +520,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	// test querying another contract
 	query2 := RawQuery{
 		Raw: RawQueryInner{
-			Contract: contractAddressCounter.String(),
+			Contract: appA.MustAccAddressToString(contractAddressCounter),
 			Key:      []byte("counter"),
 		},
 	}

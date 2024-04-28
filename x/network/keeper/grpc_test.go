@@ -52,9 +52,9 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	// defer conn1.Close()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusBech32 := consensusContract.String()
+	consensusBech32 := appA.MustAccAddressToString(consensusContract)
 
-	validatorAddr := sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()).String()
+	validatorAddr := appA.MustAccAddressToString(sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()))
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","peers":["%s@0.0.0.0:8090"]}`, validatorAddr))
 
 	vals, err := suite.App().StakingKeeper.GetAllValidators(appA.Context())
@@ -167,8 +167,8 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	msgbz, err := json.Marshal(internalmsg)
 	suite.Require().NoError(err)
 	msg := &wasmxtypes.MsgExecuteContract{
-		Sender:       sender.Address.String(),
-		Contract:     contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Contract:     appA.MustAccAddressToString(contractAddress),
 		Msg:          msgbz,
 		Funds:        nil,
 		Dependencies: nil,
@@ -190,8 +190,8 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 
 	// send a second tx!
 	msg = &wasmxtypes.MsgExecuteContract{
-		Sender:       sender2.Address.String(),
-		Contract:     contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender2.Address),
+		Contract:     appA.MustAccAddressToString(contractAddress),
 		Msg:          msgbz,
 		Funds:        nil,
 		Dependencies: nil,
@@ -250,8 +250,8 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	consensusBech32 := consensusContract.String()
-	validatorAddr := sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()).String()
+	consensusBech32 := appA.MustAccAddressToString(consensusContract)
+	validatorAddr := appA.MustAccAddressToString(sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()))
 
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","peers":["%s@0.0.0.0:8090"]}`, validatorAddr))
 
@@ -274,7 +274,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
 		Role:            wasmxtypes.ROLE_CONSENSUS,
 		Label:           "consensus_raft_0.0.2",
-		ContractAddress: newConsensus.String(),
+		ContractAddress: appA.MustAccAddressToString(newConsensus),
 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
 		Title:           "title",
 		Description:     "description",
@@ -285,7 +285,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
 	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
-		Contract: newConsensus.String(),
+		Contract: appA.MustAccAddressToString(newConsensus),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -331,8 +331,8 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_TENDERMINT)
-	consensusBech32 := consensusContract.String()
-	validatorAddr := sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()).String()
+	consensusBech32 := appA.MustAccAddressToString(consensusContract)
+	validatorAddr := appA.MustAccAddressToString(sdk.AccAddress(suite.Chain().Vals.Validators[0].PubKey.Bytes()))
 
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","peers":["%s@0.0.0.0:8090"]}`, validatorAddr))
 
@@ -355,7 +355,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
 		Role:            wasmxtypes.ROLE_CONSENSUS,
 		Label:           "consensus_tendermint_0.0.2",
-		ContractAddress: newConsensus.String(),
+		ContractAddress: appA.MustAccAddressToString(newConsensus),
 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
 		Title:           "title",
 		Description:     "description",
@@ -366,7 +366,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
 	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
-		Contract: newConsensus.String(),
+		Contract: appA.MustAccAddressToString(newConsensus),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -410,7 +410,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	raftContractBech32 := raftContract.String()
+	raftContractBech32 := appA.MustAccAddressToString(raftContract)
 
 	var msg1 []byte
 	var err error
@@ -434,22 +434,22 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	newlabel := wasmxtypes.CONSENSUS_TENDERMINT + "2"
 	title := "Register consensus"
 	description := "Register consensus"
-	authority := authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE).String()
-	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
+	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: appA.MustAccAddressToString(newConsensus)}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
+	s.Require().Equal(appA.MustAccAddressToString(newConsensus), role.ContractAddress)
 	s.Require().Equal(newlabel, role.Label)
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
 	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
-	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
-	fmt.Println("---state---", newConsensus.String(), stateKey, state)
+	state := suite.GetContextValue(appA.Context(), stateKey, appA.MustAccAddressToString(newConsensus))
+	fmt.Println("---state---", appA.MustAccAddressToString(newConsensus), stateKey, state)
 
 	// execute next block
 
@@ -463,7 +463,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
 		Role:            wasmxtypes.ROLE_CONSENSUS,
 		Label:           "consensus_tendermint_0.0.1",
-		ContractAddress: tendermintContract.String(),
+		ContractAddress: appA.MustAccAddressToString(tendermintContract),
 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
 		Title:           "title",
 		Description:     "description",
@@ -471,10 +471,10 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	suite.Require().NoError(err)
 
 	// call setup()
-	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, appA.MustAccAddressToString(raftContract)))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
-		Contract: tendermintContract.String(),
+		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -482,8 +482,8 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	// Check each simulated node has the correct context:
 	msg1 = []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   tendermintContract.String(),
-		Contract: tendermintContract.String(),
+		Sender:   appA.MustAccAddressToString(tendermintContract),
+		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -492,8 +492,8 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   tendermintContract.String(),
-		Contract: tendermintContract.String(),
+		Sender:   appA.MustAccAddressToString(tendermintContract),
+		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -501,18 +501,18 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	suite.Require().Equal(string(qrespbz), `0`)
 
 	// call start()
-	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
+	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, appA.MustAccAddressToString(raftContract)))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
-		Contract: tendermintContract.String(),
+		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
 
 	msg1 = []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
 	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
-		Sender:   tendermintContract.String(),
-		Contract: tendermintContract.String(),
+		Sender:   appA.MustAccAddressToString(tendermintContract),
+		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -535,11 +535,11 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
-	raftContractBech32 := raftContract.String()
+	raftContractBech32 := appA.MustAccAddressToString(raftContract)
 
 	// storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
 	// call start() on RAFT consensus
-	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, raftContract.String()))
+	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, appA.MustAccAddressToString(raftContract)))
 	_, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: raftContractBech32,
@@ -566,21 +566,21 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	newlabel := wasmxtypes.CONSENSUS_AVA_SNOWMAN + "2"
 	title := "Register consensus"
 	description := "Register consensus"
-	proposal := &wasmxtypes.MsgRegisterRole{Authority: appA.App.WasmxKeeper.GetAuthority(), Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: appA.App.WasmxKeeper.GetAuthority(), Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: appA.MustAccAddressToString(newConsensus)}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
+	s.Require().Equal(appA.MustAccAddressToString(newConsensus), role.ContractAddress)
 	s.Require().Equal(newlabel, role.Label)
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
 	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
-	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
-	fmt.Println("---state---", newConsensus.String(), stateKey, state)
+	state := suite.GetContextValue(appA.Context(), stateKey, appA.MustAccAddressToString(newConsensus))
+	fmt.Println("---state---", appA.MustAccAddressToString(newConsensus), stateKey, state)
 
 	time.Sleep(time.Second * 5)
 
@@ -590,8 +590,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	msgbz, err := json.Marshal(internalmsg)
 	suite.Require().NoError(err)
 	msg := &wasmxtypes.MsgExecuteContract{
-		Sender:       sender.Address.String(),
-		Contract:     contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Contract:     appA.MustAccAddressToString(contractAddress),
 		Msg:          msgbz,
 		Funds:        nil,
 		Dependencies: nil,
@@ -796,8 +796,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	msgbz, err := json.Marshal(internalmsg)
 // 	suite.Require().NoError(err)
 // 	msg := &wasmxtypes.MsgExecuteContract{
-// 		Sender:       sender.Address.String(),
-// 		Contract:     contractAddress.String(),
+// 		Sender:       appA.MustAccAddressToString(sender.Address),
+// 		Contract:     appA.MustAccAddressToString(contractAddress),
 // 		Msg:          msgbz,
 // 		Funds:        nil,
 // 		Dependencies: nil,
@@ -816,8 +816,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 
 // 	// send a second tx!
 // 	msg = &wasmxtypes.MsgExecuteContract{
-// 		Sender:       sender2.Address.String(),
-// 		Contract:     contractAddress.String(),
+// 		Sender:       appA.MustAccAddressToString(sender2.Address),
+// 		Contract:     appA.MustAccAddressToString(contractAddress),
 // 		Msg:          msgbz,
 // 		Funds:        nil,
 // 		Dependencies: nil,
@@ -907,8 +907,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	msgbz, err := json.Marshal(internalmsg)
 // 	suite.Require().NoError(err)
 // 	msg := &wasmxtypes.MsgExecuteContract{
-// 		Sender:       sender.Address.String(),
-// 		Contract:     contractAddress.String(),
+// 		Sender:       appA.MustAccAddressToString(sender.Address),
+// 		Contract:     appA.MustAccAddressToString(contractAddress),
 // 		Msg:          msgbz,
 // 		Funds:        nil,
 // 		Dependencies: nil,

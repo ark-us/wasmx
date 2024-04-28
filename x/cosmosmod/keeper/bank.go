@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	mcfg "mythos/v1/config"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -33,19 +35,25 @@ func (k KeeperBank) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAdd
 		return err
 	}
 
-	// bech32 encoding is expensive! Only do it once for fromAddr
-	fromAddrString := fromAddr.String()
+	fromAddrString, err := k.AddressCodec().BytesToString(fromAddr)
+	if err != nil {
+		return errorsmod.Wrapf(err, "from: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+	toAddrString, err := k.AddressCodec().BytesToString(toAddr)
+	if err != nil {
+		return errorsmod.Wrapf(err, "to: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	sdkCtx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
 			types.EventTypeTransfer,
-			sdk.NewAttribute(types.AttributeKeyRecipient, toAddr.String()),
+			sdk.NewAttribute(types.AttributeKeyRecipient, toAddrString),
 			sdk.NewAttribute(types.AttributeKeySender, fromAddrString),
 			sdk.NewAttribute(sdk.AttributeKeyAmount, amt.String()),
 		),
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
-			sdk.NewAttribute(types.AttributeKeySender, fromAddr.String()),
+			sdk.NewAttribute(types.AttributeKeySender, fromAddrString),
 		),
 	})
 	return nil
@@ -56,8 +64,12 @@ func (k KeeperBank) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAdd
 func (k KeeperBank) MintCoins(goCtx context.Context, moduleName string, amounts sdk.Coins) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.Logger(ctx).Debug("MintCoins", moduleName, amounts)
+	bankAddrString, err := k.AddressCodec().BytesToString(authtypes.NewModuleAddress(moduleName))
+	if err != nil {
+		return errorsmod.Wrapf(err, "bank: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
 	msg := &banktypes.Balance{
-		Address: authtypes.NewModuleAddress(moduleName).String(),
+		Address: bankAddrString,
 		Coins:   amounts,
 	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
@@ -150,7 +162,7 @@ func (k KeeperBank) SendCoinsFromAccountToModule(
 // It will panic if the module account does not exist or is unauthorized.
 func (k KeeperBank) BurnCoins(goCtx context.Context, moduleName string, amounts sdk.Coins) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	// authtypes.NewModuleAddress(moduleName).String()
+	// authtypes.NewModuleAddress(moduleName)
 	k.Logger(ctx).Error("BurnCoins not implemented")
 	return nil
 }
@@ -198,7 +210,8 @@ func (k KeeperBank) LockedCoins(goCtx context.Context, addr sdk.AccAddress) sdk.
 // receiving funds.
 func (k KeeperBank) BlockedAddr(addr sdk.AccAddress) bool {
 	fmt.Println("BlockedAddr not implemented")
-	// return k.blockedAddrs[addr.String()]
+	// addrString, err := k.AddressCodec().BytesToString(addr)
+	// return k.blockedAddrs[addrString]
 	// TODO
 	return false
 }

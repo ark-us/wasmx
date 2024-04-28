@@ -24,8 +24,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	tmrand "github.com/cometbft/cometbft/libs/rand"
-
 	app "mythos/v1/app"
 	config "mythos/v1/config"
 	networkkeeper "mythos/v1/x/network/keeper"
@@ -59,7 +57,12 @@ func New(t *testing.T, configs ...network.Config) *network.Network {
 // DefaultConfig will initialize config for the network with custom application,
 // genesis and single validator. All other parameters are inherited from cosmos-sdk/testutil/network.DefaultConfig
 func DefaultConfig() network.Config {
-	encoding := app.MakeEncodingConfig()
+	chainId := config.MYTHOS_CHAIN_ID_TEST
+	chainCfg, err := config.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	encoding := app.MakeEncodingConfig(chainCfg)
 	logger := log.NewNopLogger()
 
 	appOpts := app.DefaultAppOptions{}
@@ -99,7 +102,7 @@ func DefaultConfig() network.Config {
 		},
 		GenesisState:    tempApp.BasicModuleManager.DefaultGenesis(encoding.Marshaler),
 		TimeoutCommit:   2 * time.Second,
-		ChainID:         "chain-" + tmrand.NewRand().Str(6),
+		ChainID:         chainId,
 		NumValidators:   1,
 		BondDenom:       config.BondBaseDenom,
 		MinGasPrices:    fmt.Sprintf("1%s", config.BaseDenom),

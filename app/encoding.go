@@ -5,23 +5,23 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/gogoproto/proto"
 
 	"mythos/v1/app/params"
+	"mythos/v1/config"
 )
 
-// makeEncodingConfig creates an EncodingConfig for an amino based test configuration.
-func makeEncodingConfig() params.EncodingConfig {
+// MakeEncodingConfig creates an EncodingConfig for an amino based test configuration.
+func MakeEncodingConfig(cfg *config.ChainConfig) params.EncodingConfig {
 	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
 		ProtoFiles: proto.HybridResolver,
 		SigningOptions: signing.Options{
 			AddressCodec: address.Bech32Codec{
-				Bech32Prefix: sdk.GetConfig().GetBech32AccountAddrPrefix(),
+				Bech32Prefix: cfg.Bech32PrefixAccAddr,
 			},
 			ValidatorAddressCodec: address.Bech32Codec{
-				Bech32Prefix: sdk.GetConfig().GetBech32ValidatorAddrPrefix(),
+				Bech32Prefix: cfg.Bech32PrefixValAddr,
 			},
 		},
 	})
@@ -35,9 +35,4 @@ func makeEncodingConfig() params.EncodingConfig {
 		TxConfig:          txCfg,
 		Amino:             amino,
 	}
-}
-
-// MakeEncodingConfig creates an EncodingConfig for testing
-func MakeEncodingConfig() params.EncodingConfig {
-	return makeEncodingConfig()
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -50,7 +51,11 @@ func (k *Keeper) GetAccount(ctx sdk.Context, addr sdk.AccAddress) sdk.AccountI {
 	if err != nil {
 		panic(err)
 	}
-	msgbz := []byte(fmt.Sprintf(`{"GetAccount":{"address":"%s"}}`, addr.String()))
+	addrstr, err := k.AddressCodec().BytesToString(addr)
+	if err != nil {
+		panic(err)
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetAccount":{"address":"%s"}}`, addrstr))
 	execmsg, err := json.Marshal(types.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		return nil
@@ -91,8 +96,11 @@ func (k *Keeper) NewAccountWithAddress(ctx sdk.Context, addr sdk.AccAddress) sdk
 	if err != nil {
 		panic(err)
 	}
-
-	acc := authtypes.BaseAccount{Address: addr.String()}
+	addrstr, err := k.AddressCodec().BytesToString(addr)
+	if err != nil {
+		panic(err)
+	}
+	acc := authtypes.BaseAccount{Address: addrstr}
 	accbz, err := k.cdc.MarshalJSON(&acc)
 	if err != nil {
 		panic(err) // TODO eventually catch this
@@ -126,4 +134,8 @@ func NewAccountKeeperVerifySig(keeper *Keeper) verifysig.AccountKeeper {
 func (ak AccountKeeperVerifySig) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.AccountI {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	return ak.k.GetAccount(ctx, addr)
+}
+
+func (ak AccountKeeperVerifySig) AddressCodec() address.Codec {
+	return ak.k.AddressCodec()
 }

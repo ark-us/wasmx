@@ -22,7 +22,10 @@ func (k *Keeper) RegisterRoleHandler(
 	prevContractBech32 := ""
 	prevContract, found := k.GetContractAddressByRole(ctx, role)
 	if found {
-		prevContractBech32 = prevContract.String()
+		prevContractBech32, err = k.AddressCodec().BytesToString(prevContract)
+		if err != nil {
+			return sdkerr.Wrap(err, "prevcontract address")
+		}
 	}
 
 	// inherit storage type from previous contract
@@ -34,11 +37,12 @@ func (k *Keeper) RegisterRoleHandler(
 	if contractInfo == nil {
 		return fmt.Errorf("proposed contract info not found for role %s", contractAddressBech32)
 	}
+
 	if contractInfo.StorageType != prevContractInfo.StorageType {
-		k.Logger(ctx).Info("migrating contract storage...", "address", contractAddress.String(), "source storage type", contractInfo.StorageType, "target storage type", prevContractInfo.StorageType)
+		k.Logger(ctx).Info("migrating contract storage...", "address", contractAddressBech32, "source storage type", contractInfo.StorageType, "target storage type", prevContractInfo.StorageType)
 		k.MigrateContractStateByStorageType(ctx, contractAddress, contractInfo.StorageType, prevContractInfo.StorageType)
 		contractInfo.StorageType = prevContractInfo.StorageType
-		k.Logger(ctx).Info("contract storage migrated", "address", contractAddress.String())
+		k.Logger(ctx).Info("contract storage migrated", "address", contractAddressBech32)
 	}
 	k.StoreContractInfo(ctx, contractAddress, contractInfo)
 	k.RegisterRole(ctx, role, label, contractAddress)

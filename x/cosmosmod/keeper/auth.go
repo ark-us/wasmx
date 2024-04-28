@@ -11,6 +11,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/cosmosmod/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -54,7 +55,11 @@ func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool 
 	if err != nil {
 		panic(err) // TODO catch this
 	}
-	msgbz := []byte(fmt.Sprintf(`{"HasAccount":{"address":"%s"}}`, addr.String()))
+	addrstr, err := k.AddressCodec().BytesToString(addr)
+	if err != nil {
+		panic(fmt.Errorf("address: %s", mcfg.ERRORMSG_ACC_TOSTRING))
+	}
+	msgbz := []byte(fmt.Sprintf(`{"HasAccount":{"address":"%s"}}`, addrstr))
 	execmsg, err := json.Marshal(wasmxtypes.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		panic(err)
@@ -83,7 +88,11 @@ func (k KeeperAuth) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.A
 	if err != nil {
 		panic(err) // TODO catch this
 	}
-	msgbz := []byte(fmt.Sprintf(`{"GetAccount":{"address":"%s"}}`, addr.String()))
+	addrstr, err := k.AddressCodec().BytesToString(addr)
+	if err != nil {
+		panic(fmt.Errorf("address: %s", mcfg.ERRORMSG_ACC_TOSTRING))
+	}
+	msgbz := []byte(fmt.Sprintf(`{"GetAccount":{"address":"%s"}}`, addrstr))
 	execmsg, err := json.Marshal(wasmxtypes.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		panic(err)
@@ -162,8 +171,11 @@ func (k KeeperAuth) NewAccountWithAddress(goCtx context.Context, addr sdk.AccAdd
 	if err != nil {
 		panic(err)
 	}
-
-	acc := authtypes.BaseAccount{Address: addr.String()}
+	addrstr, err := k.AddressCodec().BytesToString(addr)
+	if err != nil {
+		panic(fmt.Errorf("address: %s", mcfg.ERRORMSG_ACC_TOSTRING))
+	}
+	acc := authtypes.BaseAccount{Address: addrstr}
 	accbz, err := k.cdc.MarshalJSON(&acc)
 	if err != nil {
 		panic(err) // TODO eventually catch this

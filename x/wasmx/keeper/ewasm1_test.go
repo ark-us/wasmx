@@ -101,9 +101,9 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	executeMsg := []byte(`{"data": "0x` + setHex + `0000000000000000000000000000000000000000000000000000000000000006"}`)
 
 	executeCodeMsg := &types.MsgExecuteWithOriginContract{
-		Origin:   sender.Address.String(),
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
+		Origin:   appA.MustAccAddressToString(sender.Address),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      executeMsg,
 		Funds:    sdk.Coins{},
 	}

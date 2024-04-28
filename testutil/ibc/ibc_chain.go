@@ -9,6 +9,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -62,8 +63,13 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
+	chainCfg, err := mcfg.GetChainConfig(chainID)
+	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	addrStr, err := addrCodec.BytesToString(acc.GetAddress())
+	require.NoError(t, err)
+
 	balance := banktypes.Balance{
-		Address: acc.GetAddress().String(),
+		Address: addrStr,
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 

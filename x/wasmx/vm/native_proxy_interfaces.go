@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"strings"
 
+	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -27,7 +28,8 @@ var AddressElem = common.Address{}
 var AddressType = reflect.TypeOf(AddressElem)
 
 type UnpackedArgs struct {
-	Args map[string]interface{}
+	Args      map[string]interface{}
+	addrCodec address.Codec
 	// GetAlias func(addr sdk.AccAddress) sdk.AccAddress
 }
 
@@ -56,7 +58,11 @@ func (b UnpackedArgs) MarshalJSON() ([]byte, error) {
 			// TODO
 			// account := b.GetAlias(sdk.AccAddress(addr.Bytes()))
 			account := sdk.AccAddress(addr.Bytes())
-			val += `"` + account.String() + `"`
+			accountstr, err := b.addrCodec.BytesToString(account)
+			if err != nil {
+				return nil, err
+			}
+			val += `"` + accountstr + `"`
 		default:
 			val += string(v)
 		}
@@ -104,6 +110,7 @@ type ProxyInterfacesEvmToJson struct {
 func ProxyInterfaces(context *Context, input []byte) ([]byte, error) {
 	sig := input[0:4]
 	calld := input[4:]
+	addrCodec := context.CosmosHandler.AddressCodec()
 
 	method, err := ProxyInterfacesAbi.MethodById(sig)
 	if err != nil {
@@ -111,18 +118,18 @@ func ProxyInterfaces(context *Context, input []byte) ([]byte, error) {
 	}
 	switch method.Name {
 	case "EvmToJson":
-		return EvmToJson(method, context, calld)
+		return EvmToJson(addrCodec, method, context, calld)
 	case "JsonToEvm":
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "not implemented")
 	case "EvmToJsonCall":
-		return EvmToJsonCall(method, context, calld)
+		return EvmToJsonCall(addrCodec, method, context, calld)
 	case "JsonToEvmCall":
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "not implemented")
 	}
 	return nil, sdkerr.Wrapf(sdkerr.Error{}, "invalid method")
 }
 
-func EvmToJsonCall(method *aabi.Method, context *Context, calld []byte) ([]byte, error) {
+func EvmToJsonCall(addrCodec address.Codec, method *aabi.Method, context *Context, calld []byte) ([]byte, error) {
 	var data ProxyInterfacesEvmToJson
 	unpacked, err := method.Inputs.Unpack(calld)
 	if err != nil {
@@ -144,7 +151,7 @@ func EvmToJsonCall(method *aabi.Method, context *Context, calld []byte) ([]byte,
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "method not found")
 	}
 
-	input, err := evmToJsonInner(fabi, contractAddress, data.MethodName, data.Input)
+	input, err := evmToJsonInner(addrCodec, fabi, contractAddress, data.MethodName, data.Input)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +197,7 @@ func EvmToJsonCall(method *aabi.Method, context *Context, calld []byte) ([]byte,
 	return response, nil
 }
 
-func EvmToJson(method *aabi.Method, context *Context, calld []byte) ([]byte, error) {
+func EvmToJson(addrCodec address.Codec, method *aabi.Method, context *Context, calld []byte) ([]byte, error) {
 	var data ProxyInterfacesEvmToJson
 	unpacked, err := method.Inputs.Unpack(calld)
 	if err != nil {
@@ -212,17 +219,17 @@ func EvmToJson(method *aabi.Method, context *Context, calld []byte) ([]byte, err
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "method not found")
 	}
 
-	return evmToJsonInner(fabi, contractAddress, data.MethodName, data.Input)
+	return evmToJsonInner(addrCodec, fabi, contractAddress, data.MethodName, data.Input)
 }
 
-func evmToJsonInner(fabi aabi.Method, contractAddress sdk.AccAddress, methodName string, input []byte) ([]byte, error) {
+func evmToJsonInner(addrCodec address.Codec, fabi aabi.Method, contractAddress sdk.AccAddress, methodName string, input []byte) ([]byte, error) {
 	v := map[string]interface{}{}
 	err := fabi.Inputs.UnpackIntoMap(v, input)
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "cannot unpack input")
 	}
 
-	vWrap := UnpackedArgs{Args: v}
+	vWrap := UnpackedArgs{Args: v, addrCodec: addrCodec}
 	vstr, err := json.Marshal(vWrap)
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "cannot marshal")

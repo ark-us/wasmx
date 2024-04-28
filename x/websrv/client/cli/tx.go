@@ -82,22 +82,22 @@ func NewRegisterRouteProposalCmd() *cobra.Command {
 				return err
 			}
 
-			// authority, _ := cmd.Flags().GetString(FlagAuthority)
-			// if authority != "" {
-			// 	if _, err = ac.StringToBytes(authority); err != nil {
-			// 		return fmt.Errorf("invalid authority address: %w", err)
-			// 	}
-			// } else {
-			// 	authority = sdk.AccAddress(address.Module("gov")).String()
-			// }
-
 			path := args[0]
 			contractAddress := args[1]
 			from := clientCtx.GetFromAddress()
-			authority := sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)).String()
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
+			if err != nil {
+				return err
+			}
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			content := &types.MsgRegisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
 			if err != nil {
 				return err
 			}
@@ -160,10 +160,20 @@ func NewDeregisterRouteProposalCmd() *cobra.Command {
 			path := args[0]
 			contractAddress := args[1]
 			from := clientCtx.GetFromAddress()
-			authority := sdk.AccAddress(address.Module("gov")).String()
+
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
+			if err != nil {
+				return err
+			}
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			content := &types.MsgDeregisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
 			if err != nil {
 				return err
 			}
@@ -205,8 +215,15 @@ func NewRegisterOauthClientCmd() *cobra.Command {
 
 			domain := args[0]
 			from := clientCtx.GetFromAddress()
+
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgRegisterOAuthClient{
-				Owner:  from.String(),
+				Owner:  fromstr,
 				Domain: domain,
 			}
 
@@ -243,8 +260,15 @@ func NewEditOauthClientCmd() *cobra.Command {
 			}
 			domain := args[1]
 			from := clientCtx.GetFromAddress()
+
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgEditOAuthClient{
-				Owner:    from.String(),
+				Owner:    fromstr,
 				ClientId: uint64(clientId),
 				Domain:   domain,
 			}
@@ -281,8 +305,15 @@ func NewDeregisterOauthClientCmd() *cobra.Command {
 				return err
 			}
 			from := clientCtx.GetFromAddress()
+
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			msg := &types.MsgDeregisterOAuthClient{
-				Owner:    from.String(),
+				Owner:    fromstr,
 				ClientId: uint64(clientId),
 			}
 

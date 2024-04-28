@@ -26,8 +26,13 @@ func (b *Backend) GetCode(_address common.Address, blockNrOrHash rpctypes.BlockN
 	}
 
 	address := wasmxtypes.AccAddressFromEvm(_address)
+	addressstr, err := b.addressCodec.BytesToString(address)
+	if err != nil {
+		return nil, err
+	}
+
 	req := &wasmxtypes.QueryContractInfoRequest{
-		Address: address.String(),
+		Address: addressstr,
 	}
 
 	res, err := b.queryClient.ContractInfo(rpctypes.ContextWithHeight(blockNum.Int64()), req)
@@ -64,8 +69,12 @@ func (b *Backend) GetStorageAt(_address common.Address, key string, blockNrOrHas
 	}
 
 	address := wasmxtypes.AccAddressFromEvm(_address)
+	addressstr, err := b.addressCodec.BytesToString(address)
+	if err != nil {
+		return nil, err
+	}
 	req := &wasmxtypes.QueryRawContractStateRequest{
-		Address:   address.String(),
+		Address:   addressstr,
 		QueryData: keybz,
 	}
 
@@ -86,8 +95,12 @@ func (b *Backend) GetBalance(_address common.Address, blockNrOrHash rpctypes.Blo
 	}
 
 	address := wasmxtypes.AccAddressFromEvm(_address)
+	addressstr, err := b.addressCodec.BytesToString(address)
+	if err != nil {
+		return nil, err
+	}
 	req := &banktypes.QueryBalanceRequest{
-		Address: address.String(),
+		Address: addressstr,
 		// TODO
 		Denom: config.BaseDenom,
 	}

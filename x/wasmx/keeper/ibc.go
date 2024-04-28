@@ -32,7 +32,7 @@ package keeper
 // const portIDPrefix = "wasm."
 
 // func PortIDForContract(addr sdk.AccAddress) string {
-// 	return portIDPrefix + addr.String()
+// 	return portIDPrefix + addr.String() // TODO stringify with codec
 // }
 
 // func ContractFromPortID(portID string) (sdk.AccAddress, error) {

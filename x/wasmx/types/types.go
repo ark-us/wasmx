@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -41,17 +42,24 @@ func (c CodeInfo) ValidateBasic() error {
 	if len(c.CodeHash) == 0 {
 		return sdkerr.Wrap(ErrEmpty, "code hash")
 	}
-	if _, err := sdk.AccAddressFromBech32(c.Creator); err != nil {
+	return nil
+}
+
+func (c CodeInfo) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := c.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(c.Creator); err != nil {
 		return sdkerr.Wrap(err, "creator")
 	}
 	return nil
 }
 
 // NewCodeInfo fills a new CodeInfo struct
-func NewCodeInfo(codeHash []byte, creator sdk.AccAddress, deps []string, metadata CodeMetadata) CodeInfo {
+func NewCodeInfo(codeHash []byte, creatorBech32 string, deps []string, metadata CodeMetadata) CodeInfo {
 	return CodeInfo{
 		CodeHash: codeHash,
-		Creator:  creator.String(),
+		Creator:  creatorBech32,
 		Deps:     deps,
 		Metadata: metadata,
 	}
@@ -121,18 +129,18 @@ func NewInfo(origin sdk.AccAddress, creator sdk.AccAddress, deposit sdk.Coins) M
 }
 
 // NewContractInfo creates a new instance of a given WASM contract info
-func NewContractInfo(CodeId uint64, creator sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, label string) ContractInfo {
+func NewContractInfo(CodeId uint64, creatorBech32 string, provenanceBech32 string, initMsg []byte, label string) ContractInfo {
 	info := ContractInfo{
 		CodeId:      CodeId,
-		Creator:     creator.String(),
+		Creator:     creatorBech32,
 		Label:       label,
 		InitMessage: initMsg,
 		StorageType: ContractStorageType_CoreConsensus,
 		// Created: createdAt,
 		// TODO tx hash
 	}
-	if provenance != nil {
-		info.Provenance = provenance.String()
+	if provenanceBech32 != "" {
+		info.Provenance = provenanceBech32
 	}
 	return info
 }
@@ -149,14 +157,21 @@ func (c *ContractInfo) ValidateBasic() error {
 	if c.CodeId == 0 {
 		return sdkerr.Wrap(ErrEmpty, "code id")
 	}
-	if _, err := sdk.AccAddressFromBech32(c.Creator); err != nil {
-		return sdkerr.Wrap(err, "creator")
-	}
 	if err := ValidateLabel(c.Label); err != nil {
 		return sdkerr.Wrap(err, "label")
 	}
+	return nil
+}
+
+func (c *ContractInfo) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := c.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(c.Creator); err != nil {
+		return sdkerr.Wrap(err, "creator")
+	}
 	if c.Provenance != "" {
-		if _, err := sdk.AccAddressFromBech32(c.Provenance); err != nil {
+		if _, err := addressCodec.StringToBytes(c.Provenance); err != nil {
 			return sdkerr.Wrap(err, "creator")
 		}
 	}

@@ -248,7 +248,11 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 	for _, chainId := range mcfg.ChainIdsInit {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		mcfg.SetGlobalChainConfig(chainId)
-		encodingConfig := mapp.MakeEncodingConfig()
+		chainCfg, err := mcfg.GetChainConfig(chainId)
+		if err != nil {
+			panic(err)
+		}
+		encodingConfig := mapp.MakeEncodingConfig(chainCfg)
 		app := mapp.NewApp(
 			actionExecutor,
 			svrCtx.Logger,
@@ -424,7 +428,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	for _, chainId := range mcfg.ChainIdsInit {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		mcfg.SetGlobalChainConfig(chainId)
-		encodingConfig := mapp.MakeEncodingConfig()
+		chainCfg, err := mcfg.GetChainConfig(chainId)
+		if err != nil {
+			panic(err)
+		}
+		encodingConfig := mapp.MakeEncodingConfig(chainCfg)
 		app := mapp.NewApp(
 			actionExecutor,
 			svrCtx.Logger,
@@ -526,7 +534,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
 	}
-	rpcClient = networkgrpc.NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor())
+	rpcClient = networkgrpc.NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor())
 
 	clientCtx = clientCtx.WithClient(rpcClient)
 

@@ -12,8 +12,8 @@ import (
 
 // newWasmModuleEvent creates with wasm module event for interacting with the given contract. Adds custom attributes
 // to this event.
-func newWasmModuleEvent(customAttributes []types.EventAttribute, contractAddr sdk.AccAddress) (sdk.Events, error) {
-	attrs, err := contractSDKEventAttributes(customAttributes, contractAddr)
+func newWasmModuleEvent(customAttributes []types.EventAttribute, contractAddrBech32 string) (sdk.Events, error) {
+	attrs, err := contractSDKEventAttributes(customAttributes, contractAddrBech32)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ const eventTypeMinLength = 2
 
 // Keep compatible with cosmwasm events
 // newCustomEvents converts wasmvm events from a contract response to sdk type events
-func newCustomEvents(evts types.Events, contractAddr sdk.AccAddress) (sdk.Events, error) {
+func newCustomEvents(evts types.Events, contractAddrBech32 string) (sdk.Events, error) {
 	events := make(sdk.Events, 0, len(evts))
 	for _, e := range evts {
 		typ := strings.TrimSpace(e.Type)
@@ -34,7 +34,7 @@ func newCustomEvents(evts types.Events, contractAddr sdk.AccAddress) (sdk.Events
 			return nil, sdkerr.Wrap(types.ErrInvalidEvent, fmt.Sprintf("Event type too short: '%s'", typ))
 		}
 		// also adds contract address as attribute
-		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddr)
+		attributes, err := contractSDKEventAttributes(e.Attributes, contractAddrBech32)
 		if err != nil {
 			return nil, err
 		}
@@ -47,8 +47,8 @@ func newCustomEvents(evts types.Events, contractAddr sdk.AccAddress) (sdk.Events
 }
 
 // convert and add contract address issuing this event
-func contractSDKEventAttributes(customAttributes []types.EventAttribute, contractAddr sdk.AccAddress) ([]sdk.Attribute, error) {
-	attrs := []sdk.Attribute{sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddr.String())}
+func contractSDKEventAttributes(customAttributes []types.EventAttribute, contractAddrBech32 string) ([]sdk.Attribute, error) {
+	attrs := []sdk.Attribute{sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddrBech32)}
 	// append attributes from wasm to the sdk.Event
 	for _, l := range customAttributes {
 		// ensure key and value are non-empty (and trim what is there)

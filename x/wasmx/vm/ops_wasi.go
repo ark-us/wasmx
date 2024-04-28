@@ -499,7 +499,13 @@ func wasi_bech32BytesToString(context interface{}, callframe *wasmedge.CallingFr
 		return nil, wasmedge.Result_Fail
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	data := []byte(addr.String())
+
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	data := []byte(addrstr)
 	ptr, err := wasimem.WriteMemDefaultMalloc(ctx.MustGetVmFromContext(), callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail

@@ -36,6 +36,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/grpc/gogoreflection"
 	reflection "github.com/cosmos/cosmos-sdk/server/grpc/reflection/v2alpha1"
 
+	address "cosmossdk.io/core/address"
 	// runapp "github.com/cosmos/cosmos-sdk/runtime"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -80,6 +81,8 @@ type MythosApp interface {
 	GetMultiChainApp() (*mconfig.MultiChainApp, error)
 	GetBaseApp() *baseapp.BaseApp
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
+
+	AddressCodec() address.Codec
 }
 
 type ABCIClientI interface {
@@ -143,7 +146,7 @@ func NewGRPCServer(
 	// }
 
 	logger := svrCtx.Logger.With("module", "network")
-	client := NewABCIClient(bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor())
+	client := NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor())
 	clientCtx = clientCtx.WithClient(client)
 
 	multiapp, err := mythosapp.GetMultiChainApp()
@@ -200,8 +203,7 @@ func NewGRPCServer(
 		time.Sleep(time.Second * 2)
 	}
 
-	// ctx := sdk.UnwrapSDKContext(goCtx)
-	// mythosapp.GetNetworkKeeper().wasmxKeeper.ContractInstance(ctx, contractAddress)
+	// TODO fix config - should I register multiple servers?
 
 	// Reflection allows consumers to build dynamic clients that can write to any
 	// Cosmos SDK application without relying on application packages at compile

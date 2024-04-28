@@ -18,6 +18,7 @@ import (
 
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	"cosmossdk.io/client/v2/autocli"
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/core/appmodule"
 	"cosmossdk.io/log"
 
@@ -302,6 +303,10 @@ type App struct {
 
 	chainCfg *cfg.ChainConfig
 	apps     map[string]*App
+
+	valCodec  address.Codec
+	consCodec address.Codec
+	addrCodec address.Codec
 }
 
 // New returns a reference to an initialized blockchain app
@@ -420,16 +425,28 @@ func NewApp(
 		actionExecutor:    actionExecutor,
 	}
 
+	valCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr)
+	consCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr)
+	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	app.valCodec = valCodec
+	app.consCodec = consCodec
+	app.addrCodec = addrCodec
+
 	// TODO replace NewPermissionsForAddress with address by role
 	permAddrs := make(map[string]authtypes.PermissionsForAddress)
 	for name, perms := range maccPerms {
 		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
-		app.Logger().Info("module address", name, permAddrs[name].GetAddress().String())
+		addrstr, err := addrCodec.BytesToString(permAddrs[name].GetAddress())
+		if err != nil {
+			panic(err)
+		}
+		app.Logger().Info("module address", name, addrstr)
 	}
 
-	valCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr)
-	consCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr)
-	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	govAuthorityAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE))
+	if err != nil {
+		panic(err)
+	}
 
 	app.ParamsKeeper = initParamsKeeper(
 		appCodec,
@@ -442,7 +459,7 @@ func NewApp(
 	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(
 		appCodec,
 		runtime.NewKVStoreService(keys[consensusParamsStoreKey]),
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		runtime.EventService{},
 	)
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
@@ -486,7 +503,7 @@ func NewApp(
 		app.interfaceRegistry,
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		valCodec,
 		consCodec,
 		addrCodec,
@@ -502,7 +519,7 @@ func NewApp(
 		&app.WasmxKeeper,
 		app.actionExecutor,
 		// TODO remove authority?
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
 
@@ -513,7 +530,7 @@ func NewApp(
 		app.NetworkKeeper,
 		app.actionExecutor,
 		// TODO what authority?
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		app.interfaceRegistry,
 		valCodec,
 		consCodec,
@@ -539,7 +556,7 @@ func NewApp(
 		app.NetworkKeeper,
 		app.actionExecutor,
 		// TODO what authority?
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		app.interfaceRegistry,
 		valCodec,
 		consCodec,
@@ -553,10 +570,11 @@ func NewApp(
 		app.NetworkKeeper,
 		app.actionExecutor,
 		// TODO what authority?
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		app.interfaceRegistry,
 		valCodec,
 		consCodec,
+		addrCodec,
 	)
 	app.GovKeeper = cosmosmodkeeper.NewKeeperGov(
 		appCodec,
@@ -566,10 +584,11 @@ func NewApp(
 		app.NetworkKeeper,
 		app.actionExecutor,
 		// TODO what authority?
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		app.interfaceRegistry,
 		valCodec,
 		consCodec,
+		addrCodec,
 	)
 	app.DistrKeeper = cosmosmodkeeper.NewKeeperDistribution(
 		appCodec,
@@ -582,11 +601,12 @@ func NewApp(
 		app.actionExecutor,
 		// TODO what authority?
 		// TODO we have addressByRole now
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		authtypes.FeeCollectorName,
 		app.interfaceRegistry,
 		valCodec,
 		consCodec,
+		addrCodec,
 	)
 	app.SlashingKeeper = cosmosmodkeeper.NewKeeperSlashing(
 		appCodec,
@@ -595,7 +615,8 @@ func NewApp(
 		&app.WasmxKeeper,
 		app.NetworkKeeper,
 		app.actionExecutor,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
+		addrCodec,
 	)
 	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, *app.SlashingKeeper, *app.DistrKeeper, app)
 
@@ -607,7 +628,7 @@ func NewApp(
 		app.AccountKeeper,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 
 	app.CrisisKeeper = crisiskeeper.NewKeeper(
@@ -616,12 +637,12 @@ func NewApp(
 		invCheckPeriod,
 		app.BankKeeper,
 		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		app.AccountKeeper.AddressCodec(),
 	)
 
 	// TODO remove
-	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuitStoreKey]), authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(), app.AccountKeeper.AddressCodec())
+	app.CircuitKeeper = circuitkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[circuitStoreKey]), govAuthorityAddr, app.AccountKeeper.AddressCodec())
 	app.BaseApp.SetCircuitBreaker(&app.CircuitKeeper)
 
 	groupConfig := group.DefaultConfig()
@@ -649,7 +670,7 @@ func NewApp(
 		appCodec,
 		homePath,
 		app.BaseApp,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 
 	// ... other modules keepers
@@ -662,7 +683,7 @@ func NewApp(
 		app.StakingKeeper,
 		app.UpgradeKeeper,
 		scopedIBCKeeper,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 
 	// Create Transfer Keepers
@@ -676,7 +697,7 @@ func NewApp(
 		app.AccountKeeper,
 		app.BankKeeper,
 		scopedTransferKeeper,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 	transferModule := transfer.NewAppModule(app.TransferKeeper)
 	transferIBCModule := transfer.NewIBCModule(app.TransferKeeper)
@@ -690,7 +711,7 @@ func NewApp(
 		app.AccountKeeper,
 		scopedICAHostKeeper,
 		app.MsgServiceRouter(),
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 	app.ICAControllerKeeper = icacontrollerkeeper.NewKeeper(
 		appCodec, keys[icacontrollerStoreKey],
@@ -700,7 +721,7 @@ func NewApp(
 		app.IBCKeeper.PortKeeper,
 		scopedICAControllerKeeper,
 		app.MsgServiceRouter(),
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 	)
 	icaModule := ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper)
 	icaHostIBCModule := icahost.NewIBCModule(app.ICAHostKeeper)
@@ -724,7 +745,7 @@ func NewApp(
 		app.GetSubspace(websrvmoduletypes.ModuleName),
 		&app.WasmxKeeper,
 		app.Query,
-		authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String(),
+		govAuthorityAddr,
 		addrCodec,
 	)
 	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
@@ -1105,7 +1126,8 @@ func (app *App) LoadHeight(height int64) error {
 func (app *App) ModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
 	for acc := range maccPerms {
-		modAccAddrs[authtypes.NewModuleAddress(acc).String()] = true
+		accstr, _ := app.addrCodec.BytesToString(authtypes.NewModuleAddress(acc))
+		modAccAddrs[accstr] = true
 	}
 
 	return modAccAddrs
@@ -1116,8 +1138,10 @@ func (app *App) ModuleAccountAddrs() map[string]bool {
 func (app *App) BlockedModuleAccountAddrs() map[string]bool {
 	modAccAddrs := app.ModuleAccountAddrs()
 
+	govAuthorityAddr, _ := app.addrCodec.BytesToString(authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE))
+
 	// allow the following addresses to receive funds
-	delete(modAccAddrs, authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE).String())
+	delete(modAccAddrs, govAuthorityAddr)
 
 	return modAccAddrs
 }
@@ -1257,6 +1281,10 @@ func (app *App) GetTxConfig() client.TxConfig {
 	return app.TxConfig()
 }
 
+func (app *App) GetChainCfg() *cfg.ChainConfig {
+	return app.chainCfg
+}
+
 // AutoCliOpts returns the autocli options for the app.
 func (app *App) AutoCliOpts() autocli.AppOptions {
 	modules := make(map[string]appmodule.AppModule, 0)
@@ -1272,9 +1300,9 @@ func (app *App) AutoCliOpts() autocli.AppOptions {
 	return autocli.AppOptions{
 		Modules:               modules,
 		ModuleOptions:         runtimeservices.ExtractAutoCLIOptions(app.mm.Modules),
-		AddressCodec:          authcodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
-		ValidatorAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ValidatorAddrPrefix()),
-		ConsensusAddressCodec: authcodec.NewBech32Codec(sdk.GetConfig().GetBech32ConsensusAddrPrefix()),
+		AddressCodec:          authcodec.NewBech32Codec(app.chainCfg.Bech32PrefixAccAddr),
+		ValidatorAddressCodec: authcodec.NewBech32Codec(app.chainCfg.Bech32PrefixValAddr),
+		ConsensusAddressCodec: authcodec.NewBech32Codec(app.chainCfg.Bech32PrefixConsAddr),
 	}
 }
 
@@ -1334,6 +1362,18 @@ func (app *App) GetGoRoutineGroup() *errgroup.Group {
 
 func (app *App) GetMultiChainApp() (*cfg.MultiChainApp, error) {
 	return cfg.GetMultiChainApp(app.GetGoContextParent())
+}
+
+func (app *App) AddressCodec() address.Codec {
+	return app.addrCodec
+}
+
+func (app *App) ValidatorAddressCodec() address.Codec {
+	return app.valCodec
+}
+
+func (app *App) ConsensusAddressCodec() address.Codec {
+	return app.consCodec
 }
 
 func Exit(s string) {

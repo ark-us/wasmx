@@ -580,7 +580,12 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
+	contractstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	for _, dep := range ctx.ContractRouter[contractstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
@@ -627,7 +632,12 @@ func create2(context interface{}, callframe *wasmedge.CallingFrame, params []int
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
+	contractstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return returns, wasmedge.Result_Fail
+	}
+
+	for _, dep := range ctx.ContractRouter[contractstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -67,10 +68,6 @@ func (msg MsgStoreCode) Type() string {
 }
 
 func (msg MsgStoreCode) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return err
-	}
-
 	maxSize := GetMaxCodeSize(msg.Deps)
 	if err := validateWasmCode(msg.ByteCode, maxSize); err != nil {
 		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
@@ -83,6 +80,16 @@ func (msg MsgStoreCode) ValidateBasic() error {
 	return nil
 }
 
+func (msg MsgStoreCode) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (msg MsgDeployCode) Route() string {
 	return RouterKey
 }
@@ -92,10 +99,6 @@ func (msg MsgDeployCode) Type() string {
 }
 
 func (msg MsgDeployCode) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return err
-	}
-
 	maxSize := GetMaxCodeSize(msg.Deps)
 	if err := validateCode(msg.ByteCode, maxSize); err != nil {
 		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "code bytes %s", err.Error())
@@ -112,6 +115,16 @@ func (msg MsgDeployCode) ValidateBasic() error {
 	return nil
 }
 
+func (msg MsgDeployCode) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (msg MsgInstantiateContract) Route() string {
 	return RouterKey
 }
@@ -121,10 +134,6 @@ func (msg MsgInstantiateContract) Type() string {
 }
 
 func (msg MsgInstantiateContract) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
-
 	if msg.CodeId == 0 {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
@@ -143,6 +152,16 @@ func (msg MsgInstantiateContract) ValidateBasic() error {
 	return nil
 }
 
+func (msg MsgInstantiateContract) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return sdkerr.Wrap(err, "sender")
+	}
+	return nil
+}
+
 func (msg MsgCompileContract) Route() string {
 	return RouterKey
 }
@@ -152,12 +171,18 @@ func (msg MsgCompileContract) Type() string {
 }
 
 func (msg MsgCompileContract) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
-
 	if msg.CodeId == 0 {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
+	}
+	return nil
+}
+
+func (msg MsgCompileContract) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Authority); err != nil {
+		return sdkerr.Wrap(err, "authority")
 	}
 	return nil
 }
@@ -171,19 +196,25 @@ func (msg MsgExecuteContract) Type() string {
 }
 
 func (msg MsgExecuteContract) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return sdkerr.Wrap(err, "contract")
-	}
-
 	if !msg.Funds.IsValid() {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
 		return sdkerr.Wrap(err, "payload msg")
+	}
+	return nil
+}
+
+func (msg MsgExecuteContract) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return sdkerr.Wrap(err, "sender")
+	}
+	contractAddress, err := addressCodec.StringToBytes(msg.Contract)
+	if err != nil {
+		return sdkerr.Wrap(err, "contract")
 	}
 	if IsSystemAddress(contractAddress) {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
@@ -200,22 +231,28 @@ func (msg MsgExecuteWithOriginContract) Type() string {
 }
 
 func (msg MsgExecuteWithOriginContract) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Origin); err != nil {
-		return sdkerr.Wrap(err, "origin")
-	}
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
-	contractAddress, err := sdk.AccAddressFromBech32(msg.Contract)
-	if err != nil {
-		return sdkerr.Wrap(err, "contract")
-	}
-
 	if !msg.Funds.IsValid() {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
 		return sdkerr.Wrap(err, "payload msg")
+	}
+	return nil
+}
+
+func (msg MsgExecuteWithOriginContract) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Origin); err != nil {
+		return sdkerr.Wrap(err, "origin")
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return sdkerr.Wrap(err, "sender")
+	}
+	contractAddress, err := addressCodec.StringToBytes(msg.Contract)
+	if err != nil {
+		return sdkerr.Wrap(err, "contract")
 	}
 	if IsSystemAddress(contractAddress) {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
@@ -232,23 +269,29 @@ func (msg MsgExecuteDelegateContract) Type() string {
 }
 
 func (msg MsgExecuteDelegateContract) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
-	codeAddress, err := sdk.AccAddressFromBech32(msg.CodeContract)
-	if err != nil {
-		return sdkerr.Wrap(err, "code_contract")
-	}
-	storageAddress, err := sdk.AccAddressFromBech32(msg.StorageContract)
-	if err != nil {
-		return sdkerr.Wrap(err, "storage_contract")
-	}
-
 	if !msg.Funds.IsValid() {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidCoins, "sentFunds")
 	}
 	if err := msg.Msg.ValidateBasic(); err != nil {
 		return sdkerr.Wrap(err, "payload msg")
+	}
+	return nil
+}
+
+func (msg MsgExecuteDelegateContract) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return sdkerr.Wrap(err, "sender")
+	}
+	codeAddress, err := addressCodec.StringToBytes(msg.CodeContract)
+	if err != nil {
+		return sdkerr.Wrap(err, "code_contract")
+	}
+	storageAddress, err := addressCodec.StringToBytes(msg.StorageContract)
+	if err != nil {
+		return sdkerr.Wrap(err, "storage_contract")
 	}
 	if IsSystemAddress(codeAddress) {
 		return sdkerr.Wrap(ErrUnauthorizedAddress, "cannot call system address")
@@ -270,10 +313,6 @@ func (msg MsgInstantiateContract2) Type() string {
 }
 
 func (msg MsgInstantiateContract2) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
-
 	if msg.CodeId == 0 {
 		return sdkerr.Wrap(sdkerrors.ErrInvalidRequest, "code id is required")
 	}
@@ -295,6 +334,16 @@ func (msg MsgInstantiateContract2) ValidateBasic() error {
 	return nil
 }
 
+func (msg MsgInstantiateContract2) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
+		return sdkerr.Wrap(err, "sender")
+	}
+	return nil
+}
+
 func (msg MsgExecuteEth) Route() string {
 	return RouterKey
 }
@@ -305,10 +354,17 @@ func (msg MsgExecuteEth) Type() string {
 
 func (msg MsgExecuteEth) ValidateBasic() error {
 	// TODO UnpackTxData, any.GetCachedValue
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+	// TODO validate tx arguments and signature
+	return nil
+}
+
+func (msg MsgExecuteEth) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Sender); err != nil {
 		return sdkerr.Wrap(err, "sender")
 	}
-	// TODO validate tx arguments and signature
 	return nil
 }
 
@@ -424,10 +480,6 @@ func (msg MsgRegisterRole) Type() string {
 }
 
 func (msg MsgRegisterRole) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return sdkerr.Wrap(err, "authority")
-	}
-
 	if err := validateStringNonEmpty(msg.Title); err != nil {
 		return sdkerr.Wrap(err, "title")
 	}
@@ -443,8 +495,17 @@ func (msg MsgRegisterRole) ValidateBasic() error {
 	if err := validateStringNonEmpty(msg.Label); err != nil {
 		return sdkerr.Wrap(err, "label")
 	}
+	return nil
+}
 
-	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+func (msg MsgRegisterRole) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Authority); err != nil {
+		return sdkerr.Wrap(err, "authority")
+	}
+	if _, err := addressCodec.StringToBytes(msg.ContractAddress); err != nil {
 		return sdkerr.Wrap(err, "contract address")
 	}
 	return nil
@@ -459,10 +520,6 @@ func (msg MsgDeregisterRole) Type() string {
 }
 
 func (msg MsgDeregisterRole) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return sdkerr.Wrap(err, "authority")
-	}
-
 	if err := validateStringNonEmpty(msg.Title); err != nil {
 		return sdkerr.Wrap(err, "title")
 	}
@@ -470,8 +527,17 @@ func (msg MsgDeregisterRole) ValidateBasic() error {
 	if err := validateStringNonEmpty(msg.Description); err != nil {
 		return sdkerr.Wrap(err, "description")
 	}
+	return nil
+}
 
-	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+func (msg MsgDeregisterRole) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Authority); err != nil {
+		return sdkerr.Wrap(err, "authority")
+	}
+	if _, err := addressCodec.StringToBytes(msg.ContractAddress); err != nil {
 		return sdkerr.Wrap(err, "contract address")
 	}
 	return nil

@@ -57,10 +57,19 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 			label := args[1]
 			contractAddress := args[2]
 			from := clientCtx.GetFromAddress()
-			authority := sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)).String()
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
+			if err != nil {
+				return err
+			}
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			content := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: role, Label: label, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
 			if err != nil {
 				return err
 			}
@@ -123,10 +132,20 @@ func NewDeregisterRoleProposalCmd() *cobra.Command {
 
 			contractAddress := args[0]
 			from := clientCtx.GetFromAddress()
-			authority := sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)).String()
+
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
+			if err != nil {
+				return err
+			}
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
 			content := &types.MsgDeregisterRole{Authority: authority, Title: title, Description: description, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, from.String(), "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
 			if err != nil {
 				return err
 			}

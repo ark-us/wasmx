@@ -34,6 +34,7 @@ import (
 )
 
 type ABCIClient struct {
+	mapp           MythosApp
 	bapp           types.BaseApp
 	nk             types.WasmxWrapper
 	logger         log.Logger
@@ -43,6 +44,7 @@ type ABCIClient struct {
 }
 
 func NewABCIClient(
+	mapp MythosApp,
 	bapp types.BaseApp,
 	logger log.Logger,
 	networkKeeper types.WasmxWrapper,
@@ -51,6 +53,7 @@ func NewABCIClient(
 	actionExecutor *ActionExecutor,
 ) *ABCIClient {
 	return &ABCIClient{
+		mapp:           mapp,
 		bapp:           bapp,
 		nk:             networkKeeper,
 		logger:         logger,
@@ -119,7 +122,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 			// } else {
 			msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
 			if ok {
-				contractAddress, err = sdk.AccAddressFromBech32(msgExec.Contract)
+				contractAddress, err = c.mapp.AddressCodec().StringToBytes(msgExec.Contract)
 				if err != nil {
 					return nil, err
 				}
@@ -134,12 +137,13 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 				addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress).Hex()
 
 				if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
-					c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddress.String())
+					contractAddressStr, err := c.mapp.AddressCodec().BytesToString(contractAddress)
+					c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
 
 					// we sent directly to the contract
 					rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
 						Sender:   msgExec.Sender, // sender will be taken from decoded tx
-						Contract: contractAddress.String(),
+						Contract: contractAddressStr,
 						Msg:      []byte(fmt.Sprintf(`{"HandleTx":"%s"}`, base64.StdEncoding.EncodeToString(tx))),
 					})
 

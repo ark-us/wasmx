@@ -3,6 +3,8 @@ package keeper
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"mythos/v1/x/websrv/keeper"
 	"mythos/v1/x/websrv/types"
 
@@ -16,13 +18,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/stretchr/testify/require"
+
+	config "mythos/v1/config"
 )
 
 func WebsrvKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
+	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)
+	if err != nil {
+		panic(err)
+	}
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
 
@@ -34,6 +42,10 @@ func WebsrvKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 
 	registry := codectypes.NewInterfaceRegistry()
 	cdc := codec.NewProtoCodec(registry)
+
+	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	govAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(govtypes.ModuleName))
+	require.NoError(t, err)
 
 	paramsSubspace := typesparams.NewSubspace(cdc,
 		codec.NewLegacyAmino(),
@@ -48,7 +60,8 @@ func WebsrvKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		paramsSubspace,
 		nil,
 		nil,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		govAddr,
+		addrCodec,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

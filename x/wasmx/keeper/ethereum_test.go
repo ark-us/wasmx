@@ -246,7 +246,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	// appA.ExecuteContract(receiver, aliasEthAddr, *execMsg, nil, nil)
 	// suite.Commit()
 
-	// receiverEthBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: receiverEth.String(), Denom: appA.Chain.Config.BaseDenom})
+	// receiverEthBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: appA.MustAccAddressToString(receiverEth), Denom: appA.Chain.Config.BaseDenom})
 	// s.Require().NoError(err)
 	// s.Require().Equal(receiverEthBalance.GetBalance().Amount.BigInt(), big.NewInt(0))
 

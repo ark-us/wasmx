@@ -128,11 +128,15 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 		status = hexutil.Uint(ethtypes.ReceiptStatusSuccessful)
 	}
 
-	sender := wasmxtypes.EvmAddressFromAcc(sdk.MustAccAddressFromBech32(ethMsg.Sender))
+	senderAcc, err := b.addressCodec.StringToBytes(ethMsg.Sender)
+	if err != nil {
+		b.logger.Debug("failed to parse sender", "sender", ethMsg.Sender, "error", err.Error())
+	}
+	sender := wasmxtypes.EvmAddressFromAcc(senderAcc)
 
 	// parse tx logs from events
 	// sets contract address, data, topics, log index
-	logs, err := TxLogsFromEvents(blockRes.TxsResults[res.TxIndex].Events)
+	logs, err := TxLogsFromEvents(b.addressCodec, blockRes.TxsResults[res.TxIndex].Events)
 	if err != nil {
 		b.logger.Debug("failed to parse logs", "hash", hexTx, "error", err.Error())
 	}
@@ -192,7 +196,7 @@ func (b *Backend) GetTransactionReceipt(hash common.Hash) (map[string]interface{
 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
 	if txData.To() == nil {
 		// get the contract address from the logs
-		newContractAddress := ContractAddressFromEvents(blockRes.TxsResults[res.TxIndex].Events)
+		newContractAddress := ContractAddressFromEvents(b.addressCodec, blockRes.TxsResults[res.TxIndex].Events)
 		receipt["contractAddress"] = newContractAddress
 	}
 

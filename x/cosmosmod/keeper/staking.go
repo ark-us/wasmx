@@ -8,6 +8,7 @@ import (
 	"time"
 
 	errors "cosmossdk.io/errors"
+	errorsmod "cosmossdk.io/errors"
 	math "cosmossdk.io/math"
 
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -44,10 +45,14 @@ func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, erro
 	if err != nil {
 		return math.NewInt(0), err
 	}
+	derc20AddressStr, err := k.AddressCodec().BytesToString(derc20Address)
+	if err != nil {
+		return math.NewInt(0), errorsmod.Wrapf(err, "derc20: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
 	msgbz := []byte(`{"totalSupply":{}}`)
 	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
-		Contract: derc20Address.String(),
+		Contract: derc20AddressStr,
 		Msg:      msgbz,
 	})
 	if err != nil {
@@ -77,7 +82,18 @@ func (k KeeperStaking) Delegation(goCtx context.Context, addrDel sdk.AccAddress,
 
 func (k KeeperStaking) DelegationInternal(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (*stakingtypes.QueryDelegationResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	resp, err := k.ContractModuleQuery(ctx, "GetDelegation", &stakingtypes.QueryDelegationRequest{DelegatorAddr: addrDel.String(), ValidatorAddr: addrVal.String()})
+
+	addrDelStr, err := k.AddressCodec().BytesToString(addrDel)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "delegator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	addrValStr, err := k.ValidatorAddressCodec().BytesToString(addrVal)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "validator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	resp, err := k.ContractModuleQuery(ctx, "GetDelegation", &stakingtypes.QueryDelegationRequest{DelegatorAddr: addrDelStr, ValidatorAddr: addrValStr})
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +198,15 @@ func (k KeeperStaking) Unjail(goCtx context.Context, consAddr sdk.ConsAddress) e
 }
 
 // Validator gets the Validator interface for a particular address
-func (k KeeperStaking) Validator(goCtx context.Context, address sdk.ValAddress) (stakingtypes.ValidatorI, error) {
+func (k KeeperStaking) Validator(goCtx context.Context, addrVal sdk.ValAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msgbz := []byte(fmt.Sprintf(`{"GetValidator":{"validator_addr":"%s"}}`, address.String()))
+
+	addrValStr, err := k.ValidatorAddressCodec().BytesToString(addrVal)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "validator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	msgbz := []byte(fmt.Sprintf(`{"GetValidator":{"validator_addr":"%s"}}`, addrValStr))
 	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
 		Contract: wasmxtypes.ROLE_STAKING,
@@ -207,9 +229,15 @@ func (k KeeperStaking) Validator(goCtx context.Context, address sdk.ValAddress) 
 }
 
 // ValidatorByConsAddr gets the validator interface for a particular pubkey
-func (k KeeperStaking) ValidatorByConsAddr(goCtx context.Context, addr sdk.ConsAddress) (stakingtypes.ValidatorI, error) {
+func (k KeeperStaking) ValidatorByConsAddr(goCtx context.Context, addrCons sdk.ConsAddress) (stakingtypes.ValidatorI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msgbz := []byte(fmt.Sprintf(`{"ValidatorByConsAddr":{"validator_addr":"%s"}}`, addr.String()))
+
+	addrConsStr, err := k.ConsensusAddressCodec().BytesToString(addrCons)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "cons: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	msgbz := []byte(fmt.Sprintf(`{"ValidatorByConsAddr":{"validator_addr":"%s"}}`, addrConsStr))
 	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
 		Contract: wasmxtypes.ROLE_STAKING,

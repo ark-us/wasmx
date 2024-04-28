@@ -8,14 +8,16 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
+
+	address "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
-	"github.com/spf13/cobra"
-	flag "github.com/spf13/pflag"
 
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
@@ -61,7 +63,6 @@ func GetTxCmd() *cobra.Command {
 		InstantiateContractCmd(),
 		InstantiateContract2Cmd(),
 		ExecuteContractCmd(),
-		CompileContractCmd(),
 		NewRegisterRoleProposalCmd(),
 		NewDeregisterRoleProposalCmd(),
 	)
@@ -80,10 +81,12 @@ func StoreCodeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msg, err := parseStoreCodeArgs(args[0], clientCtx.GetFromAddress(), cmd.Flags())
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			msg, err := parseStoreCodeArgs(addrCodec, args[0], clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
+			// TODO use ValidateWithAddress with codec
 			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
@@ -96,7 +99,7 @@ func StoreCodeCmd() *cobra.Command {
 	return cmd
 }
 
-func parseStoreCodeArgs(file string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgStoreCode, error) {
+func parseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgStoreCode, error) {
 	wasm, err := os.ReadFile(file)
 	if err != nil {
 		return types.MsgStoreCode{}, err
@@ -113,8 +116,13 @@ func parseStoreCodeArgs(file string, sender sdk.AccAddress, flags *flag.FlagSet)
 		return types.MsgStoreCode{}, fmt.Errorf("invalid input file. Use wasm binary or gzip")
 	}
 
+	senderstr, err := addrCodec.BytesToString(sender)
+	if err != nil {
+		return types.MsgStoreCode{}, err
+	}
+
 	msg := types.MsgStoreCode{
-		Sender:   sender.String(),
+		Sender:   senderstr,
 		ByteCode: wasm,
 	}
 	return msg, nil
@@ -140,7 +148,7 @@ func parseStoreCodeArgs(file string, sender sdk.AccAddress, flags *flag.FlagSet)
 // 			}
 
 // 			msg := types.MsgDeploy{
-// 				Sender:   sender.String(),
+// 				Sender:   sender.String(), // TODO replace this
 // 				ByteCode: evmByteCode,
 // 			}
 
@@ -174,7 +182,8 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 			if err != nil {
 				return err
 			}
-			msg, err := parseInstantiateArgs(args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			msg, err := parseInstantiateArgs(addrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -223,7 +232,8 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return fmt.Errorf("fix msg: %w", err)
 			}
-			data, err := parseInstantiateArgs(args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			data, err := parseInstantiateArgs(addrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -251,7 +261,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 	return cmd
 }
 
-func parseInstantiateArgs(rawCodeID, initMsg string, kr keyring.Keyring, sender sdk.AccAddress, flags *flag.FlagSet) (*types.MsgInstantiateContract, error) {
+func parseInstantiateArgs(addrCodec address.Codec, rawCodeID, initMsg string, kr keyring.Keyring, sender sdk.AccAddress, flags *flag.FlagSet) (*types.MsgInstantiateContract, error) {
 	// get the id of the code to instantiate
 	codeID, err := strconv.ParseUint(rawCodeID, 10, 64)
 	if err != nil {
@@ -278,9 +288,14 @@ func parseInstantiateArgs(rawCodeID, initMsg string, kr keyring.Keyring, sender 
 		return nil, err
 	}
 
+	senderstr, err := addrCodec.BytesToString(sender)
+	if err != nil {
+		return nil, err
+	}
+
 	// build and sign the transaction, then broadcast to Tendermint
 	msg := types.MsgInstantiateContract{
-		Sender: sender.String(),
+		Sender: senderstr,
 		CodeId: codeID,
 		Label:  label,
 		Funds:  amount,
@@ -301,8 +316,8 @@ func ExecuteContractCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			msg, err := parseExecuteArgs(args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			msg, err := parseExecuteArgs(addrCodec, args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -319,7 +334,7 @@ func ExecuteContractCmd() *cobra.Command {
 	return cmd
 }
 
-func parseExecuteArgs(contractAddr string, execMsg string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgExecuteContract, error) {
+func parseExecuteArgs(addrCodec address.Codec, contractAddr string, execMsg string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgExecuteContract, error) {
 	amountStr, err := flags.GetString(flagAmount)
 	if err != nil {
 		return types.MsgExecuteContract{}, fmt.Errorf("amount: %s", err)
@@ -333,53 +348,16 @@ func parseExecuteArgs(contractAddr string, execMsg string, sender sdk.AccAddress
 	if err != nil {
 		return types.MsgExecuteContract{}, err
 	}
+	senderstr, err := addrCodec.BytesToString(sender)
+	if err != nil {
+		return types.MsgExecuteContract{}, err
+	}
 	return types.MsgExecuteContract{
-		Sender:   sender.String(),
+		Sender:   senderstr,
 		Contract: contractAddr,
 		Funds:    amount,
 		Msg:      msgbz,
 	}, nil
-}
-
-// CompileContractCmd will instantiate a contract from previously uploaded code.
-func CompileContractCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "compile [code_id_int64]",
-		Short: "AOT compile a wasm contract",
-		Long: fmt.Sprintf(`Creates an AOT compiled module from the wasm bytecode.
-Example:
-$ %s tx wasmx compile 1 --from mykey
-`, version.AppName),
-		Aliases: []string{"start", "init", "inst", "i"},
-		Args:    cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			// get the id of the code to instantiate
-			codeId, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return err
-			}
-			// build and sign the transaction, then broadcast to Tendermint
-			msg := &types.MsgCompileContract{
-				Sender: clientCtx.GetFromAddress().String(),
-				CodeId: codeId,
-			}
-			if err := msg.ValidateBasic(); err != nil {
-				return err
-			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
-		},
-		SilenceUsage: true,
-	}
-
-	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
-	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
-	flags.AddTxFlagsToCmd(cmd)
-	return cmd
 }
 
 func wasmxMsgWrap(jsonmsg string) ([]byte, error) {

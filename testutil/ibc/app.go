@@ -2,20 +2,21 @@ package ibctesting
 
 import (
 	"encoding/json"
-	"os"
-	"path"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/rand"
 	tmtypes "github.com/cometbft/cometbft/types"
 
 	sdkmath "cosmossdk.io/math"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/address"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -37,6 +38,8 @@ var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.Testin
 // account. A Nop logger is set in SimApp.
 func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, chaincfg mcfg.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState := DefaultTestingAppInit(chainID, index)
+	mapp, ok := app.(*wasmxapp.App)
+	require.True(t, ok)
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
 	signingInfos := make([]slashingtypes.SigningInfo, 0, len(valSet.Validators))
@@ -48,7 +51,8 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 		require.NoError(t, err)
 		pkAny, err := codectypes.NewAnyWithValue(pk)
 		require.NoError(t, err)
-		valAddr := sdk.ValAddress(val.Address).String()
+		valAddr, err := mapp.AddressCodec().BytesToString(sdk.ValAddress(val.Address))
+		require.NoError(t, err)
 		validator := stakingtypes.Validator{
 			OperatorAddress:   valAddr,
 			ConsensusPubkey:   pkAny,
@@ -63,12 +67,14 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 			MinSelfDelegation: sdkmath.ZeroInt(),
 		}
 		validators = append(validators, validator)
+
+		delAddr, err := mapp.AddressCodec().BytesToString(genAccs[0].GetAddress())
+		require.NoError(t, err)
 		delegation := cosmosmodtypes.Delegation{
-			DelegatorAddress: genAccs[0].GetAddress().String(),
+			DelegatorAddress: delAddr,
 			ValidatorAddress: valAddr,
 			Amount:           bondAmt,
 		}
-		// (genAccs[0].GetAddress().String(), valAddr, sdkmath.LegacyOneDec())
 		delegations = append(delegations, delegation)
 	}
 
@@ -103,13 +109,23 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis, *slashingGenesis, *cosmosmodtypes.DefaultDistributionGenesisState(chaincfg.BaseDenom))
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
+	addrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
+
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
-	wasmxGenesis := wasmxtypes.DefaultGenesisState()
-	mydir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
+
+	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
+	require.NoError(t, err)
+	mintAddress, err := addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
+	require.NoError(t, err)
+	bootstrapAccount, err := addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
+	require.NoError(t, err)
+
+	wasmxGenesis := wasmxtypes.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress)
+	// mydir, err := os.Getwd()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
 	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 
 	stateBytes, err := json.MarshalIndent(genesisState, "", " ")

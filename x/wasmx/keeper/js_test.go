@@ -101,13 +101,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "CallSimpleContractJs", nil)
 
 	key := []byte("jsstore")
-	data := []byte(fmt.Sprintf(`{"store":["%s", "str1"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str1"]}`, appA.MustAccAddressToString(contractAddress)))
 	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("str1"), value)
 
-	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal([]byte("str1"), resp)
 }
@@ -129,13 +129,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "CallSimpleContractJs", nil)
 
 	key := []byte("pystore")
-	data := []byte(fmt.Sprintf(`{"store":["%s", "str12"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str12"]}`, appA.MustAccAddressToString(contractAddress)))
 	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("str12"), value)
 
-	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal([]byte("str12"), resp)
 }
@@ -163,13 +163,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 	codeId2 := appA.StoreCode(sender, callEvmSimpleStorageJsInterpret, depsJs)
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "CallSimpleContractJs", nil)
 
-	data := []byte(fmt.Sprintf(`{"store":["%s", "str12"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str12"]}`, appA.MustAccAddressToString(contractAddress)))
 	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000007", hex.EncodeToString(queryres))
 
-	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000007", hex.EncodeToString(resp))
 }
@@ -196,16 +196,16 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	// err = json.Unmarshal(resp, &env)
 	// s.Require().NoError(err)
 	// s.Require().Equal(env.Chain.ChainIdFull, appA.Chain.ChainID)
-	// s.Require().Equal(env.CurrentCall.Sender.String(), sender.Address.String())
-	// s.Require().Equal(env.Contract.Address.String(), contractAddress.String())
+	// s.Require().Equal(appA.MustAccAddressToString(env.CurrentCall.Sender), appA.MustAccAddressToString(sender.Address))
+	// s.Require().Equal(appA.MustAccAddressToString(env.Contract.Address), appA.MustAccAddressToString(contractAddress))
 
-	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
+	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, appA.MustAccAddressToString(sender.Address)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
-	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().True(len(resp) > 0)
 	// TODO check this

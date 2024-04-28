@@ -296,13 +296,13 @@ message MsgExecuteDelegateContractResponse {
 
 message MsgCompileContract {
     option (amino.name) = "wasmx/MsgCompileContract";
-    option (cosmos.msg.v1.signer) = "sender";
+    option (cosmos.msg.v1.signer) = "authority";
 
     option (gogoproto.equal)           = false;
     option (gogoproto.goproto_getters) = true;
 
-    // Sender is the that actor that signed the messages
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Contract is the address of the smart contract
     uint64 codeId = 2;
 }

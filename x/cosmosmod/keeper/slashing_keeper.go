@@ -3,7 +3,7 @@ package keeper
 import (
 	"fmt"
 
-	addresscodec "cosmossdk.io/core/address"
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -28,8 +28,7 @@ type (
 		// should be the x/gov module account.
 		authority string
 
-		validatorAddressCodec addresscodec.Codec
-		consensusAddressCodec addresscodec.Codec
+		addressCodec address.Codec
 	}
 )
 
@@ -41,6 +40,7 @@ func NewKeeperSlashing(
 	networkKeeper networkkeeper.Keeper,
 	actionExecutor *networkkeeper.ActionExecutor,
 	authority string,
+	addressCodec address.Codec,
 ) *KeeperSlashing {
 	keeper := &KeeperSlashing{
 		jsoncdc:        jsoncdc,
@@ -50,6 +50,7 @@ func NewKeeperSlashing(
 		NetworkKeeper:  networkKeeper,
 		actionExecutor: actionExecutor,
 		authority:      authority,
+		addressCodec:   addressCodec,
 	}
 	return keeper
 }
@@ -65,4 +66,8 @@ func (k *KeeperSlashing) GetAuthority() string {
 
 func (k *KeeperSlashing) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
+}
+
+func (k *KeeperSlashing) AddressCodec() address.Codec {
+	return k.addressCodec
 }

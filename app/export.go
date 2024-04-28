@@ -204,13 +204,17 @@ func (app *App) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []str
 
 	for ; iter.Valid(); iter.Next() {
 		addr := sdk.ValAddress(iter.Key()[1:])
+		addrstr, err := app.addrCodec.BytesToString(addr)
+		if err != nil {
+			panic(fmt.Errorf("cannot get address string: %s", err.Error()))
+		}
 		validator, err := app.StakingKeeper.GetValidator(ctx, addr)
 		if err != nil {
 			panic(fmt.Errorf("expected validator, not found: %s", err.Error()))
 		}
 
 		validator.UnbondingHeight = 0
-		if applyAllowedAddrs && !allowedAddrsMap[addr.String()] {
+		if applyAllowedAddrs && !allowedAddrsMap[addrstr] {
 			validator.Jailed = true
 		}
 

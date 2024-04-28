@@ -24,8 +24,11 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
-	msg := []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":[],"proposer":"%s","initial_deposit":[{"denom":"amyt","amount":"0x100000"}],"metadata":"metadata","title":"title","summary":"summary","expedited":false}}`, sender.Address.String()))
-	_, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
+	senderAddrStr, err := appA.AddressCodec().BytesToString(sender.Address)
+	suite.Require().NoError(err)
+
+	msg := []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":[],"proposer":"%s","initial_deposit":[{"denom":"amyt","amount":"0x100000"}],"metadata":"metadata","title":"title","summary":"summary","expedited":false}}`, senderAddrStr))
+	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
 		Msg:      msg,
@@ -35,7 +38,10 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	suite.Require().Equal(true, propext.VoteStatus.Changed)
 	suite.Require().Equal(uint32(2), propext.Winner)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata"}}`, sender.Address.String()))
+	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
+	suite.Require().NoError(err)
+
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -63,7 +69,10 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	s.Require().Equal("0", tally.Tally.AbstainCount)
 	s.Require().Equal("0", tally.Tally.NoWithVetoCount)
 
-	msg = []byte(fmt.Sprintf(`{"AddProposalOption":{"proposal_id":1,"option":{"messages":[],"proposer":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata","title":"title","summary":"summary"}}}`, sender.Address.String()))
+	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
+	suite.Require().NoError(err)
+
+	msg = []byte(fmt.Sprintf(`{"AddProposalOption":{"proposal_id":1,"option":{"messages":[],"proposer":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata","title":"title","summary":"summary"}}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -75,7 +84,10 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	suite.Require().Equal(false, propext.VoteStatus.Changed)
 	suite.Require().Equal(uint32(2), propext.Winner)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"0x200000","arbitrationAmount":"0x0","metadata":"metadata"}}`, sender.Address.String()))
+	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
+	suite.Require().NoError(err)
+
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"0x200000","arbitrationAmount":"0x0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -129,15 +141,21 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	newlabel := wasmxtypes.CONSENSUS_RAFTP2P + "2"
 	title := "Register consensus"
 	description := "Register consensus"
-	authority := authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE).String()
-	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
+
+	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
+	suite.Require().NoError(err)
+
+	newConsensusStr, err := appA.AddressCodec().BytesToString(newConsensus)
+	suite.Require().NoError(err)
+
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensusStr}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
+	s.Require().Equal(newConsensusStr, role.ContractAddress)
 	s.Require().Equal(newlabel, role.Label)
 	s.Require().Equal("consensus", role.Role)
 
@@ -146,8 +164,8 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	// Check each simulated node has the correct context:
 	msg1 = []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
-		Sender:   newConsensus.String(),
-		Contract: newConsensus.String(),
+		Sender:   newConsensusStr,
+		Contract: newConsensusStr,
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -156,8 +174,8 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 
 	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
-		Sender:   newConsensus.String(),
-		Contract: newConsensus.String(),
+		Sender:   newConsensusStr,
+		Contract: newConsensusStr,
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)

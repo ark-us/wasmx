@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/anypb"
 
+	address "cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
 	txsigning "cosmossdk.io/x/tx/signing"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -13,10 +14,13 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	sdkante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+
+	mcfg "mythos/v1/config"
 )
 
 type AccountKeeper interface {
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+	AddressCodec() address.Codec
 }
 
 // TODO use this for AnteHandler.NewSigVerificationDecorator
@@ -74,9 +78,12 @@ func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool
 		// no need to verify signatures on recheck tx
 		if !simulate && !ctx.IsReCheckTx() {
 			anyPk, _ := codectypes.NewAnyWithValue(pubKey)
-
+			addrstr, err := ak.AddressCodec().BytesToString(acc.GetAddress())
+			if err != nil {
+				return false, errorsmod.Wrapf(err, "signer: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+			}
 			signerData := txsigning.SignerData{
-				Address:       acc.GetAddress().String(),
+				Address:       addrstr,
 				ChainID:       chainID,
 				AccountNumber: accNum,
 				Sequence:      acc.GetSequence(),

@@ -7,7 +7,6 @@ import (
 
 	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -306,7 +305,7 @@ func EIDPrecompiles() SystemContracts {
 	}
 }
 
-func CosmosPrecompiles() SystemContracts {
+func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
@@ -314,7 +313,7 @@ func CosmosPrecompiles() SystemContracts {
 	}
 	// TODO remove/replace minter
 	// note we use ROLE_BANK for redirected messages through cosmosmod
-	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s","%s","%s"]}`, ROLE_STAKING, ROLE_GOVERNANCE, ROLE_BANK, authtypes.NewModuleAddress("fee_collector").String(), authtypes.NewModuleAddress("mint").String()))})
+	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s","%s","%s"]}`, ROLE_STAKING, ROLE_GOVERNANCE, ROLE_BANK, feeCollectorBech32, mintBech32))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
 	}
@@ -590,20 +589,20 @@ func ChatPrecompiles() SystemContracts {
 	}
 }
 
-func DefaultSystemContracts() SystemContracts {
+func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string) SystemContracts {
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
 	precompiles = append(precompiles, InterpreterPrecompiles()...)
 	precompiles = append(precompiles, BasePrecompiles()...)
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, HookPrecompiles()...)
-	precompiles = append(precompiles, CosmosPrecompiles()...)
+	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
 	precompiles = append(precompiles, ConsensusPrecompiles()...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles
 }
 
-func DefaultTimeChainContracts() SystemContracts {
+func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
@@ -710,7 +709,7 @@ func DefaultTimeChainContracts() SystemContracts {
 	precompiles = append(precompiles, BasePrecompiles()...)
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, hooksPrecompiles...)
-	precompiles = append(precompiles, CosmosPrecompiles()...)
+	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
 	precompiles = append(precompiles, consensusPrecompile...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles

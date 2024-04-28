@@ -12,7 +12,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
@@ -75,11 +74,16 @@ func GetCmdBuildAddress() *cobra.Command {
 		Aliases: []string{"address"},
 		Args:    cobra.RangeArgs(3, 4),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 			codeHash, err := hex.DecodeString(args[0])
 			if err != nil {
 				return fmt.Errorf("code-hash: %s", err)
 			}
-			creator, err := sdk.AccAddressFromBech32(args[1])
+			creator, err := addrCodec.StringToBytes(args[1])
 			if err != nil {
 				return fmt.Errorf("creator: %s", err)
 			}
@@ -91,7 +95,9 @@ func GetCmdBuildAddress() *cobra.Command {
 				return errors.New("empty salt")
 			}
 
-			cmd.Println(keeper.EwasmBuildContractAddressPredictable(creator, salt, codeHash).String())
+			addrstr, _ := addrCodec.BytesToString(keeper.EwasmBuildContractAddressPredictable(creator, salt, codeHash))
+
+			cmd.Println(addrstr)
 			return nil
 		},
 		SilenceUsage: true,
@@ -278,8 +284,9 @@ func GetCmdGetContractInfo() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
-			_, err = sdk.AccAddressFromBech32(args[0])
+			_, err = addrCodec.StringToBytes(args[0])
 			if err != nil {
 				return err
 			}
@@ -330,8 +337,9 @@ func GetCmdGetContractStateAll() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
-			_, err = sdk.AccAddressFromBech32(args[0])
+			_, err = addrCodec.StringToBytes(args[0])
 			if err != nil {
 				return err
 			}
@@ -372,8 +380,9 @@ func GetCmdGetContractStateRaw() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
-			_, err = sdk.AccAddressFromBech32(args[0])
+			_, err = addrCodec.StringToBytes(args[0])
 			if err != nil {
 				return err
 			}
@@ -414,8 +423,9 @@ func GetCmdGetContractCall() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
-			_, err = sdk.AccAddressFromBech32(args[0])
+			_, err = addrCodec.StringToBytes(args[0])
 			if err != nil {
 				return err
 			}
@@ -434,7 +444,10 @@ func GetCmdGetContractCall() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("wrap query data %s", err)
 			}
-			sender := clientCtx.GetFromAddress().String()
+			sender, err := clientCtx.InterfaceRegistry.SigningContext().AddressCodec().BytesToString(clientCtx.GetFromAddress())
+			if err != nil {
+				return fmt.Errorf("sender to string: %s", err)
+			}
 			if sender == "" {
 				sender = args[0]
 			}

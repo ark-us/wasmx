@@ -34,10 +34,12 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
 
-	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, sender.Address.String(), newacc.Address.String(), config.BaseDenom)
+	newaccStr := appA.MustAccAddressToString(newacc.Address)
+
+	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
 	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
 
-	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newacc.Address.String(), config.BaseDenom)
+	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
 	res := suite.queryMultiChainCall(appA.App, []byte(qmsg), sender, bankAddress, chainId)
 
 	balance := &banktypes.QueryBalanceResponse{}
@@ -64,11 +66,12 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 	suite.Commit()
 
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
+	newaccStr := appA.MustAccAddressToString(newacc.Address)
 
-	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, sender.Address.String(), newacc.Address.String(), config.BaseDenom)
+	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
 	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
 
-	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newacc.Address.String(), config.BaseDenom)
+	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
 	res := suite.queryMultiChainCall(appA.App, []byte(qmsg), sender, bankAddress, chainId)
 
 	balance := &banktypes.QueryBalanceResponse{}
@@ -82,13 +85,13 @@ func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sen
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
+	appA := suite.AppContext()
 	multimsg := &types.QueryContractCallRequest{
 		MultiChainId: chainId,
-		Sender:       sender.Address.String(),
-		Address:      contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Address:      appA.MustAccAddressToString(contractAddress),
 		QueryData:    msgbz,
 	}
-	appA := s.AppContext()
 	res, err := mapp.NetworkKeeper.ContractCall(appA.Context(), multimsg)
 	suite.Require().NoError(err)
 
@@ -103,14 +106,14 @@ func (suite *KeeperTestSuite) queryMultiChainCall__(mapp *app.App, msg []byte, s
 	_, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
 	defer conn1.Close()
 	queryClient := types.NewQueryClient(conn1)
-
+	appA := suite.AppContext()
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
 	multimsg := &types.QueryContractCallRequest{
 		MultiChainId: chainId,
-		Sender:       sender.Address.String(),
-		Address:      contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Address:      appA.MustAccAddressToString(contractAddress),
 		QueryData:    msgbz,
 	}
 	res, err := queryClient.ContractCall(
@@ -126,14 +129,14 @@ func (suite *KeeperTestSuite) queryMultiChainCall_(msg []byte, sender simulation
 	// suite.Require().NoError(err)
 	clientCtx := client.Context{}
 	queryClient := types.NewQueryClient(clientCtx)
-
+	appA := suite.AppContext()
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
 	multimsg := &types.QueryContractCallRequest{
 		MultiChainId: chainId,
-		Sender:       sender.Address.String(),
-		Address:      contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Address:      appA.MustAccAddressToString(contractAddress),
 		QueryData:    msgbz,
 	}
 	res, err := queryClient.ContractCall(
@@ -150,15 +153,15 @@ func (suite *KeeperTestSuite) broadcastMultiChainExec(msg []byte, sender simulat
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
 	msgexec := &wasmxtypes.MsgExecuteContract{
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgbz,
 	}
 	msgAny, err := codectypes.NewAnyWithValue(msgexec)
 	suite.Require().NoError(err)
 	multimsg := &types.MsgMultiChainWrap{
 		MultiChainId: chainId,
-		Sender:       sender.Address.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
 		Data:         msgAny,
 	}
 	return appA.BroadcastTxAsync(sender, multimsg)

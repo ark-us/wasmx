@@ -4,12 +4,14 @@ import (
 	"context"
 	"math/big"
 
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/cosmos/cosmos-sdk/server"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
+
 	// sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -23,6 +25,7 @@ import (
 
 	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -131,6 +134,8 @@ type EVMBackend interface {
 	// // Tracing
 	// TraceTransaction(hash common.Hash, config *evmtypes.TraceConfig) (interface{}, error)
 	// TraceBlock(height rpctypes.BlockNumber, config *evmtypes.TraceConfig, block *tmrpctypes.ResultBlock) ([]*evmtypes.TxTraceResult, error)
+
+	AddressCodec() address.Codec
 }
 
 var _ BackendI = (*Backend)(nil)
@@ -145,7 +150,9 @@ type Backend struct {
 	logger              log.Logger
 	chainID             *big.Int
 	cfg                 config.Config
+	chainConfig         *mcfg.ChainConfig
 	allowUnprotectedTxs bool
+	addressCodec        address.Codec
 }
 
 // NewBackend creates a new Backend instance for cosmos and ethereum namespaces
@@ -160,6 +167,11 @@ func NewBackend(
 	if err != nil {
 		panic(err)
 	}
+	conf, err := mcfg.GetChainConfig(clientCtx.ChainID)
+	if err != nil {
+		panic(err)
+	}
+	addressCodec := authcodec.NewBech32Codec(conf.Bech32PrefixAccAddr)
 
 	appConf, err := config.GetConfig(svrCtx.Viper)
 	if err != nil {
@@ -173,6 +185,12 @@ func NewBackend(
 		logger:              logger.With("module", "backend"),
 		chainID:             chainID,
 		cfg:                 appConf,
+		chainConfig:         conf,
 		allowUnprotectedTxs: allowUnprotectedTxs,
+		addressCodec:        addressCodec,
 	}
+}
+
+func (b *Backend) AddressCodec() address.Codec {
+	return b.addressCodec
 }

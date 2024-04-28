@@ -65,12 +65,23 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress sdk.AccAddres
 	netmsgbz, err := json.Marshal(netmsg)
 	if err != nil {
 		c.Context.Ctx.Logger().Error("cannot marshall P2PMessage", "error", err.Error())
+		return
 	}
-	c.Context.Ctx.Logger().Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddress.String(), "contract", contractAddress.String())
+	contractAddressStr, err := c.Context.CosmosHandler.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		c.Context.Ctx.Logger().Error("handle p2p message: cannot stringify contract address", "error", err.Error())
+	}
+
+	senderAddressStr, err := c.Context.CosmosHandler.AddressCodec().BytesToString(senderAddress)
+	if err != nil {
+		c.Context.Ctx.Logger().Error("handle p2p message: cannot stringify sender address", "error", err.Error())
+	}
+
+	c.Context.Ctx.Logger().Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddressStr, "contract", contractAddressStr)
 
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{
-		Sender:   senderAddress.String(),
-		Contract: contractAddress.String(),
+		Sender:   senderAddressStr,
+		Contract: contractAddressStr,
 		Data:     netmsgbz,
 	}
 	_, _, err = c.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)

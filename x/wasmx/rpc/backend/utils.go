@@ -109,7 +109,11 @@ func ContractAddressFromEvents(addressCodec address.Codec, events []abci.Event) 
 // txs in order to compute and return the pending tx sequence.
 func (b *Backend) getAccountNonce(accAddr common.Address, pending bool, height int64, logger log.Logger) (uint64, error) {
 	queryClient := authtypes.NewQueryClient(b.clientCtx)
-	adr := sdk.AccAddress(accAddr.Bytes()).String()
+	addrCodec := b.clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+	adr, err := addrCodec.BytesToString(sdk.AccAddress(accAddr.Bytes()))
+	if err != nil {
+		return 0, err
+	}
 	ctx := rpctypes.ContextWithHeight(height)
 	res, err := queryClient.Account(ctx, &authtypes.QueryAccountRequest{Address: adr})
 	if err != nil {

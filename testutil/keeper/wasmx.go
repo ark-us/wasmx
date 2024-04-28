@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -56,7 +57,11 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 
 	registry := codectypes.NewInterfaceRegistry()
 	cdc := codec.NewProtoCodec(registry)
-	encodingConfig := app.MakeEncodingConfig()
+	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)
+	if err != nil {
+		panic(err)
+	}
+	encodingConfig := app.MakeEncodingConfig(chainCfg)
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	appOpts := app.DefaultAppOptions{}
@@ -100,6 +105,13 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	for name, perms := range maccPerms {
 		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
 	}
+	valCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr)
+	consCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr)
+	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+
+	govAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(govtypes.ModuleName))
+	require.NoError(t, err)
+
 	// transferKeeper := ibctransferkeeper.NewKeeper(
 	// 	cdc,
 	// 	storetypes.NewKVStoreKey(ibctransfertypes.StoreKey),
@@ -111,7 +123,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	accountKeeper,
 	// 	bankKeeper,
 	// 	nil, //scopedTransferKeeper,
-	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	// 	govAddr,
 	// )
 	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 	mapp := app.NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
@@ -134,10 +146,13 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		app.DefaultNodeHome,
 		config.BaseDenom,
 		permAddrs,
-		app.MakeEncodingConfig().InterfaceRegistry,
+		app.MakeEncodingConfig(chainCfg).InterfaceRegistry,
 		nil,
 		nil,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		govAddr,
+		valCodec,
+		consCodec,
+		addrCodec,
 		mapp,
 	)
 

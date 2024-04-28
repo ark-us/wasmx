@@ -10,7 +10,11 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
+	cdcaddress "cosmossdk.io/core/address"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/rand"
+	"github.com/cosmos/cosmos-sdk/types/address"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"mythos/v1/x/wasmx/client/cli"
 	"mythos/v1/x/wasmx/keeper"
@@ -34,7 +38,8 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
-	cdc codec.BinaryCodec
+	cdc       codec.BinaryCodec
+	addrCodec cdcaddress.Codec
 }
 
 func NewAppModuleBasic(cdc codec.BinaryCodec) AppModuleBasic {
@@ -57,8 +62,12 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 }
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
-func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesisState())
+func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
+	feeCollector, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
+	mintAddress, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
+	bootstrapAccount, _ := a.addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
+
+	return cdc.MustMarshalJSON(types.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form

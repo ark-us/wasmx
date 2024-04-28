@@ -30,6 +30,8 @@ func init() {
 func BenchmarkSimulation(b *testing.B) {
 	config := simcli.NewConfigFromFlags()
 	config.ChainID = mcfg.MYTHOS_CHAIN_ID_TEST
+	cfg, err := mcfg.GetChainConfig(config.ChainID)
+	require.NoError(b, err)
 	simcli.FlagEnabledValue = true
 	simcli.FlagCommitValue = true
 
@@ -42,7 +44,7 @@ func BenchmarkSimulation(b *testing.B) {
 		require.NoError(b, err)
 	})
 
-	encoding := app.MakeEncodingConfig()
+	encoding := app.MakeEncodingConfig(cfg)
 
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)

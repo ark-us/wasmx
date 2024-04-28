@@ -16,11 +16,17 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 	valAccount := suite.GetRandomAccount()
 	valAddr := sdk.ValAddress(valAccount.Address)
 
+	valAddrStr, err := appA.ValidatorAddressCodec().BytesToString(valAddr)
+	suite.Require().NoError(err)
+
+	valAccountAddrStr, err := appA.AddressCodec().BytesToString(valAccount.Address)
+	suite.Require().NoError(err)
+
 	valFunds := sdkmath.NewInt(1000_000_000)
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	createValMsg, err := stakingtypes.NewMsgCreateValidator(
-		valAddr.String(),
+		valAddrStr,
 		valAccount.PubKey,
 		sdk.NewCoin(appA.Chain.Config.BaseDenom, valFunds),
 		stakingtypes.NewDescription("", "", "", "", ""),
@@ -48,7 +54,7 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 		}
 	}
 	suite.Require().True(found)
-	suite.Require().Equal(valAccount.Address.String(), validAddr)
+	suite.Require().Equal(valAccountAddrStr, validAddr)
 
 	evs = appA.GetSdkEventsByType(res.GetEvents(), "create_validator")
 	suite.Require().Equal(1, len(evs), "missing create_validator events")
@@ -58,5 +64,5 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 			validAddr = attr.Value
 		}
 	}
-	suite.Require().Equal(valAccount.Address.String(), validAddr)
+	suite.Require().Equal(valAccountAddrStr, validAddr)
 }

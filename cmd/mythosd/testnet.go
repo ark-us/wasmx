@@ -23,6 +23,7 @@ import (
 
 	"cosmossdk.io/math"
 
+	address "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -37,6 +38,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -182,7 +184,7 @@ Example:
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
-			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
+			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), clientCtx.TxConfig.SigningContext().AddressCodec(), args)
 		},
 	}
 	fmt.Println("---init-files0--")
@@ -238,7 +240,7 @@ Example:
 			}
 			leaderURI := args_[1]
 
-			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args, nodeIndex, leaderURI)
+			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), clientCtx.TxConfig.SigningContext().AddressCodec(), args, nodeIndex, leaderURI)
 		},
 	}
 
@@ -324,10 +326,11 @@ func initTestnetFiles(
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
+	addrCodec address.Codec,
 	args initArgs,
 ) error {
 	fmt.Println("--initTestnetFiles--")
-	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, 0, "")
+	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, addrCodec, args, 0, "")
 }
 
 func testnetAddNode(
@@ -337,13 +340,14 @@ func testnetAddNode(
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
+	addrCodec address.Codec,
 	args initArgs,
 	nodeIndex int,
 	leaderURI string,
 ) error {
 	args.numValidators = nodeIndex + 1
 	args.sameMachine = true
-	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, nodeIndex, leaderURI)
+	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, addrCodec, args, nodeIndex, leaderURI)
 	if err != nil {
 		return err
 	}
@@ -382,6 +386,7 @@ func initTestnetFilesInternal(
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
+	addrCodec address.Codec,
 	args initArgs,
 	nodeIndexStart int,
 	leaderURI string,
@@ -491,14 +496,19 @@ func initTestnetFilesInternal(
 			return err
 		}
 
-		host := fmt.Sprintf("%s@%s:%s", addr.String(), nodeIPs[i], "8090")
+		addrstr, err := addrCodec.BytesToString(addr)
+		if err != nil {
+			return err
+		}
+
+		host := fmt.Sprintf("%s@%s:%s", addrstr, nodeIPs[i], "8090")
 		if args.sameMachine && !args.p2p {
 			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
-			host = fmt.Sprintf("%s@%s", addr.String(), ipaddr)
+			host = fmt.Sprintf("%s@%s", addrstr, ipaddr)
 		}
 
 		if args.p2p {
-			valStr := addr.String()
+			valStr := addrstr
 
 			privValid := pvm.LoadOrGenFilePV(nodeConfig.PrivValidatorKeyFile(), nodeConfig.PrivValidatorStateFile())
 			pk := privValid.Key.PrivKey.Bytes()
@@ -564,8 +574,12 @@ func initTestnetFilesInternal(
 		coins := sdk.Coins{
 			sdk.NewCoin(chaincfg.BaseDenom, accStakingTokens),
 		}
+		addrstr, err := addrCodec.BytesToString(addr)
+		if err != nil {
+			return err
+		}
 
-		genBalances[i] = banktypes.Balance{Address: addr.String(), Coins: coins.Sort()}
+		genBalances[i] = banktypes.Balance{Address: addrstr, Coins: coins.Sort()}
 		genAccounts[i] = authtypes.NewBaseAccount(addr, nil, 0, 0)
 
 		valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addr))
@@ -620,6 +634,7 @@ func initTestnetFilesInternal(
 		if err != nil {
 			panic(err)
 		}
+		addrCodec0 := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
 
 		genBalanceCoins := make([]sdk.Coins, len(genBalances))
 		for i := 0; i < len(genBalances); i++ {
@@ -628,7 +643,11 @@ func initTestnetFilesInternal(
 
 		// set this only after we get address bytes
 		mcfg.SetGlobalChainConfig(chainId)
-		level0EncodingConfig := app.MakeEncodingConfig()
+		chainCfg, err := mcfg.GetChainConfig(chainId)
+		if err != nil {
+			panic(err)
+		}
+		level0EncodingConfig := app.MakeEncodingConfig(chainCfg)
 		valAddrCodec = level0EncodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()
 		for i := nodeIndexStart; i < args.numValidators; i++ {
 			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId)
@@ -639,11 +658,16 @@ func initTestnetFilesInternal(
 			addr := sdk.AccAddress(genAccounts0[i])
 			genAccount := authtypes.NewBaseAccount(addr, nil, 0, 0)
 
+			addrstr, err := addrCodec0.BytesToString(addr)
+			if err != nil {
+				return err
+			}
+
 			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
 			for i, coin := range genBalanceCoins[i] {
 				coins[i] = sdk.NewCoin(chaincfg.BaseDenom, coin.Amount)
 			}
-			genBalance := banktypes.Balance{Address: addr.String(), Coins: coins}
+			genBalance := banktypes.Balance{Address: addrstr, Coins: coins}
 
 			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId+".json", 1)
 

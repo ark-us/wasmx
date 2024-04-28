@@ -10,7 +10,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	address "cosmossdk.io/core/address"
-	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
@@ -47,8 +46,8 @@ type (
 		grpcQueryRouter       *baseapp.GRPCQueryRouter
 		wasmVMResponseHandler cw8types.WasmVMResponseHandler
 		wasmVMQueryHandler    cw8.WasmVMQueryHandler
-		validatorAddressCodec addresscodec.Codec
-		consensusAddressCodec addresscodec.Codec
+		validatorAddressCodec address.Codec
+		consensusAddressCodec address.Codec
 		addressCodec          address.Codec
 
 		cch *cchtypes.ContractHandlerMap
@@ -93,8 +92,8 @@ func NewKeeper(
 	msgRouter *baseapp.MsgServiceRouter,
 	grpcQueryRouter *baseapp.GRPCQueryRouter,
 	authority string,
-	validatorAddressCodec addresscodec.Codec,
-	consensusAddressCodec addresscodec.Codec,
+	validatorAddressCodec address.Codec,
+	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
 	app types.Application,
 ) *Keeper {

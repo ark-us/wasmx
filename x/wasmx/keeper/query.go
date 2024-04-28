@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 )
@@ -52,7 +53,7 @@ func (k *Keeper) ContractsByCode(c context.Context, req *types.QueryContractsByC
 	// pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 	// 	if accumulate {
 	// 		var contractAddr sdk.AccAddress = key[types.AbsoluteTxPositionLen:]
-	// 		r = append(r, contractAddr.String())
+	// 		r = append(r, contractAddr.String()) // TODO codec stringify
 	// 	}
 	// 	return true, nil
 	// })
@@ -409,8 +410,12 @@ func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper *Keeper) (*t
 	if info == nil {
 		return nil, types.ErrNotFound
 	}
+	addrstr, err := keeper.AddressCodec().BytesToString(addr)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
 	return &types.QueryContractInfoResponse{
-		Address:      addr.String(),
+		Address:      addrstr,
 		ContractInfo: *info,
 	}, nil
 }
@@ -448,7 +453,7 @@ func (k *Keeper) ContractsByCreator(c context.Context, req *types.QueryContracts
 	// pageRes, err := query.FilteredPaginate(prefixStore, req.Pagination, func(key []byte, _ []byte, accumulate bool) (bool, error) {
 	// 	if accumulate {
 	// 		accAddres := sdk.AccAddress(key[types.AbsoluteTxPositionLen:])
-	// 		contracts = append(contracts, accAddres.String())
+	// 		contracts = append(contracts, accAddres.String()) // TODO codec stringify
 	// 	}
 	// 	return true, nil
 	// })

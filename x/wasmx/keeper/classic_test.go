@@ -718,7 +718,7 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fibstorehex + "0000000000000000000000000000000000000000000000000000000000000005")}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "0000000000000000000000000000000000000000000000000000000000000005")
 
-	logs, err := appA.GetEwasmLogs(res.GetEvents())
+	logs, err := appA.GetEwasmLogs(appA.AddressCodec(), res.GetEvents())
 	s.Require().NoError(err)
 	s.Require().Equal(7, len(logs))
 	s.Require().Equal(7, len(appA.GetEventsByAttribute(res.GetEvents(), "topic", "0x5566666666666666666666666666666666666666666666666666666666666677")))
@@ -807,12 +807,12 @@ func (suite *KeeperTestSuite) TestEwasmCreate1() {
 
 	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
-	s.Require().Equal(factoryAccount.String(), contractInfo.Provenance)
+	s.Require().Equal(appA.MustAccAddressToString(factoryAccount), contractInfo.Provenance)
 
 	_factoryAccount := appA.App.AccountKeeper.GetAccount(appA.Context(), factoryAccount)
 	_nonce := _factoryAccount.GetSequence() - 1
 	_createdContractAddress := wasmxkeeper.EwasmBuildContractAddressClassic(factoryAccount, _nonce)
-	s.Require().Equal(createdContractAddress.String(), _createdContractAddress.String())
+	s.Require().Equal(appA.MustAccAddressToString(createdContractAddress), appA.MustAccAddressToString(_createdContractAddress))
 
 	// create second contract
 	res = appA.ExecuteContract(sender, factoryAccount, types.WasmxExecutionMessage{Data: appA.Hex2bz(createHex + initvalue)}, creationFunds, nil)
@@ -825,7 +825,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate1() {
 	_factoryAccount = appA.App.AccountKeeper.GetAccount(appA.Context(), factoryAccount)
 	_nonce = _factoryAccount.GetSequence() - 1
 	_createdContractAddress = wasmxkeeper.EwasmBuildContractAddressClassic(factoryAccount, _nonce)
-	s.Require().Equal(createdContractAddress.String(), _createdContractAddress.String())
+	s.Require().Equal(appA.MustAccAddressToString(createdContractAddress), appA.MustAccAddressToString(_createdContractAddress))
 }
 
 func (suite *KeeperTestSuite) TestEwasmCreate2() {
@@ -864,14 +864,14 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 
 	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
-	s.Require().Equal(factoryAccount.String(), contractInfo.Provenance)
+	s.Require().Equal(appA.MustAccAddressToString(factoryAccount), contractInfo.Provenance)
 
 	saltb, _ := hex.DecodeString(salt)
 	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), contractInfo.CodeId)
 	s.Require().NotNil(codeInfo)
 
 	_createdContractAddress := appA.App.WasmxKeeper.EwasmPredictableAddressGenerator(factoryAccount, saltb, []byte{}, false)(appA.Context(), contractInfo.CodeId, codeInfo.CodeHash)
-	s.Require().Equal(createdContractAddress.String(), _createdContractAddress.String())
+	s.Require().Equal(appA.MustAccAddressToString(createdContractAddress), appA.MustAccAddressToString(_createdContractAddress))
 
 	// second child contract
 	salt = "0000000000000000000000000000000000000000000000000000000000000002"
@@ -884,7 +884,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 
 	saltb, _ = hex.DecodeString(salt)
 	_createdContractAddress = appA.App.WasmxKeeper.EwasmPredictableAddressGenerator(factoryAccount, saltb, []byte{}, false)(appA.Context(), contractInfo.CodeId, codeInfo.CodeHash)
-	s.Require().Equal(createdContractAddress.String(), _createdContractAddress.String())
+	s.Require().Equal(appA.MustAccAddressToString(createdContractAddress), appA.MustAccAddressToString(_createdContractAddress))
 }
 
 func (suite *KeeperTestSuite) TestEwasmOrigin() {

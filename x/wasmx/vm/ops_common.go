@@ -9,13 +9,19 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 // Returns nil if there is no contract
 func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
-	depContext, ok := ctx.ContractRouter[addr.String()]
+	addrCodec := ctx.GetCosmosHandler().AddressCodec()
+	addrstr, err := addrCodec.BytesToString(addr)
+	if err != nil {
+		return nil
+	}
+	depContext, ok := ctx.ContractRouter[addrstr]
 	if ok {
 		return depContext
 	}
@@ -24,7 +30,7 @@ func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
 		return nil
 	}
 	depContext = buildExecutionContextClassic(dep)
-	ctx.ContractRouter[addr.String()] = depContext
+	ctx.ContractRouter[addrstr] = depContext
 	return depContext
 }
 
@@ -108,6 +114,16 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		return int32(0), []byte(`cannot get contract context`)
 	}
 
+	addrCodec := ctx.GetCosmosHandler().AddressCodec()
+	fromstr, err := addrCodec.BytesToString(req.From)
+	if err != nil {
+		return int32(1), []byte(fmt.Sprintf("from: %s", mcfg.ERRORMSG_ACC_TOSTRING))
+	}
+	tostr, err := addrCodec.BytesToString(req.To)
+	if err != nil {
+		return int32(1), []byte(fmt.Sprintf("to: %s", mcfg.ERRORMSG_ACC_TOSTRING))
+	}
+
 	// deterministic contracts cannot transact with or query non-deterministic contracts
 	sourceContract := GetContractContext(ctx, req.From)
 	if sourceContract != nil {
@@ -117,14 +133,14 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 			// deterministic contracts can read from metaconsensus
 			if toStorageType == types.ContractStorageType_MetaConsensus && !req.IsQuery {
 				errmsg := "deterministic contract tried to execute meta consensus contract"
-				ctx.Ctx.Logger().Debug(errmsg, "from", req.From.String(), "to", req.To.String())
-				errmsg += fmt.Sprintf(": from %s, to %s", req.From.String(), req.To.String())
+				ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
+				errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
 				return int32(1), []byte(errmsg)
 			}
 			if toStorageType != types.ContractStorageType_MetaConsensus {
 				errmsg := "deterministic contract tried to execute non-deterministic contract"
-				ctx.Ctx.Logger().Debug(errmsg, "from", req.From.String(), "to", req.To.String())
-				errmsg += fmt.Sprintf(": from %s, to %s", req.From.String(), req.To.String())
+				ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
+				errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
 				return int32(1), []byte(errmsg)
 			}
 		}
@@ -138,19 +154,21 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 	}
 
 	to := req.To
+	tostr2 := tostr
 	systemDeps := req.SystemDeps
 	// clone router
 	newrouter := cloneContractRouter(ctx.ContractRouter)
 	// TODO req.To or to?
-	routerAddress := req.To.String()
+	routerAddress := tostr
 
 	if depContext.ContractInfo.Role == types.ROLE_LIBRARY {
 		// use the sender contract if the call is to a library
 		to = req.From
+		tostr2 = fromstr
 		// TODO
-		// newrouter[to.String()].ContractInfo.
+		// newrouter[tostr2].ContractInfo.
 		// TODO inherit execution depepndencies comming from roles
-		sysdeps := newrouter[req.To.String()].ContractInfo.SystemDeps
+		sysdeps := newrouter[tostr].ContractInfo.SystemDeps
 		for _, dep := range sourceContract.ContractInfo.SystemDeps {
 			if strings.Contains(dep.Role, "consensus") {
 				if !slices.Contains(systemDeps, dep.Role) {
@@ -195,7 +213,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		newrouter[routerAddress].ContractInfo.SystemDeps = sysdeps
 	}
 	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[to.String()].ContractInfo.StorageType, ctx.ContractRouter[to.String()].ContractInfo.StoreKey)
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[tostr2].ContractInfo.StorageType, ctx.ContractRouter[tostr2].ContractInfo.StoreKey)
 
 	// for authorizing cosmos messages sent by the contract, we check the sender/signer is the contract
 	// so we initialize the cosmos handler with the target contract
@@ -229,7 +247,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		},
 	}
 
-	_, err := newrouter[routerAddress].Execute(newctx)
+	_, err = newrouter[routerAddress].Execute(newctx)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {

@@ -426,7 +426,13 @@ func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.Cal
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
+
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	for _, dep := range ctx.ContractRouter[addrstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
@@ -474,7 +480,13 @@ func wasmxCreate2AccountInterpreted(_context interface{}, callframe *wasmedge.Ca
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	for _, dep := range ctx.ContractRouter[ctx.Env.Contract.Address.String()].ContractInfo.SystemDeps {
+
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	for _, dep := range ctx.ContractRouter[addrstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 
@@ -614,12 +626,23 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+
 	contractAddress := sdk.AccAddress(vmtypes.CleanupAddress(data.Contract))
+	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
 	msg := &networktypes.MsgGrpcSendRequest{
 		IpAddress: data.IpAddress,
-		Contract:  contractAddress.String(),
+		Contract:  contractAddressStr,
 		Data:      []byte(data.Data),
-		Sender:    ctx.Env.Contract.Address.String(),
+		Sender:    addrstr,
 	}
 
 	res, err := executeWrapMultiChain(ctx, msg, msg.Sender)
@@ -703,8 +726,13 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 		return nil, wasmedge.Result_Fail
 	}
 
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
 	msgtosend := &networktypes.MsgStartTimeoutRequest{
-		Sender:   ctx.Env.Contract.Address.String(),
+		Sender:   addrstr,
 		Contract: req.Contract,
 		Delay:    req.Delay,
 		Args:     req.Args,
@@ -737,8 +765,13 @@ func wasmxStartBackgroundProcess(_context interface{}, callframe *wasmedge.Calli
 		return nil, wasmedge.Result_Fail
 	}
 
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
 	msgtosend := &networktypes.MsgStartBackgroundProcessRequest{
-		Sender:   ctx.Env.Contract.Address.String(), // TODO wasmx?
+		Sender:   addrstr, // TODO wasmx?
 		Contract: req.Contract,
 		Args:     req.Args,
 	}
@@ -776,6 +809,10 @@ func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.Cal
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 
 	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
 	if err != nil {
@@ -787,7 +824,7 @@ func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.Cal
 		returns[0] = ptr
 		return returns, wasmedge.Result_Success
 	}
-	proc, ok := procc.Processes[contractAddress.String()]
+	proc, ok := procc.Processes[contractAddressStr]
 	if !ok {
 		resp.Error = "process not existent"
 		ptr, err := prepareResponse(ctx, callframe, &resp)
@@ -838,6 +875,10 @@ func wasmxReadFromBackgroundProcess(_context interface{}, callframe *wasmedge.Ca
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 
 	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
 	if err != nil {
@@ -849,7 +890,7 @@ func wasmxReadFromBackgroundProcess(_context interface{}, callframe *wasmedge.Ca
 		returns[0] = ptr
 		return returns, wasmedge.Result_Success
 	}
-	proc, ok := procc.Processes[contractAddress.String()]
+	proc, ok := procc.Processes[contractAddressStr]
 	if !ok {
 		resp.Error = "process not existent"
 		ptr, err := prepareResponse(ctx, callframe, &resp)
@@ -1018,7 +1059,12 @@ func wasmxHumanize(context interface{}, callframe *wasmedge.CallingFrame, params
 		return nil, wasmedge.Result_Fail
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrBz))
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addr.String()))
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addrstr))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

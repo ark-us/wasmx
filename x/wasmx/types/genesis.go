@@ -1,27 +1,21 @@
 package types
 
-import (
-	"github.com/cometbft/cometbft/libs/rand"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/address"
-)
-
 // NewGenesisState creates a new genesis state.
-func NewGenesisState(params Params, systemContracts []SystemContract, bootstrapAccount sdk.AccAddress) GenesisState {
+func NewGenesisState(params Params, systemContracts []SystemContract, bootstrapAccountBech32 string) GenesisState {
 	return GenesisState{
 		Params:                  params,
 		SystemContracts:         systemContracts,
-		BootstrapAccountAddress: bootstrapAccount.String(),
+		BootstrapAccountAddress: bootstrapAccountBech32,
 	}
 }
 
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
-func DefaultGenesisState() *GenesisState {
+func DefaultGenesisState(bootstrapAccountBech32 string, feeCollectorBech32 string, mintBech32 string) *GenesisState {
 	return &GenesisState{
 		Params:                  DefaultParams(),
-		SystemContracts:         DefaultSystemContracts(),
-		BootstrapAccountAddress: sdk.AccAddress(rand.Bytes(address.Len)).String(),
+		SystemContracts:         DefaultSystemContracts(feeCollectorBech32, mintBech32),
+		BootstrapAccountAddress: bootstrapAccountBech32,
 	}
 }
 

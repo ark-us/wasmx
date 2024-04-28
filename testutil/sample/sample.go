@@ -1,13 +1,17 @@
 package sample
 
 import (
+	address "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // AccAddress returns a sample account address
-func AccAddress() string {
+func AccAddress(addrCodec address.Codec) string {
 	pk := ed25519.GenPrivKey().PubKey()
 	addr := pk.Address()
-	return sdk.AccAddress(addr).String()
+	addrstr, err := addrCodec.BytesToString(addr)
+	if err != nil {
+		panic(err)
+	}
+	return addrstr
 }

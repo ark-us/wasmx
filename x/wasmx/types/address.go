@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 
+	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -42,12 +43,12 @@ func Evm32AddressFromAcc(addr sdk.AccAddress) AddressCW {
 }
 
 // Evm32AddressFromBech32
-func Evm32AddressFromBech32(addr string) (*AddressCW, error) {
-	accAddress, err := sdk.AccAddressFromBech32(addr)
+func Evm32AddressFromBech32(addressCodec address.Codec, addr string) (*AddressCW, error) {
+	accAddress, err := addressCodec.StringToBytes(addr)
 	if err != nil {
 		return nil, err
 	}
-	addrcw := BytesToAddressCW(accAddress.Bytes())
+	addrcw := BytesToAddressCW(accAddress)
 	return &addrcw, nil
 }
 

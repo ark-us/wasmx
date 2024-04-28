@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	address "cosmossdk.io/core/address"
 	sdkmath "cosmossdk.io/math"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -17,7 +18,7 @@ import (
 var BigIntElem = &big.Int{}
 var BigIntType = reflect.TypeOf(BigIntElem)
 
-func AbiMarshalJSON(iface interface{}) (string, error) {
+func AbiMarshalJSON(addrCodec address.Codec, iface interface{}) (string, error) {
 	ifv := reflect.ValueOf(iface)
 	// ift := reflect.TypeOf(iface)
 	// fmt.Println("-AbiMarshalJSON-ifv-", ifv)
@@ -42,7 +43,7 @@ func AbiMarshalJSON(iface interface{}) (string, error) {
 
 		// fmt.Println("-structFieldName-", structFieldName, fieldName, structFieldValue.Kind())
 		if structFieldValue.Kind() == reflect.Struct {
-			encoding, err := AbiMarshalJSON(structFieldValue.Interface())
+			encoding, err := AbiMarshalJSON(addrCodec, structFieldValue.Interface())
 			if err != nil {
 				return "", err
 			}
@@ -60,9 +61,17 @@ func AbiMarshalJSON(iface interface{}) (string, error) {
 				// TODO special structs
 				if strings.Contains(fieldName, "validator") {
 					validator := sdk.ValAddress(bech32.Bytes())
-					encoded = fmt.Sprintf(`%s"%s"`, encoded, validator.String())
+					validatorstr, err := addrCodec.BytesToString(validator)
+					if err != nil {
+						return "", err
+					}
+					encoded = fmt.Sprintf(`%s"%s"`, encoded, validatorstr)
 				} else {
-					encoded = fmt.Sprintf(`%s"%s"`, encoded, bech32.String())
+					bech32str, err := addrCodec.BytesToString(bech32)
+					if err != nil {
+						return "", err
+					}
+					encoded = fmt.Sprintf(`%s"%s"`, encoded, bech32str)
 				}
 			case BigIntType:
 				// fmt.Println("----big.Int{}")
@@ -76,7 +85,7 @@ func AbiMarshalJSON(iface interface{}) (string, error) {
 					arrayItems := make([]string, 0)
 					for j := 0; j < structFieldValue.Len(); j++ {
 						item := structFieldValue.Index(j)
-						encoding, err := AbiMarshalJSON(item.Interface())
+						encoding, err := AbiMarshalJSON(addrCodec, item.Interface())
 						if err != nil {
 							return "", err
 						}

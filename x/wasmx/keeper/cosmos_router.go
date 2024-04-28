@@ -16,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	mcfg "mythos/v1/config"
 	verifysig "mythos/v1/crypto/verifysig"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
@@ -254,15 +255,24 @@ func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAdd
 		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer missing")
 	}
 	authorized := bytes.Equal(signers[0], owner.Bytes())
+	signerstr, err := k.AddressCodec().BytesToString(sdk.AccAddress(signers[0]))
+	if err != nil {
+		return nil, nil, sdkerr.Wrapf(err, "signer: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+	ownerstr, err := k.AddressCodec().BytesToString(owner)
+	if err != nil {
+		return nil, nil, sdkerr.Wrapf(err, "owner: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
 	if !authorized {
-		authorized = sdk.AccAddress(signers[0]).String() == k.authority
+		authorized = signerstr == k.authority
 	}
 	if !authorized {
-		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", sdk.AccAddress(signers[0]).String(), owner.String())
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signerstr, ownerstr)
 	}
 	// signers := msg.GetSigners()
-	// if signers[0].String() != owner.String() {
-	// 	return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signers[0].String(), owner.String())
+	// if signerstr != ownerstr {
+	// 	return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signerstr, ownerstr)
 	// }
 
 	return k.executeMsg(ctx, msg)

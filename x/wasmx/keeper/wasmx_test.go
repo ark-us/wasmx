@@ -98,7 +98,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	msgbz, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	s.Require().NoError(err)
 	instantiateContractMsg := &types.MsgInstantiateContract{
-		Sender: sender.Address.String(),
+		Sender: appA.MustAccAddressToString(sender.Address),
 		CodeId: codeId,
 		Label:  "label",
 		Msg:    msgbz,
@@ -195,8 +195,8 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	msgbz, err = json.Marshal(internalmsg)
 	suite.Require().NoError(err)
 	msg := &types.MsgExecuteContract{
-		Sender:       sender.Address.String(),
-		Contract:     contractAddress.String(),
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Contract:     appA.MustAccAddressToString(contractAddress),
 		Msg:          msgbz,
 		Funds:        nil,
 		Dependencies: nil,

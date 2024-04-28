@@ -84,12 +84,12 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("123"), value)
 
-	data := []byte(fmt.Sprintf(`{"wrapStore":["%s", "goodbye"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"wrapStore":["%s", "goodbye"]}`, appA.MustAccAddressToString(contractAddress)))
 	appA.ExecuteContract(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte(`goodbye`), value)
 
-	resp := appA.WasmxQueryRaw(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"wrapLoad":["%s"]}`, contractAddress.String()))}, nil, nil)
+	resp := appA.WasmxQueryRaw(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"wrapLoad":["%s"]}`, appA.MustAccAddressToString(contractAddress)))}, nil, nil)
 	s.Require().Equal([]byte("goodbye23"), resp)
 }

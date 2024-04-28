@@ -26,10 +26,11 @@ const (
 )
 
 // GenerateGenesisState creates a randomized GenState of the module
-func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+func (a AppModule) GenerateGenesisState(simState *module.SimulationState) {
 	accs := make([]string, len(simState.Accounts))
 	for i, acc := range simState.Accounts {
-		accs[i] = acc.Address.String()
+		accstr, _ := a.keeper.AddressCodec().BytesToString(acc.Address)
+		accs[i] = accstr
 	}
 	wasmxGenesis := types.GenesisState{
 		Params: types.DefaultParams(),

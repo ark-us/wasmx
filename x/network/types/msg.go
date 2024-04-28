@@ -2,7 +2,6 @@ package types
 
 import (
 	sdkerr "cosmossdk.io/errors"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -37,8 +36,9 @@ func (msg MsgMultiChainWrap) ValidateBasic() error {
 	if msg.Data == nil {
 		return sdkerr.Wrapf(sdkerrors.ErrInvalidRequest, "empty request")
 	}
-	if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
-		return sdkerr.Wrap(err, "sender")
-	}
+	// TODO address validator with AddressCodec
+	// if _, err := sdk.AccAddressFromBech32(msg.Sender); err != nil {
+	// 	return sdkerr.Wrap(err, "sender")
+	// }
 	return nil
 }

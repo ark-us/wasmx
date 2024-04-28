@@ -3,7 +3,7 @@ package keeper
 import (
 	"fmt"
 
-	addresscodec "cosmossdk.io/core/address"
+	address "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -28,8 +28,9 @@ type (
 		// should be the x/gov module account.
 		authority string
 
-		validatorAddressCodec addresscodec.Codec
-		consensusAddressCodec addresscodec.Codec
+		validatorAddressCodec address.Codec
+		consensusAddressCodec address.Codec
+		addressCodec          address.Codec
 	}
 )
 
@@ -42,8 +43,9 @@ func NewKeeperBank(
 	actionExecutor *networkkeeper.ActionExecutor,
 	authority string,
 	interfaceRegistry cdctypes.InterfaceRegistry,
-	validatorAddressCodec addresscodec.Codec,
-	consensusAddressCodec addresscodec.Codec,
+	validatorAddressCodec address.Codec,
+	consensusAddressCodec address.Codec,
+	addressCodec address.Codec,
 ) *KeeperBank {
 	keeper := &KeeperBank{
 		jsoncdc:               jsoncdc,
@@ -56,6 +58,7 @@ func NewKeeperBank(
 		InterfaceRegistry:     interfaceRegistry,
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
+		addressCodec:          addressCodec,
 	}
 	return keeper
 }
@@ -71,4 +74,16 @@ func (k *KeeperBank) GetAuthority() string {
 
 func (k *KeeperBank) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
+}
+
+func (k *KeeperBank) AddressCodec() address.Codec {
+	return k.addressCodec
+}
+
+func (k *KeeperBank) ValidatorAddressCodec() address.Codec {
+	return k.validatorAddressCodec
+}
+
+func (k *KeeperBank) ConsensusAddressCodec() address.Codec {
+	return k.consensusAddressCodec
 }

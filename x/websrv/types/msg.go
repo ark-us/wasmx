@@ -3,8 +3,8 @@ package types
 import (
 	fmt "fmt"
 
+	address "cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
@@ -17,16 +17,22 @@ func (msg MsgRegisterOAuthClient) Type() string {
 }
 
 func (msg MsgRegisterOAuthClient) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
-		return err
-	}
-
 	// TODO validate domain
 	if msg.Domain == "" {
 		return ErrOAuthClientInvalidDomain
 	}
 
 	return validateString(msg.Domain)
+}
+
+func (msg MsgRegisterOAuthClient) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Owner); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (msg MsgEditOAuthClient) Route() string {
@@ -38,10 +44,6 @@ func (msg MsgEditOAuthClient) Type() string {
 }
 
 func (msg MsgEditOAuthClient) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
-		return err
-	}
-
 	// TODO validate domain
 	if msg.Domain == "" {
 		return ErrOAuthClientInvalidDomain
@@ -53,6 +55,16 @@ func (msg MsgEditOAuthClient) ValidateBasic() error {
 	return validateString(msg.Domain)
 }
 
+func (msg MsgEditOAuthClient) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Owner); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (msg MsgDeregisterOAuthClient) Route() string {
 	return RouterKey
 }
@@ -62,11 +74,18 @@ func (msg MsgDeregisterOAuthClient) Type() string {
 }
 
 func (msg MsgDeregisterOAuthClient) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Owner); err != nil {
+	return validateUint64(msg.ClientId)
+}
+
+func (msg MsgDeregisterOAuthClient) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Owner); err != nil {
 		return err
 	}
 
-	return validateUint64(msg.ClientId)
+	return nil
 }
 
 func (msg MsgRegisterRoute) Route() string {
@@ -78,10 +97,6 @@ func (msg MsgRegisterRoute) Type() string {
 }
 
 func (msg MsgRegisterRoute) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return errorsmod.Wrap(err, "authority")
-	}
-
 	if err := validateStringNonEmpty(msg.Title); err != nil {
 		return errorsmod.Wrap(err, "title")
 	}
@@ -92,10 +107,6 @@ func (msg MsgRegisterRoute) ValidateBasic() error {
 
 	if err := validateStringNonEmpty(msg.Path); err != nil {
 		return errorsmod.Wrap(err, "path")
-	}
-
-	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
-		return errorsmod.Wrap(err, "contract address")
 	}
 
 	if string(msg.Path[0]) != "/" {
@@ -108,6 +119,21 @@ func (msg MsgRegisterRoute) ValidateBasic() error {
 	return nil
 }
 
+func (msg MsgRegisterRoute) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Authority); err != nil {
+		return errorsmod.Wrap(err, "authority")
+	}
+
+	if _, err := addressCodec.StringToBytes(msg.ContractAddress); err != nil {
+		return errorsmod.Wrap(err, "contract address")
+	}
+
+	return nil
+}
+
 func (msg MsgDeregisterRoute) Route() string {
 	return RouterKey
 }
@@ -117,10 +143,6 @@ func (msg MsgDeregisterRoute) Type() string {
 }
 
 func (msg MsgDeregisterRoute) ValidateBasic() error {
-	if _, err := sdk.AccAddressFromBech32(msg.Authority); err != nil {
-		return errorsmod.Wrap(err, "authority")
-	}
-
 	if err := validateStringNonEmpty(msg.Title); err != nil {
 		return errorsmod.Wrap(err, "title")
 	}
@@ -133,7 +155,18 @@ func (msg MsgDeregisterRoute) ValidateBasic() error {
 		return errorsmod.Wrap(err, "path")
 	}
 
-	if _, err := sdk.AccAddressFromBech32(msg.ContractAddress); err != nil {
+	return nil
+}
+
+func (msg MsgDeregisterRoute) ValidateWithAddress(addressCodec address.Codec) error {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+	if _, err := addressCodec.StringToBytes(msg.Authority); err != nil {
+		return errorsmod.Wrap(err, "authority")
+	}
+
+	if _, err := addressCodec.StringToBytes(msg.ContractAddress); err != nil {
 		return errorsmod.Wrap(err, "contract address")
 	}
 	return nil

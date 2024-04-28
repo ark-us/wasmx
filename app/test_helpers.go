@@ -17,7 +17,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"golang.org/x/sync/errgroup"
 
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -96,7 +95,13 @@ func SetupApp(
 	appOpts.Set("goContextParent", goctx)
 	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 
-	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
+	chainId := config.MYTHOS_CHAIN_ID_TEST
+	chainCfg, err := config.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+
+	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(chainCfg), appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -109,7 +114,7 @@ func SetupApp(
 		// Initialize the chain
 		app.InitChain(
 			&abci.RequestInitChain{
-				ChainId:         config.MYTHOS_CHAIN_ID_TEST,
+				ChainId:         chainId,
 				Time:            time.Now().UTC(),
 				Validators:      []abci.ValidatorUpdate{},
 				ConsensusParams: DefaultTestingConsensusParams,
@@ -124,7 +129,11 @@ func SetupApp(
 // SetupTestingApp initializes the IBC-go testing application
 func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
-	cfg := MakeEncodingConfig()
+	chainCfg, err := config.GetChainConfig(chainID)
+	if err != nil {
+		panic(err)
+	}
+	cfg := MakeEncodingConfig(chainCfg)
 
 	// level := "network:debug,wasmx:debug,*:info"
 	// filter, _ := log.ParseLogLevel(level)
@@ -150,10 +159,6 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 		bam.SetChainID(chainID),
 	)
 	bapps.SetApp(chainID, app)
-	for acc := range maccPerms {
-		addr := authtypes.NewModuleAddress(acc).String()
-		app.Logger().Info("module address", acc, addr)
-	}
 	return app, app.DefaultGenesis()
 }
 
@@ -175,19 +180,29 @@ func NewTestNetworkFixture() network.TestFixture {
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
-	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), appOpts)
+	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)
+	if err != nil {
+		panic(err)
+	}
+
+	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(chainCfg), appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
 		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
+		chainId := val.GetCtx().Viper.GetString(flags.FlagChainID)
+		chainCfg, err := config.GetChainConfig(chainId)
+		if err != nil {
+			panic(err)
+		}
 		return NewApp(
 			actionExecutor,
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
-			DefaultNodeHome, 5, MakeEncodingConfig(),
+			DefaultNodeHome, 5, MakeEncodingConfig(chainCfg),
 			appOpts,
 			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 			bam.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
-			bam.SetChainID(val.GetCtx().Viper.GetString(flags.FlagChainID)),
+			bam.SetChainID(chainId),
 		)
 	}
 

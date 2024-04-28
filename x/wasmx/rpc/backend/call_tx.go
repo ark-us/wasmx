@@ -33,8 +33,12 @@ func (b *Backend) DoCall(
 ) ([]byte, error) {
 	to := wasmxtypes.AccAddressFromEvm(*args.To)
 	var from string
+	var err error
 	if args.From != nil {
-		from = wasmxtypes.AccAddressFromEvm(*args.From).String()
+		from, err = b.addressCodec.BytesToString(wasmxtypes.AccAddressFromEvm(*args.From))
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		from = "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvvnu6d"
 	}
@@ -52,9 +56,14 @@ func (b *Backend) DoCall(
 		funds = sdk.NewCoins(sdk.NewCoin(config.BaseDenom, sdkmath.NewIntFromBigInt((*big.Int)(args.Value))))
 	}
 
+	tostr, err := b.addressCodec.BytesToString(to)
+	if err != nil {
+		return nil, err
+	}
+
 	req := wasmxtypes.QuerySmartContractCallRequest{
 		Sender:    from,
-		Address:   to.String(),
+		Address:   tostr,
 		QueryData: bz,
 		Funds:     funds,
 	}
@@ -117,7 +126,11 @@ func (b *Backend) SendRawTransaction(data hexutil.Bytes) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, err
 	}
-	ethereumTx.Sender = sender.String()
+	senderstr, err := b.addressCodec.BytesToString(sender)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	ethereumTx.Sender = senderstr
 
 	if err := ethereumTx.ValidateBasic(); err != nil {
 		b.logger.Debug("tx failed basic validation", "error", err.Error())
@@ -200,7 +213,11 @@ func (b *Backend) simulateTransaction(ctx context.Context, args rpctypes.Transac
 
 	// extract sender address from signature
 	ethereumTx := &wasmxtypes.MsgExecuteEth{Data: data}
-	ethereumTx.Sender = wasmxtypes.AccAddressFromEvm(*args.From).String()
+	senderstr, err := b.addressCodec.BytesToString(wasmxtypes.AccAddressFromEvm(*args.From))
+	if err != nil {
+		return hexutil.Uint64(0), err
+	}
+	ethereumTx.Sender = senderstr
 
 	// TODO denom from smart contract
 	cosmosTx, err := ethereumTx.BuildTx(b.clientCtx.TxConfig.NewTxBuilder(), config.BaseDenom)

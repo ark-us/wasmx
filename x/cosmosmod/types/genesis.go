@@ -121,7 +121,7 @@ func DefaultStakingGenesisState() *StakingGenesisState {
 func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string) []DenomDeploymentInfo {
 	erc20jsonCodeId := -1
 	derc20jsonCodeId := -1
-	for i, sysc := range wasmxtypes.DefaultSystemContracts() {
+	for i, sysc := range wasmxtypes.DefaultSystemContracts("", "") {
 		if sysc.Label == wasmxtypes.ERC20_v001 {
 			erc20jsonCodeId = i + 1
 		} else if sysc.Label == wasmxtypes.DERC20_v001 {
@@ -572,12 +572,13 @@ func (p GovParams) ValidateBasic() error {
 		return fmt.Errorf("burn rate of cancel proposal is too large: %s", proposalCancelRate)
 	}
 
-	if len(p.ProposalCancelDest) != 0 {
-		_, err := sdk.AccAddressFromBech32(p.ProposalCancelDest)
-		if err != nil {
-			return fmt.Errorf("deposits destination address is invalid: %s", p.ProposalCancelDest)
-		}
-	}
+	// TODO address validator with AddressCodec
+	// if len(p.ProposalCancelDest) != 0 {
+	// 	_, err := sdk.AccAddressFromBech32(p.ProposalCancelDest)
+	// 	if err != nil {
+	// 		return fmt.Errorf("deposits destination address is invalid: %s", p.ProposalCancelDest)
+	// 	}
+	// }
 
 	return nil
 }

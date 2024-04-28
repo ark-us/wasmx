@@ -92,13 +92,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "callSimpleStoragePy", nil)
 
 	key := []byte("pystore")
-	data := []byte(fmt.Sprintf(`{"store":["%s", "str111"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str111"]}`, appA.MustAccAddressToString(contractAddress)))
 	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("str111"), value)
 
-	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal([]byte("str11123"), resp)
 }
@@ -125,16 +125,16 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	// err = json.Unmarshal(resp, &env)
 	// s.Require().NoError(err)
 	// s.Require().Equal(env.Chain.ChainIdFull, appA.Chain.ChainID)
-	// s.Require().Equal(env.CurrentCall.Sender.String(), sender.Address.String())
-	// s.Require().Equal(env.Contract.Address.String(), contractAddress.String())
+	// s.Require().Equal(appA.MustAccAddressToString(env.CurrentCall.Sender), appA.MustAccAddressToString(sender.Address))
+	// s.Require().Equal(appA.MustAccAddressToString(env.Contract.Address), appA.MustAccAddressToString(contractAddress))
 
-	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
+	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, appA.MustAccAddressToString(sender.Address)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
-	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().True(len(resp) > 0)
 	// TODO check this
@@ -160,7 +160,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	// we actually execute the contract creation
 	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr := appA.GetContractAddressFromEvents(txresp.GetEvents())
-	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	createdContractAddress := appA.MustAddressStringToAccAddress(createdContractAddressStr)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
@@ -175,7 +175,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	// we actually execute the contract creation
 	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr = appA.GetContractAddressFromEvents(txresp.GetEvents())
-	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	createdContractAddress = appA.MustAddressStringToAccAddress(createdContractAddressStr)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
@@ -210,27 +210,27 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 
 	data = []byte(`{"getOwner":[]}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal(sender.Address.String(), string(resp))
+	s.Require().Equal(appA.MustAccAddressToString(sender.Address), string(resp))
 
 	data = []byte(`{"getCaller":[]}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal(sender.Address.String(), string(resp))
+	s.Require().Equal(appA.MustAccAddressToString(sender.Address), string(resp))
 
 	data = []byte(`{"getChainId":[]}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(appA.Chain.ChainId, string(resp))
 
-	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, sender.Address.String()))
+	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, appA.MustAccAddressToString(sender.Address)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().NoError(err)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
-	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().True(len(resp) > 0)
 
-	data = []byte(fmt.Sprintf(`{"getCode":["%s"]}`, contractAddress.String()))
+	data = []byte(fmt.Sprintf(`{"getCode":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(demoPyInterpret, resp)
 
@@ -247,7 +247,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	// we actually execute the contract creation
 	txresp := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr := appA.GetContractAddressFromEvents(txresp.GetEvents())
-	createdContractAddress := sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	createdContractAddress := appA.MustAddressStringToAccAddress(createdContractAddressStr)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 
@@ -262,7 +262,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	// we actually execute the contract creation
 	txresp = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	createdContractAddressStr = appA.GetContractAddressFromEvents(txresp.GetEvents())
-	createdContractAddress = sdk.MustAccAddressFromBech32(createdContractAddressStr)
+	createdContractAddress = appA.MustAddressStringToAccAddress(createdContractAddressStr)
 	contractInfo = appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
 	s.Require().NotNil(contractInfo)
 }

@@ -42,6 +42,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			serverCtx := server.GetServerContextFromCmd(cmd)
 			config := serverCtx.Config
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
 			config.SetRoot(clientCtx.HomeDir)
 
@@ -50,7 +51,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 				return fmt.Errorf("failed to parse coins: %w", err)
 			}
 
-			addr, err := sdk.AccAddressFromBech32(args[0])
+			addr, err := addrCodec.StringToBytes(args[0])
 			if err != nil {
 				inBuf := bufio.NewReader(cmd.InOrStdin())
 				keyringBackend, err := cmd.Flags().GetString(flags.FlagKeyringBackend)
@@ -96,7 +97,12 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 			// create concrete account type based on input parameters
 			var genAccount authtypes.GenesisAccount
 
-			balances := banktypes.Balance{Address: addr.String(), Coins: coins.Sort()}
+			addrstr, err := addrCodec.BytesToString(addr)
+			if err != nil {
+				return err
+			}
+
+			balances := banktypes.Balance{Address: addrstr, Coins: coins.Sort()}
 			baseAccount := authtypes.NewBaseAccount(addr, nil, 0, 0)
 
 			if !vestingAmt.IsZero() {
@@ -141,7 +147,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 				return fmt.Errorf("failed to get accounts from any: %w", err)
 			}
 
-			if accs.Contains(addr) {
+			if accs.Contains(sdk.AccAddress(addr)) {
 				return fmt.Errorf("cannot add account at existing address %s", addr)
 			}
 

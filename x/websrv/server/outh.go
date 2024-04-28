@@ -259,8 +259,13 @@ func (k WebsrvServer) RouteOAuthLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		bech32address := sdk.AccAddress(pubKey.Address())
+		bech32addressStr, err := k.clientCtx.InterfaceRegistry.SigningContext().AddressCodec().BytesToString(bech32address)
+		if err != nil {
+			http.Error(w, "cannot convert address to string", http.StatusInternalServerError)
+			return
+		}
 
-		msgSigned, err := getStdSignDoc([]byte(messageStr), bech32address.String())
+		msgSigned, err := getStdSignDoc([]byte(messageStr), bech32addressStr)
 		if err != nil {
 			http.Error(w, "Failed to build StdSignDoc", http.StatusInternalServerError)
 			return
@@ -293,7 +298,7 @@ func (k WebsrvServer) RouteOAuthLogin(w http.ResponseWriter, r *http.Request) {
 		// TODO what to do with the nonce?
 		delete(nonceDB, message.Nonce)
 
-		store.Set("LoggedInUserID", bech32address.String())
+		store.Set("LoggedInUserID", bech32addressStr)
 		store.Save()
 
 		w.Header().Set("Location", "/auth")

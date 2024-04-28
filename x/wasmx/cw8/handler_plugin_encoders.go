@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	address "cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
@@ -34,13 +35,13 @@ type (
 )
 
 type MessageEncoders struct {
-	Bank         func(sender sdk.AccAddress, msg *types.BankMsg) ([]sdk.Msg, error)
+	Bank         func(senderBech32 string, msg *types.BankMsg) ([]sdk.Msg, error)
 	Custom       func(sender sdk.AccAddress, msg json.RawMessage) ([]sdk.Msg, error)
-	Distribution func(sender sdk.AccAddress, msg *types.DistributionMsg) ([]sdk.Msg, error)
-	IBC          func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *types.IBCMsg) ([]sdk.Msg, error)
-	Staking      func(sender sdk.AccAddress, msg *types.StakingMsg) ([]sdk.Msg, error)
+	Distribution func(senderBech32 string, msg *types.DistributionMsg) ([]sdk.Msg, error)
+	IBC          func(ctx sdk.Context, senderBech32 string, contractIBCPortID string, msg *types.IBCMsg) ([]sdk.Msg, error)
+	Staking      func(senderBech32 string, msg *types.StakingMsg) ([]sdk.Msg, error)
 	Stargate     func(sender sdk.AccAddress, msg *types.StargateMsg) ([]sdk.Msg, error)
-	Wasm         func(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
+	Wasm         func(senderBech32 string, msg *types.WasmMsg) ([]sdk.Msg, error)
 	Gov          func(sender sdk.AccAddress, msg *types.GovMsg) ([]sdk.Msg, error)
 }
 
@@ -88,29 +89,33 @@ func (e MessageEncoders) Merge(o *MessageEncoders) MessageEncoders {
 	return e
 }
 
-func (e MessageEncoders) Encode(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) ([]sdk.Msg, error) {
+func (e MessageEncoders) Encode(addrCodec address.Codec, ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) ([]sdk.Msg, error) {
+	contractAddrBech32, err := addrCodec.BytesToString(contractAddr)
+	if err != nil {
+		return nil, err
+	}
 	switch {
 	case msg.Bank != nil:
-		return e.Bank(contractAddr, msg.Bank)
+		return e.Bank(contractAddrBech32, msg.Bank)
 	case msg.Custom != nil:
 		return e.Custom(contractAddr, msg.Custom)
 	case msg.Distribution != nil:
-		return e.Distribution(contractAddr, msg.Distribution)
+		return e.Distribution(contractAddrBech32, msg.Distribution)
 	case msg.IBC != nil:
-		return e.IBC(ctx, contractAddr, contractIBCPortID, msg.IBC)
+		return e.IBC(ctx, contractAddrBech32, contractIBCPortID, msg.IBC)
 	case msg.Staking != nil:
-		return e.Staking(contractAddr, msg.Staking)
+		return e.Staking(contractAddrBech32, msg.Staking)
 	case msg.Stargate != nil:
 		return e.Stargate(contractAddr, msg.Stargate)
 	case msg.Wasm != nil:
-		return e.Wasm(contractAddr, msg.Wasm)
+		return e.Wasm(contractAddrBech32, msg.Wasm)
 	case msg.Gov != nil:
 		return EncodeGovMsg(contractAddr, msg.Gov)
 	}
 	return nil, errorsmod.Wrap(wasmxtypes.ErrUnknownMsg, "unknown variant of Wasm")
 }
 
-func EncodeBankMsg(sender sdk.AccAddress, msg *types.BankMsg) ([]sdk.Msg, error) {
+func EncodeBankMsg(senderBech32 string, msg *types.BankMsg) ([]sdk.Msg, error) {
 	if msg.Send == nil {
 		return nil, errorsmod.Wrap(wasmxtypes.ErrUnknownMsg, "unknown variant of Bank")
 	}
@@ -122,7 +127,7 @@ func EncodeBankMsg(sender sdk.AccAddress, msg *types.BankMsg) ([]sdk.Msg, error)
 		return nil, err
 	}
 	sdkMsg := banktypes.MsgSend{
-		FromAddress: sender.String(),
+		FromAddress: senderBech32,
 		ToAddress:   msg.Send.ToAddress,
 		Amount:      toSend,
 	}
@@ -133,17 +138,17 @@ func NoCustomMsg(_ sdk.AccAddress, _ json.RawMessage) ([]sdk.Msg, error) {
 	return nil, errorsmod.Wrap(wasmxtypes.ErrUnknownMsg, "custom variant not supported")
 }
 
-func EncodeDistributionMsg(sender sdk.AccAddress, msg *types.DistributionMsg) ([]sdk.Msg, error) {
+func EncodeDistributionMsg(senderBech32 string, msg *types.DistributionMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.SetWithdrawAddress != nil:
 		setMsg := distributiontypes.MsgSetWithdrawAddress{
-			DelegatorAddress: sender.String(),
+			DelegatorAddress: senderBech32,
 			WithdrawAddress:  msg.SetWithdrawAddress.Address,
 		}
 		return []sdk.Msg{&setMsg}, nil
 	case msg.WithdrawDelegatorReward != nil:
 		withdrawMsg := distributiontypes.MsgWithdrawDelegatorReward{
-			DelegatorAddress: sender.String(),
+			DelegatorAddress: senderBech32,
 			ValidatorAddress: msg.WithdrawDelegatorReward.Validator,
 		}
 		return []sdk.Msg{&withdrawMsg}, nil
@@ -152,7 +157,7 @@ func EncodeDistributionMsg(sender sdk.AccAddress, msg *types.DistributionMsg) ([
 	}
 }
 
-func EncodeStakingMsg(sender sdk.AccAddress, msg *types.StakingMsg) ([]sdk.Msg, error) {
+func EncodeStakingMsg(senderBech32 string, msg *types.StakingMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.Delegate != nil:
 		coin, err := ConvertWasmCoinToSdkCoin(msg.Delegate.Amount)
@@ -160,7 +165,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *types.StakingMsg) ([]sdk.Msg, 
 			return nil, err
 		}
 		sdkMsg := stakingtypes.MsgDelegate{
-			DelegatorAddress: sender.String(),
+			DelegatorAddress: senderBech32,
 			ValidatorAddress: msg.Delegate.Validator,
 			Amount:           coin,
 		}
@@ -172,7 +177,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *types.StakingMsg) ([]sdk.Msg, 
 			return nil, err
 		}
 		sdkMsg := stakingtypes.MsgBeginRedelegate{
-			DelegatorAddress:    sender.String(),
+			DelegatorAddress:    senderBech32,
 			ValidatorSrcAddress: msg.Redelegate.SrcValidator,
 			ValidatorDstAddress: msg.Redelegate.DstValidator,
 			Amount:              coin,
@@ -184,7 +189,7 @@ func EncodeStakingMsg(sender sdk.AccAddress, msg *types.StakingMsg) ([]sdk.Msg, 
 			return nil, err
 		}
 		sdkMsg := stakingtypes.MsgUndelegate{
-			DelegatorAddress: sender.String(),
+			DelegatorAddress: senderBech32,
 			ValidatorAddress: msg.Undelegate.Validator,
 			Amount:           coin,
 		}
@@ -211,7 +216,7 @@ func EncodeStargateMsg(unpacker codectypes.AnyUnpacker) StargateEncoder {
 	}
 }
 
-func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error) {
+func EncodeWasmMsg(senderBech32 string, msg *types.WasmMsg) ([]sdk.Msg, error) {
 	switch {
 	case msg.Execute != nil:
 		coins, err := ConvertWasmCoinsToSdkCoins(msg.Execute.Funds)
@@ -220,7 +225,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 		}
 
 		sdkMsg := wasmxtypes.MsgExecuteContract{
-			Sender:   sender.String(),
+			Sender:   senderBech32,
 			Contract: msg.Execute.ContractAddr,
 			Msg:      msg.Execute.Msg,
 			Funds:    coins,
@@ -233,7 +238,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 		}
 
 		sdkMsg := wasmxtypes.MsgInstantiateContract{
-			Sender: sender.String(),
+			Sender: senderBech32,
 			CodeId: msg.Instantiate.CodeID,
 			Label:  msg.Instantiate.Label,
 			Msg:    msg.Instantiate.Msg,
@@ -248,7 +253,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 		}
 
 		sdkMsg := wasmxtypes.MsgInstantiateContract2{
-			Sender: sender.String(),
+			Sender: senderBech32,
 			// Admin:  msg.Instantiate2.Admin,
 			CodeId: msg.Instantiate2.CodeID,
 			Label:  msg.Instantiate2.Label,
@@ -261,7 +266,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 		return []sdk.Msg{&sdkMsg}, nil
 	// case msg.Migrate != nil:
 	// 	sdkMsg := types.MsgMigrateContract{
-	// 		Sender:   sender.String(),
+	// 		Sender:   senderBech32,
 	// 		Contract: msg.Migrate.ContractAddr,
 	// 		CodeID:   msg.Migrate.NewCodeID,
 	// 		Msg:      msg.Migrate.Msg,
@@ -269,13 +274,13 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 	// 	return []sdk.Msg{&sdkMsg}, nil
 	// case msg.ClearAdmin != nil:
 	// 	sdkMsg := types.MsgClearAdmin{
-	// 		Sender:   sender.String(),
+	// 		Sender:   senderBech32,
 	// 		Contract: msg.ClearAdmin.ContractAddr,
 	// 	}
 	// 	return []sdk.Msg{&sdkMsg}, nil
 	// case msg.UpdateAdmin != nil:
 	// 	sdkMsg := types.MsgUpdateAdmin{
-	// 		Sender:   sender.String(),
+	// 		Sender:   senderBech32,
 	// 		Contract: msg.UpdateAdmin.ContractAddr,
 	// 		NewAdmin: msg.UpdateAdmin.Admin,
 	// 	}
@@ -285,14 +290,14 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 	}
 }
 
-// func EncodeIBCMsg(portSource types.ICS20TransferPortSource) func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *types.IBCMsg) ([]sdk.Msg, error) {
-// 	return func(ctx sdk.Context, sender sdk.AccAddress, contractIBCPortID string, msg *types.IBCMsg) ([]sdk.Msg, error) {
+// func EncodeIBCMsg(portSource types.ICS20TransferPortSource) func(ctx sdk.Context, senderBech32 string, contractIBCPortID string, msg *types.IBCMsg) ([]sdk.Msg, error) {
+// 	return func(ctx sdk.Context, senderBech32 string, contractIBCPortID string, msg *types.IBCMsg) ([]sdk.Msg, error) {
 // 		switch {
 // 		case msg.CloseChannel != nil:
 // 			return []sdk.Msg{&channeltypes.MsgChannelCloseInit{
 // 				PortId:    PortIDForContract(sender),
 // 				ChannelId: msg.CloseChannel.ChannelID,
-// 				Signer:    sender.String(),
+// 				Signer:    senderBech32,
 // 			}}, nil
 // 		case msg.Transfer != nil:
 // 			amount, err := ConvertWasmCoinToSdkCoin(msg.Transfer.Amount)
@@ -303,7 +308,7 @@ func EncodeWasmMsg(sender sdk.AccAddress, msg *types.WasmMsg) ([]sdk.Msg, error)
 // 				SourcePort:       portSource.GetPort(ctx),
 // 				SourceChannel:    msg.Transfer.ChannelID,
 // 				Token:            amount,
-// 				Sender:           sender.String(),
+// 				Sender:           senderBech32,
 // 				Receiver:         msg.Transfer.ToAddress,
 // 				TimeoutHeight:    ConvertWasmIBCTimeoutHeightToCosmosHeight(msg.Transfer.Timeout.Block),
 // 				TimeoutTimestamp: msg.Transfer.Timeout.Timestamp,

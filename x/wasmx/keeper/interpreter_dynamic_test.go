@@ -40,15 +40,16 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	// Register contract role proposal
 	title := "Register interpreter"
 	description := "Register interpreter"
-	authority := authtypes.NewModuleAddress(types.ROLE_GOVERNANCE).String()
-	proposal := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddress.String()}
+	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
+	interpreterAddressStr := appA.MustAccAddressToString(interpreterAddress)
+	proposal := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddressStr}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(interpreterAddress.String(), role.ContractAddress)
+	s.Require().Equal(interpreterAddressStr, role.ContractAddress)
 	s.Require().Equal(newlabel, role.Label)
 	s.Require().Equal("interpreter", role.Role)
 

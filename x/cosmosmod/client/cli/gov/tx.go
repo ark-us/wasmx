@@ -103,7 +103,14 @@ metadata example:
 				return err
 			}
 
-			msg, err := v1.NewMsgSubmitProposal(msgs, deposit, clientCtx.GetFromAddress().String(), proposal.Metadata, proposal.Title, proposal.Summary, proposal.Expedited)
+			from := clientCtx.GetFromAddress()
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
+			msg, err := v1.NewMsgSubmitProposal(msgs, deposit, fromstr, proposal.Metadata, proposal.Title, proposal.Summary, proposal.Expedited)
 			if err != nil {
 				return fmt.Errorf("invalid message: %w", err)
 			}
@@ -138,7 +145,13 @@ func NewCmdCancelProposal() *cobra.Command {
 
 			// Get proposer address
 			from := clientCtx.GetFromAddress()
-			msg := v1.NewMsgCancelProposal(proposalID, from.String())
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			fromstr, err := addrCodec.BytesToString(from)
+			if err != nil {
+				return err
+			}
+
+			msg := v1.NewMsgCancelProposal(proposalID, fromstr)
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}

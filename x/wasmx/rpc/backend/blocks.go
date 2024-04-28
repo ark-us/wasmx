@@ -411,7 +411,7 @@ func (b *Backend) RPCBlockFromTendermintBlock(
 	}
 
 	// req := &wasmxtypes.QueryValidatorAccountRequest{
-	// 	ConsAddress: sdk.ConsAddress(block.Header.ProposerAddress).String(),
+	// 	ConsAddress: sdk.ConsAddress(block.Header.ProposerAddress).String(), // TODO stringify with ConsensusAddressCodec
 	// }
 
 	var validatorAccAddr sdk.AccAddress

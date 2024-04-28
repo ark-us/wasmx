@@ -14,6 +14,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mcfg "mythos/v1/config"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 )
@@ -70,7 +71,13 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 		return nil, err
 	}
 	setExecutionBytecode(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
-	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
+
+	addrstr, err := newctx.CosmosHandler.AddressCodec().BytesToString(newctx.Env.Contract.Address)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+
+	newctx.ContractRouter[addrstr].Vm = contractVm
 
 	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
 	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
@@ -119,9 +126,13 @@ func (ctx *Context) GetContext() sdk.Context {
 
 func (ctx *Context) GetVmFromContext() (*wasmedge.VM, error) {
 	addr := ctx.Env.Contract.Address
-	contractCtx, ok := ctx.ContractRouter[addr.String()]
+	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
+	}
+	contractCtx, ok := ctx.ContractRouter[addrstr]
 	if !ok {
-		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addr.String())
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addrstr)
 	}
 	return contractCtx.Vm, nil
 }

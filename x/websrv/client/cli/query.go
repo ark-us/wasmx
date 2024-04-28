@@ -13,7 +13,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
 	"mythos/v1/x/websrv/types"
@@ -129,8 +128,13 @@ func CmdGetOauthClientsByOwner() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 
-			owner, err := sdk.AccAddressFromBech32(args[0])
+			owner, err := addrCodec.StringToBytes(args[0])
+			if err != nil {
+				return err
+			}
+			ownerstr, err := clientCtx.InterfaceRegistry.SigningContext().AddressCodec().BytesToString(owner)
 			if err != nil {
 				return err
 			}
@@ -138,7 +142,7 @@ func CmdGetOauthClientsByOwner() *cobra.Command {
 			res, err := queryClient.GetOauthClientsByOwner(
 				context.Background(),
 				&types.QueryGetOauthClientsByOwnerRequest{
-					Owner: owner.String(),
+					Owner: ownerstr,
 				},
 			)
 			if err != nil {

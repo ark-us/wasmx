@@ -63,7 +63,12 @@ import (
 func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
-	encodingConfig := app.MakeEncodingConfig()
+	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
+	chainCfg, err := mcfg.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	encodingConfig := app.MakeEncodingConfig(chainCfg)
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -182,14 +187,6 @@ func initRootCmd(
 	encodingConfig appparams.EncodingConfig,
 	basicManager module.BasicManager,
 ) {
-	// Set config
-	// cfg := sdk.GetConfig()
-	// cfg.SetBech32PrefixForAccount(mcfg.Bech32PrefixAccAddr, mcfg.Bech32PrefixAccPub)
-	// cfg.SetBech32PrefixForValidator(mcfg.Bech32PrefixValAddr, mcfg.Bech32PrefixValPub)
-	// cfg.SetBech32PrefixForConsensusNode(mcfg.Bech32PrefixConsAddr, mcfg.Bech32PrefixConsPub)
-	// TODO we need to rewrite cosmos sdk to allow changing bech32 prefixes for multichain
-	// cfg.Seal()
-
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
 	// TODO fixme - we initialize with an empty execution executor ..

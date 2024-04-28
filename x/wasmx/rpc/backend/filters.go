@@ -26,7 +26,7 @@ func (b *Backend) GetLogsByHeight(height *int64) ([][]*ethtypes.Log, error) {
 		return nil, err
 	}
 
-	return GetLogsFromBlockResults(blockRes)
+	return GetLogsFromBlockResults(b.addressCodec, blockRes)
 }
 
 // BloomStatus returns the BloomBitsBlocks and the number of processed sections maintained

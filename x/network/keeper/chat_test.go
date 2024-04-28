@@ -76,8 +76,8 @@ func (suite *KeeperTestSuite) TestChat() {
 
 	msg = []byte(`{"GetRooms":{}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   sender.Address.String(),
-		Contract: chatAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(chatAddress),
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -141,8 +141,8 @@ func (suite *KeeperTestSuite) TestChat() {
 	verifierAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CHAT_VERIFIER)
 	msg = []byte(fmt.Sprintf(`{"VerifyConversation":{"blocks":%s}}`, string(blocksbz)))
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   sender.Address.String(),
-		Contract: verifierAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(verifierAddress),
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -162,8 +162,8 @@ func (suite *KeeperTestSuite) getBlock(sender simulation.Account, room string, i
 func (suite *KeeperTestSuite) queryChat(sender simulation.Account, contractAddress sdk.AccAddress, msg []byte) []byte {
 	appA := s.AppContext()
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -185,8 +185,8 @@ func (suite *KeeperTestSuite) sendMessageFromOther(sender simulation.Account, ro
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
 	msgexec := &wasmxtypes.MsgExecuteContract{
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgbz,
 	}
 	txdata := appA.PrepareCosmosTx(sender, []sdk.Msg{msgexec}, nil, nil)
@@ -200,8 +200,8 @@ func (suite *KeeperTestSuite) sendMessageFromOther(sender simulation.Account, ro
 	msgreceived64 := base64.StdEncoding.EncodeToString(blockbz)
 	msgreceived := []byte(fmt.Sprintf(`{"roomId":"%s","message":"%s","timestamp":"2024-03-19T12:20:26.924Z","sender":{"id":"12D3KooWRgN1dUKvDM9zu8gB7DQhLYVqEEpxBTRK3YYtr8Bj92xD","host":"","port":"","ip":"/ip4/127.0.0.1/tcp/5001"}}`, room, msgreceived64))
 	_, err = suite.App().NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_P2P_MSG, &types.MsgExecuteContract{
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgreceived,
 	})
 	suite.Require().NoError(err)
@@ -213,8 +213,8 @@ func (suite *KeeperTestSuite) broadcastMessage(msg []byte, sender simulation.Acc
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
 	msgexec := &wasmxtypes.MsgExecuteContract{
-		Sender:   sender.Address.String(),
-		Contract: contractAddress.String(),
+		Sender:   appA.MustAccAddressToString(sender.Address),
+		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgbz,
 	}
 	return appA.BroadcastTxAsync(sender, msgexec)
