@@ -33,13 +33,14 @@ type BenchmarkRequest struct {
 }
 
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
-	wasmbin := precompiles.GetPrecompileByLabel("sys_proxy")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
+
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "sys_proxy")
 
 	sysAddressBz, err := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	s.Require().NoError(err)
@@ -145,13 +146,14 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasmxTime() {
 	SkipCIExpensiveTests(suite.T(), "TestWasmxTime")
 
-	wasmbin := precompiles.GetPrecompileByLabel(types.TIME_v001)
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
+
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.TIME_v001)
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "time", nil)

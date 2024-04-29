@@ -58,7 +58,8 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 }
 
 func (suite *KeeperTestSuite) TestAliasContract() {
-	wasmbin := precompiles.GetPrecompileByLabel("alias_eth")
+	appA := s.AppContext()
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "alias_eth")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
@@ -78,7 +79,6 @@ func (suite *KeeperTestSuite) TestAliasContract() {
 	getRegisterHash := "337e8247"
 	// getRegisterMessage := "2f6da104"
 
-	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 

@@ -265,7 +265,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	log.Printf("Response: %+v", resp)
 
 	// migrate contract
-	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_RAFT)
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_RAFT)
 	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
 	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(raftInitMsg)}, "newconsensus", nil)
@@ -346,7 +346,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	log.Printf("Response: %+v", resp)
 
 	// migrate contract
-	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_TENDERMINT)
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_TENDERMINT)
 	initMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"roundTimeout","value":"10000"}],"initialState":"uninitialized"}}`
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
 	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(initMsg)}, "newconsensus", nil)
@@ -425,7 +425,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	suite.Require().NoError(err)
 
 	tendermintInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"roundTimeout","value":10000}],"initialState":"uninitialized"}}`)}
-	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_TENDERMINT)
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_TENDERMINT)
 
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM, wasmxtypes.BuildDep(wasmxtypes.ADDR_CONSENSUS_TENDERMINT_LIBRARY, wasmxtypes.ROLE_LIBRARY)})
 	newConsensus := appA.InstantiateCode(sender, codeId, tendermintInitMsg, "newconsensus", nil)
@@ -557,7 +557,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	suite.Require().NoError(err)
 
 	avaInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"rounds","value":"3"},{"key":"sampleSize","value":3},{"key":"betaThreshold","value":3},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":"2"}],"initialState":"uninitialized"}}`)}
-	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_AVA_SNOWMAN)
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_AVA_SNOWMAN)
 
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM, wasmxtypes.BuildDep(wasmxtypes.ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, wasmxtypes.ROLE_LIBRARY)})
 	newConsensus := appA.InstantiateCode(sender, codeId, avaInitMsg, "newconsensus", nil)

@@ -3,6 +3,8 @@ package precompiles
 import (
 	_ "embed"
 
+	address "cosmossdk.io/core/address"
+
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -125,7 +127,7 @@ var (
 	sys_proxy []byte
 )
 
-func GetPrecompileByLabel(label string) []byte {
+func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 	var wasmbin []byte
 	switch label {
 	case "ecrecovereth":
@@ -163,15 +165,40 @@ func GetPrecompileByLabel(label string) []byte {
 	case types.INTERPRETER_FSM:
 		wasmbin = state_machine
 	case types.CONSENSUS_RAFT:
-		wasmbin = []byte(ConsensusRaftv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFT_LIBRARY)))
+		libaddr := types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFT_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(ConsensusRaftv001(libaddrstr))
 	case types.CONSENSUS_RAFTP2P:
-		wasmbin = []byte(ConsensusRaftP2Pv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFTP2P_LIBRARY)))
+		libaddr := types.AccAddressFromHex(types.ADDR_CONSENSUS_RAFTP2P_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(ConsensusRaftP2Pv001(libaddrstr))
 	case types.CONSENSUS_TENDERMINT:
-		wasmbin = []byte(ConsensusTendermintv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_TENDERMINT_LIBRARY)))
+		libaddr := types.AccAddressFromHex(types.ADDR_CONSENSUS_TENDERMINT_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(ConsensusTendermintv001(libaddrstr))
 	case types.CONSENSUS_TENDERMINTP2P:
-		wasmbin = []byte(ConsensusTendermintP2Pv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY)))
+		libaddr := types.AccAddressFromHex(types.ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(ConsensusTendermintP2Pv001(libaddrstr))
 	case types.CONSENSUS_AVA_SNOWMAN:
-		wasmbin = []byte(ConsensusAvaSnowmanv001(types.AccAddressFromHex(types.ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY)))
+		libaddr := types.AccAddressFromHex(types.ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(ConsensusAvaSnowmanv001(libaddrstr))
 	case "raft_library":
 		wasmbin = raft_library
 	case "raftp2p_library":
@@ -215,7 +242,12 @@ func GetPrecompileByLabel(label string) []byte {
 	case "level0_library":
 		wasmbin = level0_contract
 	case types.LEVEL0_v001:
-		wasmbin = []byte(Level0P2Pv001(types.AccAddressFromHex(types.ADDR_LEVEL0_LIBRARY)))
+		libaddr := types.AccAddressFromHex(types.ADDR_LEVEL0_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(Level0P2Pv001(libaddrstr))
 	case types.LEVELN_v001:
 		wasmbin = leveln_contract
 	}

@@ -34,7 +34,7 @@ func (k *Keeper) ActivateEmbeddedSystemContract(
 	contract types.SystemContract,
 	compiledFolderPath string,
 ) error {
-	wasmbin := precompiles.GetPrecompileByLabel(contract.Label)
+	wasmbin := precompiles.GetPrecompileByLabel(k.AddressCodec(), contract.Label)
 	return k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, wasmbin, compiledFolderPath)
 }
 
@@ -50,9 +50,14 @@ func (k *Keeper) ActivateSystemContract(
 	var codeID uint64
 	var err error
 
+	bootstrapAccountAddrBech32, err := k.AddressCodec().BytesToString(bootstrapAccountAddr)
+	if err != nil {
+		return err
+	}
+
 	if contract.Native {
 		codeID = k.autoIncrementID(ctx)
-		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr, contract.Deps, contract.Metadata)
+		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddrBech32, contract.Deps, contract.Metadata)
 		k.storeCodeInfo(ctx, codeID, codeInfo)
 	} else {
 		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata)
@@ -78,7 +83,7 @@ func (k *Keeper) ActivateSystemContract(
 		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
 	}
 	if contract.Native {
-		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr, nil, contract.InitMessage, contract.Label)
+		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddrBech32, "", contract.InitMessage, contract.Label)
 		k.storeContractInfo(ctx, contractAddress, &contractInfo)
 	} else {
 		_, err = k.instantiateWithAddress(

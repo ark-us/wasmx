@@ -891,9 +891,20 @@ func initGenFilesLevel0(
 	}
 	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
 
+	addrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
+
+	feeCollectorBech32, err := addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
+	if err != nil {
+		panic(err)
+	}
+	mintAddressBech32, err := addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
+	if err != nil {
+		panic(err)
+	}
+
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts()
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32)
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState

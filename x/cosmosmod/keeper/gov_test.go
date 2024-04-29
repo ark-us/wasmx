@@ -132,7 +132,7 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	nodesInfo := appA.QueryDecode(qresp.Data)
 
 	// migrate contract
-	wasmbin := precompiles.GetPrecompileByLabel(wasmxtypes.CONSENSUS_RAFTP2P)
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_RAFTP2P)
 	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
 	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(raftInitMsg)}, "newconsensus", nil)

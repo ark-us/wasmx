@@ -183,7 +183,11 @@ func (k *Keeper) create(ctx sdk.Context, creator sdk.AccAddress, wasmCode []byte
 
 	codeID = k.autoIncrementID(ctx)
 	k.Logger(ctx).Debug("storing new contract", "deps", reportDeps, "code_id", codeID, "checksum", hex.EncodeToString(checksum))
-	codeInfo := types.NewCodeInfo(checksum, creator, reportDeps, metadata)
+	creatorBech32, err := k.AddressCodec().BytesToString(creator)
+	if err != nil {
+		return 0, checksum, err
+	}
+	codeInfo := types.NewCodeInfo(checksum, creatorBech32, reportDeps, metadata)
 	if types.HasInterpreterDep(deps) && !types.HasUtf8Dep(deps) {
 		// TODO only store one
 		codeInfo.InterpretedBytecodeDeployment = wasmCode
@@ -265,7 +269,11 @@ func (k *Keeper) CreateInterpreted(
 	checksum = k.wasmvm.checksum(wasmCode)
 	codeID = k.autoIncrementID(ctx)
 	k.Logger(ctx).Debug("storing new contract", "deps", deps, "code_id", codeID, "checksum", checksum)
-	codeInfo := types.NewCodeInfo(checksum, creator, deps, metadata)
+	creatorBech32, err := k.AddressCodec().BytesToString(creator)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	codeInfo := types.NewCodeInfo(checksum, creatorBech32, deps, metadata)
 	codeInfo.InterpretedBytecodeDeployment = wasmCode
 
 	addressParent := provenance
@@ -465,8 +473,17 @@ func (k *Keeper) instantiateInternal(
 		return nil, nil, sdkerr.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
 
+	creatorBech32, err := k.AddressCodec().BytesToString(creator)
+	if err != nil {
+		return nil, nil, err
+	}
+	provenanceBech32, err := k.AddressCodec().BytesToString(provenance)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// persist instance first
-	contractInfo := types.NewContractInfo(codeID, creator, provenance, initMsg, label)
+	contractInfo := types.NewContractInfo(codeID, creatorBech32, provenanceBech32, initMsg, label)
 	contractInfo.StorageType = storageType
 
 	// check for IBC flag - TODO use codeInfo.Dependencies

@@ -31,7 +31,7 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	wasmbin := precompiles.GetPrecompileByLabel(types.INTERPRETER_EVM_SHANGHAI)
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.INTERPRETER_EVM_SHANGHAI)
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	interpreterAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "newinterpreter", nil)
 

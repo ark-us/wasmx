@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	address "cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -24,12 +25,13 @@ type replyer interface {
 	Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply types.Reply) ([]byte, error)
 	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error)
 	Logger(ctx sdk.Context) log.Logger
+	AddressCodec() address.Codec
 }
 
 // msgEncoder is an extension point to customize encodings
 type msgEncoder interface {
 	// Encode converts wasmvm message to n cosmos message types
-	Encode(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) ([]sdk.Msg, error)
+	Encode(addrCodec address.Codec, ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) ([]sdk.Msg, error)
 }
 
 // MessageDispatcher coordinates message sending and submessage reply/ state commits
@@ -51,7 +53,7 @@ func NewMessageDispatcher(
 
 // DispatchMessages sends all messages.
 func (d MessageDispatcher) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
-	msgs, err := d.encoders.Encode(ctx, contractAddr, contractIBCPortID, msg)
+	msgs, err := d.encoders.Encode(d.keeper.AddressCodec(), ctx, contractAddr, contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
 	}

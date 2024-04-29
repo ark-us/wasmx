@@ -46,7 +46,7 @@ func init() {
 }
 
 func SecretSharing(context *Context, input []byte) ([]byte, error) {
-	wasmbin := precompiles.GetPrecompileByLabel("secret_sharing")
+	wasmbin := precompiles.GetPrecompileByLabel(context.CosmosHandler.AddressCodec(), "secret_sharing")
 	wasmedge.SetLogErrorLevel()
 	conf := wasmedge.NewConfigure(wasmedge.WASI)
 	vm := wasmedge.NewVMWithConfig(conf)
