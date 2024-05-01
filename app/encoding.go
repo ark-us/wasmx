@@ -3,12 +3,12 @@ package app
 import (
 	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/gogoproto/proto"
 
 	"mythos/v1/app/params"
+	mcodec "mythos/v1/codec"
 	"mythos/v1/config"
 )
 
@@ -17,12 +17,8 @@ func MakeEncodingConfig(cfg *config.ChainConfig) params.EncodingConfig {
 	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
 		ProtoFiles: proto.HybridResolver,
 		SigningOptions: signing.Options{
-			AddressCodec: address.Bech32Codec{
-				Bech32Prefix: cfg.Bech32PrefixAccAddr,
-			},
-			ValidatorAddressCodec: address.Bech32Codec{
-				Bech32Prefix: cfg.Bech32PrefixValAddr,
-			},
+			AddressCodec:          mcodec.NewAccBech32Codec(cfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc),
+			ValidatorAddressCodec: mcodec.NewValBech32Codec(cfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal),
 		},
 	})
 	appCodec := codec.NewProtoCodec(interfaceRegistry)

@@ -14,9 +14,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	"github.com/cosmos/go-bip39"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"
 )
@@ -82,7 +82,7 @@ func (suite *KeeperTestSuite) TestVerification() {
 	pubKey := privKey.PubKey()
 	address := sdk.AccAddress(pubKey.Address())
 
-	addrCodec := authcodec.NewBech32Codec("mythos")
+	addrCodec := mcodec.NewAccBech32Codec("mythos", mcodec.NewAddressPrefixedFromAcc)
 	addressStr, err := addrCodec.BytesToString(address)
 	s.Require().NoError(err)
 	s.Require().Equal(accountBech32, addressStr)

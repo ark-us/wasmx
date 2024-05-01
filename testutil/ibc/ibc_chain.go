@@ -9,7 +9,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -25,7 +24,9 @@ import (
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
 	wasmxapp "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 )
 
 // ChainIDPrefix defines the default chain ID prefix for Mythos test chains
@@ -54,26 +55,24 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{validator})
 	signersByAddress := make(map[string]tmtypes.PrivValidator, 1)
 	signersByAddress[pubKey.Address().String()] = privVal
+	encoding := wasmxapp.MakeEncodingConfig(&chaincfg)
+	addrCodec := mcodec.MustUnwrapAccBech32Codec(encoding.InterfaceRegistry.SigningContext().AddressCodec())
 
 	// generate genesis account
 	senderPrivKey := secp256k1.GenPrivKey()
-	acc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), senderPrivKey.PubKey(), 0, 0)
+	acc := cosmosmodtypes.NewBaseAccount(addrCodec.BytesToAccAddressPrefixed(senderPrivKey.PubKey().Address().Bytes()), senderPrivKey.PubKey(), 0, 0)
+
+	authacc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), senderPrivKey.PubKey(), 0, 0)
 
 	senderAddress := common.BytesToAddress(senderPrivKey.PubKey().Address().Bytes())
 
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
-
-	chainCfg, err := mcfg.GetChainConfig(chainID)
-	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
-	addrStr, err := addrCodec.BytesToString(acc.GetAddress())
-	require.NoError(t, err)
-
 	balance := banktypes.Balance{
-		Address: addrStr,
+		Address: acc.GetAddress().String(),
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
-	app, _ := SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainID, chaincfg, index, balance)
+	app, _ := SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainID, chaincfg, index, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 
@@ -118,13 +117,13 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 		NextVals:      valSet,
 		Signers:       signersByAddress,
 		SenderPrivKey: senderPrivKey,
-		SenderAccount: acc,
+		SenderAccount: authacc,
 	}
 
 	mapp, ok := app.(*wasmxapp.App)
 	require.True(t, ok, "not app")
 	ctx := chain.GetContext()
-	mapp.AccountKeeper.SetAccount(ctx, acc)
+	mapp.AccountKeeper.SetAccount(ctx, authacc)
 
 	valAddrCodec := txConfig.SigningContext().ValidatorAddressCodec()
 	valAddr := sdk.ValAddress(senderAddress.Bytes())

@@ -21,9 +21,9 @@ import (
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
 
+	"cosmossdk.io/core/address"
 	"cosmossdk.io/math"
 
-	address "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -38,8 +38,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -53,6 +51,7 @@ import (
 	pvm "github.com/cometbft/cometbft/privval"
 
 	app "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
@@ -415,7 +414,7 @@ func initTestnetFilesInternal(
 		appConfig.API.EnableUnsafeCORS = true
 	}
 
-	genAccounts := make([]authtypes.GenesisAccount, args.numValidators)
+	genAccounts := make([]cosmosmodtypes.GenesisAccount, args.numValidators)
 	genBalances := make([]banktypes.Balance, args.numValidators)
 	genFiles := make([]string, args.numValidators)
 
@@ -574,13 +573,10 @@ func initTestnetFilesInternal(
 		coins := sdk.Coins{
 			sdk.NewCoin(chaincfg.BaseDenom, accStakingTokens),
 		}
-		addrstr, err := addrCodec.BytesToString(addr)
-		if err != nil {
-			return err
-		}
+		addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec).BytesToAccAddressPrefixed(addr)
 
-		genBalances[i] = banktypes.Balance{Address: addrstr, Coins: coins.Sort()}
-		genAccounts[i] = authtypes.NewBaseAccount(addr, nil, 0, 0)
+		genBalances[i] = banktypes.Balance{Address: addrprefixed.String(), Coins: coins.Sort()}
+		genAccounts[i] = cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
 
 		valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addr))
 		if err != nil {
@@ -634,7 +630,6 @@ func initTestnetFilesInternal(
 		if err != nil {
 			panic(err)
 		}
-		addrCodec0 := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
 
 		genBalanceCoins := make([]sdk.Coins, len(genBalances))
 		for i := 0; i < len(genBalances); i++ {
@@ -649,19 +644,16 @@ func initTestnetFilesInternal(
 		}
 		level0EncodingConfig := app.MakeEncodingConfig(chainCfg)
 		valAddrCodec = level0EncodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()
+		addrCodec0 := level0EncodingConfig.TxConfig.SigningContext().AddressCodec()
 		for i := nodeIndexStart; i < args.numValidators; i++ {
 			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId)
 			nodeDirName := nodeDirNames[i]
 			kb := kbs[i]
 			memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
 
-			addr := sdk.AccAddress(genAccounts0[i])
-			genAccount := authtypes.NewBaseAccount(addr, nil, 0, 0)
-
-			addrstr, err := addrCodec0.BytesToString(addr)
-			if err != nil {
-				return err
-			}
+			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
+			genAccount := cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
+			addrstr := addrprefixed.String()
 
 			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
 			for i, coin := range genBalanceCoins[i] {
@@ -671,7 +663,7 @@ func initTestnetFilesInternal(
 
 			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId+".json", 1)
 
-			valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addr))
+			valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
 			if err != nil {
 				return err
 			}
@@ -754,7 +746,7 @@ func initGenFiles(
 	clientCtx client.Context,
 	mbm module.BasicManager,
 	chainID string,
-	genAccounts []authtypes.GenesisAccount,
+	genAccounts []cosmosmodtypes.GenesisAccount,
 	genBalances []banktypes.Balance,
 	genFiles []string,
 	numValidators int,
@@ -879,7 +871,7 @@ func initGenFilesLevel0(
 	clientCtx client.Context,
 	mbm module.BasicManager,
 	chainID string,
-	genAccount authtypes.GenesisAccount,
+	genAccount cosmosmodtypes.GenesisAccount,
 	genBalance banktypes.Balance,
 	genFile string,
 	numValidators int,
@@ -891,13 +883,13 @@ func initGenFilesLevel0(
 	}
 	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
 
-	addrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
+	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
-	feeCollectorBech32, err := addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("fee_collector"))
 	if err != nil {
 		panic(err)
 	}
-	mintAddressBech32, err := addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
+	mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
 	if err != nil {
 		panic(err)
 	}
@@ -922,7 +914,7 @@ func initGenFilesLevel0(
 	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
 
 	// set the accounts in the genesis state
-	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(clientCtx.Codec, cosmosmodGenState.Auth.Params, []authtypes.GenesisAccount{genAccount})
+	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(clientCtx.Codec, cosmosmodGenState.Auth.Params, []cosmosmodtypes.GenesisAccount{genAccount})
 	if err != nil {
 		return err
 	}

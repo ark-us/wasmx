@@ -66,8 +66,6 @@ import (
 	// "github.com/cosmos/cosmos-sdk/types/msgservice"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
-
 	"github.com/cosmos/cosmos-sdk/x/auth/posthandler"
 
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -194,6 +192,8 @@ import (
 	cosmosmod "mythos/v1/x/cosmosmod"
 
 	cfg "mythos/v1/config"
+
+	mcodec "mythos/v1/codec"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport
@@ -425,9 +425,9 @@ func NewApp(
 		actionExecutor:    actionExecutor,
 	}
 
-	valCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr)
-	consCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr)
-	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	valCodec := mcodec.NewValBech32Codec(chainCfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+	consCodec := mcodec.NewConsBech32Codec(chainCfg.Bech32PrefixConsAddr, mcodec.NewAddressPrefixedFromCons)
+	addrCodec := mcodec.NewAccBech32Codec(chainCfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	app.valCodec = valCodec
 	app.consCodec = consCodec
 	app.addrCodec = addrCodec
@@ -1300,9 +1300,9 @@ func (app *App) AutoCliOpts() autocli.AppOptions {
 	return autocli.AppOptions{
 		Modules:               modules,
 		ModuleOptions:         runtimeservices.ExtractAutoCLIOptions(app.mm.Modules),
-		AddressCodec:          authcodec.NewBech32Codec(app.chainCfg.Bech32PrefixAccAddr),
-		ValidatorAddressCodec: authcodec.NewBech32Codec(app.chainCfg.Bech32PrefixValAddr),
-		ConsensusAddressCodec: authcodec.NewBech32Codec(app.chainCfg.Bech32PrefixConsAddr),
+		AddressCodec:          app.addrCodec,
+		ValidatorAddressCodec: app.valCodec,
+		ConsensusAddressCodec: app.consCodec,
 	}
 }
 

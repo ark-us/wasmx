@@ -16,7 +16,6 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -25,6 +24,7 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
 	wasmxapp "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -36,7 +36,7 @@ var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.Testin
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []authtypes.GenesisAccount, chainID string, chaincfg mcfg.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
+func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg mcfg.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState := DefaultTestingAppInit(chainID, index)
 	mapp, ok := app.(*wasmxapp.App)
 	require.True(t, ok)
@@ -68,7 +68,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 		}
 		validators = append(validators, validator)
 
-		delAddr, err := mapp.AddressCodec().BytesToString(genAccs[0].GetAddress())
+		delAddr := genAccs[0].GetAddress().String()
 		require.NoError(t, err)
 		delegation := cosmosmodtypes.Delegation{
 			DelegatorAddress: delAddr,
@@ -109,7 +109,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis, *slashingGenesis, *cosmosmodtypes.DefaultDistributionGenesisState(chaincfg.BaseDenom))
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
-	addrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
+	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 

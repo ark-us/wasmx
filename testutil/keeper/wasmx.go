@@ -17,7 +17,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -32,6 +31,7 @@ import (
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
+	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
@@ -105,9 +105,9 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	for name, perms := range maccPerms {
 		permAddrs[name] = authtypes.NewPermissionsForAddress(name, perms)
 	}
-	valCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixValAddr)
-	consCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixConsAddr)
-	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	valCodec := mcodec.NewValBech32Codec(chainCfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+	consCodec := mcodec.NewConsBech32Codec(chainCfg.Bech32PrefixConsAddr, mcodec.NewAddressPrefixedFromCons)
+	addrCodec := mcodec.NewAccBech32Codec(chainCfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
 	govAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(govtypes.ModuleName))
 	require.NoError(t, err)

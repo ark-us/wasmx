@@ -15,6 +15,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/wasmx/types"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
@@ -545,7 +546,8 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 		return returns, wasmedge.Result_Fail
 	}
 
-	response := vmtypes.InstantiateAccountResponse{Address: contractAddress}
+	cdcacc := mcodec.MustUnwrapAccBech32Codec(ctx.CosmosHandler.AddressCodec())
+	response := vmtypes.InstantiateAccountResponse{Address: cdcacc.BytesToAccAddressPrefixed(contractAddress)}
 	respbz, err := json.Marshal(response)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -590,7 +592,8 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 		return returns, wasmedge.Result_Fail
 	}
 
-	response := vmtypes.Instantiate2AccountResponse{Address: contractAddress}
+	cdcacc := mcodec.MustUnwrapAccBech32Codec(ctx.CosmosHandler.AddressCodec())
+	response := vmtypes.Instantiate2AccountResponse{Address: cdcacc.BytesToAccAddressPrefixed(contractAddress)}
 	respbz, err := json.Marshal(response)
 	if err != nil {
 		return returns, wasmedge.Result_Fail

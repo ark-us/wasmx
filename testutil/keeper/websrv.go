@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/websrv/keeper"
 	"mythos/v1/x/websrv/types"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -43,7 +43,7 @@ func WebsrvKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	registry := codectypes.NewInterfaceRegistry()
 	cdc := codec.NewProtoCodec(registry)
 
-	addrCodec := authcodec.NewBech32Codec(chainCfg.Bech32PrefixAccAddr)
+	addrCodec := mcodec.NewAccBech32Codec(chainCfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	govAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(govtypes.ModuleName))
 	require.NoError(t, err)
 

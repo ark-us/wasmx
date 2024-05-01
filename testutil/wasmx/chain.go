@@ -30,7 +30,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/go-bip39"
@@ -53,6 +52,7 @@ import (
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
 	app "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	"mythos/v1/server/config"
 	ibctesting "mythos/v1/testutil/ibc"
@@ -63,6 +63,8 @@ import (
 
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkconfig "mythos/v1/x/network/server/config"
+
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions
@@ -174,8 +176,8 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 	chaincfg, err := mcfg.GetChainConfig(chainId)
 	mcfg.SetGlobalChainConfig(chainId)
 
-	addrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixAccAddr)
-	// valAddrCodec := authcodec.NewBech32Codec(chaincfg.Bech32PrefixValAddr)
+	addrCodec := mcodec.MustUnwrapAccBech32Codec(mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc))
+	// valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 
 	// generate validator private/public key
 	privVal := mock.NewPV()
@@ -190,21 +192,20 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 
 	// generate genesis account
 	senderPrivKey := secp256k1.GenPrivKey()
-	acc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), senderPrivKey.PubKey(), 0, 0)
+	authacc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), senderPrivKey.PubKey(), 0, 0)
+	acc := cosmosmodtypes.NewBaseAccount(addrCodec.BytesToAccAddressPrefixed(senderPrivKey.PubKey().Address().Bytes()), senderPrivKey.PubKey(), 0, 0)
 
 	// senderAddress := common.BytesToAddress(senderPrivKey.PubKey().Address().Bytes())
 
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
-	accstr, err := addrCodec.BytesToString(acc.GetAddress())
-
 	balance := banktypes.Balance{
-		Address: accstr,
+		Address: acc.GetAddress().String(),
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
 	valOperatorAddress := sdk.ValAddress(validator.Address)
-	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []authtypes.GenesisAccount{acc}, chainId, *chaincfg, 0, balance)
+	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, 0, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 
@@ -249,11 +250,11 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 		NextVals:      valSet,
 		Signers:       signersByAddress,
 		SenderPrivKey: senderPrivKey,
-		SenderAccount: acc,
+		SenderAccount: authacc,
 	}
 
 	ctx := chain.GetContext()
-	mapp.AccountKeeper.SetAccount(ctx, acc)
+	mapp.AccountKeeper.SetAccount(ctx, authacc)
 
 	_, err = mapp.Commit()
 	require.NoError(t, err)

@@ -16,6 +16,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	mcodec "mythos/v1/codec"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -96,7 +97,7 @@ func NewDistributingGenesisState(
 }
 
 // NewAuthGenesisState returns a default staking module genesis state.
-func NewAuthGenesisStateFromCosmos(cdc codec.Codec, params authtypes.Params, accounts []authtypes.GenesisAccount) (*AuthGenesisState, error) {
+func NewAuthGenesisStateFromCosmos(cdc codec.Codec, params authtypes.Params, accounts []GenesisAccount) (*AuthGenesisState, error) {
 	accs := make([]*AnyAccount, len(accounts))
 	for i, account := range accounts {
 		acc, err := AccountIToAnyAccount(account, cdc)
@@ -305,7 +306,7 @@ func AnyToAnyAccount(acc *cdctypes.Any) *AnyAccount {
 	}
 }
 
-func AccountIToAnyAccount(acc sdk.AccountI, cdc codec.Codec) (*AnyAccount, error) {
+func AccountIToAnyAccount(acc mcodec.AccountI, cdc codec.Codec) (*AnyAccount, error) {
 	bz, err := cdc.MarshalJSON(acc)
 	if err != nil {
 		return nil, err

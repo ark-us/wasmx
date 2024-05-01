@@ -10,7 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcodec "github.com/cosmos/cosmos-sdk/x/auth/codec"
 
 	// sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -25,6 +24,7 @@ import (
 
 	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
@@ -171,7 +171,7 @@ func NewBackend(
 	if err != nil {
 		panic(err)
 	}
-	addressCodec := authcodec.NewBech32Codec(conf.Bech32PrefixAccAddr)
+	addressCodec := mcodec.NewAccBech32Codec(conf.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
 	appConf, err := config.GetConfig(svrCtx.Viper)
 	if err != nil {

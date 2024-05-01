@@ -42,8 +42,8 @@ type AppModuleBasic struct {
 	addrCodec cdcaddress.Codec
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc}
+func NewAppModuleBasic(cdc codec.BinaryCodec, addrCodec cdcaddress.Codec) AppModuleBasic {
+	return AppModuleBasic{cdc: cdc, addrCodec: addrCodec}
 }
 
 // Name returns the name of the module as a string
@@ -110,7 +110,7 @@ func NewAppModule(
 	keeper keeper.Keeper,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc),
+		AppModuleBasic: NewAppModuleBasic(cdc, keeper.AddressCodec()),
 		keeper:         keeper,
 	}
 }

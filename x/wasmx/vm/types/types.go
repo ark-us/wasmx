@@ -8,6 +8,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -84,7 +85,7 @@ type InstantiateAccountRequest struct {
 }
 
 type InstantiateAccountResponse struct {
-	Address sdk.AccAddress `json:"address"`
+	Address mcodec.AccAddressPrefixed `json:"address"`
 }
 
 type Instantiate2AccountRequest struct {
@@ -96,7 +97,7 @@ type Instantiate2AccountRequest struct {
 }
 
 type Instantiate2AccountResponse struct {
-	Address sdk.AccAddress `json:"address"`
+	Address mcodec.AccAddressPrefixed `json:"address"`
 }
 
 func (m CallRequest) MarshalJSON() ([]byte, error) {
