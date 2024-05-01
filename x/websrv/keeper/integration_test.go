@@ -33,9 +33,9 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	// websrv := websrvserver.NewWebsrvServer(nil, appA.App.Logger(), appA.ClientCtx, config.DefaultWebsrvConfigConfig())
@@ -46,7 +46,7 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	// Register route proposal
 	title := "Register /"
 	description := "because"
-	registerRouteProposal := &types.MsgRegisterRoute{Title: title, Description: description, Path: "/", ContractAddress: appA.MustAccAddressToString(contractAddress)}
+	registerRouteProposal := &types.MsgRegisterRoute{Title: title, Description: description, Path: "/", ContractAddress: contractAddress.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{registerRouteProposal}, "", title, description, false)
 
 	req := types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/"}}}
@@ -59,7 +59,7 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	// Register route proposal
 	title = "Register /arg1/arg2"
 	description = "because"
-	registerRouteProposal = &types.MsgRegisterRoute{Title: title, Description: description, Path: "/arg1/arg2", ContractAddress: appA.MustAccAddressToString(contractAddress)}
+	registerRouteProposal = &types.MsgRegisterRoute{Title: title, Description: description, Path: "/arg1/arg2", ContractAddress: contractAddress.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{registerRouteProposal}, "", title, description, false)
 
 	req = types.HttpRequest{Header: []types.HeaderItem{{HeaderType: types.Path_Info, Value: "/arg1/arg2"}}}
@@ -88,14 +88,14 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter", nil)
-	contractAddressHex := strings.ToLower(wasmxtypes.EvmAddressFromAcc(contractAddress).Hex())
+	contractAddressHex := strings.ToLower(wasmxtypes.EvmAddressFromAcc(contractAddress.Bytes()).Hex())
 
 	wasmbinRoot := webserverwasm
 	codeIdRoot := appA.StoreCode(sender, wasmbinRoot, nil)
@@ -105,17 +105,17 @@ func (suite *KeeperTestSuite) TestWebServer() {
 	// Register route proposal
 	title := "Register /"
 	description := "because"
-	registerRouteProposal := &types.MsgRegisterRoute{Title: title, Description: description, Path: "/", ContractAddress: appA.MustAccAddressToString(contractAddressRoot)}
+	registerRouteProposal := &types.MsgRegisterRoute{Title: title, Description: description, Path: "/", ContractAddress: contractAddressRoot.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{registerRouteProposal}, "", title, description, false)
 
 	resp, err := appA.App.WebsrvKeeper.ContractByRoute(appA.Context(), &types.QueryContractByRouteRequest{Path: "/"})
 	s.Require().NoError(err)
-	s.Require().Equal(appA.MustAccAddressToString(contractAddressRoot), resp.ContractAddress)
+	s.Require().Equal(contractAddressRoot.String(), resp.ContractAddress)
 
 	handler := appA.App.WebsrvKeeper.GetMostSpecificRouteToContract(appA.Context(), "/")
-	s.Require().Equal(appA.MustAccAddressToString(contractAddressRoot), appA.MustAccAddressToString(handler))
+	s.Require().Equal(contractAddressRoot.String(), appA.MustAccAddressToString(handler))
 	handler = appA.App.WebsrvKeeper.GetMostSpecificRouteToContract(appA.Context(), "/testserver")
-	s.Require().Equal(appA.MustAccAddressToString(contractAddressRoot), appA.MustAccAddressToString(handler))
+	s.Require().Equal(contractAddressRoot.String(), appA.MustAccAddressToString(handler))
 
 	// setPage /testserver
 	appA.ExecuteContract(sender, contractAddressRoot, wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("baafbf770000000000000000000000000000000000000000000000000000000000000040000000000000000000000000" + contractAddressHex[2:] + "000000000000000000000000000000000000000000000000000000000000000b2f74657374736572766572000000000000000000000000000000000000000000")}, nil, deps)

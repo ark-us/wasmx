@@ -9,6 +9,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	networkkeeper "mythos/v1/x/network/keeper"
 
 	"mythos/v1/x/cosmosmod/types"
@@ -31,6 +32,7 @@ type (
 		validatorAddressCodec address.Codec
 		consensusAddressCodec address.Codec
 		addressCodec          address.Codec
+		accBech32Codec        mcodec.AccBech32Codec
 	}
 )
 
@@ -47,6 +49,8 @@ func NewKeeperBank(
 	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
 ) *KeeperBank {
+	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addressCodec)
+
 	keeper := &KeeperBank{
 		jsoncdc:               jsoncdc,
 		cdc:                   cdc,
@@ -59,6 +63,7 @@ func NewKeeperBank(
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
 		addressCodec:          addressCodec,
+		accBech32Codec:        accBech32Codec,
 	}
 	return keeper
 }

@@ -31,6 +31,36 @@ type CallRequest struct {
 	IsQuery    bool           `json:"isQuery"`
 }
 
+func (r CallRequest) ToCommon(from mcodec.AccAddressPrefixed, to mcodec.AccAddressPrefixed) CallRequestCommon {
+	return CallRequestCommon{
+		To:         to,
+		From:       from,
+		Value:      r.Value,
+		GasLimit:   r.GasLimit,
+		Calldata:   r.Calldata,
+		Bytecode:   r.Bytecode,
+		CodeHash:   r.CodeHash,
+		FilePath:   r.FilePath,
+		CodeId:     r.CodeId,
+		SystemDeps: r.SystemDeps,
+		IsQuery:    r.IsQuery,
+	}
+}
+
+type CallRequestCommon struct {
+	To         mcodec.AccAddressPrefixed `json:"to"`
+	From       mcodec.AccAddressPrefixed `json:"from"`
+	Value      *big.Int                  `json:"value"`
+	GasLimit   *big.Int                  `json:"gasLimit"`
+	Calldata   []byte                    `json:"calldata"`
+	Bytecode   []byte                    `json:"bytecode"`
+	CodeHash   []byte                    `json:"codeHash"`
+	FilePath   string                    `json:"filePath"`
+	CodeId     uint64                    `json:"codeId"`
+	SystemDeps []string                  `json:"systemDeps"`
+	IsQuery    bool                      `json:"isQuery"`
+}
+
 type CallRequestRaw struct {
 	To       types.RawBytes `json:"to"`
 	From     types.RawBytes `json:"from"`

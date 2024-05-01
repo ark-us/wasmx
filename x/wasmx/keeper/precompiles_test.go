@@ -26,10 +26,10 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	contractAddress := types.AccAddressFromHex(types.ADDR_IDENTITY)
+	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_IDENTITY))
 
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}, nil, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), "aa0000000000000000000000000000000000000000000000000000000077")
@@ -44,10 +44,10 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverEthDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	contractAddress := types.AccAddressFromHex(types.ADDR_ECRECOVERETH)
+	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ECRECOVERETH))
 
 	inputhex := "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02"
 
@@ -128,10 +128,10 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	contractAddress := types.AccAddressFromHex(types.ADDR_ECRECOVER)
+	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ECRECOVER))
 
 	message := []byte("This is a test message")
 	msgHash_ := sha256.Sum256(message)
@@ -161,10 +161,10 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	contractAddress := types.AccAddressFromHex(types.ADDR_MODEXP)
+	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_MODEXP))
 
 	// <length_of_BASE> <length_of_EXPONENT> <length_of_MODULUS> <BASE> <EXPONENT> <MODULUS>
 	// https://eips.ethereum.org/EIPS/eip-198
@@ -225,10 +225,10 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	contractAddress := types.AccAddressFromHex(types.ADDR_SECRET_SHARING)
+	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_SECRET_SHARING))
 
 	args1 := vm.InputShamirSplit{
 		Secret:    "this is a secret",

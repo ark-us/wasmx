@@ -16,6 +16,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mcodec "mythos/v1/codec"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 )
 
@@ -100,27 +101,28 @@ type WasmxCosmosHandler interface {
 	DecodeCosmosTx(bz []byte) ([]byte, error)
 	AnyToBz(anyMsg *cdctypes.Any) ([]byte, error)
 	VerifyCosmosTx(bz []byte) (bool, error)
-	WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
-	GetAccount(addr sdk.AccAddress) sdk.AccountI
+	WasmVMQueryHandler(caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error)
+	GetAccount(addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetCode(contractAddress sdk.AccAddress) []byte
 	GetBlockHash(blockNumber uint64) Checksum
 	GetCodeInfo(addr sdk.AccAddress) CodeInfo
 	GetContractInstance(contractAddress sdk.AccAddress) (ContractInfo, CodeInfo, []byte, error)
-	Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (sdk.AccAddress, error)
-	Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt Checksum, label string, value *big.Int, funds sdk.Coins) (sdk.AccAddress, error)
-	Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error)
-	Execute(contractAddress sdk.AccAddress, sender sdk.AccAddress, execmsg []byte, value *big.Int, deps []string) (res []byte, err error)
+	Create(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
+	Create2(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, salt Checksum, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
+	Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error)
+	Execute(contractAddress mcodec.AccAddressPrefixed, sender mcodec.AccAddressPrefixed, execmsg []byte, value *big.Int, deps []string) (res []byte, err error)
 	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
-	WithNewAddress(addr sdk.AccAddress) WasmxCosmosHandler
-	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
+	WithNewAddress(addr mcodec.AccAddressPrefixed) WasmxCosmosHandler
+	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
 	GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string
 	JSONCodec() codec.JSONCodec
-	GetAlias(addr sdk.AccAddress) (sdk.AccAddress, bool)
+	GetAlias(addr mcodec.AccAddressPrefixed) (mcodec.AccAddressPrefixed, bool)
 	AddressCodec() address.Codec
 	ValidatorAddressCodec() address.Codec
 	ConsensusAddressCodec() address.Codec
+	AccBech32Codec() mcodec.AccBech32Codec
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library

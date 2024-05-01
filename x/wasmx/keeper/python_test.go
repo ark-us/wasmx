@@ -32,7 +32,7 @@ var (
 // 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 // 	appA := s.AppContext()
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 // 	suite.Commit()
 
 // 	pyInterpreterAddress := types.AccAddressFromHex(types.ADDR_INTERPRETER_PYTHON)
@@ -53,7 +53,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -81,7 +81,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -92,13 +92,13 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "callSimpleStoragePy", nil)
 
 	key := []byte("pystore")
-	data := []byte(fmt.Sprintf(`{"store":["%s", "str111"]}`, appA.MustAccAddressToString(contractAddress)))
+	data := []byte(fmt.Sprintf(`{"store":["%s", "str111"]}`, contractAddress.String()))
 	appA.ExecuteContract(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("str111"), value)
 
-	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
+	data = []byte(fmt.Sprintf(`{"load":["%s"]}`, contractAddress.String()))
 	resp := appA.WasmxQueryRaw(sender, contractAddressCall, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal([]byte("str11123"), resp)
 }
@@ -108,7 +108,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -126,15 +126,14 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	// s.Require().NoError(err)
 	// s.Require().Equal(env.Chain.ChainIdFull, appA.Chain.ChainID)
 	// s.Require().Equal(appA.MustAccAddressToString(env.CurrentCall.Sender), appA.MustAccAddressToString(sender.Address))
-	// s.Require().Equal(appA.MustAccAddressToString(env.Contract.Address), appA.MustAccAddressToString(contractAddress))
+	// s.Require().Equal(appA.MustAccAddressToString(env.Contract.Address), contractAddress.String())
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, appA.MustAccAddressToString(sender.Address)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
-	s.Require().NoError(err)
+	balance := appA.App.BankKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
-	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
+	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().True(len(resp) > 0)
 	// TODO check this
@@ -199,7 +198,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
@@ -222,15 +221,14 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 
 	data = []byte(fmt.Sprintf(`{"getBalance":["%s"]}`, appA.MustAccAddressToString(sender.Address)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	balance, err := appA.App.WasmxKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
-	s.Require().NoError(err)
+	balance := appA.App.BankKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 	s.Require().Equal(balance.Amount.BigInt().FillBytes(make([]byte, 32)), resp)
 
-	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
+	data = []byte(fmt.Sprintf(`{"getAccount":["%s"]}`, contractAddress.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().True(len(resp) > 0)
 
-	data = []byte(fmt.Sprintf(`{"getCode":["%s"]}`, appA.MustAccAddressToString(contractAddress)))
+	data = []byte(fmt.Sprintf(`{"getCode":["%s"]}`, contractAddress.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(demoPyInterpret, resp)
 

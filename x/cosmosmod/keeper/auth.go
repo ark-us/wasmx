@@ -33,7 +33,7 @@ func (k KeeperAuth) GetParams(goCtx context.Context) (params authtypes.Params) {
 	if err != nil {
 		panic(err)
 	}
-	resp, err := k.WasmxKeeper.Query(ctx, modaddr, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
+	resp, err := k.WasmxKeeper.Query(ctx, modaddr, k.accBech32Codec.BytesToAccAddressPrefixed([]byte(types.ModuleName)), execmsg, nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool 
 	if err != nil {
 		panic(err)
 	}
-	resp, err := k.WasmxKeeper.Query(ctx, modaddr, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
+	resp, err := k.WasmxKeeper.Query(ctx, modaddr, k.accBech32Codec.BytesToAccAddressPrefixed([]byte(types.ModuleName)), execmsg, nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -84,117 +84,82 @@ func (k KeeperAuth) HasAccount(goCtx context.Context, addr sdk.AccAddress) bool 
 }
 
 func (k KeeperAuth) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.AccountI {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
-	if err != nil {
-		panic(err) // TODO catch this
-	}
-	addrstr, err := k.AddressCodec().BytesToString(addr)
-	if err != nil {
-		panic(fmt.Errorf("address: %s", mcfg.ERRORMSG_ACC_TOSTRING))
-	}
-	msgbz := []byte(fmt.Sprintf(`{"GetAccount":{"address":"%s"}}`, addrstr))
-	execmsg, err := json.Marshal(wasmxtypes.WasmxExecutionMessage{Data: msgbz})
+	addrp := k.accBech32Codec.BytesToAccAddressPrefixed(addr)
+	acc, err := k.GetAccountPrefixed(goCtx, addrp)
 	if err != nil {
 		panic(err)
 	}
-	resp, err := k.WasmxKeeper.Query(ctx, modaddr, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
-	if err != nil {
-		panic(err)
-	}
-	var rresp wasmxtypes.ContractResponse
-	err = json.Unmarshal(resp, &rresp)
-	if err != nil {
-		panic(err)
-	}
-
-	data := strings.ReplaceAll(string(rresp.Data), `{"@type":"","key":""}`, "null")
-	var response types.QueryAccountResponse
-	err = k.cdc.UnmarshalJSON([]byte(data), &response)
-	if err != nil {
-		panic(err)
-	}
-	if response.Account == nil {
+	if acc == nil {
 		return nil
 	}
-	if response.Account.TypeUrl == sdk.MsgTypeURL(&authtypes.BaseAccount{}) {
-		var acc types.BaseAccount
-		err = k.cdc.UnmarshalJSON(response.Account.Value, &acc)
-		if err != nil {
-			panic(err)
-		}
-		return authtypes.NewBaseAccount(acc.GetAddress().Bytes(), acc.GetPubKey(), acc.GetAccountNumber(), acc.GetSequence())
-	} else if response.Account.TypeUrl == sdk.MsgTypeURL(&authtypes.ModuleAccount{}) {
-		var acc types.ModuleAccount
-		err = k.cdc.UnmarshalJSON(response.Account.Value, &acc)
-		if err != nil {
-			panic(err)
-		}
-		return authtypes.NewModuleAccount(
+	var acci sdk.AccountI
+	if sdk.MsgTypeURL(acc) == sdk.MsgTypeURL(&types.BaseAccount{}) {
+		acci = authtypes.NewBaseAccount(acc.GetAddress().Bytes(), acc.GetPubKey(), acc.GetAccountNumber(), acc.GetSequence())
+	} else if sdk.MsgTypeURL(acc) == sdk.MsgTypeURL(&types.ModuleAccount{}) {
+		macc := acc.(*types.ModuleAccount)
+		acci = authtypes.NewModuleAccount(
 			authtypes.NewBaseAccount(acc.GetAddress().Bytes(), acc.GetPubKey(), acc.GetAccountNumber(), acc.GetSequence()),
-			acc.GetName(),
-			acc.GetPermissions()...,
+			macc.GetName(),
+			macc.GetPermissions()...,
 		)
 	}
-	return nil
+	return acci
 }
 
-func (k KeeperAuth) GetAccountPrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed) mcodec.AccountI {
+func (k KeeperAuth) GetAccountPrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	modaddr, err := k.WasmxKeeper.GetAddressOrRole(ctx, wasmxtypes.ROLE_AUTH)
 	if err != nil {
-		panic(err) // TODO catch this
+		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"GetAccount":{"address":"%s"}}`, addr.String()))
 	execmsg, err := json.Marshal(wasmxtypes.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	resp, err := k.WasmxKeeper.Query(ctx, modaddr, sdk.AccAddress([]byte(types.ModuleName)), execmsg, nil, nil)
+	resp, err := k.WasmxKeeper.Query(ctx, modaddr, k.accBech32Codec.BytesToAccAddressPrefixed([]byte(types.ModuleName)), execmsg, nil, nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	var rresp wasmxtypes.ContractResponse
 	err = json.Unmarshal(resp, &rresp)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	data := strings.ReplaceAll(string(rresp.Data), `{"@type":"","key":""}`, "null")
 	var response types.QueryAccountResponse
 	err = k.cdc.UnmarshalJSON([]byte(data), &response)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if response.Account == nil {
-		return nil
+		return nil, nil
 	}
 	if response.Account.TypeUrl == sdk.MsgTypeURL(&types.BaseAccount{}) {
 		var acc types.BaseAccount
 		err = k.cdc.UnmarshalJSON(response.Account.Value, &acc)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return &acc
+		return &acc, nil
 	} else if response.Account.TypeUrl == sdk.MsgTypeURL(&types.ModuleAccount{}) {
 		var acc types.ModuleAccount
 		err = k.cdc.UnmarshalJSON(response.Account.Value, &acc)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
-		return &acc
+		return &acc, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // TODO eventually remove after we replace all cosmos modules
 func (k KeeperAuth) SetAccount(goCtx context.Context, authacc sdk.AccountI) {
-	cdcacc := mcodec.MustUnwrapAccBech32Codec(k.AddressCodec())
-
 	// TODO we assume all are BaseAccounts or ModuleAccounts
 	// cosmos.sdk also has BaseVestingAccount, but we do not support this yet
 	acc := types.NewBaseAccount(
-		cdcacc.BytesToAccAddressPrefixed(authacc.GetAddress()),
+		k.accBech32Codec.BytesToAccAddressPrefixed(authacc.GetAddress()),
 		authacc.GetPubKey(),
 		authacc.GetAccountNumber(),
 		authacc.GetSequence(),
@@ -264,6 +229,16 @@ func (k KeeperAuth) NewAccountWithAddress(goCtx context.Context, addr sdk.AccAdd
 		panic(err) // TODO eventually catch this
 	}
 	return k.GetAccount(ctx, addr)
+}
+
+func (k KeeperAuth) NewAccountWithAddressPrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	acc := &types.BaseAccount{Address: addr.String()}
+	err := k.SetAccountPrefixed(goCtx, acc)
+	if err != nil {
+		return nil, err
+	}
+	return k.GetAccountPrefixed(ctx, addr)
 }
 
 func (k KeeperAuth) GetModuleAddress(moduleName string) sdk.AccAddress {

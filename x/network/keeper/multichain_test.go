@@ -29,7 +29,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
@@ -62,7 +62,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 
 	appA := s.GetAppContext(*chain)
 	denom := appA.Chain.Config.BaseDenom
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)

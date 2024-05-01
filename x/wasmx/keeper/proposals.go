@@ -14,7 +14,7 @@ func (k *Keeper) RegisterRoleHandler(
 	label string,
 	contractAddressBech32 string,
 ) error {
-	contractAddress, err := k.AddressCodec().StringToBytes(contractAddressBech32)
+	contractAddress, err := k.accBech32Codec.StringToAccAddressPrefixed(contractAddressBech32)
 	if err != nil {
 		return sdkerr.Wrap(err, "contract address")
 	}
@@ -33,18 +33,18 @@ func (k *Keeper) RegisterRoleHandler(
 	if prevContractInfo == nil {
 		return fmt.Errorf("previous contract info not found for role %s", prevContractBech32)
 	}
-	contractInfo := k.GetContractInfo(ctx, contractAddress)
+	contractInfo := k.GetContractInfo(ctx, contractAddress.Bytes())
 	if contractInfo == nil {
 		return fmt.Errorf("proposed contract info not found for role %s", contractAddressBech32)
 	}
 
 	if contractInfo.StorageType != prevContractInfo.StorageType {
 		k.Logger(ctx).Info("migrating contract storage...", "address", contractAddressBech32, "source storage type", contractInfo.StorageType, "target storage type", prevContractInfo.StorageType)
-		k.MigrateContractStateByStorageType(ctx, contractAddress, contractInfo.StorageType, prevContractInfo.StorageType)
+		k.MigrateContractStateByStorageType(ctx, contractAddress.Bytes(), contractInfo.StorageType, prevContractInfo.StorageType)
 		contractInfo.StorageType = prevContractInfo.StorageType
 		k.Logger(ctx).Info("contract storage migrated", "address", contractAddressBech32)
 	}
-	k.StoreContractInfo(ctx, contractAddress, contractInfo)
+	k.StoreContractInfo(ctx, contractAddress.Bytes(), contractInfo)
 	k.RegisterRole(ctx, role, label, contractAddress)
 
 	// we do not remove role from previous contract
@@ -58,7 +58,7 @@ func (k *Keeper) DeregisterRoleHandler(
 	ctx sdk.Context,
 	contractAddressBech32 string,
 ) error {
-	contractAddress, err := k.AddressCodec().StringToBytes(contractAddressBech32)
+	contractAddress, err := k.accBech32Codec.StringToAccAddressPrefixed(contractAddressBech32)
 	if err != nil {
 		return err
 	}

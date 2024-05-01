@@ -19,6 +19,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	mcodec "mythos/v1/codec"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -26,17 +27,17 @@ import (
 // WasmVMQueryHandler is an extension point for custom query handler implementations
 type WasmVMQueryHandler interface {
 	// HandleQuery executes the requested query
-	HandleQuery(ctx sdk.Context, caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
+	HandleQuery(ctx sdk.Context, caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error)
 }
 
 type QueryHandler struct {
 	Ctx         sdk.Context
 	Plugins     WasmVMQueryHandler
-	Caller      sdk.AccAddress
+	Caller      mcodec.AccAddressPrefixed
 	gasRegister cw8types.GasRegister
 }
 
-func NewQueryHandler(ctx sdk.Context, vmQueryHandler WasmVMQueryHandler, caller sdk.AccAddress, gasRegister cw8types.GasRegister) QueryHandler {
+func NewQueryHandler(ctx sdk.Context, vmQueryHandler WasmVMQueryHandler, caller mcodec.AccAddressPrefixed, gasRegister cw8types.GasRegister) QueryHandler {
 	return QueryHandler{
 		Ctx:         ctx,
 		Plugins:     vmQueryHandler,
@@ -642,9 +643,9 @@ func ConvertProtoToJSONMarshal(cdc codec.Codec, protoResponse codec.ProtoMarshal
 var _ WasmVMQueryHandler = WasmVMQueryHandlerFn(nil)
 
 // WasmVMQueryHandlerFn is a helper to construct a function based query handler.
-type WasmVMQueryHandlerFn func(ctx sdk.Context, caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error)
+type WasmVMQueryHandlerFn func(ctx sdk.Context, caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error)
 
 // HandleQuery delegates call into wrapped WasmVMQueryHandlerFn
-func (w WasmVMQueryHandlerFn) HandleQuery(ctx sdk.Context, caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error) {
+func (w WasmVMQueryHandlerFn) HandleQuery(ctx sdk.Context, caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error) {
 	return w(ctx, caller, request)
 }

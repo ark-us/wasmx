@@ -4,8 +4,7 @@ import (
 	bytes "bytes"
 	"encoding/json"
 	"math/big"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	mcodec "mythos/v1/codec"
 )
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)
@@ -85,10 +84,10 @@ type ChainInfo struct {
 }
 
 type EnvContractInfo struct {
-	Address    sdk.AccAddress `json:"address"`
-	CodeHash   []byte         `json:"codeHash"`
-	CodeId     uint64         `json:"codeId"`
-	SystemDeps []string       `json:"deps"`
+	Address    mcodec.AccAddressPrefixed `json:"address"`
+	CodeHash   []byte                    `json:"codeHash"`
+	CodeId     uint64                    `json:"codeId"`
+	SystemDeps []string                  `json:"deps"`
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
 	Bytecode []byte `json:"bytecode"`
@@ -100,10 +99,10 @@ type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
 	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
-	Timestamp uint64         `json:"timestamp"`
-	GasLimit  uint64         `json:"gasLimit"`
-	Hash      []byte         `json:"hash"`
-	Proposer  sdk.AccAddress `json:"proposer"`
+	Timestamp uint64                    `json:"timestamp"`
+	GasLimit  uint64                    `json:"gasLimit"`
+	Hash      []byte                    `json:"hash"`
+	Proposer  mcodec.AccAddressPrefixed `json:"proposer"`
 }
 
 type TransactionInfo struct {
@@ -118,9 +117,9 @@ type TransactionInfo struct {
 
 type MessageInfo struct {
 	// Bech32 encoded sdk.AccAddress from which the calls originated
-	Origin sdk.AccAddress `json:"origin"`
+	Origin mcodec.AccAddressPrefixed `json:"origin"`
 	// Bech32 encoded sdk.AccAddress executing the contract
-	Sender sdk.AccAddress `json:"sender"`
+	Sender mcodec.AccAddressPrefixed `json:"sender"`
 	// Amount of funds send to the contract along with this message
 	Funds    *big.Int `json:"funds"`
 	GasLimit *big.Int `json:"gasLimit"`
@@ -128,7 +127,7 @@ type MessageInfo struct {
 }
 
 type ContractDependency struct {
-	Address       sdk.AccAddress
+	Address       mcodec.AccAddressPrefixed
 	Role          string
 	Label         string
 	StoreKey      []byte

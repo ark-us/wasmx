@@ -15,11 +15,11 @@ import (
 	sdkante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
-	mcfg "mythos/v1/config"
+	mcodec "mythos/v1/codec"
 )
 
 type AccountKeeper interface {
-	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+	GetAccountPrefixed(ctx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
 	AddressCodec() address.Codec
 }
 
@@ -78,12 +78,8 @@ func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool
 		// no need to verify signatures on recheck tx
 		if !simulate && !ctx.IsReCheckTx() {
 			anyPk, _ := codectypes.NewAnyWithValue(pubKey)
-			addrstr, err := ak.AddressCodec().BytesToString(acc.GetAddress())
-			if err != nil {
-				return false, errorsmod.Wrapf(err, "signer: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-			}
 			signerData := txsigning.SignerData{
-				Address:       addrstr,
+				Address:       acc.GetAddress().String(),
 				ChainID:       chainID,
 				AccountNumber: accNum,
 				Sequence:      acc.GetSequence(),
@@ -117,10 +113,11 @@ func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool
 
 // GetSignerAcc returns an account for a given address that is expected to sign
 // a transaction.
-func GetSignerAcc(ctx sdk.Context, ak AccountKeeper, addr sdk.AccAddress) (sdk.AccountI, error) {
-	if acc := ak.GetAccount(ctx, addr); acc != nil {
-		return acc, nil
+func GetSignerAcc(ctx sdk.Context, ak AccountKeeper, addr sdk.AccAddress) (mcodec.AccountI, error) {
+	addrp := mcodec.MustUnwrapAccBech32Codec(ak.AddressCodec()).BytesToAccAddressPrefixed(addr)
+	acc, err := ak.GetAccountPrefixed(ctx, addrp)
+	if err != nil || acc == nil {
+		return nil, errorsmod.Wrapf(sdkerrors.ErrUnknownAddress, "account %s does not exist", addr)
 	}
-
-	return nil, errorsmod.Wrapf(sdkerrors.ErrUnknownAddress, "account %s does not exist", addr)
+	return acc, nil
 }

@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	mcfg "mythos/v1/config"
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
@@ -34,12 +34,12 @@ func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
 	return depContext
 }
 
-func BankGetBalance(ctx *Context, addr sdk.AccAddress, denom string) (sdk.Coin, error) {
+func BankGetBalance(ctx *Context, addr mcodec.AccAddressPrefixed, denom string) (sdk.Coin, error) {
 	alias, found := ctx.CosmosHandler.GetAlias(addr)
 	if found {
 		addr = alias
 	}
-	msg := banktypes.NewQueryBalanceRequest(addr, denom)
+	msg := &banktypes.QueryBalanceRequest{Address: addr.String(), Denom: denom}
 	bankmsgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
 	if err != nil {
 		return sdk.Coin{}, err
@@ -58,7 +58,7 @@ func BankGetBalance(ctx *Context, addr sdk.AccAddress, denom string) (sdk.Coin, 
 	return *response.Balance, nil
 }
 
-func BankSendCoin(ctx *Context, from sdk.AccAddress, to sdk.AccAddress, amount sdk.Coins) error {
+func BankSendCoin(ctx *Context, from mcodec.AccAddressPrefixed, to mcodec.AccAddressPrefixed, amount sdk.Coins) error {
 	aliasFrom, found := ctx.CosmosHandler.GetAlias(from)
 	if found {
 		from = aliasFrom
@@ -67,7 +67,11 @@ func BankSendCoin(ctx *Context, from sdk.AccAddress, to sdk.AccAddress, amount s
 	if found {
 		to = aliasTo
 	}
-	msg := banktypes.NewMsgSend(from, to, amount)
+	msg := &banktypes.MsgSend{
+		FromAddress: from.String(),
+		ToAddress:   to.String(),
+		Amount:      amount,
+	}
 	bankmsgbz, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(msg)
 	if err != nil {
 		return err
@@ -87,7 +91,7 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req := vmtypes.CallRequest{
+	req := vmtypes.CallRequestCommon{
 		To:       bankAddress,
 		From:     bankAddress, // TODO wasmx?
 		Calldata: msgbz,
@@ -102,11 +106,11 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 
 // All WasmX, eWasm calls must go through here
 // Returns 0 on success, 1 on failure and 2 on revert
-func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
-	if types.IsSystemAddress(req.To) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From) {
+func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
+	if types.IsSystemAddress(req.To.Bytes()) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From.Bytes()) {
 		return int32(1), []byte(`cannot call system contract`)
 	}
-	depContext := GetContractContext(ctx, req.To)
+	depContext := GetContractContext(ctx, req.To.Bytes())
 	// ! we return success here in case the contract does not exist
 	// an empty transaction to any account should succeed (evm way)
 	// even with value 0 & no calldata
@@ -114,18 +118,11 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		return int32(0), []byte(`cannot get contract context`)
 	}
 
-	addrCodec := ctx.GetCosmosHandler().AddressCodec()
-	fromstr, err := addrCodec.BytesToString(req.From)
-	if err != nil {
-		return int32(1), []byte(fmt.Sprintf("from: %s", mcfg.ERRORMSG_ACC_TOSTRING))
-	}
-	tostr, err := addrCodec.BytesToString(req.To)
-	if err != nil {
-		return int32(1), []byte(fmt.Sprintf("to: %s", mcfg.ERRORMSG_ACC_TOSTRING))
-	}
+	fromstr := req.From.String()
+	tostr := req.To.String()
 
 	// deterministic contracts cannot transact with or query non-deterministic contracts
-	sourceContract := GetContractContext(ctx, req.From)
+	sourceContract := GetContractContext(ctx, req.From.Bytes())
 	if sourceContract != nil {
 		fromStorageType := sourceContract.ContractInfo.StorageType
 		toStorageType := depContext.ContractInfo.StorageType
@@ -247,7 +244,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequest) (int32, []byte) {
 		},
 	}
 
-	_, err = newrouter[routerAddress].Execute(newctx)
+	_, err := newrouter[routerAddress].Execute(newctx)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {

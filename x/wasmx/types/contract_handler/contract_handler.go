@@ -6,6 +6,7 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -29,8 +30,10 @@ type ContractHandler interface {
 
 type KeeperInterface interface {
 	GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool)
-	Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
-	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg types.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
+	Query(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
+	Execute(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg types.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
+
+	AccBech32Codec() mcodec.AccBech32Codec
 }
 
 // role => handler
@@ -70,7 +73,7 @@ func (m ContractHandlerMap) Query(ctx sdk.Context, req ContractHandlerMessage) (
 	}
 
 	tmpctx, _ := ctx.CacheContext()
-	responseBz, err := m.Keeper.Query(tmpctx, contractAddress, req.Sender, msgbz, nil, nil)
+	responseBz, err := m.Keeper.Query(tmpctx, m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress), m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(req.Sender), msgbz, nil, nil)
 	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "query failed: %s", err.Error())
 	}
@@ -107,7 +110,7 @@ func (m ContractHandlerMap) Execute(ctx sdk.Context, req ContractHandlerMessage)
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "role not registered")
 	}
 
-	response, err := m.Keeper.Execute(ctx, contractAddress, req.Sender, msgbz, nil, nil, false)
+	response, err := m.Keeper.Execute(ctx, m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress), m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(req.Sender), msgbz, nil, nil, false)
 	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "execution failed: %s", err.Error())
 	}

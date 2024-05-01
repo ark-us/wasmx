@@ -12,6 +12,7 @@ import (
 
 	networkkeeper "mythos/v1/x/network/keeper"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/cosmosmod/types"
 )
 
@@ -31,6 +32,7 @@ type (
 		validatorAddressCodec address.Codec
 		consensusAddressCodec address.Codec
 		addressCodec          address.Codec
+		accBech32Codec        mcodec.AccBech32Codec
 		permAddrs             map[string]authtypes.PermissionsForAddress
 	}
 )
@@ -48,6 +50,8 @@ func NewKeeperAuth(
 	addressCodec address.Codec,
 	permAddrs map[string]authtypes.PermissionsForAddress,
 ) *KeeperAuth {
+	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addressCodec)
+
 	keeper := &KeeperAuth{
 		jsoncdc:               jsoncdc,
 		cdc:                   cdc,
@@ -59,6 +63,7 @@ func NewKeeperAuth(
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
 		addressCodec:          addressCodec,
+		accBech32Codec:        accBech32Codec,
 		permAddrs:             permAddrs,
 	}
 	return keeper

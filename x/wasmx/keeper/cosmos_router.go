@@ -16,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	verifysig "mythos/v1/crypto/verifysig"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
@@ -25,7 +26,7 @@ import (
 type WasmxCosmosHandler struct {
 	Ctx             sdk.Context
 	Keeper          *Keeper
-	ContractAddress sdk.AccAddress
+	ContractAddress mcodec.AccAddressPrefixed
 }
 
 func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
@@ -39,6 +40,9 @@ func (h *WasmxCosmosHandler) ValidatorAddressCodec() address.Codec {
 }
 func (h *WasmxCosmosHandler) ConsensusAddressCodec() address.Codec {
 	return h.Keeper.ConsensusAddressCodec()
+}
+func (h *WasmxCosmosHandler) AccBech32Codec() mcodec.AccBech32Codec {
+	return h.Keeper.accBech32Codec
 }
 func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
 	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
@@ -66,22 +70,22 @@ func (h *WasmxCosmosHandler) ExecuteCosmosMsgAnyBz(msgbz []byte) ([]sdk.Event, [
 func (h *WasmxCosmosHandler) ExecuteCosmosMsg(msg sdk.Msg) ([]sdk.Event, []byte, error) {
 	return h.Keeper.ExecuteCosmosMsg(h.Ctx, msg, h.ContractAddress)
 }
-func (h *WasmxCosmosHandler) WasmVMQueryHandler(caller sdk.AccAddress, request cw8types.QueryRequest) ([]byte, error) {
+func (h *WasmxCosmosHandler) WasmVMQueryHandler(caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error) {
 	return h.Keeper.wasmVMQueryHandler.HandleQuery(h.Ctx, caller, request)
 }
 func (h *WasmxCosmosHandler) JSONCodec() codec.JSONCodec {
 	return h.Keeper.cdc
 }
-func (h *WasmxCosmosHandler) GetAlias(addr sdk.AccAddress) (sdk.AccAddress, bool) {
-	return h.Keeper.GetAlias(h.Ctx, addr)
+func (h *WasmxCosmosHandler) GetAlias(addr mcodec.AccAddressPrefixed) (mcodec.AccAddressPrefixed, bool) {
+	alias, bool := h.Keeper.GetAlias(h.Ctx, addr)
+	return alias, bool
 }
-func (h *WasmxCosmosHandler) GetAccount(addr sdk.AccAddress) sdk.AccountI {
+func (h *WasmxCosmosHandler) GetAccount(addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error) {
 	aliasAddr, found := h.Keeper.GetAlias(h.Ctx, addr)
 	if found {
 		addr = aliasAddr
 	}
-	acc := h.Keeper.GetAccount(h.Ctx, addr)
-	return acc
+	return h.Keeper.ak.GetAccountPrefixed(h.Ctx, addr)
 }
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
@@ -126,7 +130,7 @@ func (h *WasmxCosmosHandler) ContractStore(ctx sdk.Context, storageType types.Co
 }
 
 // TODO provenance
-func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (sdk.AccAddress, error) {
+func (h *WasmxCosmosHandler) Create(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error) {
 	if value != nil {
 		funds = sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	}
@@ -134,34 +138,34 @@ func (h *WasmxCosmosHandler) Create(codeId uint64, creator sdk.AccAddress, initM
 	if err != nil {
 		return nil, err
 	}
-	return address, nil
+	return &address, nil
 }
 
 // TODO provenance
-func (h *WasmxCosmosHandler) Create2(codeId uint64, creator sdk.AccAddress, initMsg []byte, salt types.Checksum, label string, value *big.Int, funds sdk.Coins) (sdk.AccAddress, error) {
+func (h *WasmxCosmosHandler) Create2(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, salt types.Checksum, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error) {
 	if value != nil {
 		funds = sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	}
 	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, funds, salt, false, label)
-	return address, err
+	return &address, err
 }
-func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender sdk.AccAddress, provenance sdk.AccAddress, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress sdk.AccAddress, err error) {
+func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
 }
 
-func (h *WasmxCosmosHandler) Execute(contractAddress sdk.AccAddress, sender sdk.AccAddress, execmsg []byte, value *big.Int, deps []string) (res []byte, err error) {
+func (h *WasmxCosmosHandler) Execute(contractAddress mcodec.AccAddressPrefixed, sender mcodec.AccAddressPrefixed, execmsg []byte, value *big.Int, deps []string) (res []byte, err error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
 	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps, false)
 }
 
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
-	return h.Keeper.GetContractDependency(ctx, addr)
+	return h.Keeper.GetContractDependency(ctx, h.Keeper.accBech32Codec.BytesToAccAddressPrefixed(addr))
 }
 func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool {
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
-func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
+func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error) {
 	addr, err := h.Keeper.GetAddressOrRole(ctx, addressOrRole)
 	if err == nil {
 		return addr, nil
@@ -170,19 +174,19 @@ func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole str
 	// this should be replaced with a wasmx-alias contract
 	acc, found := h.Keeper.permAddrs[addressOrRole]
 	if found {
-		return acc.GetAddress(), nil
+		return h.Keeper.accBech32Codec.BytesToAccAddressPrefixed(acc.GetAddress()), nil
 	}
-	return nil, err
+	return mcodec.AccAddressPrefixed{}, err
 }
 func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string {
 	return h.Keeper.GetRoleByContractAddress(ctx, addr)
 }
 
-func (h *WasmxCosmosHandler) WithNewAddress(addr sdk.AccAddress) types.WasmxCosmosHandler {
+func (h *WasmxCosmosHandler) WithNewAddress(addr mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
 	return h.Keeper.newCosmosHandler(h.Ctx, addr)
 }
 
-func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress sdk.AccAddress) types.WasmxCosmosHandler {
+func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
 		Ctx:             ctx,
 		Keeper:          k,
@@ -226,7 +230,7 @@ func (h *Keeper) VerifyCosmosTx(ctx sdk.Context, bz []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	ak := NewAccountKeeperVerifySig(h)
+	ak := NewAccountKeeperVerifySig(h.ak)
 	valid, err := verifysig.VerifySignature(ctx, ak, tx, false, h.txConfig.SignModeHandler())
 
 	if err != nil {
@@ -235,7 +239,7 @@ func (h *Keeper) VerifyCosmosTx(ctx sdk.Context, bz []byte) (bool, error) {
 	return valid, nil
 }
 
-func (k *Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
+func (k *Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error) {
 	// sdk.Msg
 	var msg sdk.Msg
 	err := k.cdc.UnpackAny(any, &msg)
@@ -245,7 +249,7 @@ func (k *Keeper) ExecuteCosmosMsgAny(ctx sdk.Context, any *cdctypes.Any, owner s
 	return k.ExecuteCosmosMsg(ctx, msg, owner)
 }
 
-func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error) {
+func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error) {
 	anymsg, err := cdctypes.NewAnyWithValue(msg)
 	if err != nil {
 		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message any")
@@ -259,16 +263,12 @@ func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAdd
 	if err != nil {
 		return nil, nil, sdkerr.Wrapf(err, "signer: %s", mcfg.ERRORMSG_ACC_TOSTRING)
 	}
-	ownerstr, err := k.AddressCodec().BytesToString(owner)
-	if err != nil {
-		return nil, nil, sdkerr.Wrapf(err, "owner: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
 
 	if !authorized {
 		authorized = signerstr == k.authority
 	}
 	if !authorized {
-		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signerstr, ownerstr)
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signerstr, owner.String())
 	}
 	// signers := msg.GetSigners()
 	// if signerstr != ownerstr {

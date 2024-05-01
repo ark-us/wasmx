@@ -7,14 +7,14 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcfg "mythos/v1/config"
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/precompiles"
 )
 
 func (k *Keeper) BootstrapSystemContracts(
 	ctx sdk.Context,
-	bootstrapAccountAddr sdk.AccAddress,
+	bootstrapAccountAddr mcodec.AccAddressPrefixed,
 	contracts []types.SystemContract,
 	compiledFolderPath string,
 ) error {
@@ -30,7 +30,7 @@ func (k *Keeper) BootstrapSystemContracts(
 // ActivateEmbeddedSystemContract
 func (k *Keeper) ActivateEmbeddedSystemContract(
 	ctx sdk.Context,
-	bootstrapAccountAddr sdk.AccAddress,
+	bootstrapAccountAddr mcodec.AccAddressPrefixed,
 	contract types.SystemContract,
 	compiledFolderPath string,
 ) error {
@@ -41,7 +41,7 @@ func (k *Keeper) ActivateEmbeddedSystemContract(
 // ActivateSystemContract
 func (k *Keeper) ActivateSystemContract(
 	ctx sdk.Context,
-	bootstrapAccountAddr sdk.AccAddress,
+	bootstrapAccountAddr mcodec.AccAddressPrefixed,
 	contract types.SystemContract,
 	wasmbin []byte,
 	compiledFolderPath string,
@@ -50,14 +50,9 @@ func (k *Keeper) ActivateSystemContract(
 	var codeID uint64
 	var err error
 
-	bootstrapAccountAddrBech32, err := k.AddressCodec().BytesToString(bootstrapAccountAddr)
-	if err != nil {
-		return err
-	}
-
 	if contract.Native {
 		codeID = k.autoIncrementID(ctx)
-		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddrBech32, contract.Deps, contract.Metadata)
+		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata)
 		k.storeCodeInfo(ctx, codeID, codeInfo)
 	} else {
 		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata)
@@ -77,19 +72,19 @@ func (k *Keeper) ActivateSystemContract(
 		return nil
 	}
 
-	contractAddress := types.AccAddressFromHex(contract.Address)
+	contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
 	// register role first, to be able to initialize the account keeper
 	if contract.Role != "" {
 		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
 	}
 	if contract.Native {
-		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddrBech32, "", contract.InitMessage, contract.Label)
-		k.storeContractInfo(ctx, contractAddress, &contractInfo)
+		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr.String(), "", contract.InitMessage, contract.Label)
+		k.storeContractInfo(ctx, contractAddress.Bytes(), &contractInfo)
 	} else {
 		_, err = k.instantiateWithAddress(
 			ctx,
 			codeID,
-			bootstrapAccountAddr,
+			&bootstrapAccountAddr,
 			contractAddress,
 			contract.StorageType,
 			contract.InitMessage,
@@ -100,12 +95,8 @@ func (k *Keeper) ActivateSystemContract(
 			return sdkerr.Wrap(err, "instantiate system contract: "+contract.Label)
 		}
 	}
-	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
-	if err != nil {
-		return sdkerr.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
 
-	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddressStr, "hex_address", contract.Address, "code_id", codeID)
+	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddress.String(), "hex_address", contract.Address, "code_id", codeID)
 	return nil
 }
 

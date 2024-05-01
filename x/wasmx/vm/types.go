@@ -14,7 +14,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	mcfg "mythos/v1/config"
+	mcodec "mythos/v1/codec"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
 )
@@ -28,7 +28,7 @@ var (
 
 type NativePrecompileHandler interface {
 	IsPrecompile(contractAddress sdk.AccAddress) bool
-	Execute(ctx *Context, contractAddress sdk.AccAddress, input []byte) ([]byte, error)
+	Execute(ctx *Context, contractAddress mcodec.AccAddressPrefixed, input []byte) ([]byte, error)
 }
 
 type ContractContext struct {
@@ -52,7 +52,7 @@ func (c ContractContext) CloneShallow() *ContractContext {
 }
 
 func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
-	found := newctx.NativeHandler.IsPrecompile(newctx.Env.Contract.Address)
+	found := newctx.NativeHandler.IsPrecompile(newctx.Env.Contract.Address.Bytes())
 	if found {
 		data, err := newctx.NativeHandler.Execute(newctx, newctx.Env.Contract.Address, newctx.Env.CurrentCall.CallData)
 		if err != nil {
@@ -72,12 +72,7 @@ func (c ContractContext) Execute(newctx *Context) ([]byte, error) {
 	}
 	setExecutionBytecode(newctx, contractVm, types.ENTRY_POINT_EXECUTE)
 
-	addrstr, err := newctx.CosmosHandler.AddressCodec().BytesToString(newctx.Env.Contract.Address)
-	if err != nil {
-		return nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
-
-	newctx.ContractRouter[addrstr].Vm = contractVm
+	newctx.ContractRouter[newctx.Env.Contract.Address.String()].Vm = contractVm
 
 	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
 	_, err = executeHandler(newctx, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
@@ -125,11 +120,7 @@ func (ctx *Context) GetContext() sdk.Context {
 }
 
 func (ctx *Context) GetVmFromContext() (*wasmedge.VM, error) {
-	addr := ctx.Env.Contract.Address
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
-	if err != nil {
-		return nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
+	addrstr := ctx.Env.Contract.Address.String()
 	contractCtx, ok := ctx.ContractRouter[addrstr]
 	if !ok {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addrstr)
@@ -151,7 +142,7 @@ type EwasmFunctionWrapper struct {
 }
 
 type WasmxLog struct {
-	ContractAddress  sdk.AccAddress
+	ContractAddress  mcodec.AccAddressPrefixed
 	SystemDependency string
 	Data             []byte
 	Topics           [][32]byte

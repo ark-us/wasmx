@@ -20,7 +20,7 @@ package keeper_test
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 
 // 	appA := s.AppContext()
-// 	appA.faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.denom, initBalance))
 // 	suite.Commit()
 
 // 	codeId := appA.StoreCode(sender, wasmbin)

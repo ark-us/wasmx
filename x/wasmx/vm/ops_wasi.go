@@ -120,7 +120,7 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
 	value, err := mem.ReadBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -142,12 +142,12 @@ func wasiCallClassic(context interface{}, callframe *wasmedge.CallingFrame, para
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, addr)
+		contractContext := GetContractContext(ctx, addr.Bytes())
 		if contractContext == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
-			req := vmtypes.CallRequest{
+			req := vmtypes.CallRequestCommon{
 				To:         addr,
 				From:       ctx.Env.Contract.Address,
 				Value:      value,
@@ -191,7 +191,7 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
 	calldata, err := mem.ReadMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
@@ -201,12 +201,12 @@ func wasiCallStatic(context interface{}, callframe *wasmedge.CallingFrame, param
 	var success int32
 	var returnData []byte
 
-	contractContext := GetContractContext(ctx, addr)
+	contractContext := GetContractContext(ctx, addr.Bytes())
 	if contractContext == nil {
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := vmtypes.CallRequest{
+		req := vmtypes.CallRequestCommon{
 			To:         addr,
 			From:       ctx.Env.Contract.Address,
 			Value:      big.NewInt(0),
@@ -245,14 +245,14 @@ func wasi_getAccount(context interface{}, callframe *wasmedge.CallingFrame, para
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
+	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
 	code := types.EnvContractInfo{
 		Address:    address,
 		CodeHash:   types.EMPTY_BYTES32,
 		CodeId:     0,
 		SystemDeps: []string{},
 	}
-	contractInfo, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address)
+	contractInfo, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address.Bytes())
 	if err == nil {
 		code = types.EnvContractInfo{
 			Address:    address,
@@ -323,7 +323,7 @@ func wasi_getBalance(context interface{}, callframe *wasmedge.CallingFrame, para
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
+	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
 	balance, err := BankGetBalance(ctx, address, ctx.Env.Chain.Denom)
 	if err != nil {
 		return nil, wasmedge.Result_Fail

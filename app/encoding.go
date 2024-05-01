@@ -14,16 +14,28 @@ import (
 
 // MakeEncodingConfig creates an EncodingConfig for an amino based test configuration.
 func MakeEncodingConfig(cfg *config.ChainConfig) params.EncodingConfig {
+	var err error
+	signingOptions := signing.Options{
+		AddressCodec:          mcodec.NewAccBech32Codec(cfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc),
+		ValidatorAddressCodec: mcodec.NewValBech32Codec(cfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal),
+	}
 	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
-		ProtoFiles: proto.HybridResolver,
-		SigningOptions: signing.Options{
-			AddressCodec:          mcodec.NewAccBech32Codec(cfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc),
-			ValidatorAddressCodec: mcodec.NewValBech32Codec(cfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal),
-		},
+		ProtoFiles:     proto.HybridResolver,
+		SigningOptions: signingOptions,
 	})
 	appCodec := codec.NewProtoCodec(interfaceRegistry)
 	amino := codec.NewLegacyAmino()
-	txCfg := tx.NewTxConfig(appCodec, tx.DefaultSignModes)
+
+	configOptions := tx.ConfigOptions{
+		EnabledSignModes: tx.DefaultSignModes,
+	}
+	configOptions.SigningOptions = &signingOptions
+	configOptions.SigningContext, err = signing.NewContext(*configOptions.SigningOptions)
+
+	txCfg, err := tx.NewTxConfigWithOptions(appCodec, configOptions)
+	if err != nil {
+		panic(err)
+	}
 
 	return params.EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,

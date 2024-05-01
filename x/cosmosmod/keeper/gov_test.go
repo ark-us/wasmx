@@ -21,8 +21,8 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	appA := s.AppContext()
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	senderAddrStr, err := appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
@@ -118,9 +118,9 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	msg1 := []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
@@ -145,13 +145,12 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 	suite.Require().NoError(err)
 
-	newConsensusStr, err := appA.AddressCodec().BytesToString(newConsensus)
-	suite.Require().NoError(err)
+	newConsensusStr := newConsensus.String()
 
 	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensusStr}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus.Bytes())
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)

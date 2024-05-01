@@ -15,7 +15,6 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/wasmx/types"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
@@ -63,8 +62,8 @@ func getAccount(_context interface{}, callframe *wasmedge.CallingFrame, params [
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	codeInfo := ctx.CosmosHandler.GetCodeInfo(address)
+	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
+	codeInfo := ctx.CosmosHandler.GetCodeInfo(address.Bytes())
 	code := types.EnvContractInfo{
 		Address:  address,
 		CodeHash: codeInfo.CodeHash,
@@ -144,14 +143,18 @@ func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params
 	var success int32
 	var returnData []byte
 
+	to := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.To)
+	from := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.From)
+	commonReq := req.ToCommon(from, to)
+
 	// Send funds
 	if req.Value.BitLen() > 0 {
-		err = BankSendCoin(ctx, ctx.Env.Contract.Address, req.To, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
 	}
 	if err != nil {
 		success = int32(2)
 	} else {
-		success, returnData = WasmxCall(ctx, req)
+		success, returnData = WasmxCall(ctx, commonReq)
 	}
 
 	response := vmtypes.CallResponse{
@@ -200,7 +203,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, to)
+		contractContext := GetContractContext(ctx, to.Bytes())
 		if contractContext == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
@@ -209,7 +212,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 			if gasLimit == nil {
 				// TODO: gas remaining!!
 			}
-			req := vmtypes.CallRequest{
+			req := vmtypes.CallRequestCommon{
 				To:       to,
 				From:     ctx.Env.Contract.Address,
 				Value:    req.Value.BigInt(),
@@ -247,7 +250,7 @@ func wasmxGetBalance(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
+	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
 	balance, err := BankGetBalance(ctx, address, ctx.Env.Chain.Denom)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -428,18 +431,15 @@ func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.Cal
 	}
 	var sdeps []string
 
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
+	addrstr := ctx.Env.Contract.Address.String()
 
 	for _, dep := range ctx.ContractRouter[addrstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
-		ctx.Env.CurrentCall.Origin,
-		ctx.Env.Contract.Address,
+		&ctx.Env.CurrentCall.Origin,
+		&ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
 		sdeps,
@@ -482,10 +482,7 @@ func wasmxCreate2AccountInterpreted(_context interface{}, callframe *wasmedge.Ca
 	}
 	var sdeps []string
 
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
+	addrstr := ctx.Env.Contract.Address.String()
 
 	for _, dep := range ctx.ContractRouter[addrstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
@@ -493,8 +490,8 @@ func wasmxCreate2AccountInterpreted(_context interface{}, callframe *wasmedge.Ca
 
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		req.Bytecode,
-		ctx.Env.CurrentCall.Origin,
-		ctx.Env.Contract.Address,
+		&ctx.Env.CurrentCall.Origin,
+		&ctx.Env.Contract.Address,
 		initMsg,
 		req.Balance,
 		sdeps,
@@ -546,8 +543,7 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 		return returns, wasmedge.Result_Fail
 	}
 
-	cdcacc := mcodec.MustUnwrapAccBech32Codec(ctx.CosmosHandler.AddressCodec())
-	response := vmtypes.InstantiateAccountResponse{Address: cdcacc.BytesToAccAddressPrefixed(contractAddress)}
+	response := vmtypes.InstantiateAccountResponse{Address: *contractAddress}
 	respbz, err := json.Marshal(response)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -592,8 +588,7 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 		return returns, wasmedge.Result_Fail
 	}
 
-	cdcacc := mcodec.MustUnwrapAccBech32Codec(ctx.CosmosHandler.AddressCodec())
-	response := vmtypes.Instantiate2AccountResponse{Address: cdcacc.BytesToAccAddressPrefixed(contractAddress)}
+	response := vmtypes.Instantiate2AccountResponse{Address: *contractAddress}
 	respbz, err := json.Marshal(response)
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -636,16 +631,11 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		return nil, wasmedge.Result_Fail
 	}
 
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-
 	msg := &networktypes.MsgGrpcSendRequest{
 		IpAddress: data.IpAddress,
 		Contract:  contractAddressStr,
 		Data:      []byte(data.Data),
-		Sender:    addrstr,
+		Sender:    ctx.Env.Contract.Address.String(),
 	}
 
 	res, err := executeWrapMultiChain(ctx, msg, msg.Sender)
@@ -729,13 +719,8 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 		return nil, wasmedge.Result_Fail
 	}
 
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-
 	msgtosend := &networktypes.MsgStartTimeoutRequest{
-		Sender:   addrstr,
+		Sender:   ctx.Env.Contract.Address.String(),
 		Contract: req.Contract,
 		Delay:    req.Delay,
 		Args:     req.Args,
@@ -768,13 +753,8 @@ func wasmxStartBackgroundProcess(_context interface{}, callframe *wasmedge.Calli
 		return nil, wasmedge.Result_Fail
 	}
 
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-
 	msgtosend := &networktypes.MsgStartBackgroundProcessRequest{
-		Sender:   addrstr, // TODO wasmx?
+		Sender:   ctx.Env.Contract.Address.String(), // TODO wasmx?
 		Contract: req.Contract,
 		Args:     req.Args,
 	}
@@ -812,10 +792,6 @@ func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.Cal
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
 
 	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
 	if err != nil {
@@ -827,7 +803,7 @@ func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.Cal
 		returns[0] = ptr
 		return returns, wasmedge.Result_Success
 	}
-	proc, ok := procc.Processes[contractAddressStr]
+	proc, ok := procc.Processes[contractAddress.String()]
 	if !ok {
 		resp.Error = "process not existent"
 		ptr, err := prepareResponse(ctx, callframe, &resp)
@@ -878,10 +854,6 @@ func wasmxReadFromBackgroundProcess(_context interface{}, callframe *wasmedge.Ca
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
 
 	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
 	if err != nil {
@@ -893,7 +865,7 @@ func wasmxReadFromBackgroundProcess(_context interface{}, callframe *wasmedge.Ca
 		returns[0] = ptr
 		return returns, wasmedge.Result_Success
 	}
-	proc, ok := procc.Processes[contractAddressStr]
+	proc, ok := procc.Processes[contractAddress.String()]
 	if !ok {
 		resp.Error = "process not existent"
 		ptr, err := prepareResponse(ctx, callframe, &resp)

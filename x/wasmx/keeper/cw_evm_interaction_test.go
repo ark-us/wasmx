@@ -31,10 +31,10 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 	proxyAddressBz, err := hex.DecodeString("0000000000000000000000000000000000000025")
 	s.Require().NoError(err)
-	proxyAddress := sdk.AccAddress(proxyAddressBz)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	proxyAddress := appA.BytesToAccAddressPrefixed(proxyAddressBz)
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -56,7 +56,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	calld, err := json.Marshal(instantiateMsg)
 	s.Require().NoError(err)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: calld}, "cw20", nil)
-	contractAddressEvm := types.EvmAddressFromAcc(contractAddress)
+	contractAddressEvm := types.EvmAddressFromAcc(contractAddress.Bytes())
 
 	// EvmToJson
 	calldbz, err := hex.DecodeString("0000000000000000000000003defca2d10c7540621fd8ad553e7f987571b712d0000000000000000000000000000000000000000000000000000000000000064")
@@ -94,9 +94,9 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	initBalance := sdkmath.NewInt(1000_000_000).MulRaw(1000000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
@@ -119,7 +119,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	calld, err := json.Marshal(instantiateMsg)
 	s.Require().NoError(err)
 	contractAddressCw20 := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: calld}, "cw20", nil)
-	contractAddressCw20Evm := types.EvmAddressFromAcc(contractAddressCw20)
+	contractAddressCw20Evm := types.EvmAddressFromAcc(contractAddressCw20.Bytes())
 
 	// Deploy ERC20
 	evmcodeErc20, err := hex.DecodeString(testdata.Erc20AtomicSwap)
@@ -127,7 +127,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	initvaluebz, err := hex.DecodeString("000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000005746f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003544b4e0000000000000000000000000000000000000000000000000000000000")
 	s.Require().NoError(err)
 	_, contractAddressErc20 := appA.DeployEvm(sender, evmcodeErc20, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "ERC20", nil)
-	contractAddressErc20Evm := types.EvmAddressFromAcc(contractAddressErc20)
+	contractAddressErc20Evm := types.EvmAddressFromAcc(contractAddressErc20.Bytes())
 
 	// Mint Erc20 for sender2
 	calld, err = interfacesTestdata.Erc20Abi.Pack("mint", sender2AddressEvm, big.NewInt(200))
@@ -151,13 +151,13 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	appA.ExecuteContract(sender, contractAddressSwap, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Approve AtomicSwap contract in erc20
-	contractAddressSwapEvm := types.EvmAddressFromAcc(contractAddressSwap)
+	contractAddressSwapEvm := types.EvmAddressFromAcc(contractAddressSwap.Bytes())
 	calld, err = interfacesTestdata.Erc20Abi.Pack("approve", contractAddressSwapEvm, big.NewInt(200))
 	s.Require().NoError(err)
 	appA.ExecuteContract(sender2, contractAddressErc20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Approve AtomicSwap contract in cw20
-	appA.ExecuteContract(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"200"}}`, appA.MustAccAddressToString(contractAddressSwap)))}, nil, nil)
+	appA.ExecuteContract(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"increase_allowance":{"spender":"%s","amount":"200"}}`, contractAddressSwap.String()))}, nil, nil)
 
 	// Create swap
 	calld, err = atomicSwapAbi.Pack("create", "swap1", big.NewInt(0), []AtomicSwapBalance{
@@ -169,7 +169,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	appA.ExecuteContract(sender, contractAddressSwap, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Check CW20 balance
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(contractAddressSwap)))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, contractAddressSwap.String()))
 	qres := appA.WasmxQueryRaw(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"100"}`, string(qres))
 
@@ -179,7 +179,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	appA.ExecuteContract(sender2, contractAddressSwap, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 
 	// Check CW20 balance AtomicSwap
-	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, appA.MustAccAddressToString(contractAddressSwap)))
+	calld = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, contractAddressSwap.String()))
 	qres = appA.WasmxQueryRaw(sender, contractAddressCw20, types.WasmxExecutionMessage{Data: calld}, nil, nil)
 	suite.Require().Equal(`{"balance":"0"}`, string(qres))
 

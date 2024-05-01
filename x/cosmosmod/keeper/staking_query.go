@@ -63,11 +63,11 @@ func (k QuerierStaking) ValidatorUnbondingDelegations(goCtx context.Context, req
 }
 
 func (k QuerierStaking) Delegation(goCtx context.Context, req *stakingtypes.QueryDelegationRequest) (*stakingtypes.QueryDelegationResponse, error) {
-	delegator, err := k.Keeper.AddressCodec().StringToBytes(req.DelegatorAddr)
+	delegator, err := k.Keeper.accBech32Codec.StringToAccAddressPrefixed(req.DelegatorAddr)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	addrVal, err := k.Keeper.AddressCodec().StringToBytes(req.ValidatorAddr)
+	addrVal, err := k.Keeper.valBech32Codec.StringToValAddressPrefixed(req.ValidatorAddr)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}

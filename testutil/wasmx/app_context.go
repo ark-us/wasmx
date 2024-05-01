@@ -36,6 +36,7 @@ import (
 	cryptoeth "github.com/ethereum/go-ethereum/crypto"
 
 	app "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	"mythos/v1/crypto/ethsecp256k1"
 	network "mythos/v1/x/network/keeper"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
@@ -86,8 +87,20 @@ func (s *AppContext) ConsensusAddressCodec() address.Codec {
 	return s.App.AccountKeeper.ConsensusAddressCodec()
 }
 
+func (s *AppContext) AccBech32Codec() mcodec.AccBech32Codec {
+	return s.App.WasmxKeeper.AccBech32Codec()
+}
+
 func (s *AppContext) AddressStringToAccAddress(addr string) (sdk.AccAddress, error) {
 	return s.AddressCodec().StringToBytes(addr)
+}
+
+func (s *AppContext) BytesToAccAddressPrefixed(addr []byte) mcodec.AccAddressPrefixed {
+	return s.AccBech32Codec().BytesToAccAddressPrefixed(addr)
+}
+
+func (s *AppContext) AddressStringToAccAddressPrefixed(addr string) (mcodec.AccAddressPrefixed, error) {
+	return s.AccBech32Codec().StringToAccAddressPrefixed(addr)
 }
 
 func (s *AppContext) AccAddressToString(addr sdk.AccAddress) (string, error) {
@@ -169,7 +182,8 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 	s.S.Require().NoError(err)
 
 	// Second round: all signer infos are set, so each signer can sign.
-	acc := s.App.AccountKeeper.GetAccount(s.Context(), account.Address)
+	acc, err := s.App.AccountKeeper.GetAccountPrefixed(s.Context(), s.BytesToAccAddressPrefixed(account.Address))
+	s.S.Require().NoError(err)
 	signerData := authsigning.SignerData{
 		ChainID:       s.Context().ChainID(),
 		AccountNumber: acc.GetAccountNumber(),
@@ -449,7 +463,7 @@ func (s *AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []
 	return codeId
 }
 
-func (s *AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string, metadata *types.CodeMetadata) (uint64, sdk.AccAddress) {
+func (s *AppContext) Deploy(sender simulation.Account, code []byte, deps []string, instantiateMsg types.WasmxExecutionMessage, funds sdk.Coins, label string, metadata *types.CodeMetadata) (uint64, mcodec.AccAddressPrefixed) {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.S.Require().NoError(err)
 	if metadata == nil {
@@ -474,16 +488,16 @@ func (s *AppContext) Deploy(sender simulation.Account, code []byte, deps []strin
 
 	codeId := s.GetCodeIdFromEvents(res.GetEvents())
 	contractAddressStr := s.GetContractAddressFromEvents(res.GetEvents())
-	contractAddress, err := s.App.WasmxKeeper.AddressCodec().StringToBytes(contractAddressStr)
+	contractAddress, err := s.App.WasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(contractAddressStr)
 	s.S.Require().NoError(err)
 	return codeId, contractAddress
 }
 
-func (s *AppContext) DeployEvm(sender simulation.Account, evmcode []byte, initMsg types.WasmxExecutionMessage, funds sdk.Coins, label string, metadata *types.CodeMetadata) (uint64, sdk.AccAddress) {
+func (s *AppContext) DeployEvm(sender simulation.Account, evmcode []byte, initMsg types.WasmxExecutionMessage, funds sdk.Coins, label string, metadata *types.CodeMetadata) (uint64, mcodec.AccAddressPrefixed) {
 	return s.Deploy(sender, evmcode, []string{types.INTERPRETER_EVM_SHANGHAI}, initMsg, funds, label, metadata)
 }
 
-func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) sdk.AccAddress {
+func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, instantiateMsg types.WasmxExecutionMessage, label string, funds sdk.Coins) mcodec.AccAddressPrefixed {
 	msgbz, err := json.Marshal(instantiateMsg)
 	s.S.Require().NoError(err)
 	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
@@ -500,16 +514,16 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
 	contractAddressStr := s.GetContractAddressFromEvents(res.GetEvents())
-	contractAddress, err := s.App.WasmxKeeper.AddressCodec().StringToBytes(contractAddressStr)
+	contractAddress, err := s.AddressStringToAccAddressPrefixed(contractAddressStr)
 	s.S.Require().NoError(err)
 	return contractAddress
 }
 
-func (s *AppContext) ExecuteContract(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {
+func (s *AppContext) ExecuteContract(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {
 	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 1500000, nil)
 }
 
-func (s *AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) *abci.ExecTxResult {
+func (s *AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) *abci.ExecTxResult {
 	res, err := s.ExecuteContractNoCheck(sender, contractAddress, executeMsg, funds, dependencies, gasLimit, gasPrice)
 	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
@@ -518,16 +532,14 @@ func (s *AppContext) ExecuteContractWithGas(sender simulation.Account, contractA
 	return res
 }
 
-func (s *AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
+func (s *AppContext) ExecuteContractNoCheck(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
 	s.S.Require().NoError(err)
-	contractstr, err := s.AddressCodec().BytesToString(contractAddress)
-	s.S.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{
 		Sender:       senderstr,
-		Contract:     contractstr,
+		Contract:     contractAddress.String(),
 		Msg:          msgbz,
 		Funds:        funds,
 		Dependencies: dependencies,
@@ -535,16 +547,14 @@ func (s *AppContext) ExecuteContractNoCheck(sender simulation.Account, contractA
 	return s.DeliverTxWithOpts(sender, executeContractMsg, gasLimit, gasPrice)
 }
 
-func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (sdk.GasInfo, *sdk.Result, error) {
+func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (sdk.GasInfo, *sdk.Result, error) {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
 	s.S.Require().NoError(err)
-	contractstr, err := s.AddressCodec().BytesToString(contractAddress)
-	s.S.Require().NoError(err)
 	executeContractMsg := &types.MsgExecuteContract{
 		Sender:       senderstr,
-		Contract:     contractstr,
+		Contract:     contractAddress.String(),
 		Msg:          msgbz,
 		Funds:        funds,
 		Dependencies: dependencies,
@@ -552,12 +562,12 @@ func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contract
 	return s.SimulateTx(sender, executeContractMsg)
 }
 
-func (s *AppContext) WasmxQuery(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
+func (s *AppContext) WasmxQuery(account simulation.Account, contract mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
 	result := s.WasmxQueryRaw(account, contract, executeMsg, funds, dependencies)
 	return hex.EncodeToString(result)
 }
 
-func (s *AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
+func (s *AppContext) WasmxQueryRaw(account simulation.Account, contract mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) []byte {
 	abcires, err := s.WasmxQueryRawNoCheck(account, contract, executeMsg, funds, dependencies)
 	s.S.Require().NoError(err)
 	var resp types.QuerySmartContractCallResponse
@@ -570,16 +580,14 @@ func (s *AppContext) WasmxQueryRaw(account simulation.Account, contract sdk.AccA
 	return data.Data
 }
 
-func (s *AppContext) WasmxQueryRawNoCheck(sender simulation.Account, contractAddress sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (*abci.ResponseQuery, error) {
+func (s *AppContext) WasmxQueryRawNoCheck(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (*abci.ResponseQuery, error) {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
 	s.S.Require().NoError(err)
-	contractstr, err := s.AddressCodec().BytesToString(contractAddress)
-	s.S.Require().NoError(err)
 	query := types.QuerySmartContractCallRequest{
 		Sender:       senderstr,
-		Address:      contractstr,
+		Address:      contractAddress.String(),
 		QueryData:    msgbz,
 		Funds:        funds,
 		Dependencies: dependencies,
@@ -591,21 +599,19 @@ func (s *AppContext) WasmxQueryRawNoCheck(sender simulation.Account, contractAdd
 	return s.App.BaseApp.Query(s.Context().Context(), req)
 }
 
-func (s *AppContext) WasmxQueryDebug(account simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (string, []byte, error) {
+func (s *AppContext) WasmxQueryDebug(account simulation.Account, contract mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (string, []byte, error) {
 	result, memorySnapshot, err := s.WasmxQueryDebugRaw(account, contract, executeMsg, funds, dependencies)
 	return hex.EncodeToString(result), memorySnapshot, err
 }
 
-func (s *AppContext) WasmxQueryDebugRaw(sender simulation.Account, contract sdk.AccAddress, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) ([]byte, []byte, error) {
+func (s *AppContext) WasmxQueryDebugRaw(sender simulation.Account, contract mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) ([]byte, []byte, error) {
 	msgbz, err := json.Marshal(executeMsg)
 	s.S.Require().NoError(err)
 	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
 	s.S.Require().NoError(err)
-	contractstr, err := s.AddressCodec().BytesToString(contract)
-	s.S.Require().NoError(err)
 	query := types.QueryDebugContractCallRequest{
 		Sender:       senderstr,
-		Address:      contractstr,
+		Address:      contract.String(),
 		QueryData:    msgbz,
 		Funds:        funds,
 		Dependencies: dependencies,
@@ -674,8 +680,6 @@ func (s *AppContext) PassGovProposal(
 	// voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
 
 	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
-	govAddrStr, err := s.AddressCodec().BytesToString(govAddr)
-	s.S.Require().NoError(err)
 	valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
 	s.S.Require().NoError(err)
 
@@ -686,7 +690,7 @@ func (s *AppContext) PassGovProposal(
 	s.S.Require().NoError(err)
 	voteMsg := &types.MsgExecuteContract{
 		Sender:   valstr,
-		Contract: govAddrStr,
+		Contract: govAddr.String(),
 		Msg:      msgbz,
 	}
 

@@ -91,7 +91,7 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 		return nil, err
 	}
 
-	owner, err := m.wasmxKeeper.AddressCodec().StringToBytes(msg.Sender)
+	owner, err := m.wasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, err
 	}

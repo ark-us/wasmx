@@ -7,10 +7,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	mcodec "mythos/v1/codec"
 )
 
 // AddressGenerator abstract address generator to be used for a single contract address
-type AddressGenerator func(ctx sdk.Context, codeID uint64, checksum []byte) sdk.AccAddress
+type AddressGenerator func(ctx sdk.Context, codeID uint64, checksum []byte) mcodec.AccAddressPrefixed
 
 // UInt64LengthPrefix prepend big endian encoded byte length
 func UInt64LengthPrefix(bz []byte) []byte {
@@ -18,17 +20,24 @@ func UInt64LengthPrefix(bz []byte) []byte {
 }
 
 // EwasmClassicAddressGenerator generates a contract address using codeID and instanceID sequence and increments sequence
-func (k *Keeper) EwasmClassicAddressGenerator(creator sdk.AccAddress) AddressGenerator {
-	return func(ctx sdk.Context, _ uint64, _ []byte) sdk.AccAddress {
-		existingAcct := k.GetAccount(ctx, creator)
-		if existingAcct == nil {
+func (k *Keeper) EwasmClassicAddressGenerator(creator mcodec.AccAddressPrefixed) AddressGenerator {
+	cdcacc := mcodec.MustUnwrapAccBech32Codec(k.AddressCodec())
+	return func(ctx sdk.Context, _ uint64, _ []byte) mcodec.AccAddressPrefixed {
+		existingAcct, err := k.GetAccountKeeper().GetAccountPrefixed(ctx, creator)
+		if err != nil || existingAcct == nil {
 			// create an empty account (so we don't have issues later)
-			existingAcct = k.NewAccountWithAddress(ctx, creator)
+			existingAcct, err = k.GetAccountKeeper().NewAccountWithAddressPrefixed(ctx, creator)
+			if err != nil {
+				panic(fmt.Sprintf("cannot create new account: %s", err.Error()))
+			}
 		}
 		nonce := existingAcct.GetSequence()
 		existingAcct.SetSequence(nonce + 1)
-		k.SetAccount(ctx, existingAcct)
-		return EwasmBuildContractAddressClassic(creator, nonce)
+		err = k.GetAccountKeeper().SetAccountPrefixed(ctx, existingAcct)
+		if err != nil {
+			panic(fmt.Sprintf("cannot set new account: %s", err.Error()))
+		}
+		return cdcacc.BytesToAccAddressPrefixed(EwasmBuildContractAddressClassic(creator.Bytes(), nonce))
 	}
 }
 
@@ -62,8 +71,10 @@ func EwasmBuildContractAddressPredictable(creator sdk.AccAddress, salt []byte, c
 }
 
 // EwasmPredictableAddressGenerator generates a predictable contract address
-func (k *Keeper) EwasmPredictableAddressGenerator(creator sdk.AccAddress, salt []byte, _ []byte, _ bool) AddressGenerator {
-	return func(ctx sdk.Context, _ uint64, checksum []byte) sdk.AccAddress {
-		return EwasmBuildContractAddressPredictable(creator, salt, checksum)
+func (k *Keeper) EwasmPredictableAddressGenerator(creator mcodec.AccAddressPrefixed, salt []byte, _ []byte, _ bool) AddressGenerator {
+	cdcacc := mcodec.MustUnwrapAccBech32Codec(k.AddressCodec())
+
+	return func(ctx sdk.Context, _ uint64, checksum []byte) mcodec.AccAddressPrefixed {
+		return cdcacc.BytesToAccAddressPrefixed(EwasmBuildContractAddressPredictable(creator.Bytes(), salt, checksum))
 	}
 }

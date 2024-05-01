@@ -40,8 +40,8 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	_, err := appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
@@ -243,10 +243,10 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
@@ -274,7 +274,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
 		Role:            wasmxtypes.ROLE_CONSENSUS,
 		Label:           "consensus_raft_0.0.2",
-		ContractAddress: appA.MustAccAddressToString(newConsensus),
+		ContractAddress: newConsensus.String(),
 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
 		Title:           "title",
 		Description:     "description",
@@ -285,7 +285,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
 	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
-		Contract: appA.MustAccAddressToString(newConsensus),
+		Contract: newConsensus.String(),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -324,10 +324,10 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
 
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_TENDERMINT)
@@ -355,7 +355,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	_, err = msgServer.RegisterRole(appA.Context(), &wasmxtypes.MsgRegisterRole{
 		Role:            wasmxtypes.ROLE_CONSENSUS,
 		Label:           "consensus_tendermint_0.0.2",
-		ContractAddress: appA.MustAccAddressToString(newConsensus),
+		ContractAddress: newConsensus.String(),
 		Authority:       appA.App.WasmxKeeper.GetAuthority(),
 		Title:           "title",
 		Description:     "description",
@@ -366,7 +366,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
 	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
-		Contract: appA.MustAccAddressToString(newConsensus),
+		Contract: newConsensus.String(),
 		Msg:      msg1,
 	})
 	suite.Require().NoError(err)
@@ -404,10 +404,10 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := appA.MustAccAddressToString(raftContract)
@@ -435,21 +435,21 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	title := "Register consensus"
 	description := "Register consensus"
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
-	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: appA.MustAccAddressToString(newConsensus)}
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus.Bytes())
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(appA.MustAccAddressToString(newConsensus), role.ContractAddress)
+	s.Require().Equal(newConsensus.String(), role.ContractAddress)
 	s.Require().Equal(newlabel, role.Label)
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
 	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
-	state := suite.GetContextValue(appA.Context(), stateKey, appA.MustAccAddressToString(newConsensus))
-	fmt.Println("---state---", appA.MustAccAddressToString(newConsensus), stateKey, state)
+	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
+	fmt.Println("---state---", newConsensus.String(), stateKey, state)
 
 	// execute next block
 
@@ -529,10 +529,10 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
 		Address: s.Chain().SenderAccount.GetAddress(),
 	}
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := appA.MustAccAddressToString(raftContract)
@@ -566,21 +566,21 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	newlabel := wasmxtypes.CONSENSUS_AVA_SNOWMAN + "2"
 	title := "Register consensus"
 	description := "Register consensus"
-	proposal := &wasmxtypes.MsgRegisterRole{Authority: appA.App.WasmxKeeper.GetAuthority(), Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: appA.MustAccAddressToString(newConsensus)}
+	proposal := &wasmxtypes.MsgRegisterRole{Authority: appA.App.WasmxKeeper.GetAuthority(), Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus.Bytes())
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(appA.MustAccAddressToString(newConsensus), role.ContractAddress)
+	s.Require().Equal(newConsensus.String(), role.ContractAddress)
 	s.Require().Equal(newlabel, role.Label)
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
 	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
-	state := suite.GetContextValue(appA.Context(), stateKey, appA.MustAccAddressToString(newConsensus))
-	fmt.Println("---state---", appA.MustAccAddressToString(newConsensus), stateKey, state)
+	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
+	fmt.Println("---state---", newConsensus.String(), stateKey, state)
 
 	time.Sleep(time.Second * 5)
 
@@ -643,7 +643,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 // 	appA := s.AppContext()
 // denom := appA.Chain.Config.BaseDenom
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 // 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 // 	suite.Commit()
 
@@ -898,7 +898,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 // 	appA := s.GetAppContext(suite.chainA)
 // denom := appA.Chain.Config.BaseDenom
-// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 // 	suite.Commit()
 
 // 	// send tx

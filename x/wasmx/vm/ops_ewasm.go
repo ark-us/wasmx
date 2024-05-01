@@ -94,7 +94,8 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	balance, err := BankGetBalance(ctx, vmtypes.CleanupAddress(addressbz), ctx.Env.Chain.Denom)
+	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addressbz))
+	balance, err := BankGetBalance(ctx, addr, ctx.Env.Chain.Denom)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -107,7 +108,7 @@ func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, p
 func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := types.Evm32AddressFromAcc(ctx.Env.Contract.Address)
+	addr := types.Evm32AddressFromAcc(ctx.Env.Contract.Address.Bytes())
 	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -119,7 +120,7 @@ func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []
 func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender)
+	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender.Bytes())
 	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -243,7 +244,7 @@ func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params
 func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin)
+	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin.Bytes())
 	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -263,7 +264,7 @@ func getBlockNumber(context interface{}, callframe *wasmedge.CallingFrame, param
 func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	returns := make([]interface{}, 0)
-	addr := types.Evm32AddressFromAcc(ctx.Env.Block.Proposer)
+	addr := types.Evm32AddressFromAcc(ctx.Env.Block.Proposer.Bytes())
 	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
 	if err != nil {
 		return returns, wasmedge.Result_Fail
@@ -357,7 +358,8 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
+
 	value, err := mem.ReadBigInt(callframe, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
@@ -378,12 +380,12 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, addr)
+		contractContext := GetContractContext(ctx, addr.Bytes())
 		if contractContext == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
-			req := vmtypes.CallRequest{
+			req := vmtypes.CallRequestCommon{
 				To:       addr,
 				From:     ctx.Env.Contract.Address,
 				Value:    value,
@@ -438,7 +440,7 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := vmtypes.CallRequest{
+		req := vmtypes.CallRequestCommon{
 			To:       ctx.Env.Contract.Address,
 			From:     ctx.Env.Contract.Address,
 			Value:    value,
@@ -488,7 +490,7 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := vmtypes.CallRequest{
+		req := vmtypes.CallRequestCommon{
 			To:       ctx.Env.Contract.Address,
 			From:     ctx.Env.CurrentCall.Sender,
 			Value:    ctx.Env.CurrentCall.Funds,
@@ -524,7 +526,7 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 		returns[0] = int32(1)
 		return returns, wasmedge.Result_Success
 	}
-	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
 	calldata, err := mem.ReadMem(callframe, params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
@@ -533,12 +535,12 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 
 	var success int32
 	var returnData []byte
-	contractContext := GetContractContext(ctx, addr)
+	contractContext := GetContractContext(ctx, addr.Bytes())
 	if contractContext == nil {
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
-		req := vmtypes.CallRequest{
+		req := vmtypes.CallRequestCommon{
 			To:       addr,
 			From:     ctx.Env.Contract.Address,
 			Value:    big.NewInt(0),
@@ -580,18 +582,15 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	contractstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return returns, wasmedge.Result_Fail
-	}
+	contractstr := ctx.Env.Contract.Address.String()
 
 	for _, dep := range ctx.ContractRouter[contractstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		data,
-		ctx.Env.CurrentCall.Origin,
-		ctx.Env.Contract.Address,
+		&ctx.Env.CurrentCall.Origin,
+		&ctx.Env.Contract.Address,
 		initMsg,
 		value,
 		sdeps,
@@ -632,18 +631,15 @@ func create2(context interface{}, callframe *wasmedge.CallingFrame, params []int
 		return returns, wasmedge.Result_Fail
 	}
 	var sdeps []string
-	contractstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(ctx.Env.Contract.Address)
-	if err != nil {
-		return returns, wasmedge.Result_Fail
-	}
+	contractstr := ctx.Env.Contract.Address.String()
 
 	for _, dep := range ctx.ContractRouter[contractstr].ContractInfo.SystemDeps {
 		sdeps = append(sdeps, dep.Label)
 	}
 	_, _, contractAddress, err := ctx.CosmosHandler.Deploy(
 		data,
-		ctx.Env.CurrentCall.Origin,
-		ctx.Env.Contract.Address,
+		&ctx.Env.CurrentCall.Origin,
+		&ctx.Env.Contract.Address,
 		initMsg,
 		value,
 		sdeps,

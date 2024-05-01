@@ -139,7 +139,9 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
 
 	t := suite.T()
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
+	addrCodec, ok := encodingConfig.TxConfig.SigningContext().AddressCodec().(mcodec.AccBech32Codec)
+	suite.Require().True(ok)
+	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }
@@ -155,7 +157,9 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
 	t := suite.T()
 	denom := appContext.Chain.Config.BaseDenom
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(denom, sdkmath.NewInt(100_000_000_000)))
+	addrCodec := encodingConfig.TxConfig.SigningContext().AddressCodec()
+	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addrCodec)
+	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, accBech32Codec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(denom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }

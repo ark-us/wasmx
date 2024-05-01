@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"math/big"
+	mcodec "mythos/v1/codec"
 
 	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
@@ -66,7 +67,7 @@ func NewCodeInfo(codeHash []byte, creatorBech32 string, deps []string, metadata 
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash []byte, bytecode []byte, systemDeps []string, info MessageInfo) Env {
+func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string, contractAddr mcodec.AccAddressPrefixed, codeHash []byte, bytecode []byte, systemDeps []string, info MessageInfo) Env {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
 		panic("Block height must never be negative")
@@ -96,8 +97,8 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 			Height:    uint64(ctx.BlockHeight()),
 			Timestamp: uint64(nano),
 			GasLimit:  blockGasLimit,
-			Hash:      PaddLeftTo32(ctx.HeaderHash()),                    // TODO fixme
-			Proposer:  sdk.AccAddress(ctx.BlockHeader().ProposerAddress), // TODO fixme
+			Hash:      PaddLeftTo32(ctx.HeaderHash()),                                              // TODO fixme
+			Proposer:  accBech32Codec.BytesToAccAddressPrefixed(ctx.BlockHeader().ProposerAddress), // TODO fixme
 		},
 		Transaction: &TransactionInfo{
 			GasPrice: big.NewInt(1), // TODO
@@ -114,7 +115,7 @@ func NewEnv(ctx sdk.Context, denom string, contractAddr sdk.AccAddress, codeHash
 }
 
 // NewInfo initializes the MessageInfo for a contract instance
-func NewInfo(origin sdk.AccAddress, creator sdk.AccAddress, deposit sdk.Coins) MessageInfo {
+func NewInfo(origin mcodec.AccAddressPrefixed, creator mcodec.AccAddressPrefixed, deposit sdk.Coins) MessageInfo {
 	funds := big.NewInt(0)
 	if len(deposit) > 0 {
 		funds = deposit[0].Amount.BigInt()
@@ -172,7 +173,7 @@ func (c *ContractInfo) ValidateWithAddress(addressCodec address.Codec) error {
 	}
 	if c.Provenance != "" {
 		if _, err := addressCodec.StringToBytes(c.Provenance); err != nil {
-			return sdkerr.Wrap(err, "creator")
+			return sdkerr.Wrap(err, "provenance")
 		}
 	}
 	return nil

@@ -16,7 +16,6 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	mcfg "mythos/v1/config"
 	crypto "mythos/v1/crypto"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
@@ -564,14 +563,8 @@ func BuildCosmWasm_8(context *Context) *wasmedge.Module {
 }
 
 func BuildArgsCw(context *Context, contractVm *wasmedge.VM) ([]byte, []byte, []byte, error) {
-	addrstr, err := context.CosmosHandler.AddressCodec().BytesToString(context.Env.Contract.Address)
-	if err != nil {
-		return nil, nil, nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
-	senderstr, err := context.CosmosHandler.AddressCodec().BytesToString(context.Env.CurrentCall.Sender)
-	if err != nil {
-		return nil, nil, nil, sdkerr.Wrapf(err, "sender: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
+	addrstr := context.Env.Contract.Address.String()
+	senderstr := context.Env.CurrentCall.Sender.String()
 	env := cw8types.Env{
 		Block: cw8types.BlockInfo{
 			Height:  context.Env.Block.Height,
@@ -788,11 +781,7 @@ func writeMemToDestinationCw(ctx *Context, callframe *wasmedge.CallingFrame, dat
 }
 
 func allocateWriteMemCw(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (*Region, error) {
-	addr := ctx.Env.Contract.Address
-	addrstr, err := ctx.GetCosmosHandler().AddressCodec().BytesToString(addr)
-	if err != nil {
-		sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
+	addrstr := ctx.Env.Contract.Address.String()
 	contractCtx, ok := ctx.ContractRouter[addrstr]
 	if !ok {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addrstr)

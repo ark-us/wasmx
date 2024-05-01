@@ -129,7 +129,9 @@ func (k *Keeper) HttpGetInternal(ctx sdk.Context, req types.HttpRequest) (*types
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "cannot marshal WasmxExecutionMessage")
 	}
-	answ, err := k.wasmx.Query(ctx, contractAddress, types.ModuleAddress, msgExecuteBz, nil, nil)
+	contractAddressPrefixed := k.wasmx.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress)
+	senderPrefixed := k.wasmx.AccBech32Codec().BytesToAccAddressPrefixed(types.ModuleAddress)
+	answ, err := k.wasmx.Query(ctx, contractAddressPrefixed, senderPrefixed, msgExecuteBz, nil, nil)
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "querying route contract failed")
 	}

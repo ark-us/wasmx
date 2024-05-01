@@ -11,7 +11,7 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(10_000_000_000)
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	valAccount := suite.GetRandomAccount()
 	valAddr := sdk.ValAddress(valAccount.Address)
@@ -23,7 +23,7 @@ func (suite *KeeperTestSuite) TestStakingCreateValidator() {
 	suite.Require().NoError(err)
 
 	valFunds := sdkmath.NewInt(1000_000_000)
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	createValMsg, err := stakingtypes.NewMsgCreateValidator(
 		valAddrStr,

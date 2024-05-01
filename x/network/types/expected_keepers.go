@@ -6,25 +6,27 @@ import (
 	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // WasmxKeeper defines a subset of methods implemented by the cosmos-sdk account keeper
 type WasmxKeeper interface {
-	Query(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg wasmxtypes.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
-	Execute(ctx sdk.Context, contractAddr sdk.AccAddress, senderAddr sdk.AccAddress, msg wasmxtypes.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
-	ExecuteEntryPoint(ctx sdk.Context, entryPoint string, contractAddress sdk.AccAddress, caller sdk.AccAddress, msg []byte, dependencies []string, inBackground bool) ([]byte, error)
+	Query(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg wasmxtypes.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
+	Execute(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg wasmxtypes.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
+	ExecuteEntryPoint(ctx sdk.Context, entryPoint string, contractAddress mcodec.AccAddressPrefixed, caller mcodec.AccAddressPrefixed, msg []byte, dependencies []string, inBackground bool) ([]byte, error)
 	ContractInstance(ctx sdk.Context, contractAddress sdk.AccAddress) (wasmxtypes.ContractInfo, wasmxtypes.CodeInfo, []byte, error)
-	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error)
+	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
 	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
 
-	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error)
+	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
 
 	SmartContractCall(c context.Context, req *wasmxtypes.QuerySmartContractCallRequest) (rsp *wasmxtypes.QuerySmartContractCallResponse, err error)
 
 	AddressCodec() address.Codec
 	ValidatorAddressCodec() address.Codec
 	ConsensusAddressCodec() address.Codec
+	AccBech32Codec() mcodec.AccBech32Codec
 }
 
 type WasmxWrapper interface {

@@ -19,7 +19,6 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	mcfg "mythos/v1/config"
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
@@ -271,19 +270,13 @@ func ExecuteWasmInterpreted(
 		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
 		}
-		addrstr, err := cosmosHandler.AddressCodec().BytesToString(dep.Address)
-		if err != nil {
-			return types.ContractResponse{}, sdkerr.Wrapf(err, "dep: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-		}
+		addrstr := dep.Address.String()
 		context.ContractRouter[addrstr] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 
-	contractstr, err := cosmosHandler.AddressCodec().BytesToString(env.Contract.Address)
-	if err != nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
+	contractstr := env.Contract.Address.String()
 
 	if selfContext == nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", contractstr)
@@ -386,7 +379,7 @@ func ExecuteWasm(
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
 	// native implementations
-	found := context.NativeHandler.IsPrecompile(env.Contract.Address)
+	found := context.NativeHandler.IsPrecompile(env.Contract.Address.Bytes())
 	if found {
 		data, err := context.NativeHandler.Execute(context, env.Contract.Address, ethMsg.Data)
 		if err != nil {
@@ -401,19 +394,13 @@ func ExecuteWasm(
 		if contractContext == nil {
 			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
 		}
-		addrstr, err := cosmosHandler.AddressCodec().BytesToString(dep.Address)
-		if err != nil {
-			return types.ContractResponse{}, sdkerr.Wrapf(err, "dep: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-		}
+		addrstr := dep.Address.String()
 		context.ContractRouter[addrstr] = contractContext
 	}
 	// add itself
 	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 
-	contractstr, err := cosmosHandler.AddressCodec().BytesToString(env.Contract.Address)
-	if err != nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
+	contractstr := env.Contract.Address.String()
 
 	if selfContext == nil {
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for self %s", contractstr)
@@ -535,11 +522,7 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 	var events []types.Event
 	// module and contract address for the main transaction are added later
 	for i, log := range logs {
-		contractAddressStr, err := context.CosmosHandler.AddressCodec().BytesToString(log.ContractAddress)
-		if err != nil {
-			panic(sdkerr.Wrapf(err, "log contract: %s", mcfg.ERRORMSG_ACC_TOSTRING))
-		}
-
+		contractAddressStr := log.ContractAddress.String()
 		var attributes []types.EventAttribute
 		attributes = append(attributes, types.EventAttribute{
 			Key:   types.AttributeKeyIndex,

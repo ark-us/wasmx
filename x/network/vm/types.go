@@ -9,8 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
+	mcodec "mythos/v1/codec"
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
 
@@ -30,9 +29,9 @@ type Context struct {
 
 // internal use
 type ContractMessage struct {
-	Msg             []byte         `json:"msg"`
-	ContractAddress sdk.AccAddress `json:"contract_address"`
-	SenderAddress   sdk.AccAddress `json:"sender_address"`
+	Msg             []byte                    `json:"msg"`
+	ContractAddress mcodec.AccAddressPrefixed `json:"contract_address"`
+	SenderAddress   mcodec.AccAddressPrefixed `json:"sender_address"`
 }
 
 // sent to contracts
@@ -93,10 +92,10 @@ type ConnectPeerResponse struct {
 }
 
 type SendMessageToPeersRequest struct {
-	Contract   sdk.AccAddress `json:"contract"`
-	Msg        []byte         `json:"msg"`
-	ProtocolId string         `json:"protocolId"`
-	Peers      []string       `json:"peers"`
+	Contract   mcodec.AccAddressPrefixed `json:"contract"`
+	Msg        []byte                    `json:"msg"`
+	ProtocolId string                    `json:"protocolId"`
+	Peers      []string                  `json:"peers"`
 }
 
 type SendMessageToPeersResponse struct{}
@@ -109,18 +108,18 @@ type ConnectChatRoomRequest struct {
 type ConnectChatRoomResponse struct{}
 
 type SendMessageToChatRoomRequest struct {
-	Contract   sdk.AccAddress `json:"contract"`
-	Msg        []byte         `json:"msg"`
-	ProtocolId string         `json:"protocolId"`
-	Topic      string         `json:"topic"`
+	Contract   mcodec.AccAddressPrefixed `json:"contract"`
+	Msg        []byte                    `json:"msg"`
+	ProtocolId string                    `json:"protocolId"`
+	Topic      string                    `json:"topic"`
 }
 
 type SendMessageToChatRoomResponse struct{}
 
 type SendMessageRequest struct {
-	Contract   sdk.AccAddress `json:"contract"`
-	Msg        []byte         `json:"msg"`
-	ProtocolId string         `json:"protocolId"`
+	Contract   mcodec.AccAddressPrefixed `json:"contract"`
+	Msg        []byte                    `json:"msg"`
+	ProtocolId string                    `json:"protocolId"`
 }
 
 type SendMessageResponse struct{}

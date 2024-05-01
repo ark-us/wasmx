@@ -37,14 +37,14 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "sys_proxy")
 
 	sysAddressBz, err := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	s.Require().NoError(err)
-	sysAddress := sdk.AccAddress(sysAddressBz)
+	sysAddress := appA.BytesToAccAddressPrefixed(sdk.AccAddress(sysAddressBz))
 
 	// deploy an evm contract
 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
@@ -63,7 +63,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 		Benchmark: &BenchmarkRequest{
 			Magnitude: 3,
 			Request: vmtypes.CallRequest{
-				To:       contractAddress2,
+				To:       contractAddress2.Bytes(),
 				From:     sender.Address,
 				Value:    big.NewInt(0),
 				GasLimit: big.NewInt(1000000),
@@ -117,7 +117,7 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -150,7 +150,7 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.TIME_v001)
@@ -162,7 +162,7 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 	msg := &types.WasmxExecutionMessage{Data: data}
 	msgbz, err := json.Marshal(msg)
 	s.Require().NoError(err)
-	_, err = appA.App.WasmxKeeper.ExecuteEntryPoint(appA.Context(), "time", contractAddress, sender.Address, msgbz, nil, false)
+	_, err = appA.App.WasmxKeeper.ExecuteEntryPoint(appA.Context(), "time", contractAddress, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, false)
 	s.Require().NoError(err)
 
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
@@ -178,16 +178,16 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	timeAddress := types.AccAddressFromHex(types.ADDR_TIME)
-	level0Address := types.AccAddressFromHex(types.ADDR_LEVEL0)
+	timeAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_TIME))
+	level0Address := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_LEVEL0))
 
 	// start time chain
 	msgexec := types.WasmxExecutionMessage{Data: []byte(`{"StartNode":{}}`)}
 	msgbz, err := json.Marshal(&msgexec)
-	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, sender.Address, msgbz, nil, nil, false)
+	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, nil, false)
 	suite.Require().NoError(err)
 
 	time.Sleep(time.Second * 10)
@@ -198,7 +198,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	suite.Require().NoError(err)
 	msg := &types.MsgExecuteContract{
 		Sender:       appA.MustAccAddressToString(sender.Address),
-		Contract:     appA.MustAccAddressToString(contractAddress),
+		Contract:     contractAddress.String(),
 		Msg:          msgbz,
 		Funds:        nil,
 		Dependencies: nil,
@@ -211,6 +211,6 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	data := fmt.Sprintf(`{"newTransaction":{"transaction":"%s"}}`, txstr)
 	msgexec = types.WasmxExecutionMessage{Data: []byte(data)}
 	msgbz, err = json.Marshal(&msgexec)
-	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), level0Address, sender.Address, msgbz, nil, nil, false)
+	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), level0Address, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, nil, false)
 	suite.Require().NoError(err)
 }

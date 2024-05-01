@@ -10,57 +10,60 @@ import (
 	"github.com/cometbft/cometbft/crypto/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+
+	mcodec "mythos/v1/codec"
 )
 
 type BankKeeper interface {
-	SendCoins(ctx context.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
-	SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
+	SendCoinsPrefixed(ctx context.Context, fromAddr mcodec.AccAddressPrefixed, toAddr mcodec.AccAddressPrefixed, amt sdk.Coins) error
+	SendCoinsFromModuleToAccountPrefixed(ctx context.Context, senderModule string, recipientAddr mcodec.AccAddressPrefixed, amt sdk.Coins) error
 	MintCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 }
 
 type TestFaucet struct {
 	t                testing.TB
 	bankKeeper       BankKeeper
-	sender           sdk.AccAddress
+	sender           mcodec.AccAddressPrefixed
 	balance          sdk.Coins
 	minterModuleName string
 }
 
-func NewTestFaucet(t testing.TB, ctx sdk.Context, bankKeeper BankKeeper, minterModuleName string, initialAmount ...sdk.Coin) *TestFaucet {
+func NewTestFaucet(t testing.TB, accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, bankKeeper BankKeeper, minterModuleName string, initialAmount ...sdk.Coin) *TestFaucet {
 	require.NotEmpty(t, initialAmount)
 	r := &TestFaucet{t: t, bankKeeper: bankKeeper, minterModuleName: minterModuleName}
 	_, _, addr := keyPubAddr()
-	r.sender = addr
-	r.Mint(ctx, addr, initialAmount...)
+	r.sender = accBech32Codec.BytesToAccAddressPrefixed(addr)
+	r.Mint(ctx, r.sender, initialAmount...)
 	r.balance = initialAmount
 	return r
 }
 
-func (f *TestFaucet) Mint(parentCtx sdk.Context, addr sdk.AccAddress, amounts ...sdk.Coin) {
+func (f *TestFaucet) Mint(parentCtx sdk.Context, addr mcodec.AccAddressPrefixed, amounts ...sdk.Coin) {
 	require.NotEmpty(f.t, amounts)
 	ctx := parentCtx.WithEventManager(sdk.NewEventManager()) // discard all faucet related events
 	err := f.bankKeeper.MintCoins(ctx, f.minterModuleName, amounts)
 	require.NoError(f.t, err)
-	err = f.bankKeeper.SendCoinsFromModuleToAccount(ctx, f.minterModuleName, addr, amounts)
+	err = f.bankKeeper.SendCoinsFromModuleToAccountPrefixed(ctx, f.minterModuleName, addr, amounts)
 	require.NoError(f.t, err)
 	f.balance = f.balance.Add(amounts...)
 }
 
-func (f *TestFaucet) Fund(parentCtx sdk.Context, receiver sdk.AccAddress, amounts ...sdk.Coin) {
+func (f *TestFaucet) Fund(parentCtx sdk.Context, receiver mcodec.AccAddressPrefixed, amounts ...sdk.Coin) {
 	require.NotEmpty(f.t, amounts)
 	// ensure faucet is always filled
 	if !f.balance.IsAllGTE(amounts) {
 		f.Mint(parentCtx, f.sender, amounts...)
 	}
 	ctx := parentCtx.WithEventManager(sdk.NewEventManager()) // discard all faucet related events
-	err := f.bankKeeper.SendCoins(ctx, f.sender, receiver, amounts)
+	err := f.bankKeeper.SendCoinsPrefixed(ctx, f.sender, receiver, amounts)
 	require.NoError(f.t, err)
 	f.balance = f.balance.Sub(amounts...)
 }
 
-func (f *TestFaucet) NewFundedRandomAccount(ctx sdk.Context, amounts ...sdk.Coin) sdk.AccAddress {
+func (f *TestFaucet) NewFundedRandomAccount(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, amounts ...sdk.Coin) sdk.AccAddress {
 	_, _, addr := keyPubAddr()
-	f.Fund(ctx, addr, amounts...)
+	addrPrefixed := accBech32Codec.BytesToAccAddressPrefixed(addr)
+	f.Fund(ctx, addrPrefixed, amounts...)
 	return addr
 }
 

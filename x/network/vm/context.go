@@ -8,9 +8,9 @@ import (
 
 	log "cosmossdk.io/log"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	network "github.com/libp2p/go-libp2p/core/network"
 
+	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
@@ -61,21 +61,14 @@ func (c *Context) handleChatRoomMessage(crmsg *ChatRoomMessage) {
 	c.handleMessage(netmsg, msg.ContractAddress, msg.SenderAddress)
 }
 
-func (c *Context) handleMessage(netmsg P2PMessage, contractAddress sdk.AccAddress, senderAddress sdk.AccAddress) {
+func (c *Context) handleMessage(netmsg P2PMessage, contractAddress mcodec.AccAddressPrefixed, senderAddress mcodec.AccAddressPrefixed) {
 	netmsgbz, err := json.Marshal(netmsg)
 	if err != nil {
 		c.Context.Ctx.Logger().Error("cannot marshall P2PMessage", "error", err.Error())
 		return
 	}
-	contractAddressStr, err := c.Context.CosmosHandler.AddressCodec().BytesToString(contractAddress)
-	if err != nil {
-		c.Context.Ctx.Logger().Error("handle p2p message: cannot stringify contract address", "error", err.Error())
-	}
-
-	senderAddressStr, err := c.Context.CosmosHandler.AddressCodec().BytesToString(senderAddress)
-	if err != nil {
-		c.Context.Ctx.Logger().Error("handle p2p message: cannot stringify sender address", "error", err.Error())
-	}
+	contractAddressStr := contractAddress.String()
+	senderAddressStr := senderAddress.String()
 
 	c.Context.Ctx.Logger().Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddressStr, "contract", contractAddressStr)
 

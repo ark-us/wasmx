@@ -26,9 +26,9 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
-	appA.Faucet.Fund(appA.Context(), valAccount.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.INTERPRETER_EVM_SHANGHAI)
@@ -41,11 +41,11 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	title := "Register interpreter"
 	description := "Register interpreter"
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
-	interpreterAddressStr := appA.MustAccAddressToString(interpreterAddress)
+	interpreterAddressStr := interpreterAddress.String()
 	proposal := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddressStr}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress)
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress.Bytes())
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
@@ -79,7 +79,7 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
@@ -103,7 +103,7 @@ func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
 	initBalance := sdkmath.NewInt(1000_000_000)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	evmcode, err := hex.DecodeString("6019600d60003960196000f3fe6fc84a6e6ec1e7f30f5c812eeba420f76960005260206000f3")

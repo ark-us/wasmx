@@ -5,22 +5,30 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	address "cosmossdk.io/core/address"
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
+
+	mcodec "mythos/v1/codec"
 )
 
 // AccountKeeper defines a subset of methods implemented by the cosmos-sdk account keeper
 type AccountKeeper interface {
 	// Return a new account with the next account number and the specified address. Does not save the new account to the store.
 	NewAccountWithAddress(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+	NewAccountWithAddressPrefixed(ctx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
 	// Retrieve an account from the store.
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+	GetAccountPrefixed(ctx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
 	// Set an account in the store.
 	SetAccount(ctx context.Context, acc sdk.AccountI)
+	SetAccountPrefixed(ctx context.Context, acc mcodec.AccountI) error
+
+	AddressCodec() address.Codec
 }
 
 // BankKeeper defines a subset of methods implemented by the cosmos-sdk bank keeper
@@ -33,6 +41,16 @@ type BankKeeper interface {
 	IsSendEnabledCoins(ctx context.Context, coins ...sdk.Coin) error
 	BlockedAddr(addr sdk.AccAddress) bool
 	SendCoins(ctx context.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
+}
+
+type BankKeeperWasmx interface {
+	TransferCoins(parentCtx sdk.Context, fromAddr mcodec.AccAddressPrefixed, toAddr mcodec.AccAddressPrefixed, amount sdk.Coins) error
+	SendCoins(goCtx context.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, coins sdk.Coins) error
+	SendCoinsPrefixed(goCtx context.Context, fromAddr, toAddr mcodec.AccAddressPrefixed, amt sdk.Coins) error
+	GetBalance(goCtx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
+	GetBalancePrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed, denom string) sdk.Coin
+	GetAllBalances(goCtx context.Context, addr sdk.AccAddress) sdk.Coins
+	GetAllBalancesPrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed) sdk.Coins
 }
 
 // DistributionKeeper defines a subset of methods implemented by the cosmos-sdk distribution keeper

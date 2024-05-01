@@ -148,11 +148,11 @@ func MustUnwrapValBech32Codec(cdc address.Codec) ValBech32Codec {
 	return uwcdc
 }
 
-func (bc ValBech32Codec) BytesToAccAddressPrefixed(bz []byte) ValAddressPrefixed {
+func (bc ValBech32Codec) BytesToValAddressPrefixed(bz []byte) ValAddressPrefixed {
 	return bc.BytesToAddressPrefixed(bz).(ValAddressPrefixed)
 }
 
-func (bc ValBech32Codec) StringToAccAddressPrefixed(text string) (ValAddressPrefixed, error) {
+func (bc ValBech32Codec) StringToValAddressPrefixed(text string) (ValAddressPrefixed, error) {
 	res, err := bc.StringToAddressPrefixed(text)
 	if err != nil {
 		return ValAddressPrefixed{}, err
@@ -184,11 +184,11 @@ func MustUnwrapConsBech32Codec(cdc address.Codec) ConsBech32Codec {
 	return uwcdc
 }
 
-func (bc ConsBech32Codec) BytesToAccAddressPrefixed(bz []byte) ConsAddressPrefixed {
+func (bc ConsBech32Codec) BytesToConsAddressPrefixed(bz []byte) ConsAddressPrefixed {
 	return bc.BytesToAddressPrefixed(bz).(ConsAddressPrefixed)
 }
 
-func (bc ConsBech32Codec) StringToAccAddressPrefixed(text string) (ConsAddressPrefixed, error) {
+func (bc ConsBech32Codec) StringToConsAddressPrefixed(text string) (ConsAddressPrefixed, error) {
 	res, err := bc.StringToAddressPrefixed(text)
 	if err != nil {
 		return ConsAddressPrefixed{}, err

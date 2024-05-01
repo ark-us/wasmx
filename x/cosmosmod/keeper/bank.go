@@ -8,19 +8,55 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	"mythos/v1/x/cosmosmod/types"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
+// TransferCoins transfers coins from source to destination account when coin send was enabled for them and the recipient
+// is not in the blocked address list.
+func (k KeeperBank) TransferCoins(parentCtx sdk.Context, fromAddr mcodec.AccAddressPrefixed, toAddr mcodec.AccAddressPrefixed, amount sdk.Coins) error {
+	em := sdk.NewEventManager()
+	ctx := parentCtx.WithEventManager(em)
+	// TODO do we do blocked addresses here?
+	// if err := k.IsSendEnabledCoins(ctx, amount...); err != nil {
+	// 	return err
+	// }
+	// if k.BlockedAddr(toAddr) {
+	// 	return sdkerr.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr.String()) // TODO replace String()
+	// }
+
+	err := k.SendCoinsPrefixed(ctx, fromAddr, toAddr, amount)
+	if err != nil {
+		return err
+	}
+	for _, e := range em.Events() {
+		if e.Type == sdk.EventTypeMessage { // skip messages as we talk to the keeper directly
+			continue
+		}
+		parentCtx.EventManager().EmitEvent(e)
+	}
+	return nil
+}
+
 // SendCoins transfers amt coins from a sending account to a receiving account.
 // An error is returned upon failure.
 func (k KeeperBank) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAddress, amt sdk.Coins) error {
+
+	return k.SendCoinsPrefixed(goCtx, k.accBech32Codec.BytesToAccAddressPrefixed(fromAddr), k.accBech32Codec.BytesToAccAddressPrefixed(toAddr), amt)
+}
+
+func (k KeeperBank) SendCoinsPrefixed(goCtx context.Context, fromAddr, toAddr mcodec.AccAddressPrefixed, amt sdk.Coins) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewMsgSend(fromAddr, toAddr, amt)
+	msg := &banktypes.MsgSend{
+		FromAddress: fromAddr.String(),
+		ToAddress:   toAddr.String(),
+		Amount:      amt,
+	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return err
@@ -34,26 +70,17 @@ func (k KeeperBank) SendCoins(goCtx context.Context, fromAddr, toAddr sdk.AccAdd
 	if err != nil {
 		return err
 	}
-
-	fromAddrString, err := k.AddressCodec().BytesToString(fromAddr)
-	if err != nil {
-		return errorsmod.Wrapf(err, "from: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
-	toAddrString, err := k.AddressCodec().BytesToString(toAddr)
-	if err != nil {
-		return errorsmod.Wrapf(err, "to: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	sdkCtx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
-			types.EventTypeTransfer,
-			sdk.NewAttribute(types.AttributeKeyRecipient, toAddrString),
-			sdk.NewAttribute(types.AttributeKeySender, fromAddrString),
+			banktypes.EventTypeTransfer,
+			sdk.NewAttribute(banktypes.AttributeKeyRecipient, toAddr.String()),
+			sdk.NewAttribute(banktypes.AttributeKeySender, fromAddr.String()),
 			sdk.NewAttribute(sdk.AttributeKeyAmount, amt.String()),
 		),
 		sdk.NewEvent(
 			sdk.EventTypeMessage,
-			sdk.NewAttribute(types.AttributeKeySender, fromAddrString),
+			sdk.NewAttribute(banktypes.AttributeKeySender, fromAddr.String()),
 		),
 	})
 	return nil
@@ -94,8 +121,19 @@ func (k KeeperBank) MintCoins(goCtx context.Context, moduleName string, amounts 
 func (k KeeperBank) SendCoinsFromModuleToAccount(
 	goCtx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins,
 ) error {
+	return k.SendCoinsFromModuleToAccountPrefixed(goCtx, senderModule, k.accBech32Codec.BytesToAccAddressPrefixed(recipientAddr), amt)
+}
+
+func (k KeeperBank) SendCoinsFromModuleToAccountPrefixed(
+	goCtx context.Context, senderModule string, recipientAddr mcodec.AccAddressPrefixed, amt sdk.Coins,
+) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewMsgSend(authtypes.NewModuleAddress(senderModule), recipientAddr, amt)
+	modAddr := k.accBech32Codec.BytesToAccAddressPrefixed(types.NewModuleAddress(senderModule))
+	msg := &banktypes.MsgSend{
+		FromAddress: modAddr.String(),
+		ToAddress:   recipientAddr.String(),
+		Amount:      amt,
+	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return err
@@ -118,7 +156,13 @@ func (k KeeperBank) SendCoinsFromModuleToModule(
 	goCtx context.Context, senderModule, recipientModule string, amt sdk.Coins,
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewMsgSend(authtypes.NewModuleAddress(senderModule), authtypes.NewModuleAddress(recipientModule), amt)
+	modAddr := k.accBech32Codec.BytesToAccAddressPrefixed(types.NewModuleAddress(senderModule))
+	recipientAddr := k.accBech32Codec.BytesToAccAddressPrefixed(types.NewModuleAddress(recipientModule))
+	msg := &banktypes.MsgSend{
+		FromAddress: modAddr.String(),
+		ToAddress:   recipientAddr.String(),
+		Amount:      amt,
+	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return err
@@ -140,8 +184,19 @@ func (k KeeperBank) SendCoinsFromModuleToModule(
 func (k KeeperBank) SendCoinsFromAccountToModule(
 	goCtx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins,
 ) error {
+	return k.SendCoinsFromAccountToModulePrefixed(goCtx, k.accBech32Codec.BytesToAccAddressPrefixed(senderAddr), recipientModule, amt)
+}
+
+func (k KeeperBank) SendCoinsFromAccountToModulePrefixed(
+	goCtx context.Context, senderAddr mcodec.AccAddressPrefixed, recipientModule string, amt sdk.Coins,
+) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewMsgSend(senderAddr, authtypes.NewModuleAddress(recipientModule), amt)
+	recipientAddr := k.accBech32Codec.BytesToAccAddressPrefixed(types.NewModuleAddress(recipientModule))
+	msg := &banktypes.MsgSend{
+		FromAddress: senderAddr.String(),
+		ToAddress:   recipientAddr.String(),
+		Amount:      amt,
+	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return err
@@ -227,8 +282,16 @@ func (k KeeperBank) SpendableCoins(goCtx context.Context, addr sdk.AccAddress) s
 
 // GetAllBalances returns all the account balances for the given account address.
 func (k KeeperBank) GetAllBalances(goCtx context.Context, addr sdk.AccAddress) sdk.Coins {
+	return k.GetAllBalancesPrefixed(goCtx, k.accBech32Codec.BytesToAccAddressPrefixed(addr))
+}
+
+func (k KeeperBank) GetAllBalancesPrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed) sdk.Coins {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewQueryAllBalancesRequest(addr, nil, false)
+	msg := &banktypes.QueryAllBalancesRequest{
+		Address:      addr.String(),
+		Pagination:   nil,
+		ResolveDenom: false,
+	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return nil
@@ -260,8 +323,15 @@ func (k KeeperBank) GetAllBalances(goCtx context.Context, addr sdk.AccAddress) s
 // GetBalance returns the balance of a specific denomination for a given account
 // by address.
 func (k KeeperBank) GetBalance(goCtx context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
+	return k.GetBalancePrefixed(goCtx, k.accBech32Codec.BytesToAccAddressPrefixed(addr), denom)
+}
+
+func (k KeeperBank) GetBalancePrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed, denom string) sdk.Coin {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewQueryBalanceRequest(addr, denom)
+	msg := &banktypes.QueryBalanceRequest{
+		Address: addr.String(),
+		Denom:   denom,
+	}
 	bankmsgbz, err := k.cdc.MarshalJSON(msg)
 	if err != nil {
 		return sdk.Coin{}

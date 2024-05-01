@@ -3,10 +3,9 @@ package keeper
 import (
 	"fmt"
 
-	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcfg "mythos/v1/config"
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -19,20 +18,16 @@ func (k *Keeper) RegisterRole(
 	ctx sdk.Context,
 	role string,
 	label string,
-	contractAddress sdk.AccAddress,
+	contractAddress mcodec.AccAddressPrefixed,
 ) error {
-	contractAddressStr, err := k.AddressCodec().BytesToString(contractAddress)
-	if err != nil {
-		return sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
 	roleObj := &types.Role{
 		Role:            role,
 		Label:           label,
-		ContractAddress: contractAddressStr,
+		ContractAddress: contractAddress.String(),
 	}
-	k.SetContractAddressByRole(ctx, role, contractAddress)
+	k.SetContractAddressByRole(ctx, role, contractAddress.Bytes())
 	k.SetRoleByLabel(ctx, roleObj)
-	k.SetRoleLabelByContract(ctx, contractAddress, label)
+	k.SetRoleLabelByContract(ctx, contractAddress.Bytes(), label)
 	// TODO replace the previous role? if a role cannot hold 2 contracts?
 	// e.g. consensus
 	return nil
@@ -41,27 +36,27 @@ func (k *Keeper) RegisterRole(
 // DeregisterRole deregisters a contract
 func (k *Keeper) DeregisterRole(
 	ctx sdk.Context,
-	contractAddress sdk.AccAddress,
+	contractAddress mcodec.AccAddressPrefixed,
 ) error {
 	return fmt.Errorf("DeregisterRole not implemented")
 }
 
-func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (sdk.AccAddress, error) {
+func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error) {
 	addr, found := k.GetContractAddressByRole(ctx, addressOrRole)
 	if found {
-		return addr, nil
+		return k.accBech32Codec.BytesToAccAddressPrefixed(addr), nil
 	}
 	role := k.GetRoleByLabel(ctx, addressOrRole)
 	if role != nil {
-		contractAddr, err := k.AddressCodec().StringToBytes(addressOrRole)
+		contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(addressOrRole)
 		if err != nil {
-			return nil, err
+			return mcodec.AccAddressPrefixed{}, err
 		}
 		return contractAddr, nil
 	}
-	contractAddr, err := k.AddressCodec().StringToBytes(addressOrRole)
+	contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(addressOrRole)
 	if err != nil {
-		return nil, err
+		return mcodec.AccAddressPrefixed{}, err
 	}
 	return contractAddr, nil
 }

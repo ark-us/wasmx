@@ -20,6 +20,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
+	mcodec "mythos/v1/codec"
 	cw8 "mythos/v1/x/wasmx/cw8"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
@@ -49,6 +50,9 @@ type (
 		validatorAddressCodec address.Codec
 		consensusAddressCodec address.Codec
 		addressCodec          address.Codec
+		accBech32Codec        mcodec.AccBech32Codec
+		ak                    types.AccountKeeper
+		bank                  types.BankKeeperWasmx
 
 		cch *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
@@ -145,6 +149,8 @@ func NewKeeper(
 		ps = ps.WithKeyTable(types.ParamKeyTable())
 	}
 
+	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addressCodec)
+
 	keeper := &Keeper{
 		cdc:                   cdc,
 		txConfig:              txConfig,
@@ -162,6 +168,7 @@ func NewKeeper(
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
 		addressCodec:          addressCodec,
+		accBech32Codec:        accBech32Codec,
 
 		queryGasLimit: wasmConfig.SmartQueryGasLimit,
 		gasRegister:   NewDefaultWasmGasRegister(),
@@ -177,13 +184,36 @@ func NewKeeper(
 	// keeper.wasmVMResponseHandler = handler
 	// qhandler := cw8.DefaultQueryPlugins(bankKeeper, stakingKeeper, distrKeeper, channelKeeper, keeper)
 	// keeper.wasmVMQueryHandler = qhandler
-
-	// Register core contracts after the cw8 handlers are attached to the keeper
-	cch := cchtypes.NewContractHandlerMap(keeper)
-	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
-	keeper.cch = &cch
-
 	return keeper
+}
+
+func (k *Keeper) SetAccountKeeper(ak types.AccountKeeper) {
+	k.ak = ak
+}
+
+func (k *Keeper) SetBankKeeper(bank types.BankKeeperWasmx) {
+	k.bank = bank
+}
+
+func (k *Keeper) SetContractHandlerMap() {
+	// Register core contracts after the cw8 handlers are attached to the keeper
+	cch := cchtypes.NewContractHandlerMap(k)
+	cch.Register(types.ROLE_ALIAS, alias.NewAliasHandler())
+	k.cch = &cch
+}
+
+func (k *Keeper) GetAccountKeeper() types.AccountKeeper {
+	if k.ak == nil {
+		panic("no account keeper found on wasmx keeper")
+	}
+	return k.ak
+}
+
+func (k *Keeper) GetBankKeeper() types.BankKeeperWasmx {
+	if k.bank == nil {
+		panic("no bank keeper found on wasmx keeper")
+	}
+	return k.bank
 }
 
 func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
@@ -213,6 +243,10 @@ func (k *Keeper) ValidatorAddressCodec() address.Codec {
 
 func (k *Keeper) ConsensusAddressCodec() address.Codec {
 	return k.consensusAddressCodec
+}
+
+func (k *Keeper) AccBech32Codec() mcodec.AccBech32Codec {
+	return k.accBech32Codec
 }
 
 func GetLogger(ctx sdk.Context) log.Logger {

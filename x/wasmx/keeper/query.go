@@ -107,12 +107,12 @@ func (k *Keeper) RawContractState(c context.Context, req *types.QueryRawContract
 	}
 	ctx := sdk.UnwrapSDKContext(c)
 
-	contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
+	contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(req.Address)
 	if err != nil {
 		return nil, err
 	}
 
-	if !k.HasContractInfo(ctx, contractAddr) {
+	if !k.HasContractInfo(ctx, contractAddr.Bytes()) {
 		return nil, types.ErrNotFound
 	}
 	rsp := k.QueryRaw(ctx, contractAddr, req.QueryData)
@@ -175,7 +175,7 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 	if err != nil {
 		return nil, err
 	}
-	sender, err := k.AddressCodec().StringToBytes(req.Sender)
+	sender, err := k.accBech32Codec.StringToAccAddressPrefixed(req.Sender)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 		}
 	}()
 
-	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
+	if types.IsSystemAddress(contractAddr.Bytes()) && !k.CanCallSystemContract(ctx, sender.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
@@ -225,7 +225,7 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 	if senderBech32 == "" {
 		senderBech32 = "mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvvnu6d"
 	}
-	sender, err := k.AddressCodec().StringToBytes(senderBech32)
+	sender, err := k.accBech32Codec.StringToAccAddressPrefixed(senderBech32)
 	if err != nil {
 		return nil, err
 	}
@@ -276,11 +276,11 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 		return &types.QueryCallEthResponse{Data: []byte{}, GasUsed: ctx.GasMeter().GasConsumed()}, nil
 	}
 
-	contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
+	contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(req.Address)
 	if err != nil {
 		return nil, err
 	}
-	if types.IsSystemAddress(contractAddr) && !k.CanCallSystemContract(ctx, sender) {
+	if types.IsSystemAddress(contractAddr.Bytes()) && !k.CanCallSystemContract(ctx, sender.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
@@ -306,7 +306,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 	if err != nil {
 		return nil, err
 	}
-	sender, err := k.AddressCodec().StringToBytes(req.Sender)
+	sender, err := k.accBech32Codec.StringToAccAddressPrefixed(req.Sender)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 		}
 	}()
 
-	if !k.CanCallSystemContract(ctx, sender) {
+	if !k.CanCallSystemContract(ctx, sender.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "debug is non-deterministic and cannot be called as part of a transaction")
 	}
 	bz, memsnapshot, errMsg := k.QueryDebug(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)

@@ -66,13 +66,9 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 			if err != nil {
 				return ctx, errorsmod.Wrapf(err, "simulate transaction has invalid sender")
 			}
-			aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, sender)
+			aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, esvd.wasmxKeeper.AccBech32Codec().BytesToAccAddressPrefixed(sender))
 			if found {
-				aliasAddrStr, err := esvd.wasmxKeeper.AddressCodec().BytesToString(aliasAddr)
-				if err != nil {
-					return ctx, errorsmod.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-				}
-				msgEthTx.Sender = aliasAddrStr
+				msgEthTx.Sender = aliasAddr.String()
 			}
 			continue
 		}
@@ -101,13 +97,9 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 			)
 		}
 
-		aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, sender)
+		aliasAddr, found := esvd.wasmxKeeper.GetAlias(ctx, esvd.wasmxKeeper.AccBech32Codec().BytesToAccAddressPrefixed(sender))
 		if found {
-			aliasAddrStr, err := esvd.wasmxKeeper.AddressCodec().BytesToString(aliasAddr)
-			if err != nil {
-				return ctx, errorsmod.Wrapf(err, "alias: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-			}
-			msgEthTx.Sender = aliasAddrStr
+			msgEthTx.Sender = aliasAddr.String()
 		}
 	}
 

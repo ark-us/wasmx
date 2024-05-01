@@ -17,13 +17,14 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/cw8/types"
 )
 
 // replyer is a subset of keeper that can handle replies to submessages
 type replyer interface {
-	Reply(ctx sdk.Context, contractAddress sdk.AccAddress, reply types.Reply) ([]byte, error)
-	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner sdk.AccAddress) ([]sdk.Event, []byte, error)
+	Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed, reply types.Reply) ([]byte, error)
+	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
 	Logger(ctx sdk.Context) log.Logger
 	AddressCodec() address.Codec
 }
@@ -52,8 +53,8 @@ func NewMessageDispatcher(
 }
 
 // DispatchMessages sends all messages.
-func (d MessageDispatcher) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddress, contractIBCPortID string, msg types.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
-	msgs, err := d.encoders.Encode(d.keeper.AddressCodec(), ctx, contractAddr, contractIBCPortID, msg)
+func (d MessageDispatcher) DispatchMsg(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, contractIBCPortID string, msg types.CosmosMsg) (events []sdk.Event, data [][]byte, err error) {
+	msgs, err := d.encoders.Encode(d.keeper.AddressCodec(), ctx, contractAddr.Bytes(), contractIBCPortID, msg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +70,7 @@ func (d MessageDispatcher) DispatchMsg(ctx sdk.Context, contractAddr sdk.AccAddr
 }
 
 // Handle processes the data returned by a contract invocation.
-func (d MessageDispatcher) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, messages []types.SubMsg, origRspData []byte) ([]byte, error) {
+func (d MessageDispatcher) Handle(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, ibcPort string, messages []types.SubMsg, origRspData []byte) ([]byte, error) {
 	result := origRspData
 	switch rsp, err := d.DispatchSubmessages(ctx, contractAddr, ibcPort, messages); {
 	case err != nil:
@@ -81,7 +82,7 @@ func (d MessageDispatcher) Handle(ctx sdk.Context, contractAddr sdk.AccAddress, 
 }
 
 // DispatchMessages sends all messages.
-func (d MessageDispatcher) DispatchMessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []types.CosmosMsg) error {
+func (d MessageDispatcher) DispatchMessages(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, ibcPort string, msgs []types.CosmosMsg) error {
 	for _, msg := range msgs {
 		events, _, err := d.DispatchMsg(ctx, contractAddr, ibcPort, msg)
 		if err != nil {
@@ -94,7 +95,7 @@ func (d MessageDispatcher) DispatchMessages(ctx sdk.Context, contractAddr sdk.Ac
 }
 
 // dispatchMsgWithGasLimit sends a message with gas limit applied
-func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msg types.CosmosMsg, gasLimit uint64) (events []sdk.Event, data [][]byte, err error) {
+func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, ibcPort string, msg types.CosmosMsg, gasLimit uint64) (events []sdk.Event, data [][]byte, err error) {
 	limitedMeter := storetypes.NewGasMeter(gasLimit)
 	subCtx := ctx.WithGasMeter(limitedMeter)
 
@@ -123,7 +124,7 @@ func (d MessageDispatcher) dispatchMsgWithGasLimit(ctx sdk.Context, contractAddr
 
 // DispatchSubmessages builds a sandbox to execute these messages and returns the execution result to the contract
 // that dispatched them, both on success as well as failure
-func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr sdk.AccAddress, ibcPort string, msgs []types.SubMsg) ([]byte, error) {
+func (d MessageDispatcher) DispatchSubmessages(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, ibcPort string, msgs []types.SubMsg) ([]byte, error) {
 	var rsp []byte
 	for _, msg := range msgs {
 		switch msg.ReplyOn {

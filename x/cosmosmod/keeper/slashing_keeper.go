@@ -9,6 +9,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	networkkeeper "mythos/v1/x/network/keeper"
 
 	"mythos/v1/x/cosmosmod/types"
@@ -28,7 +29,8 @@ type (
 		// should be the x/gov module account.
 		authority string
 
-		addressCodec address.Codec
+		addressCodec   address.Codec
+		accBech32Codec mcodec.AccBech32Codec
 	}
 )
 
@@ -42,6 +44,7 @@ func NewKeeperSlashing(
 	authority string,
 	addressCodec address.Codec,
 ) *KeeperSlashing {
+	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addressCodec)
 	keeper := &KeeperSlashing{
 		jsoncdc:        jsoncdc,
 		cdc:            cdc,
@@ -51,6 +54,7 @@ func NewKeeperSlashing(
 		actionExecutor: actionExecutor,
 		authority:      authority,
 		addressCodec:   addressCodec,
+		accBech32Codec: accBech32Codec,
 	}
 	return keeper
 }

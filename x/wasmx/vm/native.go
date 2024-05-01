@@ -4,6 +4,7 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -21,8 +22,8 @@ func (m NativeMapI) IsPrecompile(contractAddress sdk.AccAddress) bool {
 	return found
 }
 
-func (m NativeMapI) Execute(context *Context, contractAddress sdk.AccAddress, input []byte) ([]byte, error) {
-	hexaddr := types.EvmAddressFromAcc(contractAddress).Hex()
+func (m NativeMapI) Execute(context *Context, contractAddress mcodec.AccAddressPrefixed, input []byte) ([]byte, error) {
+	hexaddr := types.EvmAddressFromAcc(contractAddress.Bytes()).Hex()
 	precompile, found := m[hexaddr]
 	if !found {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "native precompile not found")

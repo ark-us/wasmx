@@ -136,10 +136,23 @@ func (aa AccAddressPrefixed) Marshal() ([]byte, error) {
 
 // Unmarshal sets the address to the given data. It is needed for protobuf
 // compatibility.
-func (aa *AccAddressPrefixed) Unmarshal(data []byte, prefix string) error {
-	fmt.Println("--AccAddressPrefixed.Unmarshal--", string(data))
-	aa.bz = data
-	aa.prefix = prefix
+func (aa *AccAddressPrefixed) Unmarshal(data []byte) error {
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+	if s == "" {
+		return nil
+	}
+
+	aa2, err := AccAddressPrefixedFromBech32(s)
+	if err != nil {
+		return err
+	}
+
+	aa.prefix = aa2.prefix
+	aa.bz = aa2.bz
 	return nil
 }
 
@@ -161,7 +174,6 @@ func (aa *AccAddressPrefixed) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if s == "" {
-		*aa = AccAddressPrefixed{}
 		return nil
 	}
 
@@ -170,19 +182,19 @@ func (aa *AccAddressPrefixed) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	aa = &aa2
+	aa.prefix = aa2.prefix
+	aa.bz = aa2.bz
 	return nil
 }
 
 // UnmarshalYAML unmarshals from JSON assuming Bech32 encoding.
 func (aa *AccAddressPrefixed) UnmarshalYAML(data []byte) error {
 	var s string
-	err := yaml.Unmarshal(data, &s)
+	err := json.Unmarshal(data, &s)
 	if err != nil {
 		return err
 	}
 	if s == "" {
-		*aa = AccAddressPrefixed{}
 		return nil
 	}
 
@@ -191,7 +203,8 @@ func (aa *AccAddressPrefixed) UnmarshalYAML(data []byte) error {
 		return err
 	}
 
-	aa = &aa2
+	aa.prefix = aa2.prefix
+	aa.bz = aa2.bz
 	return nil
 }
 

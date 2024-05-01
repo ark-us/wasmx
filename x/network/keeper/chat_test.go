@@ -60,8 +60,8 @@ func (suite *KeeperTestSuite) TestChat() {
 	initBalance := sdkmath.NewInt(10_000_000_000)
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	chatAddress, found := appA.App.WasmxKeeper.GetContractAddressByRole(appA.Context(), wasmxtypes.ROLE_CHAT)
 	s.Require().True(found)
 
@@ -70,7 +70,7 @@ func (suite *KeeperTestSuite) TestChat() {
 	suite.Require().NoError(err)
 
 	// we just need sender2 to send a transaction, in order to have its public key registered
-	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)
+	contractAddress := appA.BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY))
 	internalmsg := wasmxtypes.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
 	appA.ExecuteContract(sender2, contractAddress, internalmsg, nil, nil)
 

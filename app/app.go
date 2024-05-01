@@ -509,7 +509,6 @@ func NewApp(
 		addrCodec,
 		app,
 	)
-	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
 
 	// app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
@@ -541,14 +540,8 @@ func NewApp(
 		// runtime.NewKVStoreService(keys[authtypes.StoreKey]),
 		// Bech32PrefixAccAddr,
 	)
-	app.AuthzKeeper = authzkeeper.NewKeeper(
-		runtime.NewKVStoreService(keys[authzStoreKey]),
-		appCodec,
-		app.MsgServiceRouter(),
-		app.AccountKeeper,
-	)
 
-	app.StakingKeeper = cosmosmodkeeper.NewKeeperStaking(
+	app.BankKeeper = cosmosmodkeeper.NewKeeperBank(
 		appCodec,
 		appCodec,
 		app.AccountKeeper,
@@ -562,7 +555,21 @@ func NewApp(
 		consCodec,
 		addrCodec,
 	)
-	app.BankKeeper = cosmosmodkeeper.NewKeeperBank(
+
+	// create NewAppModule after we set the account keeper
+	app.WasmxKeeper.SetAccountKeeper(app.AccountKeeper)
+	app.WasmxKeeper.SetBankKeeper(app.BankKeeper)
+	app.WasmxKeeper.SetContractHandlerMap()
+	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
+
+	app.AuthzKeeper = authzkeeper.NewKeeper(
+		runtime.NewKVStoreService(keys[authzStoreKey]),
+		appCodec,
+		app.MsgServiceRouter(),
+		app.AccountKeeper,
+	)
+
+	app.StakingKeeper = cosmosmodkeeper.NewKeeperStaking(
 		appCodec,
 		appCodec,
 		app.AccountKeeper,

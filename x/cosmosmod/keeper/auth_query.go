@@ -29,11 +29,14 @@ func (k QuerierAuth) Accounts(goCtx context.Context, req *authtypes.QueryAccount
 }
 
 func (k QuerierAuth) Account(goCtx context.Context, req *authtypes.QueryAccountRequest) (*authtypes.QueryAccountResponse, error) {
-	addr, err := k.Keeper.AddressCodec().StringToBytes(req.Address)
+	addr, err := k.Keeper.accBech32Codec.StringToAccAddressPrefixed(req.Address)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	account := k.Keeper.GetAccount(goCtx, addr)
+	account, err := k.Keeper.GetAccountPrefixed(goCtx, addr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
 	any, err := codectypes.NewAnyWithValue(account)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())

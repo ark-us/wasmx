@@ -31,7 +31,7 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	ctx = ctx.WithValue(cchtypes.CONTEXT_COIN_TYPE_KEY, cchtypes.COIN_TYPE_ETH)
 	tx := msg.AsTransaction()
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "ExecuteEth could not parse sender address")
 	}
@@ -62,7 +62,7 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 		if err != nil {
 			sdkerr.Wrap(err, "ExecuteEth could not marshal data")
 		}
-		data, err = m.Keeper.Execute(ctx, contractAddr, senderAddr, msgbz, funds, nil, false)
+		data, err = m.Keeper.Execute(ctx, m.accBech32Codec.BytesToAccAddressPrefixed(contractAddr), senderAddr, msgbz, funds, nil, false)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +80,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -107,7 +107,7 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 		return nil, err
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -123,15 +123,10 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 		return nil, err
 	}
 
-	addressAddr, err := m.AddressCodec().BytesToString(address)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-
 	return &types.MsgDeployCodeResponse{
 		CodeId:   codeId,
 		Checksum: checksum,
-		Address:  addressAddr,
+		Address:  address.String(),
 	}, nil
 }
 
@@ -142,7 +137,7 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -158,13 +153,8 @@ func (m msgServer) InstantiateContract(goCtx context.Context, msg *types.MsgInst
 		return nil, err
 	}
 
-	contractAddrStr, err := m.AddressCodec().BytesToString(contractAddr)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-
 	return &types.MsgInstantiateContractResponse{
-		Address: contractAddrStr,
+		Address: contractAddr.String(),
 		Data:    data,
 	}, nil
 }
@@ -176,7 +166,7 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -191,13 +181,8 @@ func (m msgServer) InstantiateContract2(goCtx context.Context, msg *types.MsgIns
 		return nil, err
 	}
 
-	contractAddrStr, err := m.AddressCodec().BytesToString(contractAddr)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract")
-	}
-
 	return &types.MsgInstantiateContract2Response{
-		Address: contractAddrStr,
+		Address: contractAddr.String(),
 		Data:    data,
 	}, nil
 }
@@ -234,7 +219,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
@@ -242,7 +227,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
-	if types.IsSystemAddress(contractAddr) {
+	if types.IsSystemAddress(contractAddr.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
@@ -270,19 +255,19 @@ func (m msgServer) ExecuteWithOriginContract(goCtx context.Context, msg *types.M
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	originAddr, err := m.AddressCodec().StringToBytes(msg.Origin)
+	originAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Origin)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "origin")
 	}
-	senderAddr, err := m.AddressCodec().StringToBytes(msg.Sender)
+	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
+	contractAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
-	if types.IsSystemAddress(contractAddr) {
+	if types.IsSystemAddress(contractAddr.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
@@ -308,27 +293,27 @@ func (m msgServer) ExecuteDelegateContract(goCtx context.Context, msg *types.Msg
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	originAddr, err := m.AddressCodec().StringToBytes(msg.Origin)
+	originAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Origin)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "origin")
 	}
-	callerAddr, err := m.AddressCodec().StringToBytes(msg.Caller)
+	callerAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Caller)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	codeContractAddr, err := m.AddressCodec().StringToBytes(msg.CodeContract)
+	codeContractAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.CodeContract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "code_contract")
 	}
-	storageContractAddr, err := m.AddressCodec().StringToBytes(msg.StorageContract)
+	storageContractAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.StorageContract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "storage_contract")
 	}
 
-	if types.IsSystemAddress(codeContractAddr) {
+	if types.IsSystemAddress(codeContractAddr.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
-	if types.IsSystemAddress(storageContractAddr) {
+	if types.IsSystemAddress(storageContractAddr.Bytes()) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
@@ -363,7 +348,7 @@ func (m msgServer) RegisterRole(goCtx context.Context, msg *types.MsgRegisterRol
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
-	if _, err := m.AddressCodec().StringToBytes(msg.ContractAddress); err != nil {
+	if _, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.ContractAddress); err != nil {
 		return nil, sdkerr.Wrap(err, "contract address")
 	}
 
@@ -394,7 +379,7 @@ func (m msgServer) DeregisterRole(goCtx context.Context, msg *types.MsgDeregiste
 		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
-	contractAddress, err := m.AddressCodec().StringToBytes(msg.ContractAddress)
+	contractAddress, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.ContractAddress)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract address")
 	}

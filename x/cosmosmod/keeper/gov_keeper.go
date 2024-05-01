@@ -9,6 +9,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	networkkeeper "mythos/v1/x/network/keeper"
 
 	"mythos/v1/x/cosmosmod/types"
@@ -31,6 +32,7 @@ type (
 		validatorAddressCodec address.Codec
 		consensusAddressCodec address.Codec
 		addressCodec          address.Codec
+		accBech32Codec        mcodec.AccBech32Codec
 	}
 )
 
@@ -47,6 +49,7 @@ func NewKeeperGov(
 	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
 ) *KeeperGov {
+	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addressCodec)
 	keeper := &KeeperGov{
 		jsoncdc:               jsoncdc,
 		cdc:                   cdc,
@@ -58,6 +61,7 @@ func NewKeeperGov(
 		InterfaceRegistry:     interfaceRegistry,
 		validatorAddressCodec: validatorAddressCodec,
 		consensusAddressCodec: consensusAddressCodec,
+		accBech32Codec:        accBech32Codec,
 	}
 	return keeper
 }

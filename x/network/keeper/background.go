@@ -7,6 +7,7 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/x/network/types"
 )
 
@@ -69,8 +70,8 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 func (k *Keeper) startBackgroundProcessInternal(
 	chainId string,
 	description string,
-	contractAddr sdk.AccAddress,
-	senderAddr sdk.AccAddress,
+	contractAddr mcodec.AccAddressPrefixed,
+	senderAddr mcodec.AccAddressPrefixed,
 	msgbz []byte,
 ) error {
 	goCtx := k.goContextParent

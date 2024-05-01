@@ -31,7 +31,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 	getHex2 := `d2178b08`
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -70,7 +70,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 	getHex := `6d4ce63c`
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -92,7 +92,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	setHex := `60fe47b1`
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -103,7 +103,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	executeCodeMsg := &types.MsgExecuteWithOriginContract{
 		Origin:   appA.MustAccAddressToString(sender.Address),
 		Sender:   appA.MustAccAddressToString(sender.Address),
-		Contract: appA.MustAccAddressToString(contractAddress),
+		Contract: contractAddress.String(),
 		Msg:      executeMsg,
 		Funds:    sdk.Coins{},
 	}
@@ -122,7 +122,7 @@ func (suite *KeeperTestSuite) TestConstructorTestBin() {
 	strmap := "e71a136a"
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)

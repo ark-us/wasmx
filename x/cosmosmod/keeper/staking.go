@@ -20,6 +20,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	"mythos/v1/x/cosmosmod/types"
 	networktypes "mythos/v1/x/network/types"
@@ -45,14 +46,11 @@ func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, erro
 	if err != nil {
 		return math.NewInt(0), err
 	}
-	derc20AddressStr, err := k.AddressCodec().BytesToString(derc20Address)
-	if err != nil {
-		return math.NewInt(0), errorsmod.Wrapf(err, "derc20: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
+
 	msgbz := []byte(`{"totalSupply":{}}`)
 	res, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
-		Contract: derc20AddressStr,
+		Contract: derc20Address.String(),
 		Msg:      msgbz,
 	})
 	if err != nil {
@@ -73,27 +71,16 @@ func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, erro
 
 // Delegation gets the delegation interface for a particular set of delegator and validator addresses
 func (k KeeperStaking) Delegation(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (stakingtypes.DelegationI, error) {
-	validatorsResp, err := k.DelegationInternal(goCtx, addrDel, addrVal)
+	validatorsResp, err := k.DelegationInternal(goCtx, k.accBech32Codec.BytesToAccAddressPrefixed(addrDel), k.valBech32Codec.BytesToValAddressPrefixed(addrVal))
 	if err != nil {
 		return nil, err
 	}
 	return validatorsResp.DelegationResponse.Delegation, nil
 }
 
-func (k KeeperStaking) DelegationInternal(goCtx context.Context, addrDel sdk.AccAddress, addrVal sdk.ValAddress) (*stakingtypes.QueryDelegationResponse, error) {
+func (k KeeperStaking) DelegationInternal(goCtx context.Context, addrDel mcodec.AccAddressPrefixed, addrVal mcodec.ValAddressPrefixed) (*stakingtypes.QueryDelegationResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	addrDelStr, err := k.AddressCodec().BytesToString(addrDel)
-	if err != nil {
-		return nil, errorsmod.Wrapf(err, "delegator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
-
-	addrValStr, err := k.ValidatorAddressCodec().BytesToString(addrVal)
-	if err != nil {
-		return nil, errorsmod.Wrapf(err, "validator: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
-
-	resp, err := k.ContractModuleQuery(ctx, "GetDelegation", &stakingtypes.QueryDelegationRequest{DelegatorAddr: addrDelStr, ValidatorAddr: addrValStr})
+	resp, err := k.ContractModuleQuery(ctx, "GetDelegation", &stakingtypes.QueryDelegationRequest{DelegatorAddr: addrDel.String(), ValidatorAddr: addrVal.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +265,7 @@ func (k KeeperStaking) GetAllSDKDelegations(goCtx context.Context) (delegations 
 	if err != nil {
 		return nil, err
 	}
-	k.WasmxKeeper.IterateContractState(ctx, derc20Address, func(key []byte, value []byte) bool {
+	k.WasmxKeeper.IterateContractState(ctx, derc20Address.Bytes(), func(key []byte, value []byte) bool {
 		if !strings.HasPrefix(string(key), types.STAKING_DELEGATOR_TO_DELEGATION_KEY) {
 			return false
 		}
@@ -518,7 +505,7 @@ func WriteValidators(ctx sdk.Context, keeper *KeeperStaking) (vals []cmttypes.Ge
 
 // GetAllSDKDelegations returns all delegations used during genesis dump
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
-func (k KeeperStaking) GetDERC20Address(ctx sdk.Context, bondDenom string) (derc20Address sdk.AccAddress, err error) {
+func (k KeeperStaking) GetDERC20Address(ctx sdk.Context, bondDenom string) (derc20Address mcodec.AccAddressPrefixed, err error) {
 	// TODO asmyt denom
 	msgbz := []byte(fmt.Sprintf(`{"GetAddressByDenom":{"denom":"%s"}}`, bondDenom))
 	res1, err := k.NetworkKeeper.QueryContract(ctx, &networktypes.MsgQueryContract{
@@ -527,20 +514,20 @@ func (k KeeperStaking) GetDERC20Address(ctx sdk.Context, bondDenom string) (derc
 		Msg:      msgbz,
 	})
 	if err != nil {
-		return nil, err
+		return mcodec.AccAddressPrefixed{}, err
 	}
 	var resp1 wasmxtypes.ContractResponse
 	err = json.Unmarshal(res1.Data, &resp1)
 	if err != nil {
-		return nil, err
+		return mcodec.AccAddressPrefixed{}, err
 	}
 	var qaddrResp types.QueryAddressByDenomResponse
 	err = json.Unmarshal(resp1.Data, &qaddrResp)
 	if err != nil {
-		return nil, err
+		return mcodec.AccAddressPrefixed{}, err
 	}
 	if len(qaddrResp.Address.Bytes()) == 0 {
-		return nil, fmt.Errorf("contract not found for bank denom: %s", bondDenom)
+		return mcodec.AccAddressPrefixed{}, fmt.Errorf("contract not found for bank denom: %s", bondDenom)
 	}
 	return qaddrResp.Address, nil
 }
