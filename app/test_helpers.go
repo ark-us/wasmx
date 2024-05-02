@@ -31,13 +31,6 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
-func init() {
-	err := config.SetGlobalChainConfig(config.MYTHOS_CHAIN_ID_TEST)
-	if err != nil {
-		panic(err)
-	}
-}
-
 // DefaultTestingAppInit defines the IBC application used for testing
 var DefaultTestingAppInit func(chainId string, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 

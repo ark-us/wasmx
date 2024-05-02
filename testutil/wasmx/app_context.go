@@ -164,8 +164,9 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 	err = txBuilder.SetMsgs(msgs...)
 	s.S.Require().NoError(err)
 
-	seq, err := s.App.AccountKeeper.GetSequence(s.Context(), account.Address)
+	accP, err := s.App.AccountKeeper.GetAccountPrefixed(s.Context(), s.BytesToAccAddressPrefixed(account.Address))
 	s.S.Require().NoError(err)
+	seq := accP.GetSequence()
 
 	// First round: we gather all the signer infos. We use the "set empty
 	// signature" hack to do that.

@@ -15,6 +15,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 	cli "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	mcodec "mythos/v1/codec"
+	mcfg "mythos/v1/config"
 )
 
 // NewTxCmd returns a root CLI command handler for all x/bank transaction commands.
@@ -51,10 +54,13 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 			if err != nil {
 				return err
 			}
-			toAddr, err := ac.StringToBytes(args[1])
+			mcfg.SetGlobalChainConfig(clientCtx.ChainID)
+			addrCodec := mcodec.MustUnwrapAccBech32Codec(ac)
+			toAddr, err := addrCodec.StringToAccAddressPrefixed(args[1])
 			if err != nil {
 				return err
 			}
+			fromAddr := addrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			coins, err := sdk.ParseCoinsNormalized(args[2])
 			if err != nil {
@@ -65,7 +71,11 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				return fmt.Errorf("invalid coins")
 			}
 
-			msg := types.NewMsgSend(clientCtx.GetFromAddress(), toAddr, coins)
+			msg := &types.MsgSend{
+				FromAddress: fromAddr.String(),
+				ToAddress:   toAddr.String(),
+				Amount:      coins,
+			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},

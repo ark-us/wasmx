@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // AccountI is an interface used to store coins at a given address within state.
@@ -26,6 +27,8 @@ type AccountI interface {
 
 	GetSequence() uint64
 	SetSequence(uint64) error
+
+	ToCosmosAccountI() sdk.AccountI
 
 	// Ensure that account implements stringer
 	String() string

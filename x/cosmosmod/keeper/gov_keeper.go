@@ -90,3 +90,7 @@ func (k *KeeperGov) ValidatorAddressCodec() address.Codec {
 func (k *KeeperGov) ConsensusAddressCodec() address.Codec {
 	return k.consensusAddressCodec
 }
+
+func (k *KeeperGov) AccBech32Codec() mcodec.AccBech32Codec {
+	return k.accBech32Codec
+}

@@ -100,3 +100,7 @@ func (k *KeeperDistribution) ValidatorAddressCodec() address.Codec {
 func (k *KeeperDistribution) ConsensusAddressCodec() address.Codec {
 	return k.consensusAddressCodec
 }
+
+func (k *KeeperDistribution) AccBech32Codec() mcodec.AccBech32Codec {
+	return k.accBech32Codec
+}

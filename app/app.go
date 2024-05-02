@@ -350,7 +350,6 @@ func NewApp(
 	if err != nil {
 		panic(err)
 	}
-	cfg.SetGlobalChainConfig(chainId)
 
 	wasmxStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.StoreKey)
 	websrvStoreKey := cfg.GetMultiChainStoreKey(chainId, websrvmoduletypes.StoreKey)

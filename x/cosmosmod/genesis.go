@@ -123,6 +123,8 @@ func InitGenesisStaking(ctx sdk.Context, k keeper.KeeperStaking, genState types.
 // bech32Prefix string
 func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState types.AuthGenesisState) {
 	k.Logger(ctx).Info("initializing auth genesis")
+	genState.BaseAccountTypeurl = sdk.MsgTypeURL(&types.BaseAccount{})
+	genState.ModuleAccountTypeurl = sdk.MsgTypeURL(&types.ModuleAccount{})
 	msgjson, err := k.JSONCodec().MarshalJSON(&genState)
 	if err != nil {
 		panic(err)

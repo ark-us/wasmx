@@ -7,7 +7,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	proto "github.com/cosmos/gogoproto/proto"
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	merkle "github.com/cometbft/cometbft/crypto/merkle"
@@ -637,13 +636,13 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 		Data:      []byte(data.Data),
 		Sender:    ctx.Env.Contract.Address.String(),
 	}
-
-	res, err := executeWrapMultiChain(ctx, msg, msg.Sender)
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
 	errmsg := ""
 	if err != nil {
 		errmsg = err.Error()
+	} else {
+		ctx.Ctx.EventManager().EmitEvents(evs)
 	}
-
 	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
 	if res != nil {
 		err = rres.Unmarshal(res)
@@ -725,12 +724,12 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 		Delay:    req.Delay,
 		Args:     req.Args,
 	}
-
-	res, err := executeWrapMultiChain(ctx, msgtosend, msgtosend.Sender)
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error())
 		return nil, wasmedge.Result_Fail
 	}
+	ctx.Ctx.EventManager().EmitEvents(evs)
 	var resp networktypes.MsgStartTimeoutResponse
 	err = resp.Unmarshal(res)
 	if err != nil {
@@ -758,11 +757,12 @@ func wasmxStartBackgroundProcess(_context interface{}, callframe *wasmedge.Calli
 		Contract: req.Contract,
 		Args:     req.Args,
 	}
-	res, err := executeWrapMultiChain(ctx, msgtosend, msgtosend.Sender)
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error())
 		return nil, wasmedge.Result_Fail
 	}
+	ctx.Ctx.EventManager().EmitEvents(evs)
 	var resp networktypes.MsgStartBackgroundProcessResponse
 	err = resp.Unmarshal(res)
 	if err != nil {
@@ -1210,31 +1210,4 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("readFromBackgroundProcess", wasmedge.NewFunction(functype_i32_i32, wasmxReadFromBackgroundProcess, context, 0))
 
 	return env
-}
-
-func executeWrapMultiChain(ctx *Context, msg proto.Message, sender string) ([]byte, error) {
-	anyMsg, err := cdctypes.NewAnyWithValue(msg)
-	if err != nil {
-		return nil, err
-	}
-	wrapmsg := &networktypes.MsgMultiChainWrap{
-		MultiChainId: ctx.GetContext().ChainID(),
-		Sender:       sender,
-		Data:         anyMsg,
-	}
-	evs, wrapresbz, err := ctx.CosmosHandler.ExecuteCosmosMsg(wrapmsg)
-	if err != nil {
-		return nil, err
-	}
-	// apply events
-	ctx.Ctx.EventManager().EmitEvents(evs)
-
-	wrapres := networktypes.MsgMultiChainWrapResponse{Data: make([]byte, 0)}
-	if wrapresbz != nil {
-		err = wrapres.Unmarshal(wrapresbz)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return wrapres.Data, nil
 }

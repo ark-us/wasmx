@@ -128,7 +128,7 @@ func (k KeeperBank) SendCoinsFromModuleToAccountPrefixed(
 	goCtx context.Context, senderModule string, recipientAddr mcodec.AccAddressPrefixed, amt sdk.Coins,
 ) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	modAddr := k.accBech32Codec.BytesToAccAddressPrefixed(types.NewModuleAddress(senderModule))
+	modAddr := k.AccBech32Codec().BytesToAccAddressPrefixed(types.NewModuleAddress(senderModule))
 	msg := &banktypes.MsgSend{
 		FromAddress: modAddr.String(),
 		ToAddress:   recipientAddr.String(),

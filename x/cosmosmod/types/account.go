@@ -13,6 +13,7 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	mcodec "mythos/v1/codec"
 )
@@ -144,6 +145,19 @@ func (acc BaseAccount) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
 	return unpacker.UnpackAny(acc.PubKey, &pubKey)
 }
 
+func (acc BaseAccount) ToCosmosAccount() *authtypes.BaseAccount {
+	return authtypes.NewBaseAccount(
+		acc.GetAddress().Bytes(),
+		acc.GetPubKey(),
+		acc.GetAccountNumber(),
+		acc.GetSequence(),
+	)
+}
+
+func (acc BaseAccount) ToCosmosAccountI() sdk.AccountI {
+	return acc.ToCosmosAccount()
+}
+
 // NewModuleAddressOrAddress gets an input string and returns an AccAddress.
 // If the input is a valid address, it returns the address.
 // If the input is a module name, it returns the module address.
@@ -269,6 +283,18 @@ func (ma *ModuleAccount) UnmarshalJSON(bz []byte) error {
 	ma.Permissions = alias.Permissions
 
 	return nil
+}
+
+func (acc ModuleAccount) ToCosmosAccount() *authtypes.ModuleAccount {
+	return authtypes.NewModuleAccount(
+		acc.BaseAccount.ToCosmosAccount(),
+		acc.GetName(),
+		acc.GetPermissions()...,
+	)
+}
+
+func (acc ModuleAccount) ToCosmosAccountI() sdk.AccountI {
+	return acc.ToCosmosAccount()
 }
 
 // GenesisAccounts defines a slice of GenesisAccount objects

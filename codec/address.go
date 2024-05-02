@@ -34,6 +34,22 @@ var (
 	isCachingEnabled atomic.Bool
 )
 
+func init() {
+	var err error
+
+	// in total the cache size is 61k entries. Key is 32 bytes and value is around 50-70 bytes.
+	// That will make around 92 * 61k * 2 (LRU) bytes ~ 11 MB
+	if accAddrCache, err = simplelru.NewLRU(60000, nil); err != nil {
+		panic(err)
+	}
+	if consAddrCache, err = simplelru.NewLRU(500, nil); err != nil {
+		panic(err)
+	}
+	if valAddrCache, err = simplelru.NewLRU(500, nil); err != nil {
+		panic(err)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // account prefixed
 // ----------------------------------------------------------------------------
@@ -234,8 +250,6 @@ func (aa AccAddressPrefixed) String() string {
 			return addr.(string)
 		}
 	}
-	// return cacheBech32Addr(GetConfig().GetBech32AccountAddrPrefix(), aa, accAddrCache, key)
-
 	return cacheBech32Addr(aa.prefix, aa.bz, accAddrCache, key)
 }
 

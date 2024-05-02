@@ -75,3 +75,7 @@ func (k *KeeperSlashing) JSONCodec() codec.JSONCodec {
 func (k *KeeperSlashing) AddressCodec() address.Codec {
 	return k.addressCodec
 }
+
+func (k *KeeperSlashing) AccBech32Codec() mcodec.AccBech32Codec {
+	return k.accBech32Codec
+}

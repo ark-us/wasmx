@@ -70,8 +70,9 @@ import (
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	suite.Suite
-	chain  TestChain
-	chains map[string]*TestChain
+	chain    TestChain
+	chains   map[string]*TestChain
+	ChainIds []string
 }
 
 type TestChain struct {
@@ -170,6 +171,7 @@ func (suite *KeeperTestSuite) SetupTest() {
 		mcfg.MYTHOS_CHAIN_ID_TEST,
 		mcfg.LEVEL0_CHAIN_ID,
 	}
+	suite.ChainIds = mcfg.ChainIdsInit
 	for _, chainId := range mcfg.ChainIdsInit {
 		suite.SetupApp(chainId)
 	}
@@ -178,7 +180,6 @@ func (suite *KeeperTestSuite) SetupTest() {
 func (suite *KeeperTestSuite) SetupApp(chainId string) {
 	t := suite.T()
 	chaincfg, err := mcfg.GetChainConfig(chainId)
-	mcfg.SetGlobalChainConfig(chainId)
 
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc))
 	// valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -267,6 +268,12 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 	suite.chains[chainId] = &chain
 	err = suite.InitConsensusContract(resInit, pubKey, privVal.PrivKey, valOperatorAddress)
 	require.NoError(t, err)
+}
+
+func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {
+	chain := suite.GetChain(chainId)
+	suite.Require().NotNil(chain)
+	suite.chain = *chain
 }
 
 func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, pubKey crypto.PubKey, privKey networkkeeper.PrivKey, valOperatorAddress sdk.ValAddress) error {
@@ -480,7 +487,11 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	}
 
 	lastBlock := suite.App().LastBlockHeight()
-	return suite.GetBlock(suite.chain.GetContext(), lastBlock)
+	res, err := suite.GetBlock(suite.chain.GetContext(), lastBlock)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (suite *KeeperTestSuite) GetBlockDelay(ctx sdk.Context) string {

@@ -92,18 +92,7 @@ func (k KeeperAuth) GetAccount(goCtx context.Context, addr sdk.AccAddress) sdk.A
 	if acc == nil {
 		return nil
 	}
-	var acci sdk.AccountI
-	if sdk.MsgTypeURL(acc) == sdk.MsgTypeURL(&types.BaseAccount{}) {
-		acci = authtypes.NewBaseAccount(acc.GetAddress().Bytes(), acc.GetPubKey(), acc.GetAccountNumber(), acc.GetSequence())
-	} else if sdk.MsgTypeURL(acc) == sdk.MsgTypeURL(&types.ModuleAccount{}) {
-		macc := acc.(*types.ModuleAccount)
-		acci = authtypes.NewModuleAccount(
-			authtypes.NewBaseAccount(acc.GetAddress().Bytes(), acc.GetPubKey(), acc.GetAccountNumber(), acc.GetSequence()),
-			macc.GetName(),
-			macc.GetPermissions()...,
-		)
-	}
-	return acci
+	return acc.ToCosmosAccountI()
 }
 
 func (k KeeperAuth) GetAccountPrefixed(goCtx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error) {
@@ -151,7 +140,7 @@ func (k KeeperAuth) GetAccountPrefixed(goCtx context.Context, addr mcodec.AccAdd
 		}
 		return &acc, nil
 	}
-	return nil, nil
+	return nil, fmt.Errorf("account not found: %s", addr.String())
 }
 
 // TODO eventually remove after we replace all cosmos modules
@@ -260,10 +249,25 @@ func (k KeeperAuth) SetModuleAccount(goCtx context.Context, macc sdk.ModuleAccou
 	k.SetAccount(ctx, macc)
 }
 
+func (k KeeperAuth) SetModuleAccountPrefixed(goCtx context.Context, macc mcodec.ModuleAccountI) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.SetAccountPrefixed(ctx, macc)
+}
+
 func (k KeeperAuth) NewAccount(goCtx context.Context, acc sdk.AccountI) sdk.AccountI {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.SetAccount(goCtx, acc)
 	return k.GetAccount(ctx, acc.GetAddress())
+}
+
+func (k KeeperAuth) NewAccountPrefixed(goCtx context.Context, acc mcodec.AccountI) mcodec.AccountI {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.SetAccountPrefixed(goCtx, acc)
+	acc, err := k.GetAccountPrefixed(ctx, acc.GetAddress())
+	if err != nil {
+		panic(fmt.Errorf("NewAccountPrefixed: %s", err.Error()))
+	}
+	return acc
 }
 
 func (k KeeperAuth) RemoveAccount(goCtx context.Context, acc sdk.AccountI) {
@@ -312,9 +316,10 @@ func (k KeeperAuth) GetModuleAccountAndPermissions(ctx context.Context, moduleNa
 	}
 
 	// create a new module account
-	macc := authtypes.NewEmptyModuleAccount(moduleName, perms...)
-	maccI := (k.NewAccount(ctx, macc)).(sdk.ModuleAccountI) // set the account number
-	k.SetModuleAccount(ctx, maccI)
+	macc := types.NewEmptyModuleAccount(k.accBech32Codec, moduleName, perms...)
+	maccIP := (k.NewAccountPrefixed(ctx, macc)).(mcodec.ModuleAccountI) // set the account number
+	k.SetModuleAccountPrefixed(ctx, maccIP)
+	maccI := (maccIP.ToCosmosAccountI()).(sdk.ModuleAccountI)
 
 	return maccI, perms
 }

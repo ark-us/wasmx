@@ -204,8 +204,6 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 	defer r.mtx.Unlock()
 
 
-	cfg.SetGlobalChainConfig(chainId)
-
 	bapp, err := r.GetApp(chainId)
 	if err != nil {
 		return nil, err

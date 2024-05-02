@@ -93,3 +93,7 @@ func (k *KeeperAuth) ValidatorAddressCodec() address.Codec {
 func (k *KeeperAuth) ConsensusAddressCodec() address.Codec {
 	return k.consensusAddressCodec
 }
+
+func (k *KeeperAuth) AccBech32Codec() mcodec.AccBech32Codec {
+	return k.accBech32Codec
+}

@@ -12,6 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 
+	mcfg "mythos/v1/config"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
 	"mythos/v1/x/wasmx/types"
@@ -32,6 +33,8 @@ func (suite *KeeperTestSuite) TestSendingCoinsToNewAccount() {
 }
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
+	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
+
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	evmcode, err := hex.DecodeString(testdata.OpcodesAll)
@@ -364,7 +367,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("00000000000000000000000000000000000000000000000000000f1171e9ac00", qres)
+	s.Require().Equal("00000000000000000000000000000000000000000000000000000f17ff2fff00", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)

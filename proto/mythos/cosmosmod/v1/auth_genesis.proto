@@ -17,4 +17,6 @@ message AuthGenesisState {
 
     // accounts are the accounts present at genesis.
     repeated AnyAccount accounts = 2;
+    string base_account_typeurl = 3;
+    string module_account_typeurl = 4;
 }

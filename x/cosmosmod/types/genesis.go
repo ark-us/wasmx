@@ -81,6 +81,7 @@ func NewDistributingGenesisState(
 	delegatorStartingInfos []distributiontypes.DelegatorStartingInfoRecord,
 	validatorSlashEvents []distributiontypes.ValidatorSlashEventRecord,
 	baseDenom string,
+	rewardsDenom string,
 ) *DistributionGenesisState {
 	return &DistributionGenesisState{
 		Params:                          params,
@@ -93,6 +94,7 @@ func NewDistributingGenesisState(
 		DelegatorStartingInfos:          delegatorStartingInfos,
 		ValidatorSlashEvents:            validatorSlashEvents,
 		BaseDenom:                       baseDenom,
+		RewardsDenom:                    rewardsDenom,
 	}
 }
 
@@ -119,7 +121,7 @@ func DefaultStakingGenesisState() *StakingGenesisState {
 	}
 }
 
-func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, denomName string) []DenomDeploymentInfo {
+func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, baseDenomName string) []DenomDeploymentInfo {
 	erc20jsonCodeId := -1
 	derc20jsonCodeId := -1
 	for i, sysc := range wasmxtypes.DefaultSystemContracts("", "") {
@@ -269,7 +271,7 @@ func DefaultSlashingGenesisState() *slashingtypes.GenesisState {
 }
 
 // DefaultDistributionGenesisState returns a default bank module genesis state.
-func DefaultDistributionGenesisState(baseDenom string) *DistributionGenesisState {
+func DefaultDistributionGenesisState(baseDenom string, rewardsDenom string) *DistributionGenesisState {
 	gen := distributiontypes.DefaultGenesisState()
 	return NewDistributingGenesisState(
 		gen.Params,
@@ -282,6 +284,7 @@ func DefaultDistributionGenesisState(baseDenom string) *DistributionGenesisState
 		gen.DelegatorStartingInfos,
 		gen.ValidatorSlashEvents,
 		baseDenom,
+		rewardsDenom,
 	)
 }
 

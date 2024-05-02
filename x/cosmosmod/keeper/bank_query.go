@@ -36,13 +36,18 @@ func (k QuerierBank) AllBalances(goCtx context.Context, req *banktypes.QueryAllB
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	addr, err := k.Keeper.ak.AddressCodec().StringToBytes(req.Address)
+	addr, err := k.Keeper.AccBech32Codec().StringToAccAddressPrefixed(req.Address)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid address: %s", err.Error())
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	msg := banktypes.NewQueryAllBalancesRequest(addr, nil, false)
+	msg := &banktypes.QueryAllBalancesRequest{
+		Address:      addr.String(),
+		Pagination:   nil,
+		ResolveDenom: false,
+	}
+
 	bankmsgbz, err := k.Keeper.cdc.MarshalJSON(msg)
 	if err != nil {
 		return nil, err

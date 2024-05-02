@@ -53,14 +53,13 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
-	mcfg.SetGlobalChainConfig(chainId)
-	chain := suite.GetChain(chainId)
+	suite.SetCurrentChain(chainId)
 
 	sender := suite.GetRandomAccount()
 	newacc := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
-	appA := s.GetAppContext(*chain)
+	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	suite.Commit()

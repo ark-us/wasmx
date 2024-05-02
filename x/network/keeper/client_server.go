@@ -167,7 +167,7 @@ func NewGRPCServer(
 		if !ok {
 			return nil, nil, fmt.Errorf("cannot get servertypes.Application")
 		}
-		mconfig.SetGlobalChainConfig(chainId)
+
 		if bapp.LastBlockHeight() == 0 {
 			networkServer := &msgServer{
 				Keeper: app.GetNetworkKeeper(),
@@ -189,7 +189,6 @@ func NewGRPCServer(
 			return nil, nil, fmt.Errorf("cannot get MythosApp")
 		}
 		bapp := app.GetBaseApp()
-		mconfig.SetGlobalChainConfig(chainId)
 		networkServer := &msgServer{
 			Keeper: app.GetNetworkKeeper(),
 		}

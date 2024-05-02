@@ -95,3 +95,7 @@ func (k *KeeperStaking) ValidatorAddressCodec() address.Codec {
 func (k *KeeperStaking) ConsensusAddressCodec() address.Codec {
 	return k.consensusAddressCodec
 }
+
+func (k *KeeperStaking) AccBech32Codec() mcodec.AccBech32Codec {
+	return k.accBech32Codec
+}

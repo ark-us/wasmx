@@ -247,7 +247,6 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 
 	for _, chainId := range mcfg.ChainIdsInit {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
-		mcfg.SetGlobalChainConfig(chainId)
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
@@ -427,7 +426,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 
 	for _, chainId := range mcfg.ChainIdsInit {
 		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
-		mcfg.SetGlobalChainConfig(chainId)
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)

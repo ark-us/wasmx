@@ -17,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 
 	tmconfig "github.com/cometbft/cometbft/config"
+	"github.com/cometbft/cometbft/libs/rand"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
 
-	"cosmossdk.io/core/address"
 	"cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -37,6 +37,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	address "github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -161,7 +162,6 @@ Example:
 	mythosd testnet init-files --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
 	`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			fmt.Println("---init-files--")
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
@@ -183,7 +183,7 @@ Example:
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
-			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), clientCtx.TxConfig.SigningContext().AddressCodec(), args)
+			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
 		},
 	}
 	fmt.Println("---init-files0--")
@@ -239,7 +239,7 @@ Example:
 			}
 			leaderURI := args_[1]
 
-			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), clientCtx.TxConfig.SigningContext().AddressCodec(), args, nodeIndex, leaderURI)
+			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args, nodeIndex, leaderURI)
 		},
 	}
 
@@ -325,11 +325,10 @@ func initTestnetFiles(
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
-	addrCodec address.Codec,
 	args initArgs,
 ) error {
 	fmt.Println("--initTestnetFiles--")
-	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, addrCodec, args, 0, "")
+	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, 0, "")
 }
 
 func testnetAddNode(
@@ -339,14 +338,13 @@ func testnetAddNode(
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
-	addrCodec address.Codec,
 	args initArgs,
 	nodeIndex int,
 	leaderURI string,
 ) error {
 	args.numValidators = nodeIndex + 1
 	args.sameMachine = true
-	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, addrCodec, args, nodeIndex, leaderURI)
+	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, nodeIndex, leaderURI)
 	if err != nil {
 		return err
 	}
@@ -385,7 +383,6 @@ func initTestnetFilesInternal(
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	valAddrCodec runtime.ValidatorAddressCodec,
-	addrCodec address.Codec,
 	args initArgs,
 	nodeIndexStart int,
 	leaderURI string,
@@ -399,6 +396,11 @@ func initTestnetFilesInternal(
 	if err != nil {
 		panic(err)
 	}
+	mcfg.SetGlobalChainConfig(args.chainID)
+
+	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+	valAddrCodec = mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
 	nodeIPs := make([]string, args.numValidators)
@@ -761,6 +763,7 @@ func initGenFiles(
 	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
 	cosmosmodGenState.Distribution.BaseDenom = mcfg.BaseDenom
+	cosmosmodGenState.Distribution.RewardsDenom = cosmosmodGenState.Bank.DenomInfo[2].Metadata.Base
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = mcfg.BaseDenom
 	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(mcfg.BaseDenom, math.NewInt(50000000)))
 	// TODO make this bigger once we have our own governance contract
@@ -894,9 +897,15 @@ func initGenFilesLevel0(
 		panic(err)
 	}
 
+	bootstrapAccount, err := addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
+	if err != nil {
+		panic(err)
+	}
+
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
 	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32)
+	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState
@@ -907,6 +916,7 @@ func initGenFilesLevel0(
 	cosmosmodGenState.Staking.Params.BondDenom = chaincfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = chaincfg.BaseDenom
 	cosmosmodGenState.Distribution.BaseDenom = chaincfg.BaseDenom
+	cosmosmodGenState.Distribution.RewardsDenom = cosmosmodGenState.Bank.DenomInfo[2].Metadata.Base
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = chaincfg.BaseDenom
 	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, math.NewInt(50000000)))
 	// TODO make this bigger once we have our own governance contract
