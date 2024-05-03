@@ -33,6 +33,7 @@ import (
 
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -61,7 +62,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	if err != nil {
 		panic(err)
 	}
-	encodingConfig := app.MakeEncodingConfig(chainCfg)
+	encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	appOpts := app.DefaultAppOptions{}
@@ -146,7 +147,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		app.DefaultNodeHome,
 		config.BaseDenom,
 		permAddrs,
-		app.MakeEncodingConfig(chainCfg).InterfaceRegistry,
+		appencoding.MakeEncodingConfig(chainCfg).InterfaceRegistry,
 		nil,
 		nil,
 		govAddr,

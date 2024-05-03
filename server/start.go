@@ -62,6 +62,7 @@ import (
 
 	mapp "mythos/v1/app"
 	mcfg "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -251,7 +252,7 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 		if err != nil {
 			panic(err)
 		}
-		encodingConfig := mapp.MakeEncodingConfig(chainCfg)
+		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 		app := mapp.NewApp(
 			actionExecutor,
 			svrCtx.Logger,
@@ -430,7 +431,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		if err != nil {
 			panic(err)
 		}
-		encodingConfig := mapp.MakeEncodingConfig(chainCfg)
+		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 		app := mapp.NewApp(
 			actionExecutor,
 			svrCtx.Logger,

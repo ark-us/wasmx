@@ -54,6 +54,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	"mythos/v1/server/config"
 	ibctesting "mythos/v1/testutil/ibc"
 	"mythos/v1/x/network/keeper"
@@ -136,7 +137,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 		Chain:         chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := app.MakeEncodingConfig(suite.App().GetChainCfg())
+	encodingConfig := appencoding.MakeEncodingConfig(suite.App().GetChainCfg())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
 
 	t := suite.T()
@@ -154,7 +155,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 		Chain:         suite.chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := app.MakeEncodingConfig(suite.App().GetChainCfg())
+	encodingConfig := appencoding.MakeEncodingConfig(suite.App().GetChainCfg())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
 	t := suite.T()
 	denom := appContext.Chain.Config.BaseDenom

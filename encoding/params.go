@@ -1,4 +1,4 @@
-package params
+package encoding
 
 import (
 	"github.com/cosmos/cosmos-sdk/client"

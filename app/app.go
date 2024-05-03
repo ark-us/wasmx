@@ -161,7 +161,7 @@ import (
 
 	ante "mythos/v1/app/ante"
 
-	appparams "mythos/v1/app/params"
+	appencoding "mythos/v1/encoding"
 
 	docs "mythos/v1/docs"
 
@@ -319,7 +319,7 @@ func NewApp(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	invCheckPeriod uint,
-	encodingConfig appparams.EncodingConfig,
+	encodingConfig appencoding.EncodingConfig,
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {

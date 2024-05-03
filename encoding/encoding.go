@@ -1,4 +1,4 @@
-package app
+package encoding
 
 import (
 	"cosmossdk.io/x/tx/signing"
@@ -7,13 +7,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/gogoproto/proto"
 
-	"mythos/v1/app/params"
 	mcodec "mythos/v1/codec"
 	"mythos/v1/config"
 )
 
 // MakeEncodingConfig creates an EncodingConfig for an amino based test configuration.
-func MakeEncodingConfig(cfg *config.ChainConfig) params.EncodingConfig {
+func MakeEncodingConfig(cfg *config.ChainConfig) EncodingConfig {
 	var err error
 	signingOptions := signing.Options{
 		AddressCodec:          mcodec.NewAccBech32Codec(cfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc),
@@ -31,13 +30,16 @@ func MakeEncodingConfig(cfg *config.ChainConfig) params.EncodingConfig {
 	}
 	configOptions.SigningOptions = &signingOptions
 	configOptions.SigningContext, err = signing.NewContext(*configOptions.SigningOptions)
+	if err != nil {
+		panic(err)
+	}
 
 	txCfg, err := tx.NewTxConfigWithOptions(appCodec, configOptions)
 	if err != nil {
 		panic(err)
 	}
 
-	return params.EncodingConfig{
+	return EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
 		Marshaler:         appCodec,
 		TxConfig:          txCfg,

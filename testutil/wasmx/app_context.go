@@ -38,6 +38,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	"mythos/v1/crypto/ethsecp256k1"
+	appencoding "mythos/v1/encoding"
 	network "mythos/v1/x/network/keeper"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	wasmxutils "mythos/v1/x/wasmx/rpc/backend"
@@ -140,7 +141,7 @@ var DEFAULT_GAS_PRICE = "10amyt"
 var DEFAULT_GAS_LIMIT = uint64(20_000_000)
 
 func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
-	encodingConfig := app.MakeEncodingConfig(s.App.GetChainCfg())
+	encodingConfig := appencoding.MakeEncodingConfig(s.App.GetChainCfg())
 	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
 	var parsedGasPrices sdk.DecCoins
 	var err error
@@ -282,7 +283,7 @@ func (s *AppContext) prepareEthTx(
 	txFee sdk.Coins,
 	gasLimit uint64,
 ) ([]byte, error) {
-	encodingConfig := app.MakeEncodingConfig(s.App.GetChainCfg())
+	encodingConfig := appencoding.MakeEncodingConfig(s.App.GetChainCfg())
 	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
 
 	err := txBuilder.SetMsgs(msg)

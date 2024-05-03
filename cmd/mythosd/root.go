@@ -48,7 +48,7 @@ import (
 	// this line is used by starport scaffolding # root/moduleImport
 
 	app "mythos/v1/app"
-	appparams "mythos/v1/app/params"
+	appencoding "mythos/v1/encoding"
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
@@ -60,7 +60,7 @@ import (
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
-func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
+func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
 	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
@@ -68,7 +68,7 @@ func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	if err != nil {
 		panic(err)
 	}
-	encodingConfig := app.MakeEncodingConfig(chainCfg)
+	encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
@@ -184,7 +184,7 @@ var MigrationMap = genutiltypes.MigrationMap{}
 
 func initRootCmd(
 	rootCmd *cobra.Command,
-	encodingConfig appparams.EncodingConfig,
+	encodingConfig appencoding.EncodingConfig,
 	basicManager module.BasicManager,
 ) {
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
@@ -323,7 +323,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 }
 
 type appCreator struct {
-	encodingConfig appparams.EncodingConfig
+	encodingConfig appencoding.EncodingConfig
 	actionExecutor *networkkeeper.ActionExecutor
 }
 

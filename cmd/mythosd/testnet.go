@@ -54,6 +54,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 	websrvflags "mythos/v1/x/websrv/server/flags"
@@ -644,7 +645,7 @@ func initTestnetFilesInternal(
 		if err != nil {
 			panic(err)
 		}
-		level0EncodingConfig := app.MakeEncodingConfig(chainCfg)
+		level0EncodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 		valAddrCodec = level0EncodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()
 		addrCodec0 := level0EncodingConfig.TxConfig.SigningContext().AddressCodec()
 		for i := nodeIndexStart; i < args.numValidators; i++ {

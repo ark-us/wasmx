@@ -13,6 +13,7 @@ import (
 
 	app "mythos/v1/app"
 	mcfg "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -44,7 +45,7 @@ func BenchmarkSimulation(b *testing.B) {
 		require.NoError(b, err)
 	})
 
-	encoding := app.MakeEncodingConfig(cfg)
+	encoding := appencoding.MakeEncodingConfig(cfg)
 
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)

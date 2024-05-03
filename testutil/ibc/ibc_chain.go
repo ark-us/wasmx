@@ -26,6 +26,7 @@ import (
 	wasmxapp "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 )
 
@@ -55,7 +56,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{validator})
 	signersByAddress := make(map[string]tmtypes.PrivValidator, 1)
 	signersByAddress[pubKey.Address().String()] = privVal
-	encoding := wasmxapp.MakeEncodingConfig(&chaincfg)
+	encoding := appencoding.MakeEncodingConfig(&chaincfg)
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(encoding.InterfaceRegistry.SigningContext().AddressCodec())
 
 	// generate genesis account

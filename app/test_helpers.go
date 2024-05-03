@@ -26,6 +26,7 @@ import (
 	tmtypes "github.com/cometbft/cometbft/types"
 
 	config "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -94,7 +95,7 @@ func SetupApp(
 		panic(err)
 	}
 
-	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(chainCfg), appOpts)
+	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -126,7 +127,6 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	if err != nil {
 		panic(err)
 	}
-	cfg := MakeEncodingConfig(chainCfg)
 
 	// level := "network:debug,wasmx:debug,*:info"
 	// filter, _ := log.ParseLogLevel(level)
@@ -136,6 +136,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	// 	log.FilterOption(filter),
 	// )
 	logger := log.NewNopLogger()
+	cfg := appencoding.MakeEncodingConfig(chainCfg)
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
@@ -178,7 +179,7 @@ func NewTestNetworkFixture() network.TestFixture {
 		panic(err)
 	}
 
-	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(chainCfg), appOpts)
+	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
@@ -191,7 +192,7 @@ func NewTestNetworkFixture() network.TestFixture {
 		return NewApp(
 			actionExecutor,
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
-			DefaultNodeHome, 5, MakeEncodingConfig(chainCfg),
+			DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg),
 			appOpts,
 			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 			bam.SetMinGasPrices(val.GetAppConfig().MinGasPrices),

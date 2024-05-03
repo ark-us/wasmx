@@ -26,6 +26,7 @@ import (
 
 	app "mythos/v1/app"
 	config "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -62,7 +63,7 @@ func DefaultConfig() network.Config {
 	if err != nil {
 		panic(err)
 	}
-	encoding := app.MakeEncodingConfig(chainCfg)
+	encoding := appencoding.MakeEncodingConfig(chainCfg)
 	logger := log.NewNopLogger()
 
 	appOpts := app.DefaultAppOptions{}
