@@ -263,7 +263,7 @@ func (k KeeperAuth) NewAccount(goCtx context.Context, acc sdk.AccountI) sdk.Acco
 func (k KeeperAuth) NewAccountPrefixed(goCtx context.Context, acc mcodec.AccountI) mcodec.AccountI {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.SetAccountPrefixed(goCtx, acc)
-	acc, err := k.GetAccountPrefixed(ctx, acc.GetAddress())
+	acc, err := k.GetAccountPrefixed(ctx, acc.GetAddressPrefixed())
 	if err != nil {
 		panic(fmt.Errorf("NewAccountPrefixed: %s", err.Error()))
 	}

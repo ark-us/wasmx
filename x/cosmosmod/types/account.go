@@ -19,10 +19,12 @@ import (
 )
 
 var (
+	_ sdk.AccountI                       = (*BaseAccount)(nil)
 	_ mcodec.AccountI                    = (*BaseAccount)(nil)
 	_ GenesisAccount                     = (*BaseAccount)(nil)
 	_ codectypes.UnpackInterfacesMessage = (*BaseAccount)(nil)
 	_ GenesisAccount                     = (*ModuleAccount)(nil)
+	_ sdk.ModuleAccountI                 = (*ModuleAccount)(nil)
 	_ mcodec.ModuleAccountI              = (*ModuleAccount)(nil)
 )
 
@@ -56,19 +58,30 @@ func NewBaseAccountWithAddress(addr mcodec.AccAddressPrefixed) *BaseAccount {
 }
 
 // GetAddress - Implements mcodec.AccountI.
-func (acc BaseAccount) GetAddress() mcodec.AccAddressPrefixed {
+func (acc BaseAccount) GetAddressPrefixed() mcodec.AccAddressPrefixed {
 	addr, _ := mcodec.AccAddressPrefixedFromBech32(acc.Address)
 	return addr
 }
 
+// GetAddress - Implements sdk.AccountI.
+func (acc BaseAccount) GetAddress() sdk.AccAddress {
+	addr, _ := mcodec.AccAddressPrefixedFromBech32(acc.Address)
+	return addr.Bytes()
+}
+
 // SetAddress - Implements mcodec.AccountI.
-func (acc *BaseAccount) SetAddress(addr mcodec.AccAddressPrefixed) error {
+func (acc *BaseAccount) SetAddressPrefixed(addr mcodec.AccAddressPrefixed) error {
 	if len(acc.Address) != 0 {
 		return errors.New("cannot override BaseAccount address")
 	}
 
 	acc.Address = addr.String()
 	return nil
+}
+
+// SetAddress - Implements sdk.AccountI.
+func (acc *BaseAccount) SetAddress(addr sdk.AccAddress) error {
+	return errors.New("cannot use SetAddress on cosmosmod.BaseAccount")
 }
 
 // GetPubKey - Implements mcodec.AccountI.
@@ -304,7 +317,7 @@ type GenesisAccounts []GenesisAccount
 // objects.
 func (ga GenesisAccounts) Contains(addr sdk.Address) bool {
 	for _, acc := range ga {
-		if acc.GetAddress().Equals(addr) {
+		if bytes.Equal(acc.GetAddressPrefixed().Bytes(), addr.Bytes()) {
 			return true
 		}
 	}

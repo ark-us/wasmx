@@ -16,8 +16,8 @@ import (
 type AccountI interface {
 	proto.Message
 
-	GetAddress() AccAddressPrefixed
-	SetAddress(AccAddressPrefixed) error // errors if already set.
+	GetAddressPrefixed() AccAddressPrefixed
+	SetAddressPrefixed(AccAddressPrefixed) error // errors if already set.
 
 	GetPubKey() cryptotypes.PubKey // can return nil.
 	SetPubKey(cryptotypes.PubKey) error

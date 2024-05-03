@@ -79,7 +79,7 @@ func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool
 		if !simulate && !ctx.IsReCheckTx() {
 			anyPk, _ := codectypes.NewAnyWithValue(pubKey)
 			signerData := txsigning.SignerData{
-				Address:       acc.GetAddress().String(),
+				Address:       acc.GetAddressPrefixed().String(),
 				ChainID:       chainID,
 				AccountNumber: accNum,
 				Sequence:      acc.GetSequence(),

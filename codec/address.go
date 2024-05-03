@@ -131,7 +131,7 @@ func AccAddressPrefixedFromBech32(address string) (addr AccAddressPrefixed, err 
 }
 
 // Returns boolean for whether two AccAddresses are Equal
-func (aa AccAddressPrefixed) Equals(aa2 sdk.Address) bool {
+func (aa AccAddressPrefixed) Equals(aa2 AccAddressPrefixed) bool {
 	if aa.Empty() && aa2.Empty() {
 		return true
 	}
@@ -311,7 +311,7 @@ func ValAddressPrefixedFromBech32(address string) (addr ValAddressPrefixed, err 
 }
 
 // Returns boolean for whether two ValAddresses are Equal
-func (va ValAddressPrefixed) Equals(va2 sdk.Address) bool {
+func (va ValAddressPrefixed) Equals(va2 ValAddressPrefixed) bool {
 	if va.Empty() && va2.Empty() {
 		return true
 	}
@@ -485,7 +485,7 @@ func GetConsAddressPrefixed(pubkey cryptotypes.PubKey, prefix string) ConsAddres
 }
 
 // Returns boolean for whether two ConsAddress are Equal
-func (ca ConsAddressPrefixed) Equals(ca2 sdk.Address) bool {
+func (ca ConsAddressPrefixed) Equals(ca2 ConsAddressPrefixed) bool {
 	if ca.Empty() && ca2.Empty() {
 		return true
 	}

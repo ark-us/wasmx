@@ -68,7 +68,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 		}
 		validators = append(validators, validator)
 
-		delAddr := genAccs[0].GetAddress().String()
+		delAddr := genAccs[0].GetAddressPrefixed().String()
 		require.NoError(t, err)
 		delegation := cosmosmodtypes.Delegation{
 			DelegatorAddress: delAddr,

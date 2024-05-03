@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -44,5 +45,10 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&BaseAccount{},
 		&ModuleAccount{},
 	)
-
+	registry.RegisterInterface(
+		"cosmos.auth.v1beta1.AccountI",
+		(*sdk.AccountI)(nil),
+		&BaseAccount{},
+		&ModuleAccount{},
+	)
 }
