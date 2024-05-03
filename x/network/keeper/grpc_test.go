@@ -643,7 +643,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 // 	appA := s.AppContext()
 // denom := appA.Chain.Config.BaseDenom
-// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
 // 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
 // 	suite.Commit()
 
@@ -898,7 +898,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	initBalance := sdkmath.NewInt(1000_000_000)
 // 	appA := s.GetAppContext(suite.chainA)
 // denom := appA.Chain.Config.BaseDenom
-// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+// 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
 // 	suite.Commit()
 
 // 	// send tx

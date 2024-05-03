@@ -33,7 +33,8 @@ func (k QuerierAuth) Account(goCtx context.Context, req *authtypes.QueryAccountR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	account := k.Keeper.GetAccount(goCtx, addr.Bytes())
+	// account := k.Keeper.GetAccount(goCtx, addr.Bytes())
+	account, err := k.Keeper.GetAccountPrefixed(goCtx, addr)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}

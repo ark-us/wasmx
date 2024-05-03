@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -81,8 +80,12 @@ type MythosApp interface {
 	GetMultiChainApp() (*mconfig.MultiChainApp, error)
 	GetBaseApp() *baseapp.BaseApp
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
-
 	AddressCodec() address.Codec
+
+	// baseapp
+	Query(context.Context, *abci.RequestQuery) (*abci.ResponseQuery, error)
+	GRPCQueryRouter() *baseapp.GRPCQueryRouter
+	MsgServiceRouter() *baseapp.MsgServiceRouter
 }
 
 type ABCIClientI interface {
@@ -178,8 +181,6 @@ func NewGRPCServer(
 				return nil, nil, err
 			}
 		}
-		// TODO fixme (remove after sdk.AccAddress does not have hardcoded prefixes)
-		time.Sleep(time.Second * 2)
 	}
 
 	for _, chainId := range multiapp.ChainIds {
@@ -198,8 +199,6 @@ func NewGRPCServer(
 		if err != nil {
 			return nil, nil, err
 		}
-		// TODO fixme (remove after sdk.AccAddress does not have hardcoded prefixes)
-		time.Sleep(time.Second * 2)
 	}
 
 	// TODO fix config - should I register multiple servers?

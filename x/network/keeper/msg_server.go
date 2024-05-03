@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	cfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -88,11 +89,27 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 		return nil, err
 	}
 
+	multichainapp, err := cfg.GetMultiChainApp(m.goContextParent)
+	if err != nil {
+		return nil, err
+	}
+	iapp, err := multichainapp.GetApp(msg.MultiChainId)
+	if err != nil {
+		return nil, err
+	}
+	app, ok := iapp.(MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("error App interface from multichainapp")
+	}
+
 	owner, err := m.wasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, err
 	}
-	_, res, err := m.wasmxKeeper.ExecuteCosmosMsg(ctx, sdkmsg, owner)
+
+	// TODO handle transaction verification!!!! here or by codec ??
+	// router := mcodec.MsgRouter{Router: app.MsgServiceRouter()}
+	_, res, err := app.GetNetworkKeeper().wasmxKeeper.ExecuteCosmosMsg(ctx, sdkmsg, owner)
 	if err != nil {
 		return nil, err
 	}

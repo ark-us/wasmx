@@ -2,8 +2,6 @@ package keeper
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"math/big"
 
 	address "cosmossdk.io/core/address"
@@ -45,7 +43,8 @@ func (h *WasmxCosmosHandler) AccBech32Codec() mcodec.AccBech32Codec {
 	return h.Keeper.accBech32Codec
 }
 func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
-	return h.Keeper.SubmitCosmosQuery(h.Ctx, reqQuery)
+	router := mcodec.QueryRouter{Router: h.Keeper.grpcQueryRouter}
+	return router.SubmitCosmosQuery(h.Ctx, reqQuery)
 }
 func (h *WasmxCosmosHandler) DecodeCosmosTx(bz []byte) ([]byte, error) {
 	return h.Keeper.DecodeCosmosTx(bz)
@@ -194,17 +193,6 @@ func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress mcodec.AccAdd
 	}
 }
 
-func (k *Keeper) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) ([]byte, error) {
-	// TODO if we allow historical queries, at a certain block
-	// use app.Query(queryReq)
-	queryFn := k.grpcQueryRouter.Route(reqQuery.Path)
-	res, err := safeQuery(ctx, reqQuery, queryFn)
-	if err != nil {
-		return nil, err
-	}
-	return res.Value, nil
-}
-
 func (h *Keeper) DecodeCosmosTx(bz []byte) ([]byte, error) {
 	tx, err := h.txConfig.TxDecoder()(bz)
 	if err != nil {
@@ -275,74 +263,6 @@ func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.Acc
 	// 	return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s", signerstr, ownerstr)
 	// }
 
-	return k.executeMsg(ctx, msg)
-}
-
-// Attempts to get the message handler from the router and if found will then execute the message.
-// If the message execution is successful, the proto marshaled message response will be returned.
-func (k *Keeper) executeMsg(ctx sdk.Context, msg sdk.Msg) ([]sdk.Event, []byte, error) {
-	handler := k.msgRouter.Handler(msg)
-	if handler == nil {
-		return nil, nil, types.ErrInvalidRoute
-	}
-	// handler can panic with out of gas or other errors
-	res, err := safeHandler(ctx, msg, handler)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return res.GetEvents(), res.Data, nil
-}
-
-// func (k *Keeper) newQueryHandler(ctx sdk.Context, contractAddress sdk.AccAddress) QueryHandler {
-// 	return NewQueryHandler(ctx, k, contractAddress, k.gasRegister)
-// }
-
-func safeHandler(ctx sdk.Context, msg sdk.Msg, handler func(ctx sdk.Context, req sdk.Msg) (*sdk.Result, error)) (res *sdk.Result, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			// TODO maybe there is a better way to get the cosmos sdk errors
-			// and make them EVM errors
-			switch x := r.(type) {
-			case string:
-				err = fmt.Errorf("failed to execute Cosmos message: %s", x)
-			case error:
-				err = sdkerr.Wrapf(x, "failed to execute Cosmos message")
-			default:
-				// Fallback err
-				err = sdkerr.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
-			}
-			// invalidate rep
-			res = nil
-		}
-	}()
-
-	res, err = handler(ctx, msg)
-	return res, err
-}
-
-func safeQuery(
-	ctx sdk.Context,
-	msg *abci.RequestQuery,
-	handler func(ctx sdk.Context, req *abci.RequestQuery) (*abci.ResponseQuery, error),
-) (res *abci.ResponseQuery, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			switch x := r.(type) {
-			case string:
-				err = errors.New(x)
-			case error:
-				err = sdkerr.Wrapf(x, "failed to execute Cosmos message")
-			default:
-				// Fallback err
-				err = sdkerr.Wrapf(sdkerrors.ErrPanic, "unknown panic %v", r)
-
-			}
-			// invalidate res
-			res = nil
-		}
-	}()
-
-	resp, err := handler(ctx, msg)
-	return resp, err
+	router := mcodec.MsgRouter{Router: k.msgRouter}
+	return router.ExecuteCosmosMsg(ctx, msg)
 }

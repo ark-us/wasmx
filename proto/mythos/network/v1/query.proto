@@ -2,6 +2,7 @@ syntax = "proto3";
 package mythos.network.v1;
 
 import "gogoproto/gogo.proto";
+import "google/protobuf/any.proto";
 import "google/api/annotations.proto";
 import "cosmos/base/v1beta1/coin.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
@@ -17,6 +18,27 @@ service Query {
     option (google.api.http).get =
         "/network/v1/{multi_chain_id}/contract/{address}/call/{query_data}";
   }
+
+  rpc QueryMultiChain(QueryMultiChainRequest) returns (QueryMultiChainResponse) {
+    option (google.api.http).get =
+        "/network/v1/{multi_chain_id}/data/{query_data}";
+  }
+}
+
+// QueryMultiChainRequest is the request type for the
+// Query/QueryMultiChain RPC method
+message QueryMultiChainRequest {
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = true;
+
+  string multi_chain_id = 1;
+  bytes query_data = 2 [ (gogoproto.casttype) = "RawContractMessage" ];
+}
+
+// QueryMultiChainResponse is the response type for the
+message QueryMultiChainResponse {
+  // Data contains the json data returned from the smart contract
+  bytes data = 1 [ (gogoproto.casttype) = "RawContractMessage" ];
 }
 
 // QueryContractCallRequest is the request type for the

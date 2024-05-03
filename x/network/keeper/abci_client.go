@@ -28,6 +28,7 @@ import (
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	cfg "mythos/v1/config"
 	"mythos/v1/server/config"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -104,10 +105,46 @@ func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpct
 func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
 	c.logger.Debug("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()))
 
+	bapp := c.bapp
+	mapp := c.mapp
+
+	sdktx, err := c.bapp.TxDecode(tx)
+	if err != nil {
+		return nil, err
+	}
+	if len(sdktx.GetMsgs()) > 0 {
+		msg, ok := sdktx.GetMsgs()[0].(*types.MsgMultiChainWrap)
+		if ok {
+			var sdkmsg sdk.Msg
+			err := c.nk.Codec().UnpackAny(msg.Data, &sdkmsg)
+			if err != nil {
+				return nil, err
+			}
+
+			multichainapp, err := cfg.GetMultiChainApp(c.mapp.GetGoContextParent())
+			if err != nil {
+				return nil, err
+			}
+			iapp, err := multichainapp.GetApp(msg.MultiChainId)
+			if err != nil {
+				return nil, err
+			}
+			mapp, ok = iapp.(MythosApp)
+			if !ok {
+				return nil, fmt.Errorf("error App interface from multichainapp")
+			}
+			bapp, ok = iapp.(types.BaseApp)
+			if !ok {
+				return nil, fmt.Errorf("error BaseApp interface from multichainapp")
+			}
+
+		}
+	}
+
 	// TODO use ctx from params?
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-		sdktx, err := c.bapp.TxDecode(tx)
+		sdktx, err := bapp.TxDecode(tx)
 
 		if len(sdktx.GetMsgs()) > 0 {
 			// we just take the first one // TODO fixme
@@ -122,7 +159,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 			// } else {
 			msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
 			if ok {
-				contractAddress, err = c.mapp.AddressCodec().StringToBytes(msgExec.Contract)
+				contractAddress, err = mapp.AddressCodec().StringToBytes(msgExec.Contract)
 				if err != nil {
 					return nil, err
 				}
@@ -137,7 +174,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 				addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress).Hex()
 
 				if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
-					contractAddressStr, err := c.mapp.AddressCodec().BytesToString(contractAddress)
+					contractAddressStr, err := mapp.AddressCodec().BytesToString(contractAddress)
 					c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
 
 					// we sent directly to the contract
@@ -156,7 +193,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 		}
 
 		msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-		rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
+		rresp, err := mapp.GetNetworkKeeper().ExecuteContract(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,
@@ -166,7 +203,7 @@ func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpcty
 		}
 		return rresp, nil
 	}
-	_, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb, c.bapp.ChainID())
+	_, err = c.actionExecutor.Execute(context.Background(), bapp.LastBlockHeight(), cb, bapp.ChainID())
 	// TODO handle resp, err ?
 	if err != nil {
 		c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())

@@ -35,7 +35,6 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
-	"github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
@@ -48,6 +47,7 @@ import (
 	// this line is used by starport scaffolding # root/moduleImport
 
 	app "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	appencoding "mythos/v1/encoding"
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
@@ -69,13 +69,14 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		panic(err)
 	}
 	encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
+	addrcodec := mcodec.MustUnwrapAccBech32Codec(encodingConfig.TxConfig.SigningContext().AddressCodec())
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).
 		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 		WithTxConfig(encodingConfig.TxConfig).
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
-		WithAccountRetriever(types.AccountRetriever{}).
+		WithAccountRetriever(cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec}).
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("")
 	fmt.Println("---init-NewRootCmd--")

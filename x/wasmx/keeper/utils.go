@@ -1,37 +1,30 @@
 package keeper
 
 import (
-	"github.com/pkg/errors"
-
-	sdkerr "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	mcodec "mythos/v1/codec"
 )
 
 // MsgFromBz
 func (k *Keeper) MsgFromBz(content []byte) (sdk.Msg, error) {
-	var txMsg sdk.Msg
-
-	if err := k.cdc.UnmarshalInterface(content, &txMsg); err != nil {
-		return nil, errors.Wrap(err, "error unmarshalling sdk msg json")
+	msg, err := mcodec.MsgFromBz(k.cdc, content)
+	if err != nil {
+		return nil, err
 	}
-
-	return txMsg, nil
+	return msg, nil
 }
 
 // RequestQueryFromBz
 func (k *Keeper) RequestQueryFromBz(content []byte) (abci.RequestQuery, error) {
-	var queryMsg abci.RequestQuery
-
-	err := queryMsg.Unmarshal(content)
-
+	msg, err := mcodec.RequestQueryFromBz(content)
 	if err != nil {
-		return queryMsg, errors.Wrap(err, "error unmarshalling abci.RequestQuery")
+		return abci.RequestQuery{}, err
 	}
-
-	return queryMsg, nil
+	return msg, nil
 }
 
 // // QueryFromBz
@@ -47,29 +40,20 @@ func (k *Keeper) RequestQueryFromBz(content []byte) (abci.RequestQuery, error) {
 
 // AnyFromBz
 func (k *Keeper) AnyFromBz(bz []byte) (cdctypes.Any, error) {
-	anyMsg := &cdctypes.Any{}
-	err := k.cdc.Unmarshal(bz, anyMsg)
+	msg, err := mcodec.AnyFromBz(k.cdc, bz)
 	if err != nil {
-		return *anyMsg, err
+		return cdctypes.Any{}, err
 	}
-
-	return *anyMsg, nil
+	return msg, nil
 }
 
 // ConvertProtoToJSONMarshal  unmarshals the given bytes into a proto message and then marshals it to json.
 // This is done so that clients calling stargate queries do not need to define their own proto unmarshalers,
 // being able to use response directly by json marshalling.
 func (k *Keeper) ConvertProtoToJSONMarshal(protoResponse codec.ProtoMarshaler, bz []byte) ([]byte, error) {
-	// unmarshal binary into stargate response data structure
-	err := k.cdc.Unmarshal(bz, protoResponse)
+	msg, err := mcodec.ConvertProtoToJSONMarshal(k.cdc, protoResponse, bz)
 	if err != nil {
-		return nil, sdkerr.Wrap(err, "to proto")
+		return nil, err
 	}
-
-	bz, err = k.cdc.MarshalJSON(protoResponse)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "to json")
-	}
-
-	return bz, nil
+	return msg, nil
 }

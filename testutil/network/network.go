@@ -22,11 +22,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	app "mythos/v1/app"
+	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -85,12 +86,14 @@ func DefaultConfig() network.Config {
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), encoding, appOpts)
 
+	addrcodec := mcodec.MustUnwrapAccBech32Codec(encoding.TxConfig.SigningContext().AddressCodec())
+
 	return network.Config{
 		Codec:             encoding.Marshaler,
 		TxConfig:          encoding.TxConfig,
 		LegacyAmino:       encoding.Amino,
 		InterfaceRegistry: encoding.InterfaceRegistry,
-		AccountRetriever:  authtypes.AccountRetriever{},
+		AccountRetriever:  cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec},
 		AppConstructor: func(val network.ValidatorI) servertypes.Application {
 			return app.NewApp(
 				actionExecutor,

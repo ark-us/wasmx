@@ -4,6 +4,7 @@ import (
 	context "context"
 
 	address "cosmossdk.io/core/address"
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	mcodec "mythos/v1/codec"
@@ -34,4 +35,6 @@ type WasmxWrapper interface {
 	// QueryContract
 	QueryContract(ctx sdk.Context, req *MsgQueryContract) (*MsgQueryContractResponse, error)
 	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
+
+	Codec() codec.Codec
 }

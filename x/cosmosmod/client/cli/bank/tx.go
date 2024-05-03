@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	cli "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
@@ -18,6 +19,9 @@ import (
 
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	appencoding "mythos/v1/encoding"
+	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	networktypes "mythos/v1/x/network/types"
 )
 
 // NewTxCmd returns a root CLI command handler for all x/bank transaction commands.
@@ -54,13 +58,32 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 			if err != nil {
 				return err
 			}
-			mcfg.SetGlobalChainConfig(clientCtx.ChainID)
+			chainId := clientCtx.ChainID
+			mcfg.SetGlobalChainConfig(chainId)
+			config, err := mcfg.GetChainConfig(chainId)
 			addrCodec := mcodec.MustUnwrapAccBech32Codec(ac)
-			toAddr, err := addrCodec.StringToAccAddressPrefixed(args[1])
+
+			customEncoding := appencoding.MakeEncodingConfig(config)
+
+			customCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+			customAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
+
+			clientCtx = clientCtx.WithAccountRetriever(cosmosmodtypes.NewAccountRetriever(chainId, customAddrCodec))
+			// TODO clientCtx.WithCodec(customCdc) ??
+
+			clientCtx = clientCtx.
+				WithCodec(customEncoding.Marshaler).
+				WithInterfaceRegistry(customEncoding.InterfaceRegistry).
+				WithTxConfig(customEncoding.TxConfig).
+				WithLegacyAmino(customEncoding.Amino)
+
+			toAddr_, err := addrCodec.StringToAccAddressPrefixed(args[1])
 			if err != nil {
 				return err
 			}
-			fromAddr := addrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			toAddr := customAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+
 
 			coins, err := sdk.ParseCoinsNormalized(args[2])
 			if err != nil {
@@ -77,7 +100,18 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				Amount:      coins,
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			msgAny, err := codectypes.NewAnyWithValue(msg)
+			if err != nil {
+				return err
+			}
+			// TODO only if diff chain than context chainId
+			msgMultiChain := &networktypes.MsgMultiChainWrap{
+				MultiChainId: chainId,
+				Sender:       fromAddr.String(),
+				Data:         msgAny,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
