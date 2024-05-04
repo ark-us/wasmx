@@ -84,7 +84,7 @@ func DefaultConfig() network.Config {
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
 		cast.ToString(appOpts.Get(flags.FlagHome)),
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), encoding, appOpts)
+		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), encoding, nil, appOpts)
 
 	addrcodec := mcodec.MustUnwrapAccBech32Codec(encoding.TxConfig.SigningContext().AddressCodec())
 
@@ -95,13 +95,20 @@ func DefaultConfig() network.Config {
 		InterfaceRegistry: encoding.InterfaceRegistry,
 		AccountRetriever:  cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec},
 		AppConstructor: func(val network.ValidatorI) servertypes.Application {
+			gasPricesStr := val.GetAppConfig().MinGasPrices
+			gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
+			if err != nil {
+				panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
+			}
+
 			return app.NewApp(
 				actionExecutor,
 				val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{}, val.GetCtx().Config.RootDir, 0,
 				encoding,
+				gasPrices,
 				simtestutil.EmptyAppOptions{},
 				baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
-				baseapp.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
+				baseapp.SetMinGasPrices(gasPricesStr),
 			)
 		},
 		GenesisState:    tempApp.BasicModuleManager.DefaultGenesis(encoding.Marshaler),

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"cosmossdk.io/log"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
@@ -16,8 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
-	"golang.org/x/sync/errgroup"
 
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 
@@ -95,7 +97,7 @@ func SetupApp(
 		panic(err)
 	}
 
-	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), appOpts)
+	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -149,7 +151,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 		actionExecutor,
 		logger,
 		db, nil, true, map[int64]bool{},
-		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, appOpts,
+		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, nil, appOpts,
 		bam.SetChainID(chainID),
 	)
 	bapps.SetApp(chainID, app)
@@ -179,7 +181,7 @@ func NewTestNetworkFixture() network.TestFixture {
 		panic(err)
 	}
 
-	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), appOpts)
+	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
@@ -189,13 +191,19 @@ func NewTestNetworkFixture() network.TestFixture {
 		if err != nil {
 			panic(err)
 		}
+		gasPricesStr := val.GetAppConfig().MinGasPrices
+		gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
+		if err != nil {
+			panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
+		}
 		return NewApp(
 			actionExecutor,
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
 			DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg),
+			gasPrices,
 			appOpts,
 			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
-			bam.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
+			bam.SetMinGasPrices(gasPricesStr),
 			bam.SetChainID(chainId),
 		)
 	}

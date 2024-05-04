@@ -21,13 +21,13 @@ import (
 // channel keeper, EVM Keeper and Fee Market Keeper.
 type HandlerOptions struct {
 	// Cosmos SDK HandlerOptions
-	AccountKeeper          sdkante.AccountKeeper
+	AccountKeeper          AccountKeeper
 	BankKeeper             authtypes.BankKeeper
 	ExtensionOptionChecker sdkante.ExtensionOptionChecker
 	FeegrantKeeper         sdkante.FeegrantKeeper
 	SignModeHandler        *txsigning.HandlerMap
 	SigGasConsumer         func(meter storetypes.GasMeter, sig signing.SignatureV2, params authtypes.Params) error
-	TxFeeChecker           sdkante.TxFeeChecker
+	TxFeeChecker           TxFeeChecker
 	CircuitKeeper          circuitante.CircuitBreaker
 
 	WasmxKeeper WasmxKeeperI
@@ -99,7 +99,7 @@ func newCosmosAnteHandler(options HandlerOptions) sdk.AnteHandler {
 		sdkante.NewTxTimeoutHeightDecorator(),
 		sdkante.NewValidateMemoDecorator(options.AccountKeeper),
 		sdkante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
-		sdkante.NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, options.TxFeeChecker),
+		NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, options.TxFeeChecker),
 		sdkante.NewSetPubKeyDecorator(options.AccountKeeper), // SetPubKeyDecorator must be called before all signature verification decorators
 		sdkante.NewValidateSigCountDecorator(options.AccountKeeper),
 		sdkante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),

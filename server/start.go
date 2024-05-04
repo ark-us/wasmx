@@ -26,6 +26,7 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	math "cosmossdk.io/math"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -34,6 +35,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	sdkserverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
@@ -41,6 +43,7 @@ import (
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	config "mythos/v1/server/config"
@@ -246,13 +249,28 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 
 	actionExecutor := networkkeeper.NewActionExecutor(bapps, svrCtx.Logger)
 
+	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
+	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
+	if err != nil {
+		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
+	}
+	minGasAmount := math.LegacyNewDec(0)
+	if len(gasPrices) > 0 {
+		minGasAmount = gasPrices[0].Amount
+	}
+
 	for _, chainId := range mcfg.ChainIdsInit {
-		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
+		minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
+		// !! we replace existing SetMinGasPrices
+		baseappOptions[1] = baseapp.SetMinGasPrices(minGasPrices.String())
+		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
+
 		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
+
 		app := mapp.NewApp(
 			actionExecutor,
 			svrCtx.Logger,
@@ -263,6 +281,7 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 			cast.ToString(appOpts.Get(flags.FlagHome)),
 			cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
 			encodingConfig,
+			minGasPrices,
 			appOpts,
 			baseappOptions...,
 		)
@@ -425,12 +444,27 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		skipUpgradeHeights[int64(h)] = true
 	}
 
+	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
+	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
+	if err != nil {
+		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
+	}
+	minGasAmount := math.LegacyNewDec(0)
+	if len(gasPrices) > 0 {
+		minGasAmount = gasPrices[0].Amount
+	}
+
 	for _, chainId := range mcfg.ChainIdsInit {
-		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
+
+		minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
+		// !! we replace existing SetMinGasPrices
+		baseappOptions[1] = baseapp.SetMinGasPrices(minGasPrices.String())
+		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
+
 		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 		app := mapp.NewApp(
 			actionExecutor,
@@ -442,6 +476,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 			cast.ToString(appOpts.Get(flags.FlagHome)),
 			cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
 			encodingConfig,
+			minGasPrices,
 			appOpts,
 			baseappOptions...,
 		)

@@ -307,6 +307,8 @@ type App struct {
 	valCodec  address.Codec
 	consCodec address.Codec
 	addrCodec address.Codec
+
+	minGasPrices sdk.DecCoins
 }
 
 // New returns a reference to an initialized blockchain app
@@ -320,6 +322,7 @@ func NewApp(
 	homePath string,
 	invCheckPeriod uint,
 	encodingConfig appencoding.EncodingConfig,
+	minGasPrices sdk.DecCoins,
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
@@ -422,6 +425,7 @@ func NewApp(
 		clessKeys:         clessKeys,
 		chainCfg:          chainCfg,
 		actionExecutor:    actionExecutor,
+		minGasPrices:      minGasPrices,
 	}
 
 	valCodec := mcodec.NewValBech32Codec(chainCfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -1380,6 +1384,10 @@ func (app *App) ValidatorAddressCodec() address.Codec {
 
 func (app *App) ConsensusAddressCodec() address.Codec {
 	return app.consCodec
+}
+
+func (app *App) MinGasPrices() sdk.DecCoins {
+	return app.minGasPrices
 }
 
 func Exit(s string) {

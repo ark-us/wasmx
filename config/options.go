@@ -46,7 +46,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 	defaultMempool := baseapp.SetMempool(mempool.NoOpMempool{})
 	return []func(*baseapp.BaseApp){
 		baseapp.SetPruning(pruningOpts),
-		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
+		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))), // don't change index, we use this
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
 		baseapp.SetHaltTime(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltTime))),
 		baseapp.SetMinRetainBlocks(cast.ToUint64(appOpts.Get(sdkserver.FlagMinRetainBlocks))),
@@ -58,7 +58,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(sdkserver.FlagDisableIAVLFastNode))),
 		defaultMempool,
 		baseapp.SetQueryGasLimit(cast.ToUint64(appOpts.Get(sdkserver.FlagQueryGasLimit))),
-		baseapp.SetChainID(chainID),
+		baseapp.SetChainID(chainID), // must be last option, we change this
 	}
 }
 

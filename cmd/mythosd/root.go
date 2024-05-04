@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 
 	"cosmossdk.io/log"
+	"cosmossdk.io/math"
 	confixcmd "cosmossdk.io/tools/confix/cmd"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -30,6 +31,7 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
@@ -103,7 +105,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
 		cast.ToString(tempOpts.Get(flags.FlagHome)),
-		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, appOpts,
+		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), encodingConfig, nil, appOpts,
 		// tempBaseappOptions...,
 		// baseapp.SetChainID(mcfg.MYTHOS_CHAIN_ID_TESTNET),
 	)
@@ -343,6 +345,22 @@ func (a appCreator) newApp(
 		skipUpgradeHeights[int64(h)] = true
 	}
 
+	chainId := mcfg.GetChainId(appOpts)
+	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
+	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
+	if err != nil {
+		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
+	}
+	minGasAmount := math.LegacyNewDec(0)
+	if len(gasPrices) > 0 {
+		minGasAmount = gasPrices[0].Amount
+	}
+	chainCfg, err := mcfg.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
+
 	return app.NewApp(
 		a.actionExecutor,
 		logger,
@@ -353,6 +371,7 @@ func (a appCreator) newApp(
 		cast.ToString(appOpts.Get(flags.FlagHome)),
 		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
 		a.encodingConfig,
+		minGasPrices,
 		appOpts,
 		baseappOptions...,
 	)
@@ -384,6 +403,22 @@ func (a appCreator) appExport(
 	viperAppOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	appOpts = viperAppOpts
 
+	chainId := mcfg.GetChainId(appOpts)
+	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
+	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
+	if err != nil {
+		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
+	}
+	minGasAmount := math.LegacyNewDec(0)
+	if len(gasPrices) > 0 {
+		minGasAmount = gasPrices[0].Amount
+	}
+	chainCfg, err := mcfg.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
+
 	app := app.NewApp(
 		a.actionExecutor,
 		logger,
@@ -394,6 +429,7 @@ func (a appCreator) appExport(
 		homePath,
 		uint(1),
 		a.encodingConfig,
+		minGasPrices,
 		appOpts,
 	)
 
