@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -17,6 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 	v1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
+
+	"mythos/v1/multichain"
 )
 
 // NewTxCmd returns the transaction commands for this module
@@ -24,7 +27,7 @@ import (
 // it contains a slice of legacy "proposal" child commands. These commands are respective
 // to the proposal type handlers that are implemented in other modules but are mounted
 // under the governance CLI (eg. parameter change proposals).
-func NewTxCmd() *cobra.Command {
+func NewTxCmd(ac address.Codec) *cobra.Command {
 	govTxCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Governance transactions subcommands",
@@ -34,19 +37,19 @@ func NewTxCmd() *cobra.Command {
 	}
 
 	govTxCmd.AddCommand(
-		NewCmdDeposit(),
-		NewCmdVote(),
-		NewCmdWeightedVote(),
-		NewCmdSubmitProposal(),
+		NewCmdDeposit(ac),
+		NewCmdVote(ac),
+		NewCmdWeightedVote(ac),
+		NewCmdSubmitProposal(ac),
 		cli.NewCmdDraftProposal(),
-		NewCmdCancelProposal(),
+		NewCmdCancelProposal(ac),
 	)
 
 	return govTxCmd
 }
 
 // NewCmdSubmitProposal implements submitting a proposal transaction command.
-func NewCmdSubmitProposal() *cobra.Command {
+func NewCmdSubmitProposal(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "submit-proposal [path/to/proposal.json]",
 		Short: "Submit a proposal along with some messages, metadata and deposit",
@@ -97,25 +100,27 @@ metadata example:
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			proposal, msgs, deposit, err := parseSubmitProposal(clientCtx.Codec, args[0])
 			if err != nil {
 				return err
 			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
-			from := clientCtx.GetFromAddress()
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-			fromstr, err := addrCodec.BytesToString(from)
+			msg, err := v1.NewMsgSubmitProposal(msgs, deposit, fromAddr.String(), proposal.Metadata, proposal.Title, proposal.Summary, proposal.Expedited)
+			if err != nil {
+				return fmt.Errorf("invalid message: %w", err)
+			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			msg, err := v1.NewMsgSubmitProposal(msgs, deposit, fromstr, proposal.Metadata, proposal.Title, proposal.Summary, proposal.Expedited)
-			if err != nil {
-				return fmt.Errorf("invalid message: %w", err)
-			}
-
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -125,7 +130,7 @@ metadata example:
 }
 
 // NewCmdCancelProposal implements submitting a cancel proposal transaction command.
-func NewCmdCancelProposal() *cobra.Command {
+func NewCmdCancelProposal(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "cancel-proposal [proposal-id]",
 		Short:   "Cancel governance proposal before the voting period ends. Must be signed by the proposal creator.",
@@ -136,23 +141,24 @@ func NewCmdCancelProposal() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			// validate that the proposal id is a uint
 			proposalID, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("proposal-id %s not a valid uint, please input a valid proposal-id", args[0])
 			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
-			// Get proposer address
-			from := clientCtx.GetFromAddress()
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-			fromstr, err := addrCodec.BytesToString(from)
+			msg := v1.NewMsgCancelProposal(proposalID, fromAddr.String())
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
 			if err != nil {
 				return err
 			}
-
-			msg := v1.NewMsgCancelProposal(proposalID, fromstr)
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -162,7 +168,7 @@ func NewCmdCancelProposal() *cobra.Command {
 
 // NewCmdSubmitLegacyProposal implements submitting a proposal transaction command.
 // Deprecated: please use NewCmdSubmitProposal instead.
-func NewCmdSubmitLegacyProposal() *cobra.Command {
+func NewCmdSubmitLegacyProposal(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "submit-legacy-proposal",
 		Short: "Submit a legacy proposal along with an initial deposit",
@@ -194,6 +200,10 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			proposal, err := parseSubmitLegacyProposal(cmd.Flags())
 			if err != nil {
@@ -209,13 +219,18 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 			if !ok {
 				return fmt.Errorf("failed to create proposal content: unknown proposal type %s", proposal.Type)
 			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			msg, err := v1beta1.NewMsgSubmitProposal(content, amount, clientCtx.GetFromAddress())
 			if err != nil {
 				return fmt.Errorf("invalid message: %w", err)
 			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -230,7 +245,7 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 }
 
 // NewCmdDeposit implements depositing tokens for an active proposal.
-func NewCmdDeposit() *cobra.Command {
+func NewCmdDeposit(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deposit [proposal-id] [deposit]",
 		Args:  cobra.ExactArgs(2),
@@ -250,6 +265,10 @@ $ %s tx gov deposit 1 10stake --from mykey
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			// validate that the proposal id is a uint
 			proposalID, err := strconv.ParseUint(args[0], 10, 64)
@@ -257,8 +276,7 @@ $ %s tx gov deposit 1 10stake --from mykey
 				return fmt.Errorf("proposal-id %s not a valid uint, please input a valid proposal-id", args[0])
 			}
 
-			// Get depositor address
-			from := clientCtx.GetFromAddress()
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			// Get amount of coins
 			amount, err := sdk.ParseCoinsNormalized(args[1])
@@ -266,9 +284,17 @@ $ %s tx gov deposit 1 10stake --from mykey
 				return err
 			}
 
-			msg := v1.NewMsgDeposit(from, proposalID, amount)
+			msg := &v1.MsgDeposit{
+				ProposalId: proposalID,
+				Depositor:  fromAddr.String(),
+				Amount:     amount,
+			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -278,7 +304,7 @@ $ %s tx gov deposit 1 10stake --from mykey
 }
 
 // NewCmdVote implements creating a new vote command.
-func NewCmdVote() *cobra.Command {
+func NewCmdVote(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vote [proposal-id] [option]",
 		Args:  cobra.ExactArgs(2),
@@ -298,8 +324,10 @@ $ %s tx gov vote 1 yes --from mykey
 			if err != nil {
 				return err
 			}
-			// Get voting address
-			from := clientCtx.GetFromAddress()
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			// validate that the proposal id is a uint
 			proposalID, err := strconv.ParseUint(args[0], 10, 64)
@@ -318,10 +346,21 @@ $ %s tx gov vote 1 yes --from mykey
 				return err
 			}
 
-			// Build vote message and run basic validation
-			msg := v1.NewMsgVote(from, proposalID, byteVoteOption, metadata)
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			// Build vote message and run basic validation
+			msg := &v1.MsgVote{
+				ProposalId: proposalID,
+				Voter:      fromAddr.String(),
+				Option:     byteVoteOption,
+				Metadata:   metadata,
+			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -332,7 +371,7 @@ $ %s tx gov vote 1 yes --from mykey
 }
 
 // NewCmdWeightedVote implements creating a new weighted vote command.
-func NewCmdWeightedVote() *cobra.Command {
+func NewCmdWeightedVote(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "weighted-vote [proposal-id] [weighted-options]",
 		Args:  cobra.ExactArgs(2),
@@ -352,9 +391,10 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 			if err != nil {
 				return err
 			}
-
-			// Get voter address
-			from := clientCtx.GetFromAddress()
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			// validate that the proposal id is a uint
 			proposalID, err := strconv.ParseUint(args[0], 10, 64)
@@ -373,9 +413,20 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 				return err
 			}
 
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+
 			// Build vote message and run basic validation
-			msg := v1.NewMsgVoteWeighted(from, proposalID, options, metadata)
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			msg := &v1.MsgVoteWeighted{
+				ProposalId: proposalID,
+				Voter:      fromAddr.String(),
+				Options:    options,
+				Metadata:   metadata,
+			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 

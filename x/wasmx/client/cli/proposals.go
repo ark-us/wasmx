@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	sdkaddress "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -14,12 +15,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
+	"mythos/v1/multichain"
 	"mythos/v1/x/wasmx/types"
 )
 
 // NewRegisterRoleProposalCmd returns a CLI command handler for registering a
 // role contract handler
-func NewRegisterRoleProposalCmd() *cobra.Command {
+func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "register-role [role] [role_label] [contract_address]",
 		Args:    cobra.ExactArgs(3),
@@ -29,6 +31,10 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -56,25 +62,26 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 			role := args[0]
 			label := args[1]
 			contractAddress := args[2]
-			from := clientCtx.GetFromAddress()
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+
 			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
-			fromstr, err := addrCodec.BytesToString(from)
-			if err != nil {
-				return err
-			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			content := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: role, Label: label, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromAddr.String(), "", title, description, false)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -96,7 +103,7 @@ func NewRegisterRoleProposalCmd() *cobra.Command {
 
 // NewDeregisterRoleProposalCmd returns a CLI command handler for registering a
 // deregistration of a webserver route smart contract handler
-func NewDeregisterRoleProposalCmd() *cobra.Command {
+func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deregister-role [contract_address]",
 		Args:    cobra.ExactArgs(1),
@@ -106,6 +113,10 @@ func NewDeregisterRoleProposalCmd() *cobra.Command {
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -131,26 +142,25 @@ func NewDeregisterRoleProposalCmd() *cobra.Command {
 			}
 
 			contractAddress := args[0]
-			from := clientCtx.GetFromAddress()
 
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
-			fromstr, err := addrCodec.BytesToString(from)
-			if err != nil {
-				return err
-			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			content := &types.MsgDeregisterRole{Authority: authority, Title: title, Description: description, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromAddr.String(), "", title, description, false)
+			if err != nil {
+				return err
+			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 

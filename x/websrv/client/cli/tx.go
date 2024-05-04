@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	sdkaddress "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -16,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
+	"mythos/v1/multichain"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	"mythos/v1/x/websrv/types"
 )
@@ -25,7 +27,7 @@ var (
 )
 
 // GetTxCmd returns the transaction commands for this module
-func GetTxCmd() *cobra.Command {
+func GetTxCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      fmt.Sprintf("%s transactions subcommands", types.ModuleName),
@@ -36,11 +38,11 @@ func GetTxCmd() *cobra.Command {
 
 	// this line is used by starport scaffolding # 1
 	cmd.AddCommand(
-		NewRegisterRouteProposalCmd(),
-		NewDeregisterRouteProposalCmd(),
-		NewRegisterOauthClientCmd(),
-		NewDeregisterOauthClientCmd(),
-		NewEditOauthClientCmd(),
+		NewRegisterRouteProposalCmd(ac),
+		NewDeregisterRouteProposalCmd(ac),
+		NewRegisterOauthClientCmd(ac),
+		NewDeregisterOauthClientCmd(ac),
+		NewEditOauthClientCmd(ac),
 	)
 
 	return cmd
@@ -48,7 +50,7 @@ func GetTxCmd() *cobra.Command {
 
 // NewRegisterRouteProposalCmd returns a CLI command handler for registering a
 // webserver route smart contract handler
-func NewRegisterRouteProposalCmd() *cobra.Command {
+func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "register-route [url_path] [contract_address]",
 		Args:    cobra.ExactArgs(2),
@@ -58,6 +60,11 @@ func NewRegisterRouteProposalCmd() *cobra.Command {
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -84,25 +91,26 @@ func NewRegisterRouteProposalCmd() *cobra.Command {
 
 			path := args[0]
 			contractAddress := args[1]
-			from := clientCtx.GetFromAddress()
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+
 			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
-			if err != nil {
-				return err
-			}
-			fromstr, err := addrCodec.BytesToString(from)
 			if err != nil {
 				return err
 			}
 
 			content := &types.MsgRegisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromAddr.String(), "", title, description, false)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -123,7 +131,7 @@ func NewRegisterRouteProposalCmd() *cobra.Command {
 
 // NewDeregisterRouteProposalCmd returns a CLI command handler for registering a
 // deregistration of a webserver route smart contract handler
-func NewDeregisterRouteProposalCmd() *cobra.Command {
+func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deregister-route [url_path] [contract_address]",
 		Args:    cobra.ExactArgs(2),
@@ -133,6 +141,11 @@ func NewDeregisterRouteProposalCmd() *cobra.Command {
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -159,26 +172,25 @@ func NewDeregisterRouteProposalCmd() *cobra.Command {
 
 			path := args[0]
 			contractAddress := args[1]
-			from := clientCtx.GetFromAddress()
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
 			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
-			if err != nil {
-				return err
-			}
-			fromstr, err := addrCodec.BytesToString(from)
 			if err != nil {
 				return err
 			}
 
 			content := &types.MsgDeregisterRoute{Authority: authority, Title: title, Description: description, Path: path, ContractAddress: contractAddress}
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromstr, "", title, description, false)
+			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromAddr.String(), "", title, description, false)
+			if err != nil {
+				return err
+			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -199,7 +211,7 @@ func NewDeregisterRouteProposalCmd() *cobra.Command {
 
 // NewRegisterOauthClientCmd returns a CLI command handler for registering a
 // oauth client
-func NewRegisterOauthClientCmd() *cobra.Command {
+func NewRegisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "register-oauth-client [domain-url]",
 		Args:    cobra.ExactArgs(1),
@@ -212,26 +224,29 @@ func NewRegisterOauthClientCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			domain := args[0]
-			from := clientCtx.GetFromAddress()
-
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-			fromstr, err := addrCodec.BytesToString(from)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
 
+			domain := args[0]
+
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+
 			msg := &types.MsgRegisterOAuthClient{
-				Owner:  fromstr,
+				Owner:  fromAddr.String(),
 				Domain: domain,
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)
@@ -240,7 +255,7 @@ func NewRegisterOauthClientCmd() *cobra.Command {
 
 // NewEditOauthClientCmd returns a CLI command handler for editing a
 // oauth client
-func NewEditOauthClientCmd() *cobra.Command {
+func NewEditOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "edit-oauth-client [client-id] [domain-url]",
 		Args:    cobra.ExactArgs(2),
@@ -253,22 +268,20 @@ func NewEditOauthClientCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			clientId, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
 				return err
 			}
 			domain := args[1]
-			from := clientCtx.GetFromAddress()
-
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-			fromstr, err := addrCodec.BytesToString(from)
-			if err != nil {
-				return err
-			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			msg := &types.MsgEditOAuthClient{
-				Owner:    fromstr,
+				Owner:    fromAddr.String(),
 				ClientId: uint64(clientId),
 				Domain:   domain,
 			}
@@ -276,8 +289,12 @@ func NewEditOauthClientCmd() *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)
@@ -286,7 +303,7 @@ func NewEditOauthClientCmd() *cobra.Command {
 
 // NewDeregisterOauthClientCmd returns a CLI command handler for deregistering a
 // oauth client
-func NewDeregisterOauthClientCmd() *cobra.Command {
+func NewDeregisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deregister-oauth-client [client-id]",
 		Args:    cobra.ExactArgs(1),
@@ -299,21 +316,19 @@ func NewDeregisterOauthClientCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			clientId, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
 				return err
 			}
-			from := clientCtx.GetFromAddress()
-
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-			fromstr, err := addrCodec.BytesToString(from)
-			if err != nil {
-				return err
-			}
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
 			msg := &types.MsgDeregisterOAuthClient{
-				Owner:    fromstr,
+				Owner:    fromAddr.String(),
 				ClientId: uint64(clientId),
 			}
 
@@ -321,7 +336,12 @@ func NewDeregisterOauthClientCmd() *cobra.Command {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			if err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)

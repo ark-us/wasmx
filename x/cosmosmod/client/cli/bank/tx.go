@@ -11,17 +11,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 	cli "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	networktypes "mythos/v1/x/network/types"
+	multichain "mythos/v1/multichain"
 )
 
 // NewTxCmd returns a root CLI command handler for all x/bank transaction commands.
@@ -54,28 +49,16 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.Flags().Set(flags.FlagFrom, args[0])
+
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
-			chainId := clientCtx.ChainID
-			mcfg.SetGlobalChainConfig(chainId)
-			config, err := mcfg.GetChainConfig(chainId)
-			addrCodec := mcodec.MustUnwrapAccBech32Codec(ac)
 
-			customEncoding := appencoding.MakeEncodingConfig(config)
-
-			customCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
-			customAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
-
-			clientCtx = clientCtx.WithAccountRetriever(cosmosmodtypes.NewAccountRetriever(chainId, customAddrCodec))
-			// TODO clientCtx.WithCodec(customCdc) ??
-
-			clientCtx = clientCtx.
-				WithCodec(customEncoding.Marshaler).
-				WithInterfaceRegistry(customEncoding.InterfaceRegistry).
-				WithTxConfig(customEncoding.TxConfig).
-				WithLegacyAmino(customEncoding.Amino)
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
 			toAddr_, err := addrCodec.StringToAccAddressPrefixed(args[1])
 			if err != nil {
@@ -83,7 +66,6 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 			}
 			toAddr := customAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
 			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
-
 
 			coins, err := sdk.ParseCoinsNormalized(args[2])
 			if err != nil {
@@ -100,17 +82,10 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				Amount:      coins,
 			}
 
-			msgAny, err := codectypes.NewAnyWithValue(msg)
+			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
 			if err != nil {
 				return err
 			}
-			// TODO only if diff chain than context chainId
-			msgMultiChain := &networktypes.MsgMultiChainWrap{
-				MultiChainId: chainId,
-				Sender:       fromAddr.String(),
-				Data:         msgAny,
-			}
-
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
@@ -141,6 +116,11 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				return err
 			}
 
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
+
 			coins, err := sdk.ParseCoinsNormalized(args[len(args)-1])
 			if err != nil {
 				return err
@@ -164,12 +144,12 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 
 			var output []types.Output
 			for _, arg := range args[1 : len(args)-1] {
-				toAddr, err := ac.StringToBytes(arg)
+				toAddr, err := addrCodec.StringToAccAddressPrefixed(arg)
 				if err != nil {
 					return err
 				}
 
-				output = append(output, types.NewOutput(toAddr, sendCoins))
+				output = append(output, types.Output{Address: toAddr.String(), Coins: sendCoins})
 			}
 
 			// amount to be send from the from address
@@ -182,7 +162,15 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				amount = coins.MulInt(totalAddrs)
 			}
 
-			msg := types.NewMsgMultiSend(types.NewInput(clientCtx.FromAddress, amount), output)
+			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+
+			msg := &types.MsgMultiSend{
+				Inputs: []types.Input{{
+					Address: fromAddr.String(),
+					Coins:   amount,
+				}},
+				Outputs: output,
+			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},

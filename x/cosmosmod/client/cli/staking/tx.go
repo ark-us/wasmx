@@ -15,12 +15,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	cli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
+
+	mcodec "mythos/v1/codec"
+	mcfg "mythos/v1/config"
+	"mythos/v1/multichain"
 )
 
 // default values
@@ -39,8 +44,8 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 	}
 
 	stakingTxCmd.AddCommand(
-		NewCreateValidatorCmd(valAddrCodec),
-		NewEditValidatorCmd(valAddrCodec),
+		NewCreateValidatorCmd(valAddrCodec, ac),
+		NewEditValidatorCmd(valAddrCodec, ac),
 		NewDelegateCmd(valAddrCodec, ac),
 		NewRedelegateCmd(valAddrCodec, ac),
 		NewUnbondCmd(valAddrCodec, ac),
@@ -51,7 +56,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 }
 
 // NewCreateValidatorCmd returns a CLI command handler for creating a MsgCreateValidator transaction.
-func NewCreateValidatorCmd(ac address.Codec) *cobra.Command {
+func NewCreateValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-validator [path/to/validator.json]",
 		Short: "create new validator initialized with a self-delegation to it",
@@ -84,6 +89,15 @@ where we can get the pubkey using "%s tendermint show-validator"
 			if err != nil {
 				return err
 			}
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
+
+			chainId := clientCtx.ChainID
+			config, _ := mcfg.GetChainConfig(chainId)
+			customValCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
 			txf, err := tx.NewFactoryCLI(clientCtx, cmd.Flags())
 			if err != nil {
@@ -95,7 +109,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 				return err
 			}
 
-			txf, msg, err := newBuildCreateValidatorMsg(clientCtx, txf, cmd.Flags(), validator, ac)
+			txf, msg, err := newBuildCreateValidatorMsg(clientCtx, customValCodec, customAddrCodec, txf, cmd.Flags(), validator, valAddrCodec)
 			if err != nil {
 				return err
 			}
@@ -114,7 +128,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 }
 
 // NewEditValidatorCmd returns a CLI command handler for creating a MsgEditValidator transaction.
-func NewEditValidatorCmd(ac address.Codec) *cobra.Command {
+func NewEditValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit-validator",
 		Short: "edit an existing validator account",
@@ -155,7 +169,7 @@ func NewEditValidatorCmd(ac address.Codec) *cobra.Command {
 				newMinSelfDelegation = &msb
 			}
 
-			valAddr, err := ac.BytesToString(clientCtx.GetFromAddress())
+			valAddr, err := valAddrCodec.BytesToString(clientCtx.GetFromAddress())
 			if err != nil {
 				return err
 			}
@@ -374,8 +388,8 @@ $ %s tx staking cancel-unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake
 	return cmd
 }
 
-func newBuildCreateValidatorMsg(clientCtx client.Context, txf tx.Factory, fs *flag.FlagSet, val validator, valAc address.Codec) (tx.Factory, *types.MsgCreateValidator, error) {
-	valAddr := clientCtx.GetFromAddress()
+func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.ValBech32Codec, customAddrCodec mcodec.AccBech32Codec, txf tx.Factory, fs *flag.FlagSet, val validator, valAc address.Codec) (tx.Factory, *types.MsgCreateValidator, error) {
+	valAddr := customValCodec.BytesToValAddressPrefixed(clientCtx.GetFromAddress())
 
 	description := types.NewDescription(
 		val.Moniker,
@@ -385,16 +399,22 @@ func newBuildCreateValidatorMsg(clientCtx client.Context, txf tx.Factory, fs *fl
 		val.Details,
 	)
 
-	valStr, err := valAc.BytesToString(sdk.ValAddress(valAddr))
-	if err != nil {
-		return txf, nil, err
+	var pkAny *codectypes.Any
+	if val.PubKey != nil {
+		var err error
+		if pkAny, err = codectypes.NewAnyWithValue(val.PubKey); err != nil {
+			return txf, nil, err
+		}
 	}
-	msg, err := types.NewMsgCreateValidator(
-		valStr, val.PubKey, val.Amount, description, val.CommissionRates, val.MinSelfDelegation,
-	)
-	if err != nil {
-		return txf, nil, err
+	msg := &types.MsgCreateValidator{
+		Description:       description,
+		ValidatorAddress:  valAddr.String(),
+		Pubkey:            pkAny,
+		Value:             val.Amount,
+		Commission:        val.CommissionRates,
+		MinSelfDelegation: val.MinSelfDelegation,
 	}
+
 	if err := msg.Validate(valAc); err != nil {
 		return txf, nil, err
 	}

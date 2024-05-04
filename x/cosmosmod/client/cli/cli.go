@@ -24,7 +24,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 	txCmd.AddCommand(
 		bank.NewTxCmd(ac),
 		staking.NewTxCmd(valAddrCodec, ac),
-		gov.NewTxCmd(),
+		gov.NewTxCmd(ac),
 	)
 
 	return txCmd
