@@ -10,11 +10,14 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 
+	"cosmossdk.io/core/address"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+
+	"mythos/v1/multichain"
 	"mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
 )
@@ -23,7 +26,7 @@ var (
 	FlagFrom = "from"
 )
 
-func GetQueryCmd(queryRoute string) *cobra.Command {
+func GetQueryCmd(queryRoute string, ac address.Codec) *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      fmt.Sprintf("Querying commands for the %s module", types.ModuleName),
@@ -33,16 +36,16 @@ func GetQueryCmd(queryRoute string) *cobra.Command {
 		SilenceUsage:               true,
 	}
 	queryCmd.AddCommand(
-		GetCmdGetContractCall(),
-		GetCmdListCode(),
-		GetCmdListContractByCode(),
-		GetCmdQueryCode(),
-		GetCmdQueryCodeInfo(),
-		GetCmdGetContractInfo(),
-		GetCmdGetContractState(),
+		GetCmdGetContractCall(ac),
+		GetCmdListCode(ac),
+		GetCmdListContractByCode(ac),
+		GetCmdQueryCode(ac),
+		GetCmdQueryCodeInfo(ac),
+		GetCmdGetContractInfo(ac),
+		GetCmdGetContractState(ac),
 		GetCmdLibVersion(),
-		GetCmdQueryParams(),
-		GetCmdBuildAddress(),
+		GetCmdQueryParams(ac),
+		GetCmdBuildAddress(ac),
 	)
 	return queryCmd
 }
@@ -66,7 +69,7 @@ func GetCmdLibVersion() *cobra.Command {
 }
 
 // GetCmdBuildAddress build a contract address
-func GetCmdBuildAddress() *cobra.Command {
+func GetCmdBuildAddress(ac address.Codec) *cobra.Command {
 	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use:     "build-address [code-hash] [creator-address] [salt-hex-encoded] [json_encoded_init_args (required when set as fixed)]",
@@ -78,15 +81,19 @@ func GetCmdBuildAddress() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 			codeHash, err := hex.DecodeString(args[0])
 			if err != nil {
 				return fmt.Errorf("code-hash: %s", err)
 			}
-			creator, err := addrCodec.StringToBytes(args[1])
+			creator_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[1])
 			if err != nil {
 				return fmt.Errorf("creator: %s", err)
 			}
+			creator := customAddrCodec.BytesToAccAddressPrefixed(creator_.Bytes())
 			salt, err := hex.DecodeString(args[2])
 			switch {
 			case err != nil:
@@ -95,9 +102,9 @@ func GetCmdBuildAddress() *cobra.Command {
 				return errors.New("empty salt")
 			}
 
-			addrstr, _ := addrCodec.BytesToString(keeper.EwasmBuildContractAddressPredictable(creator, salt, codeHash))
+			addr := customAddrCodec.BytesToAccAddressPrefixed(keeper.EwasmBuildContractAddressPredictable(creator.Bytes(), salt, codeHash))
 
-			cmd.Println(addrstr)
+			cmd.Println(addr.String())
 			return nil
 		},
 		SilenceUsage: true,
@@ -107,7 +114,7 @@ func GetCmdBuildAddress() *cobra.Command {
 }
 
 // GetCmdListCode lists all wasm code uploaded
-func GetCmdListCode() *cobra.Command {
+func GetCmdListCode(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list-code",
 		Short:   "List all wasm bytecode on the chain",
@@ -119,7 +126,10 @@ func GetCmdListCode() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 			pageReq, err := client.ReadPageRequest(withPageKeyDecoded(cmd.Flags()))
 			if err != nil {
 				return err
@@ -144,7 +154,7 @@ func GetCmdListCode() *cobra.Command {
 }
 
 // GetCmdListContractByCode lists all wasm code uploaded for given code id
-func GetCmdListContractByCode() *cobra.Command {
+func GetCmdListContractByCode(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list-contract-by-code [code_id]",
 		Short:   "List wasm all bytecode on the chain for given code id",
@@ -153,6 +163,10 @@ func GetCmdListContractByCode() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -190,7 +204,7 @@ func GetCmdListContractByCode() *cobra.Command {
 }
 
 // GetCmdQueryCode returns the bytecode for a given contract
-func GetCmdQueryCode() *cobra.Command {
+func GetCmdQueryCode(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "code [code_id] [output filename]",
 		Short:   "Downloads wasm bytecode for given code id",
@@ -199,6 +213,10 @@ func GetCmdQueryCode() *cobra.Command {
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -232,7 +250,7 @@ func GetCmdQueryCode() *cobra.Command {
 }
 
 // GetCmdQueryCodeInfo returns the code info for a given code id
-func GetCmdQueryCodeInfo() *cobra.Command {
+func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "code-info [code_id]",
 		Short: "Prints out metadata of a code id",
@@ -240,6 +258,10 @@ func GetCmdQueryCodeInfo() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -272,7 +294,7 @@ func GetCmdQueryCodeInfo() *cobra.Command {
 }
 
 // GetCmdGetContractInfo gets details about a given contract
-func GetCmdGetContractInfo() *cobra.Command {
+func GetCmdGetContractInfo(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "contract [bech32_address]",
 		Short:   "Prints out metadata of a contract given its address",
@@ -284,9 +306,12 @@ func GetCmdGetContractInfo() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			if err != nil {
+				return err
+			}
 
-			_, err = addrCodec.StringToBytes(args[0])
+			_, err = customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
 			if err != nil {
 				return err
 			}
@@ -309,7 +334,7 @@ func GetCmdGetContractInfo() *cobra.Command {
 }
 
 // GetCmdGetContractState dumps full internal state of a given contract
-func GetCmdGetContractState() *cobra.Command {
+func GetCmdGetContractState(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "contract-state",
 		Short:                      "Querying commands for the wasm module",
@@ -320,13 +345,13 @@ func GetCmdGetContractState() *cobra.Command {
 		SilenceUsage:               true,
 	}
 	cmd.AddCommand(
-		GetCmdGetContractStateAll(),
-		GetCmdGetContractStateRaw(),
+		GetCmdGetContractStateAll(ac),
+		GetCmdGetContractStateRaw(ac),
 	)
 	return cmd
 }
 
-func GetCmdGetContractStateAll() *cobra.Command {
+func GetCmdGetContractStateAll(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "all [bech32_address]",
 		Short: "Prints out all internal state of a contract given its address",
@@ -337,12 +362,16 @@ func GetCmdGetContractStateAll() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-
-			_, err = addrCodec.StringToBytes(args[0])
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
+
+			contractAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			if err != nil {
+				return err
+			}
+			contractAddr := customAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
 
 			pageReq, err := client.ReadPageRequest(withPageKeyDecoded(cmd.Flags()))
 			if err != nil {
@@ -352,7 +381,7 @@ func GetCmdGetContractStateAll() *cobra.Command {
 			res, err := queryClient.AllContractState(
 				context.Background(),
 				&types.QueryAllContractStateRequest{
-					Address:    args[0],
+					Address:    contractAddr.String(),
 					Pagination: pageReq,
 				},
 			)
@@ -368,7 +397,7 @@ func GetCmdGetContractStateAll() *cobra.Command {
 	return cmd
 }
 
-func GetCmdGetContractStateRaw() *cobra.Command {
+func GetCmdGetContractStateRaw(ac address.Codec) *cobra.Command {
 	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use:   "raw [bech32_address] [key]",
@@ -380,12 +409,16 @@ func GetCmdGetContractStateRaw() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-
-			_, err = addrCodec.StringToBytes(args[0])
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
+
+			contractAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			if err != nil {
+				return err
+			}
+			contractAddr := customAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
 			queryData, err := decoder.DecodeString(args[1])
 			if err != nil {
 				return err
@@ -395,7 +428,7 @@ func GetCmdGetContractStateRaw() *cobra.Command {
 			res, err := queryClient.RawContractState(
 				context.Background(),
 				&types.QueryRawContractStateRequest{
-					Address:   args[0],
+					Address:   contractAddr.String(),
 					QueryData: queryData,
 				},
 			)
@@ -411,7 +444,7 @@ func GetCmdGetContractStateRaw() *cobra.Command {
 	return cmd
 }
 
-func GetCmdGetContractCall() *cobra.Command {
+func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 	decoder := NewArgDecoder(AsciiDecodeString)
 	cmd := &cobra.Command{
 		Use:   "call [bech32_address] [query]",
@@ -423,12 +456,16 @@ func GetCmdGetContractCall() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-
-			_, err = addrCodec.StringToBytes(args[0])
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
+
+			contractAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			if err != nil {
+				return err
+			}
+			contractAddr := customAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
 			if args[1] == "" {
 				return errors.New("query data must not be empty")
 			}
@@ -444,20 +481,20 @@ func GetCmdGetContractCall() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("wrap query data %s", err)
 			}
-			sender, err := clientCtx.InterfaceRegistry.SigningContext().AddressCodec().BytesToString(clientCtx.GetFromAddress())
+			sender := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 			if err != nil {
 				return fmt.Errorf("sender to string: %s", err)
 			}
-			if sender == "" {
-				sender = args[0]
+			if len(sender.Bytes()) == 0 {
+				sender = contractAddr
 			}
 
 			queryClient := types.NewQueryClient(clientCtx)
 			res, err := queryClient.SmartContractCall(
 				context.Background(),
 				&types.QuerySmartContractCallRequest{
-					Sender:    sender,
-					Address:   args[0],
+					Sender:    sender.String(),
+					Address:   contractAddr.String(),
 					QueryData: msgbz,
 				},
 			)
@@ -540,13 +577,17 @@ func withPageKeyDecoded(flagSet *flag.FlagSet) *flag.FlagSet {
 
 // GetCmdQueryParams implements a command to return the current wasm
 // parameters.
-func GetCmdQueryParams() *cobra.Command {
+func GetCmdQueryParams(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "params",
 		Short: "Query the current wasm parameters",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}

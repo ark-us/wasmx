@@ -55,12 +55,12 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				return err
 			}
 
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
 
-			toAddr_, err := addrCodec.StringToAccAddressPrefixed(args[1])
+			toAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[1])
 			if err != nil {
 				return err
 			}
@@ -116,7 +116,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				return err
 			}
 
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
 			if err != nil {
 				return err
 			}
@@ -144,10 +144,11 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 
 			var output []types.Output
 			for _, arg := range args[1 : len(args)-1] {
-				toAddr, err := addrCodec.StringToAccAddressPrefixed(arg)
+				toAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(arg)
 				if err != nil {
 					return err
 				}
+				toAddr := customAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
 
 				output = append(output, types.Output{Address: toAddr.String(), Coins: sendCoins})
 			}

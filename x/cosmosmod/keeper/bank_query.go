@@ -26,9 +26,12 @@ func NewQuerierBank(keeper *KeeperBank) QuerierBank {
 }
 
 func (k QuerierBank) Balance(goCtx context.Context, req *banktypes.QueryBalanceRequest) (*banktypes.QueryBalanceResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Keeper.Logger(ctx).Error("QuerierBank.Balance not implemented")
-	return &banktypes.QueryBalanceResponse{}, nil
+	addr, err := k.Keeper.AccBech32Codec().StringToAccAddressPrefixed(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	amount := k.Keeper.GetBalancePrefixed(goCtx, addr, req.Denom)
+	return &banktypes.QueryBalanceResponse{Balance: &amount}, nil
 }
 
 func (k QuerierBank) AllBalances(goCtx context.Context, req *banktypes.QueryAllBalancesRequest) (*banktypes.QueryAllBalancesResponse, error) {

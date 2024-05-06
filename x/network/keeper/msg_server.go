@@ -107,6 +107,8 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 		return nil, err
 	}
 
+	// TODO route message &check owner is same as msg sender property ??
+
 	// TODO handle transaction verification!!!! here or by codec ??
 	// router := mcodec.MsgRouter{Router: app.MsgServiceRouter()}
 	_, res, err := app.GetNetworkKeeper().wasmxKeeper.ExecuteCosmosMsg(ctx, sdkmsg, owner)

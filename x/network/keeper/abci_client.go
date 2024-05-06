@@ -72,12 +72,13 @@ func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error)
 	return &rpctypes.ResultABCIInfo{Response: *resInfo}, nil
 }
 
-func (c *ABCIClient) ABCIQuery(ctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error) {
-	return c.ABCIQueryWithOptions(ctx, path, data, rpcclient.DefaultABCIQueryOptions)
+func (c *ABCIClient) ABCIQuery(goctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error) {
+	return c.ABCIQueryWithOptions(goctx, path, data, rpcclient.DefaultABCIQueryOptions)
 }
 
-func (c *ABCIClient) ABCIQueryWithOptions(ctx context.Context, path string, data bytes.HexBytes, opts rpcclient.ABCIQueryOptions) (*rpctypes.ResultABCIQuery, error) {
-	c.logger.Debug("ABCIClient.ABCIQueryWithOptions", "path", path, "height", opts.Height)
+func (c *ABCIClient) ABCIQueryWithOptions(goctx context.Context, path string, data bytes.HexBytes, opts rpcclient.ABCIQueryOptions) (*rpctypes.ResultABCIQuery, error) {
+	c.logger.Debug("ABCIClient.ABCIQueryWithOptions", "path", path, "height", opts.Height, "data", data.String())
+
 	// TODO prove
 	req := &abci.RequestQuery{
 		Data:   data,
@@ -102,7 +103,7 @@ func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpct
 	return nil, fmt.Errorf("ABCIClient.BroadcastTxCommit not implemented")
 }
 
-func (c *ABCIClient) BroadcastTxAsync(_ context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
+func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
 	c.logger.Debug("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()))
 
 	bapp := c.bapp

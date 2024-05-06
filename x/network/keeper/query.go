@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdkerr "cosmossdk.io/errors"
 	"google.golang.org/grpc/codes"
@@ -39,7 +40,6 @@ func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiCha
 	if resp != nil && resp.Code != 0 {
 		return nil, sdkerr.ABCIError(resp.Codespace, resp.Code, resp.Log)
 	}
-
 	res := resp.Value
 
 	return &types.QueryMultiChainResponse{

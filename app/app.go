@@ -563,7 +563,7 @@ func NewApp(
 	app.WasmxKeeper.SetAccountKeeper(app.AccountKeeper)
 	app.WasmxKeeper.SetBankKeeper(app.BankKeeper)
 	app.WasmxKeeper.SetContractHandlerMap()
-	wasmxModule := wasmxmodule.NewAppModule(appCodec, app.WasmxKeeper)
+	wasmxModule := wasmxmodule.NewAppModule(appCodec, appCodec, app.WasmxKeeper)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(
 		runtime.NewKVStoreService(keys[authzStoreKey]),
@@ -758,7 +758,7 @@ func NewApp(
 		govAuthorityAddr,
 		addrCodec,
 	)
-	websrvModule := websrvmodule.NewAppModule(appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
+	websrvModule := websrvmodule.NewAppModule(appCodec, appCodec, app.WebsrvKeeper, app.AccountKeeper, app.BankKeeper)
 
 	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 

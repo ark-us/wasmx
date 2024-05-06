@@ -40,6 +40,7 @@ func GetQueryCmd(ac address.Codec) *cobra.Command {
 	}
 
 	txCmd.AddCommand(
+		bank.GetQueryCmd(ac),
 		gov.GetCustomQueryCmd(ac),
 	)
 

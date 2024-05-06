@@ -75,6 +75,23 @@ func (bc Bech32Codec) BytesToString(bz []byte) (string, error) {
 	return text, nil
 }
 
+func (bc Bech32Codec) StringToAddressPrefixedUnsafe(text string) (AddressPrefixed, error) {
+	if len(strings.TrimSpace(text)) == 0 {
+		return nil, errors.New("empty address string is not allowed")
+	}
+
+	hrp, bz, err := bech32.DecodeAndConvert(text)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := sdk.VerifyAddressFormat(bz); err != nil {
+		return nil, err
+	}
+
+	return bc.addressConstructor(bz, hrp), nil
+}
+
 // StringToBytes encodes text to bytes
 func (bc Bech32Codec) StringToAddressPrefixed(text string) (AddressPrefixed, error) {
 	bz, err := bc.StringToBytes(text)
