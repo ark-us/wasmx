@@ -84,6 +84,7 @@ func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prov
 	// tmpctx := app.GetContextForCheckTx(make([]byte, 0))
 
 	// TODO fixme!!!
+	// take the header from the block storage contract for that particular height
 	header := cmtproto.Header{
 		ChainID:            app.ChainID(),
 		Height:             height,
@@ -131,11 +132,7 @@ func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prov
 	return sdkCtx, commitCacheCtx, cacheMS, nil
 }
 
-func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
-	mythosapp, ok := bapp.(MythosApp)
-	if !ok {
-		return fmt.Errorf("commitCtx: failed to get MythosApp from server Application")
-	}
+func commitCtx(mythosapp MythosApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
 	commitCacheCtx()
 
 	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.MetaConsensusStoreKey))
@@ -155,15 +152,15 @@ func commitCtx(bapp types.BaseApp, sdkCtx sdk.Context, commitCacheCtx func(), ct
 }
 
 type ActionExecutor struct {
-	mtx       sync.Mutex
-	multiapps *cfg.MultiChainApp
-	logger    log.Logger
+	mtx    sync.Mutex
+	app    MythosApp
+	logger log.Logger
 }
 
-func NewActionExecutor(multiapps *cfg.MultiChainApp, logger log.Logger) *ActionExecutor {
+func NewActionExecutor(app MythosApp, logger log.Logger) *ActionExecutor {
 	return &ActionExecutor{
-		multiapps: multiapps,
-		logger:    logger,
+		app:    app,
+		logger: logger,
 	}
 }
 
@@ -171,11 +168,63 @@ func (r *ActionExecutor) GetLogger() log.Logger {
 	return r.logger
 }
 
-func (r *ActionExecutor) GetMultiApp() *cfg.MultiChainApp {
+func (r *ActionExecutor) GetApp() MythosApp {
+	return r.app
+}
+
+func (r *ActionExecutor) GetBaseApp() types.BaseApp {
+	return r.app.GetBaseApp()
+}
+
+func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(r.app.GetBaseApp(), r.logger, height, false)
+	if err != nil {
+		return nil, err
+	}
+	if goCtx == nil {
+		goCtx = context.Background()
+	}
+	// goCtx, cancelFn := context.WithCancel(goCtx)
+	// defer cancelFn()
+	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+	res, err := cb(goCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	// we only commit if callback was successful
+	err = commitCtx(r.app, sdkCtx, commitCacheCtx, ctxcachems)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+type ActionExecutorMultiChain struct {
+	mtx       sync.Mutex
+	multiapps *cfg.MultiChainApp
+	logger    log.Logger
+}
+
+func NewActionExecutorMultiChain(multiapps *cfg.MultiChainApp, logger log.Logger) *ActionExecutorMultiChain {
+	return &ActionExecutorMultiChain{
+		multiapps: multiapps,
+		logger:    logger,
+	}
+}
+
+func (r *ActionExecutorMultiChain) GetLogger() log.Logger {
+	return r.logger
+}
+
+func (r *ActionExecutorMultiChain) GetMultiApp() *cfg.MultiChainApp {
 	return r.multiapps
 }
 
-func (r *ActionExecutor) GetMythosApp(chainId string) (MythosApp, error) {
+func (r *ActionExecutorMultiChain) GetMythosApp(chainId string) (MythosApp, error) {
 	iapp, err := r.multiapps.GetApp(chainId)
 	if err != nil {
 		return nil, err
@@ -187,7 +236,7 @@ func (r *ActionExecutor) GetMythosApp(chainId string) (MythosApp, error) {
 	return app, nil
 }
 
-func (r *ActionExecutor) GetApp(chainId string) (types.BaseApp, error) {
+func (r *ActionExecutorMultiChain) GetApp(chainId string) (types.BaseApp, error) {
 	app, err := r.GetMythosApp(chainId)
 	if err != nil {
 		return nil, err
@@ -199,10 +248,9 @@ func (r *ActionExecutor) GetApp(chainId string) (types.BaseApp, error) {
 	return bapp, nil
 }
 
-func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error), chainId string) (any, error) {
+func (r *ActionExecutorMultiChain) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error), chainId string) (any, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
-
 
 	bapp, err := r.GetApp(chainId)
 	if err != nil {
@@ -227,8 +275,13 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 		return nil, err
 	}
 
+	mythosapp, ok := bapp.(MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("commitCtx: failed to get MythosApp from server Application")
+	}
+
 	// we only commit if callback was successful
-	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	err = commitCtx(mythosapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
 		return nil, err
 	}

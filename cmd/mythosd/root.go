@@ -54,7 +54,6 @@ import (
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 
@@ -81,7 +80,6 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		WithAccountRetriever(cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec}).
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("")
-	fmt.Println("---init-NewRootCmd--")
 	logger := log.NewNopLogger()
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
@@ -94,13 +92,9 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	// appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
 	// appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
-
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
 	// tempBaseappOptions := DefaultBaseappOptions(appOpts)
-	fmt.Println("---tempApp--")
 	tempApp := app.NewApp(
-		actionExecutor,
 		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
@@ -109,7 +103,6 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		// tempBaseappOptions...,
 		// baseapp.SetChainID(mcfg.MYTHOS_CHAIN_ID_TESTNET),
 	)
-	fmt.Println("---tempApp DONE--")
 	rootCmd := &cobra.Command{
 		Use:   mcfg.Name + "d",
 		Short: "Start mythos node",
@@ -160,12 +153,9 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	autoCliOpts.Keyring, _ = keyring.NewAutoCLIKeyring(initClientCtx.Keyring)
 	autoCliOpts.ClientCtx = initClientCtx
 
-	fmt.Println("---NewRootCmd pre EnhanceRootCommand--")
-
 	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
 		panic(err)
 	}
-	fmt.Println("---NewRootCmd post EnhanceRootCommand--")
 
 	overwriteFlagDefaults(rootCmd, map[string]string{
 		flags.FlagChainID:        strings.ReplaceAll(mcfg.Name, "-", ""),
@@ -192,13 +182,8 @@ func initRootCmd(
 ) {
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
-	// TODO fixme - we initialize with an empty execution executor ..
-	// commands using this will not work
-	actionExecutor := networkkeeper.NewActionExecutor(nil, nil)
-
 	a := appCreator{
 		encodingConfig,
-		actionExecutor,
 	}
 
 	rootCmd.AddCommand(
@@ -327,7 +312,6 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 
 type appCreator struct {
 	encodingConfig appencoding.EncodingConfig
-	actionExecutor *networkkeeper.ActionExecutor
 }
 
 // newApp creates a new Cosmos SDK app
@@ -362,7 +346,6 @@ func (a appCreator) newApp(
 	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
 
 	return app.NewApp(
-		a.actionExecutor,
 		logger,
 		db,
 		traceStore,
@@ -420,7 +403,6 @@ func (a appCreator) appExport(
 	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
 
 	app := app.NewApp(
-		a.actionExecutor,
 		logger,
 		db,
 		traceStore,

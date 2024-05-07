@@ -189,13 +189,12 @@ func NewGRPCServer(
 		if !ok {
 			return nil, nil, fmt.Errorf("cannot get MythosApp")
 		}
-		bapp := app.GetBaseApp()
 		networkServer := &msgServer{
 			Keeper: app.GetNetworkKeeper(),
 		}
 
 		// start the node
-		err = StartNode(bapp, mythosapp, logger, networkServer)
+		err = StartNode(app, logger, networkServer)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -272,7 +271,7 @@ func RegisterGRPCServer(
 	// sapp.RegisterGRPCServer(server)
 	// return nil, nil
 
-	// TODO actionExecutors per chainId
+	// TODO introduce chain id in grpc, to make it available for all subchain
 	actionExecutor := mythosapp.GetActionExecutor()
 
 	// Define an interceptor for all gRPC queries: this interceptor will create
@@ -283,10 +282,6 @@ func RegisterGRPCServer(
 		if !ok {
 			return nil, status.Error(codes.Internal, "unable to retrieve metadata")
 		}
-		// TODO fixme set ChainId
-		fmt.Println("---network interceptor md--", md)
-		fmt.Println("---network interceptor req--", req)
-		chainId := ""
 
 		// Get height header from the request context, if present.
 		var height int64
@@ -315,7 +310,7 @@ func RegisterGRPCServer(
 			}
 			return handler(goctx, req)
 		}
-		return actionExecutor.Execute(grpcCtx, height, cb, chainId)
+		return actionExecutor.Execute(grpcCtx, height, cb)
 	}
 
 	// NewMsgServerImpl
@@ -416,10 +411,6 @@ func initChain(
 	validatorSet := cmttypes.NewValidatorSet(validators)
 	nextVals := cmttypes.TM2PB.ValidatorUpdates(validatorSet)
 	pbparams := genDoc.ConsensusParams.ToProto()
-	bapp, err := GetBaseApp(app)
-	if err != nil {
-		return nil, err
-	}
 	mythosapp, err := GetMythosApp(app)
 	if err != nil {
 		return nil, err
@@ -478,7 +469,7 @@ func initChain(
 	// peers := strings.Split(svrCtx.Config.P2P.PersistentPeers, ",")
 	peers := strings.Split(cfgAll.Network.Ips, ",")
 
-	err = InitConsensusContract(bapp, mythosapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, res.AppVersion, pubKey, privKey, peers)
+	err = InitConsensusContract(mythosapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, res.AppVersion, pubKey, privKey, peers)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +482,6 @@ type PrivKey interface {
 }
 
 func InitConsensusContract(
-	bapp types.BaseApp,
 	mythosapp MythosApp,
 	consensusLogger log.Logger,
 	cfgNetwork networkconfig.NetworkConfig,
@@ -514,7 +504,7 @@ func InitConsensusContract(
 	// version.Consensus.App = consensusParams.Version.App
 
 	initChainSetup := &types.InitChainSetup{
-		ChainID:         bapp.ChainID(),
+		ChainID:         mythosapp.GetBaseApp().ChainID(),
 		ConsensusParams: consensusParams,
 		AppHash:         appHash,
 		// We update the last results hash with the empty hash, to conform with RFC-6962.
@@ -530,15 +520,14 @@ func InitConsensusContract(
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
 	// setup the consensus contract
-	err := SetupNode(bapp, mythosapp, cfgNetwork, consensusLogger, networkServer, initChainSetup)
+	err := SetupNode(mythosapp, cfgNetwork, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, networkServer MsgServerInternal) error {
-	chainId := bapp.ChainID()
+func StartNode(mythosapp MythosApp, logger log.Logger, networkServer MsgServerInternal) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))
@@ -554,19 +543,15 @@ func StartNode(bapp types.BaseApp, mythosapp MythosApp, logger log.Logger, netwo
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	bapp, err := actionExecutor.GetApp(chainId)
-	if err != nil {
-		return err
-	}
-	_, err = actionExecutor.Execute(mythosapp.GetGoContextParent(), bapp.LastBlockHeight(), cb, chainId)
+
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func SetupNode(bapp types.BaseApp, mythosapp MythosApp, netcfg networkconfig.NetworkConfig, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
-	chainId := bapp.ChainID()
+func SetupNode(mythosapp MythosApp, netcfg networkconfig.NetworkConfig, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 
@@ -590,11 +575,7 @@ func SetupNode(bapp types.BaseApp, mythosapp MythosApp, netcfg networkconfig.Net
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	bapp, err := actionExecutor.GetApp(chainId)
-	if err != nil {
-		return err
-	}
-	_, err = actionExecutor.Execute(mythosapp.GetGoContextParent(), bapp.LastBlockHeight(), cb, chainId)
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
 	if err != nil {
 		return err
 	}

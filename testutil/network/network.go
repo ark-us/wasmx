@@ -28,7 +28,6 @@ import (
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -77,9 +76,7 @@ func DefaultConfig() network.Config {
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 	tempApp := app.NewApp(
-		actionExecutor,
 		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
@@ -102,7 +99,6 @@ func DefaultConfig() network.Config {
 			}
 
 			return app.NewApp(
-				actionExecutor,
 				val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{}, val.GetCtx().Config.RootDir, 0,
 				encoding,
 				gasPrices,

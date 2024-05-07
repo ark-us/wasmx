@@ -187,17 +187,14 @@ Example:
 			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
 		},
 	}
-	fmt.Println("---init-files0--")
 
 	addTestnetFlagsToCmd(cmd)
-	fmt.Println("---init-files1--")
 	cmd.Flags().String(flagNodeDirPrefix, "node", "Prefix the directory name for each node with (node results in node0, node1, ...)")
 	cmd.Flags().String(flagNodeDaemonHome, "mythosd", "Home directory of the node's daemon configuration")
 	cmd.Flags().String(flagStartingIPAddress, "192.168.0.1", "Starting IP address (192.168.0.1 results in persistent peers list ID0@192.168.0.1:46656, ID1@192.168.0.2:46656, ...)")
 	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
 	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
-	fmt.Println("---init-files2--")
 	return cmd
 }
 
@@ -328,7 +325,6 @@ func initTestnetFiles(
 	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 ) error {
-	fmt.Println("--initTestnetFiles--")
 	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, 0, "")
 }
 
@@ -388,7 +384,6 @@ func initTestnetFilesInternal(
 	nodeIndexStart int,
 	leaderURI string,
 ) error {
-	fmt.Println("--initTestnetFilesInternal--")
 	var err error
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
@@ -880,7 +875,6 @@ func initGenFilesLevel0(
 	genFile string,
 	numValidators int,
 ) error {
-	fmt.Println("--initGenFilesLevel0 genFile--", genFile)
 	chaincfg, err := mcfg.GetChainConfig(chainID)
 	if err != nil {
 		panic(err)

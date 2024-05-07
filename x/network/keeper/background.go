@@ -46,7 +46,7 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.Logger(ctx).Info("background process started", "description", description)
-		err := k.startBackgroundProcessInternal(ctx.ChainID(), description, contractAddr, senderAddr, msg.Args)
+		err := k.startBackgroundProcessInternal(description, contractAddr, senderAddr, msg.Args)
 		if err != nil {
 			k.Logger(ctx).Error("background process failed", "description", description, "err", err)
 			errCh <- err
@@ -68,7 +68,6 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 }
 
 func (k *Keeper) startBackgroundProcessInternal(
-	chainId string,
 	description string,
 	contractAddr mcodec.AccAddressPrefixed,
 	senderAddr mcodec.AccAddressPrefixed,
@@ -80,12 +79,9 @@ func (k *Keeper) startBackgroundProcessInternal(
 	}
 	// we cannot use the ActionExecutor, because it will block all other executions (lock)
 	// we need to start this process in its own goroutine
-	bapp, err := k.actionExecutor.GetApp(chainId)
-	if err != nil {
-		return err
-	}
-	height := bapp.LastBlockHeight()
-	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(bapp, k.actionExecutor.logger, height, false)
+	mythosapp := k.actionExecutor.GetApp()
+	height := mythosapp.GetBaseApp().LastBlockHeight()
+	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContext(mythosapp.GetBaseApp(), k.actionExecutor.logger, height, false)
 	if err != nil {
 		return err
 	}
@@ -94,7 +90,7 @@ func (k *Keeper) startBackgroundProcessInternal(
 	ctx_ := sdk.UnwrapSDKContext(goCtx)
 	_, err = k.wasmxKeeper.Execute(ctx_, contractAddr, senderAddr, msgbz, nil, nil, true)
 	// we only commit if callback was successful
-	err = commitCtx(bapp, sdkCtx, commitCacheCtx, ctxcachems)
+	err = commitCtx(mythosapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
 		return err
 	}

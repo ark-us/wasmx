@@ -78,11 +78,8 @@ func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageReques
 		return res, nil
 	}
 	// disregard result
-	bapp, err := k.actionExecutor.GetApp(chainId)
-	if err != nil {
-		return err
-	}
-	_, err = k.actionExecutor.Execute(k.goContextParent, bapp.LastBlockHeight(), cb, chainId)
+	bapp := k.actionExecutor.GetBaseApp()
+	_, err := k.actionExecutor.Execute(k.goContextParent, bapp.LastBlockHeight(), cb)
 	if err != nil {
 		return err
 	}

@@ -313,7 +313,6 @@ type App struct {
 
 // New returns a reference to an initialized blockchain app
 func NewApp(
-	actionExecutor *networkmodulekeeper.ActionExecutor,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -424,7 +423,6 @@ func NewApp(
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
 		chainCfg:          chainCfg,
-		actionExecutor:    actionExecutor,
 		minGasPrices:      minGasPrices,
 	}
 
@@ -434,6 +432,7 @@ func NewApp(
 	app.valCodec = valCodec
 	app.consCodec = consCodec
 	app.addrCodec = addrCodec
+	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 
 	// TODO replace NewPermissionsForAddress with address by role
 	permAddrs := make(map[string]authtypes.PermissionsForAddress)

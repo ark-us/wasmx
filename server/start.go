@@ -57,7 +57,6 @@ import (
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
 	networkgrpc "mythos/v1/x/network/keeper"
-	networkkeeper "mythos/v1/x/network/keeper"
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
 	networktypes "mythos/v1/x/network/types"
@@ -247,8 +246,6 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 		skipUpgradeHeights[int64(h)] = true
 	}
 
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, svrCtx.Logger)
-
 	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
 	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
 	if err != nil {
@@ -272,7 +269,6 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 
 		app := mapp.NewApp(
-			actionExecutor,
 			svrCtx.Logger,
 			db,
 			traceWriter,
@@ -435,8 +431,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
 
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, svrCtx.Logger)
-
 	appOpts := svrCtx.Viper
 	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 	skipUpgradeHeights := make(map[int64]bool)
@@ -467,7 +461,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 
 		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 		app := mapp.NewApp(
-			actionExecutor,
 			svrCtx.Logger,
 			db,
 			traceWriter,

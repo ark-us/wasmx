@@ -48,20 +48,9 @@ func (ar AccountRetriever) GetAccount(clientCtx client.Context, addr sdk.AccAddr
 func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr sdk.AccAddress) (client.Account, int64, error) {
 	var header metadata.MD
 	addrPrefixed := ar.AddressCodec.BytesToAccAddressPrefixed(addr)
-	fmt.Println("---GetAccountWithHeight--", addrPrefixed.String())
 	queryClient := networktypes.NewQueryClient(clientCtx)
 
 	accreq := &authtypes.QueryAccountRequest{Address: addrPrefixed.String()}
-
-	// accreqAny, err := codectypes.NewAnyWithValue(accreq)
-	// fmt.Println("---NewAnyWithValue--", err, accreqAny)
-	// fmt.Println("---NewAnyWithValue somevAny TypeUrl--", accreqAny.TypeUrl)
-	// fmt.Println("---NewAnyWithValue somevAny Value--", string(accreqAny.Value))
-	// accreqAnyBz, err := clientCtx.Codec.Marshal(accreqAny)
-	// if err != nil {
-	// 	return nil, 0, err
-	// }
-
 	accreqbz, err := accreq.Marshal()
 	if err != nil {
 		return nil, 0, err
@@ -72,7 +61,6 @@ func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr s
 	if err != nil {
 		return nil, 0, err
 	}
-	fmt.Println("---GetAccountWithHeight queryPath--", queryPath)
 
 	abciQuery := &abci.RequestQuery{Data: accreqbz, Path: queryPath}
 	abciQueryBz, err := abciQuery.Marshal()
@@ -82,35 +70,18 @@ func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr s
 
 	req := &networktypes.QueryMultiChainRequest{
 		MultiChainId: ar.ChainId,
-		// QueryData:    accreqAnyBz,
-		QueryData: abciQueryBz,
+		QueryData:    abciQueryBz,
 	}
-	fmt.Println("---GetAccountWithHeight sending QueryMultiChain--")
 	res, err := queryClient.QueryMultiChain(context.Background(), req, grpc.Header(&header))
-	fmt.Println("---GetAccountWithHeight res--", err, res)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	fmt.Println("---GetAccountWithHeight account--", err, string(res.Data))
-
-	// anyRes, err := mcodec.AnyFromBz(clientCtx.Codec, res.Data)
-	// fmt.Println("---GetAccountWithHeight account--", err, anyRes)
-	// if err != nil {
-	// 	return nil, 0, err
-	// }
 
 	var resAcc authtypes.QueryAccountResponse
 	err = resAcc.Unmarshal(res.Data)
-	fmt.Println("---GetAccountWithHeight resAcc(1)--", err, resAcc)
-
-	// err = clientCtx.Codec.Unmarshal(res.Data, &resAcc)
-	// fmt.Println("---GetAccountWithHeight resAcc(2)--", err, resAcc)
-
 	if err != nil {
 		return nil, 0, err
 	}
-	fmt.Println("---GetAccountWithHeight resAcc.Account--", resAcc.Account)
 
 	blockHeight := header.Get(grpctypes.GRPCBlockHeightHeader)
 	if l := len(blockHeight); l != 1 {
@@ -122,57 +93,14 @@ func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr s
 		return nil, 0, fmt.Errorf("failed to parse block height: %w", err)
 	}
 
-	// var acc sdk.AccountI
-	// var acc mcodec.AccountI
-
 	var acc2 BaseAccount
-	err = clientCtx.Codec.UnmarshalInterface(resAcc.Account.Value, &acc2)
-	fmt.Println("---GetAccountWithHeight resAcc.Account 1--", err, acc2)
-
 	err = acc2.Unmarshal(resAcc.Account.Value)
 	fmt.Println("---GetAccountWithHeight resAcc.Account 11--", err, acc2)
-
-	// err = clientCtx.InterfaceRegistry.UnpackAny(resAcc.Account, &acc)
-	// fmt.Println("---GetAccountWithHeight resAcc.Account 2--", err, acc)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	return acc2.ToCosmosAccountI(), int64(nBlockHeight), nil
-}
-
-// GetAccountWithHeight queries for an account given an address. Returns the
-// height of the query with the account. An error is returned if the query
-// or decoding fails.
-func (ar AccountRetriever) GetAccountWithHeight2(clientCtx client.Context, addr sdk.AccAddress) (client.Account, int64, error) {
-	var header metadata.MD
-	addrPrefixed := ar.AddressCodec.BytesToAccAddressPrefixed(addr)
-	fmt.Println("---GetAccountWithHeight--", addrPrefixed.String())
-	queryClient := authtypes.NewQueryClient(clientCtx)
-
-	res, err := queryClient.Account(context.Background(), &authtypes.QueryAccountRequest{Address: addrPrefixed.String()}, grpc.Header(&header))
-	fmt.Println("---GetAccountWithHeight account--", err, res)
-	if err != nil {
-		return nil, 0, err
-	}
-	fmt.Println("---GetAccountWithHeight account--", res.Account)
-
-	blockHeight := header.Get(grpctypes.GRPCBlockHeightHeader)
-	if l := len(blockHeight); l != 1 {
-		return nil, 0, fmt.Errorf("unexpected '%s' header length; got %d, expected: %d", grpctypes.GRPCBlockHeightHeader, l, 1)
-	}
-
-	nBlockHeight, err := strconv.Atoi(blockHeight[0])
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to parse block height: %w", err)
-	}
-
-	var acc sdk.AccountI
-	if err := clientCtx.InterfaceRegistry.UnpackAny(res.Account, &acc); err != nil {
-		return nil, 0, err
-	}
-
-	return acc, int64(nBlockHeight), nil
 }
 
 // EnsureExists returns an error if no account exists for the given address else nil.

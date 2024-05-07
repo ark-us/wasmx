@@ -29,7 +29,6 @@ import (
 
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -89,7 +88,6 @@ func SetupApp(
 	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 
 	chainId := config.MYTHOS_CHAIN_ID_TEST
 	chainCfg, err := config.GetChainConfig(chainId)
@@ -97,7 +95,7 @@ func SetupApp(
 		panic(err)
 	}
 
-	app := NewApp(actionExecutor, log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
+	app := NewApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -146,9 +144,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 	app := NewApp(
-		actionExecutor,
 		logger,
 		db, nil, true, map[int64]bool{},
 		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, nil, appOpts,
@@ -175,13 +171,12 @@ func NewTestNetworkFixture() network.TestFixture {
 	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
 	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)
 	if err != nil {
 		panic(err)
 	}
 
-	app := NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
+	app := NewApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
 		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
@@ -197,7 +192,6 @@ func NewTestNetworkFixture() network.TestFixture {
 			panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
 		}
 		return NewApp(
-			actionExecutor,
 			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
 			DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg),
 			gasPrices,

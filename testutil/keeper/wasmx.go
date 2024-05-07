@@ -34,7 +34,6 @@ import (
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	networkkeeper "mythos/v1/x/network/keeper"
 	networkvm "mythos/v1/x/network/vm"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -126,8 +125,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	nil, //scopedTransferKeeper,
 	// 	govAddr,
 	// )
-	actionExecutor := networkkeeper.NewActionExecutor(bapps, logger)
-	mapp := app.NewApp(actionExecutor, logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, appOpts)
+	mapp := app.NewApp(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, nil, appOpts)
 	k := keeper.NewKeeper(
 		g,
 		goctx,
