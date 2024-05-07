@@ -35,7 +35,6 @@ import (
 	"github.com/cosmos/go-bip39"
 
 	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cometbft/cometbft/node"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -54,7 +53,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
+	menc "mythos/v1/encoding"
 	"mythos/v1/server/config"
 	ibctesting "mythos/v1/testutil/ibc"
 	"mythos/v1/x/network/keeper"
@@ -79,7 +78,7 @@ type KeeperTestSuite struct {
 type TestChain struct {
 	T       *testing.T
 	ChainId string
-	Config  mcfg.ChainConfig
+	Config  menc.ChainConfig
 	ctx     sdk.Context
 
 	App *app.App
@@ -137,7 +136,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 		Chain:         chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := appencoding.MakeEncodingConfig(suite.App().GetChainCfg())
+	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
 
 	t := suite.T()
@@ -155,7 +154,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 		Chain:         suite.chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := appencoding.MakeEncodingConfig(suite.App().GetChainCfg())
+	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
 	t := suite.T()
 	denom := appContext.Chain.Config.BaseDenom
@@ -267,7 +266,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 
 	suite.chain = chain
 	suite.chains[chainId] = &chain
-	err = suite.InitConsensusContract(resInit, pubKey, privVal.PrivKey, valOperatorAddress)
+	err = suite.InitConsensusContract(resInit, pubKey.Address(), pubKey.Bytes(), privVal.PrivKey.Bytes(), valOperatorAddress)
 	require.NoError(t, err)
 }
 
@@ -277,7 +276,7 @@ func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {
 	suite.chain = *chain
 }
 
-func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, pubKey crypto.PubKey, privKey networkkeeper.PrivKey, valOperatorAddress sdk.ValAddress) error {
+func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress, nodePubKey, nodePrivKey []byte, valOperatorAddress sdk.ValAddress) error {
 	res, err := suite.App().Info(networkkeeper.RequestInfo)
 	if err != nil {
 		return fmt.Errorf("error calling Info: %v", err)
@@ -293,7 +292,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	}
 
 	cfgNetwork := networkconfig.DefaultNetworkConfigConfig()
-	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper(), suite.App().BaseApp)
+	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper().(*networkkeeper.Keeper))
 
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 
@@ -310,15 +309,15 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	}
 	err = networkkeeper.InitConsensusContract(
 		suite.App(),
-		suite.App(),
 		suite.App().Logger(),
-		*cfgNetwork,
 		networkServer,
 		resInit.AppHash,
 		&consensusParams,
 		res.AppVersion,
-		pubKey,
-		privKey,
+		nodeAddress,
+		nodePubKey,
+		nodePrivKey,
+		cfgNetwork.Id,
 		peers,
 	)
 	if err != nil {

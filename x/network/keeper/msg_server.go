@@ -13,7 +13,6 @@ import (
 )
 
 type msgServer struct {
-	// App types.BaseApp
 	*Keeper
 }
 
@@ -23,10 +22,9 @@ type MsgServerInternal interface {
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
-func NewMsgServerImpl(keeper *Keeper, app types.BaseApp) MsgServerInternal {
+func NewMsgServerImpl(keeper *Keeper) MsgServerInternal {
 	return &msgServer{
 		Keeper: keeper,
-		// App:    app,
 	}
 }
 
@@ -97,7 +95,7 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 	if err != nil {
 		return nil, err
 	}
-	app, ok := iapp.(MythosApp)
+	app, ok := iapp.(cfg.MythosApp)
 	if !ok {
 		return nil, fmt.Errorf("error App interface from multichainapp")
 	}
@@ -111,7 +109,7 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 
 	// TODO handle transaction verification!!!! here or by codec ??
 	// router := mcodec.MsgRouter{Router: app.MsgServiceRouter()}
-	_, res, err := app.GetNetworkKeeper().wasmxKeeper.ExecuteCosmosMsg(ctx, sdkmsg, owner)
+	_, res, err := app.GetNetworkKeeper().ExecuteCosmosMsg(ctx, sdkmsg, owner)
 	if err != nil {
 		return nil, err
 	}

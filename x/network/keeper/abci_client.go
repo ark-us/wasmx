@@ -35,8 +35,8 @@ import (
 )
 
 type ABCIClient struct {
-	mapp           MythosApp
-	bapp           types.BaseApp
+	mapp           cfg.MythosApp
+	bapp           cfg.BaseApp
 	nk             types.WasmxWrapper
 	logger         log.Logger
 	actionExecutor *ActionExecutor
@@ -45,8 +45,8 @@ type ABCIClient struct {
 }
 
 func NewABCIClient(
-	mapp MythosApp,
-	bapp types.BaseApp,
+	mapp cfg.MythosApp,
+	bapp cfg.BaseApp,
 	logger log.Logger,
 	networkKeeper types.WasmxWrapper,
 	serverConfig *cmtconfig.Config,
@@ -65,7 +65,7 @@ func NewABCIClient(
 }
 
 func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error) {
-	resInfo, err := c.bapp.Info(RequestInfo)
+	resInfo, err := c.bapp.Info(types.RequestInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -130,15 +130,14 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			if err != nil {
 				return nil, err
 			}
-			mapp, ok = iapp.(MythosApp)
+			mapp, ok = iapp.(cfg.MythosApp)
 			if !ok {
 				return nil, fmt.Errorf("error App interface from multichainapp")
 			}
-			bapp, ok = iapp.(types.BaseApp)
+			bapp, ok = iapp.(cfg.BaseApp)
 			if !ok {
 				return nil, fmt.Errorf("error BaseApp interface from multichainapp")
 			}
-
 		}
 	}
 
@@ -252,7 +251,7 @@ func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
 	c.logger.Debug("ABCIClient.Status")
 	// TODO finalize
 
-	res, err := c.bapp.Info(RequestInfo)
+	res, err := c.bapp.Info(types.RequestInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error calling Info: %v", err)
 	}
@@ -265,8 +264,8 @@ func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
 	result := &rpctypes.ResultStatus{
 		NodeInfo: cometp2p.DefaultNodeInfo{
 			ProtocolVersion: cometp2p.ProtocolVersion{
-				P2P:   RequestInfo.P2PVersion,
-				Block: RequestInfo.BlockVersion,
+				P2P:   types.RequestInfo.P2PVersion,
+				Block: types.RequestInfo.BlockVersion,
 				App:   res.AppVersion,
 			},
 			// TODO client methods per chainId

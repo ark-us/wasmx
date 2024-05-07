@@ -2,15 +2,12 @@ package keeper
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -24,10 +21,9 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
-	storetypes "cosmossdk.io/store/types"
 
 	// "github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/baseapp"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -35,7 +31,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/grpc/gogoreflection"
 	reflection "github.com/cosmos/cosmos-sdk/server/grpc/reflection/v2alpha1"
 
-	address "cosmossdk.io/core/address"
 	// runapp "github.com/cosmos/cosmos-sdk/runtime"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -46,8 +41,6 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtconfig "github.com/cometbft/cometbft/config"
-	"github.com/cometbft/cometbft/crypto"
-	"github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtnet "github.com/cometbft/cometbft/libs/net"
 	"github.com/cometbft/cometbft/node"
@@ -58,11 +51,10 @@ import (
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mconfig "mythos/v1/config"
+	mcfg "mythos/v1/config"
 	"mythos/v1/server/config"
-	networkconfig "mythos/v1/x/network/server/config"
+	networkserver "mythos/v1/x/network/server"
 	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 var NETWORK_GAS_LIMIT = uint64(1000000000)
@@ -70,22 +62,6 @@ var NETWORK_GAS_LIMIT = uint64(1000000000)
 // Config is an gRPC server configuration.
 type Config struct {
 	MaxOpenConnections int
-}
-
-type MythosApp interface {
-	GetNetworkKeeper() *Keeper
-	GetActionExecutor() *ActionExecutor
-	GetGoContextParent() context.Context
-	GetGoRoutineGroup() *errgroup.Group
-	GetMultiChainApp() (*mconfig.MultiChainApp, error)
-	GetBaseApp() *baseapp.BaseApp
-	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
-	AddressCodec() address.Codec
-
-	// baseapp
-	Query(context.Context, *abci.RequestQuery) (*abci.ResponseQuery, error)
-	GRPCQueryRouter() *baseapp.GRPCQueryRouter
-	MsgServiceRouter() *baseapp.MsgServiceRouter
 }
 
 type ABCIClientI interface {
@@ -111,7 +87,7 @@ func NewGRPCServer(
 	app servertypes.Application,
 	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
-	genesisDocProvider types.GenesisDocProvider,
+	genesisDocProvider mcfg.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
 ) (*grpc.Server, *ABCIClient, error) {
 	grpccfg := cfg.GRPC
@@ -149,7 +125,7 @@ func NewGRPCServer(
 	// }
 
 	logger := svrCtx.Logger.With("module", "network")
-	client := NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor())
+	client := NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor().(*ActionExecutor))
 	clientCtx = clientCtx.WithClient(client)
 
 	multiapp, err := mythosapp.GetMultiChainApp()
@@ -161,7 +137,7 @@ func NewGRPCServer(
 	// InitChain runs multiple contract executions that are not under ActionExecutor control; starting the chains while InitChain is not finished will start delayed executions that will intersect with InitChain executions
 	for _, chainId := range multiapp.ChainIds {
 		iapp, _ := multiapp.GetApp(chainId)
-		app, ok := iapp.(MythosApp)
+		app, ok := iapp.(mcfg.MythosApp)
 		if !ok {
 			return nil, nil, fmt.Errorf("cannot get MythosApp")
 		}
@@ -172,11 +148,7 @@ func NewGRPCServer(
 		}
 
 		if bapp.LastBlockHeight() == 0 {
-			networkServer := &msgServer{
-				Keeper: app.GetNetworkKeeper(),
-			}
-
-			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, chainId, metricsProvider, networkServer)
+			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, chainId, metricsProvider, app.GetNetworkKeeper())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -185,16 +157,13 @@ func NewGRPCServer(
 
 	for _, chainId := range multiapp.ChainIds {
 		iapp, _ := multiapp.GetApp(chainId)
-		app, ok := iapp.(MythosApp)
+		app, ok := iapp.(mcfg.MythosApp)
 		if !ok {
 			return nil, nil, fmt.Errorf("cannot get MythosApp")
 		}
-		networkServer := &msgServer{
-			Keeper: app.GetNetworkKeeper(),
-		}
 
 		// start the node
-		err = StartNode(app, logger, networkServer)
+		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
 		if err != nil {
 			return nil, nil, err
 		}
@@ -258,7 +227,7 @@ func RegisterGRPCServer(
 	cfg *config.Config,
 	sapp servertypes.Application,
 	server *grpc.Server,
-) (*msgServer, error) {
+) (MsgServerInternal, error) {
 	// app, err := GetBaseApp(sapp)
 	// if err != nil {
 	// 	return nil, err
@@ -313,11 +282,7 @@ func RegisterGRPCServer(
 		return actionExecutor.Execute(grpcCtx, height, cb)
 	}
 
-	// NewMsgServerImpl
-	handler := &msgServer{
-		Keeper: mythosapp.GetNetworkKeeper(),
-		// App:    app,
-	}
+	handler := NewMsgServerImpl(mythosapp.GetNetworkKeeper().(*Keeper))
 
 	desc := types.Network_Msg_serviceDesc
 	newMethods := make([]grpc.MethodDesc, len(desc.Methods))
@@ -346,7 +311,7 @@ func RegisterGRPCServer(
 	return handler, nil
 }
 
-func loadGenDoc(genesisDocProvider types.GenesisDocProvider, chainId string) (*cmttypes.GenesisDoc, error) {
+func loadGenDoc(genesisDocProvider mcfg.GenesisDocProvider, chainId string) (*cmttypes.GenesisDoc, error) {
 	genDoc, err := genesisDocProvider(chainId)
 	if err != nil {
 		return nil, err
@@ -372,31 +337,12 @@ func initChain(
 	app servertypes.Application,
 	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
-	genesisDocProvider types.GenesisDocProvider,
+	genesisDocProvider mcfg.GenesisDocProvider,
 	chainId string,
 	metricsProvider node.MetricsProvider,
-	networkServer *msgServer,
+	networkServer mcfg.NetworkKeeper,
 ) (*abci.ResponseInitChain, error) {
 	consensusLogger := svrCtx.Logger.With("module", "consensus")
-	// cfg := svrCtx.Config
-
-	res, err := app.Info(RequestInfo)
-	if err != nil {
-		return nil, fmt.Errorf("error calling Info: %v", err)
-	}
-
-	blockHeight := res.LastBlockHeight
-	if blockHeight < 0 {
-		return nil, fmt.Errorf("got a negative last block height (%d) from the app", blockHeight)
-	}
-	appHash := res.LastBlockAppHash
-
-	consensusLogger.Info("ABCI Handshake App Info",
-		"height", blockHeight,
-		"hash", fmt.Sprintf("%X", appHash),
-		"software-version", res.Version,
-		"protocol-version", res.AppVersion,
-	)
 
 	// check if network contract exists
 	genDoc, err := loadGenDoc(genesisDocProvider, chainId)
@@ -424,38 +370,15 @@ func initChain(
 		Validators:      nextVals,
 		AppStateBytes:   genDoc.AppState,
 	}
-	resInit, err := app.InitChain(req)
+	resInit, res, err := networkserver.InitChainAndCommitBlock(app, req, consensusLogger)
 	if err != nil {
 		return nil, err
 	}
-
-	// scfg := svrCtx.Config
-	freq := &abci.RequestFinalizeBlock{
-		Height: req.InitialHeight,
-		Time:   req.Time,
-	}
-	_, err = app.FinalizeBlock(freq)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = app.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	// If the app returned validators or consensus params, update the state.
+	appHash := res.LastBlockAppHash
 	if len(resInit.AppHash) > 0 {
 		appHash = resInit.AppHash
 	}
-	validatorsUpdates := resInit.Validators
-	if len(validatorsUpdates) == 0 {
-		validatorsUpdates = req.Validators
-	}
-	if len(validatorsUpdates) == 0 {
-		// If validator set is not set in genesis and still empty after InitChain, exit.
-		return nil, fmt.Errorf("validator set is nil in genesis and still empty after InitChain")
-	}
+
 	consensusParams := *genDoc.ConsensusParams
 	if resInit.ConsensusParams != nil {
 		consensusParams = consensusParams.Update(resInit.ConsensusParams)
@@ -469,117 +392,12 @@ func initChain(
 	// peers := strings.Split(svrCtx.Config.P2P.PersistentPeers, ",")
 	peers := strings.Split(cfgAll.Network.Ips, ",")
 
-	err = InitConsensusContract(mythosapp, consensusLogger, cfgAll.Network, networkServer, appHash, &consensusParams, res.AppVersion, pubKey, privKey, peers)
+	err = networkserver.InitConsensusContract(mythosapp, consensusLogger, networkServer, appHash, &consensusParams, res.AppVersion, pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), cfgAll.Network.Id, peers)
 	if err != nil {
 		return nil, err
 	}
 
 	return resInit, nil
-}
-
-type PrivKey interface {
-	Bytes() []byte
-}
-
-func InitConsensusContract(
-	mythosapp MythosApp,
-	consensusLogger log.Logger,
-	cfgNetwork networkconfig.NetworkConfig,
-	networkServer MsgServerInternal,
-	appHash []byte,
-	consensusParams *cmttypes.ConsensusParams,
-	appVersion uint64,
-	pubKey crypto.PubKey,
-	privKey PrivKey,
-	peers []string,
-) error {
-	version := types.Version{
-		Software: "",
-		Consensus: types.Consensus{
-			App:   appVersion,
-			Block: 0,
-		},
-	}
-	// TODO ?
-	// version.Consensus.App = consensusParams.Version.App
-
-	initChainSetup := &types.InitChainSetup{
-		ChainID:         mythosapp.GetBaseApp().ChainID(),
-		ConsensusParams: consensusParams,
-		AppHash:         appHash,
-		// We update the last results hash with the empty hash, to conform with RFC-6962.
-		LastResultsHash:  merkle.HashFromByteSlices(nil),
-		Version:          version,
-		ValidatorAddress: pubKey.Address(), // hexbytes
-		ValidatorPrivKey: privKey.Bytes(),  // consensus privkey
-		ValidatorPubKey:  pubKey.Bytes(),   // consensus pubkey
-		Peers:            peers,
-	}
-
-	// TODO check if app block height is same as network block height
-	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
-
-	// setup the consensus contract
-	err := SetupNode(mythosapp, cfgNetwork, consensusLogger, networkServer, initChainSetup)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func StartNode(mythosapp MythosApp, logger log.Logger, networkServer MsgServerInternal) error {
-	cb := func(goctx context.Context) (any, error) {
-		ctx := sdk.UnwrapSDKContext(goctx)
-		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))
-		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_HOOKS_NONC,
-			Contract: wasmxtypes.ROLE_HOOKS_NONC,
-			Msg:      msg,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return res, nil
-	}
-
-	actionExecutor := mythosapp.GetActionExecutor()
-
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func SetupNode(mythosapp MythosApp, netcfg networkconfig.NetworkConfig, logger log.Logger, networkServer MsgServerInternal, initChainSetup *types.InitChainSetup) error {
-	cb := func(goctx context.Context) (any, error) {
-		ctx := sdk.UnwrapSDKContext(goctx)
-
-		initbz, err := json.Marshal(initChainSetup)
-		if err != nil {
-			return nil, err
-		}
-		initData := base64.StdEncoding.EncodeToString(initbz)
-
-		// TODO node IPS!!!
-		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"initChainSetup","value":"%s"}]}}}`, netcfg.Id, initData))
-		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
-			Msg:      msg,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return res, nil
-	}
-
-	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 type WebsocketManager struct {
@@ -704,8 +522,8 @@ func (wm *WebsocketManager) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 	// }
 }
 
-func GetBaseApp(app servertypes.Application) (types.BaseApp, error) {
-	bapp, ok := app.(types.BaseApp)
+func GetBaseApp(app servertypes.Application) (mcfg.BaseApp, error) {
+	bapp, ok := app.(mcfg.BaseApp)
 	if !ok {
 		return nil, fmt.Errorf("failed to get App from server Application")
 	}
@@ -720,8 +538,8 @@ func GetBaseApp(app servertypes.Application) (types.BaseApp, error) {
 	return bapp, nil
 }
 
-func GetMythosApp(app servertypes.Application) (MythosApp, error) {
-	mythosapp, ok := app.(MythosApp)
+func GetMythosApp(app servertypes.Application) (mcfg.MythosApp, error) {
+	mythosapp, ok := app.(mcfg.MythosApp)
 	if !ok {
 		return nil, fmt.Errorf("failed to get MythosApp from server Application")
 	}

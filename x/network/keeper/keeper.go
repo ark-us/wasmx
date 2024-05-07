@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"mythos/v1/x/network/types"
+	"mythos/v1/x/network/vmmc"
 	"mythos/v1/x/network/vmp2p"
 )
 
@@ -29,6 +30,7 @@ type (
 
 func init() {
 	vmp2p.Setup()
+	vmmc.Setup()
 }
 
 func NewKeeper(

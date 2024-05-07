@@ -8,11 +8,26 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 
 	mcodec "mythos/v1/codec"
-	"mythos/v1/config"
 )
 
+type ChainConfig struct {
+	Bech32PrefixAccAddr  string
+	Bech32PrefixAccPub   string
+	Bech32PrefixValAddr  string
+	Bech32PrefixValPub   string
+	Bech32PrefixConsAddr string
+	Bech32PrefixConsPub  string
+	Name                 string
+	HumanCoinUnit        string
+	BaseDenom            string
+	DenomUnit            string
+	BaseDenomUnit        uint32
+	BondBaseDenom        string
+	BondDenom            string
+}
+
 // MakeEncodingConfig creates an EncodingConfig for an amino based test configuration.
-func MakeEncodingConfig(cfg *config.ChainConfig) EncodingConfig {
+func MakeEncodingConfig(cfg *ChainConfig) EncodingConfig {
 	var err error
 	signingOptions := signing.Options{
 		AddressCodec:          mcodec.NewAccBech32Codec(cfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc),

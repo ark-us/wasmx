@@ -3,6 +3,8 @@ package config
 import (
 	"context"
 	"fmt"
+
+	menc "mythos/v1/encoding"
 )
 
 type ContextKey string
@@ -12,6 +14,11 @@ const MultiChainAppKey ContextKey = "MultiChainApp"
 type MultiChainApp struct {
 	Apps     map[string]interface{}
 	ChainIds []string
+	NewApp   func(chainId string, chainCfg *menc.ChainConfig) MythosApp // TODO
+}
+
+func (m *MultiChainApp) SetAppCreator(appCreator func(chainId string, chainCfg *menc.ChainConfig) MythosApp) {
+	m.NewApp = appCreator
 }
 
 func (m *MultiChainApp) GetApps() map[string]interface{} {

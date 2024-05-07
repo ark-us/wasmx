@@ -25,8 +25,7 @@ import (
 
 	wasmxapp "mythos/v1/app"
 	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
+	menc "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 )
 
@@ -45,7 +44,7 @@ func init() {
 //
 // Time management is handled by the Coordinator in order to ensure synchrony between chains.
 // Each update of any chain increments the block header time for all chains by 5 seconds.
-func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string, chaincfg mcfg.ChainConfig, index int32) *ibcgotesting.TestChain {
+func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string, chaincfg menc.ChainConfig, index int32) *ibcgotesting.TestChain {
 	// generate validator private/public key
 	privVal := mock.NewPV()
 	pubKey, err := privVal.GetPubKey()
@@ -56,7 +55,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{validator})
 	signersByAddress := make(map[string]tmtypes.PrivValidator, 1)
 	signersByAddress[pubKey.Address().String()] = privVal
-	encoding := appencoding.MakeEncodingConfig(&chaincfg)
+	encoding := menc.MakeEncodingConfig(&chaincfg)
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(encoding.InterfaceRegistry.SigningContext().AddressCodec())
 
 	// generate genesis account

@@ -24,8 +24,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	networktypes "mythos/v1/x/network/types"
-
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/cosmosmod/client/cli"
 	"mythos/v1/x/cosmosmod/keeper"
 	"mythos/v1/x/cosmosmod/types"
@@ -111,7 +110,7 @@ type AppModule struct {
 	auth         keeper.KeeperAuth
 	slashing     keeper.KeeperSlashing
 	distribution keeper.KeeperDistribution
-	app          networktypes.BaseApp
+	app          mcfg.BaseApp
 }
 
 func NewAppModule(
@@ -123,7 +122,7 @@ func NewAppModule(
 	auth keeper.KeeperAuth,
 	slashing keeper.KeeperSlashing,
 	distribution keeper.KeeperDistribution,
-	app networktypes.BaseApp,
+	app mcfg.BaseApp,
 ) AppModule {
 	return AppModule{
 		AppModuleBasic: NewAppModuleBasic(cdc, ccdc),

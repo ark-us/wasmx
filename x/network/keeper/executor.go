@@ -17,8 +17,7 @@ import (
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
-	cfg "mythos/v1/config"
-	"mythos/v1/x/network/types"
+	mcfg "mythos/v1/config"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -32,7 +31,7 @@ func checkNegativeHeight(height int64) error {
 
 // createQueryContext creates a new sdk.Context for a query, taking as args
 // the block height and whether the query needs a proof or not.
-func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prove bool) (sdk.Context, func(), storetypes.CacheMultiStore, error) {
+func CreateQueryContext(app mcfg.BaseApp, logger log.Logger, height int64, prove bool) (sdk.Context, func(), storetypes.CacheMultiStore, error) {
 	if err := checkNegativeHeight(height); err != nil {
 		return sdk.Context{}, nil, nil, err
 	}
@@ -132,7 +131,7 @@ func CreateQueryContext(app types.BaseApp, logger log.Logger, height int64, prov
 	return sdkCtx, commitCacheCtx, cacheMS, nil
 }
 
-func commitCtx(mythosapp MythosApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
+func commitCtx(mythosapp mcfg.MythosApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
 	commitCacheCtx()
 
 	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.MetaConsensusStoreKey))
@@ -153,11 +152,11 @@ func commitCtx(mythosapp MythosApp, sdkCtx sdk.Context, commitCacheCtx func(), c
 
 type ActionExecutor struct {
 	mtx    sync.Mutex
-	app    MythosApp
+	app    mcfg.MythosApp
 	logger log.Logger
 }
 
-func NewActionExecutor(app MythosApp, logger log.Logger) *ActionExecutor {
+func NewActionExecutor(app mcfg.MythosApp, logger log.Logger) *ActionExecutor {
 	return &ActionExecutor{
 		app:    app,
 		logger: logger,
@@ -168,11 +167,11 @@ func (r *ActionExecutor) GetLogger() log.Logger {
 	return r.logger
 }
 
-func (r *ActionExecutor) GetApp() MythosApp {
+func (r *ActionExecutor) GetApp() mcfg.MythosApp {
 	return r.app
 }
 
-func (r *ActionExecutor) GetBaseApp() types.BaseApp {
+func (r *ActionExecutor) GetBaseApp() mcfg.BaseApp {
 	return r.app.GetBaseApp()
 }
 
@@ -205,11 +204,11 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 
 type ActionExecutorMultiChain struct {
 	mtx       sync.Mutex
-	multiapps *cfg.MultiChainApp
+	multiapps *mcfg.MultiChainApp
 	logger    log.Logger
 }
 
-func NewActionExecutorMultiChain(multiapps *cfg.MultiChainApp, logger log.Logger) *ActionExecutorMultiChain {
+func NewActionExecutorMultiChain(multiapps *mcfg.MultiChainApp, logger log.Logger) *ActionExecutorMultiChain {
 	return &ActionExecutorMultiChain{
 		multiapps: multiapps,
 		logger:    logger,
@@ -220,28 +219,28 @@ func (r *ActionExecutorMultiChain) GetLogger() log.Logger {
 	return r.logger
 }
 
-func (r *ActionExecutorMultiChain) GetMultiApp() *cfg.MultiChainApp {
+func (r *ActionExecutorMultiChain) GetMultiApp() *mcfg.MultiChainApp {
 	return r.multiapps
 }
 
-func (r *ActionExecutorMultiChain) GetMythosApp(chainId string) (MythosApp, error) {
+func (r *ActionExecutorMultiChain) GetMythosApp(chainId string) (mcfg.MythosApp, error) {
 	iapp, err := r.multiapps.GetApp(chainId)
 	if err != nil {
 		return nil, err
 	}
-	app, ok := iapp.(MythosApp)
+	app, ok := iapp.(mcfg.MythosApp)
 	if !ok {
 		return nil, fmt.Errorf("cannot get MythosApp")
 	}
 	return app, nil
 }
 
-func (r *ActionExecutorMultiChain) GetApp(chainId string) (types.BaseApp, error) {
+func (r *ActionExecutorMultiChain) GetApp(chainId string) (mcfg.BaseApp, error) {
 	app, err := r.GetMythosApp(chainId)
 	if err != nil {
 		return nil, err
 	}
-	bapp, ok := app.(types.BaseApp)
+	bapp, ok := app.(mcfg.BaseApp)
 	if !ok {
 		return nil, fmt.Errorf("cannot get BaseApp")
 	}
@@ -275,7 +274,7 @@ func (r *ActionExecutorMultiChain) Execute(goCtx context.Context, height int64, 
 		return nil, err
 	}
 
-	mythosapp, ok := bapp.(MythosApp)
+	mythosapp, ok := bapp.(mcfg.MythosApp)
 	if !ok {
 		return nil, fmt.Errorf("commitCtx: failed to get MythosApp from server Application")
 	}

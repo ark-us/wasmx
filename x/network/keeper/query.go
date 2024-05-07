@@ -28,7 +28,7 @@ func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiCha
 	if err != nil {
 		return nil, err
 	}
-	app, ok := iapp.(MythosApp)
+	app, ok := iapp.(cfg.MythosApp)
 	if !ok {
 		return nil, fmt.Errorf("error App interface from multichainapp")
 	}

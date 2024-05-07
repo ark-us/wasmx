@@ -26,16 +26,13 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	math "cosmossdk.io/math"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
-	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	sdkserverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
@@ -43,7 +40,6 @@ import (
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	config "mythos/v1/server/config"
@@ -59,13 +55,9 @@ import (
 	networkgrpc "mythos/v1/x/network/keeper"
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
-	networktypes "mythos/v1/x/network/types"
 
 	mapp "mythos/v1/app"
 	mcfg "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
-	"mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
@@ -210,7 +202,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	return cmd
 }
 
-func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) error {
+func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 	addr := svrCtx.Viper.GetString(srvflags.Address)
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
 	home := svrCtx.Viper.GetString(flags.FlagHome)
@@ -233,55 +225,21 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 		return err
 	}
 
-	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
-	ctx = vmp2p.WithP2PEmptyContext(ctx)
-	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
-	svrCtx.Viper.Set("goroutineGroup", g)
-	svrCtx.Viper.Set("goContextParent", ctx)
-
-	appOpts := svrCtx.Viper
-	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-	skipUpgradeHeights := make(map[int64]bool)
-	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
-		skipUpgradeHeights[int64(h)] = true
-	}
-
-	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
-	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
-	}
-	minGasAmount := math.LegacyNewDec(0)
-	if len(gasPrices) > 0 {
-		minGasAmount = gasPrices[0].Amount
-	}
+	bapps, appCreator := mapp.AppCreator(
+		svrCtx.Logger,
+		db,
+		traceWriter,
+		svrCtx.Viper,
+		g, ctx,
+	)
 
 	for _, chainId := range mcfg.ChainIdsInit {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
-		minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
-		// !! we replace existing SetMinGasPrices
-		baseappOptions[1] = baseapp.SetMinGasPrices(minGasPrices.String())
-		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
 
-		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
-
-		app := mapp.NewApp(
-			svrCtx.Logger,
-			db,
-			traceWriter,
-			true,
-			skipUpgradeHeights,
-			cast.ToString(appOpts.Get(flags.FlagHome)),
-			cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
-			encodingConfig,
-			minGasPrices,
-			appOpts,
-			baseappOptions...,
-		)
-		bapps.SetApp(chainId, app)
+		appCreator(chainId, chainCfg)
 	}
 
 	iapp_, err := bapps.GetApp(cast.ToString(svrCtx.Viper.Get(flags.FlagChainID)))
@@ -319,7 +277,7 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 }
 
 // legacyAminoCdc is used for the legacy REST API
-func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator servertypes.AppCreator) (err error) {
+func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ servertypes.AppCreator) (err error) {
 	cfg := svrCtx.Config
 	home := cfg.RootDir
 	logger := svrCtx.Logger
@@ -424,29 +382,13 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 		return err
 	}
 
-	// for network p2p streams
-	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
-	ctx = vmp2p.WithP2PEmptyContext(ctx)
-	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
-	svrCtx.Viper.Set("goroutineGroup", g)
-	svrCtx.Viper.Set("goContextParent", ctx)
-
-	appOpts := svrCtx.Viper
-	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-	skipUpgradeHeights := make(map[int64]bool)
-	for _, h := range cast.ToIntSlice(appOpts.Get(server.FlagUnsafeSkipUpgrades)) {
-		skipUpgradeHeights[int64(h)] = true
-	}
-
-	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
-	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
-	}
-	minGasAmount := math.LegacyNewDec(0)
-	if len(gasPrices) > 0 {
-		minGasAmount = gasPrices[0].Amount
-	}
+	bapps, appCreator := mapp.AppCreator(
+		svrCtx.Logger,
+		db,
+		traceWriter,
+		svrCtx.Viper,
+		g, ctx,
+	)
 
 	for _, chainId := range mcfg.ChainIdsInit {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
@@ -454,26 +396,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 			panic(err)
 		}
 
-		minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
-		// !! we replace existing SetMinGasPrices
-		baseappOptions[1] = baseapp.SetMinGasPrices(minGasPrices.String())
-		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
-
-		encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
-		app := mapp.NewApp(
-			svrCtx.Logger,
-			db,
-			traceWriter,
-			true,
-			skipUpgradeHeights,
-			cast.ToString(appOpts.Get(flags.FlagHome)),
-			cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod)),
-			encodingConfig,
-			minGasPrices,
-			appOpts,
-			baseappOptions...,
-		)
-		bapps.SetApp(chainId, app)
+		appCreator(chainId, chainCfg)
 	}
 
 	mainChainId := mcfg.GetChainId(svrCtx.Viper)
@@ -557,11 +480,11 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 	})
 	// ----end network
 
-	bapp, ok := app.(networktypes.BaseApp)
+	bapp, ok := app.(mcfg.BaseApp)
 	if !ok {
 		return fmt.Errorf("failed to get BaseApp from server Application")
 	}
-	rpcClient = networkgrpc.NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor())
+	rpcClient = networkgrpc.NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor().(*networkgrpc.ActionExecutor))
 
 	clientCtx = clientCtx.WithClient(rpcClient)
 

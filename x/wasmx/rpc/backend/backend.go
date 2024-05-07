@@ -26,6 +26,7 @@ import (
 
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	menc "mythos/v1/encoding"
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -150,7 +151,7 @@ type Backend struct {
 	logger              log.Logger
 	chainID             *big.Int
 	cfg                 config.Config
-	chainConfig         *mcfg.ChainConfig
+	chainConfig         *menc.ChainConfig
 	allowUnprotectedTxs bool
 	addressCodec        address.Codec
 }

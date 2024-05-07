@@ -25,7 +25,7 @@ import (
 
 	wasmxapp "mythos/v1/app"
 	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
+	menc "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -36,7 +36,7 @@ var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.Testin
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg mcfg.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
+func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState := DefaultTestingAppInit(chainID, index)
 	mapp, ok := app.(*wasmxapp.App)
 	require.True(t, ok)

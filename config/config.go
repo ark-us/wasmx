@@ -6,6 +6,8 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	menc "mythos/v1/encoding"
 )
 
 const (
@@ -38,7 +40,7 @@ var (
 )
 
 // SetBech32Prefixes sets the global prefixes to be used when serializing addresses and public keys to Bech32 strings.
-func SetBech32Prefixes(config *sdk.Config, newcfg ChainConfig) {
+func SetBech32Prefixes(config *sdk.Config, newcfg menc.ChainConfig) {
 	config.SetBech32PrefixForAccount(newcfg.Bech32PrefixAccAddr, newcfg.Bech32PrefixAccPub)
 	config.SetBech32PrefixForValidator(newcfg.Bech32PrefixValAddr, newcfg.Bech32PrefixValPub)
 	config.SetBech32PrefixForConsensusNode(newcfg.Bech32PrefixConsAddr, newcfg.Bech32PrefixConsPub)
@@ -56,26 +58,10 @@ func SetGlobalChainConfig(chainId string) error {
 	return nil
 }
 
-type ChainConfig struct {
-	Bech32PrefixAccAddr  string
-	Bech32PrefixAccPub   string
-	Bech32PrefixValAddr  string
-	Bech32PrefixValPub   string
-	Bech32PrefixConsAddr string
-	Bech32PrefixConsPub  string
-	Name                 string
-	HumanCoinUnit        string
-	BaseDenom            string
-	DenomUnit            string
-	BaseDenomUnit        uint32
-	BondBaseDenom        string
-	BondDenom            string
-}
-
-var PrefixesMap = map[string]ChainConfig{}
+var PrefixesMap = map[string]menc.ChainConfig{}
 var ChainIdsInit = []string{}
 
-func GetChainConfig(chainId string) (*ChainConfig, error) {
+func GetChainConfig(chainId string) (*menc.ChainConfig, error) {
 	conf, ok := PrefixesMap[chainId]
 	if !ok {
 		// return nil, fmt.Errorf("chain_id configuration not found: %s", chainId)
@@ -96,7 +82,7 @@ func init() {
 		MYTHOS_CHAIN_ID_TESTNET,
 		LEVEL0_CHAIN_ID,
 	}
-	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = ChainConfig{
+	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = menc.ChainConfig{
 		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
 		Bech32PrefixAccPub:   Bech32PrefixAccPub,
 		Bech32PrefixValAddr:  Bech32PrefixValAddr,
@@ -111,7 +97,7 @@ func init() {
 		BondBaseDenom:        BondBaseDenom,
 		BondDenom:            BondDenom,
 	}
-	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = ChainConfig{
+	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = menc.ChainConfig{
 		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
 		Bech32PrefixAccPub:   Bech32PrefixAccPub,
 		Bech32PrefixValAddr:  Bech32PrefixValAddr,
@@ -126,7 +112,7 @@ func init() {
 		BondBaseDenom:        BondBaseDenom,
 		BondDenom:            BondDenom,
 	}
-	PrefixesMap[LEVEL0_CHAIN_ID] = ChainConfig{
+	PrefixesMap[LEVEL0_CHAIN_ID] = menc.ChainConfig{
 		Bech32PrefixAccAddr:  "level0",
 		Bech32PrefixAccPub:   "level0pub",
 		Bech32PrefixValAddr:  "level0",

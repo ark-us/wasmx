@@ -161,7 +161,7 @@ import (
 
 	ante "mythos/v1/app/ante"
 
-	appencoding "mythos/v1/encoding"
+	menc "mythos/v1/encoding"
 
 	docs "mythos/v1/docs"
 
@@ -301,7 +301,7 @@ type App struct {
 	sm           *module.SimulationManager
 	configurator module.Configurator
 
-	chainCfg *cfg.ChainConfig
+	chainCfg *menc.ChainConfig
 	apps     map[string]*App
 
 	valCodec  address.Codec
@@ -320,7 +320,7 @@ func NewApp(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	invCheckPeriod uint,
-	encodingConfig appencoding.EncodingConfig,
+	encodingConfig menc.EncodingConfig,
 	minGasPrices sdk.DecCoins,
 	appOpts servertypes.AppOptions,
 	baseAppOptions ...func(*baseapp.BaseApp),
@@ -1290,7 +1290,7 @@ func (app *App) GetTxConfig() client.TxConfig {
 	return app.TxConfig()
 }
 
-func (app *App) GetChainCfg() *cfg.ChainConfig {
+func (app *App) GetChainCfg() *menc.ChainConfig {
 	return app.chainCfg
 }
 
@@ -1353,11 +1353,11 @@ func (app *App) SimulationManager() *module.SimulationManager {
 }
 
 // For network grpc
-func (app *App) GetNetworkKeeper() *networkmodulekeeper.Keeper {
+func (app *App) GetNetworkKeeper() cfg.NetworkKeeper {
 	return &app.NetworkKeeper
 }
 
-func (app *App) GetActionExecutor() *networkmodulekeeper.ActionExecutor {
+func (app *App) GetActionExecutor() cfg.ActionExecutor {
 	return app.actionExecutor
 }
 
