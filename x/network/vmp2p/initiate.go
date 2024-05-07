@@ -1,4 +1,4 @@
-package vm
+package vmp2p
 
 import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -7,7 +7,7 @@ import (
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
 
-func InstantiateWasmxConsensusJson(context *vmtypes.Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InstantiateWasmxP2PJson(context *vmtypes.Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	var err error
 	wasmx := BuildWasmxP2P1(context)
@@ -21,6 +21,6 @@ func InstantiateWasmxConsensusJson(context *vmtypes.Context, contractVm *wasmedg
 
 func Setup() {
 	vmtypes.DependenciesMap[HOST_WASMX_ENV_EXPORT] = true
-	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_P2P_VER1, InstantiateWasmxConsensusJson)
+	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_P2P_VER1, InstantiateWasmxP2PJson)
 	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_P2P_VER1] = true
 }

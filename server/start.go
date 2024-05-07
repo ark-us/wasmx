@@ -60,11 +60,11 @@ import (
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
 	networktypes "mythos/v1/x/network/types"
-	networkvm "mythos/v1/x/network/vm"
 
 	mapp "mythos/v1/app"
 	mcfg "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
+	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -234,7 +234,7 @@ func startStandAlone(svrCtx *server.Context, appCreator servertypes.AppCreator) 
 	}
 
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
-	ctx = networkvm.WithP2PEmptyContext(ctx)
+	ctx = vmp2p.WithP2PEmptyContext(ctx)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)
@@ -426,7 +426,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, appCreator
 
 	// for network p2p streams
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
-	ctx = networkvm.WithP2PEmptyContext(ctx)
+	ctx = vmp2p.WithP2PEmptyContext(ctx)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	svrCtx.Viper.Set("goroutineGroup", g)
 	svrCtx.Viper.Set("goContextParent", ctx)

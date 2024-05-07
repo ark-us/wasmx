@@ -28,7 +28,7 @@ import (
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	networkvm "mythos/v1/x/network/vm"
+	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -71,8 +71,8 @@ func DefaultConfig() network.Config {
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	g, goctx, _ := app.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = networkvm.WithP2PEmptyContext(goctx)
-	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
+	goctx = vmp2p.WithP2PEmptyContext(goctx)
+	goctx, _ = config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 

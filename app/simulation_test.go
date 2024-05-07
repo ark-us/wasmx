@@ -14,7 +14,7 @@ import (
 	app "mythos/v1/app"
 	mcfg "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	networkvm "mythos/v1/x/network/vm"
+	vmp2p "mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -49,8 +49,8 @@ func BenchmarkSimulation(b *testing.B) {
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = networkvm.WithP2PEmptyContext(goctx)
-	goctx, bapps := mcfg.WithMultiChainAppEmpty(goctx)
+	goctx = vmp2p.WithP2PEmptyContext(goctx)
+	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 

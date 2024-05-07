@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"mythos/v1/x/network/types"
-	p2pvm "mythos/v1/x/network/vm"
+	"mythos/v1/x/network/vmp2p"
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 )
 
 func init() {
-	p2pvm.Setup()
+	vmp2p.Setup()
 }
 
 func NewKeeper(

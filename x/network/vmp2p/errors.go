@@ -1,4 +1,4 @@
-package vm
+package vmp2p
 
 const ERROR_STREAM_RESET = "stream reset"
 

@@ -29,7 +29,7 @@ import (
 
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	networkvm "mythos/v1/x/network/vm"
+	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -84,8 +84,8 @@ func SetupApp(
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = networkvm.WithP2PEmptyContext(goctx)
-	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
+	goctx = vmp2p.WithP2PEmptyContext(goctx)
+	goctx, _ = config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 
@@ -140,7 +140,7 @@ func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[st
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = networkvm.WithP2PEmptyContext(goctx)
+	goctx = vmp2p.WithP2PEmptyContext(goctx)
 	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
@@ -167,8 +167,8 @@ func NewTestNetworkFixture() network.TestFixture {
 	appOpts := DefaultAppOptions{}
 	g, goctx, _ := GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = networkvm.WithP2PEmptyContext(goctx)
-	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
+	goctx = vmp2p.WithP2PEmptyContext(goctx)
+	goctx, _ = config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)

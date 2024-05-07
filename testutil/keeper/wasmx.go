@@ -34,7 +34,7 @@ import (
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	networkvm "mythos/v1/x/network/vm"
+	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -67,8 +67,8 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	appOpts := app.DefaultAppOptions{}
 	g, goctx, _ := app.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = networkvm.WithP2PEmptyContext(goctx)
-	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
+	goctx = vmp2p.WithP2PEmptyContext(goctx)
+	goctx, _ = config.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 

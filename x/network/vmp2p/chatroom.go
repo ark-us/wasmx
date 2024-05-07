@@ -1,4 +1,4 @@
-package vm
+package vmp2p
 
 import (
 	"time"
