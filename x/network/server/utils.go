@@ -18,6 +18,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/crypto/merkle"
+	"github.com/cometbft/cometbft/libs/bytes"
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	mcfg "mythos/v1/config"
@@ -84,7 +85,8 @@ func InitConsensusContract(
 	appHash []byte,
 	consensusParams *cmttypes.ConsensusParams,
 	appVersion uint64,
-	pubAddr, pubKey, privKey []byte,
+	pubAddr bytes.HexBytes,
+	pubKey, privKey []byte,
 	nodeIndex int32,
 	peers []string,
 ) error {
@@ -105,7 +107,7 @@ func InitConsensusContract(
 		// We update the last results hash with the empty hash, to conform with RFC-6962.
 		LastResultsHash:  merkle.HashFromByteSlices(nil),
 		Version:          version,
-		ValidatorAddress: pubKey,  // hexbytes
+		ValidatorAddress: pubAddr, // hexbytes
 		ValidatorPrivKey: privKey, // consensus privkey
 		ValidatorPubKey:  pubKey,  // consensus pubkey
 		Peers:            peers,

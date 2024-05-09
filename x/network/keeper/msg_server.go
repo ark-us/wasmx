@@ -109,10 +109,12 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 
 	// TODO handle transaction verification!!!! here or by codec ??
 	// router := mcodec.MsgRouter{Router: app.MsgServiceRouter()}
-	_, res, err := app.GetNetworkKeeper().ExecuteCosmosMsg(ctx, sdkmsg, owner)
+	evs, res, err := app.GetNetworkKeeper().ExecuteCosmosMsg(ctx, sdkmsg, owner)
 	if err != nil {
 		return nil, err
 	}
+
+	ctx.EventManager().EmitEvents(evs)
 
 	return &types.MsgMultiChainWrapResponse{
 		Data: res,

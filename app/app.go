@@ -320,6 +320,7 @@ func NewApp(
 	skipUpgradeHeights map[int64]bool,
 	homePath string,
 	invCheckPeriod uint,
+	chainCfg *menc.ChainConfig,
 	encodingConfig menc.EncodingConfig,
 	minGasPrices sdk.DecCoins,
 	appOpts servertypes.AppOptions,
@@ -348,11 +349,6 @@ func NewApp(
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 
 	chainId := bApp.ChainID()
-	chainCfg, err := cfg.GetChainConfig(chainId)
-	if err != nil {
-		panic(err)
-	}
-
 	wasmxStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.StoreKey)
 	websrvStoreKey := cfg.GetMultiChainStoreKey(chainId, websrvmoduletypes.StoreKey)
 	crisisStoreKey := cfg.GetMultiChainStoreKey(chainId, crisistypes.StoreKey)

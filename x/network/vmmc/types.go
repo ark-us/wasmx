@@ -1,6 +1,10 @@
 package vmmc
 
 import (
+	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/bytes"
+
+	menc "mythos/v1/encoding"
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
 
@@ -12,4 +16,13 @@ var HOST_WASMX_ENV_MULTICHAIN = "multichain"
 
 type Context struct {
 	*vmtypes.Context
+}
+
+type InitSubChainMsg struct {
+	InitChainRequest abci.RequestInitChain `json:"init_chain_request"`
+	ChainConfig      menc.ChainConfig      `json:"chain_config"`
+	ValidatorAddress bytes.HexBytes        `json:"validator_address"`
+	ValidatorPrivKey []byte                `json:"validator_privkey"`
+	ValidatorPubKey  []byte                `json:"validator_pubkey"`
+	Peers            []string              `json:"peers"`
 }

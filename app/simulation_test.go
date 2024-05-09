@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	simulationtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
@@ -13,9 +15,6 @@ import (
 
 	app "mythos/v1/app"
 	mcfg "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
-	vmp2p "mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 func init() {
@@ -44,28 +43,17 @@ func BenchmarkSimulation(b *testing.B) {
 		require.NoError(b, err)
 	})
 
-	encoding := appencoding.MakeEncodingConfig(cfg)
-
 	appOpts := app.DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
+	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	g, goctx, _ := app.GetTestCtx(logger, true)
-	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
-	appOpts.Set("goroutineGroup", g)
-	appOpts.Set("goContextParent", goctx)
 
-	app := app.NewApp(
-		logger,
-		db,
-		nil,
-		true,
-		map[int64]bool{},
-		app.DefaultNodeHome,
-		0,
-		encoding,
-		nil,
-		appOpts,
-	)
+	chainId := config.ChainID
+	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	iapp := appCreator(chainId, cfg)
+	app := iapp.(*app.App)
 
 	// Run randomized simulations
 	_, simParams, simErr := simulation.SimulateFromSeed(

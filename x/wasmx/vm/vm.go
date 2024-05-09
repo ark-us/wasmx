@@ -558,6 +558,8 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 			Attributes: attributes,
 		})
 	}
+	events = append(events, context.CosmosEvents...)
+
 	var mem []byte
 	if isdebug {
 		mem = getMemory(contractVm)

@@ -1106,17 +1106,30 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxLoggerDebugExtended(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	msg, parts, err := getLoggerData(callframe, params)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.Logger(ctx.Ctx).Debug(msg, parts...)
+	returns := make([]interface{}, 0)
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxEmitCosmosEvents(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
 	evsbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	// var data []types.Event
 	var data []sdk.Event
 	err = json.Unmarshal(evsbz, &data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	// ctx.CosmosEvents = append(ctx.CosmosEvents, data...)
 	ctx.Ctx.EventManager().EmitEvents(data)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
@@ -1186,6 +1199,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("LoggerInfo", wasmedge.NewFunction(functype_i32_, wasmxLoggerInfo, context, 0))
 	env.AddFunction("LoggerError", wasmedge.NewFunction(functype_i32_, wasmxLoggerError, context, 0))
 	env.AddFunction("LoggerDebug", wasmedge.NewFunction(functype_i32_, wasmxLoggerDebug, context, 0))
+	env.AddFunction("LoggerDebugExtended", wasmedge.NewFunction(functype_i32_, wasmxLoggerDebugExtended, context, 0))
 
 	env.AddFunction("ed25519Sign", wasmedge.NewFunction(functype_i32i32_i32, ed25519Sign, context, 0))
 	env.AddFunction("ed25519Verify", wasmedge.NewFunction(functype_i32i32i32_i32, ed25519Verify, context, 0))

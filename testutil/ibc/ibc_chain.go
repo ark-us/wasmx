@@ -23,7 +23,6 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
-	wasmxapp "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	menc "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
@@ -68,7 +67,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 	balance := banktypes.Balance{
-		Address: acc.GetAddress().String(),
+		Address: acc.GetAddressPrefixed().String(),
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
@@ -120,10 +119,10 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 		SenderAccount: authacc,
 	}
 
-	mapp, ok := app.(*wasmxapp.App)
-	require.True(t, ok, "not app")
-	ctx := chain.GetContext()
-	mapp.AccountKeeper.SetAccount(ctx, authacc)
+	// mapp, ok := app.(*wasmxapp.App)
+	// require.True(t, ok, "not app")
+	// ctx := chain.GetContext()
+	// mapp.AccountKeeper.SetAccount(ctx, authacc)
 
 	valAddrCodec := txConfig.SigningContext().ValidatorAddressCodec()
 	valAddr := sdk.ValAddress(senderAddress.Bytes())

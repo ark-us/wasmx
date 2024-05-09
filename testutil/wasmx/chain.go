@@ -36,6 +36,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
+	"github.com/cometbft/cometbft/libs/bytes"
 	"github.com/cometbft/cometbft/node"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmprotoversion "github.com/cometbft/cometbft/proto/tendermint/version"
@@ -61,7 +62,7 @@ import (
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 
-	networkkeeper "mythos/v1/x/network/keeper"
+	networkserver "mythos/v1/x/network/server"
 	networkconfig "mythos/v1/x/network/server/config"
 
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
@@ -172,12 +173,12 @@ func (suite *KeeperTestSuite) SetupTest() {
 		mcfg.LEVEL0_CHAIN_ID,
 	}
 	suite.ChainIds = mcfg.ChainIdsInit
-	for _, chainId := range mcfg.ChainIdsInit {
-		suite.SetupApp(chainId)
+	for i, chainId := range mcfg.ChainIdsInit {
+		suite.SetupApp(chainId, int32(i))
 	}
 }
 
-func (suite *KeeperTestSuite) SetupApp(chainId string) {
+func (suite *KeeperTestSuite) SetupApp(chainId string, index int32) {
 	t := suite.T()
 	chaincfg, err := mcfg.GetChainConfig(chainId)
 
@@ -205,12 +206,12 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
 	balance := banktypes.Balance{
-		Address: acc.GetAddress().String(),
+		Address: acc.GetAddressPrefixed().String(),
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
 	valOperatorAddress := sdk.ValAddress(validator.Address)
-	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, 0, balance)
+	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 
@@ -266,6 +267,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string) {
 
 	suite.chain = chain
 	suite.chains[chainId] = &chain
+
 	err = suite.InitConsensusContract(resInit, pubKey.Address(), pubKey.Bytes(), privVal.PrivKey.Bytes(), valOperatorAddress)
 	require.NoError(t, err)
 }
@@ -276,8 +278,8 @@ func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {
 	suite.chain = *chain
 }
 
-func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress, nodePubKey, nodePrivKey []byte, valOperatorAddress sdk.ValAddress) error {
-	res, err := suite.App().Info(networkkeeper.RequestInfo)
+func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress bytes.HexBytes, nodePubKey, nodePrivKey []byte, valOperatorAddress sdk.ValAddress) error {
+	res, err := suite.App().Info(types.RequestInfo)
 	if err != nil {
 		return fmt.Errorf("error calling Info: %v", err)
 	}
@@ -292,7 +294,6 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	}
 
 	cfgNetwork := networkconfig.DefaultNetworkConfigConfig()
-	networkServer := networkkeeper.NewMsgServerImpl(suite.App().GetNetworkKeeper().(*networkkeeper.Keeper))
 
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 
@@ -307,10 +308,10 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	} else if strings.Contains(currentState, "-P2P") {
 		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valstr)}
 	}
-	err = networkkeeper.InitConsensusContract(
+	err = networkserver.InitConsensusContract(
 		suite.App(),
 		suite.App().Logger(),
-		networkServer,
+		suite.App().GetNetworkKeeper(),
 		resInit.AppHash,
 		&consensusParams,
 		res.AppVersion,

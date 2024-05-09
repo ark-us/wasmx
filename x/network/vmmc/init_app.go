@@ -10,23 +10,22 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
 	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
 	networkserver "mythos/v1/x/network/server"
 )
 
-func InitApp(ctx *Context, req *abci.RequestInitChain, cfg *menc.ChainConfig, nodeAddress, nodePubKey, nodePrivKey []byte, peers []string) (*abci.ResponseInitChain, error) {
+func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error) {
 	logger := ctx.Logger(ctx.Ctx)
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
 		return nil, err
 	}
-	app := multichainapp.NewApp(req.ChainId, cfg)
+	app := multichainapp.NewApp(req.InitChainRequest.ChainId, &req.ChainConfig)
 	sapp, ok := app.(servertypes.Application)
 	if !ok {
 		return nil, fmt.Errorf("cannot convert MythosApp to server Application")
 	}
 
-	resInit, res, err := networkserver.InitChainAndCommitBlock(sapp, req, logger)
+	resInit, res, err := networkserver.InitChainAndCommitBlock(sapp, &req.InitChainRequest, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -35,14 +34,14 @@ func InitApp(ctx *Context, req *abci.RequestInitChain, cfg *menc.ChainConfig, no
 		appHash = resInit.AppHash
 	}
 
-	consensusParams := *req.ConsensusParams
+	consensusParams := *req.InitChainRequest.ConsensusParams
 	if resInit.ConsensusParams != nil {
 		consensusParams = UpdateParams(consensusParams, resInit.ConsensusParams)
 	}
 	constp := cmttypes.ConsensusParamsFromProto(consensusParams)
 
 	// InitChain
-	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), appHash, &constp, res.AppVersion, nodeAddress, nodePubKey, nodePrivKey, 0, peers)
+	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), appHash, &constp, res.AppVersion, req.ValidatorAddress, req.ValidatorPubKey, req.ValidatorPrivKey, 0, req.Peers)
 	if err != nil {
 		return resInit, err
 	}

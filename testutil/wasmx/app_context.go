@@ -406,19 +406,16 @@ func (s *AppContext) BroadcastTxAsync(account simulation.Account, msgs ...sdk.Ms
 
 	abciClient := network.NewABCIClient(s.App, s.App.BaseApp, s.App.Logger(), &s.App.NetworkKeeper, nil, nil, s.App.GetActionExecutor().(*network.ActionExecutor))
 
-	res, err := abciClient.BroadcastTxAsync(context.TODO(), bz)
+	_, err := abciClient.BroadcastTxAsync(context.TODO(), bz)
 	if err != nil {
 		return nil, err
 	}
-	s.S.CommitBlock()
-
-	resp := &abci.ExecTxResult{
-		Code:      res.Code,
-		Data:      res.Data,
-		Log:       res.Log,
-		Codespace: res.Codespace,
+	commitres, err := s.S.CommitBlock()
+	if err != nil {
+		return nil, err
 	}
-	return resp, nil
+	s.S.Require().Equal(1, len(commitres.TxResults))
+	return commitres.TxResults[0], nil
 }
 
 func (s *AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps []string) uint64 {

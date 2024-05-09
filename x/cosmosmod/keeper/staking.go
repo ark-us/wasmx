@@ -38,10 +38,7 @@ func (k KeeperStaking) BondedRatio(goCtx context.Context) (math.LegacyDec, error
 // StakingTokenSupply staking tokens from the total supply
 func (k KeeperStaking) StakingTokenSupply(goCtx context.Context) (math.Int, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	config, err := mcfg.GetChainConfig(ctx.ChainID())
-	if err != nil {
-		return math.NewInt(0), fmt.Errorf("config not found for chain_id: %s", ctx.ChainID())
-	}
+	config := k.actionExecutor.GetApp().GetChainCfg()
 	derc20Address, err := k.GetDERC20Address(ctx, config.BondBaseDenom)
 	if err != nil {
 		return math.NewInt(0), err
@@ -257,10 +254,7 @@ func (k KeeperStaking) GetAllDelegatorDelegations(goCtx context.Context, delegat
 // TODO: remove this func, change all usage for iterate functionality [sdk comment]
 func (k KeeperStaking) GetAllSDKDelegations(goCtx context.Context) (delegations []stakingtypes.Delegation, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	config, err := mcfg.GetChainConfig(ctx.ChainID())
-	if err != nil {
-		return nil, fmt.Errorf("config not found for chain_id: %s", ctx.ChainID())
-	}
+	config := k.actionExecutor.GetApp().GetChainCfg()
 	derc20Address, err := k.GetDERC20Address(ctx, config.BondBaseDenom)
 	if err != nil {
 		return nil, err

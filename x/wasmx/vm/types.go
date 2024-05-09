@@ -103,6 +103,7 @@ type Context struct {
 	FinishData      []byte
 	CurrentCallId   uint32
 	Logs            []WasmxLog
+	CosmosEvents    []types.Event
 	Messages        []cw8types.SubMsg `json:"messages"`
 	dbIterators     map[int32]dbm.Iterator
 }

@@ -6,21 +6,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
 	"cosmossdk.io/log"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
-	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	app "mythos/v1/app"
@@ -28,8 +25,6 @@ import (
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	"mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 type (
@@ -70,18 +65,10 @@ func DefaultConfig() network.Config {
 	appOpts.Set(flags.FlagHome, tempDir())
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	g, goctx, _ := app.GetTestCtx(logger, true)
-	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx, _ = config.WithMultiChainAppEmpty(goctx)
-	appOpts.Set("goroutineGroup", g)
-	appOpts.Set("goContextParent", goctx)
 
-	tempApp := app.NewApp(
-		logger,
-		dbm.NewMemDB(),
-		nil, true, make(map[int64]bool, 0),
-		cast.ToString(appOpts.Get(flags.FlagHome)),
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), encoding, nil, appOpts)
+	_, appCreator := app.NewAppCreator(logger, dbm.NewMemDB(), nil, appOpts, g, goctx)
+	iapp := appCreator(chainId, chainCfg)
+	tempApp := iapp.(*app.App)
 
 	addrcodec := mcodec.MustUnwrapAccBech32Codec(encoding.TxConfig.SigningContext().AddressCodec())
 
@@ -92,20 +79,20 @@ func DefaultConfig() network.Config {
 		InterfaceRegistry: encoding.InterfaceRegistry,
 		AccountRetriever:  cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec},
 		AppConstructor: func(val network.ValidatorI) servertypes.Application {
-			gasPricesStr := val.GetAppConfig().MinGasPrices
-			gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
-			if err != nil {
-				panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
-			}
 
-			return app.NewApp(
-				val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{}, val.GetCtx().Config.RootDir, 0,
-				encoding,
-				gasPrices,
-				simtestutil.EmptyAppOptions{},
-				baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
-				baseapp.SetMinGasPrices(gasPricesStr),
+			appOpts := app.DefaultAppOptions{}
+			appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
+			appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
+			// baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
+			g, goctx, _ := app.GetTestCtx(logger, true)
+
+			_, appCreator := app.NewAppCreator(
+				val.GetCtx().Logger,
+				dbm.NewMemDB(),
+				nil, appOpts, g, goctx,
 			)
+			iapp := appCreator(chainId, chainCfg)
+			return iapp.(*app.App)
 		},
 		GenesisState:    tempApp.BasicModuleManager.DefaultGenesis(encoding.Marshaler),
 		TimeoutCommit:   2 * time.Second,

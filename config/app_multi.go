@@ -14,7 +14,7 @@ const MultiChainAppKey ContextKey = "MultiChainApp"
 type MultiChainApp struct {
 	Apps     map[string]interface{}
 	ChainIds []string
-	NewApp   func(chainId string, chainCfg *menc.ChainConfig) MythosApp // TODO
+	NewApp   func(chainId string, chainCfg *menc.ChainConfig) MythosApp
 }
 
 func (m *MultiChainApp) SetAppCreator(appCreator func(chainId string, chainCfg *menc.ChainConfig) MythosApp) {

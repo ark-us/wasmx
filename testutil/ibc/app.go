@@ -2,6 +2,7 @@ package ibctesting
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -30,16 +31,48 @@ import (
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
-var DefaultTestingAppInit func(chainId string, index int32) (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp
+var DefaultTestingAppInit func(chainId string, chainCfg *menc.ChainConfig, index int32) (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp
 
 // SetupWithGenesisValSet initializes a new SimApp with a validator set and genesis accounts
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
 func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
-	app, genesisState := DefaultTestingAppInit(chainID, index)
+	app, genesisState, err := BuildGenesisData(valSet, genAccs, chainID, chaincfg, index, balances)
+
+	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
+	require.NoError(t, err)
+
+	req := &abci.RequestInitChain{
+		ChainId:         chainID,
+		InitialHeight:   1,
+		Time:            time.Now().UTC(),
+		Validators:      []abci.ValidatorUpdate{},
+		ConsensusParams: wasmxapp.DefaultTestingConsensusParams,
+		AppStateBytes:   stateBytes,
+	}
+
+	// init chain will set the validator set and initialize the genesis accounts
+	resInit, err := app.InitChain(req)
+	require.NoError(t, err)
+
+	_, err = app.FinalizeBlock(&abci.RequestFinalizeBlock{
+		Height: app.LastBlockHeight() + 1,
+		Time:   time.Now().UTC(),
+		// Hash:               app.LastCommitID().Hash,
+		// NextValidatorsHash: valSet.Hash(),
+	})
+	require.NoError(t, err)
+
+	return app, resInit
+}
+
+func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances []banktypes.Balance) (ibcgotesting.TestingApp, map[string]json.RawMessage, error) {
+	app, genesisState := DefaultTestingAppInit(chainID, &chaincfg, index)
 	mapp, ok := app.(*wasmxapp.App)
-	require.True(t, ok)
+	if !ok {
+		return app, nil, fmt.Errorf("could not build app")
+	}
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
 	signingInfos := make([]slashingtypes.SigningInfo, 0, len(valSet.Validators))
@@ -48,11 +81,17 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 
 	for _, val := range valSet.Validators {
 		pk, err := cryptocodec.FromTmPubKeyInterface(val.PubKey)
-		require.NoError(t, err)
+		if err != nil {
+			return app, nil, err
+		}
 		pkAny, err := codectypes.NewAnyWithValue(pk)
-		require.NoError(t, err)
+		if err != nil {
+			return app, nil, err
+		}
 		valAddr, err := mapp.AddressCodec().BytesToString(sdk.ValAddress(val.Address))
-		require.NoError(t, err)
+		if err != nil {
+			return app, nil, err
+		}
 		validator := stakingtypes.Validator{
 			OperatorAddress:   valAddr,
 			ConsensusPubkey:   pkAny,
@@ -69,7 +108,9 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 		validators = append(validators, validator)
 
 		delAddr := genAccs[0].GetAddressPrefixed().String()
-		require.NoError(t, err)
+		if err != nil {
+			return app, nil, err
+		}
 		delegation := cosmosmodtypes.Delegation{
 			DelegatorAddress: delAddr,
 			ValidatorAddress: valAddr,
@@ -104,7 +145,7 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	// set genesis accounts
 	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(app.AppCodec(), authtypes.DefaultParams(), genAccs)
 	if err != nil {
-		panic(err)
+		return app, nil, err
 	}
 	rewardDenom := bankGenesis.DenomInfo[2].Metadata.Base
 	distributionGenesis := cosmosmodtypes.DefaultDistributionGenesisState(chaincfg.BaseDenom, rewardDenom)
@@ -116,11 +157,17 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 
 	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
-	require.NoError(t, err)
+	if err != nil {
+		return app, nil, err
+	}
 	mintAddress, err := addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
-	require.NoError(t, err)
+	if err != nil {
+		return app, nil, err
+	}
 	bootstrapAccount, err := addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
-	require.NoError(t, err)
+	if err != nil {
+		return app, nil, err
+	}
 
 	wasmxGenesis := wasmxtypes.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress)
 	// mydir, err := os.Getwd()
@@ -130,29 +177,5 @@ func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs 
 	// wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
 	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 
-	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
-	require.NoError(t, err)
-
-	// init chain will set the validator set and initialize the genesis accounts
-	resInit, err := app.InitChain(
-		&abci.RequestInitChain{
-			ChainId:         chainID,
-			InitialHeight:   1,
-			Time:            time.Now().UTC(),
-			Validators:      []abci.ValidatorUpdate{},
-			ConsensusParams: wasmxapp.DefaultTestingConsensusParams,
-			AppStateBytes:   stateBytes,
-		},
-	)
-	require.NoError(t, err)
-
-	_, err = app.FinalizeBlock(&abci.RequestFinalizeBlock{
-		Height: app.LastBlockHeight() + 1,
-		Time:   time.Now().UTC(),
-		// Hash:               app.LastCommitID().Hash,
-		// NextValidatorsHash: valSet.Hash(),
-	})
-	require.NoError(t, err)
-
-	return app, resInit
+	return app, genesisState, nil
 }

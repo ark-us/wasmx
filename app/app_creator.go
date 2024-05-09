@@ -29,7 +29,7 @@ type AppOptions interface {
 }
 
 // newApp creates a new Cosmos SDK app
-func AppCreator(
+func NewAppCreator(
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -77,6 +77,7 @@ func AppCreator(
 			skipUpgradeHeights,
 			cast.ToString(appOpts.Get(flags.FlagHome)),
 			cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
+			chainCfg,
 			encodingConfig,
 			minGasPrices,
 			appOpts,

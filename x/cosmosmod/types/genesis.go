@@ -186,9 +186,10 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, baseDenomName str
 				URI:     "",
 				URIHash: "",
 			},
-			CodeId:    uint64(derc20jsonCodeId),
-			Admins:    []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
-			Minters:   []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			CodeId:  uint64(derc20jsonCodeId),
+			Admins:  []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			Minters: []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			// this is the gas token
 			BaseDenom: fmt.Sprintf("a%s", denomUnit),
 		},
 		{
@@ -213,9 +214,10 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, baseDenomName str
 				URI:     "",
 				URIHash: "",
 			},
-			CodeId:    uint64(erc20jsonCodeId),
-			Admins:    []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
-			Minters:   []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			CodeId:  uint64(erc20jsonCodeId),
+			Admins:  []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			Minters: []string{wasmxtypes.ROLE_BANK, wasmxtypes.ROLE_DISTRIBUTION},
+			// this is the gas token
 			BaseDenom: fmt.Sprintf("a%s", denomUnit),
 		},
 		{

@@ -58,7 +58,7 @@ var ADDR_DISTRIBUTION = "0x0000000000000000000000000000000000000046"
 var ADDR_TIME = "0x0000000000000000000000000000000000000047"
 var ADDR_LEVEL0 = "0x0000000000000000000000000000000000000048"
 var ADDR_LEVEL0_LIBRARY = "0x0000000000000000000000000000000000000049"
-var ADDR_LEVELN = "0x000000000000000000000000000000000000004a"
+var ADDR_MULTICHAIN_REGISTRY = "0x000000000000000000000000000000000000004a"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -562,6 +562,26 @@ func ConsensusPrecompiles() SystemContracts {
 	}
 }
 
+func MultiChainPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("MultiChainPrecompiles: cannot marshal init message")
+	}
+
+	return []SystemContract{
+		{
+			Address:     ADDR_MULTICHAIN_REGISTRY,
+			Label:       MULTICHAIN_REGISTRY_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_MULTICHAIN_REGISTRY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+	}
+}
+
 func ChatPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
@@ -598,6 +618,7 @@ func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string) System
 	precompiles = append(precompiles, HookPrecompiles()...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
 	precompiles = append(precompiles, ConsensusPrecompiles()...)
+	precompiles = append(precompiles, MultiChainPrecompiles()...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles
 }
@@ -646,15 +667,6 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 			Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
-		},
-		{
-			Address:     ADDR_LEVELN,
-			Label:       LEVELN_v001,
-			InitMessage: initMsg,
-			Pinned:      false,
-			Role:        ROLE_LEVELN,
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
 		},
 	}
 

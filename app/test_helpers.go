@@ -13,12 +13,11 @@ import (
 	"cosmossdk.io/log"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
-	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
@@ -29,12 +28,10 @@ import (
 
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	"mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 // DefaultTestingAppInit defines the IBC application used for testing
-var DefaultTestingAppInit func(chainId string, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
+var DefaultTestingAppInit func(chainId string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 
 // DefaultTestingConsensusParams defines the default Tendermint consensus params used in
 // Mythos testing.
@@ -81,21 +78,25 @@ func SetupApp(
 ) *App {
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
-	appOpts := DefaultAppOptions{}
-	g, goctx, _ := GetTestCtx(logger, true)
-	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx, _ = config.WithMultiChainAppEmpty(goctx)
-	appOpts.Set("goroutineGroup", g)
-	appOpts.Set("goContextParent", goctx)
 
 	chainId := config.MYTHOS_CHAIN_ID_TEST
+	appOpts := DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, DefaultNodeHome)
+	appOpts.Set(flags.FlagChainID, chainId)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 5)
+	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+	appOpts.Set(sdkserver.FlagMinGasPrices, "")
+	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+	g, goctx, _ := GetTestCtx(logger, true)
+
 	chainCfg, err := config.GetChainConfig(chainId)
 	if err != nil {
 		panic(err)
 	}
+	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	iapp := appCreator(chainId, chainCfg)
+	app := iapp.(*App)
 
-	app := NewApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := app.DefaultGenesis()
@@ -121,36 +122,30 @@ func SetupApp(
 }
 
 // SetupTestingApp initializes the IBC-go testing application
-func SetupTestingApp(chainID string, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) {
+func SetupTestingApp(chainID string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
-	chainCfg, err := config.GetChainConfig(chainID)
-	if err != nil {
-		panic(err)
-	}
 
-	// level := "network:debug,wasmx:debug,*:info"
-	// filter, _ := log.ParseLogLevel(level)
-	// logger := log.NewLogger(
-	// 	os.Stderr,
-	// 	log.LevelOption(1), // info=1
-	// 	log.FilterOption(filter),
-	// )
-	logger := log.NewNopLogger()
-	cfg := appencoding.MakeEncodingConfig(chainCfg)
-	appOpts := DefaultAppOptions{}
-	g, goctx, _ := GetTestCtx(logger, true)
-	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx, bapps := config.WithMultiChainAppEmpty(goctx)
-	appOpts.Set("goroutineGroup", g)
-	appOpts.Set("goContextParent", goctx)
-	app := NewApp(
-		logger,
-		db, nil, true, map[int64]bool{},
-		DefaultNodeHome+strconv.Itoa(int(index)), 5, cfg, nil, appOpts,
-		bam.SetChainID(chainID),
+	level := "network:debug,wasmx:debug,*:info"
+	filter, _ := log.ParseLogLevel(level)
+	logger := log.NewLogger(
+		os.Stderr,
+		log.LevelOption(1), // info=1
+		log.FilterOption(filter),
 	)
-	bapps.SetApp(chainID, app)
+	// logger := log.NewNopLogger()
+
+	appOpts := DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, DefaultNodeHome+strconv.Itoa(int(index)))
+	appOpts.Set(flags.FlagChainID, chainID)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 5)
+	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+	appOpts.Set(sdkserver.FlagMinGasPrices, "")
+	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+	g, goctx, _ := GetTestCtx(logger, true)
+
+	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	iapp := appCreator(chainID, chainCfg)
+	app := iapp.(*App)
 	return app, app.DefaultGenesis()
 }
 
@@ -164,42 +159,43 @@ func NewTestNetworkFixture() network.TestFixture {
 
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
+	chainId := config.MYTHOS_CHAIN_ID_TEST
 	appOpts := DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, DefaultNodeHome)
+	appOpts.Set(flags.FlagChainID, chainId)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 5)
+	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+	appOpts.Set(sdkserver.FlagMinGasPrices, "")
+	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx, _ = config.WithMultiChainAppEmpty(goctx)
-	appOpts.Set("goroutineGroup", g)
-	appOpts.Set("goContextParent", goctx)
-	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)
+
+	chainCfg, err := config.GetChainConfig(chainId)
 	if err != nil {
 		panic(err)
 	}
-
-	app := NewApp(logger, db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg), nil, appOpts)
+	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	iapp := appCreator(chainId, chainCfg)
+	app := iapp.(*App)
 
 	appCtr := func(val network.ValidatorI) servertypes.Application {
-		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
-		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
 		chainId := val.GetCtx().Viper.GetString(flags.FlagChainID)
 		chainCfg, err := config.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
 		gasPricesStr := val.GetAppConfig().MinGasPrices
-		gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
-		if err != nil {
-			panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
-		}
-		return NewApp(
-			val.GetCtx().Logger, dbm.NewMemDB(), nil, true, map[int64]bool{},
-			DefaultNodeHome, 5, appencoding.MakeEncodingConfig(chainCfg),
-			gasPrices,
-			appOpts,
-			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
-			bam.SetMinGasPrices(gasPricesStr),
-			bam.SetChainID(chainId),
-		)
+		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
+		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
+		appOpts.Set(flags.FlagChainID, chainId)
+		appOpts.Set(sdkserver.FlagMinGasPrices, gasPricesStr)
+		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
+		appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
+		// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
+
+		_, appCreator := NewAppCreator(val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx)
+		iapp := appCreator(chainId, chainCfg)
+		app := iapp.(*App)
+		return app
 	}
 
 	return network.TestFixture{

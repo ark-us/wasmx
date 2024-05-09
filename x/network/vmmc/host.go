@@ -5,26 +5,28 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	abci "github.com/cometbft/cometbft/abci/types"
-
 	vmtypes "mythos/v1/x/wasmx/vm"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 )
 
-// InitChain(*abci.RequestInitChain) (*abci.ResponseInitChain, error)
-func InitChain(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+// InitSubChain(*InitSubChainMsg) (*abci.ResponseInitChain, error)
+func InitSubChain(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req abci.RequestInitChain
+	var req InitSubChainMsg
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	// TODO fill in this info
-	response, err := InitApp(ctx, &req, nil, nil, nil, nil, nil)
+	response, err := InitApp(ctx, &req)
+	if err != nil {
+		ctx.Logger(ctx.Ctx).Error("could not initiate subchain app", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -46,7 +48,7 @@ func BuildWasmxMultichainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
 
-	env.AddFunction("InitChain", wasmedge.NewFunction(functype_i32_i32, InitChain, context, 0))
+	env.AddFunction("InitSubChain", wasmedge.NewFunction(functype_i32_i32, InitSubChain, context, 0))
 
 	return env
 }

@@ -14,8 +14,10 @@ import (
 	"cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -34,8 +36,6 @@ import (
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
-	"mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
@@ -57,6 +57,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 
 	registry := codectypes.NewInterfaceRegistry()
 	cdc := codec.NewProtoCodec(registry)
+	chainId := config.MYTHOS_CHAIN_ID_TEST
 	chainCfg, err := config.GetChainConfig(config.MYTHOS_CHAIN_ID_TEST)
 	if err != nil {
 		panic(err)
@@ -65,12 +66,13 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	appOpts := app.DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
 	g, goctx, _ := app.GetTestCtx(logger, true)
-	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
-	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx, _ = config.WithMultiChainAppEmpty(goctx)
-	appOpts.Set("goroutineGroup", g)
-	appOpts.Set("goContextParent", goctx)
+
+	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	iapp := appCreator(chainId, chainCfg)
+	mapp := iapp.(*app.App)
 
 	paramsSubspace := typesparams.NewSubspace(cdc,
 		codec.NewLegacyAmino(),
@@ -125,7 +127,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	// 	nil, //scopedTransferKeeper,
 	// 	govAddr,
 	// )
-	mapp := app.NewApp(logger, db, nil, true, map[int64]bool{}, app.DefaultNodeHome, 0, encodingConfig, nil, appOpts)
+
 	k := keeper.NewKeeper(
 		g,
 		goctx,

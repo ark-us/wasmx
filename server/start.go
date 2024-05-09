@@ -225,7 +225,7 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 		return err
 	}
 
-	bapps, appCreator := mapp.AppCreator(
+	bapps, appCreator := mapp.NewAppCreator(
 		svrCtx.Logger,
 		db,
 		traceWriter,
@@ -382,7 +382,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		return err
 	}
 
-	bapps, appCreator := mapp.AppCreator(
+	bapps, appCreator := mapp.NewAppCreator(
 		svrCtx.Logger,
 		db,
 		traceWriter,

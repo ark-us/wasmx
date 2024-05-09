@@ -342,7 +342,7 @@ func initChain(
 	metricsProvider node.MetricsProvider,
 	networkServer mcfg.NetworkKeeper,
 ) (*abci.ResponseInitChain, error) {
-	consensusLogger := svrCtx.Logger.With("module", "consensus")
+	consensusLogger := svrCtx.Logger.With("subchain_id", chainId)
 
 	// check if network contract exists
 	genDoc, err := loadGenDoc(genesisDocProvider, chainId)
