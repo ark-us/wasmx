@@ -635,7 +635,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 		panic("DefaultTimeChainContracts: cannot marshal timeInitMsg message")
 	}
 
-	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"maxLevel","value":0},{"key":"blockTimeout","value":5000},{"key":"currentLevel","value":0},{"key":"membersCount","value":1}],"initialState":"uninitialized"}}`)})
+	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"maxLevel","value":0},{"key":"blockTimeoutInternal","value":3000},{"key":"currentLevel","value":0},{"key":"membersCount","value":1},{"key":"blockTimeout","value":"blockTimeoutInternal"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
 	}
@@ -723,6 +723,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 	precompiles = append(precompiles, hooksPrecompiles...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
 	precompiles = append(precompiles, consensusPrecompile...)
+	precompiles = append(precompiles, MultiChainPrecompiles()...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles
 }

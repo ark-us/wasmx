@@ -147,7 +147,9 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	chainConfigBz, err := json.Marshal(subChainConfig)
 	suite.Require().NoError(err)
 
-	peer := "mythos10r9mze6m5guznjy6866x66c8vgy4yjsewql3dp@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD"
+	valAddr, err := addrCodec.BytesToString(sdk.ValAddress(chain.Vals.Validators[0].Address))
+
+	peer := fmt.Sprintf("%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD", valAddr)
 	peers := []string{peer}
 	peersbz, _ := json.Marshal(peers)
 

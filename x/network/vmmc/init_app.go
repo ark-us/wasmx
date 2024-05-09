@@ -24,7 +24,6 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 	if !ok {
 		return nil, fmt.Errorf("cannot convert MythosApp to server Application")
 	}
-
 	resInit, res, err := networkserver.InitChainAndCommitBlock(sapp, &req.InitChainRequest, logger)
 	if err != nil {
 		return nil, err

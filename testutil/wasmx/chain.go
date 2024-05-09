@@ -211,7 +211,22 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, index int32) {
 	}
 
 	valOperatorAddress := sdk.ValAddress(validator.Address)
-	testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
+	// testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
+
+	testApp, genesisState, err := ibctesting.BuildGenesisData(valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance})
+	require.NoError(t, err)
+	if strings.Contains(chainId, "level") {
+		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("fee_collector"))
+		require.NoError(t, err)
+		mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
+		require.NoError(t, err)
+
+		var wasmxGenState wasmxtypes.GenesisState
+		testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
+		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32)
+		genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
+	}
+	testApp, resInit := ibctesting.InitAppChain(t, testApp, genesisState, chainId)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 

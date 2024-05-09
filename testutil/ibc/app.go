@@ -39,7 +39,12 @@ var DefaultTestingAppInit func(chainId string, chainCfg *menc.ChainConfig, index
 // account. A Nop logger is set in SimApp.
 func SetupWithGenesisValSet(t *testing.T, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	app, genesisState, err := BuildGenesisData(valSet, genAccs, chainID, chaincfg, index, balances)
+	require.NoError(t, err)
 
+	return InitAppChain(t, app, genesisState, chainID)
+}
+
+func InitAppChain(t *testing.T, app ibcgotesting.TestingApp, genesisState map[string]json.RawMessage, chainID string) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
 	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
 	require.NoError(t, err)
 
