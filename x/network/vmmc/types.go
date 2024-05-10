@@ -26,3 +26,12 @@ type InitSubChainMsg struct {
 	ValidatorPubKey  []byte                `json:"validator_pubkey"`
 	Peers            []string              `json:"peers"`
 }
+
+type StartSubChainMsg struct {
+	ChainId     string           `json:"chain_id"`
+	ChainConfig menc.ChainConfig `json:"chain_config"`
+}
+
+type StartSubChainResponse struct {
+	Error string `json:"error"`
+}

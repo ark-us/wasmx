@@ -61,7 +61,6 @@ func NewAppCreator(
 	}
 
 	appCreator := func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp {
-		fmt.Println("---appCreator newApp--")
 
 		encodingConfig := menc.MakeEncodingConfig(chainCfg)
 		minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))

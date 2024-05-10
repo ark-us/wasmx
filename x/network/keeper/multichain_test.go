@@ -21,6 +21,8 @@ import (
 	menc "mythos/v1/encoding"
 	ibctesting "mythos/v1/testutil/ibc"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+
+	// networkserver "mythos/v1/x/network/server"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -87,8 +89,6 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 
 func (suite *KeeperTestSuite) TestMultiChainInit() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
-	// config, err := mcfg.GetChainConfig(chainId)
-	// s.Require().NoError(err)
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
@@ -158,6 +158,12 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.Require().NoError(err)
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
 	suite.Require().Equal(1, len(evs))
+
+	time.Sleep(time.Second * 3)
+
+	// test restarting the node by starting the parent chain
+	// err = networkserver.StartNode(appA.App, appA.App.Logger(), appA.App.GetNetworkKeeper())
+	// suite.Require().NoError(err)
 }
 
 func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {

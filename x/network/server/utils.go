@@ -125,7 +125,6 @@ func InitConsensusContract(
 }
 
 func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper) error {
-	fmt.Println("--StartNode chainId--", mythosapp.GetBaseApp().ChainID())
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))

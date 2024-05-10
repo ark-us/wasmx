@@ -45,14 +45,25 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 		return resInit, err
 	}
 
-	// TODO level0 start node hook starts the subchains
-	// start chain - StartNode
-
 	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
 	if err != nil {
 		return resInit, err
 	}
 	return resInit, nil
+}
+
+func StartApp(ctx *Context, req *StartSubChainMsg) error {
+	logger := ctx.Logger(ctx.Ctx)
+	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
+	if err != nil {
+		return err
+	}
+	app := multichainapp.NewApp(req.ChainId, &req.ChainConfig)
+	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Update returns a copy of the params with updates from the non-zero fields of p2.
