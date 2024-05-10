@@ -644,7 +644,8 @@ func initTestnetFilesInternal(
 		valAddrCodec = level0EncodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()
 		addrCodec0 := level0EncodingConfig.TxConfig.SigningContext().AddressCodec()
 		for i := nodeIndexStart; i < args.numValidators; i++ {
-			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId)
+			// we add the nodeid to this folder, so we only have 1 gentx for each level0
+			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId+nodeIDs[i])
 			nodeDirName := nodeDirNames[i]
 			kb := kbs[i]
 			memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
@@ -672,7 +673,7 @@ func initTestnetFilesInternal(
 				return err
 			}
 
-			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccount, genBalance, genFile, args.numValidators); err != nil {
+			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccount, genBalance, genFile, 1); err != nil {
 				return err
 			}
 
@@ -966,7 +967,8 @@ func collectGenFilesLevel0(
 
 	nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
 	nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
-	gentxsDir := filepath.Join(outputDir, "gentxs_"+chainID)
+	// we add the nodeid to this folder, so we only have 1 gentx for each level0
+	gentxsDir := filepath.Join(outputDir, "gentxs_"+chainID+nodeID)
 	nodeConfig.Moniker = nodeDirName
 	nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	// nodeConfig.ProxyApp = "tcp://127.0.0.1:26657"
