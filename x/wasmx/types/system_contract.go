@@ -290,6 +290,7 @@ func EIDPrecompiles() SystemContracts {
 			Label:       "secp384r1_registry",
 			InitMessage: initMsg,
 			Pinned:      false, // TODO
+			Role:        ROLE_EID_REGISTRY,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
