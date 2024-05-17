@@ -111,7 +111,7 @@ func MustAccAddressPrefixedFromBech32(address string) AccAddressPrefixed {
 	return addr
 }
 
-// AccAddressFromBech32 creates an AccAddress from a Bech32 string.
+// AccAddressPrefixedFromBech32 creates an AccAddressPrefixed from a Bech32 string.
 func AccAddressPrefixedFromBech32(address string) (addr AccAddressPrefixed, err error) {
 	if len(strings.TrimSpace(address)) == 0 {
 		return AccAddressPrefixed{}, errors.New("empty address string is not allowed")

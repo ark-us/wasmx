@@ -27,4 +27,5 @@ cd ..
 
 # move proto files to the right places
 cp -r mythos/v*/x/* x/
+cp -r mythos/v*/crypto/* crypto/
 rm -rf mythos

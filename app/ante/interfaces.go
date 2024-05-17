@@ -25,6 +25,9 @@ type AccountKeeper interface {
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	SetAccount(ctx context.Context, acc sdk.AccountI)
 	GetModuleAddress(moduleName string) sdk.AccAddress
+
+	GetAccountPrefixed(ctx context.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
+	SetAccountPrefixed(goCtx context.Context, acc mcodec.AccountI) error
 	AddressCodec() address.Codec
 	AccBech32Codec() mcodec.AccBech32Codec
 }

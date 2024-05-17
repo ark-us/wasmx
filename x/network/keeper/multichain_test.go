@@ -7,13 +7,23 @@ import (
 	"fmt"
 	"time"
 
+	anypb "google.golang.org/protobuf/types/known/anypb"
+
 	sdkmath "cosmossdk.io/math"
+	txsigning "cosmossdk.io/x/tx/signing"
 	abci "github.com/cometbft/cometbft/abci/types"
 	client "github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simulation "github.com/cosmos/cosmos-sdk/types/simulation"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"mythos/v1/app"
 	mcodec "mythos/v1/codec"
@@ -92,8 +102,12 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(10_000_000_000)
+	sender := simulation.Account{
+		PrivKey: chain.SenderPrivKey,
+		PubKey:  chain.SenderAccount.GetPubKey(),
+		Address: chain.SenderAccount.GetAddress(),
+	}
 
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
@@ -119,21 +133,25 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	}
 
 	subChainId := "tttest_1000-1"
-	senderPrivKey := chain.SenderPrivKey
 	encoding := menc.MakeEncodingConfig(&subChainConfig)
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(encoding.InterfaceRegistry.SigningContext().AddressCodec())
-	acc := cosmosmodtypes.NewBaseAccount(addrCodec.BytesToAccAddressPrefixed(senderPrivKey.PubKey().Address().Bytes()), senderPrivKey.PubKey(), 0, 0)
-	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
-	balances := []banktypes.Balance{{
-		Address: acc.GetAddressPrefixed().String(),
-		Coins:   sdk.NewCoins(sdk.NewCoin(subChainConfig.BaseDenom, amount)),
-	}}
-	_, genesisState, err := ibctesting.BuildGenesisData(chain.Vals, []cosmosmodtypes.GenesisAccount{acc}, subChainId, subChainConfig, 10, balances)
-	s.Require().NoError(err)
-	stateBytes, err := json.MarshalIndent(genesisState, "", " ")
+	valAddrCodec := mcodec.MustUnwrapValBech32Codec(encoding.InterfaceRegistry.SigningContext().ValidatorAddressCodec())
+	valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
+
+	genesisAccs := []cosmosmodtypes.GenesisAccount{}
+	balances := []banktypes.Balance{}
+	_, genesisState, err := ibctesting.BuildGenesisData(&tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances)
 	s.Require().NoError(err)
 
-	req := &abci.RequestInitChain{
+	genesisStateWasmx := map[string][]byte{}
+	for key, value := range genesisState {
+		genesisStateWasmx[key] = value
+	}
+
+	stateBytes, err := json.Marshal(genesisStateWasmx)
+	s.Require().NoError(err)
+
+	req := abci.RequestInitChain{
 		ChainId:         subChainId,
 		InitialHeight:   1,
 		Time:            time.Now().UTC(),
@@ -142,19 +160,110 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 		AppStateBytes:   stateBytes,
 	}
 
-	initChainBz, err := json.Marshal(req)
+	valAddr := addrCodec.BytesToAccAddressPrefixed(sdk.ValAddress(chain.Vals.Validators[0].Address))
+	valAddr = addrCodec.BytesToAccAddressPrefixed(sender.Address.Bytes())
+	valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(valAddr.Bytes()))
+
+	peer := fmt.Sprintf("%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD", valAddr.String())
+
+	valPubKey, err := cryptocodec.FromCmtPubKeyInterface(chain.Vals.Validators[0].PubKey)
 	suite.Require().NoError(err)
-	chainConfigBz, err := json.Marshal(subChainConfig)
+
+	validMsg, err := stakingtypes.NewMsgCreateValidator(
+		valStr,
+		valPubKey, // validator consensus key
+		sdk.NewCoin(subChainConfig.BaseDenom, valTokens),
+		stakingtypes.NewDescription("moniker1", "", "", "", ""),
+		stakingtypes.NewCommissionRates(sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec()),
+		sdkmath.OneInt(),
+	)
+	s.Require().NoError(err)
+
+	subchainGasPrices := "10attt"
+
+	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
+	suite.Require().NoError(err)
+	subchainapp := multichainapp.NewApp(subChainId, &subChainConfig)
+
+	valTxBuilder := appA.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{validMsg}, nil, &subchainGasPrices, peer)
+	accSeq := uint64(0)
+	accNo := uint64(0)
+	accAddress, err := subchainapp.InterfaceRegistry().SigningContext().AddressCodec().BytesToString(sender.Address.Bytes())
+	suite.Require().NoError(err)
+	sigV2 := signing.SignatureV2{
+		PubKey: sender.PubKey,
+		Data: &signing.SingleSignatureData{
+			SignMode:  signing.SignMode(subchainapp.TxConfig().SignModeHandler().DefaultMode()),
+			Signature: nil,
+		},
+		Sequence: accSeq,
+	}
+	err = valTxBuilder.SetSignatures(sigV2)
 	suite.Require().NoError(err)
 
-	valAddr, err := addrCodec.BytesToString(sdk.ValAddress(chain.Vals.Validators[0].Address))
+	signerData := authsigning.SignerData{
+		ChainID:       subChainId,
+		AccountNumber: accNo,
+		Sequence:      accSeq,
+		PubKey:        sender.PubKey,
+		Address:       accAddress,
+	}
+	sigV2, err = tx.SignWithPrivKey(
+		appA.Context().Context(),
+		signing.SignMode(subchainapp.TxConfig().SignModeHandler().DefaultMode()), signerData,
+		valTxBuilder, sender.PrivKey, subchainapp.TxConfig(),
+		accSeq,
+	)
+	suite.Require().NoError(err)
 
-	peer := fmt.Sprintf("%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD", valAddr)
-	peers := []string{peer}
-	peersbz, _ := json.Marshal(peers)
+	err = valTxBuilder.SetSignatures(sigV2)
+	suite.Require().NoError(err)
 
-	msg := fmt.Sprintf(`{"InitSubChain":{"init_chain_request":%s,"chain_config":%s,"peers":%s}}`, string(initChainBz), string(chainConfigBz), string(peersbz))
+	valSdkTx := valTxBuilder.GetTx()
+
+	txjsonbz, err := subchainapp.TxConfig().TxJSONEncoder()(valSdkTx)
+	s.Require().NoError(err)
+
+	// test verif
+	anyPk, _ := codectypes.NewAnyWithValue(sender.PubKey)
+	signerData2 := txsigning.SignerData{
+		Address:       signerData.Address,
+		ChainID:       signerData.ChainID,
+		AccountNumber: signerData.AccountNumber,
+		Sequence:      signerData.Sequence,
+		PubKey: &anypb.Any{
+			TypeUrl: anyPk.TypeUrl,
+			Value:   anyPk.Value,
+		},
+	}
+	adaptableTx, ok := valSdkTx.(authsigning.V2AdaptableTx)
+	s.Require().True(ok)
+	txData := adaptableTx.GetSigningTxData()
+
+	sigs, err := valSdkTx.GetSignaturesV2()
+	s.Require().NoError(err)
+	err = authsigning.VerifySignature(appA.Context().Context(), sender.PubKey, signerData2, sigs[0].Data, subchainapp.TxConfig().SignModeHandler(), txData)
+	s.Require().NoError(err)
+	// test verif END
+
+	regreq := wasmxtypes.RegisterSubChainRequest{
+		Data: wasmxtypes.InitSubChainDeterministicRequest{
+			InitChainRequest: req,
+			ChainConfig:      subChainConfig,
+			Peers:            []string{},
+		},
+		GenTxs:   [][]byte{txjsonbz},
+		Balances: sdk.Coins{sdk.NewCoin(subChainConfig.BaseDenom, initBalance)},
+	}
+	regreqBz, err := json.Marshal(regreq)
+	suite.Require().NoError(err)
+	msg := fmt.Sprintf(`{"RegisterSubChain":%s}`, string(regreqBz))
+
 	res, err := suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
+	suite.Require().NoError(err)
+
+	msg = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
+	res, err = suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
 	suite.Require().Equal(1, len(evs))

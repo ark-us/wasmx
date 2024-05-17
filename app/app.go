@@ -1040,6 +1040,7 @@ func (app *App) setAnteHandler(txConfig client.TxConfig) {
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 			WasmxKeeper:     &app.WasmxKeeper,
 			CircuitKeeper:   &app.CircuitKeeper,
+			AccBech32Codec:  app.AccBech32Codec(),
 		},
 	)
 	if err != nil {
@@ -1379,6 +1380,10 @@ func (app *App) ValidatorAddressCodec() address.Codec {
 
 func (app *App) ConsensusAddressCodec() address.Codec {
 	return app.consCodec
+}
+
+func (app *App) AccBech32Codec() mcodec.AccBech32Codec {
+	return mcodec.MustUnwrapAccBech32Codec(app.addrCodec)
 }
 
 func (app *App) MinGasPrices() sdk.DecCoins {

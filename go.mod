@@ -14,11 +14,11 @@ require (
 	github.com/ethereum/go-ethereum v1.14.0
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-session/session v3.1.2+incompatible
-	github.com/gogo/protobuf v1.3.3
+	github.com/gogo/protobuf v1.3.3 // indirect
 	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.27.10
 	github.com/pkg/errors v0.9.1
@@ -56,6 +56,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/hashicorp/go-metrics v0.5.3
+	github.com/hashicorp/golang-lru v1.0.2
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/libp2p/go-libp2p-pubsub v0.10.0
 	github.com/multiformats/go-multiaddr v0.12.0
@@ -67,6 +68,7 @@ require (
 	golang.org/x/sync v0.7.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de
 	google.golang.org/protobuf v1.33.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -171,7 +173,6 @@ require (
 	github.com/hashicorp/go-plugin v1.5.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
-	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.5 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
@@ -306,13 +307,13 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 	pgregory.net/rapid v1.1.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace (
 	cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0
 
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240426185659-e7b6e142f9f0
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240517151814-d4696907c571
+	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 
 	github.com/cosmos/ibc-go/v8 => github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19
 

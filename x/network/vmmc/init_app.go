@@ -1,6 +1,7 @@
 package vmmc
 
 import (
+	"encoding/json"
 	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -8,13 +9,18 @@ import (
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	mcfg "mythos/v1/config"
 	networkserver "mythos/v1/x/network/server"
 )
 
+type GenutilGenesisState struct {
+	GenTxs [][]byte `json:"gen_txs"`
+}
+
 func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error) {
-	logger := ctx.Logger(ctx.Ctx)
+	logger := ctx.Logger(ctx.Ctx).With("subchain_id", req.InitChainRequest.ChainId)
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
 		return nil, err
@@ -24,6 +30,42 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 	if !ok {
 		return nil, fmt.Errorf("cannot convert MythosApp to server Application")
 	}
+	genesisStateWasmx := map[string][]byte{}
+	err = json.Unmarshal(req.InitChainRequest.AppStateBytes, &genesisStateWasmx)
+	if err != nil {
+		return nil, err
+	}
+
+	genesisState := map[string]json.RawMessage{}
+	for key, value := range genesisStateWasmx {
+		genesisState[key] = value
+
+		// TODO remove this when we replace genutil
+		if key == genutiltypes.ModuleName {
+			genutilGenesis := &GenutilGenesisState{}
+			err = json.Unmarshal(value, genutilGenesis)
+			if err != nil {
+				return nil, err
+			}
+			cdc := app.AppCodec()
+			genTx := make([]json.RawMessage, len(genutilGenesis.GenTxs))
+			for i, txbz := range genutilGenesis.GenTxs {
+				genTx[i] = txbz
+			}
+			newGenutilGenesis := &genutiltypes.GenesisState{GenTxs: genTx}
+			newvalue, err := cdc.MarshalJSON(newGenutilGenesis)
+			if err != nil {
+				return nil, err
+			}
+			genesisState[key] = newvalue
+		}
+	}
+	stateBytes, err := json.Marshal(&genesisState)
+	if err != nil {
+		return nil, err
+	}
+	req.InitChainRequest.AppStateBytes = stateBytes
+
 	resInit, res, err := networkserver.InitChainAndCommitBlock(sapp, &req.InitChainRequest, logger)
 	if err != nil {
 		return nil, err

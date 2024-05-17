@@ -189,7 +189,7 @@ func (suite *KeeperTestSuite) sendMessageFromOther(sender simulation.Account, ro
 		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgbz,
 	}
-	txdata := appA.PrepareCosmosTx(sender, []sdk.Msg{msgexec}, nil, nil)
+	txdata := appA.PrepareCosmosTx(sender, []sdk.Msg{msgexec}, nil, nil, "")
 
 	block := ChatBlock{
 		Header: ChatHeader{Height: 3, Time: time.Now(), ParentHash: []byte{1, 2}, DataHash: []byte{1, 2}},

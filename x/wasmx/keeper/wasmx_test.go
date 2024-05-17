@@ -205,7 +205,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	}
 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
 	suite.Require().NoError(err)
-	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil, "")
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
 	data := fmt.Sprintf(`{"newTransaction":{"transaction":"%s"}}`, txstr)

@@ -10,6 +10,7 @@ import (
 	"cosmossdk.io/store/prefix"
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -119,10 +120,12 @@ type WasmxCosmosHandler interface {
 	GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string
 	JSONCodec() codec.JSONCodec
 	GetAlias(addr mcodec.AccAddressPrefixed) (mcodec.AccAddressPrefixed, bool)
+	Codec() codec.Codec
 	AddressCodec() address.Codec
 	ValidatorAddressCodec() address.Codec
 	ConsensusAddressCodec() address.Codec
 	AccBech32Codec() mcodec.AccBech32Codec
+	TxConfig() client.TxConfig
 }
 
 // LibWasmEdgeVersion returns the version of the loaded wasmedge library

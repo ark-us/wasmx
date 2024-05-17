@@ -9,6 +9,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,6 +31,9 @@ type WasmxCosmosHandler struct {
 func (h *WasmxCosmosHandler) WithContext(newctx sdk.Context) {
 	h.Ctx = newctx
 }
+func (h *WasmxCosmosHandler) Codec() codec.Codec {
+	return h.Keeper.cdc
+}
 func (h *WasmxCosmosHandler) AddressCodec() address.Codec {
 	return h.Keeper.AddressCodec()
 }
@@ -41,6 +45,9 @@ func (h *WasmxCosmosHandler) ConsensusAddressCodec() address.Codec {
 }
 func (h *WasmxCosmosHandler) AccBech32Codec() mcodec.AccBech32Codec {
 	return h.Keeper.accBech32Codec
+}
+func (h *WasmxCosmosHandler) TxConfig() client.TxConfig {
+	return h.Keeper.txConfig
 }
 func (h *WasmxCosmosHandler) SubmitCosmosQuery(reqQuery *abci.RequestQuery) ([]byte, error) {
 	router := mcodec.QueryRouter{Router: h.Keeper.grpcQueryRouter}
@@ -198,6 +205,7 @@ func (h *Keeper) DecodeCosmosTx(bz []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	txbz, err := h.txConfig.TxJSONEncoder()(tx)
 	if err != nil {
 		return nil, err

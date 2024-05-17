@@ -3,6 +3,7 @@ package mythos.cosmosmod.v1;
 
 import "gogoproto/gogo.proto";
 import "amino/amino.proto";
+import "google/protobuf/any.proto";
 import "cosmos_proto/cosmos.proto";
 import "cosmos/auth/v1beta1/auth.proto";
 import "cosmos/auth/v1beta1/genesis.proto";
@@ -16,7 +17,7 @@ message AuthGenesisState {
     cosmos.auth.v1beta1.Params params = 1 [(gogoproto.nullable) = false, (amino.dont_omitempty) = true];
 
     // accounts are the accounts present at genesis.
-    repeated AnyAccount accounts = 2;
+    repeated google.protobuf.Any accounts = 2;
     string base_account_typeurl = 3;
     string module_account_typeurl = 4;
 }

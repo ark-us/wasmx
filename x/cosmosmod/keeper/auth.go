@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	errorsmod "cosmossdk.io/errors"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -115,32 +115,20 @@ func (k KeeperAuth) GetAccountPrefixed(goCtx context.Context, addr mcodec.AccAdd
 	if err != nil {
 		return nil, err
 	}
-
-	data := strings.ReplaceAll(string(rresp.Data), `{"@type":"","key":""}`, "null")
 	var response types.QueryAccountResponse
-	err = k.cdc.UnmarshalJSON([]byte(data), &response)
+	err = k.cdc.UnmarshalJSON(rresp.Data, &response)
 	if err != nil {
 		return nil, err
 	}
 	if response.Account == nil {
 		return nil, nil
 	}
-	if response.Account.TypeUrl == sdk.MsgTypeURL(&types.BaseAccount{}) {
-		var acc types.BaseAccount
-		err = k.cdc.UnmarshalJSON(response.Account.Value, &acc)
-		if err != nil {
-			return nil, err
-		}
-		return &acc, nil
-	} else if response.Account.TypeUrl == sdk.MsgTypeURL(&types.ModuleAccount{}) {
-		var acc types.ModuleAccount
-		err = k.cdc.UnmarshalJSON(response.Account.Value, &acc)
-		if err != nil {
-			return nil, err
-		}
-		return &acc, nil
+
+	sdkmsg, err := mcodec.AnyToSdkMsg(k.cdc, response.Account)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("account not found: %s", addr.String())
+	return sdkmsg.(mcodec.AccountI), nil
 }
 
 // TODO eventually remove after we replace all cosmos modules
@@ -180,21 +168,16 @@ func (k KeeperAuth) SetAccountPrefixed(goCtx context.Context, acc mcodec.Account
 	if err != nil {
 		return err
 	}
-
-	accbz, err := k.cdc.MarshalJSON(acc)
+	accany, err := cdctypes.NewAnyWithValue(acc)
 	if err != nil {
 		return err
 	}
-	msg := types.MsgSetAccount{Account: &types.AnyAccount{
-		TypeUrl: sdk.MsgTypeURL(acc),
-		Value:   accbz,
-	}}
+	msg := types.MsgSetAccount{Account: accany}
 	accmsgbz, err := k.cdc.MarshalJSON(&msg)
 	if err != nil {
 		return err
 	}
-	data := strings.ReplaceAll(string(accmsgbz), `"pub_key":null`, `"pub_key":{"@type":"","key":""}`)
-	msgbz := []byte(fmt.Sprintf(`{"SetAccount":%s}`, data))
+	msgbz := []byte(fmt.Sprintf(`{"SetAccount":%s}`, accmsgbz))
 	execmsg, err := json.Marshal(wasmxtypes.WasmxExecutionMessage{Data: msgbz})
 	if err != nil {
 		return err

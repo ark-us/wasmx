@@ -564,17 +564,16 @@ func ConsensusPrecompiles() SystemContracts {
 }
 
 func MultiChainPrecompiles() SystemContracts {
-	msg := WasmxExecutionMessage{Data: []byte{}}
-	initMsg, err := json.Marshal(msg)
+	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"min_validators_count":1,"enable_eid_check":false}}`)})
 	if err != nil {
-		panic("MultiChainPrecompiles: cannot marshal init message")
+		panic("MultiChainPrecompiles: cannot marshal mutichainInitMsg message")
 	}
 
 	return []SystemContract{
 		{
 			Address:     ADDR_MULTICHAIN_REGISTRY,
 			Label:       MULTICHAIN_REGISTRY_v001,
-			InitMessage: initMsg,
+			InitMessage: mutichainInitMsg,
 			Pinned:      false,
 			Role:        ROLE_MULTICHAIN_REGISTRY,
 			StorageType: ContractStorageType_SingleConsensus,

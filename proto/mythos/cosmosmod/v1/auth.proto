@@ -11,17 +11,12 @@ import "cosmos/auth/v1beta1/auth.proto";
 option go_package = "mythos/v1/x/cosmosmod/types";
 option (gogoproto.goproto_getters_all) = false;
 
-message AnyAccount {
-    string type_url = 1;
-    bytes value = 2;
-}
-
 message MsgSetAccount {
-    AnyAccount account = 1;
+    google.protobuf.Any account = 1;
 }
 
 message QueryAccountResponse {
-    AnyAccount account = 1;
+    google.protobuf.Any account = 1;
 }
 
 message QueryHasAccountResponse {

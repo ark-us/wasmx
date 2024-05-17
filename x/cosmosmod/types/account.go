@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -26,6 +25,7 @@ var (
 	_ GenesisAccount                     = (*ModuleAccount)(nil)
 	_ sdk.ModuleAccountI                 = (*ModuleAccount)(nil)
 	_ mcodec.ModuleAccountI              = (*ModuleAccount)(nil)
+	_ codectypes.UnpackInterfacesMessage = (*ModuleAccount)(nil)
 )
 
 // NewBaseAccount creates a new BaseAccount object.
@@ -258,46 +258,6 @@ func (ma ModuleAccount) Validate() error {
 	return ma.BaseAccount.Validate()
 }
 
-type moduleAccountPretty struct {
-	Address       mcodec.AccAddressPrefixed `json:"address"`
-	PubKey        string                    `json:"public_key"`
-	AccountNumber uint64                    `json:"account_number"`
-	Sequence      uint64                    `json:"sequence"`
-	Name          string                    `json:"name"`
-	Permissions   []string                  `json:"permissions"`
-}
-
-// MarshalJSON returns the JSON representation of a ModuleAccount.
-func (ma ModuleAccount) MarshalJSON() ([]byte, error) {
-	accAddr, err := mcodec.AccAddressPrefixedFromBech32(ma.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(moduleAccountPretty{
-		Address:       accAddr,
-		PubKey:        "",
-		AccountNumber: ma.AccountNumber,
-		Sequence:      ma.Sequence,
-		Name:          ma.Name,
-		Permissions:   ma.Permissions,
-	})
-}
-
-// UnmarshalJSON unmarshals raw JSON bytes into a ModuleAccount.
-func (ma *ModuleAccount) UnmarshalJSON(bz []byte) error {
-	var alias moduleAccountPretty
-	if err := json.Unmarshal(bz, &alias); err != nil {
-		return err
-	}
-
-	ma.BaseAccount = NewBaseAccount(alias.Address, nil, alias.AccountNumber, alias.Sequence)
-	ma.Name = alias.Name
-	ma.Permissions = alias.Permissions
-
-	return nil
-}
-
 func (acc ModuleAccount) ToCosmosAccount() *authtypes.ModuleAccount {
 	return authtypes.NewModuleAccount(
 		acc.BaseAccount.ToCosmosAccount(),
@@ -308,6 +268,15 @@ func (acc ModuleAccount) ToCosmosAccount() *authtypes.ModuleAccount {
 
 func (acc ModuleAccount) ToCosmosAccountI() sdk.AccountI {
 	return acc.ToCosmosAccount()
+}
+
+// UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces
+func (acc ModuleAccount) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+	if acc.PubKey == nil {
+		return nil
+	}
+	var pubKey cryptotypes.PubKey
+	return unpacker.UnpackAny(acc.PubKey, &pubKey)
 }
 
 // GenesisAccounts defines a slice of GenesisAccount objects

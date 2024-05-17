@@ -3,6 +3,7 @@ package ante
 import (
 	"bytes"
 	"fmt"
+	mcodec "mythos/v1/codec"
 
 	errorsmod "cosmossdk.io/errors"
 
@@ -25,9 +26,10 @@ type DeductFeeDecorator struct {
 	bankKeeper     types.BankKeeper
 	feegrantKeeper sdkante.FeegrantKeeper
 	txFeeChecker   TxFeeChecker
+	accBech32Codec mcodec.AccBech32Codec
 }
 
-func NewDeductFeeDecorator(ak AccountKeeper, bk types.BankKeeper, fk sdkante.FeegrantKeeper, tfc TxFeeChecker) DeductFeeDecorator {
+func NewDeductFeeDecorator(ak AccountKeeper, bk types.BankKeeper, fk sdkante.FeegrantKeeper, tfc TxFeeChecker, accBech32Codec mcodec.AccBech32Codec) DeductFeeDecorator {
 	if tfc == nil {
 		tfc = checkTxFeeWithValidatorMinGasPrices
 	}
@@ -37,6 +39,7 @@ func NewDeductFeeDecorator(ak AccountKeeper, bk types.BankKeeper, fk sdkante.Fee
 		bankKeeper:     bk,
 		feegrantKeeper: fk,
 		txFeeChecker:   tfc,
+		accBech32Codec: accBech32Codec,
 	}
 }
 
@@ -81,19 +84,19 @@ func (dfd DeductFeeDecorator) checkDeductFee(ctx sdk.Context, sdkTx sdk.Tx, fee 
 		return fmt.Errorf("fee collector module account (%s) has not been set", types.FeeCollectorName)
 	}
 
-	feePayer := feeTx.FeePayer()
+	feePayer := dfd.accBech32Codec.BytesToAccAddressPrefixed(feeTx.FeePayer())
 	feeGranter := feeTx.FeeGranter()
 	deductFeesFrom := feePayer
 
 	// if feegranter set deduct fee from feegranter account.
 	// this works with only when feegrant enabled.
 	if feeGranter != nil {
-		feeGranterAddr := sdk.AccAddress(feeGranter)
+		feeGranterAddr := dfd.accBech32Codec.BytesToAccAddressPrefixed(feeGranter)
 
 		if dfd.feegrantKeeper == nil {
 			return sdkerrors.ErrInvalidRequest.Wrap("fee grants are not enabled")
-		} else if !bytes.Equal(feeGranterAddr, feePayer) {
-			err := dfd.feegrantKeeper.UseGrantedFees(ctx, feeGranterAddr, feePayer, fee, sdkTx.GetMsgs())
+		} else if !bytes.Equal(feeGranterAddr.Bytes(), feePayer.Bytes()) {
+			err := dfd.feegrantKeeper.UseGrantedFees(ctx, feeGranterAddr.Bytes(), feePayer.Bytes(), fee, sdkTx.GetMsgs())
 			if err != nil {
 				return errorsmod.Wrapf(err, "%s does not allow to pay fees for %s", feeGranter, feePayer)
 			}
@@ -102,9 +105,12 @@ func (dfd DeductFeeDecorator) checkDeductFee(ctx sdk.Context, sdkTx sdk.Tx, fee 
 		deductFeesFrom = feeGranterAddr
 	}
 
-	deductFeesFromAcc := dfd.accountKeeper.GetAccount(ctx, deductFeesFrom)
+	deductFeesFromAcc, err := dfd.accountKeeper.GetAccountPrefixed(ctx, deductFeesFrom)
+	if err != nil {
+		return err
+	}
 	if deductFeesFromAcc == nil {
-		return sdkerrors.ErrUnknownAddress.Wrapf("fee payer address: %s does not exist", deductFeesFrom)
+		return sdkerrors.ErrUnknownAddress.Wrapf("fee payer address: %s does not exist: chain id %s", deductFeesFrom.String(), ctx.ChainID())
 	}
 
 	// deduct the fees
@@ -115,13 +121,11 @@ func (dfd DeductFeeDecorator) checkDeductFee(ctx sdk.Context, sdkTx sdk.Tx, fee 
 		}
 	}
 
-	from := dfd.accountKeeper.AccBech32Codec().BytesToAccAddressPrefixed(deductFeesFrom)
-
 	events := sdk.Events{
 		sdk.NewEvent(
 			sdk.EventTypeTx,
 			sdk.NewAttribute(sdk.AttributeKeyFee, fee.String()),
-			sdk.NewAttribute(sdk.AttributeKeyFeePayer, from.String()),
+			sdk.NewAttribute(sdk.AttributeKeyFeePayer, deductFeesFrom.String()),
 		),
 	}
 	ctx.EventManager().EmitEvents(events)
@@ -130,12 +134,12 @@ func (dfd DeductFeeDecorator) checkDeductFee(ctx sdk.Context, sdkTx sdk.Tx, fee 
 }
 
 // DeductFees deducts fees from the given account.
-func DeductFees(bankKeeper types.BankKeeper, ctx sdk.Context, acc sdk.AccountI, fees sdk.Coins) error {
+func DeductFees(bankKeeper types.BankKeeper, ctx sdk.Context, acc mcodec.AccountI, fees sdk.Coins) error {
 	if !fees.IsValid() {
 		return errorsmod.Wrapf(sdkerrors.ErrInsufficientFee, "invalid fee amount: %s", fees)
 	}
 
-	err := bankKeeper.SendCoinsFromAccountToModule(ctx, acc.GetAddress(), types.FeeCollectorName, fees)
+	err := bankKeeper.SendCoinsFromAccountToModule(ctx, acc.GetAddressPrefixed().Bytes(), types.FeeCollectorName, fees)
 	if err != nil {
 		return errorsmod.Wrapf(sdkerrors.ErrInsufficientFunds, err.Error())
 	}

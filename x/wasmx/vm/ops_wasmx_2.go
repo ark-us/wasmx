@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/wasmx/types"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
@@ -376,6 +378,9 @@ func wasmxDecodeCosmosTxToJson(_context interface{}, callframe *wasmedge.Calling
 		return nil, wasmedge.Result_Fail
 	}
 	jsonbz, err := ctx.CosmosHandler.DecodeCosmosTx(reqbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
 	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, jsonbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -1013,16 +1018,43 @@ func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, pa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	data, err := addr_canonicalize(ctx.CosmosHandler.AddressCodec(), addrStrBz)
+	addr, err := mcodec.AccAddressPrefixedFromBech32(string(addrStrBz))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, data)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, addr.Bytes())
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxAddrEquivalent(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	addr1StrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr2StrBz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr1, err := mcodec.AccAddressPrefixedFromBech32(string(addr1StrBz))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr2, err := mcodec.AccAddressPrefixedFromBech32(string(addr2StrBz))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	same := bytes.Equal(addr1.Bytes(), addr2.Bytes())
+	returns := make([]interface{}, 1)
+	returns[0] = 0
+	if same {
+		returns[0] = 1
+	}
 	return returns, wasmedge.Result_Success
 }
 
@@ -1207,6 +1239,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
+	env.AddFunction("addr_equivalent", wasmedge.NewFunction(functype_i32i32_i32, wasmxAddrEquivalent, context, 0))
 
 	env.AddFunction("getAddressByRole", wasmedge.NewFunction(functype_i32_i32, wasmxGetAddressByRole, context, 0))
 	env.AddFunction("getRoleByAddress", wasmedge.NewFunction(functype_i32_i32, wasmxGetRoleByAddress, context, 0))

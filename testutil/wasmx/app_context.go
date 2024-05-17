@@ -38,7 +38,6 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	"mythos/v1/crypto/ethsecp256k1"
-	menc "mythos/v1/encoding"
 	network "mythos/v1/x/network/keeper"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	wasmxutils "mythos/v1/x/wasmx/rpc/backend"
@@ -140,9 +139,9 @@ func (s *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint, own
 var DEFAULT_GAS_PRICE = "10amyt"
 var DEFAULT_GAS_LIMIT = uint64(20_000_000)
 
-func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string) []byte {
-	encodingConfig := menc.MakeEncodingConfig(s.App.GetChainCfg())
-	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+func (s *AppContext) PrepareCosmosSdkTxBuilder(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) client.TxBuilder {
+	txConfig := s.App.TxConfig()
+	txBuilder := txConfig.NewTxBuilder()
 	var parsedGasPrices sdk.DecCoins
 	var err error
 
@@ -151,19 +150,30 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 	} else {
 		txBuilder.SetGasLimit(DEFAULT_GAS_LIMIT)
 	}
+	txBuilder.SetMemo(memo)
 
+	var feeAmount sdkmath.Int
+	denom := s.Chain.Config.BaseDenom
 	if gasPrice != nil {
 		parsedGasPrices, err = sdk.ParseDecCoins(*gasPrice)
+		feeAmount = parsedGasPrices[0].Amount.MulInt64(int64(DEFAULT_GAS_LIMIT)).RoundInt()
+		denom = parsedGasPrices[0].Denom
 	} else {
 		parsedGasPrices, err = sdk.ParseDecCoins(DEFAULT_GAS_PRICE)
+		feeAmount = parsedGasPrices.AmountOf("amyt").MulInt64(int64(DEFAULT_GAS_LIMIT)).RoundInt()
 	}
 	s.S.Require().NoError(err)
-	feeAmount := parsedGasPrices.AmountOf("amyt").MulInt64(int64(DEFAULT_GAS_LIMIT)).RoundInt()
 
-	fees := &sdk.Coins{{Denom: s.Chain.Config.BaseDenom, Amount: feeAmount}}
+	fees := &sdk.Coins{{Denom: denom, Amount: feeAmount}}
 	txBuilder.SetFeeAmount(*fees)
 	err = txBuilder.SetMsgs(msgs...)
 	s.S.Require().NoError(err)
+	return txBuilder
+}
+
+func (s *AppContext) PrepareCosmosSdkTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) sdk.Tx {
+	txConfig := s.App.TxConfig()
+	txBuilder := s.PrepareCosmosSdkTxBuilder(account, msgs, gasLimit, gasPrice, memo)
 
 	accP, err := s.App.AccountKeeper.GetAccountPrefixed(s.Context(), s.BytesToAccAddressPrefixed(account.Address))
 	s.S.Require().NoError(err)
@@ -174,7 +184,7 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 	sigV2 := signing.SignatureV2{
 		PubKey: account.PubKey,
 		Data: &signing.SingleSignatureData{
-			SignMode:  signing.SignMode(encodingConfig.TxConfig.SignModeHandler().DefaultMode()),
+			SignMode:  signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
 			Signature: nil,
 		},
 		Sequence: seq,
@@ -191,11 +201,12 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 		AccountNumber: acc.GetAccountNumber(),
 		Sequence:      seq,
 		PubKey:        account.PubKey,
+		Address:       acc.String(),
 	}
 	sigV2, err = tx.SignWithPrivKey(
 		s.Context().Context(),
-		signing.SignMode(encodingConfig.TxConfig.SignModeHandler().DefaultMode()), signerData,
-		txBuilder, account.PrivKey, encodingConfig.TxConfig,
+		signing.SignMode(txConfig.SignModeHandler().DefaultMode()), signerData,
+		txBuilder, account.PrivKey, txConfig,
 		seq,
 	)
 	s.S.Require().NoError(err)
@@ -203,9 +214,23 @@ func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg,
 	err = txBuilder.SetSignatures(sigV2)
 	s.S.Require().NoError(err)
 
+	return txBuilder.GetTx()
+}
+
+func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) []byte {
+	txConfig := s.App.TxConfig()
+	tx := s.PrepareCosmosSdkTx(account, msgs, gasLimit, gasPrice, memo)
+
 	// bz are bytes to be broadcasted over the network
-	bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+	bz, err := txConfig.TxEncoder()(tx)
 	s.S.Require().NoError(err)
+
+	// print json wasmxTx
+	// txx, err := txConfig.TxDecoder()(bz)
+	// newtx, err := types.WasmxTxFromSdkTx(s.Chain.Codec, txx)
+	// newtxbz, err := s.Chain.Codec.MarshalJSON(newtx)
+	// fmt.Println("--newtxbz-", err, string(newtxbz))
+
 	return bz
 }
 
@@ -283,8 +308,8 @@ func (s *AppContext) prepareEthTx(
 	txFee sdk.Coins,
 	gasLimit uint64,
 ) ([]byte, error) {
-	encodingConfig := menc.MakeEncodingConfig(s.App.GetChainCfg())
-	txBuilder := encodingConfig.TxConfig.NewTxBuilder()
+	txConfig := s.App.TxConfig()
+	txBuilder := txConfig.NewTxBuilder()
 
 	err := txBuilder.SetMsgs(msg)
 	if err != nil {
@@ -307,7 +332,7 @@ func (s *AppContext) prepareEthTx(
 	txBuilder.SetFeeAmount(txFee)
 
 	// bz are bytes to be broadcasted over the network
-	bz, err := encodingConfig.TxConfig.TxEncoder()(txBuilder.GetTx())
+	bz, err := txConfig.TxEncoder()(txBuilder.GetTx())
 	s.S.Require().NoError(err)
 	return bz, nil
 }
@@ -372,7 +397,7 @@ func (s *AppContext) SendEthTx(
 }
 
 func (s *AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*abci.ExecTxResult, error) {
-	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
+	bz := s.PrepareCosmosTx(account, msgs, nil, nil, "")
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.finalizeBlock(txs)
@@ -385,7 +410,7 @@ func (s *AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*ab
 }
 
 func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
-	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice)
+	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice, "")
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.finalizeBlock(txs)
@@ -397,12 +422,12 @@ func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, 
 }
 
 func (s *AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sdk.GasInfo, *sdk.Result, error) {
-	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
+	bz := s.PrepareCosmosTx(account, msgs, nil, nil, "")
 	return s.App.BaseApp.Simulate(bz)
 }
 
 func (s *AppContext) BroadcastTxAsync(account simulation.Account, msgs ...sdk.Msg) (*abci.ExecTxResult, error) {
-	bz := s.PrepareCosmosTx(account, msgs, nil, nil)
+	bz := s.PrepareCosmosTx(account, msgs, nil, nil, "")
 
 	abciClient := network.NewABCIClient(s.App, s.App.BaseApp, s.App.Logger(), &s.App.NetworkKeeper, nil, nil, s.App.GetActionExecutor().(*network.ActionExecutor))
 

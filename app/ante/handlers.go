@@ -1,6 +1,8 @@
 package ante
 
 import (
+	mcodec "mythos/v1/codec"
+
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
 	txsigning "cosmossdk.io/x/tx/signing"
@@ -37,6 +39,8 @@ type HandlerOptions struct {
 	// EvmKeeper              EVMKeeper
 	MaxTxGasWanted    uint64
 	DisabledAuthzMsgs []string
+
+	AccBech32Codec mcodec.AccBech32Codec
 }
 
 func (options HandlerOptions) validate() error {
@@ -75,7 +79,7 @@ func newEthAnteHandler(options HandlerOptions) sdk.AnteHandler {
 		// NewValidateSigCountDecorator
 		sdkante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),
 		NewEthSigVerificationDecorator(options.WasmxKeeper),
-		// sdkante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
+		// NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
 		// sdkante.NewIncrementSequenceDecorator(options.AccountKeeper),
 	}
 
@@ -99,11 +103,11 @@ func newCosmosAnteHandler(options HandlerOptions) sdk.AnteHandler {
 		sdkante.NewTxTimeoutHeightDecorator(),
 		sdkante.NewValidateMemoDecorator(options.AccountKeeper),
 		sdkante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
-		NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, options.TxFeeChecker),
+		NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, options.TxFeeChecker, options.AccBech32Codec),
 		sdkante.NewSetPubKeyDecorator(options.AccountKeeper), // SetPubKeyDecorator must be called before all signature verification decorators
 		sdkante.NewValidateSigCountDecorator(options.AccountKeeper),
 		sdkante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),
-		sdkante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
+		NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler, options.AccBech32Codec),
 		sdkante.NewIncrementSequenceDecorator(options.AccountKeeper),
 	}
 

@@ -81,3 +81,15 @@ func ConvertProtoToJSONMarshal(cdc codec.Codec, protoResponse codec.ProtoMarshal
 	}
 	return bz, nil
 }
+
+func AnyToSdkMsg(cdc codec.Codec, anymsg *cdctypes.Any) (sdk.Msg, error) {
+	sdkmsg, err := cdc.InterfaceRegistry().Resolve(anymsg.TypeUrl)
+	if err != nil {
+		return nil, err
+	}
+	err = cdc.Unmarshal(anymsg.Value, sdkmsg)
+	if err != nil {
+		return nil, err
+	}
+	return sdkmsg, nil
+}

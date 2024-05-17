@@ -176,7 +176,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
 	suite.Require().NoError(err)
 
-	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil, "")
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
@@ -196,7 +196,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 		Funds:        nil,
 		Dependencies: nil,
 	}
-	tx = appA.PrepareCosmosTx(sender2, []sdk.Msg{msg}, nil, nil)
+	tx = appA.PrepareCosmosTx(sender2, []sdk.Msg{msg}, nil, nil, "")
 	txstr = base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
@@ -599,7 +599,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
 	suite.Require().NoError(err)
 
-	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil, "")
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
@@ -614,7 +614,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	// execute another tx
 	_, err = appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
 	suite.Require().NoError(err)
-	tx = appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil)
+	tx = appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil, "")
 	txstr = base64.StdEncoding.EncodeToString(tx)
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
 	resp2, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{

@@ -30,6 +30,9 @@ func (k *Keeper) EwasmClassicAddressGenerator(creator mcodec.AccAddressPrefixed)
 			if err != nil {
 				panic(fmt.Sprintf("cannot create new account: %s", err.Error()))
 			}
+			if existingAcct == nil {
+				panic("created nil account")
+			}
 		}
 		nonce := existingAcct.GetSequence()
 		existingAcct.SetSequence(nonce + 1)

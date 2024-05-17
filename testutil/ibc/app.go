@@ -127,7 +127,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 	// set validators and delegations
 	stakingParams := stakingtypes.DefaultParams()
 	stakingParams.BondDenom = chaincfg.BondBaseDenom
-	stakingGenesis := cosmosmodtypes.NewStakingGenesisState(stakingParams, validators, delegations)
+	stakingGenesis := cosmosmodtypes.NewStakingGenesisState(stakingParams, validators, delegations, chaincfg.BaseDenom)
 
 	// update total supply
 	totalSupply := sdk.NewCoins()
