@@ -160,9 +160,9 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 		AppStateBytes:   stateBytes,
 	}
 
-	valAddr := addrCodec.BytesToAccAddressPrefixed(sdk.ValAddress(chain.Vals.Validators[0].Address))
-	valAddr = addrCodec.BytesToAccAddressPrefixed(sender.Address.Bytes())
+	valAddr := addrCodec.BytesToAccAddressPrefixed(sender.Address.Bytes())
 	valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(valAddr.Bytes()))
+	suite.Require().NoError(err)
 
 	peer := fmt.Sprintf("%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD", valAddr.String())
 
@@ -259,16 +259,16 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.Require().NoError(err)
 	msg := fmt.Sprintf(`{"RegisterSubChain":%s}`, string(regreqBz))
 
-	res, err := suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
+	_, err = suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
 	msg = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
-	res, err = suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
+	res, err := suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
 	suite.Require().Equal(1, len(evs))
 
-	time.Sleep(time.Second * 3)
+	// time.Sleep(time.Second * 3)
 
 	// test restarting the node by starting the parent chain
 	// err = networkserver.StartNode(appA.App, appA.App.Logger(), appA.App.GetNetworkKeeper())

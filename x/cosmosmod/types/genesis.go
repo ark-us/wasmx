@@ -524,14 +524,14 @@ func (p GovParams) ValidateBasic() error {
 	}
 
 	if p.VotingPeriod <= 0 {
-		return fmt.Errorf("voting period must be positive: %s", p.VotingPeriod)
+		return fmt.Errorf("voting period must be positive: %d", p.VotingPeriod)
 	}
 
 	if p.ExpeditedVotingPeriod <= 0 {
-		return fmt.Errorf("expedited voting period must be positive: %s", p.ExpeditedVotingPeriod)
+		return fmt.Errorf("expedited voting period must be positive: %d", p.ExpeditedVotingPeriod)
 	}
 	if p.ExpeditedVotingPeriod >= p.VotingPeriod {
-		return fmt.Errorf("expedited voting period %s must be strictly less that the regular voting period %s", p.ExpeditedVotingPeriod, p.VotingPeriod)
+		return fmt.Errorf("expedited voting period %d must be strictly less that the regular voting period %d", p.ExpeditedVotingPeriod, p.VotingPeriod)
 	}
 
 	minInitialDepositRatio, err := sdkmath.LegacyNewDecFromStr(p.MinInitialDepositRatio)

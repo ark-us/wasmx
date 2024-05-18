@@ -126,6 +126,9 @@ var (
 	//go:embed 4a.multichain_registry_0.0.1.wasm
 	multichain_registry []byte
 
+	//go:embed 4b.multichain_registry_local_0.0.1.wasm
+	multichain_registry_local []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -255,6 +258,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = leveln_contract
 	case types.MULTICHAIN_REGISTRY_v001:
 		wasmbin = multichain_registry
+	case types.MULTICHAIN_REGISTRY_LOCAL_v001:
+		wasmbin = multichain_registry_local
 	}
 	return wasmbin
 }

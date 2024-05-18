@@ -206,6 +206,7 @@ var ROLE_LEVEL0 = "level0"
 var ROLE_LEVELN = "leveln"
 
 var ROLE_MULTICHAIN_REGISTRY = "multichain_registry"
+var ROLE_MULTICHAIN_REGISTRY_LOCAL = "multichain_registry_local"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -254,6 +255,7 @@ var TIME_v001 = "time_0.0.1"
 var LEVEL0_v001 = "level0_0.0.1"
 var LEVELN_v001 = "leveln_0.0.1"
 var MULTICHAIN_REGISTRY_v001 = "multichain_registry_0.0.1"
+var MULTICHAIN_REGISTRY_LOCAL_v001 = "multichain_registry_local_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

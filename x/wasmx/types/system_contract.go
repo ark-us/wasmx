@@ -59,6 +59,7 @@ var ADDR_TIME = "0x0000000000000000000000000000000000000047"
 var ADDR_LEVEL0 = "0x0000000000000000000000000000000000000048"
 var ADDR_LEVEL0_LIBRARY = "0x0000000000000000000000000000000000000049"
 var ADDR_MULTICHAIN_REGISTRY = "0x000000000000000000000000000000000000004a"
+var ADDR_MULTICHAIN_REGISTRY_LOCAL = "0x000000000000000000000000000000000000004b"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -637,7 +638,12 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 
 	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"maxLevel","value":0},{"key":"blockTimeoutInternal","value":3000},{"key":"currentLevel","value":0},{"key":"membersCount","value":1},{"key":"blockTimeout","value":"blockTimeoutInternal"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+		panic("DefaultTimeChainContracts: cannot marshal level0InitMsg message")
+	}
+
+	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"ids":[]}`)})
+	if err != nil {
+		panic("DefaultTimeChainContracts: cannot marshal mutichainLocalInitMsg message")
 	}
 
 	consensusPrecompile := []SystemContract{
@@ -668,10 +674,19 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
 		},
+		{
+			Address:     ADDR_MULTICHAIN_REGISTRY_LOCAL,
+			Label:       MULTICHAIN_REGISTRY_LOCAL_v001,
+			InitMessage: mutichainLocalInitMsg,
+			Pinned:      false,
+			Role:        ROLE_MULTICHAIN_REGISTRY_LOCAL,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
 	}
 
 	hooksNonC := []Hook{
-		Hook{
+		{
 			Name:          HOOK_START_NODE,
 			SourceModule:  ROLE_HOOKS_NONC,
 			TargetModules: []string{ROLE_CONSENSUS, ROLE_TIME},
