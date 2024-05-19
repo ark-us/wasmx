@@ -113,9 +113,6 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 		validators = append(validators, validator)
 
 		delAddr := genAccs[0].GetAddressPrefixed().String()
-		if err != nil {
-			return app, nil, err
-		}
 		delegation := cosmosmodtypes.Delegation{
 			DelegatorAddress: delAddr,
 			ValidatorAddress: valAddr,
@@ -135,7 +132,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 		// add genesis acc tokens and delegated tokens to total supply
 		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(chaincfg.BaseDenom, bondAmt))...)
 	}
-	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(chaincfg.DenomUnit, chaincfg.BaseDenomUnit, chaincfg.Name)
+	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(chaincfg.DenomUnit, chaincfg.BaseDenomUnit)
 	bankGenesis.Supply = totalSupply
 	bankGenesis.Balances = balances
 

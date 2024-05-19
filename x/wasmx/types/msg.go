@@ -27,18 +27,6 @@ import (
 // any assumptions made that the data is valid syntax or semantic.
 type RawContractMessage []byte
 
-func (r RawContractMessage) MarshalJSON() ([]byte, error) {
-	return json.RawMessage(r).MarshalJSON()
-}
-
-func (r *RawContractMessage) UnmarshalJSON(b []byte) error {
-	if r == nil {
-		return errors.New("unmarshalJSON on nil pointer")
-	}
-	*r = append((*r)[0:0], b...)
-	return nil
-}
-
 func (r *RawContractMessage) ValidateBasic() error {
 	if r == nil {
 		return ErrEmpty

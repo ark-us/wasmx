@@ -755,7 +755,7 @@ func initGenFiles(
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
-	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(mcfg.DenomUnit, uint32(mcfg.BaseDenomUnit), mcfg.BaseDenom)
+	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(mcfg.DenomUnit, uint32(mcfg.BaseDenomUnit))
 	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
@@ -907,7 +907,7 @@ func initGenFilesLevel0(
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
-	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(chaincfg.DenomUnit, uint32(chaincfg.BaseDenomUnit), chaincfg.BaseDenom)
+	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(chaincfg.DenomUnit, uint32(chaincfg.BaseDenomUnit))
 	cosmosmodGenState.Bank.Balances = []banktypes.Balance{genBalance}
 	cosmosmodGenState.Staking.Params.BondDenom = chaincfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = chaincfg.BaseDenom

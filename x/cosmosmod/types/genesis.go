@@ -122,7 +122,7 @@ func DefaultStakingGenesisState(baseDenom string) *StakingGenesisState {
 	}
 }
 
-func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, baseDenomName string) []DenomDeploymentInfo {
+func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32) []DenomDeploymentInfo {
 	erc20jsonCodeId := -1
 	derc20jsonCodeId := -1
 	for i, sysc := range wasmxtypes.DefaultSystemContracts("", "") {
@@ -251,8 +251,8 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32, baseDenomName str
 }
 
 // DefaultBankGenesisState returns a default bank module genesis state.
-func DefaultBankGenesisState(denomUnit string, baseDenomUnit uint32, denomName string) *BankGenesisState {
-	return NewBankGenesisState(banktypes.DefaultParams(), []banktypes.Balance{}, sdk.Coins{}, DefaultBankDenoms(denomUnit, baseDenomUnit, denomName), []banktypes.SendEnabled{})
+func DefaultBankGenesisState(denomUnit string, baseDenomUnit uint32) *BankGenesisState {
+	return NewBankGenesisState(banktypes.DefaultParams(), []banktypes.Balance{}, sdk.Coins{}, DefaultBankDenoms(denomUnit, baseDenomUnit), []banktypes.SendEnabled{})
 }
 
 // DefaultGovGenesisState returns a default bank module genesis state.
@@ -302,10 +302,10 @@ func DefaultAuthGenesisState() *AuthGenesisState {
 
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
-func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, denomName string, baseDenom string) *GenesisState {
+func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, baseDenom string) *GenesisState {
 	return &GenesisState{
 		Staking: *DefaultStakingGenesisState(baseDenom),
-		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit, denomName),
+		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit),
 		Gov:     *DefaultGovGenesisState(),
 		Auth:    *DefaultAuthGenesisState(),
 	}

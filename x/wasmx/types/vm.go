@@ -207,6 +207,7 @@ var ROLE_LEVELN = "leveln"
 
 var ROLE_MULTICHAIN_REGISTRY = "multichain_registry"
 var ROLE_MULTICHAIN_REGISTRY_LOCAL = "multichain_registry_local"
+var ROLE_SECRET_SHARING = "secret_sharing"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
