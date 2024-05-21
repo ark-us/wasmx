@@ -105,6 +105,10 @@ func (bc Bech32Codec) BytesToAddressPrefixed(bz []byte) AddressPrefixed {
 	return bc.addressConstructor(bz, bc.bech32Prefix)
 }
 
+func (bc Bech32Codec) Prefix() string {
+	return bc.bech32Prefix
+}
+
 type AccBech32Codec struct {
 	Bech32Codec
 }

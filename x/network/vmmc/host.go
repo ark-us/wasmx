@@ -21,7 +21,6 @@ func InitSubChain(_context interface{}, callframe *wasmedge.CallingFrame, params
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO fill in this info
 	response, err := InitApp(ctx, &req)
 	if err != nil {
 		ctx.Logger(ctx.Ctx).Error("could not initiate subchain app", "error", err.Error())
@@ -81,6 +80,5 @@ func BuildWasmxMultichainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 
 	env.AddFunction("InitSubChain", wasmedge.NewFunction(functype_i32_i32, InitSubChain, context, 0))
 	env.AddFunction("StartSubChain", wasmedge.NewFunction(functype_i32_i32, StartSubChain, context, 0))
-
 	return env
 }

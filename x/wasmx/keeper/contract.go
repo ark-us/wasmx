@@ -504,7 +504,7 @@ func (k *Keeper) instantiateInternal(
 	// decision logic also very flexible and extendable. We provide new options to overwrite the default settings via WithAcceptedAccountTypesOnContractInstantiation and
 	// WithPruneAccountTypesOnContractInstantiation as constructor arguments
 	existingAcct, err := k.GetAccountKeeper().GetAccountPrefixed(ctx, contractAddress)
-	if err != nil || existingAcct != nil {
+	if err != nil && existingAcct != nil {
 		if existingAcct.GetSequence() != 0 || existingAcct.GetPubKey() != nil {
 			return mcodec.AccAddressPrefixed{}, nil, types.ErrAccountExists.Wrap("address is claimed by external account")
 		}
@@ -514,9 +514,15 @@ func (k *Keeper) instantiateInternal(
 		// this also stores the account
 		k.GetAccountKeeper().NewAccountWithAddressPrefixed(ctx, contractAddress)
 	} else {
+		if err != nil {
+			k.Logger(ctx).Debug("account not found, creating a new one", "error", err.Error())
+		}
 		// create an empty account (so we don't have issues later)
 		// this also stores the account
-		k.GetAccountKeeper().NewAccountWithAddressPrefixed(ctx, contractAddress)
+		_, err = k.GetAccountKeeper().NewAccountWithAddressPrefixed(ctx, contractAddress)
+		if err != nil {
+			panic(fmt.Sprintf("account not created: %s: %s", contractAddress.String(), err.Error()))
+		}
 	}
 
 	return contractAddress, res.Data, nil

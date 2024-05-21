@@ -16,15 +16,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	"mythos/v1/x/wasmx/client/cli"
-	"mythos/v1/x/wasmx/keeper"
-	"mythos/v1/x/wasmx/types"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+
+	mcfg "mythos/v1/config"
+	"mythos/v1/x/wasmx/client/cli"
+	"mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/types"
 )
 
 var (
@@ -64,7 +65,7 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
 func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	feeCollector, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
+	feeCollector, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
 	mintAddress, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
 	bootstrapAccount, _ := a.addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
 

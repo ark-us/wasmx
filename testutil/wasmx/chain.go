@@ -181,6 +181,7 @@ func (suite *KeeperTestSuite) SetupTest() {
 func (suite *KeeperTestSuite) SetupApp(chainId string, index int32) {
 	t := suite.T()
 	chaincfg, err := mcfg.GetChainConfig(chainId)
+	require.NoError(t, err)
 
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc))
 	// valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -199,24 +200,20 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, index int32) {
 	// generate genesis account
 	senderPrivKey := secp256k1.GenPrivKey()
 	authacc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), senderPrivKey.PubKey(), 0, 0)
-	acc := cosmosmodtypes.NewBaseAccount(addrCodec.BytesToAccAddressPrefixed(senderPrivKey.PubKey().Address().Bytes()), senderPrivKey.PubKey(), 0, 0)
-
-	// senderAddress := common.BytesToAddress(senderPrivKey.PubKey().Address().Bytes())
-
+	valOperatorAddress := addrCodec.BytesToAccAddressPrefixed(senderPrivKey.PubKey().Address().Bytes())
+	acc := cosmosmodtypes.NewBaseAccount(valOperatorAddress, senderPrivKey.PubKey(), 0, 0)
 	amount := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
 	balance := banktypes.Balance{
 		Address: acc.GetAddressPrefixed().String(),
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
-
-	valOperatorAddress := sdk.ValAddress(validator.Address)
 	// testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
 
 	testApp, genesisState, err := ibctesting.BuildGenesisData(valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance})
 	require.NoError(t, err)
 	if strings.Contains(chainId, "level") {
-		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("fee_collector"))
+		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
 		require.NoError(t, err)
 		mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
 		require.NoError(t, err)
@@ -293,7 +290,7 @@ func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {
 	suite.chain = *chain
 }
 
-func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress bytes.HexBytes, nodePubKey, nodePrivKey []byte, valOperatorAddress sdk.ValAddress) error {
+func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress bytes.HexBytes, nodePubKey, nodePrivKey []byte, valOperatorAddress mcodec.AccAddressPrefixed) error {
 	res, err := suite.App().Info(types.RequestInfo)
 	if err != nil {
 		return fmt.Errorf("error calling Info: %v", err)
@@ -312,16 +309,11 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 
 	currentState := suite.GetCurrentState(suite.chain.GetContext())
 
-	valstr, err := suite.App().AddressCodec().BytesToString(valOperatorAddress)
-	if err != nil {
-		return err
-	}
-
 	peers := []string{}
-	if strings.Contains(currentState, "RAFT-FULL") {
-		peers = []string{fmt.Sprintf(`%s@localhost:8090`, valstr)}
-	} else if strings.Contains(currentState, "-P2P") {
-		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valstr)}
+	if !strings.Contains(currentState, "P2P") && !strings.Contains(currentState, "Level") {
+		peers = []string{fmt.Sprintf(`%s@localhost:8090`, valOperatorAddress.String())}
+	} else { // P2P, level0, etc
+		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valOperatorAddress.String())}
 	}
 	err = networkserver.InitConsensusContract(
 		suite.App(),

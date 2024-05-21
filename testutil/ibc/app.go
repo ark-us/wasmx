@@ -2,7 +2,6 @@ package ibctesting
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -26,6 +25,7 @@ import (
 
 	wasmxapp "mythos/v1/app"
 	mcodec "mythos/v1/codec"
+	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -74,17 +74,13 @@ func InitAppChain(t *testing.T, app ibcgotesting.TestingApp, genesisState map[st
 
 func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances []banktypes.Balance) (ibcgotesting.TestingApp, map[string]json.RawMessage, error) {
 	app, genesisState := DefaultTestingAppInit(chainID, &chaincfg, index)
-	mapp, ok := app.(*wasmxapp.App)
-	if !ok {
-		return app, nil, fmt.Errorf("could not build app")
-	}
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
 	signingInfos := make([]slashingtypes.SigningInfo, 0, len(valSet.Validators))
 
 	bondAmt := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
-	for _, val := range valSet.Validators {
+	for i, val := range valSet.Validators {
 		pk, err := cryptocodec.FromTmPubKeyInterface(val.PubKey)
 		if err != nil {
 			return app, nil, err
@@ -93,10 +89,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 		if err != nil {
 			return app, nil, err
 		}
-		valAddr, err := mapp.AddressCodec().BytesToString(sdk.ValAddress(val.Address))
-		if err != nil {
-			return app, nil, err
-		}
+		valAddr := genAccs[i].GetAddressPrefixed().String()
 		validator := stakingtypes.Validator{
 			OperatorAddress:   valAddr,
 			ConsensusPubkey:   pkAny,
@@ -158,7 +151,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 
-	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress("fee_collector"))
+	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
 	if err != nil {
 		return app, nil, err
 	}

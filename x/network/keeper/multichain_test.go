@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -164,7 +165,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(valAddr.Bytes()))
 	suite.Require().NoError(err)
 
-	peer := fmt.Sprintf("%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD", valAddr.String())
+	memo := fmt.Sprintf("%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJdKwTq9QcARdPuk4QBibP8MxBV7Q8xC7JRMSXWuvZBtD", valAddr.String())
 
 	valPubKey, err := cryptocodec.FromCmtPubKeyInterface(chain.Vals.Validators[0].PubKey)
 	suite.Require().NoError(err)
@@ -185,7 +186,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.Require().NoError(err)
 	subchainapp := multichainapp.NewApp(subChainId, &subChainConfig)
 
-	valTxBuilder := appA.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{validMsg}, nil, &subchainGasPrices, peer)
+	valTxBuilder := appA.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{validMsg}, nil, &subchainGasPrices, memo)
 	accSeq := uint64(0)
 	accNo := uint64(0)
 	accAddress, err := subchainapp.InterfaceRegistry().SigningContext().AddressCodec().BytesToString(sender.Address.Bytes())
@@ -273,6 +274,135 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	// test restarting the node by starting the parent chain
 	// err = networkserver.StartNode(appA.App, appA.App.Logger(), appA.App.GetNetworkKeeper())
 	// suite.Require().NoError(err)
+}
+
+type QueryBuildGenTxRequest struct {
+	ChainId string                          `json:"chainId"`
+	Msg     stakingtypes.MsgCreateValidator `json:"msg"`
+}
+
+type ActionParam struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
+	chainId := mcfg.LEVEL0_CHAIN_ID
+	suite.SetCurrentChain(chainId)
+	chain := suite.GetChain(chainId)
+
+	initBalance := sdkmath.NewInt(10_000_000_000)
+	sender := simulation.Account{
+		PrivKey: chain.SenderPrivKey,
+		PubKey:  chain.SenderAccount.GetPubKey(),
+		Address: chain.SenderAccount.GetAddress(),
+	}
+
+	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(denom, initBalance))
+	suite.Commit()
+
+	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
+
+	// create new subchain genesis registry
+	regreq := `{"RegisterDefaultSubChain":{"denom_unit":"ppp","base_denom_unit":18,"chain_base_name":"ptestp","level_index":1,"balances":[{"denom":"appp","amount":"10000000000"}]}}`
+	_, err := suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	suite.Require().NoError(err)
+
+	// TODO expected subchainId
+	subChainId := "ptestp_10001-1"
+
+	// create genTx data to sign - call to level0
+	// buildGenTx query
+	valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
+	validMsg := stakingtypes.MsgCreateValidator{
+		// TODO fix as-json.parse when description contains empty strings
+		Description:       stakingtypes.NewDescription("moniker1", "id", "website", "security", "details"),
+		Commission:        stakingtypes.NewCommissionRates(sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec()),
+		MinSelfDelegation: sdkmath.OneInt(),
+		Value:             sdk.NewCoin(denom, valTokens), // denom will be changed by level0 anyway
+	}
+
+	genTxInfo, err := json.Marshal(&QueryBuildGenTxRequest{
+		ChainId: subChainId,
+		Msg:     validMsg,
+	})
+	suite.Require().NoError(err)
+	paramBz, err := json.Marshal(&ActionParam{Key: "message", Value: string(genTxInfo)})
+	suite.Require().NoError(err)
+
+	msg := []byte(fmt.Sprintf(`{"query":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
+	level0Addr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_LEVEL0)
+	txbz := suite.queryMultiChainCall(appA.App, msg, sender, level0Addr, chainId)
+	msg = []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
+	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddress, chainId)
+	suite.Require().NoError(err)
+
+	var subchainConfig menc.ChainConfig
+	err = json.Unmarshal(chaincfgbz, &subchainConfig)
+	suite.Require().NoError(err)
+
+	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
+	suite.Require().NoError(err)
+	subchainapp := multichainapp.NewApp(subChainId, &subchainConfig)
+	subtxconfig := subchainapp.TxConfig()
+
+	sigV2 := signing.SignatureV2{
+		PubKey: sender.PubKey,
+		Data: &signing.SingleSignatureData{
+			SignMode:  signing.SignMode(subtxconfig.SignModeHandler().DefaultMode()),
+			Signature: nil,
+		},
+		Sequence: 0,
+	}
+
+	sdktx, err := subtxconfig.TxJSONDecoder()(txbz)
+	suite.Require().NoError(err)
+	txbuilder, err := subtxconfig.WrapTxBuilder(sdktx)
+	suite.Require().NoError(err)
+
+	subchainSender, err := subtxconfig.SigningContext().AddressCodec().BytesToString(sender.Address)
+	suite.Require().NoError(err)
+
+	err = txbuilder.SetSignatures(sigV2)
+	suite.Require().NoError(err)
+
+	signerData := authsigning.SignerData{
+		ChainID:       subChainId,
+		AccountNumber: 0,
+		Sequence:      0,
+		PubKey:        sender.PubKey,
+		Address:       subchainSender,
+	}
+
+	sigV2, err = tx.SignWithPrivKey(
+		appA.Context().Context(),
+		signing.SignMode(subtxconfig.SignModeHandler().DefaultMode()), signerData,
+		txbuilder, sender.PrivKey, subtxconfig,
+		0,
+	)
+	suite.Require().NoError(err)
+
+	err = txbuilder.SetSignatures(sigV2)
+	suite.Require().NoError(err)
+
+	valSdkTx := txbuilder.GetTx()
+	txjsonbz, err := subtxconfig.TxJSONEncoder()(valSdkTx)
+	s.Require().NoError(err)
+	txbase64 := base64.StdEncoding.EncodeToString(txjsonbz)
+
+	regreq = fmt.Sprintf(`{"RegisterSubChainValidator":{"chainId":"%s","genTx":"%s"}}`, subChainId, txbase64)
+	_, err = suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	s.Require().NoError(err)
+	regreq = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
+	res, err := suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	suite.Require().NoError(err)
+	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
+	suite.Require().Equal(1, len(evs))
+
+	time.Sleep(time.Second * 3)
 }
 
 func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {

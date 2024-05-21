@@ -10,6 +10,8 @@ import (
 	menc "mythos/v1/encoding"
 )
 
+const FEE_COLLECTOR = "fee_collector"
+
 const (
 	Bech32Prefix  = "mythos"
 	Name          = "mythos"

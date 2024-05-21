@@ -884,7 +884,7 @@ func initGenFilesLevel0(
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
-	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("fee_collector"))
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
 	if err != nil {
 		panic(err)
 	}

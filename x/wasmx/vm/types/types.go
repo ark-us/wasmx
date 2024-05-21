@@ -16,6 +16,11 @@ type ContextI interface {
 	GetCosmosHandler() types.WasmxCosmosHandler
 }
 
+type PrefixedAddress struct {
+	Bz     []byte `json:"bz"`
+	Prefix string `json:"prefix"`
+}
+
 // Internal call request
 type CallRequest struct {
 	To         sdk.AccAddress `json:"to"`

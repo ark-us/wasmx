@@ -1080,6 +1080,60 @@ func wasmxHumanize(context interface{}, callframe *wasmedge.CallingFrame, params
 	return returns, wasmedge.Result_Success
 }
 
+// addr_humanize_mc(ArrayBuffer) -> string;
+func wasmxHumanizeMultiChain(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	prefixBz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrBz))
+	prefix := string(prefixBz)
+
+	addrCodec := mcodec.NewBech32Codec(prefix, mcodec.NewAddressPrefixedFromAcc)
+
+	addrstr, err := addrCodec.BytesToString(addr)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addrstr))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+// addr_canonicalize_mc(string) -> ArrayBuffer;
+func wasmxCanonicalizeMultiChain(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrStrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	addr, err := mcodec.AccAddressPrefixedFromBech32(string(addrStrBz))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	respbz, err := json.Marshal(&vmtypes.PrefixedAddress{Bz: addr.Bytes(), Prefix: addr.Prefix()})
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 type LoggerLog struct {
 	Msg   string   `json:"msg"`
 	Parts []string `json:"parts"`
@@ -1240,6 +1294,8 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
 	env.AddFunction("addr_equivalent", wasmedge.NewFunction(functype_i32i32_i32, wasmxAddrEquivalent, context, 0))
+	env.AddFunction("addr_humanize_mc", wasmedge.NewFunction(functype_i32i32_i32, wasmxHumanizeMultiChain, context, 0))
+	env.AddFunction("addr_canonicalize_mc", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalizeMultiChain, context, 0))
 
 	env.AddFunction("getAddressByRole", wasmedge.NewFunction(functype_i32_i32, wasmxGetAddressByRole, context, 0))
 	env.AddFunction("getRoleByAddress", wasmedge.NewFunction(functype_i32_i32, wasmxGetRoleByAddress, context, 0))

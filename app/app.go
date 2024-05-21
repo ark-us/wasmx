@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -438,7 +439,7 @@ func NewApp(
 		if err != nil {
 			panic(err)
 		}
-		app.Logger().Info("module address", name, addrstr)
+		app.Logger().Info("module address", "module", name, "bech32", addrstr, "hex", hex.EncodeToString(permAddrs[name].GetAddress()))
 	}
 
 	govAuthorityAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(wasmxmoduletypes.ROLE_GOVERNANCE))
