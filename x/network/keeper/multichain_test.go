@@ -3,9 +3,9 @@ package keeper_test
 import (
 	"context"
 	_ "embed"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
@@ -253,8 +253,8 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 			ChainConfig:      subChainConfig,
 			Peers:            []string{},
 		},
-		GenTxs:   [][]byte{txjsonbz},
-		Balances: sdk.Coins{sdk.NewCoin(subChainConfig.BaseDenom, initBalance)},
+		GenTxs:         [][]byte{txjsonbz},
+		InitialBalance: initBalance.BigInt(),
 	}
 	regreqBz, err := json.Marshal(regreq)
 	suite.Require().NoError(err)
@@ -274,16 +274,6 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	// test restarting the node by starting the parent chain
 	// err = networkserver.StartNode(appA.App, appA.App.Logger(), appA.App.GetNetworkKeeper())
 	// suite.Require().NoError(err)
-}
-
-type QueryBuildGenTxRequest struct {
-	ChainId string                          `json:"chainId"`
-	Msg     stakingtypes.MsgCreateValidator `json:"msg"`
-}
-
-type ActionParam struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
 }
 
 func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
@@ -307,8 +297,16 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 
 	// create new subchain genesis registry
-	regreq := `{"RegisterDefaultSubChain":{"denom_unit":"ppp","base_denom_unit":18,"chain_base_name":"ptestp","level_index":1,"balances":[{"denom":"appp","amount":"10000000000"}]}}`
-	_, err := suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	regreq, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterDefaultSubChain: &wasmxtypes.RegisterDefaultSubChainRequest{
+		ChainBaseName:  "ptestp",
+		DenomUnit:      "ppp",
+		Decimals:       18,
+		LevelIndex:     1,
+		InitialBalance: big.NewInt(10000000000),
+	}})
+	suite.Require().NoError(err)
+
+	_, err = suite.broadcastMultiChainExec(regreq, sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
 	// TODO expected subchainId
@@ -325,12 +323,12 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 		Value:             sdk.NewCoin(denom, valTokens), // denom will be changed by level0 anyway
 	}
 
-	genTxInfo, err := json.Marshal(&QueryBuildGenTxRequest{
+	genTxInfo, err := json.Marshal(&wasmxtypes.QueryBuildGenTxRequest{
 		ChainId: subChainId,
 		Msg:     validMsg,
 	})
 	suite.Require().NoError(err)
-	paramBz, err := json.Marshal(&ActionParam{Key: "message", Value: string(genTxInfo)})
+	paramBz, err := json.Marshal(&wasmxtypes.ActionParam{Key: "message", Value: string(genTxInfo)})
 	suite.Require().NoError(err)
 
 	msg := []byte(fmt.Sprintf(`{"query":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
@@ -391,12 +389,19 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	valSdkTx := txbuilder.GetTx()
 	txjsonbz, err := subtxconfig.TxJSONEncoder()(valSdkTx)
 	s.Require().NoError(err)
-	txbase64 := base64.StdEncoding.EncodeToString(txjsonbz)
 
-	regreq = fmt.Sprintf(`{"RegisterSubChainValidator":{"chainId":"%s","genTx":"%s"}}`, subChainId, txbase64)
+	regreq, err = json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterSubChainValidator: &wasmxtypes.RegisterSubChainValidatorRequest{
+		ChainId: subChainId,
+		GenTx:   txjsonbz,
+	}})
+	s.Require().NoError(err)
+
 	_, err = suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
 	s.Require().NoError(err)
-	regreq = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
+	regreq, err = json.Marshal(&wasmxtypes.MultiChainRegistryCallData{InitSubChain: &wasmxtypes.InitSubChainRequest{
+		ChainId: subChainId,
+	}})
+	s.Require().NoError(err)
 	res, err := suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")

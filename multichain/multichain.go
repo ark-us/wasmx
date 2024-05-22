@@ -37,6 +37,29 @@ func MultiChainCtx(ac address.Codec, clientCtx client.Context) (client.Context, 
 	return clientCtx, addrCodec, customAddrCodec, nil
 }
 
+func MultiChainCustomCtx(clientCtx client.Context) (client.Context, mcodec.AccBech32Codec, error) {
+	chainId := clientCtx.ChainID
+	mcfg.SetGlobalChainConfig(chainId)
+	config, err := mcfg.GetChainConfig(chainId)
+	if err != nil {
+		return clientCtx, mcodec.AccBech32Codec{}, err
+	}
+	customEncoding := appencoding.MakeEncodingConfig(config)
+
+	customCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+	customAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
+
+	clientCtx = clientCtx.WithAccountRetriever(cosmosmodtypes.NewAccountRetriever(chainId, customAddrCodec))
+
+	clientCtx = clientCtx.
+		WithCodec(customEncoding.Marshaler).
+		WithInterfaceRegistry(customEncoding.InterfaceRegistry).
+		WithTxConfig(customEncoding.TxConfig).
+		WithLegacyAmino(customEncoding.Amino)
+
+	return clientCtx, customAddrCodec, nil
+}
+
 func MultiChainWrap(clientCtx client.Context, msg sdk.Msg, fromAddr mcodec.AccAddressPrefixed) (*networktypes.MsgMultiChainWrap, error) {
 	msgAny, err := codectypes.NewAnyWithValue(msg)
 	if err != nil {
