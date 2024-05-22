@@ -24,46 +24,6 @@ mythosd start --home=./testnet/node1/mythosd
 
 ```
 
-## Get started
-
-```
-ignite chain serve
-
-ignite chain build
-```
-
-`serve` command installs dependencies, builds, initializes, and starts your blockchain in development.
-
-### Configure
-
-Your blockchain in development can be configured with `config.yml`.
-
-### Web Frontend
-
-```
-cd vue
-npm install
-npm run serve
-```
-
-## Release
-To release a new version of your blockchain, create and push a new tag with `v` prefix. A new draft release with the configured targets will be created.
-
-```
-git tag v0.1
-git push origin v0.1
-```
-
-After a draft release is created, make your final changes from the release page and publish it.
-
-### Install
-To install the latest version of your blockchain node's binary, execute the following command on your machine:
-
-```
-curl https://get.ignite.com/username/wasmx@latest! | sudo bash
-```
-`username/wasmx` should match the `username` and `repo_name` of the Github repository to which the source code was pushed. Learn more about [the install process](https://github.com/allinbits/starport-installer).
-
 
 ## Run tests
 
@@ -112,3 +72,19 @@ CGO_LDFLAGS='-Wl,-rpath,/Users/user/.wasmedge/lib' go test --count=1 -short -v .
 * `9999` websrv webserver
 * `6060` pprof
 * `5001` libp2p port
+
+## Multichain Commands
+
+```
+mythosd tx multichain register-subchain logos lyt 18 1 "10000000000" --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+
+mythosd query multichain subchains --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd
+
+mythosd query multichain subchain logos_10001-1 --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd
+
+mythosd tx multichain register-subchain-validator logos_10001-1 /Users/user/dev/blockchain/wasmx-tests/validator_lvl.json --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+
+mythosd tx multichain init-subchain logos_10001-1 --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+
+```
+

@@ -95,7 +95,6 @@ func (ar AccountRetriever) GetAccountWithHeight(clientCtx client.Context, addr s
 
 	var acc2 BaseAccount
 	err = acc2.Unmarshal(resAcc.Account.Value)
-	fmt.Println("---GetAccountWithHeight resAcc.Account 11--", err, acc2)
 	if err != nil {
 		return nil, 0, err
 	}

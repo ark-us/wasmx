@@ -389,8 +389,15 @@ func initChain(
 	}
 	privKey := privValidator.Key.PrivKey
 
-	// peers := strings.Split(svrCtx.Config.P2P.PersistentPeers, ",")
-	peers := strings.Split(cfgAll.Network.Ips, ",")
+	ipsMapForChain := ""
+	chainips := strings.Split(cfgAll.Network.Ips, ";")
+	for _, chainip := range chainips {
+		ips := strings.Split(chainip, ":")
+		if ips[0] == chainId {
+			ipsMapForChain = ips[1]
+		}
+	}
+	peers := strings.Split(ipsMapForChain, ",")
 
 	err = networkserver.InitConsensusContract(mythosapp, consensusLogger, networkServer, appHash, &consensusParams, res.AppVersion, pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), cfgAll.Network.Id, peers)
 	if err != nil {

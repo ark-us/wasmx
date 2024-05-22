@@ -15,6 +15,7 @@ import (
 
 	app "mythos/v1/app"
 	mcfg "mythos/v1/config"
+	multichain "mythos/v1/multichain"
 )
 
 func init() {
@@ -43,12 +44,12 @@ func BenchmarkSimulation(b *testing.B) {
 		require.NoError(b, err)
 	})
 
-	appOpts := app.DefaultAppOptions{}
+	appOpts := multichain.DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
 	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
-	g, goctx, _ := app.GetTestCtx(logger, true)
+	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	chainId := config.ChainID
 	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx)

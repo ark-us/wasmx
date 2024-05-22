@@ -51,6 +51,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	appencoding "mythos/v1/encoding"
+	"mythos/v1/multichain"
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
@@ -81,8 +82,8 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		WithHomeDir(app.DefaultNodeHome).
 		WithViper("")
 	logger := log.NewNopLogger()
-	appOpts := app.DefaultAppOptions{}
-	g, goctx, _ := app.GetTestCtx(logger, true)
+	appOpts := multichain.DefaultAppOptions{}
+	g, goctx, _ := multichain.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)

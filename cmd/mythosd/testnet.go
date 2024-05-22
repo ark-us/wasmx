@@ -22,8 +22,10 @@ import (
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
 
+	"cosmossdk.io/log"
 	"cosmossdk.io/math"
 
+	pruningtypes "cosmossdk.io/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -46,6 +48,8 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	dbm "github.com/cosmos/cosmos-db"
+
 	libp2p "github.com/libp2p/go-libp2p"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
 
@@ -54,7 +58,8 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
+	menc "mythos/v1/encoding"
+	"mythos/v1/multichain"
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 	websrvflags "mythos/v1/x/websrv/server/flags"
@@ -184,7 +189,7 @@ Example:
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
-			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args)
+			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
 		},
 	}
 
@@ -237,7 +242,7 @@ Example:
 			}
 			leaderURI := args_[1]
 
-			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, clientCtx.TxConfig.SigningContext().ValidatorAddressCodec(), args, nodeIndex, leaderURI)
+			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args, nodeIndex, leaderURI)
 		},
 	}
 
@@ -322,10 +327,9 @@ func initTestnetFiles(
 	nodeConfig *tmconfig.Config,
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
-	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 ) error {
-	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, 0, "")
+	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, 0, "")
 }
 
 func testnetAddNode(
@@ -334,14 +338,13 @@ func testnetAddNode(
 	nodeConfig *tmconfig.Config,
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
-	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 	nodeIndex int,
 	leaderURI string,
 ) error {
 	args.numValidators = nodeIndex + 1
 	args.sameMachine = true
-	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, valAddrCodec, args, nodeIndex, leaderURI)
+	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, nodeIndex, leaderURI)
 	if err != nil {
 		return err
 	}
@@ -363,6 +366,9 @@ func testnetAddNode(
 		return err
 	}
 	err = os.WriteFile(genesisFileNew, bz, 0o644)
+	if err != nil {
+		return err
+	}
 
 	bz, err = os.ReadFile(genesisFileLevel0)
 	if err != nil {
@@ -379,11 +385,13 @@ func initTestnetFilesInternal(
 	nodeConfig *tmconfig.Config,
 	mbm module.BasicManager,
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
-	valAddrCodec runtime.ValidatorAddressCodec,
 	args initArgs,
 	nodeIndexStart int,
 	leaderURI string,
 ) error {
+	os.RemoveAll(args.outputDir)
+	os.MkdirAll(args.outputDir, nodeDirPerm)
+
 	var err error
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
@@ -395,7 +403,25 @@ func initTestnetFilesInternal(
 	mcfg.SetGlobalChainConfig(args.chainID)
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
-	valAddrCodec = mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+	valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+	_, appCreator := createMockAppCreator()
+
+	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
+	chaincfgmyt, err := mcfg.GetChainConfig(chainId)
+	if err != nil {
+		panic(err)
+	}
+	imythosapp := appCreator(chainId, chaincfgmyt)
+	mythosapp := imythosapp.(*app.App)
+
+	chainId0 := mcfg.LEVEL0_CHAIN_ID
+	chaincfg0, err := mcfg.GetChainConfig(chainId0)
+	if err != nil {
+		panic(err)
+	}
+	ilevel0app := appCreator(chainId0, chaincfg0)
+	level0app := ilevel0app.(*app.App)
+	addrCodec0 := level0app.TxConfig().SigningContext().AddressCodec()
 
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
@@ -419,6 +445,7 @@ func initTestnetFilesInternal(
 	genAccounts0 := make([][]byte, args.numValidators)
 
 	networkIps := make([]string, args.numValidators)
+	networkIps0 := make([]string, args.numValidators)
 	valaddr := make([]sdk.AccAddress, args.numValidators)
 	nodeDirNames := make([]string, args.numValidators)
 	nodeDirs := make([]string, args.numValidators)
@@ -497,15 +524,22 @@ func initTestnetFilesInternal(
 		if err != nil {
 			return err
 		}
+		addrstr0, err := addrCodec0.BytesToString(addr)
+		if err != nil {
+			return err
+		}
 
 		host := fmt.Sprintf("%s@%s:%s", addrstr, nodeIPs[i], "8090")
+		host0 := fmt.Sprintf("%s@%s:%s", addrstr0, nodeIPs[i], "8090")
 		if args.sameMachine && !args.p2p {
 			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 			host = fmt.Sprintf("%s@%s", addrstr, ipaddr)
+			host0 = fmt.Sprintf("%s@%s", addrstr0, ipaddr)
 		}
 
 		if args.p2p {
 			valStr := addrstr
+			valStr0 := addrstr0
 
 			privValid := pvm.LoadOrGenFilePV(nodeConfig.PrivValidatorKeyFile(), nodeConfig.PrivValidatorStateFile())
 			pk := privValid.Key.PrivKey.Bytes()
@@ -530,6 +564,7 @@ func initTestnetFilesInternal(
 				}
 				p2pid := node.ID()
 				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr, parts[0], parts[1], p2pid)
+				host0 = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr0, parts[0], parts[1], p2pid)
 			} else {
 				ipaddr := nodeIPs[i]
 				ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
@@ -543,11 +578,13 @@ func initTestnetFilesInternal(
 				}
 				p2pid := node.ID()
 				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr, nodeIPs[i], p2pPort, p2pid)
+				host0 = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr0, nodeIPs[i], p2pPort, p2pid)
 			}
 		}
 
 		valaddr[i] = addr
 		networkIps[i] = host
+		networkIps0[i] = host0
 		genAccounts0[i] = addr.Bytes()
 	}
 	networkIpsStr := strings.Join(networkIps, ",")
@@ -556,16 +593,21 @@ func initTestnetFilesInternal(
 		networkIpsStr = networkIpsStr + "," + leaderURI
 	}
 
+	networkIpsStr0 := strings.Join(networkIps0, ",")
+	networkIpsStr0 = strings.Trim(networkIpsStr0, ",")
+	if leaderURI != "" {
+		networkIpsStr0 = networkIpsStr0 + "," + leaderURI
+	}
+
+	networkIpsJointStr := fmt.Sprintf(`%s:%s;%s:%s`, chainId, networkIpsStr, chainId0, networkIpsStr0)
+
 	for i := nodeIndexStart; i < args.numValidators; i++ {
 		gentxsDir := filepath.Join(args.outputDir, "gentxs")
 		nodeDirName := nodeDirNames[i]
 		nodeDir := nodeDirs[i]
 		addr := valaddr[i]
 		kb := kbs[i]
-		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
-		if args.sameMachine {
-			memo = fmt.Sprintf("%s@%s:%s", nodeIDs[i], "0.0.0.0", strconv.Itoa(p2pListenAddressMulti+i))
-		}
+		memo := networkIps[i]
 
 		accStakingTokens := sdk.TokensFromConsensusPower(5000, mcfg.PowerReduction)
 		coins := sdk.Coins{
@@ -581,8 +623,7 @@ func initTestnetFilesInternal(
 			return err
 		}
 		valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
-
-		err = createGentx(clientCtx, args.chainID, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg.BaseDenom, kb, cmd)
+		err = createGentx(clientCtx, mythosapp.TxConfig(), args.chainID, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg.BaseDenom, kb, cmd)
 		if err != nil {
 			return err
 		}
@@ -605,7 +646,7 @@ func initTestnetFilesInternal(
 			appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 		}
 		appConfigCopy.Network.Id = int32(i - nodeIndexStart)
-		appConfigCopy.Network.Ips = networkIpsStr
+		appConfigCopy.Network.Ips = networkIpsJointStr
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
 	}
@@ -614,20 +655,21 @@ func initTestnetFilesInternal(
 		if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
 			return err
 		}
-		err = collectGenFiles(
-			clientCtx, nodeConfig, args.chainID, nodeIDs, valPubKeys, args.numValidators,
-			args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeIndexStart,
-		)
-		if err != nil {
-			return err
+
+		for i := nodeIndexStart; i < args.numValidators; i++ {
+			err = collectGenFiles(
+				clientCtx,
+				mythosapp.TxConfig(),
+				nodeConfig,
+				args.chainID, nodeIDs[i], valPubKeys[i], i,
+				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeConfig.GenesisFile(), "gentxs",
+			)
+			if err != nil {
+				return err
+			}
 		}
 
 		// initialize level0
-		chainId := mcfg.LEVEL0_CHAIN_ID
-		chaincfg, err := mcfg.GetChainConfig(chainId)
-		if err != nil {
-			panic(err)
-		}
 
 		genBalanceCoins := make([]sdk.Coins, len(genBalances))
 		for i := 0; i < len(genBalances); i++ {
@@ -635,51 +677,55 @@ func initTestnetFilesInternal(
 		}
 
 		// set this only after we get address bytes
-		mcfg.SetGlobalChainConfig(chainId)
-		chainCfg, err := mcfg.GetChainConfig(chainId)
-		if err != nil {
-			panic(err)
-		}
-		level0EncodingConfig := appencoding.MakeEncodingConfig(chainCfg)
-		valAddrCodec = level0EncodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()
-		addrCodec0 := level0EncodingConfig.TxConfig.SigningContext().AddressCodec()
+		mcfg.SetGlobalChainConfig(chainId0)
+
+		valAddrCodec = level0app.TxConfig().SigningContext().ValidatorAddressCodec()
+
 		for i := nodeIndexStart; i < args.numValidators; i++ {
 			// we add the nodeid to this folder, so we only have 1 gentx for each level0
-			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId+nodeIDs[i])
+			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId0+nodeIDs[i])
 			nodeDirName := nodeDirNames[i]
 			kb := kbs[i]
-			memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
+			// memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
+			memo := networkIps0[i]
 
+			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
+			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
+			for i, coin := range genBalanceCoins[i] {
+				coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
+			}
+			valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
+			if err != nil {
+				return err
+			}
+			valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
+			err = createGentx(clientCtx, level0app.TxConfig(), chainId0, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg0.BaseDenom, kb, cmd)
+			if err != nil {
+				return err
+			}
+		}
+
+		for i := nodeIndexStart; i < args.numValidators; i++ {
 			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
 			genAccount := cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
 			addrstr := addrprefixed.String()
 
 			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
 			for i, coin := range genBalanceCoins[i] {
-				coins[i] = sdk.NewCoin(chaincfg.BaseDenom, coin.Amount)
+				coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
 			}
 			genBalance := banktypes.Balance{Address: addrstr, Coins: coins}
 
-			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId+".json", 1)
-
-			valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
-			if err != nil {
-				return err
-			}
-			valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
-
-			err = createGentx(clientCtx, chainId, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg.BaseDenom, kb, cmd)
-			if err != nil {
-				return err
-			}
+			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
 
 			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccount, genBalance, genFile, 1); err != nil {
 				return err
 			}
-
-			err = collectGenFilesLevel0(
-				clientCtx, nodeConfig, chainId, nodeIDs[i], valPubKeys[i], i,
-				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeIndexStart, genFile,
+			err = collectGenFiles(
+				clientCtx,
+				level0app.TxConfig(),
+				nodeConfig, chainId0, nodeIDs[i], valPubKeys[i], i,
+				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, genFile, "gentxs_"+chainId0+nodeIDs[i],
 			)
 			if err != nil {
 				return err
@@ -693,6 +739,7 @@ func initTestnetFilesInternal(
 
 func createGentx(
 	clientCtx client.Context,
+	txConfig client.TxConfig,
 	chainID string,
 	valStr string, valPubKey cryptotypes.PubKey, valTokens math.Int,
 	nodeDirName string, gentxsDir string, memo string,
@@ -712,7 +759,7 @@ func createGentx(
 		return err
 	}
 
-	txBuilder := clientCtx.TxConfig.NewTxBuilder()
+	txBuilder := txConfig.NewTxBuilder()
 	if err := txBuilder.SetMsgs(createValMsg); err != nil {
 		return err
 	}
@@ -724,13 +771,13 @@ func createGentx(
 		WithChainID(chainID).
 		WithMemo(memo).
 		WithKeybase(kb).
-		WithTxConfig(clientCtx.TxConfig)
+		WithTxConfig(txConfig)
 
 	if err := tx.Sign(cmd.Context(), txFactory, nodeDirName, txBuilder, true); err != nil {
 		return err
 	}
 
-	txBz, err := clientCtx.TxConfig.TxJSONEncoder()(txBuilder.GetTx())
+	txBz, err := txConfig.TxJSONEncoder()(txBuilder.GetTx())
 	if err != nil {
 		return err
 	}
@@ -810,60 +857,6 @@ func initGenFiles(
 			return err
 		}
 	}
-	return nil
-}
-
-func collectGenFiles(
-	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
-	nodeIDs []string, valPubKeys []cryptotypes.PubKey, numValidators int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator cosmosmodtypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool, nodeIndexStart int,
-) error {
-	var appState json.RawMessage
-	genTime := tmtime.Now()
-
-	for i := nodeIndexStart; i < numValidators; i++ {
-		nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
-		nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
-		gentxsDir := filepath.Join(outputDir, "gentxs")
-		nodeConfig.Moniker = nodeDirName
-		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
-		// nodeConfig.ProxyApp = "tcp://127.0.0.1:26657"
-		if sameMachine {
-			nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
-			// nodeConfig.ProxyApp = "tcp://127.0.0.1:" + strconv.Itoa(26657+i)
-		}
-
-		nodeConfig.SetRoot(nodeDir)
-
-		nodeID, valPubKey := nodeIDs[i], valPubKeys[i]
-		initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)
-
-		appGenesis, err := genutiltypes.AppGenesisFromFile(nodeConfig.GenesisFile())
-		if err != nil {
-			return err
-		}
-
-		nodeAppState, err := genutil.GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, appGenesis, genBalIterator, genutiltypes.DefaultMessageValidator, valAddrCodec)
-		if err != nil {
-			return err
-		}
-
-		if appState == nil {
-			// set the canonical application state (they should not differ)
-			appState = nodeAppState
-		}
-
-		genFile := nodeConfig.GenesisFile()
-
-		// overwrite each validator's genesis file to have a canonical genesis time
-		if err := genutil.ExportGenesisFileWithTime(genFile, chainID, nil, appState, genTime); err != nil {
-			return err
-		}
-
-		newGenFile := strings.Replace(genFile, ".json", "_"+chainID+".json", 1)
-		copyFile(genFile, newGenFile)
-	}
-
 	return nil
 }
 
@@ -957,18 +950,23 @@ func initGenFilesLevel0(
 	return nil
 }
 
-func collectGenFilesLevel0(
-	clientCtx client.Context, nodeConfig *tmconfig.Config, chainID string,
-	nodeID string, valPubKey cryptotypes.PubKey, i int,
-	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator cosmosmodtypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec, sameMachine bool, nodeIndexStart int, genFile string,
+func collectGenFiles(
+	clientCtx client.Context,
+	txConfig client.TxConfig,
+	nodeConfig *tmconfig.Config,
+	chainID string,
+	nodeID string, valPubKey cryptotypes.PubKey,
+	i int,
+	outputDir, nodeDirPrefix, nodeDaemonHome string, genBalIterator cosmosmodtypes.GenesisBalancesIterator, valAddrCodec runtime.ValidatorAddressCodec,
+	sameMachine bool,
+	genFile string, genTxDirName string,
 ) error {
-	var appState json.RawMessage
 	genTime := tmtime.Now()
 
 	nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
 	nodeDir := filepath.Join(outputDir, nodeDirName, nodeDaemonHome)
 	// we add the nodeid to this folder, so we only have 1 gentx for each level0
-	gentxsDir := filepath.Join(outputDir, "gentxs_"+chainID+nodeID)
+	gentxsDir := filepath.Join(outputDir, genTxDirName)
 	nodeConfig.Moniker = nodeDirName
 	nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	// nodeConfig.ProxyApp = "tcp://127.0.0.1:26657"
@@ -980,27 +978,26 @@ func collectGenFilesLevel0(
 	nodeConfig.SetRoot(nodeDir)
 	initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)
 
-	// genFile := nodeConfig.GenesisFile()
-
 	appGenesis, err := genutiltypes.AppGenesisFromFile(genFile)
 	if err != nil {
 		return err
 	}
 
-	nodeAppState, err := GenAppStateFromConfig(clientCtx.Codec, clientCtx.TxConfig, nodeConfig, initCfg, appGenesis, genBalIterator, genutiltypes.DefaultMessageValidator, valAddrCodec, genFile)
+	nodeAppState, err := GenAppStateFromConfig(clientCtx.Codec, txConfig, nodeConfig, initCfg, appGenesis, genBalIterator, genutiltypes.DefaultMessageValidator, valAddrCodec, genFile)
 	if err != nil {
 		return err
 	}
 
-	if appState == nil {
-		// set the canonical application state (they should not differ)
-		appState = nodeAppState
-	}
-
 	// overwrite each validator's genesis file to have a canonical genesis time
-	if err := genutil.ExportGenesisFileWithTime(genFile, chainID, nil, appState, genTime); err != nil {
+	if err := genutil.ExportGenesisFileWithTime(genFile, chainID, nil, nodeAppState, genTime); err != nil {
 		return err
 	}
+
+	if !strings.Contains(genFile, chainID) {
+		newGenFile := strings.Replace(genFile, ".json", "_"+chainID+".json", 1)
+		copyFile(genFile, newGenFile)
+	}
+
 	return nil
 }
 
@@ -1154,4 +1151,19 @@ func GenAppStateFromConfig(cdc codec.JSONCodec, txEncodingConfig client.TxEncodi
 	err = genutil.ExportGenesisFile(genesis, genFile)
 
 	return appState, err
+}
+
+func createMockAppCreator() (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+	db := dbm.NewMemDB()
+	logger := log.NewNopLogger()
+	appOpts := multichain.DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
+	// we set this so it does not try to read a genesis file
+	appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
+	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+	appOpts.Set(sdkserver.FlagMinGasPrices, "")
+	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+	g, goctx, _ := multichain.GetTestCtx(logger, true)
+	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
 }

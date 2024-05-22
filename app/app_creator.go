@@ -19,21 +19,17 @@ import (
 
 	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
+	multichain "mythos/v1/multichain"
 	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
-
-type AppOptions interface {
-	Get(string) interface{}
-	Set(key string, value any)
-}
 
 // newApp creates a new Cosmos SDK app
 func NewAppCreator(
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
-	appOpts AppOptions,
+	appOpts multichain.AppOptions,
 	g *errgroup.Group,
 	ctx context.Context,
 ) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {

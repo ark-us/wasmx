@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -45,7 +46,11 @@ const (
 	FlagFrom   = "from"
 )
 
-func GetTxCmd() *cobra.Command {
+type appwithTxConfig interface {
+	TxConfig() client.TxConfig
+}
+
+func GetTxCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        "multichain",
 		Short:                      "multichain transaction subcommands",
@@ -57,14 +62,14 @@ func GetTxCmd() *cobra.Command {
 	txCmd.AddCommand(
 		MultiChainTxExecuteCmd(),
 		RegisterNewSubChain(),
-		RegisterSubChainValidator(),
+		RegisterSubChainValidator(appCreator),
 		InitializeSubChain(),
 	)
 
 	return txCmd
 }
 
-func GetQueryCmd() *cobra.Command {
+func GetQueryCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        "multichain",
 		Short:                      "multichain query subcommands",
@@ -197,7 +202,7 @@ $ %s tx network register-subchain mythos myt 18 1 "10000000000" --chain-id="leve
 	return cmd
 }
 
-func RegisterSubChainValidator() *cobra.Command {
+func RegisterSubChainValidator(appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "register-subchain-validator [subchain_id] [path/to/validator.json]",
 		Short: "Register subchain validator",
@@ -246,11 +251,11 @@ Where validator.json contains:
 			if err != nil {
 				return err
 			}
-			genTxData, err := getGenTxData(clientCtx, flags, customAddrCodec, subChainId, validMsg)
+			genTxData, err := getGenTxData(clientCtx, flags, customAddrCodec, sender, subChainId, validMsg)
 			if err != nil {
 				return err
 			}
-			signedGenTxData, err := signGenTxData(clientCtx, flags, customAddrCodec, chainId, subChainId, genTxData, sender)
+			signedGenTxData, err := signGenTxData(appCreator, clientCtx, flags, customAddrCodec, chainId, subChainId, genTxData, sender)
 			if err != nil {
 				return err
 			}
@@ -438,6 +443,10 @@ $ %s query network subchains --chain-id="level0_1000-1"
 			if err != nil {
 				return err
 			}
+
+			from, _ := cmd.Flags().GetString(sdkflags.FlagFrom)
+			sender, _, _, _ := client.GetFromFields(clientCtx, clientCtx.Keyring, from)
+
 			querymsg, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{GetSubChainIds: &wasmxtypes.QueryGetSubChainIdsRequest{}})
 			if err != nil {
 				return err
@@ -448,7 +457,7 @@ $ %s query network subchains --chain-id="level0_1000-1"
 				cmd.Flags(),
 				customAddrCodec,
 				contractAddr,
-				clientCtx.GetFromAddress(),
+				sender,
 				querymsg,
 				nil,
 				nil,
@@ -456,7 +465,12 @@ $ %s query network subchains --chain-id="level0_1000-1"
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			data2, err := decodeQueryResponse(res.Data)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data2))
+			return nil
 		},
 		SilenceUsage: true,
 	}
@@ -506,12 +520,15 @@ $ %s query network subchain level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
+			from, _ := cmd.Flags().GetString(sdkflags.FlagFrom)
+			sender, _, _, _ := client.GetFromFields(clientCtx, clientCtx.Keyring, from)
+
 			res, err := sendMultiChainQuery(
 				clientCtx,
 				cmd.Flags(),
 				customAddrCodec,
 				contractAddr,
-				clientCtx.GetFromAddress(),
+				sender,
 				querymsg,
 				nil,
 				nil,
@@ -519,7 +536,12 @@ $ %s query network subchain level1_1000-1 --chain-id="level0_1000-1"
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			data2, err := decodeQueryResponse(res.Data)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data2))
+			return nil
 		},
 		SilenceUsage: true,
 	}
@@ -569,12 +591,15 @@ $ %s query network subchain-data level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
+			from, _ := cmd.Flags().GetString(sdkflags.FlagFrom)
+			sender, _, _, _ := client.GetFromFields(clientCtx, clientCtx.Keyring, from)
+
 			res, err := sendMultiChainQuery(
 				clientCtx,
 				cmd.Flags(),
 				customAddrCodec,
 				contractAddr,
-				clientCtx.GetFromAddress(),
+				sender,
 				querymsg,
 				nil,
 				nil,
@@ -582,7 +607,12 @@ $ %s query network subchain-data level1_1000-1 --chain-id="level0_1000-1"
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			data2, err := decodeQueryResponse(res.Data)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data2))
+			return nil
 		},
 		SilenceUsage: true,
 	}
@@ -605,7 +635,7 @@ func sendMultiChainExecution(
 ) error {
 	chainId, err := flags.GetString(sdkflags.FlagChainID)
 	if err != nil {
-		return fmt.Errorf("amount: %s", err)
+		return fmt.Errorf("chainId: %s", err)
 	}
 	msg := wasmxtypes.WasmxExecutionMessage{Data: execMsg}
 	msgbz, err := json.Marshal(msg)
@@ -732,9 +762,10 @@ func parseAndValidateValidatorJSON(path string) (*stakingtypes.MsgCreateValidato
 	if v.Amount == "" {
 		return nil, fmt.Errorf("must specify amount of coins to bond")
 	}
-	amount, err := sdk.ParseCoinNormalized(v.Amount)
-	if err != nil {
-		return nil, err
+
+	amount, ok := math.NewIntFromString(v.Amount)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse amount")
 	}
 
 	if v.Moniker == "" {
@@ -755,7 +786,7 @@ func parseAndValidateValidatorJSON(path string) (*stakingtypes.MsgCreateValidato
 	}
 
 	return &stakingtypes.MsgCreateValidator{
-		Value: amount,
+		Value: sdk.Coin{Denom: "faked", Amount: amount},
 		Description: stakingtypes.Description{
 			Moniker:         v.Moniker,
 			Identity:        v.Identity,
@@ -797,6 +828,7 @@ func getGenTxData(
 	clientCtx client.Context,
 	flags *flag.FlagSet,
 	customAddrCodec mcodec.AccBech32Codec,
+	sender sdk.AccAddress,
 	subChainId string,
 	validMsg *stakingtypes.MsgCreateValidator,
 ) ([]byte, error) {
@@ -822,7 +854,7 @@ func getGenTxData(
 		flags,
 		customAddrCodec,
 		level0AddrStr,
-		clientCtx.GetFromAddress(),
+		sender,
 		querymsg,
 		nil,
 		nil,
@@ -830,11 +862,25 @@ func getGenTxData(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("---gentx res.Data--", string(res.Data))
-	return res.Data, nil
+	return decodeQueryResponse(res.Data)
+}
+
+func decodeQueryResponse(resp []byte) ([]byte, error) {
+	var data wasmxtypes.QuerySmartContractCallResponse
+	err := data.Unmarshal(resp)
+	if err != nil {
+		return nil, err
+	}
+	var data2 wasmxtypes.WasmxQueryResponse
+	err = json.Unmarshal(data.Data, &data2)
+	if err != nil {
+		return nil, err
+	}
+	return data2.Data, nil
 }
 
 func signGenTxData(
+	appCreatorFactory multichain.NewAppCreator,
 	clientCtx client.Context,
 	flags *flag.FlagSet,
 	customAddrCodec mcodec.AccBech32Codec,
@@ -860,7 +906,7 @@ func signGenTxData(
 		flags,
 		customAddrCodec,
 		contractAddr,
-		clientCtx.GetFromAddress(),
+		sender,
 		querymsg,
 		nil,
 		nil,
@@ -868,18 +914,22 @@ func signGenTxData(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("---config--", string(res.Data))
-
-	var subchainConfig menc.ChainConfig
-	err = json.Unmarshal(res.Data, &subchainConfig)
+	data2, err := decodeQueryResponse(res.Data)
 	if err != nil {
 		return nil, err
 	}
 
-	_, multichainapp := mcfg.WithMultiChainAppEmpty(clientCtx.CmdContext)
-	subchainapp := multichainapp.NewApp(subChainId, &subchainConfig)
-	subtxconfig := subchainapp.TxConfig()
+	var subchainConfig menc.ChainConfig
+	err = json.Unmarshal(data2, &subchainConfig)
+	if err != nil {
+		return nil, err
+	}
 
+	_, appCreator := createMockAppCreator(appCreatorFactory)
+	isubchainapp := appCreator(subChainId, &subchainConfig)
+	subchainapp := isubchainapp.(appwithTxConfig)
+
+	subtxconfig := subchainapp.TxConfig()
 	sdktx, err := subtxconfig.TxJSONDecoder()(genTxData)
 	if err != nil {
 		return nil, err
@@ -977,4 +1027,13 @@ func signTx(
 		return nil, err
 	}
 	return txbuilder, nil
+}
+
+func createMockAppCreator(appCreatorFactory multichain.NewAppCreator) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	tempNodeHome := filepath.Join(userHomeDir, ".mythostmp")
+	return multichain.CreateMockAppCreator(appCreatorFactory, tempNodeHome)
 }

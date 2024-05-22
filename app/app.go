@@ -519,7 +519,7 @@ func NewApp(
 		// TODO remove authority?
 		govAuthorityAddr,
 	)
-	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app)
+	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app, NewAppCreator)
 
 	app.AccountKeeper = cosmosmodkeeper.NewKeeperAuth(
 		appCodec,
