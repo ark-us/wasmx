@@ -5,11 +5,11 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"time"
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
 
+	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
 	txsigning "cosmossdk.io/x/tx/signing"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -297,12 +297,14 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 
 	// create new subchain genesis registry
+	initialBalance, ok := math.NewIntFromString("10000000000100000000")
+	suite.Require().True(ok)
 	regreq, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterDefaultSubChain: &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: big.NewInt(10000000000),
+		InitialBalance: initialBalance.BigInt(),
 	}})
 	suite.Require().NoError(err)
 
@@ -314,7 +316,9 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 
 	// create genTx data to sign - call to level0
 	// buildGenTx query
-	valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
+	// valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
+	valTokens, ok := math.NewIntFromString("10000000000000000000")
+	suite.Require().True(ok)
 	validMsg := stakingtypes.MsgCreateValidator{
 		// TODO fix as-json.parse when description contains empty strings
 		Description:       stakingtypes.NewDescription("moniker1", "id", "website", "security", "details"),
