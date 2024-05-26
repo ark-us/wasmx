@@ -471,6 +471,21 @@ func ConsensusPrecompiles() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
 	}
 
+	timeInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"chain_id":"time_666-1","interval_ms":100}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal timeInitMsg message")
+	}
+
+	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":4000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPrevote","value":3000},{"key":"timeoutPropose","value":3000},{"key":"timeoutPrecommit","value":3000}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal level0InitMsg message")
+	}
+
+	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"ids":[]}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal mutichainLocalInitMsg message")
+	}
+
 	return []SystemContract{
 		{
 			Address:     ADDR_CONSENSUS_RAFT_LIBRARY,
@@ -540,7 +555,7 @@ func ConsensusPrecompiles() SystemContracts {
 			Label:       CONSENSUS_TENDERMINTP2P,
 			InitMessage: tendermintP2PInitMsg,
 			Pinned:      false,
-			Role:        ROLE_CONSENSUS,
+			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -561,6 +576,42 @@ func ConsensusPrecompiles() SystemContracts {
 			// Role:        ROLE_CONSENSUS,
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_TIME,
+			Label:       TIME_v001,
+			InitMessage: timeInitMsg,
+			Pinned:      false,
+			Role:        ROLE_TIME,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LEVEL0_LIBRARY,
+			Label:       "level0_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LEVEL0,
+			Label:       LEVEL0_v001,
+			InitMessage: level0InitMsg,
+			Pinned:      false,
+			// Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
+			Address:     ADDR_MULTICHAIN_REGISTRY_LOCAL,
+			Label:       MULTICHAIN_REGISTRY_LOCAL_v001,
+			InitMessage: mutichainLocalInitMsg,
+			Pinned:      false,
+			Role:        ROLE_MULTICHAIN_REGISTRY_LOCAL,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
 		},
 	}
 }
@@ -612,6 +663,13 @@ func ChatPrecompiles() SystemContracts {
 }
 
 func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string) SystemContracts {
+	consensusPrecompiles := ConsensusPrecompiles()
+	for i, val := range consensusPrecompiles {
+		if val.Label == CONSENSUS_TENDERMINTP2P {
+			consensusPrecompiles[i].Role = ROLE_CONSENSUS
+		}
+	}
+
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
 	precompiles = append(precompiles, InterpreterPrecompiles()...)
@@ -619,73 +677,13 @@ func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string) System
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, HookPrecompiles()...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
-	precompiles = append(precompiles, ConsensusPrecompiles()...)
+	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles()...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles
 }
 
 func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) SystemContracts {
-	msg := WasmxExecutionMessage{Data: []byte{}}
-	initMsg, err := json.Marshal(msg)
-	if err != nil {
-		panic("DefaultTimeChainContracts: cannot marshal init message")
-	}
-
-	timeInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"chain_id":"time_666-1","interval_ms":100}}`)})
-	if err != nil {
-		panic("DefaultTimeChainContracts: cannot marshal timeInitMsg message")
-	}
-
-	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"maxLevel","value":0},{"key":"blockTimeoutInternal","value":3000},{"key":"currentLevel","value":0},{"key":"membersCount","value":1},{"key":"blockTimeout","value":"blockTimeoutInternal"}],"initialState":"uninitialized"}}`)})
-	if err != nil {
-		panic("DefaultTimeChainContracts: cannot marshal level0InitMsg message")
-	}
-
-	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"ids":[]}`)})
-	if err != nil {
-		panic("DefaultTimeChainContracts: cannot marshal mutichainLocalInitMsg message")
-	}
-
-	consensusPrecompile := []SystemContract{
-		{
-			Address:     ADDR_TIME,
-			Label:       TIME_v001,
-			InitMessage: timeInitMsg,
-			Pinned:      false,
-			Role:        ROLE_TIME,
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_LEVEL0_LIBRARY,
-			Label:       "level0_library",
-			InitMessage: initMsg,
-			Pinned:      false,
-			Role:        ROLE_LIBRARY,
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
-		},
-		{
-			Address:     ADDR_LEVEL0,
-			Label:       LEVEL0_v001,
-			InitMessage: level0InitMsg,
-			Pinned:      false,
-			Role:        ROLE_CONSENSUS,
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
-		},
-		{
-			Address:     ADDR_MULTICHAIN_REGISTRY_LOCAL,
-			Label:       MULTICHAIN_REGISTRY_LOCAL_v001,
-			InitMessage: mutichainLocalInitMsg,
-			Pinned:      false,
-			Role:        ROLE_MULTICHAIN_REGISTRY_LOCAL,
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
-		},
-	}
-
 	hooksNonC := []Hook{
 		{
 			Name:          HOOK_START_NODE,
@@ -730,6 +728,12 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 			Deps:        []string{},
 		},
 	}
+	consensusPrecompiles := ConsensusPrecompiles()
+	for i, val := range consensusPrecompiles {
+		if val.Label == LEVEL0_v001 {
+			consensusPrecompiles[i].Role = ROLE_CONSENSUS
+		}
+	}
 
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
@@ -738,7 +742,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, hooksPrecompiles...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
-	precompiles = append(precompiles, consensusPrecompile...)
+	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles()...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles

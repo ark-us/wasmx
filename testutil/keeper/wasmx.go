@@ -36,6 +36,7 @@ import (
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
+	"mythos/v1/multichain"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
@@ -65,10 +66,10 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
-	appOpts := app.DefaultAppOptions{}
+	appOpts := multichain.DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
-	g, goctx, _ := app.GetTestCtx(logger, true)
+	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
 	iapp := appCreator(chainId, chainCfg)

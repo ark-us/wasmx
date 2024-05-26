@@ -24,6 +24,7 @@ import (
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
+	"mythos/v1/multichain"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 )
 
@@ -61,10 +62,10 @@ func DefaultConfig() network.Config {
 	encoding := appencoding.MakeEncodingConfig(chainCfg)
 	logger := log.NewNopLogger()
 
-	appOpts := app.DefaultAppOptions{}
+	appOpts := multichain.DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, tempDir())
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
-	g, goctx, _ := app.GetTestCtx(logger, true)
+	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	_, appCreator := app.NewAppCreator(logger, dbm.NewMemDB(), nil, appOpts, g, goctx)
 	iapp := appCreator(chainId, chainCfg)
@@ -80,11 +81,11 @@ func DefaultConfig() network.Config {
 		AccountRetriever:  cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec},
 		AppConstructor: func(val network.ValidatorI) servertypes.Application {
 
-			appOpts := app.DefaultAppOptions{}
+			appOpts := multichain.DefaultAppOptions{}
 			appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
 			appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 			// baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
-			g, goctx, _ := app.GetTestCtx(logger, true)
+			g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 			_, appCreator := app.NewAppCreator(
 				val.GetCtx().Logger,
