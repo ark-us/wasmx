@@ -194,6 +194,5 @@ message ExtensionOptionMultiChainTx {
 
 // ExtensionOptionMultiChainTx is an extension option for multichain atomic transactions
 message ExtensionOptionAtomicMultiChainTx {
-    // option (gogoproto.goproto_getters) = false;
-    string leader_chain = 1;
+    option (gogoproto.goproto_getters) = false;
 }

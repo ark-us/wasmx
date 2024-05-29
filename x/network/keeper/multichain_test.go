@@ -469,7 +469,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	txbuilder2 := suite.prepareMultiChainSubExec(subchainapp, []byte(msg), sender, bankAddress, subChainId2, 1, 2)
 	tx2 := txbuilder2.(wasmxtesting.ProtoTxProvider).GetProtoTx()
 
-	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, []sdktx.Tx{*tx1, *tx2}, subChainId2, subChainId2)
+	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, []sdktx.Tx{*tx1, *tx2}, subChainId2)
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
@@ -479,7 +479,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 		suite.SetCurrentChain(chainId)
 
 		// send the atomic tx to level0 too
-		atomictx := suite.prepareMultiChainAtomicExec(appA, sender, []sdktx.Tx{*tx1, *tx2}, chainId, subChainId2)
+		atomictx := suite.prepareMultiChainAtomicExec(appA, sender, []sdktx.Tx{*tx1, *tx2}, subChainId2)
 
 		txbz, err := appA.App.TxConfig().TxEncoder()(atomictx.GetTx())
 		s.Require().NoError(err)
@@ -750,7 +750,7 @@ func (suite *KeeperTestSuite) prepareMultiChainSubExec(appCtx wasmxtesting.AppCo
 	return appCtx.SignCosmosSdkTx(txBuilder, sender)
 }
 
-func (suite *KeeperTestSuite) prepareMultiChainAtomicExec(appCtx wasmxtesting.AppContext, sender simulation.Account, txs []sdktx.Tx, chainId string, leaderChainId string) client.TxBuilder {
+func (suite *KeeperTestSuite) prepareMultiChainAtomicExec(appCtx wasmxtesting.AppContext, sender simulation.Account, txs []sdktx.Tx, leaderChainId string) client.TxBuilder {
 	subtxmsg := &types.MsgExecuteAtomicTxRequest{
 		Txs:           txs,
 		Sender:        appCtx.MustAccAddressToString(sender.Address),
@@ -758,6 +758,6 @@ func (suite *KeeperTestSuite) prepareMultiChainAtomicExec(appCtx wasmxtesting.Ap
 	}
 
 	txBuilder := appCtx.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{subtxmsg}, nil, nil, "")
-	appCtx.SetMultiChainAtomicExtensionOptions(txBuilder, chainId)
+	appCtx.SetMultiChainAtomicExtensionOptions(txBuilder)
 	return appCtx.SignCosmosSdkTx(txBuilder, sender)
 }

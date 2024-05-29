@@ -369,10 +369,9 @@ func (s *AppContext) SetMultiChainExtensionOptions(
 
 func (s *AppContext) SetMultiChainAtomicExtensionOptions(
 	txBuilder client.TxBuilder,
-	chainId string,
 ) (client.TxBuilder, error) {
 	// Set the extension
-	option, err := codectypes.NewAnyWithValue(&networktypes.ExtensionOptionAtomicMultiChainTx{LeaderChain: chainId})
+	option, err := codectypes.NewAnyWithValue(&networktypes.ExtensionOptionAtomicMultiChainTx{})
 	if err != nil {
 		return nil, err
 	}
