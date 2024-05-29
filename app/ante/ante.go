@@ -15,10 +15,17 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"mythos/v1/crypto/ethsecp256k1"
+	networktypes "mythos/v1/x/network/types"
 )
 
 const (
 	Secp256k1VerifyCost uint64 = 21000
+)
+
+var (
+	TypeURL_ExtensionOptionEthereumTx         = "/mythos.wasmx.v1.ExtensionOptionEthereumTx"
+	TypeURL_ExtensionOptionAtomicMultiChainTx = "/mythos.network.v1.ExtensionOptionAtomicMultiChainTx"
+	TypeURL_ExtensionOptionMultiChainTx       = "/mythos.network.v1.ExtensionOptionMultiChainTx"
 )
 
 // NewAnteHandler returns an ante handler responsible for attempting to route an
@@ -42,8 +49,25 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 			opts := txWithExtensions.GetExtensionOptions()
 			if len(opts) > 0 {
 				switch typeURL := opts[0].GetTypeUrl(); typeURL {
-				case "/mythos.wasmx.v1.ExtensionOptionEthereumTx":
+				case TypeURL_ExtensionOptionEthereumTx:
 					anteHandler = newEthAnteHandler(options)
+				case TypeURL_ExtensionOptionAtomicMultiChainTx:
+					// we do not run the antehandler on the atomic wrapper tx
+					// this also means we do not have validation in CheckTx
+					// TODO maybe we can decompose the atomic tx & validate each subtx
+					return ctx, nil
+				case TypeURL_ExtensionOptionMultiChainTx:
+					ext := opts[0].GetCachedValue().(*networktypes.ExtensionOptionMultiChainTx)
+					if ctx.ChainID() == ext.ChainId {
+						if len(opts) > 1 && opts[1].GetTypeUrl() == TypeURL_ExtensionOptionEthereumTx {
+							anteHandler = newEthAnteHandler(options)
+						} else {
+							anteHandler = newCosmosAnteHandler(options)
+						}
+					} else {
+						// we skip antehandler verification on transactions that are not meant to be ran on this chain
+						return ctx, nil
+					}
 				default:
 					return ctx, errorsmod.Wrapf(
 						errortypes.ErrUnknownExtensionOptions,

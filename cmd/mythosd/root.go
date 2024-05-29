@@ -50,15 +50,15 @@ import (
 
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
+	mcfg "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
 	"mythos/v1/multichain"
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	network "mythos/v1/x/network/keeper"
 	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
-
-	mcfg "mythos/v1/config"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
@@ -86,6 +86,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
+	goctx = network.ContextWithMultiChainContext(goctx)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)

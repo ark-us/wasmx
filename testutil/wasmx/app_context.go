@@ -23,6 +23,7 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -39,6 +40,7 @@ import (
 	mcodec "mythos/v1/codec"
 	"mythos/v1/crypto/ethsecp256k1"
 	network "mythos/v1/x/network/keeper"
+	networktypes "mythos/v1/x/network/types"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
 	wasmxutils "mythos/v1/x/wasmx/rpc/backend"
 	"mythos/v1/x/wasmx/types"
@@ -61,6 +63,10 @@ var (
 		TxType:                 icatypes.TxTypeSDKMultiMsg,
 	}))
 )
+
+type ProtoTxProvider interface {
+	GetProtoTx() *txtypes.Tx
+}
 
 type AppContext struct {
 	S *KeeperTestSuite
@@ -171,10 +177,13 @@ func (s *AppContext) PrepareCosmosSdkTxBuilder(account simulation.Account, msgs 
 	return txBuilder
 }
 
-func (s *AppContext) PrepareCosmosSdkTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) sdk.Tx {
-	txConfig := s.App.TxConfig()
+func (s *AppContext) PrepareCosmosSdkTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) client.TxBuilder {
 	txBuilder := s.PrepareCosmosSdkTxBuilder(account, msgs, gasLimit, gasPrice, memo)
+	return s.SignCosmosSdkTx(txBuilder, account)
+}
 
+func (s *AppContext) SignCosmosSdkTx(txBuilder client.TxBuilder, account simulation.Account) client.TxBuilder {
+	txConfig := s.App.TxConfig()
 	accP, err := s.App.AccountKeeper.GetAccountPrefixed(s.Context(), s.BytesToAccAddressPrefixed(account.Address))
 	s.S.Require().NoError(err)
 	seq := accP.GetSequence()
@@ -214,15 +223,15 @@ func (s *AppContext) PrepareCosmosSdkTx(account simulation.Account, msgs []sdk.M
 	err = txBuilder.SetSignatures(sigV2)
 	s.S.Require().NoError(err)
 
-	return txBuilder.GetTx()
+	return txBuilder
 }
 
 func (s *AppContext) PrepareCosmosTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) []byte {
 	txConfig := s.App.TxConfig()
-	tx := s.PrepareCosmosSdkTx(account, msgs, gasLimit, gasPrice, memo)
+	txBuilder := s.PrepareCosmosSdkTx(account, msgs, gasLimit, gasPrice, memo)
 
 	// bz are bytes to be broadcasted over the network
-	bz, err := txConfig.TxEncoder()(tx)
+	bz, err := txConfig.TxEncoder()(txBuilder.GetTx())
 	s.S.Require().NoError(err)
 
 	// print json wasmxTx
@@ -337,6 +346,46 @@ func (s *AppContext) prepareEthTx(
 	return bz, nil
 }
 
+func (s *AppContext) SetMultiChainExtensionOptions(
+	txBuilder client.TxBuilder,
+	chainId string,
+	index int32,
+	txcount int32,
+) (client.TxBuilder, error) {
+	// Set the extension
+	option, err := codectypes.NewAnyWithValue(&networktypes.ExtensionOptionMultiChainTx{ChainId: chainId, Index: index, TxCount: txcount})
+	if err != nil {
+		return nil, err
+	}
+
+	builder, ok := txBuilder.(authtx.ExtensionOptionsTxBuilder)
+	if !ok {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not set extensions for Ethereum tx")
+	}
+
+	builder.SetExtensionOptions(option)
+	return txBuilder, nil
+}
+
+func (s *AppContext) SetMultiChainAtomicExtensionOptions(
+	txBuilder client.TxBuilder,
+	chainId string,
+) (client.TxBuilder, error) {
+	// Set the extension
+	option, err := codectypes.NewAnyWithValue(&networktypes.ExtensionOptionAtomicMultiChainTx{LeaderChain: chainId})
+	if err != nil {
+		return nil, err
+	}
+
+	builder, ok := txBuilder.(authtx.ExtensionOptionsTxBuilder)
+	if !ok {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not set extensions for Ethereum tx")
+	}
+
+	builder.SetExtensionOptions(option)
+	return txBuilder, nil
+}
+
 func (s *AppContext) defaultFinalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
 	req := &abci.RequestFinalizeBlock{
 		Txs:                txs,
@@ -401,6 +450,16 @@ func (s *AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*ab
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.finalizeBlock(txs)
+	if err != nil {
+		return nil, err
+	}
+
+	s.S.Require().Equal(1, len(res.TxResults))
+	return res.TxResults[0], nil
+}
+
+func (s *AppContext) DeliverTxRaw(txbz []byte) (*abci.ExecTxResult, error) {
+	res, err := s.finalizeBlock([][]byte{txbz})
 	if err != nil {
 		return nil, err
 	}
@@ -853,6 +912,15 @@ func (s *AppContext) GetSdkEventsByType(events []abci.Event, evtype string) []ab
 func (s *AppContext) GetWasmxEvents(events []abci.Event) []abci.Event {
 	wasmxlog := types.CustomContractEventPrefix + types.EventTypeWasmxLog
 	return s.GetSdkEventsByType(events, wasmxlog)
+}
+
+func (s *AppContext) GetAttributeValueFromEvent(event abci.Event, attrkey string) string {
+	for _, ev := range event.Attributes {
+		if ev.Key == attrkey {
+			return ev.Value
+		}
+	}
+	return ""
 }
 
 func (s *AppContext) GetEventsByAttribute(events []abci.Event, attrkey string, attrvalue string) []abci.Event {

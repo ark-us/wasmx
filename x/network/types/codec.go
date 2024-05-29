@@ -5,6 +5,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/msgservice"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 )
 
 func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
@@ -13,6 +14,9 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 
 	cdc.RegisterConcrete(&RequestPing{}, "network/RequestPing", nil)
 	cdc.RegisterConcrete(&RequestBroadcastTx{}, "network/RequestBroadcastTx", nil)
+
+	cdc.RegisterConcrete(&ExtensionOptionAtomicMultiChainTx{}, "network/ExtensionOptionAtomicMultiChainTx", nil)
+	cdc.RegisterConcrete(&ExtensionOptionMultiChainTx{}, "network/ExtensionOptionMultiChainTx", nil)
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
@@ -23,6 +27,12 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 
 		&RequestPing{},
 		&RequestBroadcastTx{},
+	)
+
+	registry.RegisterImplementations(
+		(*tx.TxExtensionOptionI)(nil),
+		&ExtensionOptionAtomicMultiChainTx{},
+		&ExtensionOptionMultiChainTx{},
 	)
 
 	msgservice.RegisterMsgServiceDesc(registry, &_Msg_serviceDesc)

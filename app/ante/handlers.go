@@ -98,7 +98,8 @@ func newCosmosAnteHandler(options HandlerOptions) sdk.AnteHandler {
 	anteDecorators := []sdk.AnteDecorator{
 		sdkante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
 		circuitante.NewCircuitBreakerDecorator(options.CircuitKeeper),
-		sdkante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
+		// TODO restrict ethereumtx extension, but not atomictx extensions
+		// sdkante.NewExtensionOptionsDecorator(options.ExtensionOptionChecker),
 		sdkante.NewValidateBasicDecorator(),
 		sdkante.NewTxTimeoutHeightDecorator(),
 		sdkante.NewValidateMemoDecorator(options.AccountKeeper),

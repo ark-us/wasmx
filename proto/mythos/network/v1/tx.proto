@@ -6,6 +6,8 @@ import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
 import "amino/amino.proto";
 import "google/protobuf/any.proto";
+import "cosmos/tx/v1beta1/tx.proto";
+import "mythos/network/v1/tendermint.proto";
 
 option go_package = "mythos/v1/x/network/types";
 option (gogoproto.goproto_getters_all) = false;
@@ -35,6 +37,23 @@ service Msg {
 
     // P2PReceiveMessage
     rpc P2PReceiveMessage(MsgP2PReceiveMessageRequest) returns (MsgP2PReceiveMessageResponse);
+
+    rpc ExecuteAtomicTx(MsgExecuteAtomicTxRequest) returns (MsgExecuteAtomicTxResponse);
+}
+
+message MsgExecuteAtomicTxRequest {
+    option (amino.name) = "network/MsgExecuteAtomicTxRequest";
+    option (cosmos.msg.v1.signer) = "sender";
+
+    option (gogoproto.equal)           = false;
+    option (gogoproto.goproto_getters) = true;
+    repeated cosmos.tx.v1beta1.Tx txs = 1 [(gogoproto.nullable) = false];
+    string leader_chain_id = 2;
+    string sender = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+}
+
+message MsgExecuteAtomicTxResponse {
+    repeated ExecTxResult results = 1 [(gogoproto.nullable) = false];
 }
 
 message MsgMultiChainWrap {
@@ -164,3 +183,17 @@ message MsgP2PReceiveMessageRequest {
 }
 
 message MsgP2PReceiveMessageResponse {}
+
+// ExtensionOptionMultiChainTx is an extension option for multichain atomic transactions
+message ExtensionOptionMultiChainTx {
+    // option (gogoproto.goproto_getters) = false;
+    string chain_id = 1;
+    int32 index = 2; // index of this transaction in the atomic set
+    int32 tx_count = 3; // total transactions in the atomic set
+}
+
+// ExtensionOptionMultiChainTx is an extension option for multichain atomic transactions
+message ExtensionOptionAtomicMultiChainTx {
+    // option (gogoproto.goproto_getters) = false;
+    string leader_chain = 1;
+}

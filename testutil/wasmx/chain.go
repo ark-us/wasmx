@@ -167,6 +167,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 }
 
 func (suite *KeeperTestSuite) SetupTest() {
+	t := suite.T()
 	suite.chains = map[string]*TestChain{}
 	mcfg.ChainIdsInit = []string{
 		mcfg.MYTHOS_CHAIN_ID_TEST,
@@ -174,14 +175,14 @@ func (suite *KeeperTestSuite) SetupTest() {
 	}
 	suite.ChainIds = mcfg.ChainIdsInit
 	for i, chainId := range mcfg.ChainIdsInit {
-		suite.SetupApp(chainId, int32(i))
+		chaincfg, err := mcfg.GetChainConfig(chainId)
+		require.NoError(t, err)
+		suite.SetupApp(chainId, chaincfg, int32(i))
 	}
 }
 
-func (suite *KeeperTestSuite) SetupApp(chainId string, index int32) {
+func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfig, index int32) {
 	t := suite.T()
-	chaincfg, err := mcfg.GetChainConfig(chainId)
-	require.NoError(t, err)
 
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc))
 	// valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -282,6 +283,76 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, index int32) {
 
 	err = suite.InitConsensusContract(resInit, pubKey.Address(), pubKey.Bytes(), privVal.PrivKey.Bytes(), valOperatorAddress)
 	require.NoError(t, err)
+}
+
+func (suite *KeeperTestSuite) SetupSubChainApp(chainId string, chaincfg *menc.ChainConfig, index int32) {
+	t := suite.T()
+	somechain := suite.GetChain(mcfg.LEVEL0_CHAIN_ID)
+
+	multichainapp, err := somechain.App.GetMultiChainApp()
+	suite.Require().NoError(err)
+	isubchainapp, err := multichainapp.GetApp(chainId)
+	suite.Require().NoError(err)
+	testApp, ok := isubchainapp.(ibcgotesting.TestingApp)
+	suite.Require().True(ok)
+	// if err != nil {
+	// 	fmt.Println("setting up new testing app")
+	// 	testApp, _ = app.SetupTestingApp(chainId, chaincfg, index)
+	// }
+
+	senderPrivateKey := somechain.SenderPrivKey
+	consAddress := sdk.ConsAddress(senderPrivateKey.PubKey().Address())
+	authacc := authtypes.NewBaseAccount(senderPrivateKey.PubKey().Address().Bytes(), senderPrivateKey.PubKey(), 0, 0)
+
+	// create current header and call begin block
+	header := tmproto.Header{
+		ChainID:         chainId,
+		Height:          1,
+		Time:            time.Now().UTC(),
+		ProposerAddress: consAddress.Bytes(),
+		Version: tmversion.Consensus{
+			Block: version.BlockProtocol,
+		},
+		LastBlockId: tmproto.BlockID{
+			Hash: tmhash.Sum([]byte("block_id")),
+			PartSetHeader: tmproto.PartSetHeader{
+				Total: 11,
+				Hash:  tmhash.Sum([]byte("partset_header")),
+			},
+		},
+		AppHash:            tmhash.Sum([]byte("app")),
+		DataHash:           tmhash.Sum([]byte("data")),
+		EvidenceHash:       tmhash.Sum([]byte("evidence")),
+		ValidatorsHash:     tmhash.Sum([]byte("validators")),
+		NextValidatorsHash: tmhash.Sum([]byte("next_validators")),
+		ConsensusHash:      tmhash.Sum([]byte("consensus")),
+		LastResultsHash:    tmhash.Sum([]byte("last_result")),
+	}
+
+	txConfig := testApp.GetTxConfig()
+
+	mapp, ok := testApp.(*app.App)
+	require.True(t, ok, "not app")
+	chain := TestChain{
+		T:             suite.T(),
+		ChainId:       chainId,
+		Config:        *chaincfg,
+		App:           mapp,
+		CurrentHeader: header,
+		TxConfig:      txConfig,
+		Codec:         mapp.AppCodec(),
+		Vals:          somechain.Vals,
+		NextVals:      somechain.Vals,
+		Signers:       somechain.Signers,
+		SenderPrivKey: somechain.SenderPrivKey,
+		SenderAccount: authacc,
+	}
+
+	ctx := chain.GetContext()
+	mapp.AccountKeeper.SetAccount(ctx, authacc)
+
+	suite.chain = chain
+	suite.chains[chainId] = &chain
 }
 
 func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {

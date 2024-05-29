@@ -6,6 +6,9 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	cfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
@@ -176,4 +179,137 @@ func (m msgServer) StartBackgroundProcess(goCtx context.Context, msg *types.MsgS
 
 func (m msgServer) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
 	return m.Keeper.P2PReceiveMessage(goCtx, msg)
+}
+
+func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	var newchannel chan types.MsgExecuteAtomicTxResponse
+	if msg.LeaderChainId != ctx.ChainID() {
+		existent, err := GetMultiChainChannel(m.goContextParent, ctx.ChainID())
+		if err == nil {
+			newchannel = *existent
+		}
+	}
+
+	if newchannel == nil {
+		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
+		newchannel = make(chan types.MsgExecuteAtomicTxResponse, 1)
+		defer func() {
+			close(newchannel)
+			mcctx, err := GetMultiChainContext(m.goContextParent)
+			if err != nil {
+				m.Logger(ctx).Error("cannot get multi chain context from parent context")
+			}
+			delete(mcctx.ResultChannels, ctx.ChainID())
+		}()
+		SetMultiChainContext(m.goContextParent, ctx.ChainID(), &newchannel)
+	}
+
+	// TODO add chainId, block info on each result
+	response := &types.MsgExecuteAtomicTxResponse{Results: make([]types.ExecTxResult, len(msg.Txs))}
+
+	chainIds := make([]string, len(msg.Txs))
+
+	for i, tx := range msg.Txs {
+		tx := authtx.WrapTx(&tx)
+		txWithExtensions, ok := tx.(authante.HasExtensionOptionsTx)
+		if !ok {
+			return nil, fmt.Errorf("expected atomic transaction to have ExtensionOptionMultiChainTx")
+		}
+		opts := txWithExtensions.GetExtensionOptions()
+		if len(opts) == 0 {
+			return nil, fmt.Errorf("expected atomic transaction to have ExtensionOptionMultiChainTx")
+		}
+
+		var exti sdktx.TxExtensionOptionI
+		err := m.cdc.UnpackAny(opts[0], &exti)
+		if err != nil {
+			return nil, err
+		}
+		ext, ok := exti.(*types.ExtensionOptionMultiChainTx)
+		if !ok {
+			return nil, fmt.Errorf("cannot convert extension to ExtensionOptionMultiChainTx")
+		}
+		chainIds[i] = ext.ChainId
+		// if transaction is meant for another chain, skip it
+		if ctx.ChainID() != ext.ChainId {
+			continue
+		}
+
+		txbz, err := m.actionExecutor.GetBaseApp().TxEncode(tx.GetTx())
+		if err != nil {
+			return nil, err
+		}
+		abcires := m.actionExecutor.GetApp().GetBaseApp().DeliverTx(txbz)
+
+		evs := make([]types.Event, len(abcires.Events))
+		for i, ev := range abcires.Events {
+			attrs := make([]types.EventAttribute, len(ev.Attributes))
+			for j, attr := range ev.Attributes {
+				attrs[j] = types.EventAttribute{Key: attr.Key, Value: attr.Value, Index: attr.Index}
+			}
+			evs[i] = types.Event{Type: ev.Type, Attributes: attrs}
+		}
+
+		// make sure events are emitted on the parent context
+		sdkevs := make([]sdk.Event, len(abcires.Events))
+		for i, ev := range abcires.Events {
+			sdkevs[i] = sdk.Event{Type: ev.Type, Attributes: ev.Attributes}
+		}
+		ctx.EventManager().EmitEvents(sdkevs)
+
+		resp := types.ExecTxResult{
+			Code:      abcires.Code,
+			Data:      abcires.Data,
+			Log:       abcires.Log,
+			Info:      abcires.Info,
+			GasWanted: abcires.GasWanted,
+			GasUsed:   abcires.GasUsed,
+			Events:    evs,
+			Codespace: abcires.Codespace,
+		}
+		response.Results[i] = resp
+	}
+
+	// execute this as a go routine, otherwise execution hangs
+	go func() {
+		// send our results through the channel
+		newchannel <- *response
+	}()
+
+	for i, chainId := range chainIds {
+		if ctx.ChainID() != chainId {
+			reschannel, err := GetMultiChainChannel(m.goContextParent, chainId)
+			var reschannel2 chan types.MsgExecuteAtomicTxResponse
+			if err != nil {
+				// we create it, so we can wait on it
+				// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
+				reschannel2 = make(chan types.MsgExecuteAtomicTxResponse, 1)
+				defer func() {
+					close(reschannel2)
+					mcctx, err := GetMultiChainContext(m.goContextParent)
+					if err != nil {
+						m.Logger(ctx).Error("cannot get multi chain context from parent context")
+					}
+					delete(mcctx.ResultChannels, chainId)
+				}()
+				SetMultiChainContext(m.goContextParent, chainId, &reschannel2)
+			} else {
+				reschannel2 = *reschannel
+			}
+
+			select {
+			case resp := <-reschannel2:
+				if len(resp.Results) == len(response.Results) {
+					response.Results[i] = resp.Results[i]
+				}
+			case <-m.goContextParent.Done():
+				m.Logger(ctx).Info("stopping atomic transactions: parent context closing")
+				// TODO what to do here? return error if node is closed during an atomic transaction?
+				// we should abort the execution of the transaction
+				return nil, nil
+			}
+		}
+	}
+	return response, nil
 }
