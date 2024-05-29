@@ -1033,6 +1033,8 @@ func NewApp(
 
 func (app *App) setAnteHandler(txConfig client.TxConfig) {
 	anteHandler, err := ante.NewAnteHandler(
+		app.appCodec,
+		txConfig,
 		ante.HandlerOptions{
 			AccountKeeper:   app.AccountKeeper,
 			BankKeeper:      app.BankKeeper,

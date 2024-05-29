@@ -6,9 +6,7 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
 	cfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
@@ -210,8 +208,11 @@ func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteA
 
 	chainIds := make([]string, len(msg.Txs))
 
-	for i, tx := range msg.Txs {
-		tx := authtx.WrapTx(&tx)
+	for i, txbz := range msg.Txs {
+		tx, err := m.actionExecutor.app.TxConfig().TxDecoder()(txbz)
+		if err != nil {
+			return nil, err
+		}
 		txWithExtensions, ok := tx.(authante.HasExtensionOptionsTx)
 		if !ok {
 			return nil, fmt.Errorf("expected atomic transaction to have ExtensionOptionMultiChainTx")
@@ -220,25 +221,11 @@ func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteA
 		if len(opts) == 0 {
 			return nil, fmt.Errorf("expected atomic transaction to have ExtensionOptionMultiChainTx")
 		}
-
-		var exti sdktx.TxExtensionOptionI
-		err := m.cdc.UnpackAny(opts[0], &exti)
-		if err != nil {
-			return nil, err
-		}
-		ext, ok := exti.(*types.ExtensionOptionMultiChainTx)
-		if !ok {
-			return nil, fmt.Errorf("cannot convert extension to ExtensionOptionMultiChainTx")
-		}
+		ext := opts[0].GetCachedValue().(*types.ExtensionOptionMultiChainTx)
 		chainIds[i] = ext.ChainId
 		// if transaction is meant for another chain, skip it
 		if ctx.ChainID() != ext.ChainId {
 			continue
-		}
-
-		txbz, err := m.actionExecutor.GetBaseApp().TxEncode(tx.GetTx())
-		if err != nil {
-			return nil, err
 		}
 		abcires := m.actionExecutor.GetApp().GetBaseApp().DeliverTx(txbz)
 

@@ -7,6 +7,8 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	sdklog "cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/types/multisig"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
@@ -32,7 +34,7 @@ var (
 // Ethereum or SDK transaction to an internal ante handler for performing
 // transaction-level processing (e.g. fee payment, signature verification) before
 // being passed onto it's respective handler.
-func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
+func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOptions) (sdk.AnteHandler, error) {
 	if err := options.validate(); err != nil {
 		return nil, err
 	}
@@ -52,9 +54,40 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 				case TypeURL_ExtensionOptionEthereumTx:
 					anteHandler = newEthAnteHandler(options)
 				case TypeURL_ExtensionOptionAtomicMultiChainTx:
-					// we do not run the antehandler on the atomic wrapper tx
-					// this also means we do not have validation in CheckTx
-					// TODO maybe we can decompose the atomic tx & validate each subtx
+					// CheckTx - only the AnteHandler is executed
+					// all the rest execute the msgs, so the subtx antehandlers are executed then
+					isCheck := ctx.ExecMode() == sdk.ExecModeCheck || ctx.ExecMode() == sdk.ExecModeReCheck
+					if !isCheck {
+						return ctx, nil
+					}
+					// we decompose the atomic tx & validate each subtx
+					// we only expect one message per atomic tx
+					if len(tx.GetMsgs()) != 1 {
+						return ctx, errorsmod.Wrapf(
+							errortypes.ErrInvalidRequest,
+							"rejecting tx with ExtensionOptionAtomicMultiChainTx: requires 1 MsgExecuteAtomicTxRequest message",
+						)
+					}
+					msg := tx.GetMsgs()[0]
+					atomicTx, ok := msg.(*networktypes.MsgExecuteAtomicTxRequest)
+					if !ok {
+						return ctx, errorsmod.Wrapf(
+							errortypes.ErrInvalidRequest,
+							"rejecting tx with ExtensionOptionAtomicMultiChainTx: requires MsgExecuteAtomicTxRequest message",
+						)
+					}
+					anteHandler, _ := NewAnteHandler(cdc, txConfig, options)
+					for _, txbz := range atomicTx.Txs {
+						tx, err := txConfig.TxDecoder()(txbz)
+						if err != nil {
+							return ctx, err
+						}
+
+						ctx, err = anteHandler(ctx, tx, sim)
+						if err != nil {
+							return ctx, err
+						}
+					}
 					return ctx, nil
 				case TypeURL_ExtensionOptionMultiChainTx:
 					ext := opts[0].GetCachedValue().(*networktypes.ExtensionOptionMultiChainTx)
