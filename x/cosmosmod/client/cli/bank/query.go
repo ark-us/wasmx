@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"cosmossdk.io/core/address"
+	"cosmossdk.io/x/tx/signing"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -43,7 +44,7 @@ func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}

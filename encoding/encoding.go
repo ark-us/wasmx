@@ -27,12 +27,16 @@ type ChainConfig struct {
 }
 
 // MakeEncodingConfig creates an EncodingConfig for an amino based test configuration.
-func MakeEncodingConfig(cfg *ChainConfig) EncodingConfig {
+func MakeEncodingConfig(cfg *ChainConfig, customSigners []signing.CustomGetSigner) EncodingConfig {
 	var err error
 	signingOptions := signing.Options{
 		AddressCodec:          mcodec.NewAccBech32Codec(cfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc),
 		ValidatorAddressCodec: mcodec.NewValBech32Codec(cfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal),
 	}
+	for _, customSigner := range customSigners {
+		signingOptions.DefineCustomGetSigners(customSigner.MsgType, customSigner.Fn)
+	}
+
 	interfaceRegistry, _ := types.NewInterfaceRegistryWithOptions(types.InterfaceRegistryOptions{
 		ProtoFiles:     proto.HybridResolver,
 		SigningOptions: signingOptions,

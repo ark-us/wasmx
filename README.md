@@ -88,3 +88,13 @@ mythosd tx multichain init-subchain logos_10001-1 --chain-id="leveln_1000-1" --f
 
 ```
 
+## Protos
+
+```
+make proto-gen
+```
+
+### Note! we need to manually fix the custom proto file for `network`
+
+* `custom.pulsar.go`: rename `networkv1` to `types`
+* `custom.pb.go`: comment out `MsgExecuteAtomicTxRequest` definition and methods `Reset`, `String`, `ProtoMessage`, `Descriptor`, `GetTxs`, `GetLeaderChainId`, `GetSender`

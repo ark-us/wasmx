@@ -16,6 +16,7 @@ import (
 	address "cosmossdk.io/core/address"
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/math"
+	"cosmossdk.io/x/tx/signing"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
@@ -23,7 +24,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/version"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -101,7 +102,7 @@ func MultiChainTxExecuteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -151,7 +152,7 @@ $ %s tx network register-subchain mythos myt 18 1 "10000000000" --chain-id="leve
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -235,7 +236,7 @@ Where validator.json contains:
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -309,7 +310,7 @@ $ %s tx network init-subchain level1_1000-1 --chain-id="level0_1000-1"
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -356,7 +357,7 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -433,7 +434,7 @@ $ %s query network subchains --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -503,7 +504,7 @@ $ %s query network subchain level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -574,7 +575,7 @@ $ %s query network subchain-data level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx)
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -975,10 +976,10 @@ func signTx(
 		return nil, err
 	}
 
-	sigV2 := signing.SignatureV2{
+	sigV2 := txsigning.SignatureV2{
 		PubKey: pubKey,
-		Data: &signing.SingleSignatureData{
-			SignMode:  signing.SignMode(txconfig.SignModeHandler().DefaultMode()),
+		Data: &txsigning.SingleSignatureData{
+			SignMode:  txsigning.SignMode(txconfig.SignModeHandler().DefaultMode()),
 			Signature: nil,
 		},
 		Sequence: 0,
@@ -1001,7 +1002,7 @@ func signTx(
 		PubKey:        pubKey,
 		Address:       subchainSender,
 	}
-	signMode := signing.SignMode(txconfig.SignModeHandler().DefaultMode())
+	signMode := txsigning.SignMode(txconfig.SignModeHandler().DefaultMode())
 
 	bytesToSign, err := authsigning.GetSignBytesAdapter(clientCtx.CmdContext, txconfig.SignModeHandler(), signMode, signerData, txbuilder.GetTx())
 	if err != nil {
@@ -1013,11 +1014,11 @@ func signTx(
 		return nil, err
 	}
 	// Construct the SignatureV2 struct
-	sigData := signing.SingleSignatureData{
+	sigData := txsigning.SingleSignatureData{
 		SignMode:  signMode,
 		Signature: sigBytes,
 	}
-	sigV2 = signing.SignatureV2{
+	sigV2 = txsigning.SignatureV2{
 		PubKey:   pubKey,
 		Data:     &sigData,
 		Sequence: txf.Sequence(),

@@ -7,6 +7,7 @@ import (
 
 	"cosmossdk.io/core/address"
 	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/x/tx/signing"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -55,7 +56,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				return err
 			}
 
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -116,7 +117,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				return err
 			}
 
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}

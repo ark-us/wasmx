@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	sdkaddress "cosmossdk.io/core/address"
+	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
@@ -64,7 +65,7 @@ func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -145,7 +146,7 @@ func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -224,7 +225,7 @@ func NewRegisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -268,7 +269,7 @@ func NewEditOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -316,7 +317,7 @@ func NewDeregisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx)
+			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}

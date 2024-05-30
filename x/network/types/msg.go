@@ -1,8 +1,12 @@
 package types
 
 import (
+	"google.golang.org/protobuf/proto"
+
 	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
+	"cosmossdk.io/x/tx/signing"
 
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -41,4 +45,14 @@ func (msg MsgMultiChainWrap) ValidateBasic() error {
 	// 	return sdkerr.Wrap(err, "sender")
 	// }
 	return nil
+}
+
+func ProvideExecuteAtomicTxGetSigners() signing.CustomGetSigner {
+	return signing.CustomGetSigner{
+		MsgType: proto.MessageName(&MsgExecuteAtomicTxRequest{}),
+		Fn: func(msg proto.Message) ([][]byte, error) {
+			msg2 := msg.(*MsgExecuteAtomicTxRequest)
+			return [][]byte{msg2.Sender}, nil
+		},
+	}
 }

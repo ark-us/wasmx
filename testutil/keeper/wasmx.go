@@ -5,10 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	app "mythos/v1/app"
-	"mythos/v1/x/wasmx/keeper"
-	"mythos/v1/x/wasmx/types"
-
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
 	"cosmossdk.io/store/metrics"
@@ -33,10 +29,14 @@ import (
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
+	"mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	config "mythos/v1/config"
 	appencoding "mythos/v1/encoding"
 	"mythos/v1/multichain"
+
+	"mythos/v1/x/wasmx/keeper"
+	"mythos/v1/x/wasmx/types"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
@@ -63,7 +63,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	if err != nil {
 		panic(err)
 	}
-	encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
+	encodingConfig := appencoding.MakeEncodingConfig(chainCfg, app.GetCustomSigners())
 	_, legacyAmino := encodingConfig.Marshaler, encodingConfig.Amino
 
 	appOpts := multichain.DefaultAppOptions{}
@@ -148,7 +148,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		app.DefaultNodeHome,
 		config.BaseDenom,
 		permAddrs,
-		appencoding.MakeEncodingConfig(chainCfg).InterfaceRegistry,
+		appencoding.MakeEncodingConfig(chainCfg, app.GetCustomSigners()).InterfaceRegistry,
 		nil,
 		nil,
 		govAddr,

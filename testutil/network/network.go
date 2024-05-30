@@ -59,7 +59,7 @@ func DefaultConfig() network.Config {
 	if err != nil {
 		panic(err)
 	}
-	encoding := appencoding.MakeEncodingConfig(chainCfg)
+	encoding := appencoding.MakeEncodingConfig(chainCfg, app.GetCustomSigners())
 	logger := log.NewNopLogger()
 
 	appOpts := multichain.DefaultAppOptions{}

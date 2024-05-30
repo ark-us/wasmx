@@ -1,11 +1,14 @@
 version: v1
 name: buf.build/ark-us/wasmx
 deps:
+  - buf.build/cometbft/cometbft:4a62c99d422068a5165429b62a7eb824df46cca9
   - buf.build/cosmos/cosmos-sdk:8a78b2f770c946bfa96c3e94e6b4755f
-  - buf.build/cosmos/cosmos-proto:1935555c206d4afb9e94615dfd0fad31
-  - buf.build/cosmos/gogo-proto:a14993478f40695898ed8a86931094b6656e8a5d
-  - buf.build/googleapis/googleapis:8d7204855ec14631a499bd7393ce1970
+  - buf.build/cosmos/cosmos-proto
+  - buf.build/cosmos/gogo-proto
+  - buf.build/googleapis/googleapis
   - buf.build/cosmos/ics23:b1abd8678aab07165efd453c96796a179eb3131f
+  - buf.build/sourcenetwork/go-libp2p:6f0fd9f43c604df09e932c3b87df4921
+  - buf.build/protocolbuffers/wellknowntypes:v23.4
 breaking:
   use:
     - FILE
@@ -20,4 +23,5 @@ lint:
     - SERVICE_SUFFIX
     - PACKAGE_VERSION_SUFFIX
     - RPC_REQUEST_STANDARD_NAME
+    - ENUM_NO_ALLOW_ALIAS
     - PACKAGE_DIRECTORY_MATCH

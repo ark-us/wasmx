@@ -23,6 +23,7 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
+	"mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	menc "mythos/v1/encoding"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
@@ -54,7 +55,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 	valSet := tmtypes.NewValidatorSet([]*tmtypes.Validator{validator})
 	signersByAddress := make(map[string]tmtypes.PrivValidator, 1)
 	signersByAddress[pubKey.Address().String()] = privVal
-	encoding := menc.MakeEncodingConfig(&chaincfg)
+	encoding := menc.MakeEncodingConfig(&chaincfg, app.GetCustomSigners())
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(encoding.InterfaceRegistry.SigningContext().AddressCodec())
 
 	// generate genesis account

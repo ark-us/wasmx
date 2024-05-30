@@ -145,7 +145,7 @@ func (s *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint, own
 var DEFAULT_GAS_PRICE = "10amyt"
 var DEFAULT_GAS_LIMIT = uint64(20_000_000)
 
-func (s *AppContext) PrepareCosmosSdkTxBuilder(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) client.TxBuilder {
+func (s *AppContext) PrepareCosmosSdkTxBuilder(msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) client.TxBuilder {
 	txConfig := s.App.TxConfig()
 	txBuilder := txConfig.NewTxBuilder()
 	var parsedGasPrices sdk.DecCoins
@@ -178,7 +178,7 @@ func (s *AppContext) PrepareCosmosSdkTxBuilder(account simulation.Account, msgs 
 }
 
 func (s *AppContext) PrepareCosmosSdkTx(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) client.TxBuilder {
-	txBuilder := s.PrepareCosmosSdkTxBuilder(account, msgs, gasLimit, gasPrice, memo)
+	txBuilder := s.PrepareCosmosSdkTxBuilder(msgs, gasLimit, gasPrice, memo)
 	return s.SignCosmosSdkTx(txBuilder, account)
 }
 

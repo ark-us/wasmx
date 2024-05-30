@@ -29,3 +29,5 @@ cd ..
 cp -r mythos/v*/x/* x/
 cp -r mythos/v*/crypto/* crypto/
 rm -rf mythos
+
+./scripts/protocgen-pulsar.sh

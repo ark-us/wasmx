@@ -70,7 +70,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	if err != nil {
 		panic(err)
 	}
-	encodingConfig := appencoding.MakeEncodingConfig(chainCfg)
+	encodingConfig := appencoding.MakeEncodingConfig(chainCfg, app.GetCustomSigners())
 	addrcodec := mcodec.MustUnwrapAccBech32Codec(encodingConfig.TxConfig.SigningContext().AddressCodec())
 	initClientCtx := client.Context{}.
 		WithCodec(encodingConfig.Marshaler).

@@ -135,7 +135,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	}
 
 	subChainId := "tttest_1000-1"
-	encoding := menc.MakeEncodingConfig(&subChainConfig)
+	encoding := menc.MakeEncodingConfig(&subChainConfig, []txsigning.CustomGetSigner{types.ProvideExecuteAtomicTxGetSigners()})
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(encoding.InterfaceRegistry.SigningContext().AddressCodec())
 	valAddrCodec := mcodec.MustUnwrapValBech32Codec(encoding.InterfaceRegistry.SigningContext().ValidatorAddressCodec())
 	valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
@@ -187,7 +187,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.Require().NoError(err)
 	subchainapp := multichainapp.NewApp(subChainId, &subChainConfig)
 
-	valTxBuilder := appA.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{validMsg}, nil, &subchainGasPrices, memo)
+	valTxBuilder := appA.PrepareCosmosSdkTxBuilder([]sdk.Msg{validMsg}, nil, &subchainGasPrices, memo)
 	accSeq := uint64(0)
 	accNo := uint64(0)
 	accAddress, err := subchainapp.InterfaceRegistry().SigningContext().AddressCodec().BytesToString(sender.Address.Bytes())
@@ -479,12 +479,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 		time.Sleep(time.Second * 3)
 		suite.SetCurrentChain(chainId)
 
-		// send the atomic tx to level0 too
-		atomictx := suite.prepareMultiChainAtomicExec(appA, sender, [][]byte{txbz1, txbz2}, subChainId2)
-
-		txbz, err := appA.App.TxConfig().TxEncoder()(atomictx.GetTx())
-		s.Require().NoError(err)
-
+		// we use the same atomic txbz on any chain
 		_, err = appA.DeliverTxRaw(txbz)
 		s.Require().NoError(err)
 
@@ -746,7 +741,7 @@ func (suite *KeeperTestSuite) broadcastMultiChainExec(msg []byte, sender simulat
 
 func (suite *KeeperTestSuite) prepareMultiChainSubExec(appCtx wasmxtesting.AppContext, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string, subtxindex int32, subtxcount int32) client.TxBuilder {
 	multimsg := suite.composeMultiChainTx(msg, sender, contractAddress, chainId)
-	txBuilder := appCtx.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{multimsg}, nil, nil, "")
+	txBuilder := appCtx.PrepareCosmosSdkTxBuilder([]sdk.Msg{multimsg}, nil, nil, "")
 	appCtx.SetMultiChainExtensionOptions(txBuilder, chainId, subtxindex, subtxcount)
 	return appCtx.SignCosmosSdkTx(txBuilder, sender)
 }
@@ -754,11 +749,11 @@ func (suite *KeeperTestSuite) prepareMultiChainSubExec(appCtx wasmxtesting.AppCo
 func (suite *KeeperTestSuite) prepareMultiChainAtomicExec(appCtx wasmxtesting.AppContext, sender simulation.Account, txsbz [][]byte, leaderChainId string) client.TxBuilder {
 	subtxmsg := &types.MsgExecuteAtomicTxRequest{
 		Txs:           txsbz,
-		Sender:        appCtx.MustAccAddressToString(sender.Address),
+		Sender:        sender.Address.Bytes(),
 		LeaderChainId: leaderChainId,
 	}
 
-	txBuilder := appCtx.PrepareCosmosSdkTxBuilder(sender, []sdk.Msg{subtxmsg}, nil, nil, "")
+	txBuilder := appCtx.PrepareCosmosSdkTxBuilder([]sdk.Msg{subtxmsg}, nil, nil, "")
 	appCtx.SetMultiChainAtomicExtensionOptions(txBuilder)
 	// we do not need to sign atomic transactions
 	// return appCtx.SignCosmosSdkTx(txBuilder, sender)

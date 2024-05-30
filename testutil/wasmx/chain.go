@@ -137,7 +137,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 		Chain:         chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg())
+	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg(), app.GetCustomSigners())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
 
 	t := suite.T()
@@ -155,7 +155,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 		Chain:         suite.chain,
 		FinalizeBlock: suite.FinalizeBlock,
 	}
-	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg())
+	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg(), app.GetCustomSigners())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.chain.ChainId)
 	t := suite.T()
 	denom := appContext.Chain.Config.BaseDenom

@@ -2,6 +2,7 @@ package multichain
 
 import (
 	"cosmossdk.io/core/address"
+	"cosmossdk.io/x/tx/signing"
 	"github.com/cosmos/cosmos-sdk/client"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,7 +14,7 @@ import (
 	networktypes "mythos/v1/x/network/types"
 )
 
-func MultiChainCtx(ac address.Codec, clientCtx client.Context) (client.Context, mcodec.AccBech32Codec, mcodec.AccBech32Codec, error) {
+func MultiChainCtx(ac address.Codec, clientCtx client.Context, customSigners []signing.CustomGetSigner) (client.Context, mcodec.AccBech32Codec, mcodec.AccBech32Codec, error) {
 	chainId := clientCtx.ChainID
 	mcfg.SetGlobalChainConfig(chainId)
 	config, err := mcfg.GetChainConfig(chainId)
@@ -21,7 +22,7 @@ func MultiChainCtx(ac address.Codec, clientCtx client.Context) (client.Context, 
 		return clientCtx, mcodec.AccBech32Codec{}, mcodec.AccBech32Codec{}, err
 	}
 	addrCodec := mcodec.MustUnwrapAccBech32Codec(ac)
-	customEncoding := appencoding.MakeEncodingConfig(config)
+	customEncoding := appencoding.MakeEncodingConfig(config, customSigners)
 
 	customCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	customAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
@@ -37,14 +38,14 @@ func MultiChainCtx(ac address.Codec, clientCtx client.Context) (client.Context, 
 	return clientCtx, addrCodec, customAddrCodec, nil
 }
 
-func MultiChainCustomCtx(clientCtx client.Context) (client.Context, mcodec.AccBech32Codec, error) {
+func MultiChainCustomCtx(clientCtx client.Context, customSigners []signing.CustomGetSigner) (client.Context, mcodec.AccBech32Codec, error) {
 	chainId := clientCtx.ChainID
 	mcfg.SetGlobalChainConfig(chainId)
 	config, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
 		return clientCtx, mcodec.AccBech32Codec{}, err
 	}
-	customEncoding := appencoding.MakeEncodingConfig(config)
+	customEncoding := appencoding.MakeEncodingConfig(config, customSigners)
 
 	customCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	customAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
