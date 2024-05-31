@@ -35,6 +35,7 @@ import (
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
 
 	// networkserver "mythos/v1/x/network/server"
+	testdata "mythos/v1/x/network/keeper/testdata/wasmx"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -502,6 +503,106 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	err = json.Unmarshal(qres, balance)
 	s.Require().NoError(err)
 	s.Require().Equal(sdk.NewCoin(subChainCfg2.BaseDenom, sdkmath.NewInt(0x1000)), *balance.Balance)
+}
+
+func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
+	wasmbinFrom := testdata.WasmxCrossChain
+	wasmbinTo := testdata.WasmxSimpleStorage
+	chainId := mcfg.LEVEL0_CHAIN_ID
+	// config, err := mcfg.GetChainConfig(chainId)
+	// s.Require().NoError(err)
+	suite.SetCurrentChain(chainId)
+	chain := suite.GetChain(chainId)
+
+	initBalance := sdkmath.NewInt(10_000_000_000)
+	sender := simulation.Account{
+		PrivKey: chain.SenderPrivKey,
+		PubKey:  chain.SenderAccount.GetPubKey(),
+		Address: chain.SenderAccount.GetAddress(),
+	}
+
+	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
+	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
+	suite.Commit()
+
+	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
+	// create level1
+	subChainId2 := suite.createLevel(mcfg.LEVEL0_CHAIN_ID)
+	// get config
+	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
+	subChainCfgBz2 := suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddress, subChainId2)
+	var subChainCfg2 menc.ChainConfig
+	err := json.Unmarshal(subChainCfgBz2, &subChainCfg2)
+	suite.Require().NoError(err)
+
+	// get created app
+	suite.SetupSubChainApp(subChainId2, &subChainCfg2, 3)
+
+	// run actual test
+
+	// deploy from contract on level0
+	suite.SetCurrentChain(chainId)
+	codeIdFrom := appA.StoreCode(sender, wasmbinFrom, nil)
+	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinFrom", nil)
+
+	// deploy to contract on level1
+	suite.SetCurrentChain(subChainId2)
+	subchainapp := suite.AppContext()
+	subchain2 := suite.GetChain(subChainId2)
+
+	codeIdTo := appA.StoreCode(sender, wasmbinTo, nil)
+	contractAddressTo := appA.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinTo", nil)
+
+	// execute cross chain transaction
+	// contract message
+	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
+	executeMsg := wasmxtypes.WasmxExecutionMessage{Data: data}
+	msgbz, err := json.Marshal(executeMsg)
+	suite.Require().NoError(err)
+
+	// create level0 contract input
+	crossreq := &types.MsgExecuteCrossChainTxRequest{
+		From:            contractAddressFrom.String(),
+		ToAddressOrRole: contractAddressTo.String(),
+		Msg:             msgbz,
+		FromChainId:     chainId,
+		ToChainId:       subChainId2,
+	}
+	crossreqbz, err := json.Marshal(crossreq)
+	suite.Require().NoError(err)
+	data2 := []byte(fmt.Sprintf(`{"CrossChain":%s}`, string(crossreqbz)))
+
+	// we send this message on level0
+	suite.SetCurrentChain(chainId)
+	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 2)
+	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
+	s.Require().NoError(err)
+
+	// we send it first on level1
+	suite.SetCurrentChain(subChainId2)
+	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2)
+
+	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
+	s.Require().NoError(err)
+
+	go func() {
+		time.Sleep(time.Second * 3)
+		suite.SetCurrentChain(chainId)
+
+		// we use the same atomic txbz on any chain
+		_, err = appA.DeliverTxRaw(txbz)
+		s.Require().NoError(err)
+	}()
+
+	_, err = subchainapp.DeliverTxRaw(txbz)
+	s.Require().NoError(err)
+
+	suite.SetCurrentChain(subChainId2)
+	qmsg = []byte(`{"get":{"key":"hello"}}`)
+	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, contractAddressTo.Bytes(), subChainId2)
+	suite.Require().Equal(string(qres), "sammy")
 }
 
 func (suite *KeeperTestSuite) createLevel(chainId string) string {

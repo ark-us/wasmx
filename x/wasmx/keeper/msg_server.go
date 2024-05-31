@@ -214,16 +214,20 @@ func (m msgServer) CompileContract(goCtx context.Context, msg *types.MsgCompileC
 }
 
 func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+	return m.Keeper.ExecuteContract(goCtx, msg)
+}
+
+func (k *Keeper) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	if err := msg.ValidateBasic(); err != nil {
 		return nil, err
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	senderAddr, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
+	senderAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")
 	}
-	contractAddr, err := m.Keeper.GetAddressOrRole(ctx, msg.Contract)
+	contractAddr, err := k.GetAddressOrRole(ctx, msg.Contract)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "contract")
 	}
@@ -239,7 +243,7 @@ func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteC
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	data, err := m.Keeper.Execute(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds, msg.Dependencies, false)
+	data, err := k.Execute(ctx, contractAddr, senderAddr, msg.Msg, msg.Funds, msg.Dependencies, false)
 	if err != nil {
 		return nil, err
 	}

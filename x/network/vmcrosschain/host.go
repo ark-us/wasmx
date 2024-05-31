@@ -5,12 +5,12 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	"mythos/v1/x/network/types"
 	vmtypes "mythos/v1/x/wasmx/vm"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
-	"mythos/v1/x/network/types"
 )
 
-// executeCrossChainTx(*InitSubChainMsg) (*abci.ResponseInitChain, error)
+// executeCrossChainTx(*MsgExecuteCrossChainTxRequest) (*abci.MsgExecuteCrossChainTxResponse, error)
 func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
@@ -22,16 +22,40 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	response, err := ctx.CosmosHandler.(ctx, &req)
+
+	// TODO set role
+
+	// contractAddress, err := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, types.AccAddress(req.From))
+	// if err != nil {
+	// 	return nil, wasmedge.Result_Fail
+	// }
+
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(&req)
+	errmsg := ""
 	if err != nil {
-		ctx.Logger(ctx.Ctx).Error("could not initiate subchain app", "error", err.Error())
+		errmsg = err.Error()
+	} else {
+		ctx.Ctx.EventManager().EmitEvents(evs)
+	}
+	resp := WrappedResponse{Error: errmsg}
+	if errmsg == "" {
+		var rres types.MsgExecuteCrossChainTxResponse
+		if res != nil {
+			err = rres.Unmarshal(res)
+			if err != nil {
+				return nil, wasmedge.Result_Fail
+			}
+		}
+		resp = WrappedResponse{
+			Data:  rres.Data,
+			Error: rres.Error,
+		}
+	}
+	respbz, err := json.Marshal(resp)
+	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

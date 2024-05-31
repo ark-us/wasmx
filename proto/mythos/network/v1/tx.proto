@@ -45,6 +45,20 @@ service Msg {
     rpc ExecuteCrossChainTx(MsgExecuteCrossChainTxRequest) returns (MsgExecuteCrossChainTxResponse);
 }
 
+message MsgExecuteCrossChainTxRequestIndexed {
+    option (amino.name) = "network/MsgExecuteCrossChainTxRequestIndexed";
+
+    MsgExecuteCrossChainTxRequest request = 1;
+    int32 index = 2;
+}
+
+message MsgExecuteCrossChainTxResponseIndexed {
+    option (amino.name) = "network/MsgExecuteCrossChainTxResponseIndexed";
+
+    MsgExecuteCrossChainTxResponse data = 1;
+    int32 index = 2;
+}
+
 message MsgExecuteCrossChainTxRequest {
     option (amino.name) = "network/MsgExecuteCrossChainTxRequest";
     // option (cosmos.msg.v1.signer) = "sender";
@@ -73,6 +87,7 @@ message MsgExecuteCrossChainTxRequest {
 
 message MsgExecuteCrossChainTxResponse {
     bytes data = 1;
+    string error = 2;
 }
 
 message MsgExecuteAtomicTxResponse {

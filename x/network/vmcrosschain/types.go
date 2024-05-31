@@ -13,3 +13,8 @@ var HOST_WASMX_ENV_CROSSCHAIN = "crosschain"
 type Context struct {
 	*vmtypes.Context
 }
+
+type WrappedResponse struct {
+	Data  []byte `json:"data"`
+	Error string `json:"error"`
+}
