@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/cometbft/cometbft/crypto/merkle"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
@@ -52,6 +53,7 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 		return nil, err
 	}
 
+	// TODO fixme?
 	// return &types.ResponseBroadcastTx{
 	// 	CheckTx: &abci.ResponseCheckTx{
 	// 		Code: res.CheckTx.Code,
@@ -79,6 +81,11 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 	}, nil
 }
 
+// Any execution message can be wrapped with MsgMultiChainWrap to be executed on one
+// of the available chains.
+// BroadcastTxAsync peeks inside the transaction and inside MsgMultiChainWrap to get the chainId
+// and then forwards the transaction to the apropriate chain application
+// the signature & signer are verified in the AnteHandler of that chain application
 func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChainWrap) (*types.MsgMultiChainWrapResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
@@ -182,8 +189,13 @@ func (m msgServer) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PRec
 func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	var newchannel chan types.MsgExecuteAtomicTxResponse
+	txhash := merkle.HashFromByteSlices(msg.GetTxs())
+	mcctx, err := GetMultiChainContext(m.goContextParent)
+	if err == nil {
+		return nil, err
+	}
 	if msg.LeaderChainId != ctx.ChainID() {
-		existent, err := GetMultiChainChannel(m.goContextParent, ctx.ChainID())
+		existent, err := mcctx.GetResultChannel(ctx.ChainID(), txhash)
 		if err == nil {
 			newchannel = *existent
 		}
@@ -200,7 +212,7 @@ func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteA
 			}
 			delete(mcctx.ResultChannels, ctx.ChainID())
 		}()
-		SetMultiChainContext(m.goContextParent, ctx.ChainID(), &newchannel)
+		mcctx.SetResultChannel(ctx.ChainID(), txhash, &newchannel)
 	}
 
 	// TODO add chainId, block info on each result
@@ -266,7 +278,7 @@ func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteA
 
 	for i, chainId := range chainIds {
 		if ctx.ChainID() != chainId {
-			reschannel, err := GetMultiChainChannel(m.goContextParent, chainId)
+			reschannel, err := mcctx.GetResultChannel(chainId, txhash)
 			var reschannel2 chan types.MsgExecuteAtomicTxResponse
 			if err != nil {
 				// we create it, so we can wait on it
@@ -280,7 +292,7 @@ func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteA
 					}
 					delete(mcctx.ResultChannels, chainId)
 				}()
-				SetMultiChainContext(m.goContextParent, chainId, &reschannel2)
+				mcctx.SetResultChannel(chainId, txhash, &reschannel2)
 			} else {
 				reschannel2 = *reschannel
 			}

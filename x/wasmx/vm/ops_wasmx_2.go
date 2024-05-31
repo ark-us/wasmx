@@ -1305,6 +1305,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("verifyCosmosTx", wasmedge.NewFunction(functype_i32_i32, wasmxVerifyCosmosTx, context, 0))
 
 	// TODO move externalCall, grpcRequest, startTimeout to only system API
+	// move them to the network module: vmnetwork
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
 	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32_, wasmxStartTimeout, context, 0))
