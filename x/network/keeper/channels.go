@@ -77,6 +77,7 @@ func ContextWithMultiChainContext(ctx context.Context) context.Context {
 		ResultChannels:             make(map[string]*chan types.MsgExecuteAtomicTxResponse, 0),
 		InternalCallChannels:       make(map[string]*chan types.MsgExecuteCrossChainTxRequestIndexed, 0),
 		InternalCallResultChannels: make(map[string]*chan types.MsgExecuteCrossChainTxResponseIndexed, 0),
+		CurrentAtomicTxHash:        make([]byte, 0),
 		CurrentSubTxIndex:          0,
 		CurrentInternalCrossTx:     0,
 	}

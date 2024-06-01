@@ -10,9 +10,9 @@ import (
 
 const HOST_WASMX_ENV_MULTICHAIN_VER1 = "wasmx_multichain_1"
 
-var HOST_WASMX_ENV_EXPORT = "wasmx_multichain_"
+const HOST_WASMX_ENV_EXPORT = "wasmx_multichain_"
 
-var HOST_WASMX_ENV_MULTICHAIN = "multichain"
+const HOST_WASMX_ENV_MULTICHAIN = "multichain"
 
 type Context struct {
 	*vmtypes.Context

@@ -524,16 +524,24 @@ func NewGRPCServer(
 }
 
 func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
-	for _, tx := range txs {
-		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"newTransaction","params":[{"key":"transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-		_, err := suite.chain.App.NetworkKeeper.ExecuteContract(suite.chain.GetContext(), &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
-			Msg:      msg,
-		})
-		if err != nil {
-			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
+	app := suite.chain.App
+	cb := func(goctx context.Context) (any, error) {
+		for _, tx := range txs {
+			msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"newTransaction","params":[{"key":"transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
+			_, err := suite.chain.App.NetworkKeeper.ExecuteContract(suite.chain.GetContext(), &types.MsgExecuteContract{
+				Sender:   wasmxtypes.ROLE_CONSENSUS,
+				Contract: wasmxtypes.ROLE_CONSENSUS,
+				Msg:      msg,
+			})
+			if err != nil {
+				return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
+			}
 		}
+		return nil, nil
+	}
+	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
+	if err != nil {
+		return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 	}
 	return suite.CommitBlock()
 }
@@ -552,15 +560,23 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	// 	currentState = strings.Join(parts[0:(len(parts)-1)], ".")
 	// }
 
-	// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
-	// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
-	msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
+	app := suite.chain.App
+	cb := func(goctx context.Context) (any, error) {
+		// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
+		// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
+		msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
 
-	_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
-		Sender:   wasmxtypes.ROLE_CONSENSUS,
-		Contract: wasmxtypes.ROLE_CONSENSUS,
-		Msg:      msg1,
-	})
+		_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg1,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
 	if err != nil {
 		return nil, err
 	}

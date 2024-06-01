@@ -552,8 +552,8 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	subchainapp := suite.AppContext()
 	subchain2 := suite.GetChain(subChainId2)
 
-	codeIdTo := appA.StoreCode(sender, wasmbinTo, nil)
-	contractAddressTo := appA.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinTo", nil)
+	codeIdTo := subchainapp.StoreCode(sender, wasmbinTo, nil)
+	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinTo", nil)
 
 	// execute cross chain transaction
 	// contract message
@@ -569,8 +569,9 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 		Msg:             msgbz,
 		FromChainId:     chainId,
 		ToChainId:       subChainId2,
+		Dependencies:    make([]string, 0),
 	}
-	crossreqbz, err := json.Marshal(crossreq)
+	crossreqbz, err := appA.App.AppCodec().MarshalJSON(crossreq)
 	suite.Require().NoError(err)
 	data2 := []byte(fmt.Sprintf(`{"CrossChain":%s}`, string(crossreqbz)))
 
@@ -596,13 +597,14 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 		s.Require().NoError(err)
 	}()
 
+	suite.SetCurrentChain(subChainId2)
 	_, err = subchainapp.DeliverTxRaw(txbz)
 	s.Require().NoError(err)
 
 	suite.SetCurrentChain(subChainId2)
 	qmsg = []byte(`{"get":{"key":"hello"}}`)
 	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, contractAddressTo.Bytes(), subChainId2)
-	suite.Require().Equal(string(qres), "sammy")
+	suite.Require().Equal("sammy", string(qres))
 }
 
 func (suite *KeeperTestSuite) createLevel(chainId string) string {
