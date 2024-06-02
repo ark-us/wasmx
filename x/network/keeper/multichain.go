@@ -35,50 +35,32 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	}
 	mcctx.CurrentAtomicTxHash = txhash
 
-	existent, err := mcctx.GetResultChannel(ctx.ChainID(), txhash)
+	existent, err := mcctx.GetResultChannel(ctx.ChainID())
 	if err == nil {
 		newResultsChannel = *existent
-	}
-
-	existent2, err := mcctx.GetInternalCallChannel(ctx.ChainID(), txhash)
-	if err == nil {
-		newInternalCallChannel = *existent2
-	}
-
-	existent3, err := mcctx.GetInternalCallResultChannel(ctx.ChainID(), txhash)
-	if err == nil {
-		newInternalCallResponseChannel = *existent3
-	}
-
-	if newResultsChannel == nil {
+	} else {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 		newResultsChannel = make(chan types.MsgExecuteAtomicTxResponse, 1)
-		mcctx.SetResultChannel(ctx.ChainID(), txhash, &newResultsChannel)
+		mcctx.SetResultChannel(ctx.ChainID(), &newResultsChannel)
 	}
-	defer func() {
-		close(newResultsChannel)
-		delete(mcctx.ResultChannels, ctx.ChainID())
-	}()
 
-	if newInternalCallChannel == nil {
+	existent2, err := mcctx.GetInternalCallChannel(ctx.ChainID())
+	if err == nil {
+		newInternalCallChannel = *existent2
+	} else {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 		newInternalCallChannel = make(chan types.MsgExecuteCrossChainTxRequestIndexed, 1)
-		mcctx.SetInternalCallChannel(ctx.ChainID(), txhash, &newInternalCallChannel)
+		mcctx.SetInternalCallChannel(ctx.ChainID(), &newInternalCallChannel)
 	}
-	defer func() {
-		close(newInternalCallChannel)
-		delete(mcctx.InternalCallChannels, ctx.ChainID())
-	}()
 
-	if newInternalCallResponseChannel == nil {
+	existent3, err := mcctx.GetInternalCallResultChannel(ctx.ChainID())
+	if err == nil {
+		newInternalCallResponseChannel = *existent3
+	} else {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainTxResponseIndexed, 1)
-		mcctx.SetInternalCallResultChannel(ctx.ChainID(), txhash, &newInternalCallResponseChannel)
+		mcctx.SetInternalCallResultChannel(ctx.ChainID(), &newInternalCallResponseChannel)
 	}
-	defer func() {
-		close(newInternalCallResponseChannel)
-		delete(mcctx.InternalCallResultChannels, ctx.ChainID())
-	}()
 
 	// TODO add chainId, block info on each result
 	response := &types.MsgExecuteAtomicTxResponse{Results: make([]types.ExecTxResult, len(msg.Txs))}
@@ -98,24 +80,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 		}
 
 		// TODO validation of the request
-		// resp, err := k.ExecuteContract(ctx, req)
 		// TODO have from data available to wasmx
-		// maybe use like an IBC import, a custom wasm export
-
-		// msg := &wasmxtypes.MsgExecuteContract{
-		// 	Sender:       req.From,
-		// 	Contract:     req.ToAddressOrRole,
-		// 	Msg:          req.Msg,
-		// 	Funds:        req.Funds,
-		// 	Dependencies: req.Dependencies,
-		// }
-
-		// resp, err := k.wasmxKeeper.ExecuteContract(goCtx, msg)
-		// if err != nil {
-		// 	response.Data.Error = err.Error()
-		// } else {
-		// 	response.Data.Data = resp.Data
-		// }
 
 		contractAddress, err := k.wasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(req.ToAddressOrRole)
 		if err != nil {
@@ -214,14 +179,14 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 			}()
 		} else {
 			// wait for the transaction to be executed
-			reschannel, err := mcctx.GetResultChannel(chainId, txhash)
+			reschannel, err := mcctx.GetResultChannel(chainId)
 			var reschannel2 chan types.MsgExecuteAtomicTxResponse
 			if err != nil {
 				// we create it, so we can wait on it
 				// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 				reschannel2 = make(chan types.MsgExecuteAtomicTxResponse, 1)
 				// the other chain should close their own channels when they are done
-				mcctx.SetResultChannel(chainId, txhash, &reschannel2)
+				mcctx.SetResultChannel(chainId, &reschannel2)
 			} else {
 				reschannel2 = *reschannel
 			}
@@ -257,15 +222,14 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	if err != nil {
 		return nil, err
 	}
-	txhash := mcctx.CurrentAtomicTxHash
 	channelsChainId := msg.ToChainId
 
 	// we get the channels for the chain we want to interact with
-	existent2, err := mcctx.GetInternalCallChannel(channelsChainId, txhash)
+	existent2, err := mcctx.GetInternalCallChannel(channelsChainId)
 	if err == nil {
 		newInternalCallChannel = *existent2
 	}
-	existent3, err := mcctx.GetInternalCallResultChannel(channelsChainId, txhash)
+	existent3, err := mcctx.GetInternalCallResultChannel(channelsChainId)
 	if err == nil {
 		newInternalCallResponseChannel = *existent3
 	}
@@ -273,13 +237,13 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	if newInternalCallChannel == nil {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 		newInternalCallChannel = make(chan types.MsgExecuteCrossChainTxRequestIndexed, 1)
-		mcctx.SetInternalCallChannel(channelsChainId, txhash, &newInternalCallChannel)
+		mcctx.SetInternalCallChannel(channelsChainId, &newInternalCallChannel)
 	}
 
 	if newInternalCallResponseChannel == nil {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainTxResponseIndexed, 1)
-		mcctx.SetInternalCallResultChannel(channelsChainId, txhash, &newInternalCallResponseChannel)
+		mcctx.SetInternalCallResultChannel(channelsChainId, &newInternalCallResponseChannel)
 	}
 
 	index := mcctx.CurrentInternalCrossTx
