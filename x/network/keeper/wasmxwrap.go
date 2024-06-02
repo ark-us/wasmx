@@ -19,6 +19,8 @@ func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.Acc
 	return k.wasmxKeeper.ExecuteCosmosMsg(ctx, msg, owner)
 }
 
+// only used by internal modules
+// it cannot be called by a user, it will fail when trying to get the signers & verify signatures
 func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {

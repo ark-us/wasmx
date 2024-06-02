@@ -15,9 +15,9 @@ import (
 
 const HOST_WASMX_ENV_P2P_VER1 = "wasmx_p2p_1"
 
-var HOST_WASMX_ENV_EXPORT = "wasmx_p2p_"
+const HOST_WASMX_ENV_EXPORT = "wasmx_p2p_"
 
-var HOST_WASMX_ENV_P2P = "p2p"
+const HOST_WASMX_ENV_P2P = "p2p"
 
 type ContextKey string
 

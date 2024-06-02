@@ -86,7 +86,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx = network.ContextWithMultiChainContext(goctx)
+	goctx = network.ContextWithMultiChainContext(g, goctx, logger)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)

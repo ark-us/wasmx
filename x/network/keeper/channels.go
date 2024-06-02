@@ -3,6 +3,11 @@ package keeper
 import (
 	"context"
 	"fmt"
+	"slices"
+
+	"golang.org/x/sync/errgroup"
+
+	"cosmossdk.io/log"
 
 	"mythos/v1/x/network/types"
 )
@@ -11,14 +16,94 @@ type ContextKey string
 
 const MultiChainContextKey ContextKey = "multichain-context"
 
-// chainId => channel
 type MultiChainContext struct {
+	// chainId => channel
 	ResultChannels map[string]*chan types.MsgExecuteAtomicTxResponse
+
+	// chainId => channel
+	InternalCallChannels map[string]*chan types.MsgExecuteCrossChainTxRequestIndexed
+
+	// chainId => channel
+	InternalCallResultChannels map[string]*chan types.MsgExecuteCrossChainTxResponseIndexed
+
+	ChainIds               []string
+	CurrentAtomicTxHash    []byte
+	CurrentSubTxIndex      int32
+	CurrentInternalCrossTx int32
 }
 
-func ContextWithMultiChainContext(ctx context.Context) context.Context {
-	procc := &MultiChainContext{ResultChannels: make(map[string]*chan types.MsgExecuteAtomicTxResponse, 0)}
-	return context.WithValue(ctx, MultiChainContextKey, procc)
+func (mcctx *MultiChainContext) GetResultChannel(chainId string) (*chan types.MsgExecuteAtomicTxResponse, error) {
+	mcchannel, ok := mcctx.ResultChannels[chainId]
+	if !ok {
+		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
+	}
+	return mcchannel, nil
+}
+
+func (mcctx *MultiChainContext) SetResultChannel(chainId string, value *chan types.MsgExecuteAtomicTxResponse) error {
+	mcctx.ResultChannels[chainId] = value
+	if !slices.Contains(mcctx.ChainIds, chainId) {
+		mcctx.ChainIds = append(mcctx.ChainIds, chainId)
+	}
+	return nil
+}
+
+func (mcctx *MultiChainContext) GetInternalCallChannel(chainId string) (*chan types.MsgExecuteCrossChainTxRequestIndexed, error) {
+	mcchannel, ok := mcctx.InternalCallChannels[chainId]
+	if !ok {
+		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
+	}
+	return mcchannel, nil
+}
+
+func (mcctx *MultiChainContext) SetInternalCallChannel(chainId string, value *chan types.MsgExecuteCrossChainTxRequestIndexed) error {
+	mcctx.InternalCallChannels[chainId] = value
+	return nil
+}
+
+func (mcctx *MultiChainContext) GetInternalCallResultChannel(chainId string) (*chan types.MsgExecuteCrossChainTxResponseIndexed, error) {
+	mcchannel, ok := mcctx.InternalCallResultChannels[chainId]
+	if !ok {
+		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
+	}
+	return mcchannel, nil
+}
+
+func (mcctx *MultiChainContext) SetInternalCallResultChannel(chainId string, value *chan types.MsgExecuteCrossChainTxResponseIndexed) error {
+	mcctx.InternalCallResultChannels[chainId] = value
+	return nil
+}
+
+func (mcctx *MultiChainContext) CloseChannels() error {
+	for _, channel := range mcctx.ResultChannels {
+		close(*channel)
+	}
+	for _, channel := range mcctx.InternalCallChannels {
+		close(*channel)
+	}
+	for _, channel := range mcctx.InternalCallResultChannels {
+		close(*channel)
+	}
+	return nil
+}
+
+func ContextWithMultiChainContext(g *errgroup.Group, ctx context.Context, logger log.Logger) context.Context {
+	mcctx := &MultiChainContext{
+		ResultChannels:             make(map[string]*chan types.MsgExecuteAtomicTxResponse, 0),
+		InternalCallChannels:       make(map[string]*chan types.MsgExecuteCrossChainTxRequestIndexed, 0),
+		InternalCallResultChannels: make(map[string]*chan types.MsgExecuteCrossChainTxResponseIndexed, 0),
+		CurrentAtomicTxHash:        make([]byte, 0),
+		CurrentSubTxIndex:          0,
+		CurrentInternalCrossTx:     0,
+	}
+	ctx = context.WithValue(ctx, MultiChainContextKey, mcctx)
+	// close channels when parent context closes
+	g.Go(func() error {
+		<-ctx.Done()
+		logger.Info("closing multichain channels")
+		return mcctx.CloseChannels()
+	})
+	return ctx
 }
 
 func GetMultiChainContext(ctx context.Context) (*MultiChainContext, error) {
@@ -31,34 +116,4 @@ func GetMultiChainContext(ctx context.Context) (*MultiChainContext, error) {
 		return nil, fmt.Errorf("multichain context not set on context")
 	}
 	return mcctx, nil
-}
-
-func GetMultiChainChannel(ctx context.Context, chainId string) (*chan types.MsgExecuteAtomicTxResponse, error) {
-	mcctx, err := GetMultiChainContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	mcchannel, ok := mcctx.ResultChannels[chainId]
-	if !ok {
-		return nil, fmt.Errorf("channel not found for %s", chainId)
-	}
-	return mcchannel, nil
-}
-
-func AddMultiChainContext(ctx context.Context, chainId string, value chan types.MsgExecuteAtomicTxResponse) error {
-	mcctx, err := GetMultiChainContext(ctx)
-	if err != nil {
-		return err
-	}
-	mcctx.ResultChannels[chainId] = &value
-	return nil
-}
-
-func SetMultiChainContext(ctx context.Context, chainId string, value *chan types.MsgExecuteAtomicTxResponse) error {
-	mcctx, err := GetMultiChainContext(ctx)
-	if err != nil {
-		return err
-	}
-	mcctx.ResultChannels[chainId] = value
-	return nil
 }

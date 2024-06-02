@@ -6,6 +6,7 @@ import "cosmos_proto/cosmos.proto";
 import "cosmos/msg/v1/msg.proto";
 import "amino/amino.proto";
 import "google/protobuf/any.proto";
+import "cosmos/base/v1beta1/coin.proto";
 import "mythos/network/v1/tendermint.proto";
 import "mythos/network/v1/custom.proto";
 
@@ -26,7 +27,7 @@ service Msg {
 
     rpc StartBackgroundProcess(MsgStartBackgroundProcessRequest) returns (MsgStartBackgroundProcessResponse);
 
-    // MultiChainWrap
+    // MultiChainWrap wraps a message to be executed on one of the available chains
     rpc MultiChainWrap(MsgMultiChainWrap) returns (MsgMultiChainWrapResponse);
 
     // this is external, for the grpc server
@@ -39,6 +40,54 @@ service Msg {
     rpc P2PReceiveMessage(MsgP2PReceiveMessageRequest) returns (MsgP2PReceiveMessageResponse);
 
     rpc ExecuteAtomicTx(MsgExecuteAtomicTxRequest) returns (MsgExecuteAtomicTxResponse);
+
+    // only executed internally, sent by wasmx
+    rpc ExecuteCrossChainTx(MsgExecuteCrossChainTxRequest) returns (MsgExecuteCrossChainTxResponse);
+}
+
+message MsgExecuteCrossChainTxRequestIndexed {
+    option (amino.name) = "network/MsgExecuteCrossChainTxRequestIndexed";
+
+    MsgExecuteCrossChainTxRequest request = 1;
+    int32 index = 2;
+}
+
+message MsgExecuteCrossChainTxResponseIndexed {
+    option (amino.name) = "network/MsgExecuteCrossChainTxResponseIndexed";
+
+    MsgExecuteCrossChainTxResponse data = 1;
+    int32 index = 2;
+}
+
+message MsgExecuteCrossChainTxRequest {
+    option (amino.name) = "network/MsgExecuteCrossChainTxRequest";
+    option (cosmos.msg.v1.signer) = "from";
+
+    option (gogoproto.equal)           = false;
+    option (gogoproto.goproto_getters) = true;
+
+    // from is the contract that signed the messages
+    string from = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // to is the address of the smart contract on the current chain
+    string to_address_or_role = 2;
+    // Msg json encoded message to be passed to the contract
+    bytes msg = 3 [(gogoproto.casttype) = "RawContractMessage"];
+    // Funds coins that are transferred to the contract on execution
+    repeated cosmos.base.v1beta1.Coin funds = 4 [
+        (gogoproto.nullable) = false,
+        (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+    ];
+    // Array of either hex-encoded contract addresses or contract labels
+    // on which the execution of this message depends on
+    repeated string dependencies = 5;
+    string from_chain_id = 6;
+    string from_role = 7;
+    string to_chain_id = 8;
+}
+
+message MsgExecuteCrossChainTxResponse {
+    bytes data = 1;
+    string error = 2;
 }
 
 message MsgExecuteAtomicTxResponse {
@@ -116,7 +165,7 @@ message MsgStartBackgroundProcessResponse {}
 
 // ExecuteContract
 message MsgExecuteContract {
-    option (amino.name) = "wasmx/MsgExecuteContract";
+    option (amino.name) = "network/MsgExecuteContract";
     option (cosmos.msg.v1.signer) = "sender";
     // Sender is the that actor that signed the messages
     string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];

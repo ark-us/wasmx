@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
 	cfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
@@ -52,6 +51,7 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 		return nil, err
 	}
 
+	// TODO fixme?
 	// return &types.ResponseBroadcastTx{
 	// 	CheckTx: &abci.ResponseCheckTx{
 	// 		Code: res.CheckTx.Code,
@@ -79,6 +79,11 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 	}, nil
 }
 
+// Any execution message can be wrapped with MsgMultiChainWrap to be executed on one
+// of the available chains.
+// BroadcastTxAsync peeks inside the transaction and inside MsgMultiChainWrap to get the chainId
+// and then forwards the transaction to the apropriate chain application
+// the signature & signer are verified in the AnteHandler of that chain application
 func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChainWrap) (*types.MsgMultiChainWrapResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
@@ -180,123 +185,9 @@ func (m msgServer) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PRec
 }
 
 func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	var newchannel chan types.MsgExecuteAtomicTxResponse
-	if msg.LeaderChainId != ctx.ChainID() {
-		existent, err := GetMultiChainChannel(m.goContextParent, ctx.ChainID())
-		if err == nil {
-			newchannel = *existent
-		}
-	}
+	return m.Keeper.ExecuteAtomicTx(goCtx, msg)
+}
 
-	if newchannel == nil {
-		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
-		newchannel = make(chan types.MsgExecuteAtomicTxResponse, 1)
-		defer func() {
-			close(newchannel)
-			mcctx, err := GetMultiChainContext(m.goContextParent)
-			if err != nil {
-				m.Logger(ctx).Error("cannot get multi chain context from parent context")
-			}
-			delete(mcctx.ResultChannels, ctx.ChainID())
-		}()
-		SetMultiChainContext(m.goContextParent, ctx.ChainID(), &newchannel)
-	}
-
-	// TODO add chainId, block info on each result
-	response := &types.MsgExecuteAtomicTxResponse{Results: make([]types.ExecTxResult, len(msg.Txs))}
-
-	chainIds := make([]string, len(msg.Txs))
-
-	for i, txbz := range msg.Txs {
-		tx, err := m.actionExecutor.app.TxConfig().TxDecoder()(txbz)
-		if err != nil {
-			return nil, err
-		}
-		txWithExtensions, ok := tx.(authante.HasExtensionOptionsTx)
-		if !ok {
-			return nil, fmt.Errorf("expected atomic transaction to have ExtensionOptionMultiChainTx")
-		}
-		opts := txWithExtensions.GetExtensionOptions()
-		if len(opts) == 0 {
-			return nil, fmt.Errorf("expected atomic transaction to have ExtensionOptionMultiChainTx")
-		}
-		ext := opts[0].GetCachedValue().(*types.ExtensionOptionMultiChainTx)
-		chainIds[i] = ext.ChainId
-		// if transaction is meant for another chain, skip it
-		if ctx.ChainID() != ext.ChainId {
-			continue
-		}
-		abcires := m.actionExecutor.GetApp().GetBaseApp().DeliverTx(txbz)
-
-		evs := make([]types.Event, len(abcires.Events))
-		for i, ev := range abcires.Events {
-			attrs := make([]types.EventAttribute, len(ev.Attributes))
-			for j, attr := range ev.Attributes {
-				attrs[j] = types.EventAttribute{Key: attr.Key, Value: attr.Value, Index: attr.Index}
-			}
-			evs[i] = types.Event{Type: ev.Type, Attributes: attrs}
-		}
-
-		// make sure events are emitted on the parent context
-		sdkevs := make([]sdk.Event, len(abcires.Events))
-		for i, ev := range abcires.Events {
-			sdkevs[i] = sdk.Event{Type: ev.Type, Attributes: ev.Attributes}
-		}
-		ctx.EventManager().EmitEvents(sdkevs)
-
-		resp := types.ExecTxResult{
-			Code:      abcires.Code,
-			Data:      abcires.Data,
-			Log:       abcires.Log,
-			Info:      abcires.Info,
-			GasWanted: abcires.GasWanted,
-			GasUsed:   abcires.GasUsed,
-			Events:    evs,
-			Codespace: abcires.Codespace,
-		}
-		response.Results[i] = resp
-	}
-
-	// execute this as a go routine, otherwise execution hangs
-	go func() {
-		// send our results through the channel
-		newchannel <- *response
-	}()
-
-	for i, chainId := range chainIds {
-		if ctx.ChainID() != chainId {
-			reschannel, err := GetMultiChainChannel(m.goContextParent, chainId)
-			var reschannel2 chan types.MsgExecuteAtomicTxResponse
-			if err != nil {
-				// we create it, so we can wait on it
-				// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
-				reschannel2 = make(chan types.MsgExecuteAtomicTxResponse, 1)
-				defer func() {
-					close(reschannel2)
-					mcctx, err := GetMultiChainContext(m.goContextParent)
-					if err != nil {
-						m.Logger(ctx).Error("cannot get multi chain context from parent context")
-					}
-					delete(mcctx.ResultChannels, chainId)
-				}()
-				SetMultiChainContext(m.goContextParent, chainId, &reschannel2)
-			} else {
-				reschannel2 = *reschannel
-			}
-
-			select {
-			case resp := <-reschannel2:
-				if len(resp.Results) == len(response.Results) {
-					response.Results[i] = resp.Results[i]
-				}
-			case <-m.goContextParent.Done():
-				m.Logger(ctx).Info("stopping atomic transactions: parent context closing")
-				// TODO what to do here? return error if node is closed during an atomic transaction?
-				// we should abort the execution of the transaction
-				return nil, nil
-			}
-		}
-	}
-	return response, nil
+func (m msgServer) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainTxRequest) (*types.MsgExecuteCrossChainTxResponse, error) {
+	return m.Keeper.ExecuteCrossChainTx(goCtx, msg)
 }
