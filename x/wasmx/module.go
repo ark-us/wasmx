@@ -69,7 +69,7 @@ func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	mintAddress, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
 	bootstrapAccount, _ := a.addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
 
-	return cdc.MustMarshalJSON(types.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress))
+	return cdc.MustMarshalJSON(types.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress, 3, false))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form

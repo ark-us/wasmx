@@ -164,7 +164,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 		return app, nil, err
 	}
 
-	wasmxGenesis := wasmxtypes.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress)
+	wasmxGenesis := wasmxtypes.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress, 1, false)
 	// mydir, err := os.Getwd()
 	// if err != nil {
 	// 	panic(err)

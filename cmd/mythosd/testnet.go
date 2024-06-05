@@ -73,33 +73,37 @@ import (
 )
 
 var (
-	flagNodeDirPrefix     = "node-dir-prefix"
-	flagNumValidators     = "v"
-	flagOutputDir         = "output-dir"
-	flagNodeDaemonHome    = "node-daemon-home"
-	flagStartingIPAddress = "starting-ip-address"
-	flagSameMachine       = "same-machine"
-	flagNoCors            = "nocors"
-	flagEnableLogging     = "enable-logging"
-	flagRPCAddress        = "rpc.address"
-	flagAPIAddress        = "api.address"
-	flagPrintMnemonic     = "print-mnemonic"
-	flagP2P               = "libp2p"
+	flagNodeDirPrefix      = "node-dir-prefix"
+	flagNumValidators      = "v"
+	flagOutputDir          = "output-dir"
+	flagNodeDaemonHome     = "node-daemon-home"
+	flagStartingIPAddress  = "starting-ip-address"
+	flagSameMachine        = "same-machine"
+	flagNoCors             = "nocors"
+	flagEnableLogging      = "enable-logging"
+	flagRPCAddress         = "rpc.address"
+	flagAPIAddress         = "api.address"
+	flagPrintMnemonic      = "print-mnemonic"
+	flagP2P                = "libp2p"
+	flagMinLevelValidators = "min-level-validators"
+	flagEnableEIDCheck     = "enable-eid"
 )
 
 type initArgs struct {
-	algo              string
-	chainID           string
-	keyringBackend    string
-	minGasPrices      string
-	nodeDaemonHome    string
-	nodeDirPrefix     string
-	numValidators     int
-	outputDir         string
-	startingIPAddress string
-	sameMachine       bool
-	noCors            bool
-	p2p               bool
+	algo               string
+	chainID            string
+	keyringBackend     string
+	minGasPrices       string
+	nodeDaemonHome     string
+	nodeDirPrefix      string
+	numValidators      int
+	outputDir          string
+	startingIPAddress  string
+	sameMachine        bool
+	noCors             bool
+	p2p                bool
+	minLevelValidators int
+	enableEIDCheck     bool
 }
 
 type startArgs struct {
@@ -131,6 +135,8 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().String(sdkserver.FlagMinGasPrices, fmt.Sprintf("0.000006%s", mcfg.BaseDenom), "Minimum gas prices to accept for transactions; All fees in a tx must meet this minimum (e.g. 10000amyt)")
 	cmd.Flags().String(flags.FlagKeyAlgorithm, string(hd.Secp256k1Type), "Key signing algorithm to generate keys for")
 	cmd.Flags().Bool(flagP2P, false, "wether the consensus algorithm uses libp2p or not")
+	cmd.Flags().Int(flagMinLevelValidators, 2, "minimum number of validators for chain levels")
+	cmd.Flags().Bool(flagEnableEIDCheck, false, "enable eID checks")
 }
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
@@ -188,6 +194,8 @@ Example:
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
+			args.minLevelValidators, _ = cmd.Flags().GetInt(flagMinLevelValidators)
+			args.enableEIDCheck, _ = cmd.Flags().GetBool(flagEnableEIDCheck)
 
 			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
 		},
@@ -652,7 +660,7 @@ func initTestnetFilesInternal(
 	}
 
 	if nodeIndexStart == 0 {
-		if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators); err != nil {
+		if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
 			return err
 		}
 
@@ -718,7 +726,7 @@ func initTestnetFilesInternal(
 
 			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
 
-			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccount, genBalance, genFile, 1); err != nil {
+			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
 				return err
 			}
 			err = collectGenFiles(
@@ -796,8 +804,14 @@ func initGenFiles(
 	genBalances []banktypes.Balance,
 	genFiles []string,
 	numValidators int,
+	minLevelValidators int,
+	enableEIDCheck bool,
 ) error {
 	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
+	chaincfg, err := mcfg.GetChainConfig(chainID)
+	if err != nil {
+		panic(err)
+	}
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
@@ -834,11 +848,26 @@ func initGenFiles(
 	mintGenState.Params.MintDenom = mcfg.BaseDenom
 	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
-	// var wasmxGenState wasmxtypes.GenesisState
-	// clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
+	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	if err != nil {
+		panic(err)
+	}
+	mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
+	if err != nil {
+		panic(err)
+	}
 
-	// wasmxGenState.Params.Denom = coinDenom
-	// appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
+	bootstrapAccount, err := addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
+	if err != nil {
+		panic(err)
+	}
+
+	var wasmxGenState wasmxtypes.GenesisState
+	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck)
+	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
+	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	appGenStateJSON, err := json.MarshalIndent(appGenState, "", "  ")
 	if err != nil {
@@ -868,6 +897,8 @@ func initGenFilesLevel0(
 	genBalance banktypes.Balance,
 	genFile string,
 	numValidators int,
+	minLevelValidators int,
+	enableEIDCheck bool,
 ) error {
 	chaincfg, err := mcfg.GetChainConfig(chainID)
 	if err != nil {
@@ -893,7 +924,7 @@ func initGenFilesLevel0(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32)
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck)
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 

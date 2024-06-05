@@ -16,7 +16,7 @@ func TestGenesisState_Validate(t *testing.T) {
 	}{
 		{
 			desc:     "default is valid",
-			genState: types.DefaultGenesisState("feecollector", "mint", "bootstrap"),
+			genState: types.DefaultGenesisState("feecollector", "mint", "bootstrap", 1, false),
 			valid:    true,
 		},
 		{

@@ -616,8 +616,8 @@ func ConsensusPrecompiles() SystemContracts {
 	}
 }
 
-func MultiChainPrecompiles() SystemContracts {
-	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"min_validators_count":1,"enable_eid_check":false,"erc20CodeId":27,"derc20CodeId":28,"level_initial_balance":"10000000000000000000"}}`)})
+func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool) SystemContracts {
+	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%s,"erc20CodeId":27,"derc20CodeId":28,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck))})
 	if err != nil {
 		panic("MultiChainPrecompiles: cannot marshal mutichainInitMsg message")
 	}
@@ -662,7 +662,7 @@ func ChatPrecompiles() SystemContracts {
 	}
 }
 
-func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string) SystemContracts {
+func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool) SystemContracts {
 	consensusPrecompiles := ConsensusPrecompiles()
 	for i, val := range consensusPrecompiles {
 		if val.Label == CONSENSUS_TENDERMINTP2P {
@@ -678,12 +678,12 @@ func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string) System
 	precompiles = append(precompiles, HookPrecompiles()...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
 	precompiles = append(precompiles, consensusPrecompiles...)
-	precompiles = append(precompiles, MultiChainPrecompiles()...)
+	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles
 }
 
-func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) SystemContracts {
+func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool) SystemContracts {
 	hooksNonC := []Hook{
 		{
 			Name:          HOOK_START_NODE,
@@ -743,7 +743,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string) Sys
 	precompiles = append(precompiles, hooksPrecompiles...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
 	precompiles = append(precompiles, consensusPrecompiles...)
-	precompiles = append(precompiles, MultiChainPrecompiles()...)
+	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	return precompiles
 }
