@@ -617,7 +617,7 @@ func ConsensusPrecompiles() SystemContracts {
 }
 
 func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool) SystemContracts {
-	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%s,"erc20CodeId":27,"derc20CodeId":28,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck))})
+	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%t,"erc20CodeId":27,"derc20CodeId":28,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck))})
 	if err != nil {
 		panic("MultiChainPrecompiles: cannot marshal mutichainInitMsg message")
 	}
