@@ -55,6 +55,21 @@ func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcf
 	return appCreatorFactory(logger, db, nil, appOpts, g, goctx)
 }
 
+func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+	logger := log.NewNopLogger()
+	db := dbm.NewMemDB()
+	appOpts := DefaultAppOptions{}
+	appOpts.Set(flags.FlagHome, homeDir)
+	// we set this so it does not try to read a genesis file
+	appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
+	appOpts.Set(sdkserver.FlagInvCheckPeriod, 5)
+	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+	appOpts.Set(sdkserver.FlagMinGasPrices, "")
+	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+	g, goctx, _ := GetTestCtx(logger, true)
+	return appCreatorFactory(logger, db, nil, appOpts, g, goctx)
+}
+
 func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
 	ctx, cancelFn := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)

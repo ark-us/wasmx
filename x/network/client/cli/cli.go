@@ -85,6 +85,7 @@ func GetQueryCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 		GetCmdQuerySubChain(),
 		GetCmdQuerySubChainConfig(),
 		GetCmdQuerySubChainIds(),
+		GetCmdQuerySubChainValidators(),
 	)
 
 	return txCmd
@@ -142,7 +143,7 @@ func RegisterNewSubChain() *cobra.Command {
 			fmt.Sprintf(`Register subchain
 
 Example:
-$ %s tx network register-subchain mythos myt 18 1 "10000000000" --chain-id="level0_1000-1"
+$ %s tx multichain register-subchain mythos myt 18 1 "10000000000" --chain-id="level0_1000-1"
 
 		`, version.AppName)),
 		Aliases: []string{},
@@ -211,7 +212,7 @@ func RegisterSubChainValidator(appCreator multichain.NewAppCreator) *cobra.Comma
 			fmt.Sprintf(`Register subchain validator
 
 Example:
-$ %s tx network register-subchain-validator mythos_7000-1 path/to/validator.json --chain-id="level0_1000-1"
+$ %s tx multichain register-subchain-validator mythos_7000-1 path/to/validator.json --chain-id="level0_1000-1"
 
 Where validator.json contains:
 
@@ -300,7 +301,7 @@ func InitializeSubChain() *cobra.Command {
 			fmt.Sprintf(`Register subchain
 
 Example:
-$ %s tx network init-subchain level1_1000-1 --chain-id="level0_1000-1"
+$ %s tx multichain init-subchain level1_1000-1 --chain-id="level0_1000-1"
 
 		`, version.AppName)),
 		Aliases: []string{},
@@ -415,6 +416,77 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 	return cmd
 }
 
+func GetCmdQuerySubChainValidators() *cobra.Command {
+	decoder := wasmxcli.NewArgDecoder(wasmxcli.AsciiDecodeString)
+	cmd := &cobra.Command{
+		Use:   "validators",
+		Short: "Show all registered validator address for registered subchains (initialized or not)",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Show all subchain validator addresses
+
+Example:
+$ %s query multichain validators --chain-id="level0_1000-1"
+
+		`, version.AppName)),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+			sunchainId := args[0]
+
+			registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
+			contractAddr, err := customAddrCodec.BytesToString(registryAddress)
+			if err != nil {
+				return err
+			}
+
+			from, _ := cmd.Flags().GetString(sdkflags.FlagFrom)
+			sender, _, _, _ := client.GetFromFields(clientCtx, clientCtx.Keyring, from)
+
+			querymsg, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{GetValidatorAddressesByChainId: &wasmxtypes.QueryValidatorAddressesByChainIdRequest{ChainId: sunchainId}})
+			if err != nil {
+				return err
+			}
+
+			res, err := sendMultiChainQuery(
+				clientCtx,
+				cmd.Flags(),
+				customAddrCodec,
+				contractAddr,
+				sender,
+				querymsg,
+				nil,
+				nil,
+			)
+			if err != nil {
+				return err
+			}
+			data2, err := decodeQueryResponse(res.Data)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data2))
+			return nil
+		},
+		SilenceUsage: true,
+	}
+	decoder.RegisterFlags(cmd.PersistentFlags(), "query argument")
+	sdkflags.AddQueryFlagsToCmd(cmd)
+	f := cmd.Flags()
+	if cmd.Flag(FlagFrom) == nil { // avoid flag redefinition when it's already been added by AutoCLI
+		f.String(FlagFrom, "", "Name or address of private key with which to sign")
+	}
+	sdkflags.AddKeyringFlags(f)
+	return cmd
+}
+
 func GetCmdQuerySubChainIds() *cobra.Command {
 	decoder := wasmxcli.NewArgDecoder(wasmxcli.AsciiDecodeString)
 	cmd := &cobra.Command{
@@ -424,7 +496,7 @@ func GetCmdQuerySubChainIds() *cobra.Command {
 			fmt.Sprintf(`Show all subchain ids
 
 Example:
-$ %s query network subchains --chain-id="level0_1000-1"
+$ %s query multichain subchains --chain-id="level0_1000-1"
 
 		`, version.AppName)),
 		Args: cobra.ExactArgs(0),
@@ -494,7 +566,7 @@ func GetCmdQuerySubChainConfig() *cobra.Command {
 			fmt.Sprintf(`Show subchain configuration by id
 
 Example:
-$ %s query network subchain level1_1000-1 --chain-id="level0_1000-1"
+$ %s query multichain subchain level1_1000-1 --chain-id="level0_1000-1"
 
 		`, version.AppName)),
 		Args: cobra.ExactArgs(1),
@@ -565,7 +637,7 @@ func GetCmdQuerySubChain() *cobra.Command {
 			fmt.Sprintf(`Show subchain data by id
 
 Example:
-$ %s query network subchain-data level1_1000-1 --chain-id="level0_1000-1"
+$ %s query multichain subchain-data level1_1000-1 --chain-id="level0_1000-1"
 
 		`, version.AppName)),
 		Args: cobra.ExactArgs(1),
@@ -845,16 +917,12 @@ func getGenTxData(
 		return nil, err
 	}
 	querymsg := []byte(fmt.Sprintf(`{"query":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
-	level0Addr := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_LEVEL0)
-	level0AddrStr, err := customAddrCodec.BytesToString(level0Addr)
-	if err != nil {
-		return nil, err
-	}
+
 	res, err := sendMultiChainQuery(
 		clientCtx,
 		flags,
 		customAddrCodec,
-		level0AddrStr,
+		"consensus",
 		sender,
 		querymsg,
 		nil,
@@ -1036,5 +1104,5 @@ func createMockAppCreator(appCreatorFactory multichain.NewAppCreator) (*mcfg.Mul
 		panic(err)
 	}
 	tempNodeHome := filepath.Join(userHomeDir, ".mythostmp")
-	return multichain.CreateMockAppCreator(appCreatorFactory, tempNodeHome)
+	return multichain.CreateNoLoggerAppCreator(appCreatorFactory, tempNodeHome)
 }

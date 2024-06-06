@@ -85,7 +85,7 @@ func readLoop(cr *ChatRoom) {
 			return
 		}
 		// only forward messages delivered by others
-		if msg.ReceivedFrom == cr.self {
+		if msg.ReceivedFrom.String() == cr.self.String() {
 			continue
 		}
 		cm := &ChatRoomMessage{

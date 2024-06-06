@@ -153,6 +153,7 @@ func NewTestnetCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.Genesi
 	testnetCmd.AddCommand(testnetStartCmd())
 	testnetCmd.AddCommand(testnetInitFilesCmd(mbm, genBalIterator))
 	testnetCmd.AddCommand(testnetAddNodeCmd(mbm, genBalIterator))
+	testnetCmd.AddCommand(testnetCreateHierarchyCmd(mbm, genBalIterator))
 
 	return testnetCmd
 }
@@ -317,6 +318,63 @@ Example:
 	cmd.Flags().Duration(jsonrpcflags.JsonRpcHTTPIdleTimeout, jsonrpcconfig.DefaultHTTPIdleTimeout, "Sets a idle timeout for json-rpc http server (0=infinite)")
 	cmd.Flags().Bool(jsonrpcflags.JsonRpcAllowUnprotectedTxs, jsonrpcconfig.DefaultAllowUnprotectedTxs, "Allow for unprotected (non EIP155 signed) transactions to be submitted via the node's RPC when the global parameter is disabled")
 	cmd.Flags().Int(jsonrpcflags.JsonRpcMaxOpenConnections, jsonrpcconfig.DefaultMaxOpenConnections, "Sets the maximum number of simultaneous connections for the server listener")
+	return cmd
+}
+
+func testnetCreateHierarchyCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "create-levels [level_count] [validator_count_per_level]",
+		Args:  cobra.ExactArgs(2),
+		Short: "Initialize hierarchical chains up to given number of levels",
+		Long: `create-levels will initialize hierarchical chains up to given number of levels
+
+Example:
+	mythosd testnet create-levels 3 --output-dir ./.testnets
+	`,
+		RunE: func(cmd *cobra.Command, args_ []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+
+			args := initArgs{}
+			args.outputDir, _ = cmd.Flags().GetString(flagOutputDir)
+			args.keyringBackend, _ = cmd.Flags().GetString(flags.FlagKeyringBackend)
+			args.chainID, _ = cmd.Flags().GetString(flags.FlagChainID)
+			args.minGasPrices, _ = cmd.Flags().GetString(sdkserver.FlagMinGasPrices)
+			args.nodeDirPrefix, _ = cmd.Flags().GetString(flagNodeDirPrefix)
+			args.nodeDaemonHome, _ = cmd.Flags().GetString(flagNodeDaemonHome)
+			args.startingIPAddress, _ = cmd.Flags().GetString(flagStartingIPAddress)
+			args.sameMachine, _ = cmd.Flags().GetBool(flagSameMachine)
+			args.noCors, _ = cmd.Flags().GetBool(flagNoCors)
+			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
+			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
+			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
+
+			levels, err := strconv.Atoi(args_[0])
+			if err != nil {
+				panic(err)
+			}
+
+			validatorCountPerLevel, err := strconv.Atoi(args_[1])
+			if err != nil {
+				panic(err)
+			}
+
+			return testnetCreateHierarchy(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args, levels, validatorCountPerLevel)
+		},
+	}
+
+	addTestnetFlagsToCmd(cmd)
+	cmd.Flags().String(flagNodeDirPrefix, "node", "Prefix the directory name for each node with (node results in node0, node1, ...)")
+	cmd.Flags().String(flagNodeDaemonHome, "mythosd", "Home directory of the node's daemon configuration")
+	cmd.Flags().String(flagStartingIPAddress, "192.168.0.1", "Starting IP address (192.168.0.1 results in persistent peers list ID0@192.168.0.1:46656, ID1@192.168.0.2:46656, ...)")
+	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
+	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
+	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
+
 	return cmd
 }
 

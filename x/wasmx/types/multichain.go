@@ -51,7 +51,13 @@ type RemoveSubChainRequest struct {
 
 type QueryGetSubChainsRequest struct{}
 type QueryGetSubChainsByIdsRequest struct {
-	Ids []string `json:"ids"`
+	ChainId string `json:"chainId"`
+}
+type QueryGetValidatorsByChainIdRequest struct {
+	ChainId string `json:"chainId"`
+}
+type QueryValidatorAddressesByChainIdRequest struct {
+	ChainId string `json:"chainId"`
 }
 
 type MultiChainRegistryCallData struct {
@@ -62,11 +68,13 @@ type MultiChainRegistryCallData struct {
 	InitSubChain              *InitSubChainRequest              `json:"InitSubChain,omitempty"`
 
 	// query
-	GetSubChains          *QueryGetSubChainsRequest      `json:"GetSubChains,omitempty"`
-	GetSubChainsByIds     *QueryGetSubChainsByIdsRequest `json:"GetSubChainsByIds,omitempty"`
-	GetSubChainIds        *QueryGetSubChainIdsRequest    `json:"GetSubChainIds,omitempty"`
-	GetSubChainById       *QueryGetSubChainRequest       `json:"GetSubChainById,omitempty"`
-	GetSubChainConfigById *QueryGetSubChainRequest       `json:"GetSubChainConfigById,omitempty"`
+	GetSubChains                   *QueryGetSubChainsRequest                `json:"GetSubChains,omitempty"`
+	GetSubChainsByIds              *QueryGetSubChainsByIdsRequest           `json:"GetSubChainsByIds,omitempty"`
+	GetSubChainIds                 *QueryGetSubChainIdsRequest              `json:"GetSubChainIds,omitempty"`
+	GetSubChainById                *QueryGetSubChainRequest                 `json:"GetSubChainById,omitempty"`
+	GetSubChainConfigById          *QueryGetSubChainRequest                 `json:"GetSubChainConfigById,omitempty"`
+	GetValidatorsByChainId         *QueryGetValidatorsByChainIdRequest      `json:"GetValidatorsByChainId,omitempty"`
+	GetValidatorAddressesByChainId *QueryValidatorAddressesByChainIdRequest `json:"GetValidatorAddressesByChainId,omitempty"`
 }
 
 type QueryBuildGenTxRequest struct {
