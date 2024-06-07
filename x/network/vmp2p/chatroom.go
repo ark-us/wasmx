@@ -69,7 +69,7 @@ func (cr *ChatRoom) ListPeers() []peer.ID {
 
 // readLoop pulls messages from the pubsub topic and pushes them onto the Messages channel.
 func readLoop(cr *ChatRoom) {
-	logger := cr.ctx.Context.Ctx.Logger()
+	logger := cr.ctx.Logger
 	ctx := cr.ctx.Context.GoContextParent
 	for {
 		msg, err := cr.sub.Next(ctx)

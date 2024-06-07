@@ -9,6 +9,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
+	"cosmossdk.io/log"
+
 	mcodec "mythos/v1/codec"
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
@@ -25,6 +27,7 @@ const P2PContextKey ContextKey = "p2p-context"
 
 type Context struct {
 	Context *vmtypes.Context
+	Logger  log.Logger
 }
 
 // internal use

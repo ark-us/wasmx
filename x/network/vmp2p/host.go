@@ -47,12 +47,12 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 
 	node, err := startNodeWithIdentityInternal(req.PrivateKey, req.Port)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("start p2p node with identity failed", "error", err.Error())
+		ctx.Logger.Error("start p2p node with identity failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
 	p2pctx.Node = &node
@@ -66,7 +66,7 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.Context.Ctx.Logger().Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs)
+	ctx.Logger.Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs)
 	node.SetStreamHandler(protocol.ID(req.ProtocolId), ctx.handleStream)
 
 	err = connectGossipSub(ctx, p2pctx, req.ProtocolId)
@@ -92,7 +92,7 @@ func GetNodeInfo(_context interface{}, callframe *wasmedge.CallingFrame, params 
 	ctx := _context.(*Context)
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
 	node := *p2pctx.Node
@@ -152,13 +152,13 @@ func SendMessage(_context interface{}, callframe *wasmedge.CallingFrame, params 
 	var req SendMessageRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Debug("could not unmarshal SendMessageRequest", "error", err.Error())
+		ctx.Logger.Debug("could not unmarshal SendMessageRequest", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
 	peers := []string{}
@@ -200,7 +200,7 @@ func SendMessageToPeers(_context interface{}, callframe *wasmedge.CallingFrame, 
 	var req SendMessageToPeersRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("send message to peers failed", "error", err.Error())
+		ctx.Logger.Error("send message to peers failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	err = sendMessageToPeersCommon(ctx, req)
@@ -231,14 +231,14 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 	var req ConnectChatRoomRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("send message to chat room failed", "error", err.Error())
+		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 	// TODO send error to contract
 	if err != nil {
 		if err.Error() != ERROR_CTX_CANCELED {
-			ctx.Context.Ctx.Logger().Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
+			ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
 			return nil, wasmedge.Result_Fail
 		}
 		// remove chat room; it will be reconnected when needed
@@ -271,13 +271,13 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 	var req SendMessageToChatRoomRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("send message to chat room failed", "error", err.Error())
+		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
 		return nil, wasmedge.Result_Fail
 	}
 
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
 
@@ -286,7 +286,7 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 		cr, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 		if err != nil {
 			if err.Error() != ERROR_CTX_CANCELED {
-				ctx.Context.Ctx.Logger().Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
+				ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
 				return nil, wasmedge.Result_Fail
 			}
 			// remove chat room; it will be reconnected when needed
@@ -322,16 +322,16 @@ func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	ctx := _context.(*Context)
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
 	node := *p2pctx.Node
 	err = node.Close()
-	ctx.Context.Ctx.Logger().Info("closing p2p node")
+	ctx.Logger.Info("closing p2p node")
 
 	// TODO response
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("failed to close p2p node", "err", err.Error())
+		ctx.Logger.Error("failed to close p2p node", "err", err.Error())
 	}
 
 	returns := make([]interface{}, 0)
@@ -339,7 +339,8 @@ func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []
 }
 
 func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
-	ctx := &Context{Context: ctx_}
+	logger := ctx_.GetContext().Logger().With("chain_id", ctx_.GetContext().ChainID())
+	ctx := &Context{Context: ctx_, Logger: logger}
 	env := wasmedge.NewModule(HOST_WASMX_ENV_P2P)
 	functype__i32 := wasmedge.NewFunctionType(
 		[]wasmedge.ValType{},
@@ -404,13 +405,13 @@ func connectPeerInternal(node host.Host, protocolID string, peeraddrstr string) 
 func connectAndListenPeerInternal(ctx *Context, req ConnectPeerRequest) (network.Stream, error) {
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, err
 	}
 
 	stream, err := connectPeerInternal(*p2pctx.Node, req.ProtocolId, req.Peer)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Info("connect to peer failed", "peer", req.Peer, "protocol_id", req.ProtocolId, "error", err.Error())
+		ctx.Logger.Info("connect to peer failed", "peer", req.Peer, "protocol_id", req.ProtocolId, "error", err.Error())
 		return nil, err
 	}
 	p2pctx.Streams[req.Peer] = stream
@@ -419,12 +420,12 @@ func connectAndListenPeerInternal(ctx *Context, req ConnectPeerRequest) (network
 		intervalEnded := make(chan bool, 1)
 		defer close(intervalEnded)
 		go func(ctx *Context, p2pctx_ *P2PContext) {
-			ctx.Context.Ctx.Logger().Info("goroutine peer connect started", "peer", req.Peer)
-			defer ctx.Context.Ctx.Logger().Info("goroutine peer connect finished", "peer", req.Peer)
+			ctx.Logger.Info("goroutine peer connect started", "peer", req.Peer)
+			defer ctx.Logger.Info("goroutine peer connect finished", "peer", req.Peer)
 
 			stream, found := p2pctx_.Streams[req.Peer]
 			if !found {
-				ctx.Context.Ctx.Logger().Debug("stream not found: ", "peer", req.Peer)
+				ctx.Logger.Debug("stream not found: ", "peer", req.Peer)
 				intervalEnded <- true
 			}
 			ctx.listenPeerStream(stream, req.Peer)
@@ -465,7 +466,7 @@ func writeData(rw *bufio.ReadWriter, msg []byte) error {
 func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error {
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil
 	}
 
@@ -481,7 +482,7 @@ func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error
 		if !found {
 			stream, err = connectAndListenPeerInternal(ctx, ConnectPeerRequest{ProtocolId: req.ProtocolId, Peer: peer})
 			if err != nil {
-				ctx.Context.Ctx.Logger().Error("connect to peer failed", "peer", peer, "error", err.Error())
+				ctx.Logger.Error("connect to peer failed", "peer", peer, "error", err.Error())
 			}
 		}
 		if stream != nil {
@@ -537,7 +538,7 @@ func tryPeerConnect(ctx context.Context, n *DiscoveryNotifee, pi peerstore.AddrI
 func connectChatRoomAndListen(ctx *Context, protocolId string, topic string) (*ChatRoom, error) {
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
-		ctx.Context.Ctx.Logger().Error("p2pcontext not found")
+		ctx.Logger.Error("p2pcontext not found")
 		return nil, err
 	}
 
@@ -555,17 +556,17 @@ func connectChatRoomAndListen(ctx *Context, protocolId string, topic string) (*C
 		intervalEnded := make(chan bool, 1)
 		defer close(intervalEnded)
 		go func(ctx_ *Context, p2pctx_ *P2PContext) {
-			ctx_.Context.Ctx.Logger().Info("room connection started", "topic", topic)
-			defer ctx_.Context.Ctx.Logger().Info("room connection successful", "topic", topic)
+			ctx_.Logger.Info("room connection started", "topic", topic)
+			defer ctx_.Logger.Info("room connection successful", "topic", topic)
 
 			cr, found := p2pctx_.ChatRooms[topic]
 			if !found {
-				ctx_.Context.Ctx.Logger().Debug("chat room not found: ", "topic", topic)
+				ctx_.Logger.Debug("chat room not found: ", "topic", topic)
 				intervalEnded <- true
 			}
 			err := listenChatRoomStream(cr)
 			if err != nil {
-				ctx_.Context.Ctx.Logger().Error("could not connect to room", "topic", topic, "error", err)
+				ctx_.Logger.Error("could not connect to room", "topic", topic, "error", err)
 				intervalEnded <- true
 			}
 
@@ -601,7 +602,7 @@ func connectGossipSub(ctx *Context, p2pctx *P2PContext, protocolId string) error
 	// This lets us automatically discover peers on the same LAN and connect to them.
 	if p2pctx.Mdns == nil {
 		// setup local mDNS discovery
-		logger := ctx.Context.Ctx.Logger()
+		logger := ctx.Logger
 		s := mdns.NewMdnsService(*p2pctx.Node, DiscoveryServiceTag, &DiscoveryNotifee{Node: *p2pctx.Node, Logger: logger, Context: goctx})
 		err := s.Start()
 		if err != nil {

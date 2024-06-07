@@ -21,21 +21,21 @@ var STREAM_MAIN = "mainstream"
 func (c *Context) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Context.Ctx.Logger(), rw, STREAM_MAIN, c.handleContractMessage)
+	go readDataStd(c.Context, c.Logger, rw, STREAM_MAIN, c.handleContractMessage)
 }
 
 // peer stream
 func (c *Context) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Context.Ctx.Logger(), rw, peeraddrstr, c.handleContractMessage)
-	c.Context.Ctx.Logger().Debug("Connected to:", peeraddrstr)
+	go readDataStd(c.Context, c.Logger, rw, peeraddrstr, c.handleContractMessage)
+	c.Logger.Debug("Connected to:", peeraddrstr)
 }
 
 func (c *Context) handleContractMessage(msgbz []byte, frompeer string) {
 	var msg ContractMessage
 	err := json.Unmarshal(msgbz, &msg)
 	if err != nil {
-		c.Context.Ctx.Logger().Debug(fmt.Sprintf("ContractMessage unmarshal failed: %s; err: %s", string(msgbz), err.Error()))
+		c.Logger.Debug(fmt.Sprintf("ContractMessage unmarshal failed: %s; err: %s", string(msgbz), err.Error()))
 	}
 	netmsg := P2PMessage{
 		Message:   msg.Msg,
@@ -50,7 +50,7 @@ func (c *Context) handleChatRoomMessage(crmsg *ChatRoomMessage) {
 	var msg ContractMessage
 	err := json.Unmarshal(crmsg.ContractMsg, &msg)
 	if err != nil {
-		c.Context.Ctx.Logger().Debug(fmt.Sprintf("chat room message unmarshal failed: %s; err: %s", string(crmsg.ContractMsg), err.Error()))
+		c.Logger.Debug(fmt.Sprintf("chat room message unmarshal failed: %s; err: %s", string(crmsg.ContractMsg), err.Error()))
 	}
 	netmsg := P2PMessage{
 		Message:   msg.Msg,
@@ -64,13 +64,13 @@ func (c *Context) handleChatRoomMessage(crmsg *ChatRoomMessage) {
 func (c *Context) handleMessage(netmsg P2PMessage, contractAddress mcodec.AccAddressPrefixed, senderAddress mcodec.AccAddressPrefixed) {
 	netmsgbz, err := json.Marshal(netmsg)
 	if err != nil {
-		c.Context.Ctx.Logger().Error("cannot marshall P2PMessage", "error", err.Error())
+		c.Logger.Error("cannot marshall P2PMessage", "error", err.Error())
 		return
 	}
 	contractAddressStr := contractAddress.String()
 	senderAddressStr := senderAddress.String()
 
-	c.Context.Ctx.Logger().Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddressStr, "contract", contractAddressStr)
+	c.Logger.Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddressStr, "contract", contractAddressStr)
 
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{
 		Sender:   senderAddressStr,
@@ -79,7 +79,7 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress mcodec.AccAdd
 	}
 	_, _, err = c.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
-		c.Context.Ctx.Logger().Error(err.Error())
+		c.Logger.Error(err.Error())
 	}
 }
 
