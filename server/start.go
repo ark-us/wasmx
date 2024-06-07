@@ -94,7 +94,7 @@ bypassed and can be used when legacy queries are needed after an on-chain upgrad
 is performed. Note, when enabled, gRPC will also be automatically enabled.
 `,
 		PreRunE: func(cmd *cobra.Command, _ []string) error {
-			serverCtx := server.GetServerContextFromCmd(cmd)
+			serverCtx := GetServerContextFromCmd(cmd)
 
 			// Bind flags to the Context's Viper so the app construction can set
 			// options accordingly.
@@ -107,7 +107,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			return err
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			serverCtx := server.GetServerContextFromCmd(cmd)
+			serverCtx := GetServerContextFromCmd(cmd)
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err

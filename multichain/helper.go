@@ -39,6 +39,7 @@ func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcf
 	// 	os.Stderr,
 	// 	log.LevelOption(1), // info=1
 	// 	log.FilterOption(filter),
+	// 	log.TimeFormatOption(time.RFC3339),
 	// )
 	logger := log.NewNopLogger()
 

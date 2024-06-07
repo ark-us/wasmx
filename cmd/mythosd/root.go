@@ -142,9 +142,14 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 
 			customAppTemplate, customAppConfig := serverconfig.AppConfig()
 			customTMConfig := initTendermintConfig()
-			return sdkserver.InterceptConfigsPreRunHandler(
-				cmd, customAppTemplate, customAppConfig, customTMConfig,
-			)
+
+			serverCtx, err := sdkserver.InterceptConfigsAndCreateContext(cmd, customAppTemplate, customAppConfig, customTMConfig)
+			if err != nil {
+				return err
+			}
+			logger = server.NewDefaultLogger()
+			serverCtx.Logger = logger.With(log.ModuleKey, "server")
+			return sdkserver.SetCmdServerContext(cmd, serverCtx)
 		},
 	}
 
@@ -442,7 +447,7 @@ func extendUnsafeResetAllCmd(rootCmd *cobra.Command) {
 					if err := serverRunE(cmd, args); err != nil {
 						return nil
 					}
-					serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+					serverCtx := server.GetServerContextFromCmd(cmd)
 					return os.RemoveAll(filepath.Join(serverCtx.Config.RootDir, wasmxtypes.ContractsDir))
 				}
 				return

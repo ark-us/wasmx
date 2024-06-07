@@ -60,6 +60,7 @@ import (
 	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
 	"mythos/v1/multichain"
+	"mythos/v1/server"
 	config "mythos/v1/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 	websrvflags "mythos/v1/x/websrv/server/flags"
@@ -180,7 +181,7 @@ Example:
 				return err
 			}
 
-			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+			serverCtx := server.GetServerContextFromCmd(cmd)
 
 			args := initArgs{}
 			args.outputDir, _ = cmd.Flags().GetString(flagOutputDir)
@@ -229,7 +230,7 @@ Example:
 				return err
 			}
 
-			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+			serverCtx := server.GetServerContextFromCmd(cmd)
 
 			args := initArgs{}
 			args.outputDir, _ = cmd.Flags().GetString(flagOutputDir)
@@ -337,7 +338,7 @@ Example:
 				return err
 			}
 
-			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+			serverCtx := server.GetServerContextFromCmd(cmd)
 
 			args := initArgs{}
 			args.outputDir, _ = cmd.Flags().GetString(flagOutputDir)
@@ -697,7 +698,14 @@ func initTestnetFilesInternal(
 		customAppTemplate, customAppConfig := config.AppConfig()
 		srvconfig.SetConfigTemplate(customAppTemplate)
 
-		if err := sdkserver.InterceptConfigsPreRunHandler(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig()); err != nil {
+		serverCtx, err := sdkserver.InterceptConfigsAndCreateContext(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig())
+		if err != nil {
+			return err
+		}
+		logger := server.NewDefaultLogger()
+		serverCtx.Logger = logger.With(log.ModuleKey, "server")
+		err = sdkserver.SetCmdServerContext(cmd, serverCtx)
+		if err != nil {
 			return err
 		}
 
