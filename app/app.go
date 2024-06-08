@@ -350,6 +350,7 @@ func NewApp(
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 
 	chainId := bApp.ChainID()
+	logger = logger.With("chain_id", chainId)
 	wasmxStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.StoreKey)
 	websrvStoreKey := cfg.GetMultiChainStoreKey(chainId, websrvmoduletypes.StoreKey)
 	crisisStoreKey := cfg.GetMultiChainStoreKey(chainId, crisistypes.StoreKey)
@@ -509,7 +510,6 @@ func NewApp(
 		app,
 	)
 
-	// app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
 		app.goRoutineGroup,
 		app.goContextParent,
