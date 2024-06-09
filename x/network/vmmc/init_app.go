@@ -82,7 +82,7 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 	constp := cmttypes.ConsensusParamsFromProto(consensusParams)
 
 	// InitChain
-	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), appHash, &constp, res.AppVersion, req.ValidatorAddress, req.ValidatorPubKey, req.ValidatorPrivKey, 0, req.Peers)
+	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), appHash, &constp, res.AppVersion, req.ValidatorAddress, req.ValidatorPubKey, req.ValidatorPrivKey, req.CurrentNodeId, req.Peers)
 	if err != nil {
 		return resInit, err
 	}

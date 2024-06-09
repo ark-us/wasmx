@@ -50,10 +50,10 @@ func testnetCreateHierarchy(
 		return err
 	}
 	startIndex := len(subchainIds)
+	fmt.Printf("creating %d subchains; total: %d subchains", level1Chains-startIndex, level1Chains)
 	// create all level1 chains
 	for i := startIndex; i < level1Chains; i++ {
 		nodeIndex := i * validatorPerLevelCount
-		// err := testnetCreateLevel(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, i, nodeIndex)
 		subChainId, err := registerLevelChain(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, i, nodeIndex, startIndex)
 		if err != nil {
 			return err

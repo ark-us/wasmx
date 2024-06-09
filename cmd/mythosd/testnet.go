@@ -330,7 +330,7 @@ func testnetCreateHierarchyCmd(mbm module.BasicManager, genBalIterator cosmosmod
 		Long: `create-levels will initialize hierarchical chains up to given number of levels
 
 Example:
-	mythosd testnet create-levels 3 --output-dir ./.testnets
+	mythosd testnet create-levels 2 2 --output-dir ./.testnets
 	`,
 		RunE: func(cmd *cobra.Command, args_ []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)

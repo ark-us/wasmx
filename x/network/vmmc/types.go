@@ -25,6 +25,7 @@ type InitSubChainMsg struct {
 	ValidatorPrivKey []byte                `json:"validator_privkey"`
 	ValidatorPubKey  []byte                `json:"validator_pubkey"`
 	Peers            []string              `json:"peers"`
+	CurrentNodeId    int32                 `json:"current_node_id"`
 }
 
 type StartSubChainMsg struct {
