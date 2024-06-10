@@ -702,7 +702,7 @@ func initTestnetFilesInternal(
 		if err != nil {
 			return err
 		}
-		logger := server.NewDefaultLogger()
+		logger := server.NewDefaultLogger(cmd.Flags())
 		serverCtx.Logger = logger.With(log.ModuleKey, "server")
 		err = sdkserver.SetCmdServerContext(cmd, serverCtx)
 		if err != nil {

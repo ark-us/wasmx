@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"cosmossdk.io/log"
+	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -58,20 +60,27 @@ func GetServerContextFromCmd(cmd *cobra.Command) *sdkserver.Context {
 		return serverCtxPtr
 	}
 
-	return NewDefaultContext()
+	return NewDefaultContext(cmd.Flags())
 }
 
-func NewDefaultContext() *sdkserver.Context {
+func NewDefaultContext(flags *pflag.FlagSet) *sdkserver.Context {
 	return sdkserver.NewContext(
 		viper.New(),
 		cmtcfg.DefaultConfig(),
-		NewDefaultLogger(),
+		NewDefaultLogger(flags),
 	)
 }
 
-func NewDefaultLogger() log.Logger {
+func NewDefaultLogger(flags *pflag.FlagSet) log.Logger {
+	// format, err := flags.GetString(sdkflags.FlagLogFormat)
+	level, err := flags.GetString(sdkflags.FlagLogLevel)
+	if err != nil && level == "" {
+		level = "info"
+	}
+	filter, _ := log.ParseLogLevel(level)
 	return log.NewLogger(
 		os.Stdout,
+		log.FilterOption(filter),
 		log.TimeFormatOption(time.RFC3339),
 	)
 }

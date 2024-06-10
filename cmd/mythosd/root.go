@@ -147,7 +147,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 			if err != nil {
 				return err
 			}
-			logger = server.NewDefaultLogger()
+			logger = server.NewDefaultLogger(cmd.Flags())
 			serverCtx.Logger = logger.With(log.ModuleKey, "server")
 			return sdkserver.SetCmdServerContext(cmd, serverCtx)
 		},
