@@ -363,10 +363,6 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 				return err
 			}
 
-			_, err = customAddrCodec.StringToBytes(args[0])
-			if err != nil {
-				return err
-			}
 			if args[1] == "" {
 				return errors.New("query data must not be empty")
 			}
@@ -382,9 +378,14 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("wrap query data %s", err)
 			}
-			sender, err := customAddrCodec.BytesToString(clientCtx.GetFromAddress())
-			if err != nil {
-				return fmt.Errorf("sender: %s", err)
+
+			fromAddr := clientCtx.GetFromAddress()
+			sender := ""
+			if len(fromAddr) > 0 {
+				sender, err = customAddrCodec.BytesToString(clientCtx.GetFromAddress())
+				if err != nil {
+					return fmt.Errorf("sender: %s", err)
+				}
 			}
 			if sender == "" {
 				sender = args[0]
@@ -581,35 +582,10 @@ $ %s query multichain subchain level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
-			registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
-			contractAddr, err := customAddrCodec.BytesToString(registryAddress)
-			if err != nil {
-				return err
-			}
-			querymsg, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{GetSubChainConfigById: &wasmxtypes.QueryGetSubChainRequest{
-				ChainId: args[0],
-			}})
-			if err != nil {
-				return err
-			}
-
 			from, _ := cmd.Flags().GetString(sdkflags.FlagFrom)
 			sender, _, _, _ := client.GetFromFields(clientCtx, clientCtx.Keyring, from)
 
-			res, err := sendMultiChainQuery(
-				clientCtx,
-				cmd.Flags(),
-				customAddrCodec,
-				contractAddr,
-				sender,
-				querymsg,
-				nil,
-				nil,
-			)
-			if err != nil {
-				return err
-			}
-			data2, err := decodeQueryResponse(res.Data)
+			data2, err := getSubChainConfigBz(clientCtx, cmd.Flags(), customAddrCodec, args[0], sender)
 			if err != nil {
 				return err
 			}
@@ -626,6 +602,39 @@ $ %s query multichain subchain level1_1000-1 --chain-id="level0_1000-1"
 	}
 	sdkflags.AddKeyringFlags(f)
 	return cmd
+}
+
+func getSubChainConfigBz(clientCtx client.Context, flags *flag.FlagSet, customAddrCodec mcodec.AccBech32Codec, subchainId string, sender sdk.AccAddress) ([]byte, error) {
+	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
+	contractAddr, err := customAddrCodec.BytesToString(registryAddress)
+	if err != nil {
+		return nil, err
+	}
+	querymsg, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{GetSubChainConfigById: &wasmxtypes.QueryGetSubChainRequest{
+		ChainId: subchainId,
+	}})
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := sendMultiChainQuery(
+		clientCtx,
+		flags,
+		customAddrCodec,
+		contractAddr,
+		sender,
+		querymsg,
+		nil,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	data2, err := decodeQueryResponse(res.Data)
+	if err != nil {
+		return nil, err
+	}
+	return data2, nil
 }
 
 func GetCmdQuerySubChain() *cobra.Command {
