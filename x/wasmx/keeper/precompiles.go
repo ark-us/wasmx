@@ -96,6 +96,8 @@ func (k *Keeper) ActivateSystemContract(
 		}
 	}
 
+	k.ImportContractState(ctx, contractAddress.Bytes(), contract.StorageType, contract.ContractState)
+
 	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddress.String(), "hex_address", contract.Address, "code_id", codeID)
 	return nil
 }

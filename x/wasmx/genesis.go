@@ -14,6 +14,10 @@ func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) 
 	for _, contract := range genState.SystemContracts {
 		k.SetSystemContract(ctx, contract)
 	}
+	// TODO
+	// genState.Contracts
+	// genState.Codes
+	// genState.Sequences
 }
 
 // ExportGenesis returns the module's exported genesis

@@ -143,9 +143,9 @@ func (k *Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAd
 	}
 }
 
-func (k *Keeper) ImportContractState(ctx sdk.Context, contractAddress sdk.AccAddress, models []types.ContractStorage) error {
+func (k *Keeper) ImportContractState(ctx sdk.Context, contractAddress sdk.AccAddress, storageType types.ContractStorageType, models []types.ContractStorage) error {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
 	for _, model := range models {
 		if model.Value == nil {
 			model.Value = []byte{}

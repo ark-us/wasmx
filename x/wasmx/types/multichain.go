@@ -59,6 +59,9 @@ type QueryGetValidatorsByChainIdRequest struct {
 type QueryValidatorAddressesByChainIdRequest struct {
 	ChainId string `json:"chainId"`
 }
+type QueryGetCurrentLevelResponse struct {
+	Level int32 `json:"level"`
+}
 
 type MultiChainRegistryCallData struct {
 	RegisterSubChain          *RegisterSubChainRequest          `json:"RegisterSubChain,omitempty"`

@@ -463,7 +463,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	suite.Require().NoError(err)
 
 	// get created app
-	suite.SetupSubChainApp(subChainId2, &subChainCfg2, 3)
+	suite.SetupSubChainApp(mcfg.LEVEL0_CHAIN_ID, subChainId2, &subChainCfg2, 3)
 
 	newacc := suite.GetRandomAccount()
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
@@ -566,7 +566,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	suite.Require().NoError(err)
 
 	// get created app
-	suite.SetupSubChainApp(subChainId2, &subChainCfg2, 3)
+	suite.SetupSubChainApp(mcfg.LEVEL0_CHAIN_ID, subChainId2, &subChainCfg2, 3)
 
 	// run actual test
 
@@ -731,6 +731,45 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(chainIds2))
 	suite.Require().Equal(level3ChainId, chainIds2[0])
+
+	var level wasmxtypes.QueryGetCurrentLevelResponse
+
+	// verify that level2 chain contains level1 chain ids
+	suite.createSubChainApp(sender, registryAddressStr, chainId, level2ChainId, 4)
+	suite.SetCurrentChain(level2ChainId)
+	subchainapp := suite.AppContext()
+	registryAddressLevel2Str := subchainapp.MustAccAddressToString(registryAddress)
+	qmsg = []byte(`{"GetCurrentLevel":{}}`)
+	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel2Str, level2ChainId)
+	err = json.Unmarshal(respbz, &level)
+	suite.Require().NoError(err)
+	suite.Require().Equal(int32(2), level.Level)
+
+	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":1}}`)
+	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel2Str, level2ChainId)
+	err = json.Unmarshal(respbz, &chainIds2)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(chainIds2))
+	suite.Require().Equal(subChainId2, chainIds2[0])
+
+	// verify that level3 chain contains level2 chain id
+	suite.SetCurrentChain(chainId) // for the below query
+	suite.createSubChainApp(sender, registryAddressStr, chainId, level3ChainId, 5)
+	suite.SetCurrentChain(level3ChainId)
+	subchainapp = suite.AppContext()
+	registryAddressLevel3Str := subchainapp.MustAccAddressToString(registryAddress)
+	qmsg = []byte(`{"GetCurrentLevel":{}}`)
+	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel3Str, level3ChainId)
+	err = json.Unmarshal(respbz, &level)
+	suite.Require().NoError(err)
+	suite.Require().Equal(int32(3), level.Level)
+
+	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":2}}`)
+	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel3Str, level3ChainId)
+	err = json.Unmarshal(respbz, &chainIds2)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(chainIds2))
+	suite.Require().Equal(level2ChainId, chainIds2[0])
 }
 
 func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.RegisterDefaultSubChainRequest) (string, *abci.ExecTxResult) {
@@ -860,6 +899,25 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	subChainIdInit := appA.GetAttributeValueFromEvent(evs[0], "chain_id")
 	suite.Require().Equal(subChainId, subChainIdInit)
 	return subChainId, res
+}
+
+func (suite *KeeperTestSuite) createSubChainApp(sender simulation.Account, registryAddressStr string, chainId string, subChainId string, index int32) mcfg.MythosApp {
+	appA := s.AppContext()
+	msg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
+	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddressStr, chainId)
+
+	var subchainConfig menc.ChainConfig
+	err := json.Unmarshal(chaincfgbz, &subchainConfig)
+	suite.Require().NoError(err)
+
+	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
+	suite.Require().NoError(err)
+	subchainapp := multichainapp.NewApp(subChainId, &subchainConfig)
+
+	// get created app
+	suite.SetupSubChainApp(chainId, subChainId, &subchainConfig, index)
+
+	return subchainapp
 }
 
 func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sender simulation.Account, contractAddress string, chainId string) []byte {

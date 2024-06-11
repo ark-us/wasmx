@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"regexp"
@@ -44,13 +45,14 @@ func testnetCreateHierarchy(
 	maxLevel int,
 	validatorPerLevelCount int,
 ) error {
-	level1Chains := validatorPerLevelCount ^ (maxLevel - 1)
+	level1Chains := int(math.Pow(float64(validatorPerLevelCount), float64(maxLevel-1)))
+	fmt.Printf("* creating up to %d levels, with %d validators per chain: up to %d subchains\n", maxLevel, validatorPerLevelCount, level1Chains)
 	subchainIds, err := getSubChainIds(clientCtx, args, 0)
 	if err != nil {
 		return err
 	}
 	startIndex := len(subchainIds)
-	fmt.Printf("creating %d subchains; total: %d subchains", level1Chains-startIndex, level1Chains)
+	fmt.Printf("* creating %d subchains; total: %d subchains; already created: %d subchains\n", level1Chains-startIndex, level1Chains, startIndex)
 	// create all level1 chains
 	for i := startIndex; i < level1Chains; i++ {
 		nodeIndex := i * validatorPerLevelCount

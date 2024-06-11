@@ -285,9 +285,9 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	require.NoError(t, err)
 }
 
-func (suite *KeeperTestSuite) SetupSubChainApp(chainId string, chaincfg *menc.ChainConfig, index int32) {
+func (suite *KeeperTestSuite) SetupSubChainApp(mainChainId string, chainId string, chaincfg *menc.ChainConfig, index int32) {
 	t := suite.T()
-	somechain := suite.GetChain(mcfg.LEVEL0_CHAIN_ID)
+	somechain := suite.GetChain(mainChainId)
 
 	multichainapp, err := somechain.App.GetMultiChainApp()
 	suite.Require().NoError(err)
