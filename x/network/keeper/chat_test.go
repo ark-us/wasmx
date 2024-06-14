@@ -217,5 +217,5 @@ func (suite *KeeperTestSuite) broadcastMessage(msg []byte, sender simulation.Acc
 		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgbz,
 	}
-	return appA.BroadcastTxAsync(sender, msgexec)
+	return appA.BroadcastTxAsync(sender, []sdk.Msg{msgexec}, nil, nil, "")
 }

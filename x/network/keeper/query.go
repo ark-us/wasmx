@@ -17,8 +17,20 @@ import (
 
 var _ types.QueryServer = &Keeper{}
 
+func (k *Keeper) AtomicMultiChain(goCtx context.Context, req *types.QueryAtomicMultiChainRequest) (*types.QueryAtomicMultiChainResponse, error) {
+	return nil, nil
+}
+
+// TODO remove or make deterministic
+func (k *Keeper) QueryCrossChain(goCtx context.Context, req *types.QueryCrossChainRequest) (*types.QueryCrossChainResponse, error) {
+	return nil, nil
+}
+
 func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiChainRequest) (*types.QueryMultiChainResponse, error) {
 	abciReq, err := mcodec.RequestQueryFromBz(req.QueryData)
+	if err != nil {
+		return nil, err
+	}
 
 	multichainapp, err := cfg.GetMultiChainApp(k.goContextParent)
 	if err != nil {

@@ -19,6 +19,10 @@ var (
 	SSTORE_GAS_WASMX = 20_000
 )
 
+// cosmos-sdk key-value max sizes
+// MaxKeyLength: 128K - 1
+// MaxValueLength: 2G - 1
+
 type WasmxJsonLog struct {
 	Type   string
 	Data   []byte

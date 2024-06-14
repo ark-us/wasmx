@@ -5,6 +5,8 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	menc "mythos/v1/encoding"
@@ -88,4 +90,46 @@ type QueryBuildGenTxRequest struct {
 type ActionParam struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+}
+
+type Erc20TokenInstantiate struct {
+	Admins    []string `json:"admins"`
+	Minters   []string `json:"minters"`
+	Name      string   `json:"name"`
+	Symbol    string   `json:"symbol"`
+	Decimals  int32    `json:"decimals"`
+	BaseDenom string   `json:"base_denom"`
+}
+
+type Erc20RollupTokenInstantiate struct {
+	Admins      []string `json:"admins"`
+	Minters     []string `json:"minters"`
+	Name        string   `json:"name"`
+	Symbol      string   `json:"symbol"`
+	Decimals    int32    `json:"decimals"`
+	BaseDenom   string   `json:"base_denom"`
+	SubChainIds []string `json:"sub_chain_ids"`
+}
+
+type MsgTotalSupplyResponse struct {
+	Supply sdk.Coin `json:"supply"`
+}
+
+type MsgBalanceOfResponse struct {
+	Balance sdk.Coin `json:"balance"`
+}
+
+type CoinPerChain struct {
+	ChainId string      `json:"chain_id"`
+	Value   sdkmath.Int `json:"value"`
+}
+
+type MsgTotalSupplyCrossChainResponse struct {
+	Supply sdk.Coin       `json:"supply"`
+	Chains []CoinPerChain `json:"chains"`
+}
+
+type MsgBalanceOfCrossChainResponse struct {
+	Balance sdk.Coin       `json:"balance"`
+	Chains  []CoinPerChain `json:"chains"`
 }

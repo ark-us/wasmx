@@ -144,6 +144,9 @@ func (k *Keeper) IterateContractState(ctx sdk.Context, contractAddress sdk.AccAd
 }
 
 func (k *Keeper) ImportContractState(ctx sdk.Context, contractAddress sdk.AccAddress, storageType types.ContractStorageType, models []types.ContractStorage) error {
+	if len(models) == 0 {
+		return nil
+	}
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
 	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
 	for _, model := range models {

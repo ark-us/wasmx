@@ -629,7 +629,7 @@ func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool) SystemC
 			InitMessage: mutichainInitMsg,
 			Pinned:      false,
 			Role:        ROLE_MULTICHAIN_REGISTRY,
-			StorageType: ContractStorageType_SingleConsensus,
+			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
 	}

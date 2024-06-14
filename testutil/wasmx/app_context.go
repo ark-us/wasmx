@@ -484,8 +484,8 @@ func (s *AppContext) SimulateTx(account simulation.Account, msgs ...sdk.Msg) (sd
 	return s.App.BaseApp.Simulate(bz)
 }
 
-func (s *AppContext) BroadcastTxAsync(account simulation.Account, msgs ...sdk.Msg) (*abci.ExecTxResult, error) {
-	bz := s.PrepareCosmosTx(account, msgs, nil, nil, "")
+func (s *AppContext) BroadcastTxAsync(account simulation.Account, msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) (*abci.ExecTxResult, error) {
+	bz := s.PrepareCosmosTx(account, msgs, gasLimit, gasPrice, memo)
 
 	abciClient := network.NewABCIClient(s.App, s.App.BaseApp, s.App.Logger(), &s.App.NetworkKeeper, nil, nil, s.App.GetActionExecutor().(*network.ActionExecutor))
 

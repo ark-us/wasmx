@@ -18,3 +18,12 @@ message MsgExecuteAtomicTxRequest {
     string leader_chain_id = 2;
     bytes sender = 3;
 }
+
+message QueryAtomicMultiChainRequest {
+    option (gogoproto.equal)           = false;
+    option (gogoproto.goproto_getters) = true;
+    // protobuf encoded queries
+    repeated bytes query_data = 1;
+    string leader_chain_id = 2;
+    bytes sender = 3;
+}

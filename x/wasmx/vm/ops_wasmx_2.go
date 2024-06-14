@@ -56,6 +56,18 @@ func getEnv(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxGetChainId(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(ctx.Env.Chain.ChainIdFull))
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 // address -> account
 func getAccount(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
@@ -1252,6 +1264,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 
 	env.AddFunction("getCallData", wasmedge.NewFunction(functype__i32, getCallData, context, 0))
 	env.AddFunction("getEnv", wasmedge.NewFunction(functype__i32, getEnv, context, 0))
+	env.AddFunction("getChainId", wasmedge.NewFunction(functype__i32, wasmxGetChainId, context, 0))
 	env.AddFunction("getCaller", wasmedge.NewFunction(functype__i32, wasmxGetCaller, context, 0))
 	env.AddFunction("getAddress", wasmedge.NewFunction(functype__i32, wasmxGetAddress, context, 0))
 	env.AddFunction("storageLoad", wasmedge.NewFunction(functype_i32_i32, wasmxStorageLoad, context, 0))

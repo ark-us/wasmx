@@ -10,10 +10,57 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
+	cfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
 	"mythos/v1/x/network/vmcrosschain"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
+
+// Any execution message can be wrapped with MsgMultiChainWrap to be executed on one
+// of the available chains.
+// BroadcastTxAsync peeks inside the transaction and inside MsgMultiChainWrap to get the chainId
+// and then forwards the transaction to the apropriate chain application
+// the signature & signer are verified in the AnteHandler of that chain application
+func (k *Keeper) MultiChainWrapInternal(ctx sdk.Context, msg *types.MsgMultiChainWrap) (*types.MsgMultiChainWrapResponse, error) {
+	var sdkmsg sdk.Msg
+	err := k.cdc.UnpackAny(msg.Data, &sdkmsg)
+	if err != nil {
+		return nil, err
+	}
+
+	multichainapp, err := cfg.GetMultiChainApp(k.goContextParent)
+	if err != nil {
+		return nil, err
+	}
+	iapp, err := multichainapp.GetApp(msg.MultiChainId)
+	if err != nil {
+		return nil, err
+	}
+	app, ok := iapp.(cfg.MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("error App interface from multichainapp")
+	}
+
+	owner, err := k.wasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(msg.Sender)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO route message &check owner is same as msg sender property ??
+
+	// TODO handle transaction verification!!!! here or by codec ??
+	// router := mcodec.MsgRouter{Router: app.MsgServiceRouter()}
+	evs, res, err := app.GetNetworkKeeper().ExecuteCosmosMsg(ctx, sdkmsg, owner)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.EventManager().EmitEvents(evs)
+
+	return &types.MsgMultiChainWrapResponse{
+		Data: res,
+	}, nil
+}
 
 // an atomic batch of multichain transactions
 // each transaction may affect only one chain or > 1, if they contain MsgExecuteCrossChainTxRequest messages
@@ -208,7 +255,8 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 }
 
 func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainTxRequest) (*types.MsgExecuteCrossChainTxResponse, error) {
-	// TODO can only be sent from wasmx
+	// TODO can only be sent from wasmx, from a contract
+	// we can check sender is a contract
 	var newInternalCallChannel chan types.MsgExecuteCrossChainTxRequestIndexed
 	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainTxResponseIndexed
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -223,6 +271,17 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 		return nil, err
 	}
 	channelsChainId := msg.ToChainId
+
+	multichainapp, err := cfg.GetMultiChainApp(k.goContextParent)
+	if err != nil {
+		return nil, err
+	}
+	_, err = multichainapp.GetApp(channelsChainId)
+	if err != nil {
+		// TODO revert ??
+		// this node does not run this chain, so we return because we cannot execute this tx
+		return &types.MsgExecuteCrossChainTxResponse{Error: fmt.Sprintf("chain not found: cannot execute cross call on chain_id %s", channelsChainId)}, nil
+	}
 
 	// we get the channels for the chain we want to interact with
 	existent2, err := mcctx.GetInternalCallChannel(channelsChainId)

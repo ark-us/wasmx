@@ -38,6 +38,7 @@ import (
 	testdata "mythos/v1/x/network/keeper/testdata/wasmx"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
+	precompiles "mythos/v1/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
@@ -592,12 +593,12 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 
 	// create level0 contract input
 	crossreq := &types.MsgExecuteCrossChainTxRequest{
-		From:            contractAddressFrom.String(),
 		ToAddressOrRole: contractAddressTo.String(),
 		Msg:             msgbz,
-		FromChainId:     chainId,
 		ToChainId:       subChainId2,
 		Dependencies:    make([]string, 0),
+		// From:            contractAddressFrom.String(),
+		// FromChainId:     chainId,
 	}
 	crossreqbz, err := appA.App.AppCodec().MarshalJSON(crossreq)
 	suite.Require().NoError(err)
@@ -772,6 +773,153 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 	suite.Require().Equal(level2ChainId, chainIds2[0])
 }
 
+func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
+	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
+	suite.SetCurrentChain(chainId)
+	chain := suite.GetChain(chainId)
+
+	initBalance := sdkmath.NewInt(10_000_000_000)
+	sender := simulation.Account{
+		PrivKey: chain.SenderPrivKey,
+		PubKey:  chain.SenderAccount.GetPubKey(),
+		Address: chain.SenderAccount.GetAddress(),
+	}
+
+	appA := s.AppContext()
+	denom := appA.Chain.Config.BaseDenom
+	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
+	suite.Commit()
+
+	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
+	registryAddressStr := appA.MustAccAddressToString(registryAddress)
+	initialBalance, ok := math.NewIntFromString("10000000100000000000")
+	suite.Require().True(ok)
+	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
+		ChainBaseName:  "ptestp",
+		DenomUnit:      "ppp",
+		Decimals:       18,
+		LevelIndex:     1,
+		InitialBalance: initialBalance.BigInt(),
+	}
+	subChainId1, res := suite.createLevel1(chainId, reqlevel1)
+	suite.Require().Equal("ptestp_10001-1", subChainId1)
+
+	// we expect 1 level2 was created
+	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
+	level2ChainId := appA.GetAttributeValueFromEvent(evs[1], "chain_id")
+
+	suite.SetCurrentChain(chainId)
+	suite.createSubChainApp(sender, registryAddressStr, chainId, subChainId1, 4)
+	suite.SetCurrentChain(chainId)
+	suite.createSubChainApp(sender, registryAddressStr, chainId, level2ChainId, 5)
+
+	// deploy erc20 rollup
+	newacc := suite.GetRandomAccount()
+	erc20rbin := precompiles.GetPrecompileByLabel(nil, wasmxtypes.ERC20_ROLLUP_v001)
+	erc20data := &wasmxtypes.Erc20RollupTokenInstantiate{
+		Admins:      []string{},
+		Minters:     []string{},
+		Name:        "erc20rollup",
+		Symbol:      "erc20symbol",
+		Decimals:    18,
+		BaseDenom:   "appp",
+		SubChainIds: []string{},
+	}
+
+	// level 1 deploy erc20
+	suite.SetCurrentChain(subChainId1)
+	subchainapp1 := suite.AppContext()
+	codeIdErc20R1 := subchainapp1.StoreCode(sender, erc20rbin, nil)
+	senderAddr1 := subchainapp1.MustAccAddressToString(sender.Address)
+	erc20data.Minters = []string{senderAddr1}
+	erc20databz, err := json.Marshal(erc20data)
+	suite.Require().NoError(err)
+	addressErc20R1 := subchainapp1.InstantiateCode(sender, codeIdErc20R1, wasmxtypes.WasmxExecutionMessage{Data: erc20databz}, "addressErc20R1", nil)
+	// mint tokens on level1
+	newaccAddr1 := subchainapp1.MustAccAddressToString(newacc.Address)
+	// subchainapp1.ExecuteContract(sender, addressErc20R1, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"1000000000"}}`, newaccAddr1))}, nil, nil)
+	msg := []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"1000000000"}}`, newaccAddr1))
+	suite.broadcastMultiChainExec(msg, sender, addressErc20R1.Bytes(), subChainId1)
+	// get totalsupply on level1
+	qmsg := `{"totalSupply":{}}`
+	qres := suite.queryMultiChainCall(subchainapp1.App, []byte(qmsg), sender, addressErc20R1.String(), subChainId1)
+	supply := &wasmxtypes.MsgTotalSupplyResponse{}
+	err = json.Unmarshal(qres, supply)
+	s.Require().NoError(err)
+	s.Require().Equal(erc20data.Symbol, supply.Supply.Denom)
+	s.Require().Equal(sdkmath.NewInt(1000000000), supply.Supply.Amount)
+
+	// get balance on level1
+	qmsg = fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, newaccAddr1)
+	qres = suite.queryMultiChainCall(subchainapp1.App, []byte(qmsg), sender, addressErc20R1.String(), subChainId1)
+	balance := &wasmxtypes.MsgBalanceOfResponse{}
+	err = json.Unmarshal(qres, balance)
+	s.Require().NoError(err)
+	s.Require().Equal(erc20data.Symbol, balance.Balance.Denom)
+	s.Require().Equal(sdkmath.NewInt(1000000000), balance.Balance.Amount)
+
+	// level 2 deploy erc20
+	suite.SetCurrentChain(level2ChainId)
+	subchainapp2 := suite.AppContext()
+	senderPrefixed := subchainapp2.AccBech32Codec().BytesToAccAddressPrefixed(sender.Address)
+
+	subchainapp2.Faucet.Fund(subchainapp2.Context(), senderPrefixed, sdk.NewCoin(subchainapp2.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+	codeIdErc20R2 := subchainapp2.StoreCode(sender, erc20rbin, nil)
+	senderAddr2 := subchainapp2.MustAccAddressToString(sender.Address)
+	erc20data.Minters = []string{senderAddr2}
+	erc20data.BaseDenom = "alvl2"
+	erc20data.SubChainIds = []string{subChainId1}
+	erc20databz, err = json.Marshal(erc20data)
+	suite.Require().NoError(err)
+	addressErc20R2 := subchainapp2.InstantiateCode(sender, codeIdErc20R2, wasmxtypes.WasmxExecutionMessage{Data: erc20databz}, "addressErc20R2", nil)
+	fmt.Println("--addressErc20R2--", addressErc20R2.String())
+	// mint tokens on level2
+	newaccAddr2 := subchainapp2.MustAccAddressToString(newacc.Address)
+	// subchainapp1.ExecuteContract(sender, addressErc20R2, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"2000000000"}}`, newaccAddr2))}, nil, nil)
+	msg = []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"2000000000"}}`, newaccAddr2))
+	suite.broadcastMultiChainExec(msg, sender, addressErc20R2.Bytes(), level2ChainId)
+	// get totalsupply on level2
+	qmsg = `{"totalSupply":{}}`
+	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	err = json.Unmarshal(qres, supply)
+	s.Require().NoError(err)
+	s.Require().Equal(erc20data.Symbol, supply.Supply.Denom)
+	s.Require().Equal(sdkmath.NewInt(2000000000), supply.Supply.Amount)
+
+	// get balance on level2
+	qmsg = fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, newaccAddr2)
+	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	err = json.Unmarshal(qres, balance)
+	s.Require().NoError(err)
+	s.Require().Equal(erc20data.Symbol, balance.Balance.Denom)
+	s.Require().Equal(sdkmath.NewInt(2000000000), balance.Balance.Amount)
+
+	// get cross chain supply on level2
+	qmsg = `{"totalSupplyCrossChain":{}}`
+	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	supplyCrossChain := &wasmxtypes.MsgTotalSupplyCrossChainResponse{}
+	err = json.Unmarshal(qres, supplyCrossChain)
+	s.Require().NoError(err)
+	s.Require().Equal(erc20data.Symbol, supplyCrossChain.Supply.Denom)
+	s.Require().Equal(sdkmath.NewInt(3000000000), supplyCrossChain.Supply.Amount)
+	s.Require().Equal(2, len(supplyCrossChain.Chains))
+	s.Require().Equal(sdkmath.NewInt(2000000000), supplyCrossChain.Chains[0].Value)
+	s.Require().Equal(level2ChainId, supplyCrossChain.Chains[0].ChainId)
+	s.Require().Equal(sdkmath.NewInt(1000000000), supplyCrossChain.Chains[1].Value)
+	s.Require().Equal(subChainId1, supplyCrossChain.Chains[1].ChainId)
+
+	// get cross chain balance on level2
+	qmsg = fmt.Sprintf(`{"balanceOfCrossChain":{"owner":"%s"}}`, newaccAddr2)
+	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	balanceCrossChain := &wasmxtypes.MsgBalanceOfCrossChainResponse{}
+	err = json.Unmarshal(qres, balanceCrossChain)
+	s.Require().NoError(err)
+	s.Require().Equal(erc20data.Symbol, balanceCrossChain.Balance.Denom)
+	s.Require().Equal(sdkmath.NewInt(3000000000), balanceCrossChain.Balance.Amount)
+}
+
 func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.RegisterDefaultSubChainRequest) (string, *abci.ExecTxResult) {
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
@@ -912,7 +1060,14 @@ func (suite *KeeperTestSuite) createSubChainApp(sender simulation.Account, regis
 
 	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
 	suite.Require().NoError(err)
-	subchainapp := multichainapp.NewApp(subChainId, &subchainConfig)
+
+	var subchainapp mcfg.MythosApp
+	isubchainapp, err := multichainapp.GetApp(subChainId)
+	if err == nil {
+		subchainapp = isubchainapp.(mcfg.MythosApp)
+	} else {
+		subchainapp = multichainapp.NewApp(subChainId, &subchainConfig)
+	}
 
 	// get created app
 	suite.SetupSubChainApp(chainId, subChainId, &subchainConfig, index)
@@ -1009,7 +1164,9 @@ func (suite *KeeperTestSuite) composeMultiChainTx(msg []byte, sender simulation.
 func (suite *KeeperTestSuite) broadcastMultiChainExec(msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) (*abci.ExecTxResult, error) {
 	appA := s.AppContext()
 	multimsg := suite.composeMultiChainTx(msg, sender, contractAddress, chainId)
-	resp, err := appA.BroadcastTxAsync(sender, multimsg)
+	// initializing chains is expensive ~6mil
+	gasLimit := uint64(30000000)
+	resp, err := appA.BroadcastTxAsync(sender, []sdk.Msg{multimsg}, &gasLimit, nil, "")
 	if err != nil {
 		return nil, err
 	}

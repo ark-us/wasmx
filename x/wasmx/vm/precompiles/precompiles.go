@@ -129,6 +129,9 @@ var (
 	//go:embed 4b.multichain_registry_local_0.0.1.wasm
 	multichain_registry_local []byte
 
+	//go:embed 4c.erc20rollupjson_0.0.1.wasm
+	erc20rollupjson []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -260,6 +263,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = multichain_registry
 	case types.MULTICHAIN_REGISTRY_LOCAL_v001:
 		wasmbin = multichain_registry_local
+	case types.ERC20_ROLLUP_v001:
+		wasmbin = erc20rollupjson
 	}
 	return wasmbin
 }
