@@ -129,7 +129,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 		// TODO validation of the request
 		// TODO have from data available to wasmx
 
-		contractAddress, err := k.wasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(req.ToAddressOrRole)
+		contractAddress, err := k.wasmxKeeper.AccBech32Codec().StringToAccAddressPrefixed(req.To)
 		if err != nil {
 			response.Data.Error = err.Error()
 			newInternalCallResponseChannel <- response
@@ -262,9 +262,8 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	msg.FromChainId = ctx.ChainID()
-	// TODO role
 
-	k.Logger(ctx).Info("executing crosschain tx", "from_chain_id", msg.FromChainId, "from", msg.From, "from_role", msg.FromRole, "to_chain_id", msg.ToChainId, "to", msg.ToAddressOrRole)
+	k.Logger(ctx).Info("executing crosschain tx", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To)
 
 	mcctx, err := GetMultiChainContext(k.goContextParent)
 	if err != nil {

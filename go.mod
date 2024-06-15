@@ -311,8 +311,9 @@ require (
 
 replace (
 	cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0
+	// github.com/loredanacirstea/cosmos-sdk@95b07abddc958de86a962abc75bc9ac9da49bae4
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240615121816-95b07abddc95
 
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240528230327-49fe06f7640f
 	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 
 	github.com/cosmos/ibc-go/v8 => github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19

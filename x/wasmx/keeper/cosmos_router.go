@@ -251,7 +251,10 @@ func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.Acc
 		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message any")
 	}
 	signers, _, err := k.cdc.GetMsgAnySigners(anymsg)
-	if err != nil || len(signers) == 0 {
+	if err != nil {
+		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer from %s: %s", sdk.MsgTypeURL(msg), err.Error())
+	}
+	if len(signers) == 0 {
 		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer missing for %s", sdk.MsgTypeURL(msg))
 	}
 	authorized := bytes.Equal(signers[0], owner.Bytes())

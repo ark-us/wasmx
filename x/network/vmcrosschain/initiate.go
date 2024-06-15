@@ -7,6 +7,7 @@ import (
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
 
+// !!!!This is an internal API only to be used by trusted system contracts
 func InstantiateWasmxCrossChainJson(context *vmtypes.Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	var err error

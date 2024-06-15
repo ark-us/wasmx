@@ -21,11 +21,6 @@ func (k *Keeper) AtomicMultiChain(goCtx context.Context, req *types.QueryAtomicM
 	return nil, nil
 }
 
-// TODO remove or make deterministic
-func (k *Keeper) QueryCrossChain(goCtx context.Context, req *types.QueryCrossChainRequest) (*types.QueryCrossChainResponse, error) {
-	return nil, nil
-}
-
 func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiChainRequest) (*types.QueryMultiChainResponse, error) {
 	abciReq, err := mcodec.RequestQueryFromBz(req.QueryData)
 	if err != nil {
@@ -60,6 +55,8 @@ func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiCha
 }
 
 // TODO remove this, because we should use QueryMultiChain
+// all queries must pass through baseapp.Query(), which sets the ExecModeQuery
+// needed for nondeterministic queries
 func (k *Keeper) ContractCall(goCtx context.Context, req *types.QueryContractCallRequest) (*types.QueryContractCallResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
@@ -81,4 +78,8 @@ func (k *Keeper) ContractCall(goCtx context.Context, req *types.QueryContractCal
 	}
 
 	return &types.QueryContractCallResponse{Data: resp}, nil
+}
+
+func (k *Keeper) QueryCrossChain(goCtx context.Context, req *types.QueryCrossChainRequest) (*types.QueryCrossChainResponse, error) {
+	return nil, nil
 }

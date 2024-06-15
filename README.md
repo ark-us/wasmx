@@ -79,6 +79,7 @@ CGO_LDFLAGS='-Wl,-rpath,/Users/user/.wasmedge/lib' go test --count=1 -short -v .
 ## Multichain Commands
 
 ```
+
 mythosd tx multichain register-subchain logos lyt 18 1 "10000000000" --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
 
 mythosd query multichain subchains --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd
@@ -100,4 +101,4 @@ make proto-gen
 ### Note! we need to manually fix the custom proto file for `network`
 
 * `custom.pulsar.go`: rename `networkv1` to `types`
-* `custom.pb.go`: comment out `MsgExecuteAtomicTxRequest` definition and methods `Reset`, `String`, `ProtoMessage`, `Descriptor`, `GetTxs`, `GetLeaderChainId`, `GetSender`
+* `custom.pb.go`: comment out `MsgExecuteAtomicTxRequest` definition and methods `Reset`, `String`, `ProtoMessage`, `Descriptor`, `GetTxs`, `GetLeaderChainId`, `GetSender`. Also comment out `QueryAtomicMultiChainRequest` def & methods

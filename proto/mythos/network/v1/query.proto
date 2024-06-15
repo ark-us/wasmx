@@ -39,22 +39,23 @@ message QueryCrossChainRequest {
   option (gogoproto.equal)           = false;
   option (gogoproto.goproto_getters) = true;
 
-  // from is the contract that signed the messages
-  string from = 1;
+  // sender is the contract that prepared the message
+  string sender = 1;
+  // from is the contract that sent the cross-chain message
+  string from = 2;
   // to is the address of the smart contract on the current chain
-  string to_address_or_role = 2;
+  string to = 3;
   // Msg json encoded message to be passed to the contract
-  bytes msg = 3;
+  bytes msg = 4 [(gogoproto.casttype) = "RawContractMessage"];
   // Funds coins that are transferred to the contract on execution
-  repeated cosmos.base.v1beta1.Coin funds = 4 [
+  repeated cosmos.base.v1beta1.Coin funds = 5 [
       (gogoproto.nullable) = false,
       (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
   ];
   // Array of either hex-encoded contract addresses or contract labels
   // on which the execution of this message depends on
-  repeated string dependencies = 5;
-  string from_chain_id = 6;
-  string from_role = 7;
+  repeated string dependencies = 6;
+  string from_chain_id = 7;
   string to_chain_id = 8;
 }
 

@@ -593,10 +593,10 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 
 	// create level0 contract input
 	crossreq := &types.MsgExecuteCrossChainTxRequest{
-		ToAddressOrRole: contractAddressTo.String(),
-		Msg:             msgbz,
-		ToChainId:       subChainId2,
-		Dependencies:    make([]string, 0),
+		To:           contractAddressTo.String(),
+		Msg:          msgbz,
+		ToChainId:    subChainId2,
+		Dependencies: make([]string, 0),
 		// From:            contractAddressFrom.String(),
 		// FromChainId:     chainId,
 	}
@@ -896,8 +896,10 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	s.Require().Equal(erc20data.Symbol, balance.Balance.Denom)
 	s.Require().Equal(sdkmath.NewInt(2000000000), balance.Balance.Amount)
 
+	// non-deterministic queries!
+
 	// get cross chain supply on level2
-	qmsg = `{"totalSupplyCrossChain":{}}`
+	qmsg = `{"totalSupplyCrossChainNonDeterministic":{}}`
 	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	supplyCrossChain := &wasmxtypes.MsgTotalSupplyCrossChainResponse{}
 	err = json.Unmarshal(qres, supplyCrossChain)
@@ -911,13 +913,17 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	s.Require().Equal(subChainId1, supplyCrossChain.Chains[1].ChainId)
 
 	// get cross chain balance on level2
-	qmsg = fmt.Sprintf(`{"balanceOfCrossChain":{"owner":"%s"}}`, newaccAddr2)
+	qmsg = fmt.Sprintf(`{"balanceOfCrossChainNonDeterministic":{"owner":"%s"}}`, newaccAddr2)
 	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	balanceCrossChain := &wasmxtypes.MsgBalanceOfCrossChainResponse{}
 	err = json.Unmarshal(qres, balanceCrossChain)
 	s.Require().NoError(err)
 	s.Require().Equal(erc20data.Symbol, balanceCrossChain.Balance.Denom)
 	s.Require().Equal(sdkmath.NewInt(3000000000), balanceCrossChain.Balance.Amount)
+
+	// ensure we do not run nondeterministic crosschain queries as part of a tx
+	_, err = suite.queryMultiChainCallWithWrongModeExec(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	s.Require().Error(err, "")
 }
 
 func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.RegisterDefaultSubChainRequest) (string, *abci.ExecTxResult) {
@@ -1086,13 +1092,31 @@ func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sen
 		Address:      contractAddress,
 		QueryData:    msgbz,
 	}
-	res, err := mapp.NetworkKeeper.ContractCall(appA.Context(), multimsg)
+	// TODO we should use network.QueryMultiChain instead; baseapp.Query sets the proper ExecMode
+	ctx := appA.Context().WithExecMode(sdk.ExecModeQuery)
+	res, err := mapp.NetworkKeeper.ContractCall(ctx, multimsg)
 	suite.Require().NoError(err)
 
 	wres := &wasmxtypes.WasmxExecutionMessage{}
 	err = json.Unmarshal(res.Data, wres)
 	suite.Require().NoError(err)
 	return wres.Data
+}
+
+func (suite *KeeperTestSuite) queryMultiChainCallWithWrongModeExec(mapp *app.App, msg []byte, sender simulation.Account, contractAddress string, chainId string) (*types.QueryContractCallResponse, error) {
+	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
+	msgbz, err := json.Marshal(msgwrap)
+	suite.Require().NoError(err)
+	appA := suite.AppContext()
+	multimsg := &types.QueryContractCallRequest{
+		MultiChainId: chainId,
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Address:      contractAddress,
+		QueryData:    msgbz,
+	}
+	// TODO we should use network.QueryMultiChain instead; baseapp.Query sets the proper ExecMode
+	ctx := appA.Context().WithExecMode(sdk.ExecModeFinalize)
+	return mapp.NetworkKeeper.ContractCall(ctx, multimsg)
 }
 
 func (suite *KeeperTestSuite) queryMultiChainCall__(mapp *app.App, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {

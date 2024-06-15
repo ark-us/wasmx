@@ -864,10 +864,6 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
 	}
 
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		types.EventTypeExecute,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
-	))
 
 	// data, err := k.handleContractResponse(ctx, contractAddress, contractInfo.IbcPortId, res.Attributes, res.Data, res.Events)
 	// if err != nil {
