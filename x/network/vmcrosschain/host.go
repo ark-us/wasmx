@@ -17,20 +17,21 @@ import (
 
 // TODO!! this API should only be used by core contracts
 
-// executeCrossChainTx(*MsgExecuteCrossChainTxRequest) (*abci.MsgExecuteCrossChainTxResponse, error)
+// executeCrossChainTx(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req types.MsgExecuteCrossChainTxRequest
+	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 
 	// we expect from & chain id to be set correctly by the multichain registry contract
+	req.IsQuery = false
 	req.Sender = ctx.Env.Contract.Address.String()
 	req.FromChainId = ctx.Env.Chain.ChainIdFull
 
@@ -43,7 +44,7 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 	}
 	resp := WrappedResponse{Error: errmsg}
 	if errmsg == "" {
-		var rres types.MsgExecuteCrossChainTxResponse
+		var rres types.MsgExecuteCrossChainCallResponse
 		if res != nil {
 			err = rres.Unmarshal(res)
 			if err != nil {
@@ -68,20 +69,21 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 	return returns, wasmedge.Result_Success
 }
 
-// executeCrossChainQuery(*QueryCrossChainRequest) (*abci.MsgExecuteCrossChainTxResponse, error)
+// executeCrossChainQuery(*QueryCrossChainRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req types.QueryCrossChainRequest
+	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 
 	// we expect sender & chain id to be set correctly by the multichain registry contract
+	req.IsQuery = true
 	req.Sender = ctx.Env.Contract.Address.String()
 	req.FromChainId = ctx.Env.Chain.ChainIdFull
 
@@ -93,7 +95,7 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 
 	resp := WrappedResponse{Error: errmsg}
 	if errmsg == "" {
-		var rres types.QueryCrossChainResponse
+		var rres types.MsgExecuteCrossChainCallResponse
 		if res != nil {
 			err = rres.Unmarshal(res)
 			if err != nil {
@@ -137,7 +139,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req types.QueryCrossChainRequest
+	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -147,6 +149,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	// set this contract as sender
 	// TODO URGENT interchain account addresses
 	// req.From = ctx.Env.Contract.Address.String()
+	req.IsQuery = true
 	req.Sender = ctx.Env.Contract.Address.String()
 	req.FromChainId = ctx.Env.Chain.ChainIdFull
 

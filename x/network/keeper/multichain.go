@@ -63,16 +63,16 @@ func (k *Keeper) MultiChainWrapInternal(ctx sdk.Context, msg *types.MsgMultiChai
 }
 
 // an atomic batch of multichain transactions
-// each transaction may affect only one chain or > 1, if they contain MsgExecuteCrossChainTxRequest messages
-// each transaction may contain multiple MsgExecuteCrossChainTxRequest messages, with multiple internal cross-chain transactions
+// each transaction may affect only one chain or > 1, if they contain MsgExecuteCrossChainCallRequest messages
+// each transaction may contain multiple MsgExecuteCrossChainCallRequest messages, with multiple internal cross-chain transactions
 // TODO: ExecuteAtomicTx must not be nested inside other ExecuteAtomicTx
 func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
 	// our atomic tx result channel - we use this to send our result
 	var newResultsChannel chan types.MsgExecuteAtomicTxResponse
 	// our cross-chain tx request channel - we receive contract calls from other chains
-	var newInternalCallChannel chan types.MsgExecuteCrossChainTxRequestIndexed
+	var newInternalCallChannel chan types.MsgExecuteCrossChainCallRequestIndexed
 	// our cross-chain tx response channel - we send the results of cross-chain calls to other chains
-	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainTxResponseIndexed
+	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainCallResponseIndexed
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	txhash := merkle.HashFromByteSlices(msg.GetTxs())
@@ -96,7 +96,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 		newInternalCallChannel = *existent2
 	} else {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
-		newInternalCallChannel = make(chan types.MsgExecuteCrossChainTxRequestIndexed, 1)
+		newInternalCallChannel = make(chan types.MsgExecuteCrossChainCallRequestIndexed, 1)
 		mcctx.SetInternalCallChannel(ctx.ChainID(), &newInternalCallChannel)
 	}
 
@@ -105,7 +105,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 		newInternalCallResponseChannel = *existent3
 	} else {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
-		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainTxResponseIndexed, 1)
+		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainCallResponseIndexed, 1)
 		mcctx.SetInternalCallResultChannel(ctx.ChainID(), &newInternalCallResponseChannel)
 	}
 
@@ -119,11 +119,11 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 		if crosschainreq.Request == nil {
 			return
 		}
-		k.Logger(ctx).Info("received crosschain internal tx", "atomic_txhash", hex.EncodeToString(txhash), "index", crosschainreq.Index)
+		k.Logger(ctx).Info("received crosschain internal call", "atomic_txhash", hex.EncodeToString(txhash), "index", crosschainreq.Index, "is_query", crosschainreq.Request.IsQuery)
 		req := crosschainreq.Request
-		response := types.MsgExecuteCrossChainTxResponseIndexed{
+		response := types.MsgExecuteCrossChainCallResponseIndexed{
 			Index: crosschainreq.Index,
-			Data:  &types.MsgExecuteCrossChainTxResponse{},
+			Data:  &types.MsgExecuteCrossChainCallResponse{},
 		}
 
 		// TODO validation of the request
@@ -159,14 +159,19 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 			return
 		}
 
-		respbz, err := k.wasmxKeeper.ExecuteEntryPoint(ctx, vmcrosschain.HOST_WASMX_ENV_CROSSCHAIN, contractAddress, caller, execmsgbz, req.Dependencies, false)
+		reqctx := ctx
+		if req.IsQuery {
+			reqctx, _ = ctx.CacheContext()
+		}
+
+		respbz, err := k.wasmxKeeper.ExecuteEntryPoint(reqctx, vmcrosschain.HOST_WASMX_ENV_CROSSCHAIN, contractAddress, caller, execmsgbz, req.Dependencies, false)
 		if err != nil {
 			response.Data.Error = err.Error()
 			newInternalCallResponseChannel <- response
 			return
 		}
 		response.Data.Data = respbz
-		k.Logger(ctx).Info("sending crosschain internal tx response", "atomic_txhash", hex.EncodeToString(txhash), "index", crosschainreq.Index)
+		k.Logger(ctx).Info("sending crosschain internal call response", "atomic_txhash", hex.EncodeToString(txhash), "index", crosschainreq.Index, "is_query", crosschainreq.Request.IsQuery)
 		newInternalCallResponseChannel <- response
 	}()
 
@@ -254,16 +259,16 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	return response, nil
 }
 
-func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainTxRequest) (*types.MsgExecuteCrossChainTxResponse, error) {
+func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainCallRequest) (*types.MsgExecuteCrossChainCallResponse, error) {
 	// TODO can only be sent from wasmx, from a contract
 	// we can check sender is a contract
-	var newInternalCallChannel chan types.MsgExecuteCrossChainTxRequestIndexed
-	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainTxResponseIndexed
+	var newInternalCallChannel chan types.MsgExecuteCrossChainCallRequestIndexed
+	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainCallResponseIndexed
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	msg.FromChainId = ctx.ChainID()
 
-	k.Logger(ctx).Info("executing crosschain tx", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To)
+	k.Logger(ctx).Info("executing crosschain call", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To, "is_query", msg.IsQuery)
 
 	mcctx, err := GetMultiChainContext(k.goContextParent)
 	if err != nil {
@@ -279,7 +284,7 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	if err != nil {
 		// TODO revert ??
 		// this node does not run this chain, so we return because we cannot execute this tx
-		return &types.MsgExecuteCrossChainTxResponse{Error: fmt.Sprintf("chain not found: cannot execute cross call on chain_id %s", channelsChainId)}, nil
+		return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain not found: cannot execute cross call on chain_id %s", channelsChainId)}, nil
 	}
 
 	// we get the channels for the chain we want to interact with
@@ -294,18 +299,18 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 
 	if newInternalCallChannel == nil {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
-		newInternalCallChannel = make(chan types.MsgExecuteCrossChainTxRequestIndexed, 1)
+		newInternalCallChannel = make(chan types.MsgExecuteCrossChainCallRequestIndexed, 1)
 		mcctx.SetInternalCallChannel(channelsChainId, &newInternalCallChannel)
 	}
 
 	if newInternalCallResponseChannel == nil {
 		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
-		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainTxResponseIndexed, 1)
+		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainCallResponseIndexed, 1)
 		mcctx.SetInternalCallResultChannel(channelsChainId, &newInternalCallResponseChannel)
 	}
 
 	index := mcctx.CurrentInternalCrossTx
-	req := types.MsgExecuteCrossChainTxRequestIndexed{
+	req := types.MsgExecuteCrossChainCallRequestIndexed{
 		Index:   index,
 		Request: msg,
 	}

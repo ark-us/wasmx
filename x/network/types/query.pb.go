@@ -33,188 +33,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type QueryAtomicMultiChainResponse struct {
-	Results [][]byte `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
-}
-
-func (m *QueryAtomicMultiChainResponse) Reset()         { *m = QueryAtomicMultiChainResponse{} }
-func (m *QueryAtomicMultiChainResponse) String() string { return proto.CompactTextString(m) }
-func (*QueryAtomicMultiChainResponse) ProtoMessage()    {}
-func (*QueryAtomicMultiChainResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{0}
-}
-func (m *QueryAtomicMultiChainResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *QueryAtomicMultiChainResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_QueryAtomicMultiChainResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *QueryAtomicMultiChainResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryAtomicMultiChainResponse.Merge(m, src)
-}
-func (m *QueryAtomicMultiChainResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *QueryAtomicMultiChainResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryAtomicMultiChainResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_QueryAtomicMultiChainResponse proto.InternalMessageInfo
-
-type QueryCrossChainRequest struct {
-	// sender is the contract that prepared the message
-	Sender string `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
-	// from is the contract that sent the cross-chain message
-	From string `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
-	// to is the address of the smart contract on the current chain
-	To string `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
-	// Msg json encoded message to be passed to the contract
-	Msg RawContractMessage `protobuf:"bytes,4,opt,name=msg,proto3,casttype=RawContractMessage" json:"msg,omitempty"`
-	// Funds coins that are transferred to the contract on execution
-	Funds github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,5,rep,name=funds,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"funds"`
-	// Array of either hex-encoded contract addresses or contract labels
-	// on which the execution of this message depends on
-	Dependencies []string `protobuf:"bytes,6,rep,name=dependencies,proto3" json:"dependencies,omitempty"`
-	FromChainId  string   `protobuf:"bytes,7,opt,name=from_chain_id,json=fromChainId,proto3" json:"from_chain_id,omitempty"`
-	ToChainId    string   `protobuf:"bytes,8,opt,name=to_chain_id,json=toChainId,proto3" json:"to_chain_id,omitempty"`
-}
-
-func (m *QueryCrossChainRequest) Reset()         { *m = QueryCrossChainRequest{} }
-func (m *QueryCrossChainRequest) String() string { return proto.CompactTextString(m) }
-func (*QueryCrossChainRequest) ProtoMessage()    {}
-func (*QueryCrossChainRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{1}
-}
-func (m *QueryCrossChainRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *QueryCrossChainRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_QueryCrossChainRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *QueryCrossChainRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryCrossChainRequest.Merge(m, src)
-}
-func (m *QueryCrossChainRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *QueryCrossChainRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryCrossChainRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_QueryCrossChainRequest proto.InternalMessageInfo
-
-func (m *QueryCrossChainRequest) GetSender() string {
-	if m != nil {
-		return m.Sender
-	}
-	return ""
-}
-
-func (m *QueryCrossChainRequest) GetFrom() string {
-	if m != nil {
-		return m.From
-	}
-	return ""
-}
-
-func (m *QueryCrossChainRequest) GetTo() string {
-	if m != nil {
-		return m.To
-	}
-	return ""
-}
-
-func (m *QueryCrossChainRequest) GetMsg() RawContractMessage {
-	if m != nil {
-		return m.Msg
-	}
-	return nil
-}
-
-func (m *QueryCrossChainRequest) GetFunds() github_com_cosmos_cosmos_sdk_types.Coins {
-	if m != nil {
-		return m.Funds
-	}
-	return nil
-}
-
-func (m *QueryCrossChainRequest) GetDependencies() []string {
-	if m != nil {
-		return m.Dependencies
-	}
-	return nil
-}
-
-func (m *QueryCrossChainRequest) GetFromChainId() string {
-	if m != nil {
-		return m.FromChainId
-	}
-	return ""
-}
-
-func (m *QueryCrossChainRequest) GetToChainId() string {
-	if m != nil {
-		return m.ToChainId
-	}
-	return ""
-}
-
-type QueryCrossChainResponse struct {
-	Data  []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-	Error string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-}
-
-func (m *QueryCrossChainResponse) Reset()         { *m = QueryCrossChainResponse{} }
-func (m *QueryCrossChainResponse) String() string { return proto.CompactTextString(m) }
-func (*QueryCrossChainResponse) ProtoMessage()    {}
-func (*QueryCrossChainResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{2}
-}
-func (m *QueryCrossChainResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *QueryCrossChainResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_QueryCrossChainResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *QueryCrossChainResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_QueryCrossChainResponse.Merge(m, src)
-}
-func (m *QueryCrossChainResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *QueryCrossChainResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_QueryCrossChainResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_QueryCrossChainResponse proto.InternalMessageInfo
-
 // QueryMultiChainRequest is the request type for the
 // Query/QueryMultiChain RPC method
 type QueryMultiChainRequest struct {
@@ -226,7 +44,7 @@ func (m *QueryMultiChainRequest) Reset()         { *m = QueryMultiChainRequest{}
 func (m *QueryMultiChainRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryMultiChainRequest) ProtoMessage()    {}
 func (*QueryMultiChainRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{3}
+	return fileDescriptor_3b6a247dd5f5b796, []int{0}
 }
 func (m *QueryMultiChainRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -279,7 +97,7 @@ func (m *QueryMultiChainResponse) Reset()         { *m = QueryMultiChainResponse
 func (m *QueryMultiChainResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryMultiChainResponse) ProtoMessage()    {}
 func (*QueryMultiChainResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{4}
+	return fileDescriptor_3b6a247dd5f5b796, []int{1}
 }
 func (m *QueryMultiChainResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -328,7 +146,7 @@ func (m *QueryContractCallRequest) Reset()         { *m = QueryContractCallReque
 func (m *QueryContractCallRequest) String() string { return proto.CompactTextString(m) }
 func (*QueryContractCallRequest) ProtoMessage()    {}
 func (*QueryContractCallRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{5}
+	return fileDescriptor_3b6a247dd5f5b796, []int{2}
 }
 func (m *QueryContractCallRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -368,7 +186,7 @@ func (m *QueryContractCallResponse) Reset()         { *m = QueryContractCallResp
 func (m *QueryContractCallResponse) String() string { return proto.CompactTextString(m) }
 func (*QueryContractCallResponse) ProtoMessage()    {}
 func (*QueryContractCallResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3b6a247dd5f5b796, []int{6}
+	return fileDescriptor_3b6a247dd5f5b796, []int{3}
 }
 func (m *QueryContractCallResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -398,9 +216,6 @@ func (m *QueryContractCallResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_QueryContractCallResponse proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*QueryAtomicMultiChainResponse)(nil), "mythos.network.v1.QueryAtomicMultiChainResponse")
-	proto.RegisterType((*QueryCrossChainRequest)(nil), "mythos.network.v1.QueryCrossChainRequest")
-	proto.RegisterType((*QueryCrossChainResponse)(nil), "mythos.network.v1.QueryCrossChainResponse")
 	proto.RegisterType((*QueryMultiChainRequest)(nil), "mythos.network.v1.QueryMultiChainRequest")
 	proto.RegisterType((*QueryMultiChainResponse)(nil), "mythos.network.v1.QueryMultiChainResponse")
 	proto.RegisterType((*QueryContractCallRequest)(nil), "mythos.network.v1.QueryContractCallRequest")
@@ -410,56 +225,44 @@ func init() {
 func init() { proto.RegisterFile("mythos/network/v1/query.proto", fileDescriptor_3b6a247dd5f5b796) }
 
 var fileDescriptor_3b6a247dd5f5b796 = []byte{
-	// 769 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x55, 0x31, 0x6f, 0xd3, 0x40,
-	0x14, 0x8e, 0x9d, 0xa4, 0x6d, 0xae, 0xa1, 0xc0, 0xa9, 0x2a, 0x4e, 0x44, 0x9d, 0xc8, 0x62, 0x08,
-	0x05, 0x7c, 0x4d, 0x11, 0x48, 0xc0, 0xd4, 0x06, 0x84, 0x3a, 0x74, 0xc0, 0x23, 0x4b, 0x75, 0xb1,
-	0xaf, 0x8e, 0xd5, 0xd8, 0x97, 0xfa, 0xce, 0x29, 0x55, 0x55, 0x21, 0x31, 0x31, 0x22, 0xf1, 0x07,
-	0x3a, 0x22, 0x26, 0x06, 0x7e, 0x01, 0x53, 0xc7, 0x4a, 0x5d, 0x98, 0x0a, 0xa4, 0x0c, 0xfc, 0x06,
-	0x26, 0xe4, 0xf3, 0xb5, 0x49, 0xea, 0xa6, 0x4a, 0x37, 0xa6, 0xf8, 0xee, 0x7d, 0xef, 0xf9, 0x7b,
-	0xdf, 0xf7, 0xf2, 0x0c, 0xe6, 0xfd, 0x1d, 0xde, 0xa2, 0x0c, 0x05, 0x84, 0x6f, 0xd3, 0x70, 0x13,
-	0x75, 0xeb, 0x68, 0x2b, 0x22, 0xe1, 0x8e, 0xd9, 0x09, 0x29, 0xa7, 0xf0, 0x66, 0x12, 0x36, 0x65,
-	0xd8, 0xec, 0xd6, 0xcb, 0xb3, 0x2e, 0x75, 0xa9, 0x88, 0xa2, 0xf8, 0x29, 0x01, 0x96, 0x4b, 0x2e,
-	0xa5, 0x6e, 0x9b, 0x20, 0x71, 0x6a, 0x46, 0x1b, 0x08, 0x07, 0xb2, 0x46, 0xf9, 0xb6, 0x0c, 0xe1,
-	0x8e, 0x87, 0x70, 0x10, 0x50, 0x8e, 0xb9, 0x47, 0x03, 0x26, 0xa3, 0xba, 0x4d, 0x99, 0x4f, 0x19,
-	0x6a, 0x62, 0x46, 0x50, 0xb7, 0xde, 0x24, 0x1c, 0xd7, 0x91, 0x4d, 0xbd, 0x40, 0xc6, 0x17, 0x06,
-	0xe3, 0x82, 0xda, 0x19, 0xaa, 0x83, 0x5d, 0x2f, 0x10, 0xc5, 0x4e, 0x6b, 0xa5, 0x9b, 0xb1, 0x23,
-	0xc6, 0xa9, 0x9f, 0xc4, 0x8d, 0x27, 0x60, 0xfe, 0x55, 0x5c, 0x61, 0x99, 0x53, 0xdf, 0xb3, 0xd7,
-	0xa2, 0x36, 0xf7, 0x1a, 0x2d, 0xec, 0x05, 0x16, 0x61, 0x1d, 0x1a, 0x30, 0x02, 0x35, 0x30, 0x19,
-	0x12, 0x16, 0xb5, 0x39, 0xd3, 0x94, 0x6a, 0xb6, 0x56, 0xb4, 0x4e, 0x8f, 0xc6, 0x91, 0x0a, 0xe6,
-	0x44, 0x6e, 0x23, 0xa4, 0x8c, 0xc9, 0xac, 0xad, 0x88, 0x30, 0x0e, 0xe7, 0xc0, 0x04, 0x23, 0x81,
-	0x43, 0x42, 0x4d, 0xa9, 0x2a, 0xb5, 0x82, 0x25, 0x4f, 0x10, 0x82, 0xdc, 0x46, 0x48, 0x7d, 0x4d,
-	0x15, 0xb7, 0xe2, 0x19, 0xce, 0x00, 0x95, 0x53, 0x2d, 0x2b, 0x6e, 0x54, 0x4e, 0x61, 0x0d, 0x64,
-	0x7d, 0xe6, 0x6a, 0xb9, 0xaa, 0x52, 0x2b, 0xae, 0xcc, 0xfd, 0x3d, 0xae, 0x40, 0x0b, 0x6f, 0x37,
-	0x68, 0xc0, 0x43, 0x6c, 0xf3, 0x35, 0xc2, 0x18, 0x76, 0x89, 0x15, 0x43, 0x20, 0x06, 0xf9, 0x8d,
-	0x28, 0x70, 0x98, 0x96, 0xaf, 0x66, 0x6b, 0xd3, 0x4b, 0x25, 0x33, 0xd1, 0xc5, 0x8c, 0x75, 0x31,
-	0xa5, 0x22, 0x66, 0x83, 0x7a, 0xc1, 0xca, 0xe2, 0xc1, 0x71, 0x25, 0xf3, 0xf9, 0x47, 0xa5, 0xe6,
-	0x7a, 0xbc, 0x15, 0x35, 0x4d, 0x9b, 0xfa, 0x48, 0x8a, 0x98, 0xfc, 0x3c, 0x60, 0xce, 0x26, 0xe2,
-	0x3b, 0x1d, 0xc2, 0x44, 0x02, 0xb3, 0x92, 0xca, 0xd0, 0x00, 0x45, 0x87, 0x74, 0x62, 0xf2, 0x81,
-	0xed, 0x11, 0xa6, 0x4d, 0x54, 0xb3, 0xb5, 0x82, 0x35, 0x74, 0x07, 0x0d, 0x70, 0x2d, 0x6e, 0x64,
-	0xdd, 0x8e, 0x15, 0x58, 0xf7, 0x1c, 0x6d, 0x52, 0xf4, 0x32, 0x1d, 0x5f, 0x0a, 0x55, 0x56, 0x1d,
-	0xa8, 0x83, 0x69, 0x4e, 0xfb, 0x88, 0x29, 0x81, 0x28, 0x70, 0x2a, 0xe3, 0x4f, 0xa7, 0xde, 0xef,
-	0x57, 0x94, 0x3f, 0xfb, 0x95, 0x8c, 0xd1, 0x00, 0xb7, 0x52, 0xa2, 0x4a, 0x2b, 0x20, 0xc8, 0x39,
-	0x98, 0x63, 0xa1, 0x69, 0xd1, 0x12, 0xcf, 0x70, 0x16, 0xe4, 0x49, 0x18, 0xd2, 0x50, 0x4a, 0x9a,
-	0x1c, 0x8c, 0xb7, 0xd2, 0x99, 0x41, 0x3f, 0x13, 0x67, 0xee, 0x80, 0x19, 0x3f, 0xbe, 0xec, 0x73,
-	0x49, 0x1c, 0x2a, 0xfa, 0x67, 0xd0, 0x55, 0x07, 0x3e, 0x02, 0x40, 0xcc, 0xd5, 0xba, 0x78, 0x9f,
-	0x7a, 0xa9, 0x15, 0x05, 0x81, 0x7c, 0x8e, 0x39, 0x1e, 0xe8, 0xe2, 0x85, 0xec, 0xe2, 0x82, 0x81,
-	0x5a, 0x18, 0xec, 0x62, 0x64, 0x55, 0x81, 0x31, 0xbe, 0xa8, 0x40, 0x4b, 0xd4, 0x90, 0xe1, 0x06,
-	0x6e, 0xb7, 0xaf, 0xd6, 0x4a, 0x7f, 0x14, 0xd5, 0xa1, 0x51, 0xd4, 0xc0, 0x24, 0x76, 0x9c, 0x90,
-	0x30, 0x26, 0x67, 0xef, 0xf4, 0x78, 0xae, 0xf9, 0xdc, 0x98, 0xcd, 0xff, 0x27, 0xd3, 0x68, 0xbc,
-	0x04, 0xa5, 0x0b, 0x14, 0xbb, 0xba, 0xf6, 0x4b, 0xdf, 0x72, 0x20, 0x2f, 0x2a, 0xc1, 0xaf, 0x0a,
-	0x28, 0x0e, 0x96, 0x83, 0xf7, 0xcc, 0xd4, 0x0e, 0x34, 0x47, 0xd9, 0x54, 0xbe, 0x3f, 0x1e, 0x38,
-	0x61, 0x68, 0xac, 0xbe, 0x3b, 0xfa, 0xfd, 0x51, 0x6d, 0xc0, 0xe5, 0xc1, 0x8d, 0xb5, 0x3b, 0xec,
-	0xf3, 0x1e, 0xb2, 0x65, 0x2a, 0xda, 0x95, 0xa6, 0xed, 0x21, 0x1b, 0xb7, 0xdb, 0x68, 0xb7, 0x6f,
-	0xdc, 0x1e, 0xdc, 0x57, 0xc0, 0xf5, 0x73, 0x43, 0x08, 0xef, 0x8e, 0x22, 0x93, 0xfa, 0xa7, 0x94,
-	0x17, 0xc6, 0x81, 0x4a, 0xd6, 0x8f, 0x05, 0xeb, 0x45, 0x68, 0x5e, 0xca, 0x3a, 0xa6, 0x35, 0x4c,
-	0x31, 0x02, 0x37, 0xce, 0x2f, 0x5e, 0x88, 0x46, 0xbd, 0x37, 0xbd, 0xa2, 0x13, 0xa2, 0x8b, 0xe3,
-	0x27, 0xc8, 0x31, 0x68, 0x49, 0x61, 0xfa, 0x3b, 0x66, 0xb4, 0x30, 0xa9, 0xe5, 0x3e, 0x5a, 0x98,
-	0xf4, 0xca, 0x5a, 0x79, 0x76, 0xf0, 0x4b, 0xcf, 0x7c, 0xea, 0xe9, 0x99, 0x83, 0x9e, 0xae, 0x1c,
-	0xf6, 0x74, 0xe5, 0x67, 0x4f, 0x57, 0x3e, 0x9c, 0xe8, 0x99, 0xc3, 0x13, 0x3d, 0xf3, 0xfd, 0x44,
-	0xcf, 0xbc, 0x2e, 0xc9, 0x0f, 0x54, 0xb7, 0x8e, 0xde, 0x9c, 0xa9, 0x27, 0x66, 0xbf, 0x39, 0x21,
-	0x3e, 0x51, 0x0f, 0xff, 0x05, 0x00, 0x00, 0xff, 0xff, 0x64, 0x28, 0xd9, 0x94, 0x91, 0x07, 0x00,
-	0x00,
+	// 592 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x53, 0x3f, 0x6f, 0xd3, 0x40,
+	0x1c, 0xb5, 0xd3, 0x3f, 0xd0, 0x23, 0x02, 0x71, 0x42, 0xc5, 0x89, 0xc0, 0x89, 0x2c, 0x86, 0x50,
+	0xc0, 0xd7, 0x14, 0xc1, 0x00, 0x13, 0x0d, 0x08, 0x75, 0xe8, 0x80, 0x47, 0x96, 0xea, 0x62, 0x5f,
+	0x1d, 0xab, 0xf6, 0x9d, 0xeb, 0x3b, 0xa7, 0x44, 0x51, 0x84, 0xc4, 0xc4, 0x88, 0xc4, 0x17, 0xc8,
+	0x88, 0x98, 0x18, 0xf8, 0x10, 0x19, 0x2b, 0xb1, 0x30, 0x15, 0x9a, 0x30, 0xf0, 0x19, 0x98, 0x90,
+	0xcf, 0x97, 0x90, 0x36, 0xb4, 0x4a, 0x27, 0xfb, 0xee, 0xbd, 0x7b, 0x7a, 0xef, 0xde, 0xfd, 0xc0,
+	0xed, 0xa8, 0x23, 0x5a, 0x8c, 0x23, 0x4a, 0xc4, 0x01, 0x4b, 0xf6, 0x50, 0xbb, 0x8e, 0xf6, 0x53,
+	0x92, 0x74, 0xec, 0x38, 0x61, 0x82, 0xc1, 0xeb, 0x39, 0x6c, 0x2b, 0xd8, 0x6e, 0xd7, 0xcb, 0x37,
+	0x7c, 0xe6, 0x33, 0x89, 0xa2, 0xec, 0x2f, 0x27, 0x96, 0x4b, 0x3e, 0x63, 0x7e, 0x48, 0x90, 0x5c,
+	0x35, 0xd3, 0x5d, 0x84, 0xa9, 0xd2, 0x28, 0xdf, 0x52, 0x10, 0x8e, 0x03, 0x84, 0x29, 0x65, 0x02,
+	0x8b, 0x80, 0x51, 0xae, 0x50, 0xd3, 0x65, 0x3c, 0x62, 0x1c, 0x35, 0x31, 0x27, 0xa8, 0x5d, 0x6f,
+	0x12, 0x81, 0xeb, 0xc8, 0x65, 0x01, 0x55, 0xf8, 0xda, 0x34, 0x2e, 0xad, 0x4d, 0x58, 0x31, 0xf6,
+	0x03, 0x2a, 0xc5, 0xc6, 0x5a, 0xb3, 0x61, 0xdc, 0x94, 0x0b, 0x16, 0xe5, 0xb8, 0xf5, 0x16, 0xac,
+	0xbe, 0xca, 0x14, 0xb6, 0xd3, 0x50, 0x04, 0x8d, 0x16, 0x0e, 0xa8, 0x43, 0xf6, 0x53, 0xc2, 0x05,
+	0xbc, 0x03, 0xae, 0x46, 0xd9, 0xe6, 0x8e, 0x9b, 0xed, 0xee, 0x04, 0x9e, 0xa1, 0x57, 0xf5, 0xda,
+	0x8a, 0x53, 0x8c, 0x26, 0xd4, 0x2d, 0x0f, 0x3e, 0x02, 0x40, 0x3a, 0xd8, 0xf1, 0xb0, 0xc0, 0x46,
+	0xa1, 0xaa, 0xd7, 0x8a, 0x9b, 0xab, 0x7f, 0x8e, 0x2a, 0xd0, 0xc1, 0x07, 0x0d, 0x46, 0x45, 0x82,
+	0x5d, 0xb1, 0x4d, 0x38, 0xc7, 0x3e, 0x71, 0x56, 0x24, 0xf3, 0x39, 0x16, 0xf8, 0xc9, 0xe5, 0xf7,
+	0xfd, 0x8a, 0xfe, 0xbb, 0x5f, 0xd1, 0xac, 0x17, 0xe0, 0xe6, 0x8c, 0x01, 0x1e, 0x33, 0xca, 0x09,
+	0x5c, 0x03, 0x8b, 0x52, 0x55, 0x3f, 0x57, 0x55, 0x72, 0xac, 0x2f, 0x05, 0x60, 0x48, 0x9d, 0x31,
+	0xdc, 0xc0, 0x61, 0x78, 0xb1, 0x28, 0xab, 0x60, 0x99, 0x13, 0xea, 0x91, 0x44, 0xc6, 0x58, 0x71,
+	0xd4, 0x0a, 0x1a, 0xe0, 0x12, 0xf6, 0xbc, 0x84, 0x70, 0x6e, 0x2c, 0x48, 0x60, 0xbc, 0x3c, 0x15,
+	0x7e, 0x71, 0xce, 0xf0, 0x10, 0x83, 0xa5, 0xdd, 0x94, 0x7a, 0xdc, 0x58, 0xaa, 0x2e, 0xd4, 0xae,
+	0x6c, 0x94, 0xec, 0xbc, 0x4f, 0x3b, 0xeb, 0xd3, 0x56, 0x4d, 0xda, 0x0d, 0x16, 0xd0, 0xcd, 0xf5,
+	0xc1, 0x51, 0x45, 0xfb, 0xfc, 0xa3, 0x52, 0xf3, 0x03, 0xd1, 0x4a, 0x9b, 0xb6, 0xcb, 0x22, 0xa4,
+	0xca, 0xcf, 0x3f, 0x0f, 0xb8, 0xb7, 0x87, 0x44, 0x27, 0x26, 0x5c, 0x1e, 0xe0, 0x4e, 0xae, 0x0c,
+	0x2d, 0x50, 0xf4, 0x48, 0x9c, 0xf9, 0xa7, 0x6e, 0x40, 0xb8, 0xb1, 0x5c, 0x5d, 0xc8, 0xf2, 0x4e,
+	0xef, 0x59, 0x2f, 0x41, 0xe9, 0x3f, 0x37, 0x76, 0xf1, 0xbb, 0xdf, 0x38, 0x2e, 0x80, 0x25, 0xa9,
+	0x04, 0xbf, 0xea, 0xa0, 0x38, 0x2d, 0x07, 0xef, 0xd9, 0x33, 0xd3, 0x62, 0x9f, 0x55, 0x53, 0xf9,
+	0xfe, 0x7c, 0xe4, 0xdc, 0xa1, 0xb5, 0xf5, 0xee, 0xdb, 0xaf, 0x8f, 0x85, 0x06, 0x7c, 0x36, 0xfd,
+	0xb6, 0xbb, 0x27, 0x7b, 0xee, 0x21, 0x57, 0x1d, 0x45, 0x5d, 0x55, 0x5a, 0x0f, 0xb9, 0x38, 0x0c,
+	0x51, 0xf7, 0x5f, 0x71, 0x3d, 0xd8, 0xd7, 0xc1, 0xb5, 0x53, 0x8f, 0x10, 0xde, 0x3d, 0xcb, 0xcc,
+	0xcc, 0xa4, 0x94, 0xd7, 0xe6, 0xa1, 0x2a, 0xd7, 0x8f, 0xa5, 0xeb, 0x75, 0x68, 0x9f, 0xeb, 0x3a,
+	0xb3, 0x75, 0xc2, 0xe2, 0xe6, 0xd3, 0xc1, 0xb1, 0xa9, 0x7d, 0x1a, 0x9a, 0xda, 0x60, 0x68, 0xea,
+	0x87, 0x43, 0x53, 0xff, 0x39, 0x34, 0xf5, 0x0f, 0x23, 0x53, 0x3b, 0x1c, 0x99, 0xda, 0xf7, 0x91,
+	0xa9, 0xbd, 0x2e, 0xa9, 0x49, 0x6f, 0xd7, 0xd1, 0x9b, 0x89, 0xb8, 0x7c, 0x1a, 0xcd, 0x65, 0x39,
+	0xeb, 0x0f, 0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0xb1, 0xe2, 0x3c, 0x26, 0xda, 0x04, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -477,9 +280,6 @@ type QueryClient interface {
 	// ContractCall
 	ContractCall(ctx context.Context, in *QueryContractCallRequest, opts ...grpc.CallOption) (*QueryContractCallResponse, error)
 	QueryMultiChain(ctx context.Context, in *QueryMultiChainRequest, opts ...grpc.CallOption) (*QueryMultiChainResponse, error)
-	AtomicMultiChain(ctx context.Context, in *QueryAtomicMultiChainRequest, opts ...grpc.CallOption) (*QueryAtomicMultiChainResponse, error)
-	// only executed internally, sent by wasmx
-	QueryCrossChain(ctx context.Context, in *QueryCrossChainRequest, opts ...grpc.CallOption) (*QueryCrossChainResponse, error)
 }
 
 type queryClient struct {
@@ -508,32 +308,11 @@ func (c *queryClient) QueryMultiChain(ctx context.Context, in *QueryMultiChainRe
 	return out, nil
 }
 
-func (c *queryClient) AtomicMultiChain(ctx context.Context, in *QueryAtomicMultiChainRequest, opts ...grpc.CallOption) (*QueryAtomicMultiChainResponse, error) {
-	out := new(QueryAtomicMultiChainResponse)
-	err := c.cc.Invoke(ctx, "/mythos.network.v1.Query/AtomicMultiChain", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) QueryCrossChain(ctx context.Context, in *QueryCrossChainRequest, opts ...grpc.CallOption) (*QueryCrossChainResponse, error) {
-	out := new(QueryCrossChainResponse)
-	err := c.cc.Invoke(ctx, "/mythos.network.v1.Query/QueryCrossChain", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // QueryServer is the server API for Query service.
 type QueryServer interface {
 	// ContractCall
 	ContractCall(context.Context, *QueryContractCallRequest) (*QueryContractCallResponse, error)
 	QueryMultiChain(context.Context, *QueryMultiChainRequest) (*QueryMultiChainResponse, error)
-	AtomicMultiChain(context.Context, *QueryAtomicMultiChainRequest) (*QueryAtomicMultiChainResponse, error)
-	// only executed internally, sent by wasmx
-	QueryCrossChain(context.Context, *QueryCrossChainRequest) (*QueryCrossChainResponse, error)
 }
 
 // UnimplementedQueryServer can be embedded to have forward compatible implementations.
@@ -545,12 +324,6 @@ func (*UnimplementedQueryServer) ContractCall(ctx context.Context, req *QueryCon
 }
 func (*UnimplementedQueryServer) QueryMultiChain(ctx context.Context, req *QueryMultiChainRequest) (*QueryMultiChainResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryMultiChain not implemented")
-}
-func (*UnimplementedQueryServer) AtomicMultiChain(ctx context.Context, req *QueryAtomicMultiChainRequest) (*QueryAtomicMultiChainResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AtomicMultiChain not implemented")
-}
-func (*UnimplementedQueryServer) QueryCrossChain(ctx context.Context, req *QueryCrossChainRequest) (*QueryCrossChainResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method QueryCrossChain not implemented")
 }
 
 func RegisterQueryServer(s grpc1.Server, srv QueryServer) {
@@ -593,42 +366,6 @@ func _Query_QueryMultiChain_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_AtomicMultiChain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryAtomicMultiChainRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).AtomicMultiChain(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mythos.network.v1.Query/AtomicMultiChain",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).AtomicMultiChain(ctx, req.(*QueryAtomicMultiChainRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_QueryCrossChain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryCrossChainRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).QueryCrossChain(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mythos.network.v1.Query/QueryCrossChain",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).QueryCrossChain(ctx, req.(*QueryCrossChainRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 var _Query_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "mythos.network.v1.Query",
 	HandlerType: (*QueryServer)(nil),
@@ -641,174 +378,9 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			MethodName: "QueryMultiChain",
 			Handler:    _Query_QueryMultiChain_Handler,
 		},
-		{
-			MethodName: "AtomicMultiChain",
-			Handler:    _Query_AtomicMultiChain_Handler,
-		},
-		{
-			MethodName: "QueryCrossChain",
-			Handler:    _Query_QueryCrossChain_Handler,
-		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "mythos/network/v1/query.proto",
-}
-
-func (m *QueryAtomicMultiChainResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *QueryAtomicMultiChainResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *QueryAtomicMultiChainResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Results) > 0 {
-		for iNdEx := len(m.Results) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Results[iNdEx])
-			copy(dAtA[i:], m.Results[iNdEx])
-			i = encodeVarintQuery(dAtA, i, uint64(len(m.Results[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *QueryCrossChainRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *QueryCrossChainRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *QueryCrossChainRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.ToChainId) > 0 {
-		i -= len(m.ToChainId)
-		copy(dAtA[i:], m.ToChainId)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.ToChainId)))
-		i--
-		dAtA[i] = 0x42
-	}
-	if len(m.FromChainId) > 0 {
-		i -= len(m.FromChainId)
-		copy(dAtA[i:], m.FromChainId)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.FromChainId)))
-		i--
-		dAtA[i] = 0x3a
-	}
-	if len(m.Dependencies) > 0 {
-		for iNdEx := len(m.Dependencies) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Dependencies[iNdEx])
-			copy(dAtA[i:], m.Dependencies[iNdEx])
-			i = encodeVarintQuery(dAtA, i, uint64(len(m.Dependencies[iNdEx])))
-			i--
-			dAtA[i] = 0x32
-		}
-	}
-	if len(m.Funds) > 0 {
-		for iNdEx := len(m.Funds) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Funds[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintQuery(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x2a
-		}
-	}
-	if len(m.Msg) > 0 {
-		i -= len(m.Msg)
-		copy(dAtA[i:], m.Msg)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Msg)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.To) > 0 {
-		i -= len(m.To)
-		copy(dAtA[i:], m.To)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.To)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.From) > 0 {
-		i -= len(m.From)
-		copy(dAtA[i:], m.From)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.From)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Sender) > 0 {
-		i -= len(m.Sender)
-		copy(dAtA[i:], m.Sender)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Sender)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *QueryCrossChainResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *QueryCrossChainResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *QueryCrossChainResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Error) > 0 {
-		i -= len(m.Error)
-		copy(dAtA[i:], m.Error)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Error)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Data) > 0 {
-		i -= len(m.Data)
-		copy(dAtA[i:], m.Data)
-		i = encodeVarintQuery(dAtA, i, uint64(len(m.Data)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
 }
 
 func (m *QueryMultiChainRequest) Marshal() (dAtA []byte, err error) {
@@ -993,83 +565,6 @@ func encodeVarintQuery(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *QueryAtomicMultiChainResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Results) > 0 {
-		for _, b := range m.Results {
-			l = len(b)
-			n += 1 + l + sovQuery(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *QueryCrossChainRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Sender)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	l = len(m.From)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	l = len(m.To)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	l = len(m.Msg)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	if len(m.Funds) > 0 {
-		for _, e := range m.Funds {
-			l = e.Size()
-			n += 1 + l + sovQuery(uint64(l))
-		}
-	}
-	if len(m.Dependencies) > 0 {
-		for _, s := range m.Dependencies {
-			l = len(s)
-			n += 1 + l + sovQuery(uint64(l))
-		}
-	}
-	l = len(m.FromChainId)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	l = len(m.ToChainId)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	return n
-}
-
-func (m *QueryCrossChainResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Data)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	l = len(m.Error)
-	if l > 0 {
-		n += 1 + l + sovQuery(uint64(l))
-	}
-	return n
-}
-
 func (m *QueryMultiChainRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1155,514 +650,6 @@ func sovQuery(x uint64) (n int) {
 }
 func sozQuery(x uint64) (n int) {
 	return sovQuery(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (m *QueryAtomicMultiChainResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowQuery
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: QueryAtomicMultiChainResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryAtomicMultiChainResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Results", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Results = append(m.Results, make([]byte, postIndex-iNdEx))
-			copy(m.Results[len(m.Results)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipQuery(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *QueryCrossChainRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowQuery
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: QueryCrossChainRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryCrossChainRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sender", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Sender = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field From", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.From = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field To", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.To = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Msg", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Msg = append(m.Msg[:0], dAtA[iNdEx:postIndex]...)
-			if m.Msg == nil {
-				m.Msg = []byte{}
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Funds", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Funds = append(m.Funds, types.Coin{})
-			if err := m.Funds[len(m.Funds)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Dependencies", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Dependencies = append(m.Dependencies, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FromChainId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.FromChainId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ToChainId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ToChainId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipQuery(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *QueryCrossChainResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowQuery
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: QueryCrossChainResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: QueryCrossChainResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
-			if m.Data == nil {
-				m.Data = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowQuery
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthQuery
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Error = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipQuery(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthQuery
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
 }
 func (m *QueryMultiChainRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)

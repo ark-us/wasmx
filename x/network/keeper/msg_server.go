@@ -150,6 +150,6 @@ func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteA
 	return m.Keeper.ExecuteAtomicTx(goCtx, msg)
 }
 
-func (m msgServer) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainTxRequest) (*types.MsgExecuteCrossChainTxResponse, error) {
+func (m msgServer) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainCallRequest) (*types.MsgExecuteCrossChainCallResponse, error) {
 	return m.Keeper.ExecuteCrossChainTx(goCtx, msg)
 }

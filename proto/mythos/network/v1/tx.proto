@@ -42,25 +42,25 @@ service Msg {
     rpc ExecuteAtomicTx(MsgExecuteAtomicTxRequest) returns (MsgExecuteAtomicTxResponse);
 
     // only executed internally, sent by wasmx
-    rpc ExecuteCrossChainTx(MsgExecuteCrossChainTxRequest) returns (MsgExecuteCrossChainTxResponse);
+    rpc ExecuteCrossChainTx(MsgExecuteCrossChainCallRequest) returns (MsgExecuteCrossChainCallResponse);
 }
 
-message MsgExecuteCrossChainTxRequestIndexed {
-    option (amino.name) = "network/MsgExecuteCrossChainTxRequestIndexed";
+message MsgExecuteCrossChainCallRequestIndexed {
+    option (amino.name) = "network/MsgExecuteCrossChainCallRequestIndexed";
 
-    MsgExecuteCrossChainTxRequest request = 1;
+    MsgExecuteCrossChainCallRequest request = 1;
     int32 index = 2;
 }
 
-message MsgExecuteCrossChainTxResponseIndexed {
-    option (amino.name) = "network/MsgExecuteCrossChainTxResponseIndexed";
+message MsgExecuteCrossChainCallResponseIndexed {
+    option (amino.name) = "network/MsgExecuteCrossChainCallResponseIndexed";
 
-    MsgExecuteCrossChainTxResponse data = 1;
+    MsgExecuteCrossChainCallResponse data = 1;
     int32 index = 2;
 }
 
-message MsgExecuteCrossChainTxRequest {
-    option (amino.name) = "network/MsgExecuteCrossChainTxRequest";
+message MsgExecuteCrossChainCallRequest {
+    option (amino.name) = "network/MsgExecuteCrossChainCallRequest";
     option (cosmos.msg.v1.signer) = "sender";
 
     option (gogoproto.equal)           = false;
@@ -84,9 +84,10 @@ message MsgExecuteCrossChainTxRequest {
     repeated string dependencies = 6;
     string from_chain_id = 7;
     string to_chain_id = 8;
+    bool is_query = 9;
 }
 
-message MsgExecuteCrossChainTxResponse {
+message MsgExecuteCrossChainCallResponse {
     bytes data = 1;
     string error = 2;
 }

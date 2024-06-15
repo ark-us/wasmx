@@ -21,10 +21,10 @@ type MultiChainContext struct {
 	ResultChannels map[string]*chan types.MsgExecuteAtomicTxResponse
 
 	// chainId => channel
-	InternalCallChannels map[string]*chan types.MsgExecuteCrossChainTxRequestIndexed
+	InternalCallChannels map[string]*chan types.MsgExecuteCrossChainCallRequestIndexed
 
 	// chainId => channel
-	InternalCallResultChannels map[string]*chan types.MsgExecuteCrossChainTxResponseIndexed
+	InternalCallResultChannels map[string]*chan types.MsgExecuteCrossChainCallResponseIndexed
 
 	ChainIds               []string
 	CurrentAtomicTxHash    []byte
@@ -48,7 +48,7 @@ func (mcctx *MultiChainContext) SetResultChannel(chainId string, value *chan typ
 	return nil
 }
 
-func (mcctx *MultiChainContext) GetInternalCallChannel(chainId string) (*chan types.MsgExecuteCrossChainTxRequestIndexed, error) {
+func (mcctx *MultiChainContext) GetInternalCallChannel(chainId string) (*chan types.MsgExecuteCrossChainCallRequestIndexed, error) {
 	mcchannel, ok := mcctx.InternalCallChannels[chainId]
 	if !ok {
 		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
@@ -56,12 +56,12 @@ func (mcctx *MultiChainContext) GetInternalCallChannel(chainId string) (*chan ty
 	return mcchannel, nil
 }
 
-func (mcctx *MultiChainContext) SetInternalCallChannel(chainId string, value *chan types.MsgExecuteCrossChainTxRequestIndexed) error {
+func (mcctx *MultiChainContext) SetInternalCallChannel(chainId string, value *chan types.MsgExecuteCrossChainCallRequestIndexed) error {
 	mcctx.InternalCallChannels[chainId] = value
 	return nil
 }
 
-func (mcctx *MultiChainContext) GetInternalCallResultChannel(chainId string) (*chan types.MsgExecuteCrossChainTxResponseIndexed, error) {
+func (mcctx *MultiChainContext) GetInternalCallResultChannel(chainId string) (*chan types.MsgExecuteCrossChainCallResponseIndexed, error) {
 	mcchannel, ok := mcctx.InternalCallResultChannels[chainId]
 	if !ok {
 		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
@@ -69,7 +69,7 @@ func (mcctx *MultiChainContext) GetInternalCallResultChannel(chainId string) (*c
 	return mcchannel, nil
 }
 
-func (mcctx *MultiChainContext) SetInternalCallResultChannel(chainId string, value *chan types.MsgExecuteCrossChainTxResponseIndexed) error {
+func (mcctx *MultiChainContext) SetInternalCallResultChannel(chainId string, value *chan types.MsgExecuteCrossChainCallResponseIndexed) error {
 	mcctx.InternalCallResultChannels[chainId] = value
 	return nil
 }
@@ -90,8 +90,8 @@ func (mcctx *MultiChainContext) CloseChannels() error {
 func ContextWithMultiChainContext(g *errgroup.Group, ctx context.Context, logger log.Logger) context.Context {
 	mcctx := &MultiChainContext{
 		ResultChannels:             make(map[string]*chan types.MsgExecuteAtomicTxResponse, 0),
-		InternalCallChannels:       make(map[string]*chan types.MsgExecuteCrossChainTxRequestIndexed, 0),
-		InternalCallResultChannels: make(map[string]*chan types.MsgExecuteCrossChainTxResponseIndexed, 0),
+		InternalCallChannels:       make(map[string]*chan types.MsgExecuteCrossChainCallRequestIndexed, 0),
+		InternalCallResultChannels: make(map[string]*chan types.MsgExecuteCrossChainCallResponseIndexed, 0),
 		CurrentAtomicTxHash:        make([]byte, 0),
 		CurrentSubTxIndex:          0,
 		CurrentInternalCrossTx:     0,

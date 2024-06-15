@@ -17,10 +17,6 @@ import (
 
 var _ types.QueryServer = &Keeper{}
 
-func (k *Keeper) AtomicMultiChain(goCtx context.Context, req *types.QueryAtomicMultiChainRequest) (*types.QueryAtomicMultiChainResponse, error) {
-	return nil, nil
-}
-
 func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiChainRequest) (*types.QueryMultiChainResponse, error) {
 	abciReq, err := mcodec.RequestQueryFromBz(req.QueryData)
 	if err != nil {
@@ -78,8 +74,4 @@ func (k *Keeper) ContractCall(goCtx context.Context, req *types.QueryContractCal
 	}
 
 	return &types.QueryContractCallResponse{Data: resp}, nil
-}
-
-func (k *Keeper) QueryCrossChain(goCtx context.Context, req *types.QueryCrossChainRequest) (*types.QueryCrossChainResponse, error) {
-	return nil, nil
 }
