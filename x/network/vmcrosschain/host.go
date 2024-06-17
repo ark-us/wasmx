@@ -1,6 +1,7 @@
 package vmcrosschain
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -9,6 +10,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcfg "mythos/v1/config"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm"
@@ -231,6 +233,54 @@ func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, resp WrappedRe
 	return returns, wasmedge.Result_Success
 }
 
+// isAtomicTxInExecution(*MsgIsAtomicTxInExecutionRequest) (*abci.MsgIsAtomicTxInExecutionResponse, error)
+func isAtomicTxInExecution(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req MsgIsAtomicTxInExecutionRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	resp := &MsgIsAtomicTxInExecutionResponse{IsInExecution: false}
+
+	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	_, err = multichainapp.GetApp(req.SubChainId)
+	if err != nil {
+		return returnIsInExecutionResult(ctx, callframe, resp)
+	}
+
+	// check if chain has channel opened
+	mcctx, err := types.GetMultiChainContext(ctx.GoContextParent)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	if bytes.Equal(mcctx.CurrentAtomicTxHash, req.TxHash) {
+		resp.IsInExecution = true
+	}
+	return returnIsInExecutionResult(ctx, callframe, resp)
+}
+
+func returnIsInExecutionResult(ctx *Context, callframe *wasmedge.CallingFrame, resp *MsgIsAtomicTxInExecutionResponse) ([]interface{}, wasmedge.Result) {
+	respbz, err := json.Marshal(resp)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, respbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	context := &Context{Context: ctx_}
 	env := wasmedge.NewModule(HOST_WASMX_ENV_CROSSCHAIN)
@@ -242,5 +292,6 @@ func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	env.AddFunction("executeCrossChainTx", wasmedge.NewFunction(functype_i32_i32, executeCrossChainTx, context, 0))
 	env.AddFunction("executeCrossChainQuery", wasmedge.NewFunction(functype_i32_i32, executeCrossChainQuery, context, 0))
 	env.AddFunction("executeCrossChainQueryNonDeterministic", wasmedge.NewFunction(functype_i32_i32, executeCrossChainQueryNonDeterministic, context, 0))
+	env.AddFunction("isAtomicTxInExecution", wasmedge.NewFunction(functype_i32_i32, isAtomicTxInExecution, context, 0))
 	return env
 }

@@ -76,7 +76,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	txhash := merkle.HashFromByteSlices(msg.GetTxs())
-	mcctx, err := GetMultiChainContext(k.goContextParent)
+	mcctx, err := types.GetMultiChainContext(k.goContextParent)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 
 	k.Logger(ctx).Info("executing crosschain call", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To, "is_query", msg.IsQuery)
 
-	mcctx, err := GetMultiChainContext(k.goContextParent)
+	mcctx, err := types.GetMultiChainContext(k.goContextParent)
 	if err != nil {
 		return nil, err
 	}

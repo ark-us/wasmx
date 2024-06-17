@@ -15,6 +15,5 @@ message MsgExecuteAtomicTxRequest {
     option (gogoproto.goproto_getters) = true;
     // protobuf encoded transactions
     repeated bytes txs = 1;
-    string leader_chain_id = 2;
-    bytes sender = 3;
+    bytes sender = 2;
 }

@@ -56,7 +56,7 @@ import (
 	server "mythos/v1/server"
 	serverconfig "mythos/v1/server/config"
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	network "mythos/v1/x/network/keeper"
+	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -86,7 +86,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
-	goctx = network.ContextWithMultiChainContext(g, goctx, logger)
+	goctx = networktypes.ContextWithMultiChainContext(g, goctx, logger)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)

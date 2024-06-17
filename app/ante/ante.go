@@ -3,6 +3,7 @@ package ante
 import (
 	"fmt"
 	"runtime/debug"
+	"slices"
 
 	errorsmod "cosmossdk.io/errors"
 	sdklog "cosmossdk.io/log"
@@ -54,6 +55,19 @@ func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOp
 				case TypeURL_ExtensionOptionEthereumTx:
 					anteHandler = newEthAnteHandler(options)
 				case TypeURL_ExtensionOptionAtomicMultiChainTx:
+					ext := opts[0].GetCachedValue().(*networktypes.ExtensionOptionAtomicMultiChainTx)
+					if !slices.Contains(ext.ChainIds, ext.LeaderChainId) {
+						return ctx, errorsmod.Wrapf(
+							errortypes.ErrInvalidRequest,
+							"rejecting tx with ExtensionOptionAtomicMultiChainTx: leader chain id is not included in the chain ids array",
+						)
+					}
+					if !slices.Contains(ext.ChainIds, ctx.ChainID()) {
+						return ctx, errorsmod.Wrapf(
+							errortypes.ErrInvalidRequest,
+							"rejecting tx with ExtensionOptionAtomicMultiChainTx: not for current chain",
+						)
+					}
 					// CheckTx - only the AnteHandler is executed
 					// all the rest execute the msgs, so the subtx antehandlers are executed then
 					isCheck := ctx.ExecMode() == sdk.ExecModeCheck || ctx.ExecMode() == sdk.ExecModeReCheck
@@ -81,6 +95,28 @@ func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOp
 						tx, err := txConfig.TxDecoder()(txbz)
 						if err != nil {
 							return ctx, err
+						}
+						// we check that the chainId of the subtx is included in the atomic wrapper
+						txWithExtensions_, ok := tx.(authante.HasExtensionOptionsTx)
+						if !ok {
+							return ctx, errorsmod.Wrapf(
+								errortypes.ErrInvalidRequest,
+								"rejecting subtx with no ExtensionOptionMultiChainTx",
+							)
+						}
+						opts_ := txWithExtensions_.GetExtensionOptions()
+						if len(opts_) == 0 {
+							return ctx, errorsmod.Wrapf(
+								errortypes.ErrInvalidRequest,
+								"rejecting subtx with no ExtensionOptionMultiChainTx",
+							)
+						}
+						extsubtx := opts_[0].GetCachedValue().(*networktypes.ExtensionOptionMultiChainTx)
+						if !slices.Contains(ext.ChainIds, extsubtx.ChainId) {
+							return ctx, errorsmod.Wrapf(
+								errortypes.ErrInvalidRequest,
+								"rejecting subtx with chain_id not included in ExtensionOptionAtomicMultiChainTx",
+							)
 						}
 
 						ctx, err = anteHandler(ctx, tx, sim)

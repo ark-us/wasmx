@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/cosmos/gogoproto/proto"
+
 	sdkerr "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -92,4 +94,13 @@ func AnyToSdkMsg(cdc codec.Codec, anymsg *cdctypes.Any) (sdk.Msg, error) {
 		return nil, err
 	}
 	return sdkmsg, nil
+}
+
+func TxMsgDataFromBz(bz []byte) (*sdk.TxMsgData, error) {
+	var txmsgdata sdk.TxMsgData
+	err := proto.Unmarshal(bz, &txmsgdata)
+	if err != nil {
+		return nil, err
+	}
+	return &txmsgdata, nil
 }

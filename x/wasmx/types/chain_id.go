@@ -11,12 +11,19 @@ import (
 
 var (
 	regexChainID         = `[a-z0-9]{1,}`
+	regexLevelSeparator  = `_{0,1}`        // optional level separator
+	regexLevel           = `([0-9]*){0,1}` // optional level group
 	regexEIP155Separator = `_{1}`
 	regexEIP155          = `[1-9][0-9]*`
 	regexEpochSeparator  = `-{1}`
 	regexEpoch           = `[1-9][0-9]*`
-	wasmxChainID         = regexp.MustCompile(fmt.Sprintf(`^(%s)%s(%s)%s(%s)$`, regexChainID, regexEIP155Separator, regexEIP155, regexEpochSeparator, regexEpoch))
+	wasmxChainID         = regexp.MustCompile(fmt.Sprintf(`^(%s)%s%s%s(%s)%s(%s)$`, regexChainID, regexLevelSeparator, regexLevel, regexEIP155Separator, regexEIP155, regexEpochSeparator, regexEpoch))
+	// ^([a-z0-9]{1,})_{0,1}([1-9][0-9]*){0,1}_{1}([1-9][0-9]*)-{1}([1-9][0-9]*)$
 )
+
+// both should work, with or without level
+// mythos_8000-1
+// chain0_1_10001-1
 
 // IsValidChainID returns false if the given chain identifier is incorrectly formatted.
 func IsValidChainID(chainID string) bool {
@@ -32,14 +39,14 @@ func ParseChainID(chainID string) (*big.Int, error) {
 	}
 
 	matches := wasmxChainID.FindStringSubmatch(chainID)
-	if matches == nil || len(matches) != 4 || matches[1] == "" {
+	if matches == nil || len(matches) != 5 || matches[1] == "" {
 		return nil, sdkerr.Wrapf(ErrInvalidChainID, "matches for %s: %v", chainID, matches)
 	}
 
 	// verify that the chain-id entered is a base 10 integer
-	chainIDInt, ok := new(big.Int).SetString(matches[2], 10)
+	chainIDInt, ok := new(big.Int).SetString(matches[3], 10)
 	if !ok {
-		return nil, sdkerr.Wrapf(ErrInvalidChainID, "epoch %s must be base-10 integer format", matches[2])
+		return nil, sdkerr.Wrapf(ErrInvalidChainID, "epoch %s must be base-10 integer format", matches[3])
 	}
 
 	return chainIDInt, nil

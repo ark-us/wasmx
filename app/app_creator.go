@@ -20,7 +20,7 @@ import (
 	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
 	multichain "mythos/v1/multichain"
-	network "mythos/v1/x/network/keeper"
+	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -36,7 +36,7 @@ func NewAppCreator(
 ) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = vmp2p.WithP2PEmptyContext(ctx)
-	ctx = network.ContextWithMultiChainContext(g, ctx, logger)
+	ctx = networktypes.ContextWithMultiChainContext(g, ctx, logger)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)

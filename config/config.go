@@ -73,7 +73,7 @@ func GetChainConfig(chainId string) (*menc.ChainConfig, error) {
 	return &conf, nil
 }
 
-var LEVEL0_CHAIN_ID = "leveln_1000-1"
+var LEVEL0_CHAIN_ID = "level0_1000-1"
 var MYTHOS_CHAIN_ID_TEST = "mythos_7001-1"
 var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 

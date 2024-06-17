@@ -15,7 +15,8 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&RequestPing{}, "network/RequestPing", nil)
 	cdc.RegisterConcrete(&RequestBroadcastTx{}, "network/RequestBroadcastTx", nil)
 
-	cdc.RegisterConcrete(&MsgExecuteAtomicTxRequest{}, "network/MsgExecuteAtomicTxRequest", nil)
+	cdc.RegisterConcrete(&MsgExecuteAtomicTxRequest{}, "mythos.network.v1.MsgExecuteAtomicTxRequest", nil)
+	cdc.RegisterConcrete(&MsgExecuteAtomicTxResponse{}, "mythos.network.v1.MsgExecuteAtomicTxResponse", nil)
 
 	cdc.RegisterConcrete(&ExtensionOptionAtomicMultiChainTx{}, "network/ExtensionOptionAtomicMultiChainTx", nil)
 	cdc.RegisterConcrete(&ExtensionOptionMultiChainTx{}, "network/ExtensionOptionMultiChainTx", nil)
@@ -31,6 +32,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&RequestBroadcastTx{},
 
 		&MsgExecuteAtomicTxRequest{},
+		&MsgExecuteAtomicTxResponse{},
 	)
 
 	registry.RegisterImplementations(

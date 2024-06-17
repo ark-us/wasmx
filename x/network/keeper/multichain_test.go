@@ -9,7 +9,6 @@ import (
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
 
-	"cosmossdk.io/math"
 	sdkmath "cosmossdk.io/math"
 	txsigning "cosmossdk.io/x/tx/signing"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -302,7 +301,7 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
 
 	// create new subchain genesis registry
-	initialBalance, ok := math.NewIntFromString("10000000000100000000")
+	initialBalance, ok := sdkmath.NewIntFromString("10000000000100000000")
 	suite.Require().True(ok)
 	regreq, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterDefaultSubChain: &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
@@ -317,12 +316,12 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	suite.Require().NoError(err)
 
 	// TODO expected subchainId
-	subChainId := "ptestp_10001-1"
+	subChainId := "ptestp_1_1001-1"
 
 	// create genTx data to sign - call to level0
 	// buildGenTx query
 	// valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
-	valTokens, ok := math.NewIntFromString("10000000000000000000")
+	valTokens, ok := sdkmath.NewIntFromString("10000000000000000000")
 	suite.Require().True(ok)
 	validMsg := stakingtypes.MsgCreateValidator{
 		// TODO fix as-json.parse when description contains empty strings
@@ -441,7 +440,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
 
-	initialBalance, ok := math.NewIntFromString("10000000100000000000")
+	initialBalance, ok := sdkmath.NewIntFromString("10000000100000000000")
 	suite.Require().True(ok)
 	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
@@ -453,7 +452,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 
 	// create level1
 	subChainId2, _ := suite.createLevel1(mcfg.LEVEL0_CHAIN_ID, reqlevel1)
-	suite.Require().Equal("ptestp_10001-1", subChainId2)
+	suite.Require().Equal("ptestp_1_1001-1", subChainId2)
 
 	// get config
 	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
@@ -487,7 +486,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	txbz2, err := subchainapp.App.TxConfig().TxEncoder()(txbuilder2.GetTx())
 	s.Require().NoError(err)
 
-	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1, txbz2}, subChainId2)
+	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1, txbz2}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
@@ -549,7 +548,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
 
 	// create level1
-	initialBalance, ok := math.NewIntFromString("10000000100000000000")
+	initialBalance, ok := sdkmath.NewIntFromString("10000000100000000000")
 	suite.Require().True(ok)
 	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
@@ -559,7 +558,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 		InitialBalance: initialBalance.BigInt(),
 	}
 	subChainId2, _ := suite.createLevel1(mcfg.LEVEL0_CHAIN_ID, reqlevel1)
-	suite.Require().Equal("ptestp_10001-1", subChainId2)
+	suite.Require().Equal("ptestp_1_1001-1", subChainId2)
 
 	// get config
 	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
@@ -614,7 +613,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 
 	// we send it first on level1
 	suite.SetCurrentChain(subChainId2)
-	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2)
+	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
@@ -666,7 +665,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
 
 	// create level1
-	initialBalance, ok := math.NewIntFromString("10000000100000000000")
+	initialBalance, ok := sdkmath.NewIntFromString("10000000100000000000")
 	suite.Require().True(ok)
 	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
@@ -676,7 +675,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 		InitialBalance: initialBalance.BigInt(),
 	}
 	subChainId2, _ := suite.createLevel1(mcfg.LEVEL0_CHAIN_ID, reqlevel1)
-	suite.Require().Equal("ptestp_10001-1", subChainId2)
+	suite.Require().Equal("ptestp_1_1001-1", subChainId2)
 
 	// get config
 	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
@@ -735,7 +734,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 
 	// we send it first on level1
 	suite.SetCurrentChain(subChainId2)
-	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2)
+	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
@@ -754,6 +753,17 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	res, err := subchainapp.DeliverTxRaw(txbz)
 	s.Require().NoError(err)
 	s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+
+	txmsgdata, err := mcodec.TxMsgDataFromBz(res.Data)
+	s.Require().NoError(err)
+	s.Require().Equal(1, len(txmsgdata.MsgResponses))
+
+	var sdkmsg sdk.Msg
+	err = subchainapp.Chain.Codec.UnpackAny(txmsgdata.MsgResponses[0], &sdkmsg)
+	s.Require().NoError(err)
+	atomicres := sdkmsg.(*types.MsgExecuteAtomicTxResponse)
+	s.Require().Equal(1, len(atomicres.Results))
+	s.Require().Equal(abci.CodeTypeOK, atomicres.Results[0].Code)
 
 	suite.SetCurrentChain(subChainId2)
 	qmsg = []byte(`{"get":{"key":"hello"}}`)
@@ -781,7 +791,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
-	initialBalance, ok := math.NewIntFromString("10000000100000000000")
+	initialBalance, ok := sdkmath.NewIntFromString("10000000100000000000")
 	suite.Require().True(ok)
 	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
@@ -791,13 +801,13 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 		InitialBalance: initialBalance.BigInt(),
 	}
 	subChainId1, res := suite.createLevel1(chainId, reqlevel1)
-	suite.Require().Equal("ptestp_10001-1", subChainId1)
+	suite.Require().Equal("ptestp_1_1001-1", subChainId1)
 
 	// we expect 1 level2 was created
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
 	suite.Require().Equal(2, len(evs))
 	level2ChainId := appA.GetAttributeValueFromEvent(evs[1], "chain_id")
-	suite.Require().Equal("leveln_20001-1", level2ChainId)
+	suite.Require().Equal("leveln_2_2001-1", level2ChainId)
 
 	// check level1 has 3 chain
 	qmsg := []byte(`{"GetSubChainIdsByLevel":{"level":1}}`)
@@ -918,7 +928,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
-	initialBalance, ok := math.NewIntFromString("10000000100000000000")
+	initialBalance, ok := sdkmath.NewIntFromString("10000000100000000000")
 	suite.Require().True(ok)
 	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
@@ -928,7 +938,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 		InitialBalance: initialBalance.BigInt(),
 	}
 	subChainId1, res := suite.createLevel1(chainId, reqlevel1)
-	suite.Require().Equal("ptestp_10001-1", subChainId1)
+	suite.Require().Equal("ptestp_1_1001-1", subChainId1)
 
 	// we expect 1 level2 was created
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
@@ -999,7 +1009,6 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	erc20databz, err = json.Marshal(erc20data)
 	suite.Require().NoError(err)
 	addressErc20R2 := subchainapp2.InstantiateCode(sender, codeIdErc20R2, wasmxtypes.WasmxExecutionMessage{Data: erc20databz}, "addressErc20R2", nil)
-	fmt.Println("--addressErc20R2--", addressErc20R2.String())
 	// mint tokens on level2
 	newaccAddr2 := subchainapp2.MustAccAddressToString(newacc.Address)
 	// subchainapp1.ExecuteContract(sender, addressErc20R2, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"2000000000"}}`, newaccAddr2))}, nil, nil)
@@ -1084,7 +1093,7 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	// create genTx data to sign - call to level0
 	// buildGenTx query
 	// valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
-	valTokens, ok := math.NewIntFromString("10000000000000000000")
+	valTokens, ok := sdkmath.NewIntFromString("10000000000000000000")
 	suite.Require().True(ok)
 	validMsg := stakingtypes.MsgCreateValidator{
 		// TODO fix as-json.parse when description contains empty strings
@@ -1329,15 +1338,14 @@ func (suite *KeeperTestSuite) prepareMultiChainSubExec(appCtx wasmxtesting.AppCo
 	return appCtx.SignCosmosSdkTx(txBuilder, sender)
 }
 
-func (suite *KeeperTestSuite) prepareMultiChainAtomicExec(appCtx wasmxtesting.AppContext, sender simulation.Account, txsbz [][]byte, leaderChainId string) client.TxBuilder {
+func (suite *KeeperTestSuite) prepareMultiChainAtomicExec(appCtx wasmxtesting.AppContext, sender simulation.Account, txsbz [][]byte, leaderChainId string, chainIds []string) client.TxBuilder {
 	subtxmsg := &types.MsgExecuteAtomicTxRequest{
-		Txs:           txsbz,
-		Sender:        sender.Address.Bytes(),
-		LeaderChainId: leaderChainId,
+		Txs:    txsbz,
+		Sender: sender.Address.Bytes(),
 	}
 
 	txBuilder := appCtx.PrepareCosmosSdkTxBuilder([]sdk.Msg{subtxmsg}, nil, nil, "")
-	appCtx.SetMultiChainAtomicExtensionOptions(txBuilder)
+	appCtx.SetMultiChainAtomicExtensionOptions(txBuilder, chainIds, leaderChainId)
 	// we do not need to sign atomic transactions
 	// return appCtx.SignCosmosSdkTx(txBuilder, sender)
 	return txBuilder

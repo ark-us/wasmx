@@ -21,22 +21,22 @@ func TestChainIdValidate(t *testing.T) {
 			valid:      true,
 		},
 		{
-			chainId:    "level0_1000-1",
+			chainId:    "level0_0_1000-1",
 			evmChainId: big.NewInt(1000),
 			valid:      true,
 		},
 		{
-			chainId:    "leveln_1000-1",
+			chainId:    "leveln_2_1000-1",
 			evmChainId: big.NewInt(1000),
 			valid:      true,
 		},
 		{
-			chainId:    "chain0_10001-1",
+			chainId:    "chain0_1_10001-1",
 			evmChainId: big.NewInt(10001),
 			valid:      true,
 		},
 		{
-			chainId:    "level11_900001-1",
+			chainId:    "level11_11_900001-1",
 			evmChainId: big.NewInt(900001),
 			valid:      true,
 		},
