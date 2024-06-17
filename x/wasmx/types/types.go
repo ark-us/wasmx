@@ -86,6 +86,8 @@ func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string,
 	if err != nil {
 		panic(fmt.Sprintf("Chain ID cannot be parsed for wasmx: %s", err.Error()))
 	}
+	// TODO add Transaction.hash
+	// txhash := tmhash.Sum(ctx.TxBytes())
 
 	env := Env{
 		Chain: ChainInfo{

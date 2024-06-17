@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cometbft/cometbft/crypto/merkle"
+	"github.com/cometbft/cometbft/crypto/tmhash"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
@@ -75,7 +76,8 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainCallResponseIndexed
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	txhash := merkle.HashFromByteSlices(msg.GetTxs())
+	txhash := tmhash.Sum(ctx.TxBytes())
+
 	mcctx, err := types.GetMultiChainContext(k.goContextParent)
 	if err != nil {
 		return nil, err
