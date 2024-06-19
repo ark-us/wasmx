@@ -90,7 +90,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -122,6 +122,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 	cmd.Flags().String(cli.FlagIP, "", fmt.Sprintf("The node's public IP. It takes effect only when used in combination with --%s", flags.FlagGenerateOnly))
 	cmd.Flags().String(cli.FlagNodeID, "", "The node's ID")
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	_ = cmd.MarkFlagRequired(flags.FlagFrom)
 
@@ -185,6 +186,7 @@ func NewEditValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Co
 	cmd.Flags().AddFlagSet(flagSetCommissionUpdate())
 	cmd.Flags().AddFlagSet(cli.FlagSetMinSelfDelegation())
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -231,6 +233,7 @@ $ %s tx staking delegate cosmosvalopers1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm 1
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -282,6 +285,7 @@ $ %s tx staking redelegate cosmosvalopers1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -330,6 +334,7 @@ $ %s tx staking unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake --from
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -385,6 +390,7 @@ $ %s tx staking cancel-unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }

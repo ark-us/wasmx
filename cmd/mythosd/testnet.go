@@ -467,7 +467,7 @@ func initTestnetFilesInternal(
 	if err != nil {
 		panic(err)
 	}
-	mcfg.SetGlobalChainConfig(args.chainID)
+	mcfg.SetGlobalChainConfigById(args.chainID)
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -751,7 +751,7 @@ func initTestnetFilesInternal(
 		}
 
 		// set this only after we get address bytes
-		mcfg.SetGlobalChainConfig(chainId0)
+		mcfg.SetGlobalChainConfigById(chainId0)
 
 		valAddrCodec = level0app.TxConfig().SigningContext().ValidatorAddressCodec()
 

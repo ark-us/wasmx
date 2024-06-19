@@ -48,11 +48,15 @@ func SetBech32Prefixes(config *sdk.Config, newcfg menc.ChainConfig) {
 	config.SetBech32PrefixForConsensusNode(newcfg.Bech32PrefixConsAddr, newcfg.Bech32PrefixConsPub)
 }
 
-func SetGlobalChainConfig(chainId string) error {
+func SetGlobalChainConfigById(chainId string) error {
 	cfg, ok := PrefixesMap[chainId]
 	if !ok {
 		return fmt.Errorf("chain_id configuration not found: %s", chainId)
 	}
+	return SetGlobalChainConfig(chainId, cfg)
+}
+
+func SetGlobalChainConfig(chainId string, cfg menc.ChainConfig) error {
 	config := sdk.GetConfig()
 	// TODO rewrite cosmos
 	sdk.SetAddrCacheEnabled(false)
@@ -66,9 +70,7 @@ var ChainIdsInit = []string{}
 func GetChainConfig(chainId string) (*menc.ChainConfig, error) {
 	conf, ok := PrefixesMap[chainId]
 	if !ok {
-		// return nil, fmt.Errorf("chain_id configuration not found: %s", chainId)
-		// for initializing an empty application when starting the process
-		conf = PrefixesMap[MYTHOS_CHAIN_ID_TESTNET]
+		return nil, fmt.Errorf("chain_id configuration not found: %s", chainId)
 	}
 	return &conf, nil
 }

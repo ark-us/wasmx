@@ -44,7 +44,7 @@ func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -91,5 +91,6 @@ func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }

@@ -92,6 +92,20 @@ mythosd tx multichain init-subchain logos_10001-1 --chain-id="leveln_1000-1" --f
 
 ```
 
+## Create a hierarchy of multichains
+
+```
+mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=3 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
+
+mythosd start --home=./testnet/node0/mythosd
+mythosd start --home=./testnet/node1/mythosd
+mythosd start --home=./testnet/node2/mythosd
+
+# create 1 level with 2 validators per subchain
+mythosd testnet create-levels 1 2 --chain-id="mythos_7000-14" --keyring-backend test --home ./testnet
+
+```
+
 ## Protos
 
 ```

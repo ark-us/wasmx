@@ -15,6 +15,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
+	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
@@ -108,105 +109,117 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 
 	bapp := c.bapp
 	mapp := c.mapp
+	ok := false
 
 	sdktx, err := c.bapp.TxDecode(tx)
 	if err != nil {
 		return nil, err
 	}
+	multiChainIds := []string{}
+	txWithExtensions, ok := sdktx.(authante.HasExtensionOptionsTx)
+	if ok {
+		opts := txWithExtensions.GetExtensionOptions()
+		if len(opts) > 0 && opts[0].GetTypeUrl() == types.TypeURL_ExtensionOptionAtomicMultiChainTx {
+			ext := opts[0].GetCachedValue().(*types.ExtensionOptionAtomicMultiChainTx)
+			multiChainIds = ext.ChainIds
+		}
+	}
 	if len(sdktx.GetMsgs()) > 0 {
 		msg, ok := sdktx.GetMsgs()[0].(*types.MsgMultiChainWrap)
 		if ok {
-			var sdkmsg sdk.Msg
-			err := c.nk.Codec().UnpackAny(msg.Data, &sdkmsg)
-			if err != nil {
-				return nil, err
-			}
-
-			multichainapp, err := cfg.GetMultiChainApp(c.mapp.GetGoContextParent())
-			if err != nil {
-				return nil, err
-			}
-			iapp, err := multichainapp.GetApp(msg.MultiChainId)
-			if err != nil {
-				return nil, err
-			}
-			mapp, ok = iapp.(cfg.MythosApp)
-			if !ok {
-				return nil, fmt.Errorf("error App interface from multichainapp")
-			}
-			bapp, ok = iapp.(cfg.BaseApp)
-			if !ok {
-				return nil, fmt.Errorf("error BaseApp interface from multichainapp")
-			}
+			multiChainIds = []string{msg.MultiChainId}
 		}
 	}
+	if len(multiChainIds) == 0 {
+		multiChainIds = []string{bapp.ChainID()}
+	}
 
-	// TODO use ctx from params?
-	cb := func(goctx context.Context) (any, error) {
-		ctx := sdk.UnwrapSDKContext(goctx)
-		sdktx, err := bapp.TxDecode(tx)
-
-		if len(sdktx.GetMsgs()) > 0 {
-			// we just take the first one // TODO fixme
-			msg := sdktx.GetMsgs()[0]
-			var contractAddress sdk.AccAddress
-			// TODO all messages, like MsgExecuteEth
-			// msgEthTx, ok := msg.(*wasmxtypes.MsgExecuteEth)
-			// if ok {
-			// 	ethTx := msgEthTx.AsTransaction()
-			// 	to := ethTx.To()
-			// 	contractAddress = wasmxtypes.AccAddressFromEvm(*to)
-			// } else {
-			msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
-			if ok {
-				contractAddress, err = mapp.AddressCodec().StringToBytes(msgExec.Contract)
-				if err != nil {
-					return nil, err
-				}
-			}
-			// }
-			// if consensusless contract -> just execute it
-			// whitelist of contracts exposed like this - just chat
-			if len(contractAddress.Bytes()) > 0 {
-				contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
-
-				// whitelist is in hex
-				addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress).Hex()
-
-				if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
-					contractAddressStr, err := mapp.AddressCodec().BytesToString(contractAddress)
-					c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
-
-					// we sent directly to the contract
-					rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
-						Sender:   msgExec.Sender, // sender will be taken from decoded tx
-						Contract: contractAddressStr,
-						Msg:      []byte(fmt.Sprintf(`{"HandleTx":"%s"}`, base64.StdEncoding.EncodeToString(tx))),
-					})
-
-					if err != nil {
-						return nil, err
-					}
-					return rresp, nil
-				}
-			}
-		}
-
-		msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-		rresp, err := mapp.GetNetworkKeeper().ExecuteContract(ctx, &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
-			Msg:      msg,
-		})
+	// if atomic transaction, we send it to all respective chains
+	for _, multiChainId := range multiChainIds {
+		multichainapp, err := cfg.GetMultiChainApp(c.mapp.GetGoContextParent())
 		if err != nil {
 			return nil, err
 		}
-		return rresp, nil
-	}
-	_, err = mapp.GetActionExecutor().Execute(context.Background(), bapp.LastBlockHeight(), cb)
-	// TODO handle resp, err ?
-	if err != nil {
-		c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())
+		iapp, err := multichainapp.GetApp(multiChainId)
+		if err != nil {
+			return nil, err
+		}
+		mapp, ok = iapp.(cfg.MythosApp)
+		if !ok {
+			return nil, fmt.Errorf("error App interface from multichainapp")
+		}
+		bapp, ok = iapp.(cfg.BaseApp)
+		if !ok {
+			return nil, fmt.Errorf("error BaseApp interface from multichainapp")
+		}
+
+		// TODO use ctx from params?
+		cb := func(goctx context.Context) (any, error) {
+			ctx := sdk.UnwrapSDKContext(goctx)
+			sdktx, err := bapp.TxDecode(tx)
+
+			if len(sdktx.GetMsgs()) > 0 {
+				// we just take the first one // TODO fixme
+				msg := sdktx.GetMsgs()[0]
+				var contractAddress sdk.AccAddress
+				// TODO all messages, like MsgExecuteEth
+				// msgEthTx, ok := msg.(*wasmxtypes.MsgExecuteEth)
+				// if ok {
+				// 	ethTx := msgEthTx.AsTransaction()
+				// 	to := ethTx.To()
+				// 	contractAddress = wasmxtypes.AccAddressFromEvm(*to)
+				// } else {
+				msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
+				if ok {
+					contractAddress, err = mapp.AddressCodec().StringToBytes(msgExec.Contract)
+					if err != nil {
+						return nil, err
+					}
+				}
+				// }
+				// if consensusless contract -> just execute it
+				// whitelist of contracts exposed like this - just chat
+				if len(contractAddress.Bytes()) > 0 {
+					contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
+
+					// whitelist is in hex
+					addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress).Hex()
+
+					if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
+						contractAddressStr, err := mapp.AddressCodec().BytesToString(contractAddress)
+						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
+
+						// we sent directly to the contract
+						rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
+							Sender:   msgExec.Sender, // sender will be taken from decoded tx
+							Contract: contractAddressStr,
+							Msg:      []byte(fmt.Sprintf(`{"HandleTx":"%s"}`, base64.StdEncoding.EncodeToString(tx))),
+						})
+
+						if err != nil {
+							return nil, err
+						}
+						return rresp, nil
+					}
+				}
+			}
+
+			msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
+			rresp, err := mapp.GetNetworkKeeper().ExecuteContract(ctx, &types.MsgExecuteContract{
+				Sender:   wasmxtypes.ROLE_CONSENSUS,
+				Contract: wasmxtypes.ROLE_CONSENSUS,
+				Msg:      msg,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return rresp, nil
+		}
+		_, err = mapp.GetActionExecutor().Execute(context.Background(), bapp.LastBlockHeight(), cb)
+		// TODO handle resp, err ?
+		if err != nil {
+			c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())
+		}
 	}
 
 	return &rpctypes.ResultBroadcastTx{Hash: tx.Hash()}, nil

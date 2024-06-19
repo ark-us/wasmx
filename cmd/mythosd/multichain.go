@@ -222,7 +222,7 @@ func registerLevelChainValidator(
 	nodeDir := fmt.Sprintf("%s/node%d/%s", clientCtx.HomeDir, nodeIndex, args.nodeDaemonHome)
 	pathToValidatorJson := fmt.Sprintf("%s/node%d/validator.json", clientCtx.HomeDir, nodeIndex)
 	val := &internalVal{
-		Amount:              "100000000000000000",
+		Amount:              "100000000000000000", // smaller than overall balance
 		Moniker:             nodeName,
 		Identity:            "identity",
 		Website:             "website",

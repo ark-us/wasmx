@@ -380,7 +380,7 @@ func (s *AppContext) SetMultiChainAtomicExtensionOptions(
 
 	builder, ok := txBuilder.(authtx.ExtensionOptionsTxBuilder)
 	if !ok {
-		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not set extensions for Ethereum tx")
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not set extensions for atomic tx")
 	}
 
 	builder.SetExtensionOptions(option)

@@ -35,7 +35,7 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -64,7 +64,7 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			label := args[1]
 			contractAddress := args[2]
 
-			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
+			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
@@ -99,6 +99,7 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 		panic(err)
 	}
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -117,7 +118,7 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -144,7 +145,7 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 
 			contractAddress := args[0]
 
-			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
+			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
@@ -177,5 +178,6 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 	if err := cmd.MarkFlagRequired(cli.FlagDeposit); err != nil {
 		panic(err)
 	}
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }

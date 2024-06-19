@@ -65,7 +65,7 @@ func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -94,7 +94,7 @@ func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			contractAddress := args[1]
 			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
-			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
+			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
@@ -146,7 +146,7 @@ func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -175,7 +175,7 @@ func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			contractAddress := args[1]
 			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
 
-			authority, err := addrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
+			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
@@ -225,7 +225,7 @@ func NewRegisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -269,7 +269,7 @@ func NewEditOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -317,7 +317,7 @@ func NewDeregisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}

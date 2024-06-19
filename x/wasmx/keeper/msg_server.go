@@ -85,12 +85,6 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		return nil, sdkerr.Wrap(err, "sender")
 	}
 
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		sdk.EventTypeMessage,
-		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
-	))
-
 	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata)
 	if err != nil {
 		return nil, err

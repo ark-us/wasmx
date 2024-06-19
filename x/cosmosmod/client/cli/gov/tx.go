@@ -101,7 +101,7 @@ metadata example:
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -126,6 +126,7 @@ metadata example:
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -142,7 +143,7 @@ func NewCmdCancelProposal(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -164,6 +165,7 @@ func NewCmdCancelProposal(ac address.Codec) *cobra.Command {
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -201,7 +203,7 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -241,6 +243,7 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 	cmd.Flags().String(cli.FlagDeposit, "", "The proposal deposit")
 	cmd.Flags().String(cli.FlagProposal, "", "Proposal file path (if this path is given, other proposal flags are ignored)")
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -266,7 +269,7 @@ $ %s tx gov deposit 1 10stake --from mykey
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -300,6 +303,7 @@ $ %s tx gov deposit 1 10stake --from mykey
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -325,7 +329,7 @@ $ %s tx gov vote 1 yes --from mykey
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -367,6 +371,7 @@ $ %s tx gov vote 1 yes --from mykey
 
 	cmd.Flags().String(cli.FlagMetadata, "", "Specify metadata of the vote")
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -392,7 +397,7 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -433,6 +438,7 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 
 	cmd.Flags().String(cli.FlagMetadata, "", "Specify metadata of the weighted vote")
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }

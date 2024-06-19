@@ -83,15 +83,15 @@ func StoreCodeCmd(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
-			msg, err := parseStoreCodeArgs(addrCodec, args[0], clientCtx.GetFromAddress(), cmd.Flags())
+			msg, err := ParseStoreCodeArgs(customAddrCodec, args[0], clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
-			// TODO use ValidateWithAddress with codec
 			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
@@ -104,12 +104,12 @@ func StoreCodeCmd(ac address.Codec) *cobra.Command {
 		},
 		SilenceUsage: true,
 	}
-
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
 
-func parseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgStoreCode, error) {
+func ParseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgStoreCode, error) {
 	wasm, err := os.ReadFile(file)
 	if err != nil {
 		return types.MsgStoreCode{}, err
@@ -192,12 +192,12 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 			if err != nil {
 				return err
 			}
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			msg, err := parseInstantiateArgs(addrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
+			msg, err := parseInstantiateArgs(customAddrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -218,6 +218,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -245,7 +246,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return err
 			}
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -257,7 +258,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return fmt.Errorf("fix msg: %w", err)
 			}
-			data, err := parseInstantiateArgs(addrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
+			data, err := parseInstantiateArgs(customAddrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -287,6 +288,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract during instantiation")
 	cmd.Flags().String(flagLabel, "", "A human-readable name for this contract in lists")
 	decoder.RegisterFlags(cmd.PersistentFlags(), "salt")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -346,12 +348,11 @@ func ExecuteContractCmd(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			addrCodec := clientCtx.InterfaceRegistry.SigningContext().AddressCodec()
-			msg, err := parseExecuteArgs(addrCodec, args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
-			clientCtx, addrCodec, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			msg, err := parseExecuteArgs(customAddrCodec, args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -370,6 +371,7 @@ func ExecuteContractCmd(ac address.Codec) *cobra.Command {
 	}
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }

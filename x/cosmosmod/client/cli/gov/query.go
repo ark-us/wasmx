@@ -14,6 +14,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/version"
 	gcutils "github.com/cosmos/cosmos-sdk/x/gov/client/utils"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
+
+	"mythos/v1/multichain"
 )
 
 // GetCustomQueryCmd returns the cli query commands for this module
@@ -69,6 +71,7 @@ func GetCmdQueryProposer() *cobra.Command {
 	}
 
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }

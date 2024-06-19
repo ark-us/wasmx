@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 
+	"mythos/v1/multichain"
 	"mythos/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -30,6 +31,7 @@ func CmdQueryParams() *cobra.Command {
 	}
 
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }

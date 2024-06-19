@@ -61,20 +61,29 @@ func (c *Context) handleChatRoomMessage(crmsg *ChatRoomMessage) {
 	c.handleMessage(netmsg, msg.ContractAddress, msg.SenderAddress)
 }
 
-func (c *Context) handleMessage(netmsg P2PMessage, contractAddress mcodec.AccAddressPrefixed, senderAddress mcodec.AccAddressPrefixed) {
+func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, senderAddress string) {
 	netmsgbz, err := json.Marshal(netmsg)
 	if err != nil {
 		c.Logger.Error("cannot marshall P2PMessage", "error", err.Error())
 		return
 	}
-	contractAddressStr := contractAddress.String()
-	senderAddressStr := senderAddress.String()
 
-	c.Logger.Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddressStr, "contract", contractAddressStr)
+	c.Logger.Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddress, "contract", contractAddress)
 
+	// if the message is from another chain, contract address may be without prefix
+	// and sender address will have the prefix of the other chain
+	contractBz, _, err := mcodec.GetFromBech32Unsafe(contractAddress)
+	if err != nil {
+		contractAddress = c.Context.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(contractBz).String()
+	}
+	_, senderPrefix, _ := mcodec.GetFromBech32Unsafe(senderAddress)
+	ourprefix := c.Context.CosmosHandler.AccBech32Codec().Prefix()
+	if senderPrefix != ourprefix {
+		senderAddress, _ = networktypes.CrossChainAddress(senderAddress, ourprefix)
+	}
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{
-		Sender:   senderAddressStr,
-		Contract: contractAddressStr,
+		Sender:   senderAddress,
+		Contract: contractAddress,
 		Data:     netmsgbz,
 	}
 	_, _, err = c.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)

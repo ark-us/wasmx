@@ -25,12 +25,6 @@ const (
 	Secp256k1VerifyCost uint64 = 21000
 )
 
-var (
-	TypeURL_ExtensionOptionEthereumTx         = "/mythos.wasmx.v1.ExtensionOptionEthereumTx"
-	TypeURL_ExtensionOptionAtomicMultiChainTx = "/mythos.network.v1.ExtensionOptionAtomicMultiChainTx"
-	TypeURL_ExtensionOptionMultiChainTx       = "/mythos.network.v1.ExtensionOptionMultiChainTx"
-)
-
 // NewAnteHandler returns an ante handler responsible for attempting to route an
 // Ethereum or SDK transaction to an internal ante handler for performing
 // transaction-level processing (e.g. fee payment, signature verification) before
@@ -52,9 +46,9 @@ func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOp
 			opts := txWithExtensions.GetExtensionOptions()
 			if len(opts) > 0 {
 				switch typeURL := opts[0].GetTypeUrl(); typeURL {
-				case TypeURL_ExtensionOptionEthereumTx:
+				case networktypes.TypeURL_ExtensionOptionEthereumTx:
 					anteHandler = newEthAnteHandler(options)
-				case TypeURL_ExtensionOptionAtomicMultiChainTx:
+				case networktypes.TypeURL_ExtensionOptionAtomicMultiChainTx:
 					ext := opts[0].GetCachedValue().(*networktypes.ExtensionOptionAtomicMultiChainTx)
 					if !slices.Contains(ext.ChainIds, ext.LeaderChainId) {
 						return ctx, errorsmod.Wrapf(
@@ -91,27 +85,28 @@ func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOp
 						)
 					}
 					anteHandler, _ := NewAnteHandler(cdc, txConfig, options)
-					for _, txbz := range atomicTx.Txs {
-						tx, err := txConfig.TxDecoder()(txbz)
+					for _, subtxbz := range atomicTx.Txs {
+						subtx, err := txConfig.TxDecoder()(subtxbz)
 						if err != nil {
 							return ctx, err
 						}
+
 						// we check that the chainId of the subtx is included in the atomic wrapper
-						txWithExtensions_, ok := tx.(authante.HasExtensionOptionsTx)
+						subtxWithExtensions, ok := subtx.(authante.HasExtensionOptionsTx)
 						if !ok {
 							return ctx, errorsmod.Wrapf(
 								errortypes.ErrInvalidRequest,
-								"rejecting subtx with no ExtensionOptionMultiChainTx",
+								"rejecting subtx with no extension options",
 							)
 						}
-						opts_ := txWithExtensions_.GetExtensionOptions()
-						if len(opts_) == 0 {
+						subopts := subtxWithExtensions.GetExtensionOptions()
+						if len(subopts) == 0 {
 							return ctx, errorsmod.Wrapf(
 								errortypes.ErrInvalidRequest,
 								"rejecting subtx with no ExtensionOptionMultiChainTx",
 							)
 						}
-						extsubtx := opts_[0].GetCachedValue().(*networktypes.ExtensionOptionMultiChainTx)
+						extsubtx := subopts[0].GetCachedValue().(*networktypes.ExtensionOptionMultiChainTx)
 						if !slices.Contains(ext.ChainIds, extsubtx.ChainId) {
 							return ctx, errorsmod.Wrapf(
 								errortypes.ErrInvalidRequest,
@@ -119,16 +114,16 @@ func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOp
 							)
 						}
 
-						ctx, err = anteHandler(ctx, tx, sim)
+						ctx, err = anteHandler(ctx, subtx, sim)
 						if err != nil {
 							return ctx, err
 						}
 					}
 					return ctx, nil
-				case TypeURL_ExtensionOptionMultiChainTx:
+				case networktypes.TypeURL_ExtensionOptionMultiChainTx:
 					ext := opts[0].GetCachedValue().(*networktypes.ExtensionOptionMultiChainTx)
 					if ctx.ChainID() == ext.ChainId {
-						if len(opts) > 1 && opts[1].GetTypeUrl() == TypeURL_ExtensionOptionEthereumTx {
+						if len(opts) > 1 && opts[1].GetTypeUrl() == networktypes.TypeURL_ExtensionOptionEthereumTx {
 							anteHandler = newEthAnteHandler(options)
 						} else {
 							anteHandler = newCosmosAnteHandler(options)

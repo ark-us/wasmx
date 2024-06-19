@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -61,7 +62,7 @@ func GetTxCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 	}
 
 	txCmd.AddCommand(
-		MultiChainTxExecuteCmd(),
+		AtomicTxExecuteCmd(appCreator),
 		RegisterNewSubChain(),
 		RegisterSubChainValidator(appCreator),
 		InitializeSubChain(),
@@ -91,48 +92,194 @@ func GetQueryCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 	return txCmd
 }
 
-// NewMultiChainTxExecuteCmd returns a CLI command handler for creating a MsgMultiChainWrap transaction.
-func MultiChainTxExecuteCmd() *cobra.Command {
+func AtomicTxExecuteCmd(appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "execute [contract_addr_bech32] [json_encoded_send_args] --amount [coins,optional]",
-		Short:   "Execute a command on a wasm contract",
-		Aliases: []string{"run", "call", "exec", "ex", "e"},
-		Args:    cobra.ExactArgs(2),
+		Use:     "atomic [path/to/atomictx.json] [comma_separated_chainIds]",
+		Short:   "Execute an atomic transaction between chains",
+		Aliases: []string{},
+		Args:    cobra.MinimumNArgs(1),
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Execute an atomic cross-chain transaction on multiple chains.
+
+Example:
+$ %s tx multichain atomic path/to/atomictx.json --from mykey
+
+Where atomictx.json contains:
+
+{
+
+}
+
+`,
+				version.AppName,
+			),
+		),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, _, config, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			amountStr, err := cmd.Flags().GetString(flagAmount)
+			subchainId, err := cmd.Flags().GetString(sdkflags.FlagChainID)
 			if err != nil {
-				return fmt.Errorf("amount: %s", err)
+				return fmt.Errorf("subchainId: %s", err)
 			}
-			amount, err := sdk.ParseCoinsNormalized(amountStr)
+			_, appCreator := createMockAppCreator(appFactory, 0)
+			isubchainapp := appCreator(subchainId, config)
+			subchainapp := isubchainapp.(appwithTxConfig)
+			subtxconfig := subchainapp.TxConfig()
+
+			registryId, err := cmd.Flags().GetString(multichain.FlagRegistryChainId)
+			if err != nil {
+				return fmt.Errorf("registry chainId: %s", err)
+			}
+
+			chainIds := []string{}
+			if len(args) > 1 {
+				ids := strings.Split(strings.TrimSpace(args[1]), ",")
+				for _, id := range ids {
+					chainIds = append(chainIds, strings.TrimSpace(id))
+				}
+			}
+
+			sender := clientCtx.GetFromAddress()
+			mcwrapsInternal, err := parseAndValidateAtomicTxContentJSON(args[0])
+			if err != nil {
+				return err
+			}
+			txcount := len(mcwrapsInternal)
+			chainConfigs := make([]menc.ChainConfig, txcount)
+			txs := make([][]byte, txcount)
+			for i, msg := range mcwrapsInternal {
+				chainId := msg.MultiChainId
+				if !slices.Contains(chainIds, chainId) {
+					chainIds = append(chainIds, chainId)
+				}
+
+				chainConfig, err := multichain.GetSubChainConfig(clientCtx, chainId, registryId)
+				if err != nil {
+					return err
+				}
+				chainConfigs[i] = *chainConfig
+
+				_, subappCreator := createMockAppCreator(appFactory, i+1)
+				isubchainapp_ := subappCreator(chainId, chainConfig)
+				subchainapp_ := isubchainapp_.(appwithTxConfig)
+				subtxconfig_ := subchainapp_.TxConfig()
+
+				customCdc := mcodec.NewAccBech32Codec(chainConfig.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+				chainAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
+
+				msgmc, err := prepareMultiChainExecution(
+					clientCtx,
+					cmd.Flags(),
+					chainAddrCodec,
+					msg.Contract,
+					sender,
+					[]byte(msg.MsgJson),
+					nil,
+				)
+				if err != nil {
+					return err
+				}
+
+				// prepare tx: add multichain extension options & sign
+				txBuilder, txf, err := GenerateTxCLI(clientCtx, cmd.Flags(), msgmc)
+				if err != nil {
+					return err
+				}
+				txBuilder, err = msgmc.SetExtensionOptions(txBuilder, chainId, int32(i), int32(txcount))
+				if err != nil {
+					return err
+				}
+				txBuilder, err = SignTx(clientCtx, txf, txBuilder)
+				if err != nil {
+					return err
+				}
+				txBytes, err := subtxconfig_.TxEncoder()(txBuilder.GetTx())
+				if err != nil {
+					return err
+				}
+				txs[i] = txBytes
+			}
+
+			leaderChainId := getLeaderChainId(chainIds)
+			atomictx := &types.MsgExecuteAtomicTxRequest{
+				Txs:    txs,
+				Sender: sender,
+			}
+			// prepare atomic tx: add atomic transaction extension options & broadcast unsigned
+			txBuilder := subtxconfig.NewTxBuilder()
+			err = txBuilder.SetMsgs(atomictx)
+			if err != nil {
+				return err
+			}
+			txBuilder, err = atomictx.SetExtensionOptions(txBuilder, chainIds, leaderChainId)
+			if err != nil {
+				return err
+			}
+			txBytes, err := subtxconfig.TxEncoder()(txBuilder.GetTx())
 			if err != nil {
 				return err
 			}
 
-			return sendMultiChainExecution(
-				clientCtx,
-				cmd.Flags(),
-				customAddrCodec,
-				args[0],
-				clientCtx.GetFromAddress(),
-				[]byte(args[1]),
-				amount,
-			)
+			res, err := clientCtx.BroadcastTx(txBytes)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	sdkflags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
+}
+
+// TODO fixme
+func getLeaderChainId(chainIds []string) string {
+	return chainIds[0]
+}
+
+type internalMsgMultiChainWrap struct {
+	MultiChainId string `json:"multi_chain_id"`
+	MsgJson      string `json:"msg_json"`
+	Contract     string `json:"contract"`
+}
+
+func parseAndValidateAtomicTxContentJSON(path string) ([]internalMsgMultiChainWrap, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var v []internalMsgMultiChainWrap
+	err = json.Unmarshal(contents, &v)
+	if err != nil {
+		return nil, err
+	}
+	if len(v) == 0 {
+		return nil, fmt.Errorf("must have at least 1 MsgMultiChainWrap")
+	}
+	for i, msg := range v {
+		if msg.Contract == "" {
+			return nil, fmt.Errorf("must specify contract address: %d", i)
+		}
+		if msg.MultiChainId == "" {
+			return nil, fmt.Errorf("must specify subchain id: %d", i)
+		}
+		if len(msg.MsgJson) == 0 {
+			return nil, fmt.Errorf("must have non empty message: %d", i)
+		}
+	}
+	return v, nil
 }
 
 func RegisterNewSubChain() *cobra.Command {
@@ -153,7 +300,7 @@ $ %s tx multichain register-subchain mythos myt 18 1 "10000000000" --chain-id="l
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -201,6 +348,7 @@ $ %s tx multichain register-subchain mythos myt 18 1 "10000000000" --chain-id="l
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	sdkflags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -237,7 +385,7 @@ Where validator.json contains:
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -253,6 +401,7 @@ Where validator.json contains:
 			if err != nil {
 				return err
 			}
+			fmt.Println("---sender--", sender)
 			genTxData, err := getGenTxData(clientCtx, flags, customAddrCodec, sender, subChainId, validMsg)
 			if err != nil {
 				return err
@@ -290,6 +439,7 @@ Where validator.json contains:
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	sdkflags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -311,7 +461,7 @@ $ %s tx multichain init-subchain level1_1000-1 --chain-id="level0_1000-1"
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -342,6 +492,7 @@ $ %s tx multichain init-subchain level1_1000-1 --chain-id="level0_1000-1"
 
 	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
 	sdkflags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -358,7 +509,7 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -374,36 +525,26 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 			if !json.Valid(queryData) {
 				return errors.New("query data must be json")
 			}
-			msgbz, err := wasmxMsgWrap(args[1])
-			if err != nil {
-				return fmt.Errorf("wrap query data %s", err)
-			}
 
-			fromAddr := clientCtx.GetFromAddress()
-			sender := ""
-			if len(fromAddr) > 0 {
-				sender, err = customAddrCodec.BytesToString(clientCtx.GetFromAddress())
-				if err != nil {
-					return fmt.Errorf("sender: %s", err)
-				}
-			}
-			if sender == "" {
-				sender = args[0]
-			}
-
-			queryClient := types.NewQueryClient(clientCtx)
-			res, err := queryClient.ContractCall(
-				context.Background(),
-				&types.QueryContractCallRequest{
-					Sender:    sender,
-					Address:   args[0],
-					QueryData: msgbz,
-				},
+			res, err := sendMultiChainQuery(
+				clientCtx,
+				cmd.Flags(),
+				customAddrCodec,
+				args[0],
+				clientCtx.GetFromAddress(),
+				queryData,
+				nil,
+				nil,
 			)
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			data2, err := decodeQueryResponse(res.Data)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data2))
+			return nil
 		},
 		SilenceUsage: true,
 	}
@@ -414,6 +555,7 @@ func GetCmdQueryMultiChainCall() *cobra.Command {
 		f.String(FlagFrom, "", "Name or address of private key with which to sign")
 	}
 	sdkflags.AddKeyringFlags(f)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -436,7 +578,7 @@ $ %s query multichain validators --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -485,6 +627,7 @@ $ %s query multichain validators --chain-id="level0_1000-1"
 		f.String(FlagFrom, "", "Name or address of private key with which to sign")
 	}
 	sdkflags.AddKeyringFlags(f)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -507,7 +650,7 @@ $ %s query multichain subchains --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -555,6 +698,7 @@ $ %s query multichain subchains --chain-id="level0_1000-1"
 		f.String(FlagFrom, "", "Name or address of private key with which to sign")
 	}
 	sdkflags.AddKeyringFlags(f)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -577,7 +721,7 @@ $ %s query multichain subchain level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -601,7 +745,21 @@ $ %s query multichain subchain level1_1000-1 --chain-id="level0_1000-1"
 		f.String(FlagFrom, "", "Name or address of private key with which to sign")
 	}
 	sdkflags.AddKeyringFlags(f)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
+}
+
+func getSubChainConfig(clientCtx client.Context, flags *flag.FlagSet, customAddrCodec mcodec.AccBech32Codec, subchainId string, sender sdk.AccAddress) (*menc.ChainConfig, error) {
+	chainConfigBz, err := getSubChainConfigBz(clientCtx, flags, customAddrCodec, subchainId, sender)
+	if err != nil {
+		return nil, err
+	}
+	var chainConfig menc.ChainConfig
+	err = json.Unmarshal(chainConfigBz, &chainConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &chainConfig, nil
 }
 
 func getSubChainConfigBz(clientCtx client.Context, flags *flag.FlagSet, customAddrCodec mcodec.AccBech32Codec, subchainId string, sender sdk.AccAddress) ([]byte, error) {
@@ -656,7 +814,7 @@ $ %s query multichain subchain-data level1_1000-1 --chain-id="level0_1000-1"
 				return err
 			}
 
-			clientCtx, customAddrCodec, err := multichain.MultiChainCustomCtx(clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -705,6 +863,7 @@ $ %s query multichain subchain-data level1_1000-1 --chain-id="level0_1000-1"
 		f.String(FlagFrom, "", "Name or address of private key with which to sign")
 	}
 	sdkflags.AddKeyringFlags(f)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -715,18 +874,32 @@ func sendMultiChainExecution(
 	contractAddr string, sender sdk.AccAddress,
 	execMsg []byte, amount sdk.Coins,
 ) error {
+	mmsg, err := prepareMultiChainExecution(clientCtx, flags, addrCodec, contractAddr, sender, execMsg, amount)
+	if err != nil {
+		return err
+	}
+	return tx.GenerateOrBroadcastTxCLI(clientCtx, flags, mmsg)
+}
+
+func prepareMultiChainExecution(
+	clientCtx client.Context,
+	flags *flag.FlagSet,
+	addrCodec address.Codec,
+	contractAddr string, sender sdk.AccAddress,
+	execMsg []byte, amount sdk.Coins,
+) (*types.MsgMultiChainWrap, error) {
 	chainId, err := flags.GetString(sdkflags.FlagChainID)
 	if err != nil {
-		return fmt.Errorf("chainId: %s", err)
+		return nil, fmt.Errorf("chainId: %s", err)
 	}
 	msg := wasmxtypes.WasmxExecutionMessage{Data: execMsg}
 	msgbz, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	senderAddr, err := addrCodec.BytesToString(sender)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	wasmxExecMsg := &wasmxtypes.MsgExecuteContract{
 		Sender:   senderAddr,
@@ -736,12 +909,60 @@ func sendMultiChainExecution(
 	}
 	wasmxExecAny, err := codectypes.NewAnyWithValue(wasmxExecMsg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mmsg := types.MsgMultiChainWrap{
 		MultiChainId: chainId,
 		Sender:       senderAddr,
+		Data:         wasmxExecAny,
+	}
+	if err := mmsg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+	return &mmsg, nil
+}
+
+func sendMultiChainContractStore(
+	clientCtx client.Context,
+	flags *flag.FlagSet,
+	addrCodec mcodec.AccBech32Codec,
+	sender sdk.AccAddress,
+	registryChainId string,
+	pathToWasm string,
+) error {
+	// registry encoding
+	chainId, err := flags.GetString(sdkflags.FlagChainID)
+	if err != nil {
+		return fmt.Errorf("chainId: %s", err)
+	}
+
+	registryConfig, err := mcfg.GetChainConfig(registryChainId)
+	if err != nil {
+		return err
+	}
+	customCdc := mcodec.NewAccBech32Codec(registryConfig.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+	registryCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
+	// registry encoding END
+
+	config, err := getSubChainConfig(clientCtx, flags, registryCodec, chainId, sender)
+	if err != nil {
+		return err
+	}
+	newaddrCondec := mcodec.NewAccBech32Codec(config.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+
+	wasmxMsg, err := wasmxcli.ParseStoreCodeArgs(newaddrCondec, pathToWasm, sender, flags)
+	if err != nil {
+		return err
+	}
+	wasmxExecAny, err := codectypes.NewAnyWithValue(&wasmxMsg)
+	if err != nil {
+		return err
+	}
+
+	mmsg := types.MsgMultiChainWrap{
+		MultiChainId: chainId,
+		Sender:       wasmxMsg.Sender,
 		Data:         wasmxExecAny,
 	}
 	if err := mmsg.ValidateBasic(); err != nil {
@@ -760,7 +981,7 @@ func sendMultiChainQuery(
 ) (*types.QueryMultiChainResponse, error) {
 	chainId, err := flags.GetString(sdkflags.FlagChainID)
 	if err != nil {
-		return nil, fmt.Errorf("amount: %s", err)
+		return nil, fmt.Errorf("chainId: %s", err)
 	}
 	if !json.Valid(queryData) {
 		return nil, errors.New("query data must be json")
@@ -770,6 +991,11 @@ func sendMultiChainQuery(
 	if err != nil {
 		return nil, err
 	}
+
+	if len(sender) == 0 {
+		sender = multichain.EMPTY_BYTES20
+	}
+
 	senderAddr, err := addrCodec.BytesToString(sender)
 	if err != nil {
 		return nil, err
@@ -1003,7 +1229,7 @@ func signGenTxData(
 		return nil, err
 	}
 
-	_, appCreator := createMockAppCreator(appCreatorFactory)
+	_, appCreator := createMockAppCreator(appCreatorFactory, 0)
 	isubchainapp := appCreator(subChainId, &subchainConfig)
 	subchainapp := isubchainapp.(appwithTxConfig)
 
@@ -1107,11 +1333,11 @@ func signTx(
 	return txbuilder, nil
 }
 
-func createMockAppCreator(appCreatorFactory multichain.NewAppCreator) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func createMockAppCreator(appCreatorFactory multichain.NewAppCreator, index int) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
-	tempNodeHome := filepath.Join(userHomeDir, ".mythostmp")
+	tempNodeHome := filepath.Join(userHomeDir, fmt.Sprintf(".mythostmp_%d", index))
 	return multichain.CreateNoLoggerAppCreator(appCreatorFactory, tempNodeHome)
 }

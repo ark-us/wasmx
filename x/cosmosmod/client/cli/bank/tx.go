@@ -56,7 +56,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				return err
 			}
 
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -92,6 +92,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 	}
 
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }
@@ -117,7 +118,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				return err
 			}
 
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -180,6 +181,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 
 	cmd.Flags().Bool(cli.FlagSplit, false, "Send the equally split token amount to each address")
 	flags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }

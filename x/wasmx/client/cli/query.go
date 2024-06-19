@@ -82,7 +82,7 @@ func GetCmdBuildAddress(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -111,6 +111,7 @@ func GetCmdBuildAddress(ac address.Codec) *cobra.Command {
 		SilenceUsage: true,
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "salt")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -127,7 +128,7 @@ func GetCmdListCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -151,6 +152,7 @@ func GetCmdListCode(ac address.Codec) *cobra.Command {
 	}
 	flags.AddQueryFlagsToCmd(cmd)
 	flags.AddPaginationFlagsToCmd(cmd, "list codes")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -167,7 +169,7 @@ func GetCmdListContractByCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -201,6 +203,7 @@ func GetCmdListContractByCode(ac address.Codec) *cobra.Command {
 	}
 	flags.AddQueryFlagsToCmd(cmd)
 	flags.AddPaginationFlagsToCmd(cmd, "list contracts by code")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -217,7 +220,7 @@ func GetCmdQueryCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -247,6 +250,7 @@ func GetCmdQueryCode(ac address.Codec) *cobra.Command {
 		SilenceUsage: true,
 	}
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -262,7 +266,7 @@ func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -291,6 +295,7 @@ func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 		SilenceUsage: true,
 	}
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -307,7 +312,7 @@ func GetCmdGetContractInfo(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -331,6 +336,7 @@ func GetCmdGetContractInfo(ac address.Codec) *cobra.Command {
 		SilenceUsage: true,
 	}
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -363,7 +369,7 @@ func GetCmdGetContractStateAll(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -395,6 +401,7 @@ func GetCmdGetContractStateAll(ac address.Codec) *cobra.Command {
 	}
 	flags.AddQueryFlagsToCmd(cmd)
 	flags.AddPaginationFlagsToCmd(cmd, "contract state")
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -410,7 +417,7 @@ func GetCmdGetContractStateRaw(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -442,6 +449,7 @@ func GetCmdGetContractStateRaw(ac address.Codec) *cobra.Command {
 	}
 	decoder.RegisterFlags(cmd.PersistentFlags(), "key argument")
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -457,7 +465,7 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, customAddrCodec, err := multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -513,6 +521,7 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 		f.String(FlagFrom, "", "Name or address of private key with which to sign")
 	}
 	flags.AddKeyringFlags(f)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }
 
@@ -588,7 +597,7 @@ func GetCmdQueryParams(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtx(ac, clientCtx, []signing.CustomGetSigner{})
+			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -606,6 +615,7 @@ func GetCmdQueryParams(ac address.Codec) *cobra.Command {
 	}
 
 	flags.AddQueryFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
 
 	return cmd
 }

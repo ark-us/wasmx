@@ -473,7 +473,7 @@ func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error
 	msgReq := ContractMessage{
 		Msg:             req.Msg,
 		ContractAddress: req.Contract,
-		SenderAddress:   ctx.Context.Env.Contract.Address,
+		SenderAddress:   req.Sender,
 	}
 
 	// make sure peers are connected
@@ -642,7 +642,7 @@ func sendMessageToChatRoomInternal(ctx *Context, cr *ChatRoom, req SendMessageTo
 	msgReq := ContractMessage{
 		Msg:             req.Msg,
 		ContractAddress: req.Contract,
-		SenderAddress:   ctx.Context.Env.Contract.Address,
+		SenderAddress:   req.Sender,
 	}
 	msgbz, err := json.Marshal(msgReq)
 	if err != nil {
