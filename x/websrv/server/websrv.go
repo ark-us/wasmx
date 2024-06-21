@@ -37,7 +37,7 @@ func NewWebsrvServer(
 	ctx context.Context,
 	config *config.WebsrvConfig,
 ) *WebsrvServer {
-	chainID, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
+	chainID, err := wasmxtypes.ParseEvmChainID(clientCtx.ChainID)
 	if err != nil {
 		panic(err)
 	}

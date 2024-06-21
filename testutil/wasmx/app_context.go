@@ -260,7 +260,7 @@ func (s *AppContext) BuildEthTx(
 	gasPrice *big.Int,
 	accesses *ethtypes.AccessList,
 ) (*types.MsgExecuteEth, sdk.Coins, uint64) {
-	chainID, err := types.ParseChainID(s.Context().ChainID())
+	chainID, err := types.ParseEvmChainID(s.Context().ChainID())
 	s.S.Require().NoError(err)
 	cfg := s.Chain.Config
 	ethSigner := ethtypes.LatestSignerForChainID(chainID)

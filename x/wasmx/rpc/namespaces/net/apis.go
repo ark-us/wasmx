@@ -19,7 +19,7 @@ type PublicAPI struct {
 // NewPublicAPI creates an instance of the public Net Web3 API.
 func NewPublicAPI(clientCtx client.Context) *PublicAPI {
 	// parse the chainID from a integer string
-	chainIDEpoch, err := wasmxtypes.ParseChainID(clientCtx.ChainID)
+	chainIDEpoch, err := wasmxtypes.ParseEvmChainID(clientCtx.ChainID)
 	if err != nil {
 		panic(err)
 	}

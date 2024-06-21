@@ -33,7 +33,7 @@ func (esvd EthSigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, s
 	// ethCfg := chainCfg.EthereumConfig(chainID)
 	// blockNum := big.NewInt(ctx.BlockHeight())
 	// signer := ethtypes.MakeSigner(ethCfg, blockNum)
-	chainID, err := wasmxtypes.ParseChainID(ctx.ChainID())
+	chainID, err := wasmxtypes.ParseEvmChainID(ctx.ChainID())
 	if err != nil {
 		return ctx, errorsmod.Wrapf(
 			errortypes.ErrInvalidChainID,

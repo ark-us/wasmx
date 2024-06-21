@@ -528,14 +528,13 @@ func initTestnetFilesInternal(
 
 		nodeConfig.SetRoot(nodeDir)
 		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
-		// nodeConfig.ProxyApp = "tcp://127.0.0.1:26657"
 		if args.sameMachine {
 			nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
-			// nodeConfig.ProxyApp = "tcp://127.0.0.1:" + strconv.Itoa(26657+i)
 		}
 		if args.noCors {
 			nodeConfig.RPC.CORSAllowedOrigins = []string{"*"}
 		}
+		nodeConfig.ProxyApp = nodeConfig.RPC.ListenAddress
 
 		if err := os.MkdirAll(filepath.Join(nodeDir, "config"), nodeDirPerm); err != nil {
 			_ = os.RemoveAll(args.outputDir)
@@ -1066,11 +1065,10 @@ func collectGenFiles(
 	gentxsDir := filepath.Join(outputDir, genTxDirName)
 	nodeConfig.Moniker = nodeDirName
 	nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
-	// nodeConfig.ProxyApp = "tcp://127.0.0.1:26657"
 	if sameMachine {
 		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
-		// nodeConfig.ProxyApp = "tcp://127.0.0.1:" + strconv.Itoa(26657+i)
 	}
+	nodeConfig.ProxyApp = nodeConfig.RPC.ListenAddress
 
 	nodeConfig.SetRoot(nodeDir)
 	initCfg := genutiltypes.NewInitConfig(chainID, gentxsDir, nodeID, valPubKey)

@@ -207,7 +207,7 @@ Where atomictx.json contains:
 				txs[i] = txBytes
 			}
 
-			leaderChainId := getLeaderChainId(chainIds)
+			leaderChainId := types.GetLeaderChain(chainIds)
 			atomictx := &types.MsgExecuteAtomicTxRequest{
 				Txs:    txs,
 				Sender: sender,
@@ -241,11 +241,6 @@ Where atomictx.json contains:
 	sdkflags.AddTxFlagsToCmd(cmd)
 	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
-}
-
-// TODO fixme
-func getLeaderChainId(chainIds []string) string {
-	return chainIds[0]
 }
 
 type internalMsgMultiChainWrap struct {

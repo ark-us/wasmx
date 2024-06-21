@@ -82,7 +82,7 @@ func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string,
 		blockGasLimit = ctx.BlockGasMeter().Limit()
 	}
 
-	chainId, err := ParseChainID(ctx.ChainID())
+	chainId, err := ParseEvmChainID(ctx.ChainID())
 	if err != nil {
 		panic(fmt.Sprintf("Chain ID cannot be parsed for wasmx: %s", err.Error()))
 	}

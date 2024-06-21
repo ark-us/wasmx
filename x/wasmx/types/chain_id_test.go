@@ -46,7 +46,7 @@ func TestChainIdValidate(t *testing.T) {
 			require.Equal(t, tc.valid, valid)
 
 			if valid {
-				evmId, err := types.ParseChainID(tc.chainId)
+				evmId, err := types.ParseEvmChainID(tc.chainId)
 				require.NoError(t, err)
 				require.Equal(t, tc.evmChainId, evmId)
 			}
