@@ -143,7 +143,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 		MaxOpenConnections: v.GetInt("network.max-open-connections"),
 		Leader:             v.GetBool("network.leader"),
 		Ips:                v.GetString("network.ips"),
-		Id:                 v.GetInt32("network.id"),
+		Id:                 v.GetString("network.id"),
 	}
 
 	return Config{

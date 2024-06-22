@@ -76,9 +76,10 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 	if err != nil {
 		contractAddress = c.Context.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(contractBz).String()
 	}
-	_, senderPrefix, _ := mcodec.GetFromBech32Unsafe(senderAddress)
+	_, senderPrefix, err := mcodec.GetFromBech32Unsafe(senderAddress)
 	ourprefix := c.Context.CosmosHandler.AccBech32Codec().Prefix()
 	if senderPrefix != ourprefix {
+		c.Logger.Debug("p2p received message from address with different prefix", "prefix", senderPrefix, "sender", senderAddress, "ourprefix", ourprefix, "err", err.Error(), "msg", string(netmsgbz))
 		senderAddress, _ = networktypes.CrossChainAddress(senderAddress, ourprefix)
 	}
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{

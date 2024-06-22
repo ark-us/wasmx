@@ -6,7 +6,7 @@ const (
 	DefaultNetworkPort    = "8090"
 	DefaultNetworkAddress = "0.0.0.0:" + DefaultNetworkPort
 	DefaultNetworkIps     = DefaultNetworkAddress
-	DefaultNodeId         = 0
+	DefaultNodeId         = "0"
 
 	// DefaultMaxOpenConnections represents the amount of open connections (unlimited = 0)
 	DefaultMaxOpenConnections = 0
@@ -22,7 +22,8 @@ type NetworkConfig struct {
 	Leader             bool `mapstructure:"leader"`
 	// comma separated list of values
 	Ips string `mapstructure:"ips"`
-	Id  int32  `mapstructure:"id"`
+	// comma separated list of values for each initialized chain
+	Id string `mapstructure:"id"`
 }
 
 // DefaultEVMConfig returns the default EVM configuration

@@ -659,14 +659,6 @@ func initTestnetFilesInternal(
 		networkIpsStr = networkIpsStr + "," + leaderURI
 	}
 
-	networkIpsStr0 := strings.Join(networkIps0, ",")
-	networkIpsStr0 = strings.Trim(networkIpsStr0, ",")
-	if leaderURI != "" {
-		networkIpsStr0 = networkIpsStr0 + "," + leaderURI
-	}
-
-	networkIpsJointStr := fmt.Sprintf(`%s:%s;%s:%s`, chainId, networkIpsStr, chainId0, networkIpsStr0)
-
 	for i := nodeIndexStart; i < args.numValidators; i++ {
 		gentxsDir := filepath.Join(args.outputDir, "gentxs")
 		nodeDirName := nodeDirNames[i]
@@ -718,7 +710,10 @@ func initTestnetFilesInternal(
 			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
 			appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 		}
-		appConfigCopy.Network.Id = int32(i - nodeIndexStart)
+		// current index for mythos, then level0
+		appConfigCopy.Network.Id = fmt.Sprintf("%s:%d;%s:%d", chainId, int32(i-nodeIndexStart), chainId0, 0)
+
+		networkIpsJointStr := fmt.Sprintf(`%s:%s;%s:%s`, chainId, networkIpsStr, chainId0, networkIps0[i])
 		appConfigCopy.Network.Ips = networkIpsJointStr
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
@@ -791,7 +786,7 @@ func initTestnetFilesInternal(
 
 			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
 
-			if err := initGenFilesLevel0(clientCtx, mbm, mcfg.LEVEL0_CHAIN_ID, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
+			if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
 				return err
 			}
 			err = collectGenFiles(

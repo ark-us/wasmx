@@ -395,11 +395,28 @@ func initChain(
 		ips := strings.Split(chainip, ":")
 		if ips[0] == chainId {
 			ipsMapForChain = ips[1]
+			break
 		}
 	}
 	peers := strings.Split(ipsMapForChain, ",")
 
-	err = networkserver.InitConsensusContract(mythosapp, consensusLogger, networkServer, appHash, &consensusParams, res.AppVersion, pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), cfgAll.Network.Id, peers)
+	currentIdStr := "0"
+	nodeids := strings.Split(cfgAll.Network.Id, ";")
+	for _, nodeid := range nodeids {
+		chainIdPair := strings.Split(nodeid, ":")
+		if len(chainIdPair) == 1 {
+			currentIdStr = chainIdPair[0]
+		} else if len(chainIdPair) > 1 && chainIdPair[0] == chainId {
+			currentIdStr = chainIdPair[1]
+			break
+		}
+	}
+	currentId, err := strconv.Atoi(currentIdStr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = networkserver.InitConsensusContract(mythosapp, consensusLogger, networkServer, appHash, &consensusParams, res.AppVersion, pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers)
 	if err != nil {
 		return nil, err
 	}

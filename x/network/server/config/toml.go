@@ -23,6 +23,6 @@ leader = {{ .Network.Leader }}
 # Comma separated list of node ips
 ips = "{{ .Network.Ips }}"
 
-id = {{ .Network.Id }}
+id = "{{ .Network.Id }}"
 
 `

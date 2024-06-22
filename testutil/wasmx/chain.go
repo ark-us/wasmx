@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -386,6 +387,8 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	} else { // P2P, level0, etc
 		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valOperatorAddress.String())}
 	}
+	nodeindex, err := strconv.Atoi(cfgNetwork.Id)
+	suite.Require().NoError(err)
 	err = networkserver.InitConsensusContract(
 		suite.App(),
 		suite.App().Logger(),
@@ -396,7 +399,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		nodeAddress,
 		nodePubKey,
 		nodePrivKey,
-		cfgNetwork.Id,
+		int32(nodeindex),
 		peers,
 	)
 	if err != nil {
