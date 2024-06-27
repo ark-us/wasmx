@@ -111,13 +111,14 @@ func InitConsensusContract(
 		ValidatorPrivKey: privKey, // consensus privkey
 		ValidatorPubKey:  pubKey,  // consensus pubkey
 		Peers:            peers,
+		NodeIndex:        nodeIndex,
 	}
 
 	// TODO check if app block height is same as network block height
 	// https://github.com/cometbft/cometbft/blob/9cccc8c463f204b210b2a290c2066445188dc681/internal/consensus/replay.go#L360
 
 	// setup the consensus contract
-	err := SetupNode(mythosapp, consensusLogger, networkServer, initChainSetup, nodeIndex)
+	err := SetupNode(mythosapp, consensusLogger, networkServer, initChainSetup)
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	return nil
 }
 
-func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, initChainSetup *types.InitChainSetup, nodeIndex int32) error {
+func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, initChainSetup *types.InitChainSetup) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 
@@ -157,12 +158,10 @@ func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 			return nil, err
 		}
 		initData := base64.StdEncoding.EncodeToString(initbz)
-
-		// TODO node IPS!!!
-		msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"%d"},{"key":"initChainSetup","value":"%s"}]}}}`, nodeIndex, initData))
+		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":"%s"}}`, wasmxtypes.HOOK_SETUP_NODE, initData))
 		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Sender:   wasmxtypes.ROLE_HOOKS_NONC,
+			Contract: wasmxtypes.ROLE_HOOKS_NONC,
 			Msg:      msg,
 		})
 		if err != nil {

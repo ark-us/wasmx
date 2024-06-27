@@ -78,6 +78,7 @@ type InitChainSetup struct {
 	ValidatorPrivKey []byte                    `json:"validator_privkey"`
 	ValidatorPubKey  []byte                    `json:"validator_pubkey"`
 	Peers            []string                  `json:"peers"`
+	NodeIndex        int32                     `json:"node_index"`
 }
 
 type Consensus struct {

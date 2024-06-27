@@ -684,11 +684,17 @@ func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minVal
 }
 
 func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool) SystemContracts {
+	// DEFAULT_HOOKS_NONC
 	hooksNonC := []Hook{
 		{
 			Name:          HOOK_START_NODE,
 			SourceModule:  ROLE_HOOKS_NONC,
 			TargetModules: []string{ROLE_CONSENSUS, ROLE_TIME},
+		},
+		{
+			Name:          HOOK_SETUP_NODE,
+			SourceModule:  ROLE_HOOKS_NONC,
+			TargetModules: []string{ROLE_CONSENSUS},
 		},
 	}
 	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
