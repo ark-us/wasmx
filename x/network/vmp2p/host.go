@@ -338,6 +338,80 @@ func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	return returns, wasmedge.Result_Success
 }
 
+func DisconnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req DisconnectChatRoomRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Logger.Error("disconnect chat room failed", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Logger.Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+	cr, found := p2pctx.ChatRooms[req.Topic]
+	if found {
+		cr.Unsubscribe()
+		delete(p2pctx.ChatRooms, req.Topic)
+	}
+
+	response := DisconnectChatRoomResponse{}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func DisconnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req DisconnectPeerRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Logger.Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+	stream, found := p2pctx.Streams[req.Peer]
+	if found {
+		stream.Close()
+		delete(p2pctx.Streams, req.Peer)
+	}
+
+	response := DisconnectPeerResponse{}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	logger := ctx_.GetContext().Logger().With("chain_id", ctx_.GetContext().ChainID())
 	ctx := &Context{Context: ctx_, Logger: logger}
@@ -352,12 +426,14 @@ func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	)
 	env.AddFunction("StartNodeWithIdentity", wasmedge.NewFunction(functype_i32_i32, StartNodeWithIdentity, ctx, 0))
 	env.AddFunction("GetNodeInfo", wasmedge.NewFunction(functype__i32, GetNodeInfo, ctx, 0))
-	env.AddFunction("CloseNode", wasmedge.NewFunction(functype__i32, CloseNode, ctx, 0))
 	env.AddFunction("ConnectPeer", wasmedge.NewFunction(functype_i32_i32, ConnectPeer, ctx, 0))
 	env.AddFunction("SendMessage", wasmedge.NewFunction(functype_i32_i32, SendMessage, ctx, 0))
 	env.AddFunction("SendMessageToPeers", wasmedge.NewFunction(functype_i32_i32, SendMessageToPeers, ctx, 0))
 	env.AddFunction("ConnectChatRoom", wasmedge.NewFunction(functype_i32_i32, ConnectChatRoom, ctx, 0))
 	env.AddFunction("SendMessageToChatRoom", wasmedge.NewFunction(functype_i32_i32, SendMessageToChatRoom, ctx, 0))
+	env.AddFunction("CloseNode", wasmedge.NewFunction(functype__i32, CloseNode, ctx, 0))
+	env.AddFunction("DisconnectChatRoom", wasmedge.NewFunction(functype_i32_i32, DisconnectChatRoom, ctx, 0))
+	env.AddFunction("DisconnectPeer", wasmedge.NewFunction(functype_i32_i32, DisconnectPeer, ctx, 0))
 	return env
 }
 

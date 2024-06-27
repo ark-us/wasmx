@@ -67,6 +67,10 @@ func (cr *ChatRoom) ListPeers() []peer.ID {
 	return cr.ps.ListPeers(topicName(cr.roomName))
 }
 
+func (cr *ChatRoom) Unsubscribe() {
+	cr.sub.Cancel()
+}
+
 // readLoop pulls messages from the pubsub topic and pushes them onto the Messages channel.
 func readLoop(cr *ChatRoom) {
 	logger := cr.ctx.Logger

@@ -68,7 +68,7 @@ type P2PContext struct {
 	Node      *host.Host
 	PubSub    *pubsub.PubSub
 	Mdns      MdnsService
-	ChatRooms map[string]*ChatRoom
+	ChatRooms map[string]*ChatRoom // indexed by topic
 	Streams   map[string]network.Stream
 }
 
@@ -127,6 +127,20 @@ type SendMessageRequest struct {
 }
 
 type SendMessageResponse struct{}
+
+type DisconnectPeerRequest struct {
+	ProtocolId string `json:"protocolId"`
+	Peer       string `json:"peer"`
+}
+
+type DisconnectPeerResponse struct{}
+
+type DisconnectChatRoomRequest struct {
+	ProtocolId string `json:"protocolId"`
+	Topic      string `json:"topic"`
+}
+
+type DisconnectChatRoomResponse struct{}
 
 type MsgStart struct {
 	PrivateKey []byte     `json:"pk"`
