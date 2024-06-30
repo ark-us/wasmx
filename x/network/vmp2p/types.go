@@ -50,6 +50,7 @@ type ChatRoomMessage struct {
 	RoomId      string    `json:"roomId"`
 	Timestamp   time.Time `json:"timestamp"`
 	Sender      NodeInfo  `json:"sender"`
+	ProtocolID  string    `json:"protocolID"`
 }
 
 type NodeInfo struct {
@@ -65,11 +66,15 @@ type MdnsService interface {
 }
 
 type P2PContext struct {
-	Node      *host.Host
-	PubSub    *pubsub.PubSub
-	Mdns      MdnsService
-	ChatRooms map[string]*ChatRoom // indexed by topic
-	Streams   map[string]network.Stream
+	Node             *host.Host
+	PubSub           *pubsub.PubSub
+	Mdns             MdnsService
+	ProtocolContexts map[string]*ProtocolContext // indexed by protocol ID
+}
+
+type ProtocolContext struct {
+	ChatRooms map[string]*ChatRoom      // indexed by topic
+	Streams   map[string]network.Stream // indexed by peer address
 }
 
 type StartNodeWithIdentityRequest struct {
@@ -159,8 +164,72 @@ type CalldataStart struct {
 	Start MsgStart `json:"start"`
 }
 
+func (p *P2PContext) GetPeers(protocolID string) ([]string, error) {
+	pctx, found := p.ProtocolContexts[protocolID]
+	if !found {
+		return nil, fmt.Errorf("protocol ID not registered: %s", protocolID)
+	}
+	peers := []string{}
+	for peeraddr := range pctx.Streams {
+		peers = append(peers, peeraddr)
+	}
+	return peers, nil
+}
+
+func (p *P2PContext) GetPeer(protocolID string, peer string) (network.Stream, bool) {
+	pctx, found := p.ProtocolContexts[protocolID]
+	if !found {
+		return nil, false
+	}
+	stream, found := pctx.Streams[peer]
+	return stream, found
+}
+
+func (p *P2PContext) AddPeer(protocolID string, peer string, stream network.Stream) {
+	_, found := p.ProtocolContexts[protocolID]
+	if !found {
+		p.ProtocolContexts[protocolID] = &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}}
+	}
+	p.ProtocolContexts[protocolID].Streams[peer] = stream
+}
+
+func (p *P2PContext) DeletePeer(protocolID string, peer string) error {
+	pctx, found := p.ProtocolContexts[protocolID]
+	if !found {
+		return fmt.Errorf("protocol ID not registered: %s", protocolID)
+	}
+	delete(pctx.Streams, peer)
+	return nil
+}
+
+func (p *P2PContext) GetChatRoom(protocolID string, topic string) (*ChatRoom, bool) {
+	pctx, found := p.ProtocolContexts[protocolID]
+	if !found {
+		return nil, false
+	}
+	cr, found := pctx.ChatRooms[topic]
+	return cr, found
+}
+
+func (p *P2PContext) AddChatRoom(protocolID string, topic string, cr *ChatRoom) {
+	_, found := p.ProtocolContexts[protocolID]
+	if !found {
+		p.ProtocolContexts[protocolID] = &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}}
+	}
+	p.ProtocolContexts[protocolID].ChatRooms[topic] = cr
+}
+
+func (p *P2PContext) DeleteChatRoom(protocolID string, topic string) error {
+	pctx, found := p.ProtocolContexts[protocolID]
+	if !found {
+		return fmt.Errorf("protocol ID not registered: %s", protocolID)
+	}
+	delete(pctx.ChatRooms, topic)
+	return nil
+}
+
 func WithP2PEmptyContext(ctx context.Context) context.Context {
-	p2pctx := &P2PContext{Streams: map[string]network.Stream{}, ChatRooms: map[string]*ChatRoom{}}
+	p2pctx := &P2PContext{ProtocolContexts: map[string]*ProtocolContext{}}
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 

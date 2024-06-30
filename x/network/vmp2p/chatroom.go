@@ -23,15 +23,16 @@ type ChatRoom struct {
 	topic *pubsub.Topic
 	sub   *pubsub.Subscription
 
-	roomName string
-	self     peer.ID
+	protocolID  string
+	topicString string
+	self        peer.ID
 }
 
 // JoinChatRoom tries to subscribe to the PubSub topic for the room name, returning
 // a ChatRoom on success.
-func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, roomName string) (*ChatRoom, error) {
+func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, protocolID string, topicString string) (*ChatRoom, error) {
 	// join the pubsub topic
-	topic, err := ps.Join(topicName(roomName))
+	topic, err := ps.Join(topicName(topicString))
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +44,14 @@ func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, roomName stri
 	}
 
 	cr := &ChatRoom{
-		ctx:      ctx,
-		ps:       ps,
-		topic:    topic,
-		sub:      sub,
-		self:     selfID,
-		roomName: roomName,
-		Messages: make(chan *ChatRoomMessage, ChatRoomBufSize),
+		ctx:         ctx,
+		ps:          ps,
+		topic:       topic,
+		sub:         sub,
+		self:        selfID,
+		protocolID:  protocolID,
+		topicString: topicString,
+		Messages:    make(chan *ChatRoomMessage, ChatRoomBufSize),
 	}
 
 	// start reading messages from the subscription in a loop
@@ -64,7 +66,7 @@ func (cr *ChatRoom) Publish(message []byte) error {
 }
 
 func (cr *ChatRoom) ListPeers() []peer.ID {
-	return cr.ps.ListPeers(topicName(cr.roomName))
+	return cr.ps.ListPeers(topicName(cr.topicString))
 }
 
 func (cr *ChatRoom) Unsubscribe() {
@@ -84,7 +86,7 @@ func readLoop(cr *ChatRoom) {
 			// remove chat room; it will be reconnected when needed
 			p2pctx, err := GetP2PContext(cr.ctx.Context)
 			if err == nil {
-				delete(p2pctx.ChatRooms, cr.roomName)
+				p2pctx.DeleteChatRoom(cr.protocolID, cr.topicString)
 			}
 			return
 		}
@@ -94,9 +96,10 @@ func readLoop(cr *ChatRoom) {
 		}
 		cm := &ChatRoomMessage{
 			ContractMsg: msg.Data,
-			RoomId:      cr.roomName,
+			RoomId:      cr.topicString,
 			Sender:      NodeInfo{Id: msg.ReceivedFrom.String()},
 			Timestamp:   time.Now(),
+			ProtocolID:  cr.protocolID,
 		}
 
 		// send valid messages onto the Messages channel
@@ -104,6 +107,6 @@ func readLoop(cr *ChatRoom) {
 	}
 }
 
-func topicName(roomName string) string {
-	return "chat-room:" + roomName
+func topicName(topicString string) string {
+	return "chat-room:" + topicString
 }

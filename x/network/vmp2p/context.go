@@ -21,13 +21,13 @@ var STREAM_MAIN = "mainstream"
 func (c *Context) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Logger, rw, STREAM_MAIN, c.handleContractMessage)
+	go readDataStd(c.Context, c.Logger, rw, stream.ID(), STREAM_MAIN, c.handleContractMessage)
 }
 
 // peer stream
 func (c *Context) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Logger, rw, peeraddrstr, c.handleContractMessage)
+	go readDataStd(c.Context, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
 	c.Logger.Debug("Connected to:", peeraddrstr)
 }
 
@@ -68,7 +68,7 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 		return
 	}
 
-	c.Logger.Debug("p2p received message", "message", string(netmsgbz), "sender", senderAddress, "contract", contractAddress)
+	c.Logger.Debug("p2p received message", "msg", string(netmsgbz), "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId)
 
 	// if the message is from another chain, contract address may be without prefix
 	// and sender address will have the prefix of the other chain
@@ -93,7 +93,7 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 	}
 }
 
-func readDataStd(ctx *vmtypes.Context, logger log.Logger, rw *bufio.ReadWriter, frompeer string, handleMessage func(msg []byte, frompeer string)) {
+func readDataStd(ctx *vmtypes.Context, logger log.Logger, rw *bufio.ReadWriter, protocolID string, frompeer string, handleMessage func(msg []byte, frompeer string)) {
 	logger.Debug("reading stream data from peer", "peer", frompeer)
 	goCtx := ctx.GoContextParent
 out:
@@ -107,7 +107,7 @@ out:
 			if frompeer != STREAM_MAIN {
 				p2pctx, err := GetP2PContext(ctx)
 				if err == nil {
-					delete(p2pctx.Streams, frompeer)
+					p2pctx.DeletePeer(protocolID, frompeer)
 				}
 			}
 			return

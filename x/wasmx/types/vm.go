@@ -209,6 +209,8 @@ var ROLE_MULTICHAIN_REGISTRY = "multichain_registry"
 var ROLE_MULTICHAIN_REGISTRY_LOCAL = "multichain_registry_local"
 var ROLE_SECRET_SHARING = "secret_sharing"
 
+var ROLE_LOBBY = "lobby"
+
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
 // encoding = ""
@@ -258,6 +260,7 @@ var LEVELN_v001 = "leveln_0.0.1"
 var MULTICHAIN_REGISTRY_v001 = "multichain_registry_0.0.1"
 var MULTICHAIN_REGISTRY_LOCAL_v001 = "multichain_registry_local_0.0.1"
 var ERC20_ROLLUP_v001 = "erc20rollupjson_0.0.1"
+var LOBBY_v001 = "lobby_json_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

@@ -132,6 +132,9 @@ var (
 	//go:embed 4c.erc20rollupjson_0.0.1.wasm
 	erc20rollupjson []byte
 
+	//go:embed 4d.lobby_json_0.0.1.wasm
+	lobbyjson []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -265,6 +268,15 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = multichain_registry_local
 	case types.ERC20_ROLLUP_v001:
 		wasmbin = erc20rollupjson
+	case "lobby_library":
+		wasmbin = lobbyjson
+	case types.LOBBY_v001:
+		libaddr := types.AccAddressFromHex(types.ADDR_LOBBY_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(LobbyP2Pv001(libaddrstr))
 	}
 	return wasmbin
 }

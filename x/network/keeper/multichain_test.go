@@ -339,7 +339,7 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	paramBz, err := json.Marshal(&wasmxtypes.ActionParam{Key: "message", Value: string(genTxInfo)})
 	suite.Require().NoError(err)
 
-	msg := []byte(fmt.Sprintf(`{"query":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
+	msg := []byte(fmt.Sprintf(`{"execute":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
 	txbz := suite.queryMultiChainCall(appA.App, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
 	msg = []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
 	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddressStr, chainId)
@@ -1111,7 +1111,7 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	paramBz, err := json.Marshal(&wasmxtypes.ActionParam{Key: "message", Value: string(genTxInfo)})
 	suite.Require().NoError(err)
 
-	msg := []byte(fmt.Sprintf(`{"query":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
+	msg := []byte(fmt.Sprintf(`{"execute":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
 	txbz := suite.queryMultiChainCall(appA.App, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
 	msg = []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
 	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddressStr, chainId)

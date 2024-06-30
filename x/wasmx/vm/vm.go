@@ -317,7 +317,14 @@ func ExecuteWasmInterpreted(
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
-		wrapErr := sdkerr.Wrapf(err, "%s", string(context.FinishData))
+		wrapErr := sdkerr.Wrapf(
+			err,
+			"chain_id: %s; contract: %s; entry point: %s; revert: %s",
+			context.Ctx.ChainID(),
+			context.Env.Contract.Address.String(),
+			funcName,
+			string(context.FinishData),
+		)
 		resp := handleContractErrorResponse(contractVm, context.FinishData, isdebug, wrapErr)
 		if isdebug {
 			// we don't fail for debug/tracing transactions
@@ -441,7 +448,14 @@ func ExecuteWasm(
 
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	if err != nil {
-		wrapErr := sdkerr.Wrapf(err, "revert: %s", hex.EncodeToString(context.FinishData))
+		wrapErr := sdkerr.Wrapf(
+			err,
+			"chain_id: %s; contract: %s; entry point: %s; revert: %s",
+			context.Ctx.ChainID(),
+			context.Env.Contract.Address.String(),
+			funcName,
+			hex.EncodeToString(context.FinishData),
+		)
 		resp := handleContractErrorResponse(contractVm, context.FinishData, isdebug, wrapErr)
 		if isdebug {
 			return resp, nil

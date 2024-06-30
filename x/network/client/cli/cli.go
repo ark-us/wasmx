@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -50,6 +52,9 @@ const (
 
 type appwithTxConfig interface {
 	TxConfig() client.TxConfig
+	LegacyAmino() *codec.LegacyAmino
+	AppCodec() codec.Codec
+	InterfaceRegistry() codectypes.InterfaceRegistry
 }
 
 func GetTxCmd(appCreator multichain.NewAppCreator) *cobra.Command {
@@ -66,6 +71,7 @@ func GetTxCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 		RegisterNewSubChain(),
 		RegisterSubChainValidator(appCreator),
 		InitializeSubChain(),
+		RegisterLobbyGenTx(appCreator),
 	)
 
 	return txCmd
@@ -397,7 +403,7 @@ Where validator.json contains:
 				return err
 			}
 			fmt.Println("---sender--", sender)
-			genTxData, err := getGenTxData(clientCtx, flags, customAddrCodec, sender, subChainId, validMsg)
+			genTxData, err := getGenTxData(clientCtx, flags, customAddrCodec, "consensus", sender, subChainId, validMsg)
 			if err != nil {
 				return err
 			}
@@ -415,6 +421,95 @@ Where validator.json contains:
 			}
 			registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 			contractAddr, err := customAddrCodec.BytesToString(registryAddress)
+			if err != nil {
+				return err
+			}
+
+			return sendMultiChainExecution(
+				clientCtx,
+				cmd.Flags(),
+				customAddrCodec,
+				contractAddr,
+				sender,
+				msgbz,
+				nil,
+			)
+		},
+		SilenceUsage: true,
+	}
+
+	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
+	sdkflags.AddTxFlagsToCmd(cmd)
+	multichain.AddMultiChainFlagsToCmd(cmd)
+	return cmd
+}
+
+func RegisterLobbyGenTx(appCreator multichain.NewAppCreator) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "register-subchain-gentx [path/to/validator.json]",
+		Short: "Register subchain gentx for lobby contract deployed on the provided subchain",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Register subchain gentx
+
+Example:
+$ %s tx multichain register-subchain-gentx path/to/validator.json --chain-id="level0_1000-1"
+
+Where validator.json contains:
+
+{
+	"moniker": "myvalidator",
+	"identity": "optional identity signature (ex. UPort or Keybase)",
+	"website": "validator's (optional) website",
+	"security": "validator's (optional) security contact email",
+	"details": "validator's (optional) details",
+	"commission-rate": "0.1",
+	"commission-max-rate": "0.2",
+	"commission-max-change-rate": "0.01",
+	"min-self-delegation": "1"
+	"amount": "1000000000",
+}
+
+		`, version.AppName)),
+		Aliases: []string{},
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+			flags := cmd.Flags()
+			chainId, err := flags.GetString(sdkflags.FlagChainID)
+			if err != nil {
+				return err
+			}
+			sender := clientCtx.GetFromAddress()
+
+			validMsg, err := parseAndValidateValidatorJSON(args[0])
+			if err != nil {
+				return err
+			}
+			genTxData, err := getGenTxData(clientCtx, flags, customAddrCodec, "lobby", sender, chainId, validMsg)
+			if err != nil {
+				return err
+			}
+
+			signedGenTxData, err := signGenTxDataLobby(appCreator, clientCtx, flags, customAddrCodec, chainId, genTxData, sender)
+			if err != nil {
+				return err
+			}
+
+			paramBz, err := json.Marshal(&wasmxtypes.ActionParam{Key: "gentx", Value: base64.StdEncoding.EncodeToString(signedGenTxData)})
+			if err != nil {
+				return err
+			}
+			msgbz := []byte(fmt.Sprintf(`{"run":{"event":{"type":"addGenTx","params":[%s]}}}`, string(paramBz)))
+
+			lobbyAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_LOBBY)
+			contractAddr, err := customAddrCodec.BytesToString(lobbyAddress)
 			if err != nil {
 				return err
 			}
@@ -1131,6 +1226,7 @@ func getGenTxData(
 	clientCtx client.Context,
 	flags *flag.FlagSet,
 	customAddrCodec mcodec.AccBech32Codec,
+	contractAddress string,
 	sender sdk.AccAddress,
 	subChainId string,
 	validMsg *stakingtypes.MsgCreateValidator,
@@ -1146,13 +1242,13 @@ func getGenTxData(
 	if err != nil {
 		return nil, err
 	}
-	querymsg := []byte(fmt.Sprintf(`{"query":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
+	querymsg := []byte(fmt.Sprintf(`{"execute":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
 
 	res, err := sendMultiChainQuery(
 		clientCtx,
 		flags,
 		customAddrCodec,
-		"consensus",
+		contractAddress,
 		sender,
 		querymsg,
 		nil,
@@ -1223,6 +1319,65 @@ func signGenTxData(
 	if err != nil {
 		return nil, err
 	}
+	return signGenTxDataInternal(appCreatorFactory, clientCtx, flags, subChainId, genTxData, sender, subchainConfig)
+}
+
+type ChainConfigData struct {
+	ChainId     string           `json:"chain_id"`
+	ChainConfig menc.ChainConfig `json:"chain_config"`
+}
+
+func signGenTxDataLobby(
+	appCreatorFactory multichain.NewAppCreator,
+	clientCtx client.Context,
+	flags *flag.FlagSet,
+	customAddrCodec mcodec.AccBech32Codec,
+	chainId string,
+	genTxData []byte,
+	sender sdk.AccAddress,
+) ([]byte, error) {
+	querymsg := []byte(`{"execute":{"action":{"type": "getConfigData","params":[],"event":null}}}`)
+	lobbyAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_LOBBY)
+	contractAddr, err := customAddrCodec.BytesToString(lobbyAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := sendMultiChainQuery(
+		clientCtx,
+		flags,
+		customAddrCodec,
+		contractAddr,
+		sender,
+		querymsg,
+		nil,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	data2, err := decodeQueryResponse(res.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	var subchainConfig ChainConfigData
+	err = json.Unmarshal(data2, &subchainConfig)
+	if err != nil {
+		return nil, err
+	}
+	return signGenTxDataInternal(appCreatorFactory, clientCtx, flags, subchainConfig.ChainId, genTxData, sender, subchainConfig.ChainConfig)
+}
+
+func signGenTxDataInternal(
+	appCreatorFactory multichain.NewAppCreator,
+	clientCtx client.Context,
+	flags *flag.FlagSet,
+	subChainId string,
+	genTxData []byte,
+	sender sdk.AccAddress,
+	subchainConfig menc.ChainConfig,
+) ([]byte, error) {
 
 	_, appCreator := createMockAppCreator(appCreatorFactory, 0)
 	isubchainapp := appCreator(subChainId, &subchainConfig)
@@ -1238,7 +1393,20 @@ func signGenTxData(
 	if err != nil {
 		return nil, err
 	}
-	txbuilder, err = signTx(clientCtx, flags, txbuilder, subtxconfig, sender, subChainId)
+
+	newClientCtx := clientCtx.
+		WithChainID(subChainId).
+		WithTxConfig(subtxconfig).
+		WithCodec(subchainapp.AppCodec()).
+		WithInterfaceRegistry(subchainapp.InterfaceRegistry()).
+		WithLegacyAmino(subchainapp.LegacyAmino())
+		// WithAccountRetriever(cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec}).
+
+	txf, err := tx.NewFactoryCLI(clientCtx, flags)
+	if err != nil {
+		return nil, err
+	}
+	txbuilder, err = signTxWithSignerData(newClientCtx, txf, flags, txbuilder, subtxconfig, sender, subChainId, 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -1263,7 +1431,20 @@ func signTx(
 	if err != nil {
 		return nil, err
 	}
+	return signTxWithSignerData(clientCtx, txf, flags, txbuilder, txconfig, sender, subChainId, txf.AccountNumber(), txf.Sequence())
+}
 
+func signTxWithSignerData(
+	clientCtx client.Context,
+	txf tx.Factory,
+	flags *flag.FlagSet,
+	txbuilder client.TxBuilder,
+	txconfig client.TxConfig,
+	sender sdk.AccAddress,
+	subChainId string,
+	accountNumber uint64,
+	sequence uint64,
+) (client.TxBuilder, error) {
 	k, err := txf.Keybase().Key(clientCtx.FromName)
 	if err != nil {
 		return nil, err
@@ -1280,7 +1461,7 @@ func signTx(
 			SignMode:  txsigning.SignMode(txconfig.SignModeHandler().DefaultMode()),
 			Signature: nil,
 		},
-		Sequence: 0,
+		Sequence: sequence,
 	}
 
 	subchainSender, err := txconfig.SigningContext().AddressCodec().BytesToString(sender)
@@ -1295,8 +1476,8 @@ func signTx(
 
 	signerData := authsigning.SignerData{
 		ChainID:       subChainId,
-		AccountNumber: 0,
-		Sequence:      0,
+		AccountNumber: accountNumber,
+		Sequence:      sequence,
 		PubKey:        pubKey,
 		Address:       subchainSender,
 	}
@@ -1316,10 +1497,11 @@ func signTx(
 		SignMode:  signMode,
 		Signature: sigBytes,
 	}
+
 	sigV2 = txsigning.SignatureV2{
 		PubKey:   pubKey,
 		Data:     &sigData,
-		Sequence: txf.Sequence(),
+		Sequence: sequence,
 	}
 	err = txbuilder.SetSignatures(sigV2)
 	if err != nil {

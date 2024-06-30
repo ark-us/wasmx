@@ -92,6 +92,12 @@ mythosd tx multichain init-subchain logos_10001-1 --chain-id="leveln_1000-1" --f
 
 ```
 
+```
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl.json --chain-id="level0_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl2.json --chain-id="level0_1000-1" --from node1 --keyring-backend test --home ./testnet/node1/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+```
+
 ## Create a hierarchy of multichains
 
 ```
@@ -116,3 +122,9 @@ make proto-gen
 
 * `custom.pulsar.go`: rename `networkv1` to `types`
 * `custom.pb.go`: comment out `MsgExecuteAtomicTxRequest` definition and methods `Reset`, `String`, `ProtoMessage`, `Descriptor`, `GetTxs`, `GetLeaderChainId`, `GetSender`. Also comment out `QueryAtomicMultiChainRequest` def & methods
+
+### Open Ports
+
+TCP: 22, 80, 443, 8443, 8447, 8090, 1317, 26657, 26656, 5001, 5011
+UDP: 5353 (libp2p)
+

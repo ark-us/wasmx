@@ -61,6 +61,8 @@ var ADDR_LEVEL0 = "0x0000000000000000000000000000000000000048"
 var ADDR_LEVEL0_LIBRARY = "0x0000000000000000000000000000000000000049"
 var ADDR_MULTICHAIN_REGISTRY = "0x000000000000000000000000000000000000004a"
 var ADDR_MULTICHAIN_REGISTRY_LOCAL = "0x000000000000000000000000000000000000004b"
+var ADDR_LOBBY = "0x000000000000000000000000000000000000004d"
+var ADDR_LOBBY_LIBRARY = "0x000000000000000000000000000000000000004e"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -481,6 +483,11 @@ func ConsensusPrecompiles() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal level0InitMsg message")
 	}
 
+	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"min_validators_count","value":2},{"key":"enable_eid_check","value":false},{"key":"erc20CodeId","value":27},{"key":"derc20CodeId","value":28},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal lobbyInitMsg message")
+	}
+
 	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"ids":[]}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal mutichainLocalInitMsg message")
@@ -613,6 +620,24 @@ func ConsensusPrecompiles() SystemContracts {
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
+		{
+			Address:     ADDR_LOBBY_LIBRARY,
+			Label:       "lobby_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LOBBY,
+			Label:       LOBBY_v001,
+			InitMessage: lobbyInitMsg,
+			Pinned:      false,
+			Role:        ROLE_LOBBY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LOBBY_LIBRARY, ROLE_LIBRARY)},
+		},
 	}
 }
 
@@ -689,12 +714,12 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, min
 		{
 			Name:          HOOK_START_NODE,
 			SourceModule:  ROLE_HOOKS_NONC,
-			TargetModules: []string{ROLE_CONSENSUS, ROLE_TIME},
+			TargetModules: []string{ROLE_CONSENSUS, ROLE_TIME, ROLE_LOBBY},
 		},
 		{
 			Name:          HOOK_SETUP_NODE,
 			SourceModule:  ROLE_HOOKS_NONC,
-			TargetModules: []string{ROLE_CONSENSUS},
+			TargetModules: []string{ROLE_CONSENSUS, ROLE_LOBBY},
 		},
 	}
 	hooksbz, err := json.Marshal(DEFAULT_HOOKS)

@@ -31,6 +31,7 @@ func InitChainAndCommitBlock(
 	req *abci.RequestInitChain,
 	logger log.Logger,
 ) (*abci.ResponseInitChain, *abci.ResponseInfo, error) {
+	// TODO catch panic so other chains remain unaffected
 	res, err := app.Info(types.RequestInfo)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error calling Info: %v", err)
