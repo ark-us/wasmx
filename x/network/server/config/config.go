@@ -12,6 +12,8 @@ const (
 	DefaultMaxOpenConnections = 0
 )
 
+var DefaultInitialChains = []string{}
+
 // NetworkConfig defines the application configuration values for Network module.
 type NetworkConfig struct {
 	Enable  bool   `mapstructure:"enable"`
@@ -23,7 +25,8 @@ type NetworkConfig struct {
 	// comma separated list of values
 	Ips string `mapstructure:"ips"`
 	// comma separated list of values for each initialized chain
-	Id string `mapstructure:"id"`
+	Id            string   `mapstructure:"id"`
+	InitialChains []string `mapstructure:"initial-chains"`
 }
 
 // DefaultEVMConfig returns the default EVM configuration
@@ -35,6 +38,7 @@ func DefaultNetworkConfigConfig() *NetworkConfig {
 		Leader:             DefaultNetworkLeader,
 		Ips:                DefaultNetworkIps,
 		Id:                 DefaultNodeId,
+		InitialChains:      DefaultInitialChains,
 	}
 }
 

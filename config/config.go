@@ -78,6 +78,36 @@ func GetChainConfig(chainId string) (*menc.ChainConfig, error) {
 var LEVEL0_CHAIN_ID = "level0_1000-1"
 var MYTHOS_CHAIN_ID_TEST = "mythos_7001-1"
 var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
+var DEFAULT_MYTHOS_CONFIG = menc.ChainConfig{
+	Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
+	Bech32PrefixAccPub:   Bech32PrefixAccPub,
+	Bech32PrefixValAddr:  Bech32PrefixValAddr,
+	Bech32PrefixValPub:   Bech32PrefixValPub,
+	Bech32PrefixConsAddr: Bech32PrefixConsAddr,
+	Bech32PrefixConsPub:  Bech32PrefixConsPub,
+	Name:                 Name,
+	HumanCoinUnit:        HumanCoinUnit,
+	BaseDenom:            BaseDenom,
+	DenomUnit:            DenomUnit,
+	BaseDenomUnit:        BaseDenomUnit,
+	BondBaseDenom:        BondBaseDenom,
+	BondDenom:            BondDenom,
+}
+var DEFAULT_LEVEL0_CONFIG = menc.ChainConfig{
+	Bech32PrefixAccAddr:  "level0",
+	Bech32PrefixAccPub:   "level0pub",
+	Bech32PrefixValAddr:  "level0",
+	Bech32PrefixValPub:   "level0pub",
+	Bech32PrefixConsAddr: "level0",
+	Bech32PrefixConsPub:  "level0pub",
+	Name:                 "level0",
+	HumanCoinUnit:        "lvl",
+	BaseDenom:            "alvl",
+	DenomUnit:            "lvl",
+	BaseDenomUnit:        18,
+	BondBaseDenom:        "aslvl",
+	BondDenom:            "slvl",
+}
 
 // TODO this needs to be in a contract
 func init() {
@@ -86,51 +116,11 @@ func init() {
 		MYTHOS_CHAIN_ID_TESTNET,
 		LEVEL0_CHAIN_ID,
 	}
-	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = menc.ChainConfig{
-		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
-		Bech32PrefixAccPub:   Bech32PrefixAccPub,
-		Bech32PrefixValAddr:  Bech32PrefixValAddr,
-		Bech32PrefixValPub:   Bech32PrefixValPub,
-		Bech32PrefixConsAddr: Bech32PrefixConsAddr,
-		Bech32PrefixConsPub:  Bech32PrefixConsPub,
-		Name:                 Name,
-		HumanCoinUnit:        HumanCoinUnit,
-		BaseDenom:            BaseDenom,
-		DenomUnit:            DenomUnit,
-		BaseDenomUnit:        BaseDenomUnit,
-		BondBaseDenom:        BondBaseDenom,
-		BondDenom:            BondDenom,
-	}
-	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = menc.ChainConfig{
-		Bech32PrefixAccAddr:  Bech32PrefixAccAddr,
-		Bech32PrefixAccPub:   Bech32PrefixAccPub,
-		Bech32PrefixValAddr:  Bech32PrefixValAddr,
-		Bech32PrefixValPub:   Bech32PrefixValPub,
-		Bech32PrefixConsAddr: Bech32PrefixConsAddr,
-		Bech32PrefixConsPub:  Bech32PrefixConsPub,
-		Name:                 Name,
-		HumanCoinUnit:        HumanCoinUnit,
-		BaseDenom:            BaseDenom,
-		DenomUnit:            DenomUnit,
-		BaseDenomUnit:        BaseDenomUnit,
-		BondBaseDenom:        BondBaseDenom,
-		BondDenom:            BondDenom,
-	}
-	PrefixesMap[LEVEL0_CHAIN_ID] = menc.ChainConfig{
-		Bech32PrefixAccAddr:  "level0",
-		Bech32PrefixAccPub:   "level0pub",
-		Bech32PrefixValAddr:  "level0",
-		Bech32PrefixValPub:   "level0pub",
-		Bech32PrefixConsAddr: "level0",
-		Bech32PrefixConsPub:  "level0pub",
-		Name:                 "level0",
-		HumanCoinUnit:        "lvl",
-		BaseDenom:            "alvl",
-		DenomUnit:            "lvl",
-		BaseDenomUnit:        18,
-		BondBaseDenom:        "aslvl",
-		BondDenom:            "slvl",
-	}
+	PrefixesMap["mythos"] = DEFAULT_MYTHOS_CONFIG
+	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = DEFAULT_MYTHOS_CONFIG
+	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = DEFAULT_MYTHOS_CONFIG
+	PrefixesMap["level0"] = DEFAULT_LEVEL0_CONFIG
+	PrefixesMap[LEVEL0_CHAIN_ID] = DEFAULT_LEVEL0_CONFIG
 }
 
 func GetMultiChainStoreKey(chainId string, storeKey string) string {

@@ -11,6 +11,7 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
 	networkconfig "mythos/v1/x/network/server/config"
+	networkflags "mythos/v1/x/network/server/flags"
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
 	websrvconfig "mythos/v1/x/websrv/server/config"
 )
@@ -144,6 +145,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 		Leader:             v.GetBool("network.leader"),
 		Ips:                v.GetString("network.ips"),
 		Id:                 v.GetString("network.id"),
+		InitialChains:      v.GetStringSlice(networkflags.NetworkInitialChains),
 	}
 
 	return Config{

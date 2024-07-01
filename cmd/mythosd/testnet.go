@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -69,6 +70,7 @@ import (
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
 	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	networksrvflags "mythos/v1/x/network/server/flags"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	// "mythos/v1/testutil/network"
 )
@@ -105,6 +107,7 @@ type initArgs struct {
 	p2p                bool
 	minLevelValidators int
 	enableEIDCheck     bool
+	initialChains      []string
 }
 
 type startArgs struct {
@@ -173,7 +176,7 @@ or a similar setup where each node has a manually configurable IP address.
 Note, strict routability for addresses is turned off in the config file.
 
 Example:
-	mythosd testnet init-files --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
+	mythosd testnet init-files --initial-chains=mythos,level0 --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
 	`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
@@ -198,7 +201,7 @@ Example:
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 			args.minLevelValidators, _ = cmd.Flags().GetInt(flagMinLevelValidators)
 			args.enableEIDCheck, _ = cmd.Flags().GetBool(flagEnableEIDCheck)
-
+			args.initialChains, _ = cmd.Flags().GetStringSlice(networksrvflags.NetworkInitialChains)
 			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
 		},
 	}
@@ -210,6 +213,7 @@ Example:
 	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
 	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
+	cmd.Flags().StringSlice(networksrvflags.NetworkInitialChains, []string{"mythos"}, "Initialized chains, separated by comma. E.g. 'mythos', 'mythos,level0'")
 	return cmd
 }
 
@@ -460,6 +464,8 @@ func initTestnetFilesInternal(
 	os.MkdirAll(args.outputDir, nodeDirPerm)
 
 	var err error
+	generateMythos := slices.Contains(args.initialChains, "mythos")
+	generateLevel0 := slices.Contains(args.initialChains, "level0")
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
 	}
@@ -490,6 +496,13 @@ func initTestnetFilesInternal(
 	level0app := ilevel0app.(*app.App)
 	addrCodec0 := level0app.TxConfig().SigningContext().AddressCodec()
 
+	initialChainIds := []string{}
+	if generateMythos {
+		initialChainIds = append(initialChainIds, chainId)
+	}
+	if generateLevel0 {
+		initialChainIds = append(initialChainIds, chainId0)
+	}
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
 	nodeIPs := make([]string, args.numValidators)
@@ -715,87 +728,99 @@ func initTestnetFilesInternal(
 
 		networkIpsJointStr := fmt.Sprintf(`%s:%s;%s:%s`, chainId, networkIpsStr, chainId0, networkIps0[i])
 		appConfigCopy.Network.Ips = networkIpsJointStr
+		appConfigCopy.Network.InitialChains = initialChainIds
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
 	}
 
 	if nodeIndexStart == 0 {
-		if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
-			return err
-		}
-
-		for i := nodeIndexStart; i < args.numValidators; i++ {
-			err = collectGenFiles(
-				clientCtx,
-				mythosapp.TxConfig(),
-				nodeConfig,
-				args.chainID, nodeIDs[i], valPubKeys[i], i,
-				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeConfig.GenesisFile(), "gentxs",
-			)
-			if err != nil {
+		if generateMythos {
+			if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
 				return err
 			}
-		}
 
-		// initialize level0
-
-		genBalanceCoins := make([]sdk.Coins, len(genBalances))
-		for i := 0; i < len(genBalances); i++ {
-			genBalanceCoins[i] = genBalances[i].Coins
-		}
-
-		// set this only after we get address bytes
-		mcfg.SetGlobalChainConfigById(chainId0)
-
-		valAddrCodec = level0app.TxConfig().SigningContext().ValidatorAddressCodec()
-
-		for i := nodeIndexStart; i < args.numValidators; i++ {
-			// we add the nodeid to this folder, so we only have 1 gentx for each level0
-			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId0+nodeIDs[i])
-			nodeDirName := nodeDirNames[i]
-			kb := kbs[i]
-			// memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
-			memo := networkIps0[i]
-
-			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
-			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
-			for i, coin := range genBalanceCoins[i] {
-				coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
-			}
-			valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
-			if err != nil {
-				return err
-			}
-			valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
-			err = createGentx(clientCtx, level0app.TxConfig(), chainId0, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg0.BaseDenom, kb, cmd)
-			if err != nil {
-				return err
+			for i := nodeIndexStart; i < args.numValidators; i++ {
+				err = collectGenFiles(
+					clientCtx,
+					mythosapp.TxConfig(),
+					nodeConfig,
+					args.chainID, nodeIDs[i], valPubKeys[i], i,
+					args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeConfig.GenesisFile(), "gentxs",
+				)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
-		for i := nodeIndexStart; i < args.numValidators; i++ {
-			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
-			genAccount := cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
-			addrstr := addrprefixed.String()
-
-			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
-			for i, coin := range genBalanceCoins[i] {
-				coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
+		if generateLevel0 {
+			// initialize level0
+			genBalanceCoins := make([]sdk.Coins, len(genBalances))
+			for i := 0; i < len(genBalances); i++ {
+				genBalanceCoins[i] = genBalances[i].Coins
 			}
-			genBalance := banktypes.Balance{Address: addrstr, Coins: coins}
 
-			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
+			// set this only after we get address bytes
+			mcfg.SetGlobalChainConfigById(chainId0)
 
-			if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
-				return err
+			valAddrCodec = level0app.TxConfig().SigningContext().ValidatorAddressCodec()
+
+			for i := nodeIndexStart; i < args.numValidators; i++ {
+				// we add the nodeid to this folder, so we only have 1 gentx for each level0
+				gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId0+nodeIDs[i])
+				nodeDirName := nodeDirNames[i]
+				kb := kbs[i]
+				// memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
+				memo := networkIps0[i]
+
+				addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
+				coins := make([]sdk.Coin, len(genBalanceCoins[i]))
+				for i, coin := range genBalanceCoins[i] {
+					coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
+				}
+				valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
+				if err != nil {
+					return err
+				}
+				valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
+				err = createGentx(clientCtx, level0app.TxConfig(), chainId0, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg0.BaseDenom, kb, cmd)
+				if err != nil {
+					return err
+				}
 			}
-			err = collectGenFiles(
-				clientCtx,
-				level0app.TxConfig(),
-				nodeConfig, chainId0, nodeIDs[i], valPubKeys[i], i,
-				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, genFile, "gentxs_"+chainId0+nodeIDs[i],
-			)
-			if err != nil {
+			genBalances := []banktypes.Balance{}
+			genAccounts := []cosmosmodtypes.GenesisAccount{}
+
+			for i := nodeIndexStart; i < args.numValidators; i++ {
+				addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
+				genAccount := cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
+				genAccounts = append(genAccounts, genAccount)
+				addrstr := addrprefixed.String()
+
+				coins := make([]sdk.Coin, len(genBalanceCoins[i]))
+				for i, coin := range genBalanceCoins[i] {
+					coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
+				}
+				genBalance := banktypes.Balance{Address: addrstr, Coins: coins}
+				genBalances = append(genBalances, genBalance)
+
+				genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
+
+				if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
+					return err
+				}
+				err = collectGenFiles(
+					clientCtx,
+					level0app.TxConfig(),
+					nodeConfig, chainId0, nodeIDs[i], valPubKeys[i], i,
+					args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, genFile, "gentxs_"+chainId0+nodeIDs[i],
+				)
+				if err != nil {
+					return err
+				}
+			}
+
+			if err := initGenFiles(clientCtx, mbm, chainId0, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
 				return err
 			}
 		}

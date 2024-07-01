@@ -8,4 +8,5 @@ const (
 	NetworkLeader             = "network.leader"
 	NetworkIps                = "network.ips"
 	NetworkNodeId             = "network.id"
+	NetworkInitialChains      = "network.initial-chains"
 )

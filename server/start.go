@@ -233,7 +233,17 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 		g, ctx,
 	)
 
-	for _, chainId := range mcfg.ChainIdsInit {
+	config, err := config.GetConfig(svrCtx.Viper)
+	if err != nil {
+		svrCtx.Logger.Error("failed to get server config", "error", err.Error())
+		return err
+	}
+
+	if err := config.ValidateBasic(); err != nil {
+		return err
+	}
+
+	for _, chainId := range config.Network.InitialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
@@ -390,7 +400,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		g, ctx,
 	)
 
-	for _, chainId := range mcfg.ChainIdsInit {
+	for _, chainId := range config.Network.InitialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)

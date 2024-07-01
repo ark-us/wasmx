@@ -25,4 +25,7 @@ ips = "{{ .Network.Ips }}"
 
 id = "{{ .Network.Id }}"
 
+# Comma separated list of types of chains. E.g. "mythos" or "mythos,level0"
+initial-chains = [{{ range .Network.InitialChains }}{{ printf "%q, " . }}{{end}}]
+
 `
