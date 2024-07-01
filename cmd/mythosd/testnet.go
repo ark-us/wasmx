@@ -28,6 +28,7 @@ import (
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/client"
+	sdkconfig "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -731,6 +732,7 @@ func initTestnetFilesInternal(
 		appConfigCopy.Network.InitialChains = initialChainIds
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appConfigCopy)
+		initClientConfig(clientCtx, nodeDir, i)
 	}
 
 	if nodeIndexStart == 0 {
@@ -828,6 +830,17 @@ func initTestnetFilesInternal(
 
 	cmd.PrintErrf("Successfully initialized %d node directories\n", args.numValidators)
 	return nil
+}
+
+func initClientConfig(ctx client.Context, nodeDir string, index int) {
+	configFilePath := filepath.Join(nodeDir, "config/client.toml")
+	conf := sdkconfig.DefaultConfig()
+	conf.ChainID = ctx.ChainID
+	conf.Node = fmt.Sprintf("tcp://localhost:%d", 26657+index)
+	// conf.KeyringBackend = "os" // os|test
+	// conf.Output = "text"
+	// conf.BroadcastMode = "sync"
+	sdkconfig.WriteConfigToFile(configFilePath, conf)
 }
 
 func createGentx(
