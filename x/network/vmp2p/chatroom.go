@@ -71,6 +71,7 @@ func (cr *ChatRoom) ListPeers() []peer.ID {
 
 func (cr *ChatRoom) Unsubscribe() {
 	cr.sub.Cancel()
+	cr.ctx.Logger.Info("p2p unsubscribed from chat room", "protocolID", cr.protocolID, "topic", cr.topicString)
 }
 
 // readLoop pulls messages from the pubsub topic and pushes them onto the Messages channel.
@@ -80,7 +81,7 @@ func readLoop(cr *ChatRoom) {
 	for {
 		msg, err := cr.sub.Next(ctx)
 		if err != nil {
-			if err.Error() != ERROR_STREAM_RESET && err.Error() != ERROR_CTX_CANCELED {
+			if err.Error() != ERROR_STREAM_RESET && err.Error() != ERROR_CTX_CANCELED && err.Error() != ERROR_SUBSCRIPTION_CANCELLED {
 				logger.Error("Error chat room message read ", "error", err.Error(), "topic", cr.topic)
 			}
 			// remove chat room; it will be reconnected when needed

@@ -397,6 +397,7 @@ func DisconnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, para
 	if found {
 		stream.Close()
 		p2pctx.DeletePeer(req.ProtocolId, req.Peer)
+		ctx.Logger.Debug("p2p disconnect from peer", "protocolID", req.ProtocolId, "peer", req.Peer)
 	}
 
 	response := DisconnectPeerResponse{}

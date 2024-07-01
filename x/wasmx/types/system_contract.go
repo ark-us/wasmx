@@ -446,7 +446,7 @@ func HookPrecompiles() SystemContracts {
 	}
 }
 
-func ConsensusPrecompiles() SystemContracts {
+func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool) SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
@@ -483,7 +483,7 @@ func ConsensusPrecompiles() SystemContracts {
 		panic("DefaultSystemContracts: cannot marshal level0InitMsg message")
 	}
 
-	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"min_validators_count","value":2},{"key":"enable_eid_check","value":false},{"key":"erc20CodeId","value":27},{"key":"derc20CodeId","value":28},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`)})
+	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"min_validators_count","value":%d},{"key":"enable_eid_check","value":%t},{"key":"erc20CodeId","value":27},{"key":"derc20CodeId","value":28},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`, minValidatorCount, enableEIDCheck))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal lobbyInitMsg message")
 	}
@@ -688,7 +688,7 @@ func ChatPrecompiles() SystemContracts {
 }
 
 func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool) SystemContracts {
-	consensusPrecompiles := ConsensusPrecompiles()
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck)
 	for i, val := range consensusPrecompiles {
 		if val.Label == CONSENSUS_TENDERMINTP2P {
 			consensusPrecompiles[i].Role = ROLE_CONSENSUS
@@ -759,7 +759,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, min
 			Deps:        []string{},
 		},
 	}
-	consensusPrecompiles := ConsensusPrecompiles()
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck)
 	for i, val := range consensusPrecompiles {
 		if val.Label == LEVEL0_v001 {
 			consensusPrecompiles[i].Role = ROLE_CONSENSUS
