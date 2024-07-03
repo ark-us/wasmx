@@ -1,6 +1,27 @@
 # Examples
 
-## multi-chain, cross-chain transaction
+## levels subchains
+
+### create level1 chain
+
+```bash
+
+mythosd testnet init-files --network.initial-chains=level0 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
+
+# create gentx
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl.json --chain-id="level0_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl2.json --chain-id="level0_1000-1" --from node1 --keyring-backend test --home ./testnet/node1/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+
+```
+
+### create higher levels
+
+```bash
+mythosd tx wasmx execute level11qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzra8lqlf '{"SetHook":{"hook":"StartNode","modules":["lobby"]}}' --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --yes
+```
+
+## multiregistry multi-chain, cross-chain transaction
 
 ```bash
 

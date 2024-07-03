@@ -3,6 +3,7 @@ package multichain
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 )
 
 var FlagRegistryChainId = "registry-chain-id"
+var CHAIN_CONFIG_REGISTRY = wasmxtypes.ROLE_METAREGISTRY
 
 var EMPTY_BYTES20 = bytes.Repeat([]byte{0}, 20)
 
@@ -51,6 +53,9 @@ func MultiChainCtxByChainId(clientCtx client.Context, flags *flag.FlagSet, custo
 func MultiChainCtx(clientCtx client.Context, customSigners []signing.CustomGetSigner, chainId string, registryId string) (client.Context, mcodec.AccBech32Codec, *menc.ChainConfig, error) {
 	config, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
+		if _, err := mcfg.GetChainConfig(registryId); err != nil {
+			return clientCtx, mcodec.AccBech32Codec{}, nil, fmt.Errorf("registry chain id must be an initial chain")
+		}
 		config, err = GetSubChainConfig(clientCtx, chainId, registryId)
 		if err != nil {
 			return clientCtx, mcodec.AccBech32Codec{}, config, err
@@ -100,7 +105,11 @@ func GetSubChainConfig(clientCtx client.Context, subchainId string, registryId s
 }
 
 func GetSubChainConfigBz(clientCtx client.Context, subchainId string, registryId string) ([]byte, error) {
-	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
+	addrhex := wasmxtypes.ADDR_METAREGISTRY
+	if CHAIN_CONFIG_REGISTRY == wasmxtypes.ROLE_MULTICHAIN_REGISTRY {
+		addrhex = wasmxtypes.ADDR_MULTICHAIN_REGISTRY
+	}
+	registryAddress := wasmxtypes.AccAddressFromHex(addrhex)
 
 	clientCtx, customAddrCodec, _, err := MultiChainCtx(clientCtx, []signing.CustomGetSigner{}, registryId, "")
 	if err != nil {
@@ -142,7 +151,7 @@ func decodeQueryResponse(resp []byte) ([]byte, error) {
 	var data wasmxtypes.QuerySmartContractCallResponse
 	err := data.Unmarshal(resp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot decode query response, data: %s", hex.EncodeToString(resp))
 	}
 	var data2 wasmxtypes.WasmxQueryResponse
 	err = json.Unmarshal(data.Data, &data2)
