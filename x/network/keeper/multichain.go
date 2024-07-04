@@ -258,6 +258,8 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 			}
 		}
 	}
+	// reset current txhash
+	mcctx.CurrentAtomicTxHash = []byte{}
 	return response, nil
 }
 
@@ -270,13 +272,16 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 
 	msg.FromChainId = ctx.ChainID()
 
-	k.Logger(ctx).Info("executing crosschain call", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To, "is_query", msg.IsQuery)
-
 	mcctx, err := types.GetMultiChainContext(k.goContextParent)
 	if err != nil {
 		return nil, err
 	}
+	if len(mcctx.CurrentAtomicTxHash) == 0 {
+		return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("current atomic tx not set: cannot execute cross call on chain_id %s", msg.ToChainId)}, nil
+	}
 	channelsChainId := msg.ToChainId
+
+	k.Logger(ctx).Info("executing crosschain call", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To, "is_query", msg.IsQuery)
 
 	multichainapp, err := cfg.GetMultiChainApp(k.goContextParent)
 	if err != nil {

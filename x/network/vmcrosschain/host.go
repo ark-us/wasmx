@@ -2,6 +2,7 @@ package vmcrosschain
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
@@ -120,6 +121,73 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
 	return returns, wasmedge.Result_Success
+}
+
+// TODO API can only be used by core contracts
+// like consensus, lobby, etc
+// internal communication with private chains, like level0, or between consensusless
+// contracts on different chains, which do not require determinism
+// executeCrossChainTxNonDeterministic(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
+func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	resp := WrappedResponse{}
+	ctx := _context.(*Context)
+
+	// we do not want to fail and end the transaction
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		resp.Error = "cannot read request" + err.Error()
+		return returnResult(ctx, callframe, resp)
+	}
+	var req types.MsgExecuteCrossChainCallRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		resp.Error = "cannot unmarshal request" + err.Error()
+		return returnResult(ctx, callframe, resp)
+	}
+
+	// TODO check to & from are consensusless contracts
+	// contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
+
+	// get subchainapp
+	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
+	if err != nil {
+		resp.Error = err.Error()
+		return returnResult(ctx, callframe, resp)
+	}
+	iapp, err := multichainapp.GetApp(req.ToChainId)
+	if err != nil {
+		resp.Error = err.Error()
+		return returnResult(ctx, callframe, resp)
+	}
+	app, ok := iapp.(mcfg.MythosApp)
+	if !ok {
+		resp.Error = "error App interface from multichainapp"
+		return returnResult(ctx, callframe, resp)
+	}
+
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+
+		// we sent directly to the contract
+		resp, err := app.GetNetworkKeeper().ExecuteContract(ctx, &types.MsgExecuteContract{
+			Sender:   req.From,
+			Contract: req.To,
+			Msg:      req.Msg,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
+	}
+
+	// app.GetBaseApp().RunTx(sdk.ExecModeFinalize, txbytes)
+	_, err = app.GetActionExecutor().Execute(context.Background(), app.GetBaseApp().LastBlockHeight(), cb)
+	if err != nil {
+		resp.Error = err.Error()
+		return returnResult(ctx, callframe, resp)
+	}
+
+	return returnResult(ctx, callframe, resp)
 }
 
 // !! this is non-deterministic !! it must not be used inside a transaction
@@ -292,6 +360,7 @@ func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	env.AddFunction("executeCrossChainTx", wasmedge.NewFunction(functype_i32_i32, executeCrossChainTx, context, 0))
 	env.AddFunction("executeCrossChainQuery", wasmedge.NewFunction(functype_i32_i32, executeCrossChainQuery, context, 0))
 	env.AddFunction("executeCrossChainQueryNonDeterministic", wasmedge.NewFunction(functype_i32_i32, executeCrossChainQueryNonDeterministic, context, 0))
+	env.AddFunction("executeCrossChainTxNonDeterministic", wasmedge.NewFunction(functype_i32_i32, executeCrossChainTxNonDeterministic, context, 0))
 	env.AddFunction("isAtomicTxInExecution", wasmedge.NewFunction(functype_i32_i32, isAtomicTxInExecution, context, 0))
 	return env
 }

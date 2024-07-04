@@ -48,15 +48,15 @@ func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec
 	}
 	role := k.GetRoleByLabel(ctx, addressOrRole)
 	if role != nil {
-		contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(addressOrRole)
+		contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(role.ContractAddress)
 		if err != nil {
-			return mcodec.AccAddressPrefixed{}, err
+			return mcodec.AccAddressPrefixed{}, fmt.Errorf("role address decoding failed: %s: %s", role.ContractAddress, err.Error())
 		}
 		return contractAddr, nil
 	}
 	contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(addressOrRole)
 	if err != nil {
-		return mcodec.AccAddressPrefixed{}, err
+		return mcodec.AccAddressPrefixed{}, fmt.Errorf("no role found and address invalid: %s: %s", addressOrRole, err.Error())
 	}
 	return contractAddr, nil
 }

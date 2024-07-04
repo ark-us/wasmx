@@ -575,7 +575,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	// deploy from contract on level0
 	suite.SetCurrentChain(chainId)
 	codeIdFrom := appA.StoreCode(sender, wasmbinFrom, nil)
-	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinFrom", nil)
+	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinFrom", nil)
 
 	// deploy to contract on level1
 	suite.SetCurrentChain(subChainId2)
@@ -692,7 +692,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	// deploy from contract on level0
 	suite.SetCurrentChain(chainId)
 	codeIdFrom := appA.StoreCode(sender, wasmbinFrom, nil)
-	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinFrom", nil)
+	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinFrom", nil)
 
 	// deploy to contract on level1
 	suite.SetCurrentChain(subChainId2)
