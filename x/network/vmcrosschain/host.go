@@ -180,7 +180,6 @@ func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmed
 		return resp, nil
 	}
 
-	// app.GetBaseApp().RunTx(sdk.ExecModeFinalize, txbytes)
 	_, err = app.GetActionExecutor().Execute(context.Background(), app.GetBaseApp().LastBlockHeight(), cb)
 	if err != nil {
 		resp.Error = err.Error()
