@@ -233,6 +233,7 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
+		// TODO don't fail here, catch & return error
 		return nil, wasmedge.Result_Fail
 	}
 	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
@@ -240,6 +241,7 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		if err.Error() != ERROR_CTX_CANCELED {
 			ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
+			// TODO don't fail here, catch & return error
 			return nil, wasmedge.Result_Fail
 		}
 		// remove chat room; it will be reconnected when needed

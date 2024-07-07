@@ -127,13 +127,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		fromStorageType := sourceContract.ContractInfo.StorageType
 		toStorageType := depContext.ContractInfo.StorageType
 		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
-			// deterministic contracts can read from metaconsensus
-			if toStorageType == types.ContractStorageType_MetaConsensus && !req.IsQuery {
-				errmsg := "deterministic contract tried to execute meta consensus contract"
-				ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
-				errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
-				return int32(1), []byte(errmsg)
-			}
+			// deterministic contracts can read & write from/to metaconsensus contracts
 			if toStorageType != types.ContractStorageType_MetaConsensus {
 				errmsg := "deterministic contract tried to execute non-deterministic contract"
 				ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)

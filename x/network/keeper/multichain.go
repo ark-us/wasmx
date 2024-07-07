@@ -289,9 +289,13 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	}
 	_, err = multichainapp.GetApp(channelsChainId)
 	if err != nil {
-		// TODO revert ??
 		// this node does not run this chain, so we return because we cannot execute this tx
-		return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain not found: cannot execute cross call on chain_id %s", channelsChainId)}, nil
+		// this is part of an atomic tx and this node does not have access to the state of this chain
+		// so we just return empty data, without error
+		// TODO we will have a system for internal tx & results, so we can return correct data here that was precomputed by a node with the needed state on this chain
+		// return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain not found: cannot execute cross call on chain_id %s", channelsChainId)}, nil
+		k.Logger(ctx).Info(fmt.Sprintf("chain not found: cannot execute cross call on chain_id %s, skipping ...", channelsChainId))
+		return &types.MsgExecuteCrossChainCallResponse{Error: "", Data: []byte{}}, nil
 	}
 
 	// we get the channels for the chain we want to interact with

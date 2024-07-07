@@ -70,18 +70,32 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 
 	c.Logger.Debug("p2p received message", "msg", string(netmsgbz), "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId)
 
-	// if the message is from another chain, contract address may be without prefix
-	// and sender address will have the prefix of the other chain
-	contractBz, _, err := mcodec.GetFromBech32Unsafe(contractAddress)
-	if err != nil {
-		contractAddress = c.Context.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(contractBz).String()
+	// TODO roles should be bech32 compatible
+	contractAddressPrefixed, err := c.Context.CosmosHandler.GetAddressOrRole(c.Context.Ctx, contractAddress)
+	if err == nil {
+		contractAddress = contractAddressPrefixed.String()
+	} else {
+		// if the message is from another chain, contract address may be without prefix
+		// and sender address will have the prefix of the other chain
+		contractBz, _, err := mcodec.GetFromBech32Unsafe(contractAddress)
+		if err != nil {
+			contractAddressPrefixed := c.Context.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(contractBz)
+			contractAddress = contractAddressPrefixed.String()
+		}
 	}
-	_, senderPrefix, err := mcodec.GetFromBech32Unsafe(senderAddress)
-	ourprefix := c.Context.CosmosHandler.AccBech32Codec().Prefix()
-	if senderPrefix != ourprefix {
-		c.Logger.Debug("p2p received message from address with different prefix", "prefix", senderPrefix, "sender", senderAddress, "ourprefix", ourprefix, "err", err.Error(), "msg", string(netmsgbz))
-		senderAddress, _ = networktypes.CrossChainAddress(senderAddress, ourprefix)
+
+	senderAddressPrefixed, err := c.Context.CosmosHandler.GetAddressOrRole(c.Context.Ctx, senderAddress)
+	if err == nil {
+		senderAddress = senderAddressPrefixed.String()
+	} else {
+		_, senderPrefix, err := mcodec.GetFromBech32Unsafe(senderAddress)
+		ourprefix := c.Context.CosmosHandler.AccBech32Codec().Prefix()
+		if senderPrefix != ourprefix {
+			c.Logger.Info("p2p received message from address with different prefix", "prefix", senderPrefix, "sender", senderAddress, "ourprefix", ourprefix, "err", err, "msg", string(netmsgbz))
+			senderAddress, _ = networktypes.CrossChainAddress(senderAddress, ourprefix)
+		}
 	}
+
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{
 		Sender:   senderAddress,
 		Contract: contractAddress,
