@@ -14,11 +14,6 @@ type Context struct {
 	*vmtypes.Context
 }
 
-type WrappedResponse struct {
-	Data  []byte `json:"data"`
-	Error string `json:"error"`
-}
-
 type MsgIsAtomicTxInExecutionRequest struct {
 	SubChainId string `json:"sub_chain_id"`
 	TxHash     []byte `json:"tx_hash"`

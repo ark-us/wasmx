@@ -76,6 +76,8 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainCallResponseIndexed
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	types.SetCrossChainCallMetaInfoEmpty(k.goContextParent)
+
 	txhash := tmhash.Sum(ctx.TxBytes())
 
 	mcctx, err := types.GetMultiChainContext(k.goContextParent)

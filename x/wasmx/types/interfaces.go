@@ -7,6 +7,7 @@ import (
 
 	address "cosmossdk.io/core/address"
 	storetypes "cosmossdk.io/store/types"
+	"github.com/cosmos/cosmos-sdk/baseapp/oe"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -95,6 +96,7 @@ type Application interface {
 	CheckTx(*abci.RequestCheckTx) (*abci.ResponseCheckTx, error) // Validate a tx for the mempool
 
 	// Consensus Connection
+	GetOptimisticExecution() *oe.OptimisticExecution
 	InitChain(*abci.RequestInitChain) (*abci.ResponseInitChain, error) // Initialize blockchain w validators/other info from CometBFT
 	PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
 	ProcessProposal(*abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error)

@@ -18,6 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
 	multichain "mythos/v1/multichain"
 	networktypes "mythos/v1/x/network/types"
@@ -38,6 +39,7 @@ func NewAppCreator(
 	ctx = vmp2p.WithP2PEmptyContext(ctx)
 	ctx = networktypes.ContextWithMultiChainContext(g, ctx, logger)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
+	ctx, _ = mctx.WithExecutionMetaInfoEmpty(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 

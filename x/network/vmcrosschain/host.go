@@ -22,15 +22,17 @@ import (
 
 // executeCrossChainTx(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	resp := types.WrappedResponse{}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		resp.Error = "cannot read request" + err.Error()
+		return returnResult(ctx, callframe, resp)
 	}
 	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return returnResult(ctx, callframe, resp)
 	}
 
 	// we expect from & chain id to be set correctly by the multichain registry contract
@@ -45,7 +47,7 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 	} else {
 		ctx.Ctx.EventManager().EmitEvents(evs)
 	}
-	resp := WrappedResponse{Error: errmsg}
+	resp.Error = errmsg
 	if errmsg == "" {
 		var rres types.MsgExecuteCrossChainCallResponse
 		if res != nil {
@@ -54,35 +56,26 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 				return nil, wasmedge.Result_Fail
 			}
 		}
-		resp = WrappedResponse{
-			Data:  rres.Data,
-			Error: rres.Error,
-		}
+		resp.Data = rres.Data
+		resp.Error = rres.Error
 	}
-	respbz, err := json.Marshal(resp)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, respbz)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returnResultAndAddCrossChainInfo(ctx, callframe, req, resp)
 }
 
 // executeCrossChainQuery(*QueryCrossChainRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	resp := types.WrappedResponse{}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		resp.Error = "cannot read request" + err.Error()
+		return returnResult(ctx, callframe, resp)
 	}
 	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		resp.Error = "cannot read request" + err.Error()
+		return returnResult(ctx, callframe, resp)
 	}
 
 	// we expect sender & chain id to be set correctly by the multichain registry contract
@@ -96,7 +89,7 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 		errmsg = err.Error()
 	}
 
-	resp := WrappedResponse{Error: errmsg}
+	resp.Error = errmsg
 	if errmsg == "" {
 		var rres types.MsgExecuteCrossChainCallResponse
 		if res != nil {
@@ -105,22 +98,11 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 				return nil, wasmedge.Result_Fail
 			}
 		}
-		resp = WrappedResponse{
-			Data:  rres.Data,
-			Error: rres.Error,
-		}
+		resp.Data = rres.Data
+		resp.Error = rres.Error
 	}
-	respbz, err := json.Marshal(resp)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, respbz)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+
+	return returnResultAndAddCrossChainInfo(ctx, callframe, req, resp)
 }
 
 // TODO API can only be used by core contracts
@@ -129,7 +111,7 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 // contracts on different chains, which do not require determinism
 // executeCrossChainTxNonDeterministic(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	resp := WrappedResponse{}
+	resp := types.WrappedResponse{}
 	ctx := _context.(*Context)
 
 	// we do not want to fail and end the transaction
@@ -193,7 +175,7 @@ func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmed
 // to make the query deterministic, we need to use ExecuteCrossChainTx
 // to ensure the cross-chain queries are executed in the same order for all validators
 func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	resp := WrappedResponse{}
+	resp := types.WrappedResponse{}
 	ctx := _context.(*Context)
 
 	// TODO check that we are in a query environment
@@ -286,7 +268,12 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	return returnResult(ctx, callframe, resp)
 }
 
-func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, resp WrappedResponse) ([]interface{}, wasmedge.Result) {
+func returnResultAndAddCrossChainInfo(ctx *Context, callframe *wasmedge.CallingFrame, req types.MsgExecuteCrossChainCallRequest, resp types.WrappedResponse) ([]interface{}, wasmedge.Result) {
+	types.AddCrossChainCallMetaInfo(ctx.GoContextParent, req, resp)
+	return returnResult(ctx, callframe, resp)
+}
+
+func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, resp types.WrappedResponse) ([]interface{}, wasmedge.Result) {
 	respbz, err := json.Marshal(resp)
 	if err != nil {
 		return nil, wasmedge.Result_Fail

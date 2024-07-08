@@ -7,8 +7,24 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mctx "mythos/v1/context"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 )
+
+type WrapRequestProcessProposal struct {
+	Request             abci.RequestProcessProposal `json:"req"`
+	OptimisticExecution bool                        `json:"optimistic_execution"`
+}
+
+type ResponseProcessProposal struct {
+	Status   abci.ResponseProcessProposal_ProposalStatus `json:"status"`
+	MetaInfo map[string][]byte                           `json:"metainfo"`
+}
+
+type WrapRequestFinalizeBlock struct {
+	Request  abci.RequestFinalizeBlock `json:"request"`
+	MetaInfo map[string][]byte         `json:"metainfo"`
+}
 
 // PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
 func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -49,17 +65,51 @@ func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req abci.RequestProcessProposal
+	var req WrapRequestProcessProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
 		return nil, wasmedge.Result_Fail
 	}
-	resp, err := ctx.GetApplication().ProcessProposal(&req)
+	bapp := ctx.GetApplication()
+	oe := bapp.GetOptimisticExecution()
+	if req.OptimisticExecution {
+		oe.Enable()
+	}
+	respInner, err := bapp.ProcessProposal(&req.Request)
+	oe.Disable()
+
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
 		return nil, wasmedge.Result_Fail
 	}
+	// TODO we should return the error, not throw
+	metainfo := map[string][]byte{}
+	if req.OptimisticExecution {
+		_, err = oe.WaitResult()
+		if err != nil {
+			ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
+			return nil, wasmedge.Result_Fail
+		}
+		execInfo, err := mctx.GetExecutionMetaInfo(ctx.GoContextParent)
+		if err != nil {
+			ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
+			return nil, wasmedge.Result_Fail
+		}
+		for key, value := range execInfo.Data {
+			bz, err := json.Marshal(value)
+			if err != nil {
+				ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
+				return nil, wasmedge.Result_Fail
+			}
+			metainfo[key] = bz
+		}
+	}
+	resp := ResponseProcessProposal{Status: respInner.Status, MetaInfo: metainfo}
+
+	// reset meta info from optimistic execution
+	mctx.ResetExecutionMetaInfo(ctx.GoContextParent)
+
 	respbz, err := json.Marshal(resp)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -81,12 +131,13 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req abci.RequestFinalizeBlock
+	var req WrapRequestFinalizeBlock
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	resp, err := ctx.GetApplication().FinalizeBlockSimple(&req)
+	// TODO use metainfo
+	resp, err := ctx.GetApplication().FinalizeBlockSimple(&req.Request)
 	errmsg := ""
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")

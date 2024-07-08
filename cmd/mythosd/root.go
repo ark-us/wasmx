@@ -51,6 +51,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	appencoding "mythos/v1/encoding"
 	"mythos/v1/multichain"
 	server "mythos/v1/server"
@@ -88,6 +89,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
 	goctx = networktypes.ContextWithMultiChainContext(g, goctx, logger)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
+	goctx, _ = mctx.WithExecutionMetaInfoEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir())

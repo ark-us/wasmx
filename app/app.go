@@ -58,6 +58,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 
+	"github.com/cosmos/cosmos-sdk/baseapp/oe"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/std"
 
@@ -348,6 +349,7 @@ func NewApp(
 	bApp.SetVersion(version.Version)
 	bApp.SetInterfaceRegistry(interfaceRegistry)
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
+	bApp.SetOptimisticExecution(func(oexe *oe.OptimisticExecution) { oexe.Disable() })
 
 	chainId := bApp.ChainID()
 	logger = logger.With("chain_id", chainId)
