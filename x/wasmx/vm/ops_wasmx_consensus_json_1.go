@@ -11,19 +11,18 @@ import (
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 )
 
-type WrapRequestProcessProposal struct {
-	Request             abci.RequestProcessProposal `json:"req"`
-	OptimisticExecution bool                        `json:"optimistic_execution"`
-}
-
-type ResponseProcessProposal struct {
-	Status   abci.ResponseProcessProposal_ProposalStatus `json:"status"`
-	MetaInfo map[string][]byte                           `json:"metainfo"`
+type ResponseOptimisticExecution struct {
+	MetaInfo map[string][]byte `json:"metainfo"`
 }
 
 type WrapRequestFinalizeBlock struct {
 	Request  abci.RequestFinalizeBlock `json:"request"`
 	MetaInfo map[string][]byte         `json:"metainfo"`
+}
+
+type WrapResult struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
 }
 
 // PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
@@ -65,52 +64,79 @@ func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	var req WrapRequestProcessProposal
+	var req abci.RequestProcessProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
 		return nil, wasmedge.Result_Fail
 	}
 	bapp := ctx.GetApplication()
-	oe := bapp.GetOptimisticExecution()
-	if req.OptimisticExecution {
-		oe.Enable()
-	}
-	respInner, err := bapp.ProcessProposal(&req.Request)
-	oe.Disable()
+	resp, err := bapp.ProcessProposal(&req)
 
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO we should return the error, not throw
-	metainfo := map[string][]byte{}
-	if req.OptimisticExecution {
-		_, err = oe.WaitResult()
-		if err != nil {
-			ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
-			return nil, wasmedge.Result_Fail
-		}
-		execInfo, err := mctx.GetExecutionMetaInfo(ctx.GoContextParent)
-		if err != nil {
-			ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
-			return nil, wasmedge.Result_Fail
-		}
-		for key, value := range execInfo.Data {
-			bz, err := json.Marshal(value)
-			if err != nil {
-				ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
-				return nil, wasmedge.Result_Fail
-			}
-			metainfo[key] = bz
-		}
-	}
-	resp := ResponseProcessProposal{Status: respInner.Status, MetaInfo: metainfo}
-
-	// reset meta info from optimistic execution
-	mctx.ResetExecutionMetaInfo(ctx.GoContextParent)
 
 	respbz, err := json.Marshal(resp)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func OptimisticExecution(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	resbz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req abci.RequestProcessProposal
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
+		return nil, wasmedge.Result_Fail
+	}
+	var res abci.ResponseProcessProposal
+	err = json.Unmarshal(resbz, &res)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
+		return nil, wasmedge.Result_Fail
+	}
+	bapp := ctx.GetApplication()
+	oe := bapp.GetOptimisticExecution()
+	oe.Enable()
+
+	// reset meta info from previous optimistic executions
+	mctx.ResetExecutionMetaInfo(ctx.GoContextParent)
+
+	bapp.OptimisticExecution(&req, &res)
+	oe.Disable()
+
+	// TODO we should return the error, not throw
+	_, err = oe.WaitResult()
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
+		return nil, wasmedge.Result_Fail
+	}
+	metainfo, err := mctx.GetExecutionMetaInfoEncoded(ctx.GoContextParent, ctx.GetCosmosHandler().Codec())
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
+		return nil, wasmedge.Result_Fail
+	}
+
+	respbz, err := json.Marshal(&ResponseOptimisticExecution{MetaInfo: metainfo})
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -136,12 +162,24 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	// TODO use metainfo
-	resp, err := ctx.GetApplication().FinalizeBlockSimple(&req.Request)
+
+	// set metainfo on the parent context, so it is available during execution
+	err = mctx.SetExecutionMetaInfo(ctx.GoContextParent, ctx.CosmosHandler.Codec(), req.MetaInfo)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
+		return nil, wasmedge.Result_Fail
+	}
+
+	bapp := ctx.GetApplication()
+	resp, err := bapp.FinalizeBlockSimple(&req.Request)
 	errmsg := ""
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
 		errmsg = err.Error()
+	}
+	oe := bapp.GetOptimisticExecution()
+	if oe.Initialized() {
+		oe.Reset()
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
@@ -320,10 +358,15 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I64},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+	functype_i32i32_i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
 
 	env.AddFunction("CheckTx", wasmedge.NewFunction(functype_i32_i32, CheckTx, context, 0))
 	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, PrepareProposal, context, 0))
 	env.AddFunction("ProcessProposal", wasmedge.NewFunction(functype_i32_i32, ProcessProposal, context, 0))
+	env.AddFunction("OptimisticExecution", wasmedge.NewFunction(functype_i32i32_i32, OptimisticExecution, context, 0))
 	env.AddFunction("FinalizeBlock", wasmedge.NewFunction(functype_i32_i32, FinalizeBlock, context, 0))
 	env.AddFunction("BeginBlock", wasmedge.NewFunction(functype_i32_i32, BeginBlock, context, 0))
 	env.AddFunction("EndBlock", wasmedge.NewFunction(functype_i32_i32, EndBlock, context, 0))

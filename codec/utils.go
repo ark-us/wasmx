@@ -68,6 +68,15 @@ func AnyFromBz(cdc codec.Codec, bz []byte) (cdctypes.Any, error) {
 	return *anyMsg, nil
 }
 
+func AnyFromBzJson(cdc codec.Codec, bz []byte) (cdctypes.Any, error) {
+	anyMsg := &cdctypes.Any{}
+	err := cdc.UnmarshalJSON(bz, anyMsg)
+	if err != nil {
+		return *anyMsg, err
+	}
+	return *anyMsg, nil
+}
+
 // ConvertProtoToJSONMarshal  unmarshals the given bytes into a proto message and then marshals it to json.
 // This is done so that clients calling stargate queries do not need to define their own proto unmarshalers,
 // being able to use response directly by json marshalling.

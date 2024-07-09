@@ -100,6 +100,7 @@ type Application interface {
 	InitChain(*abci.RequestInitChain) (*abci.ResponseInitChain, error) // Initialize blockchain w validators/other info from CometBFT
 	PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
 	ProcessProposal(*abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error)
+	OptimisticExecution(*abci.RequestProcessProposal, *abci.ResponseProcessProposal)
 	// Deliver the decided block with its txs to the Application
 	FinalizeBlock(*abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error)
 	FinalizeBlockSimple(*abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error)

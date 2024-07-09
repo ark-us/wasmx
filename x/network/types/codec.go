@@ -20,6 +20,7 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 
 	cdc.RegisterConcrete(&MsgExecuteAtomicTxRequest{}, "network/MsgExecuteAtomicTxRequest", nil)
 	cdc.RegisterConcrete(&MsgExecuteAtomicTxResponse{}, "network/MsgExecuteAtomicTxResponse", nil)
+	cdc.RegisterConcrete(&AtomicTxCrossChainCallInfo{}, "network/AtomicTxCrossChainCallInfo", nil)
 
 	cdc.RegisterConcrete(&ExtensionOptionAtomicMultiChainTx{}, "network/ExtensionOptionAtomicMultiChainTx", nil)
 	cdc.RegisterConcrete(&ExtensionOptionMultiChainTx{}, "network/ExtensionOptionMultiChainTx", nil)
@@ -36,6 +37,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 
 		&MsgMultiChainWrap{},
 		&MsgMultiChainWrapResponse{},
+		&AtomicTxCrossChainCallInfo{},
 
 		&MsgExecuteAtomicTxRequest{},
 		&MsgExecuteAtomicTxResponse{},

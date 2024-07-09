@@ -4,65 +4,84 @@
 
 ## Table of Contents
 
-- [mythos/websrv/v1/params.proto](#mythos/websrv/v1/params.proto)
-    - [Params](#mythos.websrv.v1.Params)
+- [mythos/network/v1/custom.proto](#mythos/network/v1/custom.proto)
+    - [MsgExecuteAtomicTxRequest](#mythos.network.v1.MsgExecuteAtomicTxRequest)
   
-- [mythos/websrv/v1/genesis.proto](#mythos/websrv/v1/genesis.proto)
-    - [GenesisState](#mythos.websrv.v1.GenesisState)
+- [mythos/network/v1/genesis.proto](#mythos/network/v1/genesis.proto)
+    - [GenesisState](#mythos.network.v1.GenesisState)
   
-- [mythos/websrv/v1/query.proto](#mythos/websrv/v1/query.proto)
-    - [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo)
-    - [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest)
-    - [QueryContractByRouteResponse](#mythos.websrv.v1.QueryContractByRouteResponse)
-    - [QueryGetAllOauthClientsRequest](#mythos.websrv.v1.QueryGetAllOauthClientsRequest)
-    - [QueryGetAllOauthClientsResponse](#mythos.websrv.v1.QueryGetAllOauthClientsResponse)
-    - [QueryGetOauthClientRequest](#mythos.websrv.v1.QueryGetOauthClientRequest)
-    - [QueryGetOauthClientResponse](#mythos.websrv.v1.QueryGetOauthClientResponse)
-    - [QueryGetOauthClientsByOwnerRequest](#mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest)
-    - [QueryGetOauthClientsByOwnerResponse](#mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse)
-    - [QueryHttpRequestGet](#mythos.websrv.v1.QueryHttpRequestGet)
-    - [QueryHttpResponseGet](#mythos.websrv.v1.QueryHttpResponseGet)
-    - [QueryParamsRequest](#mythos.websrv.v1.QueryParamsRequest)
-    - [QueryParamsResponse](#mythos.websrv.v1.QueryParamsResponse)
-    - [QueryRouteByContractRequest](#mythos.websrv.v1.QueryRouteByContractRequest)
-    - [QueryRouteByContractResponse](#mythos.websrv.v1.QueryRouteByContractResponse)
+- [mythos/network/v1/query.proto](#mythos/network/v1/query.proto)
+    - [QueryContractCallRequest](#mythos.network.v1.QueryContractCallRequest)
+    - [QueryContractCallResponse](#mythos.network.v1.QueryContractCallResponse)
+    - [QueryMultiChainRequest](#mythos.network.v1.QueryMultiChainRequest)
+    - [QueryMultiChainResponse](#mythos.network.v1.QueryMultiChainResponse)
   
-    - [Query](#mythos.websrv.v1.Query)
+    - [Query](#mythos.network.v1.Query)
   
-- [mythos/websrv/v1/tx.proto](#mythos/websrv/v1/tx.proto)
-    - [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient)
-    - [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse)
-    - [MsgDeregisterRoute](#mythos.websrv.v1.MsgDeregisterRoute)
-    - [MsgDeregisterRouteResponse](#mythos.websrv.v1.MsgDeregisterRouteResponse)
-    - [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient)
-    - [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse)
-    - [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient)
-    - [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse)
-    - [MsgRegisterRoute](#mythos.websrv.v1.MsgRegisterRoute)
-    - [MsgRegisterRouteResponse](#mythos.websrv.v1.MsgRegisterRouteResponse)
+- [mythos/network/v1/tendermint.proto](#mythos/network/v1/tendermint.proto)
+    - [Event](#mythos.network.v1.Event)
+    - [EventAttribute](#mythos.network.v1.EventAttribute)
+    - [ExecTxResult](#mythos.network.v1.ExecTxResult)
+    - [RequestBroadcastTx](#mythos.network.v1.RequestBroadcastTx)
+    - [RequestPing](#mythos.network.v1.RequestPing)
+    - [ResponseBroadcastTx](#mythos.network.v1.ResponseBroadcastTx)
+    - [ResponseCheckTx](#mythos.network.v1.ResponseCheckTx)
+    - [ResponsePing](#mythos.network.v1.ResponsePing)
   
-    - [Msg](#mythos.websrv.v1.Msg)
+    - [BroadcastAPI](#mythos.network.v1.BroadcastAPI)
+  
+- [mythos/network/v1/tx.proto](#mythos/network/v1/tx.proto)
+    - [AtomicTxCrossChainCallInfo](#mythos.network.v1.AtomicTxCrossChainCallInfo)
+    - [CrossChainCallInfo](#mythos.network.v1.CrossChainCallInfo)
+    - [ExtensionOptionAtomicMultiChainTx](#mythos.network.v1.ExtensionOptionAtomicMultiChainTx)
+    - [ExtensionOptionMultiChainTx](#mythos.network.v1.ExtensionOptionMultiChainTx)
+    - [MsgExecuteAtomicTxResponse](#mythos.network.v1.MsgExecuteAtomicTxResponse)
+    - [MsgExecuteContract](#mythos.network.v1.MsgExecuteContract)
+    - [MsgExecuteContractResponse](#mythos.network.v1.MsgExecuteContractResponse)
+    - [MsgExecuteCrossChainCallRequest](#mythos.network.v1.MsgExecuteCrossChainCallRequest)
+    - [MsgExecuteCrossChainCallRequestIndexed](#mythos.network.v1.MsgExecuteCrossChainCallRequestIndexed)
+    - [MsgExecuteCrossChainCallResponse](#mythos.network.v1.MsgExecuteCrossChainCallResponse)
+    - [MsgExecuteCrossChainCallResponseIndexed](#mythos.network.v1.MsgExecuteCrossChainCallResponseIndexed)
+    - [MsgGrpcReceiveRequest](#mythos.network.v1.MsgGrpcReceiveRequest)
+    - [MsgGrpcReceiveRequestResponse](#mythos.network.v1.MsgGrpcReceiveRequestResponse)
+    - [MsgGrpcSendRequest](#mythos.network.v1.MsgGrpcSendRequest)
+    - [MsgGrpcSendRequestResponse](#mythos.network.v1.MsgGrpcSendRequestResponse)
+    - [MsgMultiChainWrap](#mythos.network.v1.MsgMultiChainWrap)
+    - [MsgMultiChainWrapResponse](#mythos.network.v1.MsgMultiChainWrapResponse)
+    - [MsgP2PReceiveMessageRequest](#mythos.network.v1.MsgP2PReceiveMessageRequest)
+    - [MsgP2PReceiveMessageResponse](#mythos.network.v1.MsgP2PReceiveMessageResponse)
+    - [MsgQueryContract](#mythos.network.v1.MsgQueryContract)
+    - [MsgQueryContractResponse](#mythos.network.v1.MsgQueryContractResponse)
+    - [MsgStartBackgroundProcessRequest](#mythos.network.v1.MsgStartBackgroundProcessRequest)
+    - [MsgStartBackgroundProcessResponse](#mythos.network.v1.MsgStartBackgroundProcessResponse)
+    - [MsgStartTimeoutRequest](#mythos.network.v1.MsgStartTimeoutRequest)
+    - [MsgStartTimeoutResponse](#mythos.network.v1.MsgStartTimeoutResponse)
+    - [SubTxCrossChainCallInfo](#mythos.network.v1.SubTxCrossChainCallInfo)
+    - [WrappedResponse](#mythos.network.v1.WrappedResponse)
+  
+    - [Msg](#mythos.network.v1.Msg)
   
 - [Scalar Value Types](#scalar-value-types)
 
 
 
-<a name="mythos/websrv/v1/params.proto"></a>
+<a name="mythos/network/v1/custom.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/params.proto
+## mythos/network/v1/custom.proto
 
 
 
-<a name="mythos.websrv.v1.Params"></a>
+<a name="mythos.network.v1.MsgExecuteAtomicTxRequest"></a>
 
-### Params
-Params defines the parameters for the module.
+### MsgExecuteAtomicTxRequest
+
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `oauth_client_registration_only_e_id` | [bool](#bool) |  |  |
+| `txs` | [bytes](#bytes) | repeated | protobuf encoded transactions |
+| `sender` | [bytes](#bytes) |  |  |
 
 
 
@@ -78,22 +97,17 @@ Params defines the parameters for the module.
 
 
 
-<a name="mythos/websrv/v1/genesis.proto"></a>
+<a name="mythos/network/v1/genesis.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/genesis.proto
+## mythos/network/v1/genesis.proto
 
 
 
-<a name="mythos.websrv.v1.GenesisState"></a>
+<a name="mythos.network.v1.GenesisState"></a>
 
 ### GenesisState
-GenesisState defines the websrv module's genesis state.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `params` | [Params](#mythos.websrv.v1.Params) |  |  |
+GenesisState defines the network module's genesis state.
 
 
 
@@ -109,243 +123,76 @@ GenesisState defines the websrv module's genesis state.
 
 
 
-<a name="mythos/websrv/v1/query.proto"></a>
+<a name="mythos/network/v1/query.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/query.proto
+## mythos/network/v1/query.proto
 
 
 
-<a name="mythos.websrv.v1.OauthClientInfo"></a>
+<a name="mythos.network.v1.QueryContractCallRequest"></a>
 
-### OauthClientInfo
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_id` | [uint64](#uint64) |  |  |
-| `owner` | [string](#string) |  |  |
-| `domain` | [string](#string) |  |  |
-| `public` | [bool](#bool) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryContractByRouteRequest"></a>
-
-### QueryContractByRouteRequest
-QueryContractByRouteRequest is the request type for the
-Query/ContractByRoute RPC method.
+### QueryContractCallRequest
+QueryContractCallRequest is the request type for the
+Query/ContractCall RPC method
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `path` | [string](#string) |  |  |
+| `multi_chain_id` | [string](#string) |  |  |
+| `sender` | [string](#string) |  | Sender is the that actor that signed the messages |
+| `address` | [string](#string) |  | Address is the address of the smart contract |
+| `query_data` | [bytes](#bytes) |  |  |
+| `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on execution |
+| `dependencies` | [string](#string) | repeated | Array of either hex-encoded contract addresses or contract labels on which the execution of this message depends on |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.QueryContractByRouteResponse"></a>
+<a name="mythos.network.v1.QueryContractCallResponse"></a>
 
-### QueryContractByRouteResponse
-QueryContractByRouteResponse is the response type for the
-Query/ContractByRoute RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `contract_address` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetAllOauthClientsRequest"></a>
-
-### QueryGetAllOauthClientsRequest
-QueryGetAllOauthClientsRequest is the request type for the
-Query/GetAllOauthClients RPC method.
+### QueryContractCallResponse
+QueryContractCallResponse is the response type for the
+Query/ContractCall RPC method
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `pagination` | [cosmos.base.query.v1beta1.PageRequest](#cosmos.base.query.v1beta1.PageRequest) |  | pagination defines an optional pagination for the request. |
+| `data` | [bytes](#bytes) |  | Data contains the json data returned from the smart contract |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.QueryGetAllOauthClientsResponse"></a>
+<a name="mythos.network.v1.QueryMultiChainRequest"></a>
 
-### QueryGetAllOauthClientsResponse
-QueryGetAllOauthClientsResponse is the response type for the
-Query/GetAllOauthClients RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `clients` | [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo) | repeated |  |
-| `pagination` | [cosmos.base.query.v1beta1.PageResponse](#cosmos.base.query.v1beta1.PageResponse) |  | pagination defines the pagination in the response. |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientRequest"></a>
-
-### QueryGetOauthClientRequest
-QueryGetOauthClientRequest is the request type for the
-Query/GetOauthClient RPC method.
+### QueryMultiChainRequest
+QueryMultiChainRequest is the request type for the
+Query/QueryMultiChain RPC method
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `client_id` | [uint64](#uint64) |  |  |
+| `multi_chain_id` | [string](#string) |  |  |
+| `query_data` | [bytes](#bytes) |  |  |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.QueryGetOauthClientResponse"></a>
+<a name="mythos.network.v1.QueryMultiChainResponse"></a>
 
-### QueryGetOauthClientResponse
-QueryGetOauthClientResponse is the response type for the
-Query/GetOauthClient RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client` | [OauthClientInfo](#mythos.websrv.v1.OauthClientInfo) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest"></a>
-
-### QueryGetOauthClientsByOwnerRequest
-QueryGetAllOauthClientsRequest is the request type for the
-Query/GetOauthClientsByOwner RPC method.
+### QueryMultiChainResponse
+QueryMultiChainResponse is the response type for the
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  | bech32 address |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse"></a>
-
-### QueryGetOauthClientsByOwnerResponse
-QueryGetAllOauthClientsResponse is the response type for the
-Query/GetOauthClientsByOwner RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_ids` | [uint64](#uint64) | repeated |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryHttpRequestGet"></a>
-
-### QueryHttpRequestGet
-QueryHttpGetRequest is the request type for the
-Query/HttpGet RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `http_request` | [bytes](#bytes) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryHttpResponseGet"></a>
-
-### QueryHttpResponseGet
-QueryHttpResponseGet is the response type for the
-Query/HttpGet RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `data` | [bytes](#bytes) |  | HttpResponse data = 1; |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryParamsRequest"></a>
-
-### QueryParamsRequest
-QueryParamsRequest is request type for the Query/Params RPC method.
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryParamsResponse"></a>
-
-### QueryParamsResponse
-QueryParamsResponse is response type for the Query/Params RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `params` | [Params](#mythos.websrv.v1.Params) |  | params holds all the parameters of this module. |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryRouteByContractRequest"></a>
-
-### QueryRouteByContractRequest
-QueryRouteByContractRequest is the request type for the
-Query/RouteByContract RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `contract_address` | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.QueryRouteByContractResponse"></a>
-
-### QueryRouteByContractResponse
-QueryRouteByContractResponse is the response type for the
-Query/RouteByContract RPC method.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `path` | [string](#string) |  |  |
+| `data` | [bytes](#bytes) |  | Data contains the json data returned from the smart contract |
 
 
 
@@ -358,80 +205,105 @@ Query/RouteByContract RPC method.
  <!-- end HasExtensions -->
 
 
-<a name="mythos.websrv.v1.Query"></a>
+<a name="mythos.network.v1.Query"></a>
 
 ### Query
-Query defines the gRPC querier service.
+Query provides defines the gRPC querier service
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `HttpGet` | [QueryHttpRequestGet](#mythos.websrv.v1.QueryHttpRequestGet) | [QueryHttpResponseGet](#mythos.websrv.v1.QueryHttpResponseGet) | HttpGet makes a get request to the webserver | GET|/websrv/v1/get/{http_request}|
-| `ContractByRoute` | [QueryContractByRouteRequest](#mythos.websrv.v1.QueryContractByRouteRequest) | [QueryContractByRouteResponse](#mythos.websrv.v1.QueryContractByRouteResponse) | ContractByRoute gets the contract controlling a given route | GET|/websrv/v1/route/{path}|
-| `RouteByContract` | [QueryRouteByContractRequest](#mythos.websrv.v1.QueryRouteByContractRequest) | [QueryRouteByContractResponse](#mythos.websrv.v1.QueryRouteByContractResponse) | RouteByContract gets the route controlled by a given contract | GET|/websrv/v1/contract/{contract_address}|
-| `Params` | [QueryParamsRequest](#mythos.websrv.v1.QueryParamsRequest) | [QueryParamsResponse](#mythos.websrv.v1.QueryParamsResponse) | Parameters queries the parameters of the module. | GET|/websrv/v1/params|
-| `GetAllOauthClients` | [QueryGetAllOauthClientsRequest](#mythos.websrv.v1.QueryGetAllOauthClientsRequest) | [QueryGetAllOauthClientsResponse](#mythos.websrv.v1.QueryGetAllOauthClientsResponse) | GetAllClients gets all the registered client apps for the oauth service | GET|/websrv/v1/oauth/clients|
-| `GetOauthClient` | [QueryGetOauthClientRequest](#mythos.websrv.v1.QueryGetOauthClientRequest) | [QueryGetOauthClientResponse](#mythos.websrv.v1.QueryGetOauthClientResponse) | GetOauthClient gets the registered oauth client by client id | GET|/websrv/v1/oauth/client/{client_id}|
-| `GetOauthClientsByOwner` | [QueryGetOauthClientsByOwnerRequest](#mythos.websrv.v1.QueryGetOauthClientsByOwnerRequest) | [QueryGetOauthClientsByOwnerResponse](#mythos.websrv.v1.QueryGetOauthClientsByOwnerResponse) | GetOauthClientsByOwner gets all the registered oauth client by an owner address | GET|/websrv/v1/oauth/clients/{owner}|
+| `ContractCall` | [QueryContractCallRequest](#mythos.network.v1.QueryContractCallRequest) | [QueryContractCallResponse](#mythos.network.v1.QueryContractCallResponse) | ContractCall | GET|/network/v1/{multi_chain_id}/contract/{address}/call/{query_data}|
+| `QueryMultiChain` | [QueryMultiChainRequest](#mythos.network.v1.QueryMultiChainRequest) | [QueryMultiChainResponse](#mythos.network.v1.QueryMultiChainResponse) |  | GET|/network/v1/{multi_chain_id}/data/{query_data}|
 
  <!-- end services -->
 
 
 
-<a name="mythos/websrv/v1/tx.proto"></a>
+<a name="mythos/network/v1/tendermint.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## mythos/websrv/v1/tx.proto
+## mythos/network/v1/tendermint.proto
 
 
 
-<a name="mythos.websrv.v1.MsgDeregisterOAuthClient"></a>
+<a name="mythos.network.v1.Event"></a>
 
-### MsgDeregisterOAuthClient
+### Event
+Event allows application developers to attach additional information to
+ResponseFinalizeBlock and ResponseCheckTx.
+Later, transactions may be queried using these events.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `type` | [string](#string) |  |  |
+| `attributes` | [EventAttribute](#mythos.network.v1.EventAttribute) | repeated |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.EventAttribute"></a>
+
+### EventAttribute
+EventAttribute is a single key-value pair, associated with an event.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `key` | [string](#string) |  |  |
+| `value` | [string](#string) |  |  |
+| `index` | [bool](#bool) |  | nondeterministic |
+
+
+
+
+
+
+<a name="mythos.network.v1.ExecTxResult"></a>
+
+### ExecTxResult
+ExecTxResult contains results of executing one individual transaction.
+
+* Its structure is equivalent to #ResponseDeliverTx which will be deprecated/deleted
+tendermint.abci.ExecTxResult
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `code` | [uint32](#uint32) |  |  |
+| `data` | [bytes](#bytes) |  |  |
+| `log` | [string](#string) |  | nondeterministic |
+| `info` | [string](#string) |  | nondeterministic |
+| `gas_wanted` | [int64](#int64) |  |  |
+| `gas_used` | [int64](#int64) |  |  |
+| `events` | [Event](#mythos.network.v1.Event) | repeated | nondeterministic |
+| `codespace` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.RequestBroadcastTx"></a>
+
+### RequestBroadcastTx
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  |  |
-| `client_id` | [uint64](#uint64) |  |  |
+| `tx` | [bytes](#bytes) |  |  |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.MsgDeregisterOAuthClientResponse"></a>
+<a name="mythos.network.v1.RequestPing"></a>
 
-### MsgDeregisterOAuthClientResponse
-
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgDeregisterRoute"></a>
-
-### MsgDeregisterRoute
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `authority` | [string](#string) |  | authority is the address that controls the module. |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgDeregisterRouteResponse"></a>
-
-### MsgDeregisterRouteResponse
+### RequestPing
 
 
 
@@ -439,86 +311,47 @@ Query defines the gRPC querier service.
 
 
 
-<a name="mythos.websrv.v1.MsgEditOAuthClient"></a>
+<a name="mythos.network.v1.ResponseBroadcastTx"></a>
 
-### MsgEditOAuthClient
+### ResponseBroadcastTx
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  |  |
-| `client_id` | [uint64](#uint64) |  |  |
-| `domain` | [string](#string) |  |  |
+| `check_tx` | [ResponseCheckTx](#mythos.network.v1.ResponseCheckTx) |  |  |
+| `tx_result` | [ExecTxResult](#mythos.network.v1.ExecTxResult) |  |  |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.MsgEditOAuthClientResponse"></a>
+<a name="mythos.network.v1.ResponseCheckTx"></a>
 
-### MsgEditOAuthClientResponse
-
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterOAuthClient"></a>
-
-### MsgRegisterOAuthClient
-
+### ResponseCheckTx
+tendermint.abci.ResponseCheckTx
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| `owner` | [string](#string) |  |  |
-| `domain` | [string](#string) |  |  |
+| `code` | [uint32](#uint32) |  |  |
+| `data` | [bytes](#bytes) |  |  |
+| `log` | [string](#string) |  | nondeterministic |
+| `info` | [string](#string) |  | nondeterministic |
+| `gas_wanted` | [int64](#int64) |  |  |
+| `gas_used` | [int64](#int64) |  |  |
+| `events` | [Event](#mythos.network.v1.Event) | repeated |  |
+| `codespace` | [string](#string) |  |  |
 
 
 
 
 
 
-<a name="mythos.websrv.v1.MsgRegisterOAuthClientResponse"></a>
+<a name="mythos.network.v1.ResponsePing"></a>
 
-### MsgRegisterOAuthClientResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `client_id` | [uint64](#uint64) |  |  |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterRoute"></a>
-
-### MsgRegisterRoute
-Register a web server route
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `authority` | [string](#string) |  | authority is the address that controls the module. |
-| `title` | [string](#string) |  | title of the proposal |
-| `description` | [string](#string) |  | description of the proposal |
-| `path` | [string](#string) |  | Route path |
-| `contract_address` | [string](#string) |  | Contract address in bech32 format |
-
-
-
-
-
-
-<a name="mythos.websrv.v1.MsgRegisterRouteResponse"></a>
-
-### MsgRegisterRouteResponse
+### ResponsePing
 
 
 
@@ -532,18 +365,479 @@ Register a web server route
  <!-- end HasExtensions -->
 
 
-<a name="mythos.websrv.v1.Msg"></a>
+<a name="mythos.network.v1.BroadcastAPI"></a>
 
-### Msg
-Msg defines the Msg service.
+### BroadcastAPI
+BroadcastAPI
+
+Deprecated: This API will be superseded by a more comprehensive gRPC-based
+broadcast API, and is scheduled for removal after v0.38.
 
 | Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
 | ----------- | ------------ | ------------- | ------------| ------- | -------- |
-| `RegisterOAuthClient` | [MsgRegisterOAuthClient](#mythos.websrv.v1.MsgRegisterOAuthClient) | [MsgRegisterOAuthClientResponse](#mythos.websrv.v1.MsgRegisterOAuthClientResponse) | Register OAuth client | |
-| `EditOAuthClient` | [MsgEditOAuthClient](#mythos.websrv.v1.MsgEditOAuthClient) | [MsgEditOAuthClientResponse](#mythos.websrv.v1.MsgEditOAuthClientResponse) | Edit OAuth client | |
-| `DeregisterOAuthClient` | [MsgDeregisterOAuthClient](#mythos.websrv.v1.MsgDeregisterOAuthClient) | [MsgDeregisterOAuthClientResponse](#mythos.websrv.v1.MsgDeregisterOAuthClientResponse) | Deregister OAuth client | |
-| `RegisterRoute` | [MsgRegisterRoute](#mythos.websrv.v1.MsgRegisterRoute) | [MsgRegisterRouteResponse](#mythos.websrv.v1.MsgRegisterRouteResponse) | gov authorized register contract for http route | |
-| `DeregisterRoute` | [MsgDeregisterRoute](#mythos.websrv.v1.MsgDeregisterRoute) | [MsgDeregisterRouteResponse](#mythos.websrv.v1.MsgDeregisterRouteResponse) | deregister http route | |
+| `Ping` | [RequestPing](#mythos.network.v1.RequestPing) | [ResponsePing](#mythos.network.v1.ResponsePing) |  | |
+| `BroadcastTx` | [RequestBroadcastTx](#mythos.network.v1.RequestBroadcastTx) | [ResponseBroadcastTx](#mythos.network.v1.ResponseBroadcastTx) |  | |
+
+ <!-- end services -->
+
+
+
+<a name="mythos/network/v1/tx.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## mythos/network/v1/tx.proto
+
+
+
+<a name="mythos.network.v1.AtomicTxCrossChainCallInfo"></a>
+
+### AtomicTxCrossChainCallInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `subtx` | [SubTxCrossChainCallInfo](#mythos.network.v1.SubTxCrossChainCallInfo) | repeated |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.CrossChainCallInfo"></a>
+
+### CrossChainCallInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `request` | [MsgExecuteCrossChainCallRequest](#mythos.network.v1.MsgExecuteCrossChainCallRequest) |  |  |
+| `response` | [WrappedResponse](#mythos.network.v1.WrappedResponse) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.ExtensionOptionAtomicMultiChainTx"></a>
+
+### ExtensionOptionAtomicMultiChainTx
+ExtensionOptionMultiChainTx is an extension option for multichain atomic transactions
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `leader_chain_id` | [string](#string) |  |  |
+| `chain_ids` | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.ExtensionOptionMultiChainTx"></a>
+
+### ExtensionOptionMultiChainTx
+ExtensionOptionMultiChainTx is an extension option for multichain atomic transactions
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `chain_id` | [string](#string) |  | option (gogoproto.goproto_getters) = false; |
+| `index` | [int32](#int32) |  | index of this transaction in the atomic set |
+| `tx_count` | [int32](#int32) |  | total transactions in the atomic set |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteAtomicTxResponse"></a>
+
+### MsgExecuteAtomicTxResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `results` | [ExecTxResult](#mythos.network.v1.ExecTxResult) | repeated |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteContract"></a>
+
+### MsgExecuteContract
+ExecuteContract
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | Sender is the that actor that signed the messages |
+| `contract` | [string](#string) |  | Contract is the address of the smart contract |
+| `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract
+
+Funds coins that are transferred to the contract on execution repeated cosmos.base.v1beta1.Coin funds = 4 [ (gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins" ]; // Array of either hex-encoded contract addresses or contract labels // on which the execution of this message depends on repeated string dependencies = 5; |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteContractResponse"></a>
+
+### MsgExecuteContractResponse
+ExecuteContractResponse
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteCrossChainCallRequest"></a>
+
+### MsgExecuteCrossChainCallRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | sender is the contract that prepared the message |
+| `from` | [string](#string) |  | from is the contract that sent the cross-chain message |
+| `to` | [string](#string) |  | to is the address of the smart contract on the current chain |
+| `msg` | [bytes](#bytes) |  | Msg json encoded message to be passed to the contract |
+| `funds` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Funds coins that are transferred to the contract on execution |
+| `dependencies` | [string](#string) | repeated | Array of either hex-encoded contract addresses or contract labels on which the execution of this message depends on |
+| `from_chain_id` | [string](#string) |  |  |
+| `to_chain_id` | [string](#string) |  |  |
+| `is_query` | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteCrossChainCallRequestIndexed"></a>
+
+### MsgExecuteCrossChainCallRequestIndexed
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `request` | [MsgExecuteCrossChainCallRequest](#mythos.network.v1.MsgExecuteCrossChainCallRequest) |  |  |
+| `index` | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteCrossChainCallResponse"></a>
+
+### MsgExecuteCrossChainCallResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+| `error` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgExecuteCrossChainCallResponseIndexed"></a>
+
+### MsgExecuteCrossChainCallResponseIndexed
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [MsgExecuteCrossChainCallResponse](#mythos.network.v1.MsgExecuteCrossChainCallResponse) |  |  |
+| `index` | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgGrpcReceiveRequest"></a>
+
+### MsgGrpcReceiveRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | this will always be the network module |
+| `contract` | [string](#string) |  |  |
+| `data` | [bytes](#bytes) |  |  |
+| `encoding` | [string](#string) |  | evm, json, protobuf // ? |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgGrpcReceiveRequestResponse"></a>
+
+### MsgGrpcReceiveRequestResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgGrpcSendRequest"></a>
+
+### MsgGrpcSendRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | this will always be the network module |
+| `contract` | [string](#string) |  |  |
+| `ip_address` | [string](#string) |  |  |
+| `data` | [bytes](#bytes) |  |  |
+| `encoding` | [string](#string) |  | evm, json, protobuf // ? |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgGrpcSendRequestResponse"></a>
+
+### MsgGrpcSendRequestResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgMultiChainWrap"></a>
+
+### MsgMultiChainWrap
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `multi_chain_id` | [string](#string) |  |  |
+| `sender` | [string](#string) |  |  |
+| `data` | [google.protobuf.Any](#google.protobuf.Any) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgMultiChainWrapResponse"></a>
+
+### MsgMultiChainWrapResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgP2PReceiveMessageRequest"></a>
+
+### MsgP2PReceiveMessageRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | this will always be the network module |
+| `contract` | [string](#string) |  |  |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgP2PReceiveMessageResponse"></a>
+
+### MsgP2PReceiveMessageResponse
+
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgQueryContract"></a>
+
+### MsgQueryContract
+QueryContract
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | Sender is the that actor that signed the messages |
+| `contract` | [string](#string) |  | Address is the address of the smart contract |
+| `msg` | [bytes](#bytes) |  | Funds coins that are transferred to the contract on execution repeated cosmos.base.v1beta1.Coin funds = 4 [ (gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins" ]; // Array of either hex-encoded contract addresses or contract labels // on which the execution of this message depends on repeated string dependencies = 5; |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgQueryContractResponse"></a>
+
+### MsgQueryContractResponse
+QueryContractResponse
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgStartBackgroundProcessRequest"></a>
+
+### MsgStartBackgroundProcessRequest
+MsgStartBackgroundProcessRequest
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | this will always be the wasmx module // TODO authority |
+| `contract` | [string](#string) |  | contract address |
+| `args` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgStartBackgroundProcessResponse"></a>
+
+### MsgStartBackgroundProcessResponse
+MsgStartBackgroundProcessResponse
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgStartTimeoutRequest"></a>
+
+### MsgStartTimeoutRequest
+MsgStartTimeoutRequest
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `sender` | [string](#string) |  | this will always be the wasmx module // TODO authority |
+| `contract` | [string](#string) |  | contract address |
+| `delay` | [int64](#int64) |  |  |
+| `args` | [bytes](#bytes) |  |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.MsgStartTimeoutResponse"></a>
+
+### MsgStartTimeoutResponse
+MsgStartTimeoutResponse
+
+
+
+
+
+
+<a name="mythos.network.v1.SubTxCrossChainCallInfo"></a>
+
+### SubTxCrossChainCallInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `calls` | [CrossChainCallInfo](#mythos.network.v1.CrossChainCallInfo) | repeated |  |
+
+
+
+
+
+
+<a name="mythos.network.v1.WrappedResponse"></a>
+
+### WrappedResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `data` | [bytes](#bytes) |  |  |
+| `error` | [string](#string) |  |  |
+
+
+
+
+
+ <!-- end messages -->
+
+ <!-- end enums -->
+
+ <!-- end HasExtensions -->
+
+
+<a name="mythos.network.v1.Msg"></a>
+
+### Msg
+Msg defines the grpc server
+
+| Method Name | Request Type | Response Type | Description | HTTP Verb | Endpoint |
+| ----------- | ------------ | ------------- | ------------| ------- | -------- |
+| `GrpcSendRequest` | [MsgGrpcSendRequest](#mythos.network.v1.MsgGrpcSendRequest) | [MsgGrpcSendRequestResponse](#mythos.network.v1.MsgGrpcSendRequestResponse) | GrpcSendRequest | |
+| `StartTimeout` | [MsgStartTimeoutRequest](#mythos.network.v1.MsgStartTimeoutRequest) | [MsgStartTimeoutResponse](#mythos.network.v1.MsgStartTimeoutResponse) | StartTimeout | |
+| `StartBackgroundProcess` | [MsgStartBackgroundProcessRequest](#mythos.network.v1.MsgStartBackgroundProcessRequest) | [MsgStartBackgroundProcessResponse](#mythos.network.v1.MsgStartBackgroundProcessResponse) |  | |
+| `MultiChainWrap` | [MsgMultiChainWrap](#mythos.network.v1.MsgMultiChainWrap) | [MsgMultiChainWrapResponse](#mythos.network.v1.MsgMultiChainWrapResponse) | MultiChainWrap wraps a message to be executed on one of the available chains | |
+| `GrpcReceiveRequest` | [MsgGrpcReceiveRequest](#mythos.network.v1.MsgGrpcReceiveRequest) | [MsgGrpcReceiveRequestResponse](#mythos.network.v1.MsgGrpcReceiveRequestResponse) | GrpcReceiveRequest | |
+| `P2PReceiveMessage` | [MsgP2PReceiveMessageRequest](#mythos.network.v1.MsgP2PReceiveMessageRequest) | [MsgP2PReceiveMessageResponse](#mythos.network.v1.MsgP2PReceiveMessageResponse) | P2PReceiveMessage | |
+| `ExecuteAtomicTx` | [MsgExecuteAtomicTxRequest](#mythos.network.v1.MsgExecuteAtomicTxRequest) | [MsgExecuteAtomicTxResponse](#mythos.network.v1.MsgExecuteAtomicTxResponse) |  | |
+| `ExecuteCrossChainTx` | [MsgExecuteCrossChainCallRequest](#mythos.network.v1.MsgExecuteCrossChainCallRequest) | [MsgExecuteCrossChainCallResponse](#mythos.network.v1.MsgExecuteCrossChainCallResponse) | only executed internally, sent by wasmx | |
 
  <!-- end services -->
 

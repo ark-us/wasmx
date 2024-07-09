@@ -7,42 +7,37 @@ import (
 )
 
 const MetaInfoCrossChainKey = "crosschain_internal_tx"
+const MetaInfoCrossChainNextIndexKey = "crosschain_internal_tx_index"
 
-type WrappedResponse struct {
-	Data  []byte `json:"data"`
-	Error string `json:"error"`
-}
-
-type CrossChainCallInfo struct {
-	Request MsgExecuteCrossChainCallRequest
-	Result  WrappedResponse
-}
-
-type MetaInfoCrossChain struct {
-	Requests [][]CrossChainCallInfo
-}
-
-func SetCrossChainCallMetaInfoEmpty(ctx context.Context) error {
-	data := &MetaInfoCrossChain{}
+func SetCrossChainCallMetaInfoNextIndex(ctx context.Context, index int32) error {
 	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
 	if err != nil {
 		return err
 	}
-	execInfo.Data[MetaInfoCrossChainKey] = data
+	execInfo.TempData[MetaInfoCrossChainNextIndexKey] = index
 	return nil
 }
 
-func GetCrossChainCallMetaInfo(ctx context.Context) *MetaInfoCrossChain {
-	data := &MetaInfoCrossChain{}
+func GetCrossChainCallMetaInfoNextIndex(ctx context.Context) int32 {
 	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
 	if err != nil {
-		return data
+		return 0
+	}
+	return execInfo.TempData[MetaInfoCrossChainNextIndexKey].(int32)
+}
+
+func GetCrossChainCallMetaInfo(ctx context.Context) (*AtomicTxCrossChainCallInfo, int32) {
+	data := &AtomicTxCrossChainCallInfo{}
+	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
+	if err != nil {
+		return data, 0
 	}
 	datai, found := execInfo.Data[MetaInfoCrossChainKey]
 	if found {
-		data = datai.(*MetaInfoCrossChain)
+		data = datai.(*AtomicTxCrossChainCallInfo)
 	}
-	return data
+	index := execInfo.TempData[MetaInfoCrossChainNextIndexKey].(int32)
+	return data, index
 }
 
 // we only add deterministic requests
@@ -54,19 +49,19 @@ func AddCrossChainCallMetaInfo(ctx context.Context, req MsgExecuteCrossChainCall
 	}
 	subtxIndex := int(mcctx.CurrentSubTxIndex)
 	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
-	info := CrossChainCallInfo{Request: req, Result: resp}
+	info := CrossChainCallInfo{Request: req, Response: resp}
 	if err != nil {
 		return err
 	}
-	data := &MetaInfoCrossChain{}
+	data := &AtomicTxCrossChainCallInfo{}
 	datai, found := execInfo.Data[MetaInfoCrossChainKey]
 	if found {
-		data = datai.(*MetaInfoCrossChain)
+		data = datai.(*AtomicTxCrossChainCallInfo)
 	}
-	for i := len(data.Requests); i <= subtxIndex; i++ {
-		data.Requests = append(data.Requests, []CrossChainCallInfo{})
+	for i := len(data.Subtx); i <= subtxIndex; i++ {
+		data.Subtx = append(data.Subtx, SubTxCrossChainCallInfo{})
 	}
-	data.Requests[subtxIndex] = append(data.Requests[subtxIndex], info)
+	data.Subtx[subtxIndex].Calls = append(data.Subtx[subtxIndex].Calls, info)
 	execInfo.Data[MetaInfoCrossChainKey] = data
 	return nil
 }

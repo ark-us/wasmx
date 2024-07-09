@@ -22,7 +22,7 @@ import (
 
 // executeCrossChainTx(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	resp := types.WrappedResponse{}
+	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
@@ -64,7 +64,7 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 
 // executeCrossChainQuery(*QueryCrossChainRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	resp := types.WrappedResponse{}
+	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
@@ -111,7 +111,7 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 // contracts on different chains, which do not require determinism
 // executeCrossChainTxNonDeterministic(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	resp := types.WrappedResponse{}
+	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
 
 	// we do not want to fail and end the transaction
@@ -175,7 +175,7 @@ func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmed
 // to make the query deterministic, we need to use ExecuteCrossChainTx
 // to ensure the cross-chain queries are executed in the same order for all validators
 func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	resp := types.WrappedResponse{}
+	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
 
 	// TODO check that we are in a query environment
@@ -268,13 +268,13 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	return returnResult(ctx, callframe, resp)
 }
 
-func returnResultAndAddCrossChainInfo(ctx *Context, callframe *wasmedge.CallingFrame, req types.MsgExecuteCrossChainCallRequest, resp types.WrappedResponse) ([]interface{}, wasmedge.Result) {
-	types.AddCrossChainCallMetaInfo(ctx.GoContextParent, req, resp)
+func returnResultAndAddCrossChainInfo(ctx *Context, callframe *wasmedge.CallingFrame, req types.MsgExecuteCrossChainCallRequest, resp *types.WrappedResponse) ([]interface{}, wasmedge.Result) {
+	types.AddCrossChainCallMetaInfo(ctx.GoContextParent, req, *resp)
 	return returnResult(ctx, callframe, resp)
 }
 
-func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, resp types.WrappedResponse) ([]interface{}, wasmedge.Result) {
-	respbz, err := json.Marshal(resp)
+func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, resp *types.WrappedResponse) ([]interface{}, wasmedge.Result) {
+	respbz, err := ctx.GetCosmosHandler().Codec().MarshalJSON(resp)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

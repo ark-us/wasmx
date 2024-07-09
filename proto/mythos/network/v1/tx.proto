@@ -73,7 +73,7 @@ message MsgExecuteCrossChainCallRequest {
     // to is the address of the smart contract on the current chain
     string to = 3;
     // Msg json encoded message to be passed to the contract
-    bytes msg = 4 [(gogoproto.casttype) = "RawContractMessage"];
+    bytes msg = 4;
     // Funds coins that are transferred to the contract on execution
     repeated cosmos.base.v1beta1.Coin funds = 5 [
         (gogoproto.nullable) = false,
@@ -237,4 +237,22 @@ message ExtensionOptionAtomicMultiChainTx {
     option (gogoproto.goproto_getters) = false;
     string leader_chain_id = 1;
     repeated string chain_ids = 2;
+}
+
+message WrappedResponse {
+    bytes data = 1;
+    string error = 2;
+}
+
+message CrossChainCallInfo {
+    MsgExecuteCrossChainCallRequest request = 1 [(gogoproto.nullable) = false];
+    WrappedResponse response = 2 [(gogoproto.nullable) = false];
+}
+
+message SubTxCrossChainCallInfo {
+    repeated CrossChainCallInfo calls = 1 [(gogoproto.nullable) = false];
+}
+
+message AtomicTxCrossChainCallInfo {
+    repeated SubTxCrossChainCallInfo subtx = 1 [(gogoproto.nullable) = false];
 }

@@ -2032,8 +2032,8 @@ github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-b
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
 github.com/linxGnu/grocksdb v1.8.14 h1:HTgyYalNwBSG/1qCQUIott44wU5b2Y9Kr3z7SK5OfGQ=
 github.com/linxGnu/grocksdb v1.8.14/go.mod h1:QYiYypR2d4v63Wj1adOOfzglnoII0gLj3PNh4fZkcFA=
-github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240708111617-d24b57a4f60f h1:vtkL1EL8aWyNP0XUna5+OOuo+7NDpnhnaG0WQqb9/d0=
-github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240708111617-d24b57a4f60f/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240709214022-5ef815b915a4 h1:aQbYUAXw5LAPLdBVp2vq7vieP+89+FBeJkDYF9OCJic=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240709214022-5ef815b915a4/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0 h1:3nZD78E9S6dQhWvPdGL3bEn8l3VEVRc4sBOKfiiiIxU=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0/go.mod h1:ZW4eIE98wivInyQyhxU2nHqEielc/iZAcr41qNyWSrw=
 github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19 h1:qQOX+FXfEuUcXL2cOfbJVfKkhCaneKeOU4I+skRpHOQ=

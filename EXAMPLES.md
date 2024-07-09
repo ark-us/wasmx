@@ -51,7 +51,7 @@ mythosd tx wasmx store ./x/network/keeper/testdata/wasmx/simple_storage.wasm --c
 mythosd tx wasmx instantiate 53 '{"data":"{}"}' --label "simple_storage" --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --yes
 
 # instantiate
-# level11way38fzsju0a6xl7f3xd84chnq37m2ftecw6jk
+# level11m77kmufz9a6lzs6q7sw8fywkxc57c6p95vs7sh
 
 # chain level2
 mythosd tx wasmx store ./x/network/keeper/testdata/wasmx/crosschain.wasm --chain-id=level2_2_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl2 --gas=9000000 --yes
@@ -62,12 +62,12 @@ mythosd tx wasmx store ./x/network/keeper/testdata/wasmx/crosschain.wasm --chain
 mythosd tx wasmx instantiate 53 '{"crosschain_contract":"metaregistry"}' --label "crosschain" --chain-id=level2_2_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl2 --gas=9000000 --yes
 
 # instantiate
-# level21q2ll6fvqu4mf5y78prwka8gqvmmxnw2masm84n
+# level21k6cmx9qqssmua806sagehx4a2dx3h9zfgn8nxc
 
 # chain level1
-mythosd tx wasmx execute level11way38fzsju0a6xl7f3xd84chnq37m2ftecw6jk '{"set":{"key":"hello","value":"brian"}}' --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --yes
+mythosd tx wasmx execute level11m77kmufz9a6lzs6q7sw8fywkxc57c6p95vs7sh '{"set":{"key":"hello","value":"brian"}}' --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --yes
 
-mythosd query multichain call level11way38fzsju0a6xl7f3xd84chnq37m2ftecw6jk '{"get":{"key":"hello"}}' --from node0 --keyring-backend test --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --home=./testnet/node0/mythosd
+mythosd query multichain call level11m77kmufz9a6lzs6q7sw8fywkxc57c6p95vs7sh '{"get":{"key":"hello"}}' --from node0 --keyring-backend test --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --home=./testnet/node0/mythosd
 
 # atomic tx sent to chain level2
 
@@ -80,7 +80,7 @@ mythosd tx multichain atomic "/Users/user/dev/blockchain/wasmx-tests/atomictx.js
 
 * atomictx.json
 ```json
-[{"msg_json":"{\"CrossChain\":{\"sender\":\"\",\"from\":\"\",\"to\":\"level11way38fzsju0a6xl7f3xd84chnq37m2ftecw6jk\",\"msg\":\"eyJkYXRhIjoiZXlKelpYUWlPbnNpYTJWNUlqb2lhR1ZzYkc4aUxDSjJZV3gxWlNJNkluTmhiVzE1SW4xOSJ9\",\"funds\":[],\"dependencies\":[],\"from_chain_id\":\"\",\"to_chain_id\":\"level1_1_1002-1\",\"is_query\":false}}","contract": "level21q2ll6fvqu4mf5y78prwka8gqvmmxnw2masm84n", "multi_chain_id":"level2_2_1002-1"}]
+[{"msg_json":"{\"CrossChain\":{\"sender\":\"\",\"from\":\"\",\"to\":\"level11m77kmufz9a6lzs6q7sw8fywkxc57c6p95vs7sh\",\"msg\":\"eyJkYXRhIjoiZXlKelpYUWlPbnNpYTJWNUlqb2lhR1ZzYkc4aUxDSjJZV3gxWlNJNkluTmhiVzE1SW4xOSJ9\",\"funds\":[],\"dependencies\":[],\"from_chain_id\":\"\",\"to_chain_id\":\"level1_1_1002-1\",\"is_query\":false}}","contract": "level21k6cmx9qqssmua806sagehx4a2dx3h9zfgn8nxc", "multi_chain_id":"level2_2_1002-1"}]
 
 ```
 
