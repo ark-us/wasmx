@@ -4,7 +4,7 @@ package mythos.network.v1;
 option go_package = "mythos/v1/x/network/types";
 
 import "gogoproto/gogo.proto";
-// import "tendermint/abci/types.proto";
+import "tendermint/abci/types.proto";
 
 //----------------------------------------
 // Request types
@@ -87,4 +87,10 @@ message EventAttribute {
     string key   = 1;
     string value = 2;
     bool   index = 3;  // nondeterministic
+}
+
+message RequestProcessProposalWithMetaInfo {
+	tendermint.abci.RequestProcessProposal request = 1;
+	bool optimistic_execution = 2;
+	map<string, string> metainfo = 3;
 }

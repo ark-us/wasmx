@@ -121,6 +121,7 @@ func (k QuerierBank) TotalSupply(goCtx context.Context, req *banktypes.QueryTota
 
 func (k QuerierBank) SupplyOf(goCtx context.Context, req *banktypes.QuerySupplyOfRequest) (*banktypes.QuerySupplyOfResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	k.Keeper.Logger(ctx).Debug("SupplyOf", "denom", req.Denom)
 	reqbz, err := k.Keeper.cdc.MarshalJSON(req)
 	if err != nil {
 		return nil, err
@@ -146,6 +147,23 @@ func (k QuerierBank) SupplyOf(goCtx context.Context, req *banktypes.QuerySupplyO
 		return nil, err
 	}
 	return &response, nil
+}
+
+// this is called by /cosmos/bank/v1beta1/supply/by_denom
+func (k QuerierBank) GetSupply(goCtx context.Context, denom string) sdk.Coin {
+	supply, err := k.SupplyOf(goCtx, &banktypes.QuerySupplyOfRequest{Denom: denom})
+	if err != nil {
+		return sdk.NewInt64Coin(denom, 0)
+	}
+	return supply.Amount
+}
+
+func (k QuerierBank) HasSupply(goCtx context.Context, denom string) bool {
+	supply, err := k.SupplyOf(goCtx, &banktypes.QuerySupplyOfRequest{Denom: denom})
+	if err != nil {
+		return false
+	}
+	return !supply.Amount.IsZero()
 }
 
 func (k QuerierBank) Params(goCtx context.Context, req *banktypes.QueryParamsRequest) (*banktypes.QueryParamsResponse, error) {

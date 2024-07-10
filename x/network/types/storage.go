@@ -34,14 +34,15 @@ type LogEntry struct {
 }
 
 type BlockEntry struct {
-	Index          int64  `json:"index"`
-	ReaderContract []byte `json:"readerContract"`
-	WriterContract []byte `json:"writerContract"`
-	Data           []byte `json:"data"`        // RequestProcessProposal
-	Header         []byte `json:"header"`      // Block Header
-	LastCommit     []byte `json:"last_commit"` // BlockCommit
-	Evidence       []byte `json:"evidence"`    // EvidenceData
-	Result         []byte `json:"result"`      // ResponseFinalizeBlock
+	Index           int64  `json:"index"`
+	ReaderContract  []byte `json:"readerContract"`
+	WriterContract  []byte `json:"writerContract"`
+	Data            []byte `json:"data"` // RequestProcessProposalWithMetaInfo
+	ProposerAddress string `json:"proposer_address"`
+	Header          []byte `json:"header"`      // Block Header
+	LastCommit      []byte `json:"last_commit"` // BlockCommit
+	Evidence        []byte `json:"evidence"`    // EvidenceData
+	Result          []byte `json:"result"`      // ResponseFinalizeBlock
 }
 
 func GetTopicDataKey(topic string) string {

@@ -66,6 +66,7 @@ func NewABCIClient(
 }
 
 func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error) {
+	c.logger.Debug("ABCIClient.ABCIInfo")
 	resInfo, err := c.bapp.Info(types.RequestInfo)
 	if err != nil {
 		return nil, err
@@ -74,6 +75,7 @@ func (c *ABCIClient) ABCIInfo(context.Context) (*rpctypes.ResultABCIInfo, error)
 }
 
 func (c *ABCIClient) ABCIQuery(goctx context.Context, path string, data bytes.HexBytes) (*rpctypes.ResultABCIQuery, error) {
+	c.logger.Debug("ABCIClient.ABCIQuery", "path", path, "data", data.String())
 	return c.ABCIQueryWithOptions(goctx, path, data, rpcclient.DefaultABCIQueryOptions)
 }
 
@@ -359,30 +361,36 @@ func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.Result
 	var entry types.BlockEntry
 	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
 	}
 
-	var b abci.RequestProcessProposal
-	err = json.Unmarshal(entry.Data, &b)
+	var bmeta types.RequestProcessProposalWithMetaInfo
+	err = c.nk.Codec().UnmarshalJSON(entry.Data, &bmeta)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode RequestProcessProposalWithMetaInfo")
 	}
+	b := bmeta.Request
 
 	var header cmttypes.Header
 	err = json.Unmarshal(entry.Header, &header)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode Header")
 	}
 
 	var lastCommit cmttypes.Commit
 	err = json.Unmarshal(entry.LastCommit, &lastCommit)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode Commit")
 	}
+
 	var evidence cmttypes.EvidenceData
 	err = json.Unmarshal(entry.Evidence, &evidence)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode EvidenceData")
+	}
+
+	if len(b.Hash) == 0 {
+		return nil, fmt.Errorf("block (%d) not found", blockHeight)
 	}
 
 	// TODO fixme
@@ -463,14 +471,15 @@ func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes
 	var entry types.BlockEntry
 	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
-		return nil, err
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
 	}
 
-	var blockData abci.RequestProcessProposal
-	err = json.Unmarshal(entry.Data, &blockData)
+	var bmeta types.RequestProcessProposalWithMetaInfo
+	err = c.nk.Codec().UnmarshalJSON(entry.Data, &bmeta)
 	if err != nil {
-		return nil, err
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode RequestProcessProposalWithMetaInfo")
 	}
+	blockData := bmeta.Request
 
 	var blockResultData abci.ResponseFinalizeBlock
 	err = json.Unmarshal(entry.Result, &blockResultData)

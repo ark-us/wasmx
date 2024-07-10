@@ -359,8 +359,3 @@ func (k KeeperBank) GetBalancePrefixed(goCtx context.Context, addr mcodec.AccAdd
 
 	return *response.Balance
 }
-
-// // GetSupply retrieves the Supply from store
-// func (k KeeperBank) GetSupply(goCtx context.Context, denom string) sdk.Coin {
-// 	return sdk.NewCoin(denom, math.NewInt(0))
-// }
