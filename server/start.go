@@ -35,14 +35,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	sdkserverconfig "github.com/cosmos/cosmos-sdk/server/config"
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	config "mythos/v1/server/config"
+	srvconfig "mythos/v1/server/config"
 	srvflags "mythos/v1/server/flags"
 	websrv "mythos/v1/x/websrv/server"
 	websrvconfig "mythos/v1/x/websrv/server/config"
@@ -233,7 +232,7 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 		g, ctx,
 	)
 
-	config, err := config.GetConfig(svrCtx.Viper)
+	config, err := srvconfig.GetConfig(svrCtx.Viper)
 	if err != nil {
 		svrCtx.Logger.Error("failed to get server config", "error", err.Error())
 		return err
@@ -382,7 +381,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		return err
 	}
 
-	config, err := config.GetConfig(svrCtx.Viper)
+	config, err := srvconfig.GetConfig(svrCtx.Viper)
 	if err != nil {
 		logger.Error("failed to get server config", "error", err.Error())
 		return err
@@ -707,7 +706,7 @@ func getGenDocProvider2(cfg *cmtcfg.Config) func(chainId string) (*cmttypes.Gene
 func startGrpcServer(
 	ctx context.Context,
 	g *errgroup.Group,
-	config serverconfig.GRPCConfig,
+	config sdkserverconfig.GRPCConfig,
 	clientCtx client.Context,
 	svrCtx *server.Context,
 	app servertypes.Application,
@@ -723,12 +722,12 @@ func startGrpcServer(
 
 	maxSendMsgSize := config.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
-		maxSendMsgSize = serverconfig.DefaultGRPCMaxSendMsgSize
+		maxSendMsgSize = sdkserverconfig.DefaultGRPCMaxSendMsgSize
 	}
 
 	maxRecvMsgSize := config.MaxRecvMsgSize
 	if maxRecvMsgSize == 0 {
-		maxRecvMsgSize = serverconfig.DefaultGRPCMaxRecvMsgSize
+		maxRecvMsgSize = sdkserverconfig.DefaultGRPCMaxRecvMsgSize
 	}
 
 	grpcAddress := fmt.Sprintf("127.0.0.1:%s", port)
@@ -767,7 +766,7 @@ func startAPIServer(
 	ctx context.Context,
 	g *errgroup.Group,
 	cmtCfg *cmtcfg.Config,
-	svrCfg serverconfig.Config,
+	svrCfg sdkserverconfig.Config,
 	clientCtx client.Context,
 	svrCtx *server.Context,
 	app servertypes.Application,
@@ -794,7 +793,7 @@ func startAPIServer(
 	return nil
 }
 
-func startTelemetry(cfg serverconfig.Config) (*telemetry.Metrics, error) {
+func startTelemetry(cfg sdkserverconfig.Config) (*telemetry.Metrics, error) {
 	if !cfg.Telemetry.Enabled {
 		return nil, nil
 	}
