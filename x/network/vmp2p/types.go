@@ -3,6 +3,7 @@ package vmp2p
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -66,6 +67,7 @@ type MdnsService interface {
 }
 
 type P2PContext struct {
+	mtx              sync.Mutex
 	Node             *host.Host
 	PubSub           *pubsub.PubSub
 	Mdns             MdnsService
@@ -186,6 +188,8 @@ func (p *P2PContext) GetPeer(protocolID string, peer string) (network.Stream, bo
 }
 
 func (p *P2PContext) AddPeer(protocolID string, peer string, stream network.Stream) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
 	_, found := p.ProtocolContexts[protocolID]
 	if !found {
 		p.ProtocolContexts[protocolID] = &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}}
@@ -194,6 +198,8 @@ func (p *P2PContext) AddPeer(protocolID string, peer string, stream network.Stre
 }
 
 func (p *P2PContext) DeletePeer(protocolID string, peer string) error {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
 	pctx, found := p.ProtocolContexts[protocolID]
 	if !found {
 		return fmt.Errorf("protocol ID not registered: %s", protocolID)
@@ -212,6 +218,8 @@ func (p *P2PContext) GetChatRoom(protocolID string, topic string) (*ChatRoom, bo
 }
 
 func (p *P2PContext) AddChatRoom(protocolID string, topic string, cr *ChatRoom) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
 	_, found := p.ProtocolContexts[protocolID]
 	if !found {
 		p.ProtocolContexts[protocolID] = &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}}
@@ -220,6 +228,8 @@ func (p *P2PContext) AddChatRoom(protocolID string, topic string, cr *ChatRoom) 
 }
 
 func (p *P2PContext) DeleteChatRoom(protocolID string, topic string) error {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
 	pctx, found := p.ProtocolContexts[protocolID]
 	if !found {
 		return fmt.Errorf("protocol ID not registered: %s", protocolID)
