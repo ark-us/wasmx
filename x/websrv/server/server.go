@@ -60,7 +60,7 @@ func StartWebsrv(
 		svrCtx.Logger.Info("Starting Websrv server", "address", cfg.Address)
 		if err := httpSrv.Serve(ln); err != nil {
 			if err == http.ErrServerClosed {
-				svrCtx.Logger.Info("closing Websrv", "error", err.Error())
+				svrCtx.Logger.Info("closing Websrv", "message", err.Error())
 				close(httpSrvDone)
 				return
 			}

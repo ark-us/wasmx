@@ -32,19 +32,20 @@ func StartGRPCServer(
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider mcfg.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
-) (*grpc.Server, client.CometRPC, error) {
+	rpcClient *ABCIClient,
+) (*grpc.Server, error) {
 	GRPCAddr := cfgAll.Network.Address
 	ln, err := Listen(GRPCAddr)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	logger := svrCtx.Logger.With("module", "network")
+	svrCtx.Logger = svrCtx.Logger.With("module", "network")
 
 	// TODO we are starting the consensus protocol before the grpc server is running; we should start it after
-	grpcServer, rpcClient, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, privValidator, nodeKey, genesisDocProvider, metricsProvider)
+	grpcServer, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, privValidator, nodeKey, genesisDocProvider, metricsProvider, rpcClient)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	errCh := make(chan error, 1)
@@ -91,7 +92,7 @@ func StartGRPCServer(
 	case <-ctx.Done():
 		// The calling process canceled or closed the provided context, so we must
 		// gracefully stop the GRPC server.
-		logger.Info("stopping network GRPC server...", "address", GRPCAddr)
+		svrCtx.Logger.Info("stopping network GRPC server...", "address", GRPCAddr)
 		grpcServer.GracefulStop()
 
 		if svrCtx.Config.RPC.IsPprofEnabled() {
@@ -100,10 +101,10 @@ func StartGRPCServer(
 			}
 		}
 
-		return grpcServer, rpcClient, nil
+		return grpcServer, nil
 	case err := <-errCh:
 		svrCtx.Logger.Error("failed to boot network GRPC server", "error", err.Error())
-		return nil, nil, err
+		return nil, err
 	}
 }
 

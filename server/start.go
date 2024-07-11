@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -52,6 +53,7 @@ import (
 	jsonrpcflags "mythos/v1/x/wasmx/server/flags"
 
 	networkgrpc "mythos/v1/x/network/keeper"
+	networkserver "mythos/v1/x/network/server"
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
 
@@ -287,8 +289,8 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 
 // legacyAminoCdc is used for the legacy REST API
 func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ servertypes.AppCreator) (err error) {
-	cfg := svrCtx.Config
-	home := cfg.RootDir
+	tndcfg := svrCtx.Config
+	home := tndcfg.RootDir
 	logger := svrCtx.Logger
 
 	g, ctx := getCtx(svrCtx, true)
@@ -314,7 +316,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 			return err
 		}
 
-		svrCtx.Logger.Info("starting CPU profiler", "profile", cpuProfile)
+		logger.Info("starting CPU profiler", "profile", cpuProfile)
 		if err := pprof.StartCPUProfile(f); err != nil {
 			return err
 		}
@@ -336,27 +338,27 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		// "mutex":        mutexProfile,
 
 		defer func() {
-			svrCtx.Logger.Info("stopping CPU profiler", "profile", cpuProfile)
+			logger.Info("stopping CPU profiler", "profile", cpuProfile)
 			pprof.StopCPUProfile()
 			if err := f.Close(); err != nil {
 				logger.Error("failed to close CPU profiler file", "error", err.Error())
 			}
 		}()
 		defer func() {
-			svrCtx.Logger.Info("stopping memory profiler", "profile", memProfile)
+			logger.Info("stopping memory profiler", "profile", memProfile)
 			runtime.GC() // get up-to-date statistics
 			if err := fm.Close(); err != nil {
 				logger.Error("failed to close memory profiler file", "error", err.Error())
 			}
 		}()
 		defer func() {
-			svrCtx.Logger.Info("stopping goroutine profiler", "profile", gorProfile)
+			logger.Info("stopping goroutine profiler", "profile", gorProfile)
 			if err := fg.Close(); err != nil {
 				logger.Error("failed to close goroutine profiler file", "error", err.Error())
 			}
 		}()
 		defer func() {
-			svrCtx.Logger.Info("stopping allocs profiler", "profile", allocProfile)
+			logger.Info("stopping allocs profiler", "profile", allocProfile)
 			if err := fa.Close(); err != nil {
 				logger.Error("failed to close allocs profiler file", "error", err.Error())
 			}
@@ -371,7 +373,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			svrCtx.Logger.With("error", err).Error("error closing db")
+			logger.With("error", err).Error("error closing db")
 		}
 	}()
 
@@ -381,206 +383,225 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		return err
 	}
 
-	config, err := srvconfig.GetConfig(svrCtx.Viper)
+	msrvconfig, err := srvconfig.GetConfig(svrCtx.Viper)
 	if err != nil {
 		logger.Error("failed to get server config", "error", err.Error())
 		return err
 	}
 
-	if err := config.ValidateBasic(); err != nil {
+	if err := msrvconfig.ValidateBasic(); err != nil {
 		return err
 	}
 
-	bapps, appCreator := mapp.NewAppCreator(
-		svrCtx.Logger,
+	genDocProvider := getGenDocProvider(tndcfg)
+	genDoc, err := genDocProvider()
+	if err != nil {
+		return err
+	}
+	nodeKey, err := p2p.LoadOrGenNodeKey(tndcfg.NodeKeyFile())
+	if err != nil {
+		return err
+	}
+
+	// var rpcClient client.CometRPC
+	// var (
+	// 	tmNode *node.Node
+	// 	gRPCOnly  = svrCtx.Viper.GetBool(srvflags.GRPCOnly)
+	// 	cleanupFn func()
+	// )
+
+	multiapp, appCreator := mapp.NewAppCreator(
+		logger,
 		db,
 		traceWriter,
 		svrCtx.Viper,
 		g, ctx,
 	)
 
-	for _, chainId := range config.Network.InitialChains {
+	clientCtx = clientCtx.
+		WithHomeDir(home).
+		WithChainID(genDoc.ChainID)
+
+	metrics, err := startTelemetry(msrvconfig.Config)
+	if err != nil {
+		return err
+	}
+	metricsProvider := node.DefaultMetricsProvider(tndcfg.Instrumentation)
+
+	// create apps for initial chains
+	initialChains := msrvconfig.Network.InitialChains
+	for i, chainId := range initialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
 
-		appCreator(chainId, chainCfg)
-	}
-
-	mainChainId := mcfg.GetChainId(svrCtx.Viper)
-	app_, err := bapps.GetApp(mainChainId)
-	if err != nil {
-		return err
-	}
-	mythosapp, ok := app_.(*mapp.App)
-	if !ok {
-		return fmt.Errorf("cannot find app for chainId: %s", mainChainId)
-	}
-	app := servertypes.Application(mythosapp)
-
-	metrics, err := startTelemetry(config.Config)
-	if err != nil {
-		return err
-	}
-
-	genDocProvider := getGenDocProvider(cfg)
-	var (
-		tmNode    *node.Node
-		gRPCOnly  = svrCtx.Viper.GetBool(srvflags.GRPCOnly)
-		cleanupFn func()
-	)
-	if gRPCOnly {
-		svrCtx.Logger.Info("starting node in query only mode; CometBFT is disabled")
-		config.GRPC.Enable = true
-	} else {
-		// svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
-		// tmNode, cleanupFn, err = startCmtNode(ctx, cfg, app, svrCtx)
-		// if err != nil {
-		// 	return err
-		// }
-		defer cleanupFn()
-	}
-
-	// Add the tx service to the gRPC router. We only need to register this
-	// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
-	// case, because it spawns a new local tendermint RPC client.
-	if (config.API.Enable || config.GRPC.Enable || config.Websrv.Enable || config.JsonRpc.Enable) && tmNode != nil {
-		// Re-assign for making the client available below do not use := to avoid
-		// shadowing the clientCtx variable.
-		// clientCtx = clientCtx.WithClient(local.New(tmNode))
-
-		// app.RegisterTxService(clientCtx)
-		// app.RegisterTendermintService(clientCtx)
-		// app.RegisterNodeService(clientCtx, config.Config)
-	}
-
-	genDoc, err := genDocProvider()
-	if err != nil {
-		return err
-	}
-	clientCtx = clientCtx.
-		WithHomeDir(home).
-		WithChainID(genDoc.ChainID)
-
-	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
-	if err != nil {
-		return err
-	}
-	var rpcClient client.CometRPC
-	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
-	// that the server is gracefully shut down.
-	g.Go(func() error {
-		_, rpcClient, err = networkgrpc.StartGRPCServer(
-			svrCtx,
-			clientCtx,
-			ctx,
-			&config,
-			app,
-			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
-			nodeKey,
-			getGenDocProvider2(cfg),
-			node.DefaultMetricsProvider(cfg.Instrumentation),
-		)
-		if err != nil {
-			svrCtx.Logger.Error(err.Error())
+		mythosapp_ := appCreator(chainId, chainCfg)
+		mythosapp, ok := mythosapp_.(*mapp.App)
+		if !ok {
+			return fmt.Errorf("cannot convert MythosApp to App")
 		}
-		return err
-	})
-	// ----end network
+		app := servertypes.Application(mythosapp)
+		bapp := mythosapp.GetBaseApp()
 
-	bapp, ok := app.(mcfg.BaseApp)
-	if !ok {
-		return fmt.Errorf("failed to get BaseApp from server Application")
-	}
-	rpcClient = networkgrpc.NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, &config, mythosapp.GetActionExecutor().(*networkgrpc.ActionExecutor))
+		cclientCtx := clientCtx.WithChainID(chainId)
 
-	clientCtx = clientCtx.WithClient(rpcClient)
+		cmsrvconfig, ctndcfg, err := cloneConfigs(&msrvconfig, tndcfg)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("---chain---", chainId)
+		fmt.Println("---cmsrvconfig---", cmsrvconfig)
+		fmt.Println("---ctndcfg---", ctndcfg)
 
-	app.RegisterTxService(clientCtx)
-	app.RegisterTendermintService(clientCtx)
-	app.RegisterNodeService(clientCtx, config.Config)
+		// TODO extract the port base ; define port family range in the toml files
+		cmsrvconfig.Config.API.Address = strings.Replace(cmsrvconfig.Config.API.Address, "1317", fmt.Sprintf("%d", 1317+i), 1)
+		cmsrvconfig.Config.GRPC.Address = strings.Replace(cmsrvconfig.Config.GRPC.Address, "9090", fmt.Sprintf("%d", 9090+i), 1)
+		cmsrvconfig.Network.Address = strings.Replace(cmsrvconfig.Network.Address, "8090", fmt.Sprintf("%d", 8090+i), 1)
+		cmsrvconfig.Websrv.Address = strings.Replace(cmsrvconfig.Websrv.Address, "9900", fmt.Sprintf("%d", 9900+i), 1)
+		cmsrvconfig.JsonRpc.Address = strings.Replace(cmsrvconfig.JsonRpc.Address, "8555", fmt.Sprintf("%d", 8555+i*2), 1)
+		cmsrvconfig.JsonRpc.WsAddress = strings.Replace(cmsrvconfig.JsonRpc.WsAddress, "8555", fmt.Sprintf("%d", 8556+i), 1)
 
-	grpcSrv, clientCtx, err := startGrpcServer(ctx, g, config.Config.GRPC, clientCtx, svrCtx, app)
-	if err != nil {
-		return err
-	}
+		ctndcfg.RPC.ListenAddress = strings.Replace(ctndcfg.RPC.ListenAddress, "26657", fmt.Sprintf("%d", 26657+i), 1)
 
-	err = startAPIServer(ctx, g, cfg, config.Config, clientCtx, svrCtx, app, home, grpcSrv, metrics)
-	if err != nil {
-		return err
-	}
+		csvrCtx := &server.Context{
+			Viper:  svrCtx.Viper,
+			Logger: svrCtx.Logger.With("chain_id", chainId),
+			Config: ctndcfg,
+		}
 
-	// var (
-	// 	httpSrv     *http.Server
-	// 	httpSrvDone chan struct{}
-	// )
+		privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
+		genesisDocProvider := getGenDocProvider2(ctndcfg)
 
-	if config.JsonRpc.Enable {
-		// genDoc, err := genDocProvider()
-		// if err != nil {
-		// 	return err
-		// }
-
-		// clientCtx := clientCtx.WithChainID(genDoc.ChainID)
-
-		tmEndpoint := "/websocket"
-		tmRPCAddr := cfg.RPC.ListenAddress
+		rpcClient := networkgrpc.NewABCIClient(mythosapp, bapp, csvrCtx.Logger, mythosapp.GetNetworkKeeper(), csvrCtx.Config, cmsrvconfig, mythosapp.GetActionExecutor().(*networkgrpc.ActionExecutor))
+		cclientCtx = cclientCtx.WithClient(rpcClient)
 
 		// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 		// that the server is gracefully shut down.
 		g.Go(func() error {
-			// httpSrv, httpSrvDone, err
-			_, _, err = jsonrpc.StartJsonRpc(svrCtx, clientCtx, ctx, tmRPCAddr, tmEndpoint, &config)
+			_, err = networkgrpc.StartGRPCServer(
+				csvrCtx,
+				cclientCtx,
+				ctx,
+				cmsrvconfig,
+				app,
+				privValidator,
+				nodeKey,
+				genesisDocProvider,
+				metricsProvider,
+				rpcClient,
+			)
 			if err != nil {
-				svrCtx.Logger.Error(err.Error())
+				csvrCtx.Logger.Error(err.Error())
 			}
 			return err
 		})
-		// defer func() {
-		// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-		// 	defer cancelFn()
-		// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-		// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
-		// 	} else {
-		// 		logger.Info("HTTP server shut down, waiting 5 sec")
-		// 		select {
-		// 		case <-time.Tick(5 * time.Second):
-		// 		case <-httpSrvDone:
-		// 		}
-		// 	}
-		// }()
-	}
 
-	if config.Websrv.Enable {
-		genDoc, err := genDocProvider()
+		// Add the tx service to the gRPC router. We only need to register this
+		// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
+		// case, because it spawns a new local tendermint RPC client.
+		// if cmsrvconfig.API.Enable || cmsrvconfig.GRPC.Enable || cmsrvconfig.Websrv.Enable || cmsrvconfig.JsonRpc.Enable {
+		// Re-assign for making the client available below do not use := to avoid
+		// shadowing the clientCtx variable.
+		app.RegisterTxService(cclientCtx)
+		app.RegisterTendermintService(cclientCtx)
+		app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)
+		// }
+
+		grpcSrv, cclientCtx, err := startGrpcServer(ctx, g, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
 		if err != nil {
 			return err
 		}
 
-		clientCtx := clientCtx.WithChainID(genDoc.ChainID)
-
-		g.Go(func() error {
-			// httpSrv, httpSrvDone, err
-			_, _, err = websrv.StartWebsrv(svrCtx, clientCtx, ctx, &config.Websrv)
-			if err != nil {
-				svrCtx.Logger.Error(err.Error())
-			}
+		err = startAPIServer(ctx, g, cmsrvconfig.Config, cclientCtx, csvrCtx, app, grpcSrv, metrics)
+		if err != nil {
 			return err
-		})
-		// defer func() {
-		// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-		// 	defer cancelFn()
-		// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-		// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
-		// 	} else {
-		// 		logger.Info("HTTP server shut down, waiting 5 sec")
-		// 		select {
-		// 		case <-time.Tick(5 * time.Second):
-		// 		case <-httpSrvDone:
-		// 		}
-		// 	}
-		// }()
+		}
+
+		// var (
+		// 	httpSrv     *http.Server
+		// 	httpSrvDone chan struct{}
+		// )
+
+		if cmsrvconfig.JsonRpc.Enable {
+			tmEndpoint := "/websocket"
+			tmRPCAddr := ctndcfg.RPC.ListenAddress
+
+			// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
+			// that the server is gracefully shut down.
+			g.Go(func() error {
+				// httpSrv, httpSrvDone, err
+				_, _, err = jsonrpc.StartJsonRpc(csvrCtx, cclientCtx, ctx, tmRPCAddr, tmEndpoint, cmsrvconfig)
+				if err != nil {
+					csvrCtx.Logger.Error(err.Error())
+				}
+				return err
+			})
+			// defer func() {
+			// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+			// 	defer cancelFn()
+			// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
+			// 	} else {
+			// 		logger.Info("HTTP server shut down, waiting 5 sec")
+			// 		select {
+			// 		case <-time.Tick(5 * time.Second):
+			// 		case <-httpSrvDone:
+			// 		}
+			// 	}
+			// }()
+		}
+
+		if cmsrvconfig.Websrv.Enable {
+			g.Go(func() error {
+				// httpSrv, httpSrvDone, err
+				_, _, err = websrv.StartWebsrv(csvrCtx, cclientCtx, ctx, &cmsrvconfig.Websrv)
+				if err != nil {
+					csvrCtx.Logger.Error(err.Error())
+				}
+				return err
+			})
+			// defer func() {
+			// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+			// 	defer cancelFn()
+			// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
+			// 	} else {
+			// 		logger.Info("HTTP server shut down, waiting 5 sec")
+			// 		select {
+			// 		case <-time.Tick(5 * time.Second):
+			// 		case <-httpSrvDone:
+			// 		}
+			// 	}
+			// }()
+		}
+
+		// initialize chain if this is block 0
+		// init all chains first and start them afterwards
+		// InitChain runs multiple contract executions that are not under ActionExecutor control; starting the chains while InitChain is not finished will start delayed executions that will intersect with InitChain executions
+		if bapp.LastBlockHeight() == 0 {
+			_, err := networkgrpc.InitChain(csvrCtx.Logger, &msrvconfig, app, privValidator, nodeKey, genesisDocProvider, chainId, mythosapp.GetNetworkKeeper())
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// start nodes for all chains
+	// should be all chains, taken from level0
+	for _, chainId := range multiapp.ChainIds {
+		iapp, _ := multiapp.GetApp(chainId)
+		app, ok := iapp.(mcfg.MythosApp)
+		if !ok {
+			return fmt.Errorf("cannot get MythosApp")
+		}
+		logger := svrCtx.Logger.With("chain_id", chainId)
+
+		// start the node
+		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
+		if err != nil {
+			return err
+		}
 	}
 
 	// TODO - do we need this? (see simap)
@@ -630,6 +651,29 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	// wait for signal capture and gracefully return
 	// we are guaranteed to be waiting for the "ListenForQuitSignals" goroutine.
 	return g.Wait()
+}
+
+func cloneConfigs(msrvconfig *srvconfig.Config, tndcfg *cmtcfg.Config) (*srvconfig.Config, *cmtcfg.Config, error) {
+	newmsrvconfig := &srvconfig.Config{}
+	newtndcfg := &cmtcfg.Config{}
+	msrvconfigbz, err := json.Marshal(msrvconfig)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = json.Unmarshal(msrvconfigbz, newmsrvconfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tndcfgbz, err := json.Marshal(tndcfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = json.Unmarshal(tndcfgbz, newtndcfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return newmsrvconfig, newtndcfg, nil
 }
 
 // TODO: Move nodeKey into being created within the function.
@@ -765,20 +809,16 @@ func startGrpcServer(
 func startAPIServer(
 	ctx context.Context,
 	g *errgroup.Group,
-	cmtCfg *cmtcfg.Config,
 	svrCfg sdkserverconfig.Config,
 	clientCtx client.Context,
 	svrCtx *server.Context,
 	app servertypes.Application,
-	home string,
 	grpcSrv *grpc.Server,
 	metrics *telemetry.Metrics,
 ) error {
 	if !svrCfg.API.Enable {
 		return nil
 	}
-
-	clientCtx = clientCtx.WithHomeDir(home)
 
 	apiSrv := api.New(clientCtx, svrCtx.Logger.With("module", "api-server"), grpcSrv)
 	app.RegisterAPIRoutes(apiSrv, svrCfg.API)

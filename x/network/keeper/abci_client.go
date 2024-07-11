@@ -54,6 +54,7 @@ func NewABCIClient(
 	config *config.Config,
 	actionExecutor *ActionExecutor,
 ) *ABCIClient {
+	logger = logger.With("module", "network", "client", "abci")
 	return &ABCIClient{
 		mapp:           mapp,
 		bapp:           bapp,

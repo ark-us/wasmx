@@ -89,7 +89,8 @@ func NewGRPCServer(
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider mcfg.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
-) (*grpc.Server, *ABCIClient, error) {
+	client *ABCIClient,
+) (*grpc.Server, error) {
 	grpccfg := cfg.GRPC
 	maxSendMsgSize := grpccfg.MaxSendMsgSize
 	if maxSendMsgSize == 0 {
@@ -109,67 +110,9 @@ func NewGRPCServer(
 
 	_, err := RegisterGRPCServer(ctx, svrCtx, clientCtx, cfg, app, grpcSrv)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to register grpc server: %w", err)
+		return nil, fmt.Errorf("failed to register grpc server: %w", err)
 	}
-	bapp, err := GetBaseApp(app)
-	if err != nil {
-		return nil, nil, err
-	}
-	mythosapp, err := GetMythosApp(app)
-	if err != nil {
-		return nil, nil, err
-	}
-	// networkServer := &msgServer{
-	// 	Keeper: mythosapp.GetNetworkKeeper(),
-	// 	// App:    bapp,
-	// }
-
-	logger := svrCtx.Logger.With("module", "network")
-	client := NewABCIClient(mythosapp, bapp, logger, mythosapp.GetNetworkKeeper(), svrCtx.Config, cfg, mythosapp.GetActionExecutor().(*ActionExecutor))
 	clientCtx = clientCtx.WithClient(client)
-
-	multiapp, err := mythosapp.GetMultiChainApp()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// init all chains first and start them afterwards
-	// InitChain runs multiple contract executions that are not under ActionExecutor control; starting the chains while InitChain is not finished will start delayed executions that will intersect with InitChain executions
-	for _, chainId := range multiapp.ChainIds {
-		iapp, _ := multiapp.GetApp(chainId)
-		app, ok := iapp.(mcfg.MythosApp)
-		if !ok {
-			return nil, nil, fmt.Errorf("cannot get MythosApp")
-		}
-		bapp := app.GetBaseApp()
-		sapp, ok := app.(servertypes.Application)
-		if !ok {
-			return nil, nil, fmt.Errorf("cannot get servertypes.Application")
-		}
-
-		if bapp.LastBlockHeight() == 0 {
-			_, err := initChain(svrCtx, clientCtx, cfg, sapp, privValidator, nodeKey, genesisDocProvider, chainId, metricsProvider, app.GetNetworkKeeper())
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-	}
-
-	for _, chainId := range multiapp.ChainIds {
-		iapp, _ := multiapp.GetApp(chainId)
-		app, ok := iapp.(mcfg.MythosApp)
-		if !ok {
-			return nil, nil, fmt.Errorf("cannot get MythosApp")
-		}
-
-		// start the node
-		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	// TODO fix config - should I register multiple servers?
 
 	// Reflection allows consumers to build dynamic clients that can write to any
 	// Cosmos SDK application without relying on application packages at compile
@@ -189,14 +132,14 @@ func NewGRPCServer(
 		InterfaceRegistry: clientCtx.InterfaceRegistry,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to register reflection service: %w", err)
+		return nil, fmt.Errorf("failed to register reflection service: %w", err)
 	}
 
 	// Reflection allows external clients to see what services and methods
 	// the gRPC server exposes.
 	gogoreflection.Register(grpcSrv)
 
-	return grpcSrv, client, nil
+	return grpcSrv, nil
 }
 
 // StartGRPCClient dials the gRPC server using protoAddr and returns a new
@@ -330,19 +273,17 @@ func loadGenDoc(genesisDocProvider mcfg.GenesisDocProvider, chainId string) (*cm
 	return genDoc, nil
 }
 
-func initChain(
-	svrCtx *server.Context,
-	clientCtx client.Context,
+func InitChain(
+	logger log.Logger,
 	cfgAll *config.Config,
 	app servertypes.Application,
 	privValidator *pvm.FilePV,
 	nodeKey *p2p.NodeKey,
 	genesisDocProvider mcfg.GenesisDocProvider,
 	chainId string,
-	metricsProvider node.MetricsProvider,
 	networkServer mcfg.NetworkKeeper,
 ) (*abci.ResponseInitChain, error) {
-	consensusLogger := svrCtx.Logger.With("subchain_id", chainId)
+	consensusLogger := logger.With("subchain_id", chainId)
 
 	// check if network contract exists
 	genDoc, err := loadGenDoc(genesisDocProvider, chainId)
