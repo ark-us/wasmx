@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	errors "cosmossdk.io/errors"
 	errorsmod "cosmossdk.io/errors"
 	math "cosmossdk.io/math"
 
@@ -304,6 +303,9 @@ func (k KeeperStaking) UnbondingTime(goCtx context.Context) (time.Duration, erro
 func (k KeeperStaking) GetParams(goCtx context.Context) (params stakingtypes.Params, err error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleQuery(ctx, "Params", &stakingtypes.QueryParamsRequest{})
+	if err != nil {
+		return stakingtypes.Params{}, err
+	}
 	var cresp stakingtypes.QueryParamsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -353,7 +355,7 @@ func (k KeeperStaking) ApplyAndReturnValidatorSetUpdates(goCtx context.Context) 
 		}
 		pk, ok := valid.ConsensusPubkey.GetCachedValue().(cryptotypes.PubKey)
 		if !ok {
-			return nil, errors.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk)
+			return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidType, "expecting cryptotypes.PubKey, got %T", pk)
 		}
 		tmPk, err := cryptocodec.ToCmtProtoPublicKey(pk)
 		if err != nil {

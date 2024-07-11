@@ -23,6 +23,9 @@ import (
 
 func (k KeeperDistribution) SetWithdrawAddress(ctx sdk.Context, msg *distributiontypes.MsgSetWithdrawAddress) (*distributiontypes.MsgSetWithdrawAddressResponse, error) {
 	resp, err := k.ContractModuleExecution(ctx, "SetWithdrawAddress", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgSetWithdrawAddressResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -48,6 +51,9 @@ func (k KeeperDistribution) WithdrawValidatorCommission(goCtx context.Context, v
 func (k KeeperDistribution) WithdrawValidatorCommissionInternal(goCtx context.Context, msg *distributiontypes.MsgWithdrawValidatorCommission) (*distributiontypes.MsgWithdrawValidatorCommissionResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleExecution(ctx, "WithdrawValidatorCommission", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgWithdrawValidatorCommissionResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -84,6 +90,9 @@ func (k KeeperDistribution) WithdrawDelegationRewards(goCtx context.Context, del
 func (k KeeperDistribution) FundCommunityPool(goCtx context.Context, msg *distributiontypes.MsgFundCommunityPool) (*distributiontypes.MsgFundCommunityPoolResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleExecution(ctx, "FundCommunityPool", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgFundCommunityPoolResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -95,6 +104,9 @@ func (k KeeperDistribution) FundCommunityPool(goCtx context.Context, msg *distri
 func (k KeeperDistribution) UpdateParams(goCtx context.Context, msg *distributiontypes.MsgUpdateParams) (*distributiontypes.MsgUpdateParamsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleExecution(ctx, "UpdateParams", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgUpdateParamsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -106,6 +118,9 @@ func (k KeeperDistribution) UpdateParams(goCtx context.Context, msg *distributio
 func (k KeeperDistribution) CommunityPoolSpend(goCtx context.Context, msg *distributiontypes.MsgCommunityPoolSpend) (*distributiontypes.MsgCommunityPoolSpendResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleExecution(ctx, "CommunityPoolSpend", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgCommunityPoolSpendResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -117,6 +132,9 @@ func (k KeeperDistribution) CommunityPoolSpend(goCtx context.Context, msg *distr
 func (k KeeperDistribution) DepositValidatorRewardsPool(goCtx context.Context, msg *distributiontypes.MsgDepositValidatorRewardsPool) (*distributiontypes.MsgDepositValidatorRewardsPoolResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleExecution(ctx, "DepositValidatorRewardsPool", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgDepositValidatorRewardsPoolResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -140,6 +158,9 @@ func (k KeeperDistribution) DeleteAllValidatorHistoricalRewards(goCtx context.Co
 func (k KeeperDistribution) WithdrawDelegatorReward(goCtx context.Context, msg *distributiontypes.MsgWithdrawDelegatorReward) (*distributiontypes.MsgWithdrawDelegatorRewardResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleExecution(ctx, "WithdrawDelegatorReward", msg)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.MsgWithdrawDelegatorRewardResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -167,6 +188,9 @@ func (k KeeperDistribution) GetValidatorOutstandingRewardsCoins(goCtx context.Co
 func (k KeeperDistribution) Params(goCtx context.Context) (*distributiontypes.Params, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := k.ContractModuleQuery(ctx, "Params", &distributiontypes.QueryParamsRequest{})
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryParamsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -177,6 +201,9 @@ func (k KeeperDistribution) Params(goCtx context.Context) (*distributiontypes.Pa
 
 func (k KeeperDistribution) ValidatorDistributionInfo(ctx sdk.Context, req *distributiontypes.QueryValidatorDistributionInfoRequest) (*distributiontypes.QueryValidatorDistributionInfoResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "ValidatorDistributionInfo", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryValidatorDistributionInfoResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -187,6 +214,9 @@ func (k KeeperDistribution) ValidatorDistributionInfo(ctx sdk.Context, req *dist
 
 func (k KeeperDistribution) ValidatorOutstandingRewards(ctx sdk.Context, req *distributiontypes.QueryValidatorOutstandingRewardsRequest) (*distributiontypes.QueryValidatorOutstandingRewardsResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "ValidatorOutstandingRewards", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryValidatorOutstandingRewardsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -197,6 +227,9 @@ func (k KeeperDistribution) ValidatorOutstandingRewards(ctx sdk.Context, req *di
 
 func (k KeeperDistribution) ValidatorCommission(ctx sdk.Context, req *distributiontypes.QueryValidatorCommissionRequest) (*distributiontypes.QueryValidatorCommissionResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "ValidatorCommission", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryValidatorCommissionResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -207,6 +240,9 @@ func (k KeeperDistribution) ValidatorCommission(ctx sdk.Context, req *distributi
 
 func (k KeeperDistribution) ValidatorSlashes(ctx sdk.Context, req *distributiontypes.QueryValidatorSlashesRequest) (*distributiontypes.QueryValidatorSlashesResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "ValidatorSlashes", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryValidatorSlashesResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -217,6 +253,9 @@ func (k KeeperDistribution) ValidatorSlashes(ctx sdk.Context, req *distributiont
 
 func (k KeeperDistribution) DelegationRewards(ctx sdk.Context, req *distributiontypes.QueryDelegationRewardsRequest) (*distributiontypes.QueryDelegationRewardsResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "DelegationRewards", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryDelegationRewardsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -227,6 +266,9 @@ func (k KeeperDistribution) DelegationRewards(ctx sdk.Context, req *distribution
 
 func (k KeeperDistribution) DelegationTotalRewards(ctx sdk.Context, req *distributiontypes.QueryDelegationTotalRewardsRequest) (*distributiontypes.QueryDelegationTotalRewardsResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "DelegationTotalRewards", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryDelegationTotalRewardsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -237,6 +279,9 @@ func (k KeeperDistribution) DelegationTotalRewards(ctx sdk.Context, req *distrib
 
 func (k KeeperDistribution) DelegatorValidators(ctx sdk.Context, req *distributiontypes.QueryDelegatorValidatorsRequest) (*distributiontypes.QueryDelegatorValidatorsResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "DelegatorValidators", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryDelegatorValidatorsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -247,6 +292,9 @@ func (k KeeperDistribution) DelegatorValidators(ctx sdk.Context, req *distributi
 
 func (k KeeperDistribution) DelegatorWithdrawAddress(ctx sdk.Context, req *distributiontypes.QueryDelegatorWithdrawAddressRequest) (*distributiontypes.QueryDelegatorWithdrawAddressResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "DelegatorWithdrawAddress", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryDelegatorWithdrawAddressResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -257,6 +305,9 @@ func (k KeeperDistribution) DelegatorWithdrawAddress(ctx sdk.Context, req *distr
 
 func (k KeeperDistribution) CommunityPool(ctx sdk.Context, req *distributiontypes.QueryCommunityPoolRequest) (*distributiontypes.QueryCommunityPoolResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "CommunityPool", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp distributiontypes.QueryCommunityPoolResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {

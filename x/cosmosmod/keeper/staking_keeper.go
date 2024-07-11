@@ -3,7 +3,6 @@ package keeper
 import (
 	"fmt"
 
-	"cosmossdk.io/core/address"
 	addresscodec "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -30,7 +29,7 @@ type (
 		// should be the x/gov module account.
 		authority string
 
-		addressCodec          address.Codec
+		addressCodec          addresscodec.Codec
 		validatorAddressCodec addresscodec.Codec
 		consensusAddressCodec addresscodec.Codec
 		accBech32Codec        mcodec.AccBech32Codec
@@ -49,7 +48,7 @@ func NewKeeperStaking(
 	interfaceRegistry cdctypes.InterfaceRegistry,
 	validatorAddressCodec addresscodec.Codec,
 	consensusAddressCodec addresscodec.Codec,
-	addressCodec address.Codec,
+	addressCodec addresscodec.Codec,
 ) *KeeperStaking {
 	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addressCodec)
 	valBech32Codec := mcodec.MustUnwrapValBech32Codec(validatorAddressCodec)
@@ -84,15 +83,15 @@ func (k *KeeperStaking) JSONCodec() codec.JSONCodec {
 	return k.jsoncdc
 }
 
-func (k *KeeperStaking) AddressCodec() address.Codec {
+func (k *KeeperStaking) AddressCodec() addresscodec.Codec {
 	return k.addressCodec
 }
 
-func (k *KeeperStaking) ValidatorAddressCodec() address.Codec {
+func (k *KeeperStaking) ValidatorAddressCodec() addresscodec.Codec {
 	return k.validatorAddressCodec
 }
 
-func (k *KeeperStaking) ConsensusAddressCodec() address.Codec {
+func (k *KeeperStaking) ConsensusAddressCodec() addresscodec.Codec {
 	return k.consensusAddressCodec
 }
 

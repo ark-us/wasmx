@@ -201,6 +201,8 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 	}
 	ctx.EventManager().EmitEvent(evt)
 
+	k.Logger(ctx).Debug("created new contract", "code_id", codeID)
+
 	return codeID, checksum, nil
 }
 
@@ -524,6 +526,7 @@ func (k *Keeper) instantiateInternal(
 			panic(fmt.Sprintf("account not created: %s: %s", contractAddress.String(), err.Error()))
 		}
 	}
+	k.Logger(ctx).Debug("instantiated new contract", "address", contractAddress.String())
 
 	return contractAddress, res.Data, nil
 }

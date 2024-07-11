@@ -45,6 +45,9 @@ func (k KeeperSlashing) UpdateParams(ctx sdk.Context, params slashingtypes.Param
 
 func (k KeeperSlashing) Params(ctx sdk.Context) (*slashingtypes.Params, error) {
 	resp, err := k.ContractModuleQuery(ctx, "Params", &slashingtypes.QueryParamsRequest{})
+	if err != nil {
+		return nil, err
+	}
 	var cresp slashingtypes.QueryParamsResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -55,6 +58,9 @@ func (k KeeperSlashing) Params(ctx sdk.Context) (*slashingtypes.Params, error) {
 
 func (k KeeperSlashing) SigningInfo(ctx sdk.Context, req *slashingtypes.QuerySigningInfoRequest) (*slashingtypes.ValidatorSigningInfo, error) {
 	resp, err := k.ContractModuleQuery(ctx, "SigningInfo", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp slashingtypes.QuerySigningInfoResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
@@ -65,6 +71,9 @@ func (k KeeperSlashing) SigningInfo(ctx sdk.Context, req *slashingtypes.QuerySig
 
 func (k KeeperSlashing) SigningInfos(ctx sdk.Context, req *slashingtypes.QuerySigningInfosRequest) (*slashingtypes.QuerySigningInfosResponse, error) {
 	resp, err := k.ContractModuleQuery(ctx, "SigningInfos", req)
+	if err != nil {
+		return nil, err
+	}
 	var cresp slashingtypes.QuerySigningInfosResponse
 	err = k.JSONCodec().UnmarshalJSON(resp.Data, &cresp)
 	if err != nil {
