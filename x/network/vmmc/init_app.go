@@ -20,6 +20,10 @@ type GenutilGenesisState struct {
 }
 
 func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error) {
+	// TODO catch the panic! so other chains don't stop
+	if req == nil {
+		return nil, fmt.Errorf("cannot initialize chain with empty request")
+	}
 	logger := ctx.Logger(ctx.Ctx).With("subchain_id", req.InitChainRequest.ChainId)
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
@@ -82,12 +86,7 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 	constp := cmttypes.ConsensusParamsFromProto(consensusParams)
 
 	// InitChain
-	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), appHash, &constp, res.AppVersion, req.ValidatorAddress, req.ValidatorPubKey, req.ValidatorPrivKey, req.CurrentNodeId, req.Peers)
-	if err != nil {
-		return resInit, err
-	}
-
-	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
+	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), appHash, &constp, res.AppVersion, req.ValidatorAddress, req.ValidatorPubKey, req.ValidatorPrivKey, req.CurrentNodeId, req.Peers, req.InitialPorts)
 	if err != nil {
 		return resInit, err
 	}
@@ -95,12 +94,36 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 }
 
 func StartApp(ctx *Context, req *StartSubChainMsg) error {
+	// TODO catch the panic! so other chains don't stop
+	if req == nil {
+		return fmt.Errorf("cannot start node with empty request")
+	}
 	logger := ctx.Logger(ctx.Ctx)
+	logger.Info("starting subchain", "subchain_id", req.ChainId)
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
 		return err
 	}
-	app := multichainapp.NewApp(req.ChainId, &req.ChainConfig)
+	mcfg.CacheChainConfig(req.ChainId, req.ChainConfig)
+	var app mcfg.MythosApp
+	found := false
+	iapp, err := multichainapp.GetApp(req.ChainId)
+	if err == nil {
+		app_, ok := iapp.(mcfg.MythosApp)
+		if ok {
+			app = app_
+			found = true
+		}
+	}
+	if !found {
+		app = multichainapp.NewApp(req.ChainId, &req.ChainConfig)
+	}
+
+	// start API servers
+	_, _, _, _, _, err = multichainapp.StartAPIs(req.ChainId, &req.ChainConfig, req.NodePorts)
+	if err != nil {
+		return err
+	}
 	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
 	if err != nil {
 		return err

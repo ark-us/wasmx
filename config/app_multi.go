@@ -4,7 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/server"
+
+	cmtcfg "github.com/cometbft/cometbft/config"
+
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
+	srvconfig "mythos/v1/server/config"
 )
 
 type ContextKey string
@@ -12,9 +19,14 @@ type ContextKey string
 const MultiChainAppKey ContextKey = "MultiChainApp"
 
 type MultiChainApp struct {
-	Apps     map[string]interface{}
-	ChainIds []string
-	NewApp   func(chainId string, chainCfg *menc.ChainConfig) MythosApp
+	Apps      map[string]interface{}
+	ChainIds  []string
+	NewApp    func(chainId string, chainCfg *menc.ChainConfig) MythosApp
+	StartAPIs func(chainId string, chainCfg *menc.ChainConfig, ports mctx.NodePorts) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error)
+}
+
+func (m *MultiChainApp) SetStartAPIs(startAPIs func(chainId string, chainCfg *menc.ChainConfig, ports mctx.NodePorts) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error)) {
+	m.StartAPIs = startAPIs
 }
 
 func (m *MultiChainApp) SetAppCreator(appCreator func(chainId string, chainCfg *menc.ChainConfig) MythosApp) {

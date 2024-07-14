@@ -22,6 +22,7 @@ import (
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -90,6 +91,7 @@ func InitConsensusContract(
 	pubKey, privKey []byte,
 	nodeIndex int32,
 	peers []string,
+	nodePorts mctx.NodePorts,
 ) error {
 	version := types.Version{
 		Software: "",
@@ -113,6 +115,7 @@ func InitConsensusContract(
 		ValidatorPubKey:  pubKey,  // consensus pubkey
 		Peers:            peers,
 		NodeIndex:        nodeIndex,
+		InitialPorts:     nodePorts,
 	}
 
 	// TODO check if app block height is same as network block height

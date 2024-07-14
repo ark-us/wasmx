@@ -447,7 +447,7 @@ func HookPrecompiles() SystemContracts {
 	}
 }
 
-func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentLevel int32) SystemContracts {
+func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentLevel int32, initialPortValues string) SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
@@ -489,7 +489,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("DefaultSystemContracts: cannot marshal lobbyInitMsg message")
 	}
 
-	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"ids":[]}`)})
+	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"ids":[],"initialPorts":%s}`, initialPortValues))})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal mutichainLocalInitMsg message")
 	}
@@ -702,8 +702,8 @@ func ChatPrecompiles() SystemContracts {
 	}
 }
 
-func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool) SystemContracts {
-	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0)
+func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues)
 	for i, val := range consensusPrecompiles {
 		if val.Label == CONSENSUS_TENDERMINTP2P {
 			consensusPrecompiles[i].Role = ROLE_CONSENSUS
@@ -723,13 +723,13 @@ func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minVal
 	return precompiles
 }
 
-func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool) SystemContracts {
+func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
 	// DEFAULT_HOOKS_NONC
 	hooksNonC := []Hook{
 		{
 			Name:          HOOK_START_NODE,
 			SourceModules: []string{ROLE_HOOKS_NONC},
-			TargetModules: []string{ROLE_CONSENSUS, ROLE_TIME, ROLE_LOBBY},
+			TargetModules: []string{ROLE_CONSENSUS, ROLE_MULTICHAIN_REGISTRY_LOCAL, ROLE_TIME, ROLE_LOBBY},
 		},
 		{
 			Name:          HOOK_SETUP_NODE,
@@ -739,7 +739,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, min
 		{
 			Name:          HOOK_NEW_SUBCHAIN,
 			SourceModules: []string{ROLE_HOOKS_NONC, ROLE_LOBBY, ROLE_CONSENSUS},
-			TargetModules: []string{ROLE_METAREGISTRY},
+			TargetModules: []string{ROLE_METAREGISTRY, ROLE_MULTICHAIN_REGISTRY_LOCAL},
 		},
 	}
 	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
@@ -779,7 +779,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, min
 			Deps:        []string{},
 		},
 	}
-	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0)
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues)
 	for i, val := range consensusPrecompiles {
 		if val.Label == LEVEL0_v001 {
 			consensusPrecompiles[i].Role = ROLE_CONSENSUS

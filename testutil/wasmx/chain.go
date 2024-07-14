@@ -55,6 +55,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
 	"mythos/v1/server/config"
 	ibctesting "mythos/v1/testutil/ibc"
@@ -222,7 +223,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 
 		var wasmxGenState wasmxtypes.GenesisState
 		testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
-		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, 1, false)
+		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, 1, false, "{}")
 		genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
 	}
 	testApp, resInit := ibctesting.InitAppChain(t, testApp, genesisState, chainId)
@@ -401,6 +402,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		nodePrivKey,
 		int32(nodeindex),
 		peers,
+		mctx.NodePorts{},
 	)
 	if err != nil {
 		return err

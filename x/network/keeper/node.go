@@ -11,14 +11,11 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/cometbft/cometbft/node"
-	"github.com/cometbft/cometbft/p2p"
-	pvm "github.com/cometbft/cometbft/privval"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
-	mcfg "mythos/v1/config"
 	"mythos/v1/server/config"
 )
 
@@ -28,9 +25,6 @@ func StartGRPCServer(
 	ctx context.Context,
 	cfgAll *config.Config,
 	app servertypes.Application,
-	privValidator *pvm.FilePV,
-	nodeKey *p2p.NodeKey,
-	genesisDocProvider mcfg.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
 	rpcClient *ABCIClient,
 ) (*grpc.Server, error) {
@@ -43,7 +37,7 @@ func StartGRPCServer(
 	svrCtx.Logger = svrCtx.Logger.With("module", "network")
 
 	// TODO we are starting the consensus protocol before the grpc server is running; we should start it after
-	grpcServer, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, privValidator, nodeKey, genesisDocProvider, metricsProvider, rpcClient)
+	grpcServer, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, metricsProvider, rpcClient)
 	if err != nil {
 		return nil, err
 	}

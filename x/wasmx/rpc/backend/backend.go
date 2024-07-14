@@ -25,7 +25,6 @@ import (
 	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
 	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
 	"mythos/v1/server/config"
 	rpctypes "mythos/v1/x/wasmx/rpc/types"
@@ -163,12 +162,10 @@ func NewBackend(
 	clientCtx client.Context,
 	ctx context.Context,
 	allowUnprotectedTxs bool,
+	chainId string,
+	conf menc.ChainConfig,
 ) *Backend {
-	chainID, err := wasmxtypes.ParseEvmChainID(clientCtx.ChainID)
-	if err != nil {
-		panic(err)
-	}
-	conf, err := mcfg.GetChainConfig(clientCtx.ChainID)
+	evmChainID, err := wasmxtypes.ParseEvmChainID(chainId)
 	if err != nil {
 		panic(err)
 	}
@@ -184,9 +181,9 @@ func NewBackend(
 		clientCtx:           clientCtx,
 		queryClient:         rpctypes.NewQueryClient(clientCtx),
 		logger:              logger.With("module", "backend"),
-		chainID:             chainID,
+		chainID:             evmChainID,
 		cfg:                 appConf,
-		chainConfig:         conf,
+		chainConfig:         &conf,
 		allowUnprotectedTxs: allowUnprotectedTxs,
 		addressCodec:        addressCodec,
 	}

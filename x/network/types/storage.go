@@ -7,6 +7,8 @@ import (
 
 	cmtlibs "github.com/cometbft/cometbft/libs/bytes"
 	cmttypes "github.com/cometbft/cometbft/types"
+
+	mctx "mythos/v1/context"
 )
 
 var BLOCK_LAST_INDEX = "block_last_index"
@@ -80,6 +82,7 @@ type InitChainSetup struct {
 	ValidatorPubKey  []byte                    `json:"validator_pubkey"`
 	Peers            []string                  `json:"peers"`
 	NodeIndex        int32                     `json:"node_index"`
+	InitialPorts     mctx.NodePorts            `json:"initial_ports"`
 }
 
 type Consensus struct {

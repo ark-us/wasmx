@@ -44,16 +44,20 @@ func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-
-	node, err := startNodeWithIdentityInternal(req.PrivateKey, req.Port)
-	if err != nil {
-		ctx.Logger.Error("start p2p node with identity failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
-	}
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
+	}
+	var node host.Host
+	if p2pctx.Node != nil {
+		node = *p2pctx.Node
+	} else {
+		node, err = startNodeWithIdentityInternal(req.PrivateKey, req.Port)
+		if err != nil {
+			ctx.Logger.Error("start p2p node with identity failed", "error", err.Error())
+			return nil, wasmedge.Result_Fail
+		}
 	}
 	p2pctx.Node = &node
 
@@ -93,6 +97,14 @@ func GetNodeInfo(_context interface{}, callframe *wasmedge.CallingFrame, params 
 	p2pctx, err := GetP2PContext(ctx.Context)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+	if p2pctx.Node == nil {
+		ctx.Logger.Error(ERROR_NODE_NOT_INSTANTIATED)
+		return nil, wasmedge.Result_Fail
+	}
+	if p2pctx.Node == nil {
+		ctx.Logger.Error(ERROR_NODE_NOT_INSTANTIATED)
 		return nil, wasmedge.Result_Fail
 	}
 	node := *p2pctx.Node
@@ -328,6 +340,10 @@ func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []
 		ctx.Logger.Error("p2pcontext not found")
 		return nil, wasmedge.Result_Fail
 	}
+	if p2pctx.Node == nil {
+		ctx.Logger.Error(ERROR_NODE_NOT_INSTANTIATED)
+		return nil, wasmedge.Result_Fail
+	}
 	node := *p2pctx.Node
 	err = node.Close()
 	ctx.Logger.Info("closing p2p node")
@@ -488,7 +504,9 @@ func connectAndListenPeerInternal(ctx *Context, req ConnectPeerRequest) (network
 		ctx.Logger.Error("p2pcontext not found")
 		return nil, err
 	}
-
+	if p2pctx.Node == nil {
+		return nil, fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
+	}
 	stream, err := connectPeerInternal(*p2pctx.Node, req.ProtocolId, req.Peer)
 	if err != nil {
 		ctx.Logger.Info("connect to peer failed", "peer", req.Peer, "protocol_id", req.ProtocolId, "error", err.Error())
@@ -626,7 +644,9 @@ func connectChatRoomAndListen(ctx *Context, protocolId string, topic string) (*C
 	if err != nil {
 		return nil, err
 	}
-
+	if p2pctx.Node == nil {
+		return nil, fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
+	}
 	cr, err := connectChatRoomInternal(ctx, p2pctx, *p2pctx.Node, protocolId, topic)
 	if err != nil {
 		return nil, err
@@ -669,6 +689,9 @@ func connectGossipSub(ctx *Context, p2pctx *P2PContext, protocolId string) error
 	goctx := ctx.Context.GoContextParent
 	// ctx := context.Background()
 	if p2pctx.PubSub == nil {
+		if p2pctx.Node == nil {
+			return fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
+		}
 		// create a new PubSub service using the GossipSub router
 		// we can use pubsub.NewJSONTracer to trace messages
 		ps, err := pubsub.NewGossipSub(goctx, *p2pctx.Node)
@@ -681,6 +704,9 @@ func connectGossipSub(ctx *Context, p2pctx *P2PContext, protocolId string) error
 	// setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
 	// This lets us automatically discover peers on the same LAN and connect to them.
 	if p2pctx.Mdns == nil {
+		if p2pctx.Node == nil {
+			return fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
+		}
 		// setup local mDNS discovery
 		logger := ctx.Logger
 		s := mdns.NewMdnsService(*p2pctx.Node, DiscoveryServiceTag, &DiscoveryNotifee{Node: *p2pctx.Node, Logger: logger, Context: goctx})

@@ -4,6 +4,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/bytes"
 
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
@@ -26,11 +27,13 @@ type InitSubChainMsg struct {
 	ValidatorPubKey  []byte                `json:"validator_pubkey"`
 	Peers            []string              `json:"peers"`
 	CurrentNodeId    int32                 `json:"current_node_id"`
+	InitialPorts     mctx.NodePorts        `json:"initial_ports"`
 }
 
 type StartSubChainMsg struct {
 	ChainId     string           `json:"chain_id"`
 	ChainConfig menc.ChainConfig `json:"chain_config"`
+	NodePorts   mctx.NodePorts   `json:"node_ports"`
 }
 
 type StartSubChainResponse struct {

@@ -75,6 +75,10 @@ func GetChainConfig(chainId string) (*menc.ChainConfig, error) {
 	return &conf, nil
 }
 
+func CacheChainConfig(chainId string, conf menc.ChainConfig) {
+	PrefixesMap[chainId] = conf
+}
+
 var LEVEL0_CHAIN_ID = "level0_1000-1"
 var MYTHOS_CHAIN_ID_TEST = "mythos_7001-1"
 var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"

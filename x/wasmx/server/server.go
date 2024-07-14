@@ -22,6 +22,7 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
+	menc "mythos/v1/encoding"
 	"mythos/v1/server/config"
 	"mythos/v1/x/wasmx/rpc"
 	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
@@ -35,6 +36,8 @@ func StartJsonRpc(
 	tmRPCAddr,
 	tmEndpoint string,
 	cfgAll *config.Config,
+	chainId string,
+	chainConfig menc.ChainConfig,
 ) (*http.Server, chan struct{}, error) {
 	cfg := cfgAll.JsonRpc
 	svrCtx.Logger.Info("starting JSON-RPC server ", cfg.Address)
@@ -58,7 +61,7 @@ func StartJsonRpc(
 	allowUnprotectedTxs := cfg.AllowUnprotectedTxs
 	rpcAPIArr := cfg.API
 
-	apis := rpc.GetRPCAPIs(svrCtx, clientCtx, ctx, tmWsClient, allowUnprotectedTxs, rpcAPIArr)
+	apis := rpc.GetRPCAPIs(svrCtx, clientCtx, ctx, tmWsClient, allowUnprotectedTxs, rpcAPIArr, chainId, chainConfig)
 
 	for _, api := range apis {
 		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {

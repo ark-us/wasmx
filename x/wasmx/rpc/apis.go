@@ -11,6 +11,8 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
+	menc "mythos/v1/encoding"
+
 	"mythos/v1/x/wasmx/rpc/backend"
 	"mythos/v1/x/wasmx/rpc/namespaces/eth"
 	"mythos/v1/x/wasmx/rpc/namespaces/net"
@@ -42,6 +44,8 @@ type APICreator = func(
 	ctx context.Context,
 	tendermintWebsocketClient *rpcclient.WSClient,
 	allowUnprotectedTxs bool,
+	chainId string,
+	chainConfig menc.ChainConfig,
 ) []rpc.API
 
 // apiCreators defines the JSON-RPC API namespaces.
@@ -54,8 +58,10 @@ func init() {
 			ctx context.Context,
 			tmWSClient *rpcclient.WSClient,
 			allowUnprotectedTxs bool,
+			chainId string,
+			chainConfig menc.ChainConfig,
 		) []rpc.API {
-			evmBackend := backend.NewBackend(svrCtx, svrCtx.Logger, clientCtx, ctx, allowUnprotectedTxs)
+			evmBackend := backend.NewBackend(svrCtx, svrCtx.Logger, clientCtx, ctx, allowUnprotectedTxs, chainId, chainConfig)
 			return []rpc.API{
 				{
 					Namespace: EthNamespace,
@@ -81,7 +87,7 @@ func init() {
 		// 		},
 		// 	}
 		// },
-		NetNamespace: func(_ *server.Context, clientCtx client.Context, _ context.Context, _ *rpcclient.WSClient, _ bool) []rpc.API {
+		NetNamespace: func(_ *server.Context, clientCtx client.Context, _ context.Context, _ *rpcclient.WSClient, _ bool, _ string, _ menc.ChainConfig) []rpc.API {
 			return []rpc.API{
 				{
 					Namespace: NetNamespace,
@@ -159,12 +165,14 @@ func GetRPCAPIs(svrCtx *server.Context,
 	tmWSClient *rpcclient.WSClient,
 	allowUnprotectedTxs bool,
 	selectedAPIs []string,
+	chainId string,
+	chainConfig menc.ChainConfig,
 ) []rpc.API {
 	var apis []rpc.API
 
 	for _, ns := range selectedAPIs {
 		if creator, ok := apiCreators[ns]; ok {
-			apis = append(apis, creator(svrCtx, clientCtx, ctx, tmWSClient, allowUnprotectedTxs)...)
+			apis = append(apis, creator(svrCtx, clientCtx, ctx, tmWSClient, allowUnprotectedTxs, chainId, chainConfig)...)
 		} else {
 			svrCtx.Logger.Error("invalid namespace value", "namespace", ns)
 		}

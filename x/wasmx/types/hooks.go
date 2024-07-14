@@ -108,7 +108,7 @@ var DEFAULT_HOOKS_NONC = []Hook{
 	{
 		Name:          HOOK_START_NODE,
 		SourceModules: []string{ROLE_HOOKS_NONC},
-		TargetModules: []string{ROLE_CONSENSUS, ROLE_CHAT},
+		TargetModules: []string{ROLE_CONSENSUS, ROLE_MULTICHAIN_REGISTRY_LOCAL, ROLE_CHAT},
 	},
 	{
 		Name:          HOOK_SETUP_NODE,
@@ -118,6 +118,6 @@ var DEFAULT_HOOKS_NONC = []Hook{
 	{
 		Name:          HOOK_NEW_SUBCHAIN,
 		SourceModules: []string{ROLE_HOOKS_NONC},
-		TargetModules: []string{ROLE_METAREGISTRY},
+		TargetModules: []string{ROLE_METAREGISTRY, ROLE_MULTICHAIN_REGISTRY_LOCAL},
 	},
 }

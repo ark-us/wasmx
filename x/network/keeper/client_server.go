@@ -52,6 +52,7 @@ import (
 	cmttypes "github.com/cometbft/cometbft/types"
 
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	"mythos/v1/server/config"
 	networkserver "mythos/v1/x/network/server"
 	"mythos/v1/x/network/types"
@@ -85,9 +86,6 @@ func NewGRPCServer(
 	clientCtx client.Context,
 	cfg *config.Config,
 	app servertypes.Application,
-	privValidator *pvm.FilePV,
-	nodeKey *p2p.NodeKey,
-	genesisDocProvider mcfg.GenesisDocProvider,
 	metricsProvider node.MetricsProvider,
 	client *ABCIClient,
 ) (*grpc.Server, error) {
@@ -282,6 +280,7 @@ func InitChain(
 	genesisDocProvider mcfg.GenesisDocProvider,
 	chainId string,
 	networkServer mcfg.NetworkKeeper,
+	initialPorts mctx.NodePorts,
 ) (*abci.ResponseInitChain, error) {
 	consensusLogger := logger.With("subchain_id", chainId)
 
@@ -357,7 +356,7 @@ func InitChain(
 		return nil, err
 	}
 
-	err = networkserver.InitConsensusContract(mythosapp, consensusLogger, networkServer, appHash, &consensusParams, res.AppVersion, pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers)
+	err = networkserver.InitConsensusContract(mythosapp, consensusLogger, networkServer, appHash, &consensusParams, res.AppVersion, pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers, initialPorts)
 	if err != nil {
 		return nil, err
 	}

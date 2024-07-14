@@ -611,11 +611,11 @@ func initTestnetFilesInternal(
 
 		host := fmt.Sprintf("%s@%s:%s", addrstr, nodeIPs[i], "8090")
 		host0 := fmt.Sprintf("%s@%s:%s", addrstr0, nodeIPs[i], "8090")
-		if args.sameMachine && !args.p2p {
-			ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
-			host = fmt.Sprintf("%s@%s", addrstr, ipaddr)
-			host0 = fmt.Sprintf("%s@%s", addrstr0, ipaddr)
-		}
+		// if args.sameMachine && !args.p2p {
+		// 	ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+		// 	host = fmt.Sprintf("%s@%s", addrstr, ipaddr)
+		// 	host0 = fmt.Sprintf("%s@%s", addrstr0, ipaddr)
+		// }
 
 		if args.p2p {
 			valStr := addrstr
@@ -717,12 +717,12 @@ func initTestnetFilesInternal(
 		// value copy, not reference!
 		appConfigCopy := *appConfig
 		if args.sameMachine {
-			appConfigCopy.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
-			appConfigCopy.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
-			appConfigCopy.JsonRpc.Address = strings.Replace(appConfig.JsonRpc.Address, "8545", strconv.Itoa(8555+i*2), 1)
-			appConfigCopy.JsonRpc.WsAddress = strings.Replace(appConfig.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
-			appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
-			appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
+			// appConfigCopy.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
+			// appConfigCopy.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
+			// appConfigCopy.JsonRpc.Address = strings.Replace(appConfig.JsonRpc.Address, "8545", strconv.Itoa(8555+i*2), 1)
+			// appConfigCopy.JsonRpc.WsAddress = strings.Replace(appConfig.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
+			// appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
+			// appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
 		}
 		// current index for mythos, then level0
 		appConfigCopy.Network.Id = fmt.Sprintf("%s:%d;%s:%d", chainId, int32(i-nodeIndexStart), chainId0, 0)
@@ -963,7 +963,7 @@ func initGenFiles(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck)
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
@@ -1022,7 +1022,7 @@ func initGenFilesLevel0(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck)
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
@@ -1098,9 +1098,9 @@ func collectGenFiles(
 	gentxsDir := filepath.Join(outputDir, genTxDirName)
 	nodeConfig.Moniker = nodeDirName
 	nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
-	if sameMachine {
-		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
-	}
+	// if sameMachine {
+	// 	nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
+	// }
 	nodeConfig.ProxyApp = nodeConfig.RPC.ListenAddress
 
 	nodeConfig.SetRoot(nodeDir)

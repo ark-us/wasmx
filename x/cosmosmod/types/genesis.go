@@ -125,7 +125,7 @@ func DefaultStakingGenesisState(baseDenom string) *StakingGenesisState {
 func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32) []DenomDeploymentInfo {
 	erc20jsonCodeId := -1
 	derc20jsonCodeId := -1
-	for i, sysc := range wasmxtypes.DefaultSystemContracts("", "", 1, false) {
+	for i, sysc := range wasmxtypes.DefaultSystemContracts("", "", 1, false, "{}") {
 		if sysc.Label == wasmxtypes.ERC20_v001 {
 			erc20jsonCodeId = i + 1
 		} else if sysc.Label == wasmxtypes.DERC20_v001 {

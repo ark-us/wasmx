@@ -59,7 +59,11 @@ import (
 
 	mapp "mythos/v1/app"
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
+	menc "mythos/v1/encoding"
 )
+
+var flagSameMachineNodeIndex = "same-machine-node-index"
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
 // Tendermint.
@@ -198,6 +202,8 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Uint64(server.FlagStateSyncSnapshotInterval, 0, "State sync snapshot interval")
 	cmd.Flags().Uint32(server.FlagStateSyncSnapshotKeepRecent, 2, "State sync snapshot to keep")
 
+	cmd.Flags().Uint32(flagSameMachineNodeIndex, 0, "delta for assigning port numbers; usually equal to the number of nodes ran on the machine")
+
 	// add support for all Tendermint-specific command line options
 	tcmd.AddNodeFlags(cmd)
 	return cmd
@@ -292,6 +298,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	tndcfg := svrCtx.Config
 	home := tndcfg.RootDir
 	logger := svrCtx.Logger
+	nodeOffset := svrCtx.Viper.GetUint32(flagSameMachineNodeIndex)
 
 	g, ctx := getCtx(svrCtx, true)
 
@@ -428,159 +435,73 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	}
 	metricsProvider := node.DefaultMetricsProvider(tndcfg.Instrumentation)
 
+	apictx := &APICtx{
+		g:               g,
+		ctx:             ctx,
+		svrCtx:          svrCtx,
+		clientCtx:       clientCtx,
+		msrvconfig:      msrvconfig,
+		tndcfg:          tndcfg,
+		appCreator:      appCreator,
+		metricsProvider: metricsProvider,
+		metrics:         metrics,
+		multiapp:        multiapp,
+	}
+
+	multiapp.SetStartAPIs(apictx.StartChainApis)
+
 	// create apps for initial chains
 	initialChains := msrvconfig.Network.InitialChains
+	portOffset := int32(nodeOffset * uint32(len(initialChains)))
+	portstep := 100
+	subchainPortOffset := portOffset * int32(portstep)
 	for i, chainId := range initialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
-
-		mythosapp_ := appCreator(chainId, chainCfg)
-		mythosapp, ok := mythosapp_.(*mapp.App)
-		if !ok {
-			return fmt.Errorf("cannot convert MythosApp to App")
+		// TODO use ports set in toml file; family of ports
+		ports := mctx.NodePorts{
+			CosmosRestApi:    int32(1317+i) + portOffset,
+			CosmosGrpc:       int32(9090+i) + portOffset,
+			WasmxNetworkGrpc: int32(8090+i) + portOffset,
+			WebsrvWebServer:  int32(9900+i) + portOffset,
+			EvmJsonRpc:       int32(8545+i*2) + portOffset,
+			EvmJsonRpcWs:     int32(8546+i) + portOffset,
+			Pprof:            int32(6060+i) + portOffset,
+			WasmxNetworkP2P:  int32(5001+i) + portOffset,
+			TendermintRpc:    int32(26657+i) + portOffset,
 		}
-		app := servertypes.Application(mythosapp)
-		bapp := mythosapp.GetBaseApp()
-
-		cclientCtx := clientCtx.WithChainID(chainId)
-
-		cmsrvconfig, ctndcfg, err := cloneConfigs(&msrvconfig, tndcfg)
+		// ports for subchains
+		initialPorts := mctx.NodePorts{
+			CosmosRestApi:    int32(1330+i*portstep) + subchainPortOffset,
+			CosmosGrpc:       int32(9100+i*portstep) + subchainPortOffset,
+			WasmxNetworkGrpc: int32(8100+i*portstep) + subchainPortOffset,
+			WebsrvWebServer:  int32(9910+i*portstep) + subchainPortOffset,
+			EvmJsonRpc:       int32(8555+i*portstep) + subchainPortOffset,
+			EvmJsonRpcWs:     int32(8656+i*portstep) + subchainPortOffset,
+			Pprof:            int32(6070+i*portstep) + subchainPortOffset,
+			WasmxNetworkP2P:  int32(5010+i*portstep) + subchainPortOffset,
+			TendermintRpc:    int32(26670+i*portstep) + subchainPortOffset,
+		}
+		mythosapp_, csvrCtx, _, cmsrvconfig, ctndcfg, err := apictx.StartChainApis(chainId, chainCfg, ports)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("---chain---", chainId)
-		fmt.Println("---cmsrvconfig---", cmsrvconfig)
-		fmt.Println("---ctndcfg---", ctndcfg)
-
-		// TODO extract the port base ; define port family range in the toml files
-		cmsrvconfig.Config.API.Address = strings.Replace(cmsrvconfig.Config.API.Address, "1317", fmt.Sprintf("%d", 1317+i), 1)
-		cmsrvconfig.Config.GRPC.Address = strings.Replace(cmsrvconfig.Config.GRPC.Address, "9090", fmt.Sprintf("%d", 9090+i), 1)
-		cmsrvconfig.Network.Address = strings.Replace(cmsrvconfig.Network.Address, "8090", fmt.Sprintf("%d", 8090+i), 1)
-		cmsrvconfig.Websrv.Address = strings.Replace(cmsrvconfig.Websrv.Address, "9900", fmt.Sprintf("%d", 9900+i), 1)
-		cmsrvconfig.JsonRpc.Address = strings.Replace(cmsrvconfig.JsonRpc.Address, "8555", fmt.Sprintf("%d", 8555+i*2), 1)
-		cmsrvconfig.JsonRpc.WsAddress = strings.Replace(cmsrvconfig.JsonRpc.WsAddress, "8555", fmt.Sprintf("%d", 8556+i), 1)
-
-		ctndcfg.RPC.ListenAddress = strings.Replace(ctndcfg.RPC.ListenAddress, "26657", fmt.Sprintf("%d", 26657+i), 1)
-
-		csvrCtx := &server.Context{
-			Viper:  svrCtx.Viper,
-			Logger: svrCtx.Logger.With("chain_id", chainId),
-			Config: ctndcfg,
+		mythosapp, ok := mythosapp_.(*mapp.App)
+		if !ok {
+			panic(fmt.Errorf("cannot convert MythosApp to App"))
 		}
-
+		app := servertypes.Application(mythosapp)
+		bapp := mythosapp.GetBaseApp()
 		privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
 		genesisDocProvider := getGenDocProvider2(ctndcfg)
-
-		rpcClient := networkgrpc.NewABCIClient(mythosapp, bapp, csvrCtx.Logger, mythosapp.GetNetworkKeeper(), csvrCtx.Config, cmsrvconfig, mythosapp.GetActionExecutor().(*networkgrpc.ActionExecutor))
-		cclientCtx = cclientCtx.WithClient(rpcClient)
-
-		// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
-		// that the server is gracefully shut down.
-		g.Go(func() error {
-			_, err = networkgrpc.StartGRPCServer(
-				csvrCtx,
-				cclientCtx,
-				ctx,
-				cmsrvconfig,
-				app,
-				privValidator,
-				nodeKey,
-				genesisDocProvider,
-				metricsProvider,
-				rpcClient,
-			)
-			if err != nil {
-				csvrCtx.Logger.Error(err.Error())
-			}
-			return err
-		})
-
-		// Add the tx service to the gRPC router. We only need to register this
-		// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
-		// case, because it spawns a new local tendermint RPC client.
-		// if cmsrvconfig.API.Enable || cmsrvconfig.GRPC.Enable || cmsrvconfig.Websrv.Enable || cmsrvconfig.JsonRpc.Enable {
-		// Re-assign for making the client available below do not use := to avoid
-		// shadowing the clientCtx variable.
-		app.RegisterTxService(cclientCtx)
-		app.RegisterTendermintService(cclientCtx)
-		app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)
-		// }
-
-		grpcSrv, cclientCtx, err := startGrpcServer(ctx, g, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
-		if err != nil {
-			return err
-		}
-
-		err = startAPIServer(ctx, g, cmsrvconfig.Config, cclientCtx, csvrCtx, app, grpcSrv, metrics)
-		if err != nil {
-			return err
-		}
-
-		// var (
-		// 	httpSrv     *http.Server
-		// 	httpSrvDone chan struct{}
-		// )
-
-		if cmsrvconfig.JsonRpc.Enable {
-			tmEndpoint := "/websocket"
-			tmRPCAddr := ctndcfg.RPC.ListenAddress
-
-			// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
-			// that the server is gracefully shut down.
-			g.Go(func() error {
-				// httpSrv, httpSrvDone, err
-				_, _, err = jsonrpc.StartJsonRpc(csvrCtx, cclientCtx, ctx, tmRPCAddr, tmEndpoint, cmsrvconfig)
-				if err != nil {
-					csvrCtx.Logger.Error(err.Error())
-				}
-				return err
-			})
-			// defer func() {
-			// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-			// 	defer cancelFn()
-			// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-			// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
-			// 	} else {
-			// 		logger.Info("HTTP server shut down, waiting 5 sec")
-			// 		select {
-			// 		case <-time.Tick(5 * time.Second):
-			// 		case <-httpSrvDone:
-			// 		}
-			// 	}
-			// }()
-		}
-
-		if cmsrvconfig.Websrv.Enable {
-			g.Go(func() error {
-				// httpSrv, httpSrvDone, err
-				_, _, err = websrv.StartWebsrv(csvrCtx, cclientCtx, ctx, &cmsrvconfig.Websrv)
-				if err != nil {
-					csvrCtx.Logger.Error(err.Error())
-				}
-				return err
-			})
-			// defer func() {
-			// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
-			// 	defer cancelFn()
-			// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-			// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
-			// 	} else {
-			// 		logger.Info("HTTP server shut down, waiting 5 sec")
-			// 		select {
-			// 		case <-time.Tick(5 * time.Second):
-			// 		case <-httpSrvDone:
-			// 		}
-			// 	}
-			// }()
-		}
 
 		// initialize chain if this is block 0
 		// init all chains first and start them afterwards
 		// InitChain runs multiple contract executions that are not under ActionExecutor control; starting the chains while InitChain is not finished will start delayed executions that will intersect with InitChain executions
 		if bapp.LastBlockHeight() == 0 {
-			_, err := networkgrpc.InitChain(csvrCtx.Logger, &msrvconfig, app, privValidator, nodeKey, genesisDocProvider, chainId, mythosapp.GetNetworkKeeper())
+			_, err := networkgrpc.InitChain(csvrCtx.Logger, cmsrvconfig, app, privValidator, nodeKey, genesisDocProvider, chainId, mythosapp.GetNetworkKeeper(), initialPorts)
 			if err != nil {
 				return err
 			}
@@ -651,6 +572,167 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	// wait for signal capture and gracefully return
 	// we are guaranteed to be waiting for the "ListenForQuitSignals" goroutine.
 	return g.Wait()
+}
+
+type APICtx struct {
+	g               *errgroup.Group
+	ctx             context.Context
+	svrCtx          *server.Context
+	clientCtx       client.Context
+	msrvconfig      srvconfig.Config
+	tndcfg          *cmtcfg.Config
+	appCreator      func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp
+	metricsProvider node.MetricsProvider
+	metrics         *telemetry.Metrics
+	multiapp        *mcfg.MultiChainApp
+}
+
+func (ac *APICtx) StartChainApis(
+	chainId string,
+	chainCfg *menc.ChainConfig,
+	ports mctx.NodePorts,
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error) {
+	var mythosapp_ mcfg.MythosApp
+	found := false
+	iapp, err := ac.multiapp.GetApp(chainId)
+	if err == nil {
+		mythosapp_, found = iapp.(mcfg.MythosApp)
+	}
+	if !found {
+		mythosapp_ = ac.appCreator(chainId, chainCfg)
+	}
+	mythosapp, ok := mythosapp_.(*mapp.App)
+	if !ok {
+		return nil, nil, ac.clientCtx, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
+	}
+	app := servertypes.Application(mythosapp)
+	bapp := mythosapp.GetBaseApp()
+
+	mythosapp.Logger().Info("starting chain api servers and clients", "chain_id", chainId)
+
+	cclientCtx := ac.clientCtx.WithChainID(chainId)
+
+	cmsrvconfig, ctndcfg, err := cloneConfigs(&ac.msrvconfig, ac.tndcfg)
+	if err != nil {
+		return nil, nil, ac.clientCtx, nil, nil, err
+	}
+
+
+	// TODO extract the port base ; define port family range in the toml files
+	cmsrvconfig.Config.API.Address = strings.Replace(cmsrvconfig.Config.API.Address, "1317", fmt.Sprintf("%d", ports.CosmosRestApi), 1)
+	cmsrvconfig.Config.GRPC.Address = strings.Replace(cmsrvconfig.Config.GRPC.Address, "9090", fmt.Sprintf("%d", ports.CosmosGrpc), 1)
+	cmsrvconfig.Network.Address = strings.Replace(cmsrvconfig.Network.Address, "8090", fmt.Sprintf("%d", ports.WasmxNetworkGrpc), 1)
+	cmsrvconfig.Websrv.Address = strings.Replace(cmsrvconfig.Websrv.Address, "9999", fmt.Sprintf("%d", ports.WebsrvWebServer), 1)
+	cmsrvconfig.JsonRpc.Address = strings.Replace(cmsrvconfig.JsonRpc.Address, "8545", fmt.Sprintf("%d", ports.EvmJsonRpc), 1)
+	cmsrvconfig.JsonRpc.WsAddress = strings.Replace(cmsrvconfig.JsonRpc.WsAddress, "8546", fmt.Sprintf("%d", ports.EvmJsonRpcWs), 1)
+	ctndcfg.RPC.ListenAddress = strings.Replace(ctndcfg.RPC.ListenAddress, "26657", fmt.Sprintf("%d", ports.TendermintRpc), 1)
+
+	csvrCtx := &server.Context{
+		Viper:  ac.svrCtx.Viper,
+		Logger: ac.svrCtx.Logger.With("chain_id", chainId),
+		Config: ctndcfg,
+	}
+
+	rpcClient := networkgrpc.NewABCIClient(mythosapp, bapp, csvrCtx.Logger, mythosapp.GetNetworkKeeper(), csvrCtx.Config, cmsrvconfig, mythosapp.GetActionExecutor().(*networkgrpc.ActionExecutor))
+	cclientCtx = cclientCtx.WithClient(rpcClient)
+
+	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
+	// that the server is gracefully shut down.
+	ac.g.Go(func() error {
+		_, err = networkgrpc.StartGRPCServer(
+			csvrCtx,
+			cclientCtx,
+			ac.ctx,
+			cmsrvconfig,
+			app,
+			ac.metricsProvider,
+			rpcClient,
+		)
+		if err != nil {
+			csvrCtx.Logger.Error(err.Error())
+		}
+		return err
+	})
+
+	// Add the tx service to the gRPC router. We only need to register this
+	// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
+	// case, because it spawns a new local tendermint RPC client.
+	// if cmsrvconfig.API.Enable || cmsrvconfig.GRPC.Enable || cmsrvconfig.Websrv.Enable || cmsrvconfig.JsonRpc.Enable {
+	// Re-assign for making the client available below do not use := to avoid
+	// shadowing the clientCtx variable.
+	app.RegisterTxService(cclientCtx)
+	app.RegisterTendermintService(cclientCtx)
+	app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)
+	// }
+
+	grpcSrv, cclientCtx, err := startGrpcServer(ac.ctx, ac.g, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
+	if err != nil {
+		return nil, nil, ac.clientCtx, nil, nil, err
+	}
+
+	err = startAPIServer(ac.ctx, ac.g, cmsrvconfig.Config, cclientCtx, csvrCtx, app, grpcSrv, ac.metrics)
+	if err != nil {
+		return nil, nil, ac.clientCtx, nil, nil, err
+	}
+
+	// var (
+	// 	httpSrv     *http.Server
+	// 	httpSrvDone chan struct{}
+	// )
+
+	if cmsrvconfig.JsonRpc.Enable {
+		tmEndpoint := "/websocket"
+		tmRPCAddr := ctndcfg.RPC.ListenAddress
+
+		// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
+		// that the server is gracefully shut down.
+		ac.g.Go(func() error {
+			// httpSrv, httpSrvDone, err
+			_, _, err = jsonrpc.StartJsonRpc(csvrCtx, cclientCtx, ac.ctx, tmRPCAddr, tmEndpoint, cmsrvconfig, chainId, *chainCfg)
+			if err != nil {
+				csvrCtx.Logger.Error(err.Error())
+			}
+			return err
+		})
+		// defer func() {
+		// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+		// 	defer cancelFn()
+		// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
+		// 	} else {
+		// 		logger.Info("HTTP server shut down, waiting 5 sec")
+		// 		select {
+		// 		case <-time.Tick(5 * time.Second):
+		// 		case <-httpSrvDone:
+		// 		}
+		// 	}
+		// }()
+	}
+
+	if cmsrvconfig.Websrv.Enable {
+		ac.g.Go(func() error {
+			// httpSrv, httpSrvDone, err
+			_, _, err = websrv.StartWebsrv(csvrCtx, cclientCtx, ac.ctx, &cmsrvconfig.Websrv)
+			if err != nil {
+				csvrCtx.Logger.Error(err.Error())
+			}
+			return err
+		})
+		// defer func() {
+		// 	shutdownCtx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+		// 	defer cancelFn()
+		// 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		// 		logger.Error("HTTP server shutdown produced a warning", "error", err.Error())
+		// 	} else {
+		// 		logger.Info("HTTP server shut down, waiting 5 sec")
+		// 		select {
+		// 		case <-time.Tick(5 * time.Second):
+		// 		case <-httpSrvDone:
+		// 		}
+		// 	}
+		// }()
+	}
+	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, nil
 }
 
 func cloneConfigs(msrvconfig *srvconfig.Config, tndcfg *cmtcfg.Config) (*srvconfig.Config, *cmtcfg.Config, error) {
