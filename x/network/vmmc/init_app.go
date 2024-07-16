@@ -25,6 +25,7 @@ func InitApp(ctx *Context, req *InitSubChainMsg) (*abci.ResponseInitChain, error
 		return nil, fmt.Errorf("cannot initialize chain with empty request")
 	}
 	logger := ctx.Logger(ctx.Ctx).With("subchain_id", req.InitChainRequest.ChainId)
+
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
 		return nil, err
