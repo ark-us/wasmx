@@ -44,15 +44,15 @@ func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
-			ownerAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			ownerAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
 			if err != nil {
 				return err
 			}
-			ownerAddr := customAddrCodec.BytesToAccAddressPrefixed(ownerAddr_.Bytes())
+			ownerAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(ownerAddr_.Bytes())
 
 			query := &banktypes.QueryBalanceRequest{
 				Address: ownerAddr.String(),
@@ -74,9 +74,9 @@ func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			queryClient := networktypes.NewQueryClient(clientCtx)
+			queryClient := networktypes.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.QueryMultiChain(context.Background(), &networktypes.QueryMultiChainRequest{
-				MultiChainId: clientCtx.ChainID,
+				MultiChainId: mcctx.ClientCtx.ChainID,
 				QueryData:    abciQueryBz,
 			})
 			if err != nil {
@@ -87,7 +87,7 @@ func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(&response)
+			return mcctx.ClientCtx.PrintProto(&response)
 		},
 		SilenceUsage: true,
 	}

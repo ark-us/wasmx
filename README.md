@@ -21,9 +21,9 @@ mythosd testnet init-files --network.initial-chains=level0 --output-dir=$(pwd)/t
 # add new node to existing testnet
 mythosd testnet add-node 2 "mythos167eea4stw39as3tjsc5mryqsusyt6hhs62mq07@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWAcvC67ydPNLzd7jsnKr47yngw6H5rVr86etnySDd9aXP" --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
 
-mythosd start --home=./testnet/node0/mythosd
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 
-mythosd start --home=./testnet/node1/mythosd
+mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1
 
 # create chain levels after chain start
 mythosd testnet create-levels 1 2 --chain-id="mythos_7000-14" --keyring-backend test --home ./testnet

@@ -5,6 +5,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
+	mcfg "mythos/v1/config"
 	vmtypes "mythos/v1/x/wasmx/vm"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 )
@@ -70,6 +71,25 @@ func StartSubChain(_context interface{}, callframe *wasmedge.CallingFrame, param
 	return returns, wasmedge.Result_Success
 }
 
+func GetSubChainIds(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	responsebz, err := json.Marshal(multichainapp.ChainIds)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxMultichainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	context := &Context{Context: ctx_}
 	env := wasmedge.NewModule("multichain")
@@ -77,8 +97,13 @@ func BuildWasmxMultichainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 		[]wasmedge.ValType{wasmedge.ValType_I32},
 	)
+	functype__i32 := wasmedge.NewFunctionType(
+		[]wasmedge.ValType{},
+		[]wasmedge.ValType{wasmedge.ValType_I32},
+	)
 
 	env.AddFunction("InitSubChain", wasmedge.NewFunction(functype_i32_i32, InitSubChain, context, 0))
 	env.AddFunction("StartSubChain", wasmedge.NewFunction(functype_i32_i32, StartSubChain, context, 0))
+	env.AddFunction("GetSubChainIds", wasmedge.NewFunction(functype__i32, GetSubChainIds, context, 0))
 	return env
 }

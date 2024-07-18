@@ -90,32 +90,32 @@ where we can get the pubkey using "%s tendermint show-validator"
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			chainId := clientCtx.ChainID
+			chainId := mcctx.ClientCtx.ChainID
 			config, _ := mcfg.GetChainConfig(chainId)
 			customValCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
-			txf, err := tx.NewFactoryCLI(clientCtx, cmd.Flags())
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			validator, err := parseAndValidateValidatorJSON(clientCtx.Codec, args[0])
+			validator, err := parseAndValidateValidatorJSON(mcctx.ClientCtx.Codec, args[0])
 			if err != nil {
 				return err
 			}
 
-			txf, msg, err := newBuildCreateValidatorMsg(clientCtx, customValCodec, customAddrCodec, txf, cmd.Flags(), validator, valAddrCodec)
+			txf, msg, err := newBuildCreateValidatorMsg(mcctx.ClientCtx, customValCodec, mcctx.CustomAddrCodec, txf, cmd.Flags(), validator, valAddrCodec)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxWithFactory(clientCtx, txf, msg)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 

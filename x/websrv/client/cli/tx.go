@@ -65,7 +65,7 @@ func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -92,9 +92,9 @@ func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 
 			path := args[0]
 			contractAddress := args[1]
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
-			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
+			authority, err := mcctx.CustomAddrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
@@ -106,12 +106,12 @@ func NewRegisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -146,7 +146,7 @@ func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -173,9 +173,9 @@ func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 
 			path := args[0]
 			contractAddress := args[1]
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
-			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
+			authority, err := mcctx.CustomAddrCodec.BytesToString(sdk.AccAddress(address.Module(wasmxtypes.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
@@ -186,12 +186,12 @@ func NewDeregisterRouteProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -225,14 +225,14 @@ func NewRegisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
 			domain := args[0]
 
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			msg := &types.MsgRegisterOAuthClient{
 				Owner:  fromAddr.String(),
@@ -242,12 +242,12 @@ func NewRegisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)
@@ -269,7 +269,7 @@ func NewEditOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -279,7 +279,7 @@ func NewEditOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 			domain := args[1]
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			msg := &types.MsgEditOAuthClient{
 				Owner:    fromAddr.String(),
@@ -290,12 +290,12 @@ func NewEditOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)
@@ -317,7 +317,7 @@ func NewDeregisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -326,7 +326,7 @@ func NewDeregisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			msg := &types.MsgDeregisterOAuthClient{
 				Owner:    fromAddr.String(),
@@ -337,12 +337,12 @@ func NewDeregisterOauthClientCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 	flags.AddTxFlagsToCmd(cmd)

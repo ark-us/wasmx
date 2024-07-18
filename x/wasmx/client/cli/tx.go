@@ -84,23 +84,23 @@ func StoreCodeCmd(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
-			msg, err := ParseStoreCodeArgs(customAddrCodec, args[0], clientCtx.GetFromAddress(), cmd.Flags())
+			msg, err := ParseStoreCodeArgs(mcctx.CustomAddrCodec, args[0], mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
 			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, &msg, fromAddr)
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
+			msgMultiChain, err := mcctx.MultiChainWrap(&msg, fromAddr)
 			if err != nil {
 				return err
 			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 		SilenceUsage: true,
 	}
@@ -192,12 +192,12 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			msg, err := parseInstantiateArgs(customAddrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
+			msg, err := parseInstantiateArgs(mcctx.CustomAddrCodec, args[0], args[1], mcctx.ClientCtx.Keyring, mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -205,13 +205,13 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 				return err
 			}
 
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 		SilenceUsage: true,
 	}
@@ -246,7 +246,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -258,7 +258,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return fmt.Errorf("fix msg: %w", err)
 			}
-			data, err := parseInstantiateArgs(customAddrCodec, args[0], args[1], clientCtx.Keyring, clientCtx.GetFromAddress(), cmd.Flags())
+			data, err := parseInstantiateArgs(mcctx.CustomAddrCodec, args[0], args[1], mcctx.ClientCtx.Keyring, mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -274,13 +274,13 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 		SilenceUsage: true,
 	}
@@ -348,24 +348,24 @@ func ExecuteContractCmd(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
-			msg, err := parseExecuteArgs(customAddrCodec, args[0], args[1], clientCtx.GetFromAddress(), cmd.Flags())
+			msg, err := parseExecuteArgs(mcctx.CustomAddrCodec, args[0], args[1], mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, &msg, fromAddr)
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
+			msgMultiChain, err := mcctx.MultiChainWrap(&msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 		SilenceUsage: true,
 	}

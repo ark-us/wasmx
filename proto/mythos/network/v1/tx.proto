@@ -85,6 +85,8 @@ message MsgExecuteCrossChainCallRequest {
     string from_chain_id = 7;
     string to_chain_id = 8;
     bool is_query = 9;
+    // timeout in miliseconds for this cross-chain call
+    uint64 timeout_ms = 10;
 }
 
 message MsgExecuteCrossChainCallResponse {

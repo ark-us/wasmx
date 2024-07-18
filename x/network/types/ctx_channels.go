@@ -97,9 +97,18 @@ func ContextWithMultiChainContext(g *errgroup.Group, ctx context.Context, logger
 	ctx = context.WithValue(ctx, MultiChainContextKey, mcctx)
 	// close channels when parent context closes
 	g.Go(func() error {
-		<-ctx.Done()
-		logger.Info("closing multichain channels")
-		return mcctx.CloseChannels()
+		announcedCtxClose := false
+		for range ctx.Done() {
+			if !announcedCtxClose {
+				logger.Info("closing multichain channels")
+			}
+			announcedCtxClose = true
+			// wait for any atomic tx to finish before closing the channels
+			if len(mcctx.CurrentAtomicTxHash) == 0 {
+				return mcctx.CloseChannels()
+			}
+		}
+		return nil
 	})
 	return ctx
 }

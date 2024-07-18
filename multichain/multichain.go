@@ -38,16 +38,36 @@ func AddMultiChainFlagsToCmd(cmd *cobra.Command) {
 	f.String(FlagRegistryChainId, "", "multichain registry chain id")
 }
 
-func MultiChainCtxByChainId(clientCtx client.Context, flags *flag.FlagSet, customSigners []signing.CustomGetSigner) (client.Context, mcodec.AccBech32Codec, *menc.ChainConfig, error) {
+type CliMultiChainCtx struct {
+	ClientCtx       client.Context
+	CustomAddrCodec mcodec.AccBech32Codec
+	Config          *menc.ChainConfig
+	SubchainId      string
+	RegistryId      string
+	// CtxChainId      string
+	ForwardedTx bool
+}
+
+func MultiChainCtxByChainId(clientCtx client.Context, flags *flag.FlagSet, customSigners []signing.CustomGetSigner) (*CliMultiChainCtx, error) {
 	subchainId, err := flags.GetString(sdkflags.FlagChainID)
 	if err != nil {
-		return clientCtx, mcodec.AccBech32Codec{}, nil, fmt.Errorf("subchainId: %s", err)
+		return &CliMultiChainCtx{}, fmt.Errorf("subchainId: %s", err)
 	}
 	registryId, err := flags.GetString(FlagRegistryChainId)
 	if err != nil {
-		return clientCtx, mcodec.AccBech32Codec{}, nil, fmt.Errorf("registry chainId: %s", err)
+		return &CliMultiChainCtx{}, fmt.Errorf("registry chainId: %s", err)
 	}
-	return MultiChainCtx(clientCtx, customSigners, subchainId, registryId)
+	clientCtx, customAddrCodec, config, err := MultiChainCtx(clientCtx, customSigners, subchainId, registryId)
+
+	return &CliMultiChainCtx{
+		ClientCtx:       clientCtx,
+		CustomAddrCodec: customAddrCodec,
+		Config:          config,
+		SubchainId:      subchainId,
+		RegistryId:      registryId,
+		// ForwardedTx: subchainId != ctxChainId,
+		ForwardedTx: false,
+	}, err
 }
 
 func MultiChainCtx(clientCtx client.Context, customSigners []signing.CustomGetSigner, chainId string, registryId string) (client.Context, mcodec.AccBech32Codec, *menc.ChainConfig, error) {
@@ -89,6 +109,13 @@ func MultiChainWrap(clientCtx client.Context, msg sdk.Msg, fromAddr mcodec.AccAd
 		Data:         msgAny,
 	}
 	return msgMultiChain, nil
+}
+
+func (ctx *CliMultiChainCtx) MultiChainWrap(msg sdk.Msg, fromAddr mcodec.AccAddressPrefixed) (sdk.Msg, error) {
+	if ctx.ForwardedTx {
+		return MultiChainWrap(ctx.ClientCtx, msg, fromAddr)
+	}
+	return msg, nil
 }
 
 func GetSubChainConfig(clientCtx client.Context, subchainId string, registryId string) (*menc.ChainConfig, error) {

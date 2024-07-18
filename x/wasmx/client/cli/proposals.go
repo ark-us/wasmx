@@ -35,7 +35,7 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -64,11 +64,11 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			label := args[1]
 			contractAddress := args[2]
 
-			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
+			authority, err := mcctx.CustomAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			content := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: role, Label: label, ContractAddress: contractAddress}
 
@@ -77,12 +77,12 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -118,7 +118,7 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -145,11 +145,11 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 
 			contractAddress := args[0]
 
-			authority, err := customAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
+			authority, err := mcctx.CustomAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			content := &types.MsgDeregisterRole{Authority: authority, Title: title, Description: description, ContractAddress: contractAddress}
 
@@ -157,7 +157,7 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}

@@ -101,27 +101,27 @@ metadata example:
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			proposal, msgs, deposit, err := parseSubmitProposal(clientCtx.Codec, args[0])
+			proposal, msgs, deposit, err := parseSubmitProposal(mcctx.ClientCtx.Codec, args[0])
 			if err != nil {
 				return err
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			msg, err := v1.NewMsgSubmitProposal(msgs, deposit, fromAddr.String(), proposal.Metadata, proposal.Title, proposal.Summary, proposal.Expedited)
 			if err != nil {
 				return fmt.Errorf("invalid message: %w", err)
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -143,7 +143,7 @@ func NewCmdCancelProposal(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -153,14 +153,14 @@ func NewCmdCancelProposal(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("proposal-id %s not a valid uint, please input a valid proposal-id", args[0])
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			msg := v1.NewMsgCancelProposal(proposalID, fromAddr.String())
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -203,7 +203,7 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -222,18 +222,18 @@ $ %s tx gov submit-legacy-proposal --title="Test Proposal" --description="My awe
 			if !ok {
 				return fmt.Errorf("failed to create proposal content: unknown proposal type %s", proposal.Type)
 			}
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
-			msg, err := v1beta1.NewMsgSubmitProposal(content, amount, clientCtx.GetFromAddress())
+			msg, err := v1beta1.NewMsgSubmitProposal(content, amount, mcctx.ClientCtx.GetFromAddress())
 			if err != nil {
 				return fmt.Errorf("invalid message: %w", err)
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -269,7 +269,7 @@ $ %s tx gov deposit 1 10stake --from mykey
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -280,7 +280,7 @@ $ %s tx gov deposit 1 10stake --from mykey
 				return fmt.Errorf("proposal-id %s not a valid uint, please input a valid proposal-id", args[0])
 			}
 
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			// Get amount of coins
 			amount, err := sdk.ParseCoinsNormalized(args[1])
@@ -293,12 +293,12 @@ $ %s tx gov deposit 1 10stake --from mykey
 				Depositor:  fromAddr.String(),
 				Amount:     amount,
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -329,7 +329,7 @@ $ %s tx gov vote 1 yes --from mykey
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -351,7 +351,7 @@ $ %s tx gov vote 1 yes --from mykey
 				return err
 			}
 
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			// Build vote message and run basic validation
 			msg := &v1.MsgVote{
@@ -360,12 +360,12 @@ $ %s tx gov vote 1 yes --from mykey
 				Option:     byteVoteOption,
 				Metadata:   metadata,
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -397,7 +397,7 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -419,7 +419,7 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 				return err
 			}
 
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			// Build vote message and run basic validation
 			msg := &v1.MsgVoteWeighted{
@@ -428,11 +428,11 @@ $ %s tx gov weighted-vote 1 yes=0.6,no=0.3,abstain=0.05,no_with_veto=0.05 --from
 				Options:    options,
 				Metadata:   metadata,
 			}
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 

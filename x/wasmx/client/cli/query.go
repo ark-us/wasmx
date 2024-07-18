@@ -82,7 +82,7 @@ func GetCmdBuildAddress(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -90,11 +90,11 @@ func GetCmdBuildAddress(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("code-hash: %s", err)
 			}
-			creator_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[1])
+			creator_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[1])
 			if err != nil {
 				return fmt.Errorf("creator: %s", err)
 			}
-			creator := customAddrCodec.BytesToAccAddressPrefixed(creator_.Bytes())
+			creator := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(creator_.Bytes())
 			salt, err := hex.DecodeString(args[2])
 			switch {
 			case err != nil:
@@ -103,7 +103,7 @@ func GetCmdBuildAddress(ac address.Codec) *cobra.Command {
 				return errors.New("empty salt")
 			}
 
-			addr := customAddrCodec.BytesToAccAddressPrefixed(keeper.EwasmBuildContractAddressPredictable(creator.Bytes(), salt, codeHash))
+			addr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(keeper.EwasmBuildContractAddressPredictable(creator.Bytes(), salt, codeHash))
 
 			cmd.Println(addr.String())
 			return nil
@@ -128,7 +128,7 @@ func GetCmdListCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -136,7 +136,7 @@ func GetCmdListCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.Codes(
 				context.Background(),
 				&types.QueryCodesRequest{
@@ -146,7 +146,7 @@ func GetCmdListCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			return mcctx.ClientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
@@ -169,7 +169,7 @@ func GetCmdListContractByCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -186,7 +186,7 @@ func GetCmdListContractByCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.ContractsByCode(
 				context.Background(),
 				&types.QueryContractsByCodeRequest{
@@ -197,7 +197,7 @@ func GetCmdListContractByCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			return mcctx.ClientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
@@ -220,7 +220,7 @@ func GetCmdQueryCode(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -230,7 +230,7 @@ func GetCmdQueryCode(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.Code(
 				context.Background(),
 				&types.QueryCodeRequest{
@@ -266,7 +266,7 @@ func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.Code(
 				context.Background(),
 				&types.QueryCodeRequest{
@@ -290,7 +290,7 @@ func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 				return fmt.Errorf("contract not found")
 			}
 
-			return clientCtx.PrintProto(res.CodeInfo)
+			return mcctx.ClientCtx.PrintProto(res.CodeInfo)
 		},
 		SilenceUsage: true,
 	}
@@ -312,16 +312,16 @@ func GetCmdGetContractInfo(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			_, err = customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			_, err = mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
 			if err != nil {
 				return err
 			}
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.ContractInfo(
 				context.Background(),
 				&types.QueryContractInfoRequest{
@@ -331,7 +331,7 @@ func GetCmdGetContractInfo(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			return mcctx.ClientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
@@ -369,22 +369,22 @@ func GetCmdGetContractStateAll(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			contractAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			contractAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
 			if err != nil {
 				return err
 			}
-			contractAddr := customAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
+			contractAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
 
 			pageReq, err := client.ReadPageRequest(withPageKeyDecoded(cmd.Flags()))
 			if err != nil {
 				return err
 			}
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.AllContractState(
 				context.Background(),
 				&types.QueryAllContractStateRequest{
@@ -395,7 +395,7 @@ func GetCmdGetContractStateAll(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			return mcctx.ClientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
@@ -417,22 +417,22 @@ func GetCmdGetContractStateRaw(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			contractAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			contractAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
 			if err != nil {
 				return err
 			}
-			contractAddr := customAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
+			contractAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
 			queryData, err := decoder.DecodeString(args[1])
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.RawContractState(
 				context.Background(),
 				&types.QueryRawContractStateRequest{
@@ -443,7 +443,7 @@ func GetCmdGetContractStateRaw(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			return mcctx.ClientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
@@ -465,16 +465,16 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			contractAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			contractAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
 			if err != nil {
 				return err
 			}
-			contractAddr := customAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
+			contractAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(contractAddr_.Bytes())
 			if args[1] == "" {
 				return errors.New("query data must not be empty")
 			}
@@ -490,7 +490,7 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("wrap query data %s", err)
 			}
-			sender := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			sender := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 			if err != nil {
 				return fmt.Errorf("sender to string: %s", err)
 			}
@@ -498,7 +498,7 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 				sender = contractAddr
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 			res, err := queryClient.SmartContractCall(
 				context.Background(),
 				&types.QuerySmartContractCallRequest{
@@ -510,7 +510,7 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return clientCtx.PrintProto(res)
+			return mcctx.ClientCtx.PrintProto(res)
 		},
 		SilenceUsage: true,
 	}
@@ -597,11 +597,11 @@ func GetCmdQueryParams(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientCtx, _, _, err = multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := types.NewQueryClient(mcctx.ClientCtx)
 
 			params := &types.QueryParamsRequest{}
 			res, err := queryClient.Params(cmd.Context(), params)
@@ -609,7 +609,7 @@ func GetCmdQueryParams(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintProto(&res.Params)
+			return mcctx.ClientCtx.PrintProto(&res.Params)
 		},
 		SilenceUsage: true,
 	}

@@ -56,17 +56,17 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				return err
 			}
 
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
 
-			toAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(args[1])
+			toAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[1])
 			if err != nil {
 				return err
 			}
-			toAddr := customAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			toAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			coins, err := sdk.ParseCoinsNormalized(args[2])
 			if err != nil {
@@ -83,11 +83,11 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.
 				Amount:      coins,
 			}
 
-			msgMultiChain, err := multichain.MultiChainWrap(clientCtx, msg, fromAddr)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
 			if err != nil {
 				return err
 			}
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
@@ -118,7 +118,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				return err
 			}
 
-			clientCtx, customAddrCodec, _, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
 			if err != nil {
 				return err
 			}
@@ -146,11 +146,11 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 
 			var output []types.Output
 			for _, arg := range args[1 : len(args)-1] {
-				toAddr_, err := customAddrCodec.StringToAddressPrefixedUnsafe(arg)
+				toAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(arg)
 				if err != nil {
 					return err
 				}
-				toAddr := customAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
+				toAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
 
 				output = append(output, types.Output{Address: toAddr.String(), Coins: sendCoins})
 			}
@@ -165,7 +165,7 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				amount = coins.MulInt(totalAddrs)
 			}
 
-			fromAddr := customAddrCodec.BytesToAccAddressPrefixed(clientCtx.GetFromAddress())
+			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
 			msg := &types.MsgMultiSend{
 				Inputs: []types.Input{{
@@ -175,7 +175,12 @@ When using '--dry-run' a key name cannot be used, only a bech32 address.`,
 				Outputs: output,
 			}
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
+			if err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
 
