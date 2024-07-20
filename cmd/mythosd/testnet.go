@@ -418,7 +418,7 @@ func testnetAddNode(
 	nodeIndex int,
 	leaderURI string,
 ) error {
-	// generateMythos := slices.Contains(args.initialChains, "mythos")
+	generateMythos := slices.Contains(args.initialChains, "mythos")
 	generateLevel0 := slices.Contains(args.initialChains, "level0")
 
 	args.numValidators = nodeIndex + 1
@@ -427,28 +427,44 @@ func testnetAddNode(
 	if err != nil {
 		return err
 	}
-	// copy genesis from node0 into our node
+
+	// first get the node0 genesis file path
 	nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, 0)
 	nodeDir := filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
 	nodeConfig.SetRoot(nodeDir)
+	genesisFile0 := nodeConfig.GenesisFile()
 
+	// our current node genesis file path
 	nodeDirName = fmt.Sprintf("%s%d", args.nodeDirPrefix, nodeIndex)
 	nodeDir = filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
 	nodeConfig.SetRoot(nodeDir)
 	genesisFileNew := nodeConfig.GenesisFile()
 
+	// copy genesis from node0 into our node
+	bz, err := os.ReadFile(genesisFile0)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(genesisFileNew, bz, 0o644)
+	if err != nil {
+		return err
+	}
+
+	if generateMythos {
+		genesisFileMythos := strings.Replace(genesisFile0, ".json", "_"+args.chainID+".json", 1)
+		genesisFileNewMythos := strings.Replace(genesisFileNew, ".json", "_"+args.chainID+".json", 1)
+
+		bz, err = os.ReadFile(genesisFileMythos)
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(genesisFileNewMythos, bz, 0o644)
+		return err
+	}
+
 	if generateLevel0 {
-		genesisFile0 := nodeConfig.GenesisFile()
 		genesisFileLevel0 := strings.Replace(genesisFile0, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
 		genesisFileNewLevel0 := strings.Replace(genesisFileNew, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
-		bz, err := os.ReadFile(genesisFile0)
-		if err != nil {
-			return err
-		}
-		err = os.WriteFile(genesisFileNew, bz, 0o644)
-		if err != nil {
-			return err
-		}
 
 		bz, err = os.ReadFile(genesisFileLevel0)
 		if err != nil {
