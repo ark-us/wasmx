@@ -9,7 +9,6 @@ import (
 	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
-	dbm "github.com/cometbft/cometbft-db"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -153,7 +152,7 @@ func cw_8_db_scan(context interface{}, callframe *wasmedge.CallingFrame, params 
 	}
 	order := params[2].(int32)
 
-	var iter dbm.Iterator
+	var iter types.Iterator
 	if order == int32(OrderAscending) {
 		iter = ctx.ContractStore.Iterator(startKey, endKey)
 	} else {

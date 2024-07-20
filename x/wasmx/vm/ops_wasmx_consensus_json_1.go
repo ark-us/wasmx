@@ -140,6 +140,7 @@ func OptimisticExecution(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+
 	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail

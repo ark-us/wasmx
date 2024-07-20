@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	dbm "github.com/cometbft/cometbft-db"
-
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
@@ -126,7 +124,7 @@ func wasmxStorageLoadRange(context interface{}, callframe *wasmedge.CallingFrame
 		endKey = nil
 	}
 
-	var iter dbm.Iterator
+	var iter types.Iterator
 	if req.Reverse {
 		iter = ctx.ContractStore.ReverseIterator(startKey, endKey)
 	} else {
@@ -162,7 +160,7 @@ func wasmxStorageLoadRangePairs(context interface{}, callframe *wasmedge.Calling
 		return nil, wasmedge.Result_Fail
 	}
 	pairs := make([]StoragePair, 0)
-	var iter dbm.Iterator
+	var iter types.Iterator
 	if req.Reverse {
 		iter = ctx.ContractStore.ReverseIterator(req.StartKey, req.EndKey)
 	} else {

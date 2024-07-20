@@ -8,7 +8,6 @@ import (
 
 	address "cosmossdk.io/core/address"
 	"cosmossdk.io/store/prefix"
-	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -70,12 +69,12 @@ type KVStore interface {
 	// Start must be less than end, or the Iterator is invalid.
 	// Iterator must be closed by caller.
 	// To iterate over entire domain, use store.Iterator(nil, nil)
-	Iterator(start, end []byte) dbm.Iterator
+	Iterator(start, end []byte) Iterator
 
 	// Iterator over a domain of keys in descending order. End is exclusive.
 	// Start must be less than end, or the Iterator is invalid.
 	// Iterator must be closed by caller.
-	ReverseIterator(start, end []byte) dbm.Iterator
+	ReverseIterator(start, end []byte) Iterator
 }
 
 // Querier lets us make read-only queries on other modules

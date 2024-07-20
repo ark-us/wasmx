@@ -10,8 +10,6 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 
-	dbm "github.com/cometbft/cometbft-db"
-
 	sdkerr "cosmossdk.io/errors"
 	log "cosmossdk.io/log"
 	"cosmossdk.io/store/prefix"
@@ -262,7 +260,7 @@ func ExecuteWasmInterpreted(
 		App:             app,
 		ContractRouter:  contractRouter,
 		NativeHandler:   NativeMap,
-		dbIterators:     map[int32]dbm.Iterator{},
+		dbIterators:     map[int32]types.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -381,7 +379,7 @@ func ExecuteWasm(
 		ContractRouter:  contractRouter,
 		App:             app,
 		NativeHandler:   NativeMap,
-		dbIterators:     map[int32]dbm.Iterator{},
+		dbIterators:     map[int32]types.Iterator{},
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 

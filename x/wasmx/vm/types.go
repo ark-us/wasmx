@@ -10,8 +10,6 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dbm "github.com/cometbft/cometbft-db"
-
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	mcodec "mythos/v1/codec"
@@ -105,7 +103,7 @@ type Context struct {
 	Logs            []WasmxLog
 	CosmosEvents    []types.Event
 	Messages        []cw8types.SubMsg `json:"messages"`
-	dbIterators     map[int32]dbm.Iterator
+	dbIterators     map[int32]types.Iterator
 }
 
 func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {

@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 
-	dbm "github.com/cometbft/cometbft-db"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
@@ -221,7 +220,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		ContractRouter:  newrouter,
 		App:             ctx.App,
 		NativeHandler:   ctx.NativeHandler,
-		dbIterators:     map[int32]dbm.Iterator{},
+		dbIterators:     map[int32]types.Iterator{},
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
