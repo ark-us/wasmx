@@ -177,7 +177,7 @@ or a similar setup where each node has a manually configurable IP address.
 Note, strict routability for addresses is turned off in the config file.
 
 Example:
-	mythosd testnet init-files --initial-chains=mythos,level0 --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
+	mythosd testnet init-files --network.initial-chains=mythos,level0 --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
 	`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
@@ -250,6 +250,7 @@ Example:
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.algo, _ = cmd.Flags().GetString(flags.FlagKeyAlgorithm)
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
+			args.initialChains, _ = cmd.Flags().GetStringSlice(networksrvflags.NetworkInitialChains)
 
 			nodeIndex, err := strconv.Atoi(args_[0])
 			if err != nil {
@@ -268,6 +269,7 @@ Example:
 	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
 	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
+	cmd.Flags().StringSlice(networksrvflags.NetworkInitialChains, []string{"mythos"}, "Initialized chains, separated by comma. E.g. 'mythos', 'mythos,level0'")
 
 	return cmd
 }
@@ -401,6 +403,8 @@ func initTestnetFiles(
 	genBalIterator cosmosmodtypes.GenesisBalancesIterator,
 	args initArgs,
 ) error {
+	os.RemoveAll(args.outputDir)
+	os.MkdirAll(args.outputDir, nodeDirPerm)
 	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, 0, "")
 }
 
@@ -414,6 +418,9 @@ func testnetAddNode(
 	nodeIndex int,
 	leaderURI string,
 ) error {
+	// generateMythos := slices.Contains(args.initialChains, "mythos")
+	generateLevel0 := slices.Contains(args.initialChains, "level0")
+
 	args.numValidators = nodeIndex + 1
 	args.sameMachine = true
 	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, nodeIndex, leaderURI)
@@ -424,30 +431,33 @@ func testnetAddNode(
 	nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, 0)
 	nodeDir := filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
 	nodeConfig.SetRoot(nodeDir)
-	genesisFile0 := nodeConfig.GenesisFile()
-	genesisFileLevel0 := strings.Replace(genesisFile0, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
 
 	nodeDirName = fmt.Sprintf("%s%d", args.nodeDirPrefix, nodeIndex)
 	nodeDir = filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
 	nodeConfig.SetRoot(nodeDir)
 	genesisFileNew := nodeConfig.GenesisFile()
-	genesisFileNewLevel0 := strings.Replace(genesisFileNew, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
 
-	bz, err := os.ReadFile(genesisFile0)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(genesisFileNew, bz, 0o644)
-	if err != nil {
-		return err
-	}
+	if generateLevel0 {
+		genesisFile0 := nodeConfig.GenesisFile()
+		genesisFileLevel0 := strings.Replace(genesisFile0, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
+		genesisFileNewLevel0 := strings.Replace(genesisFileNew, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
+		bz, err := os.ReadFile(genesisFile0)
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(genesisFileNew, bz, 0o644)
+		if err != nil {
+			return err
+		}
 
-	bz, err = os.ReadFile(genesisFileLevel0)
-	if err != nil {
+		bz, err = os.ReadFile(genesisFileLevel0)
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(genesisFileNewLevel0, bz, 0o644)
 		return err
 	}
-	err = os.WriteFile(genesisFileNewLevel0, bz, 0o644)
-	return err
+	return nil
 }
 
 // initTestnetFiles initializes testnet files for a testnet to be run in a separate process
@@ -461,9 +471,6 @@ func initTestnetFilesInternal(
 	nodeIndexStart int,
 	leaderURI string,
 ) error {
-	os.RemoveAll(args.outputDir)
-	os.MkdirAll(args.outputDir, nodeDirPerm)
-
 	var err error
 	generateMythos := slices.Contains(args.initialChains, "mythos")
 	generateLevel0 := slices.Contains(args.initialChains, "level0")
@@ -1293,5 +1300,5 @@ func createMockAppCreator() (*mcfg.MultiChainApp, func(chainId string, chainCfg 
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
-	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx, app.NopStartChainApis)
 }

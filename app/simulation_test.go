@@ -52,7 +52,7 @@ func BenchmarkSimulation(b *testing.B) {
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	chainId := config.ChainID
-	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx, app.NopStartChainApis)
 	iapp := appCreator(chainId, cfg)
 	app := iapp.(*app.App)
 

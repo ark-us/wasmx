@@ -6,48 +6,31 @@ import (
 	mctx "mythos/v1/context"
 )
 
+// these structures are used when building the meta info
+// during the common block proposer's execution
 const MetaInfoCrossChainKey = "crosschain_internal_tx"
-const MetaInfoCrossChainNextIndexKey = "crosschain_internal_tx_index"
 
-func SetCrossChainCallMetaInfoNextIndex(ctx context.Context, index int32) error {
-	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
-	if err != nil {
-		return err
-	}
-	execInfo.TempData[MetaInfoCrossChainNextIndexKey] = index
-	return nil
-}
-
-func GetCrossChainCallMetaInfoNextIndex(ctx context.Context) int32 {
-	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
-	if err != nil {
-		return 0
-	}
-	return execInfo.TempData[MetaInfoCrossChainNextIndexKey].(int32)
-}
-
-func GetCrossChainCallMetaInfo(ctx context.Context) (*AtomicTxCrossChainCallInfo, int32) {
+func GetCrossChainCallMetaInfo(ctx context.Context, chainId string) *AtomicTxCrossChainCallInfo {
 	data := &AtomicTxCrossChainCallInfo{}
 	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
 	if err != nil {
-		return data, 0
+		return nil
 	}
 	datai, found := execInfo.Data[MetaInfoCrossChainKey]
 	if found {
 		data = datai.(*AtomicTxCrossChainCallInfo)
 	}
-	index := execInfo.TempData[MetaInfoCrossChainNextIndexKey].(int32)
-	return data, index
+	return data
 }
 
 // we only add deterministic requests
 // we should consider if we need to also add
-func AddCrossChainCallMetaInfo(ctx context.Context, req MsgExecuteCrossChainCallRequest, resp WrappedResponse) error {
+func AddCrossChainCallMetaInfo(ctx context.Context, chainId string, req MsgExecuteCrossChainCallRequest, resp WrappedResponse) error {
 	mcctx, err := GetMultiChainContext(ctx)
 	if err != nil {
 		return err
 	}
-	subtxIndex := int(mcctx.CurrentSubTxIndex)
+	subtxIndex := mcctx.GetCurrentSubTxIndex(chainId)
 	execInfo, err := mctx.GetExecutionMetaInfo(ctx)
 	info := CrossChainCallInfo{Request: req, Response: resp}
 	if err != nil {

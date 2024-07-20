@@ -7,12 +7,17 @@ import (
 
 	"cosmossdk.io/log"
 	pruningtypes "cosmossdk.io/store/pruning/types"
+	cmtcfg "github.com/cometbft/cometbft/config"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
+	srvconfig "mythos/v1/server/config"
 )
 
 // DefaultAppOptions is a stub implementing AppOptions
@@ -53,7 +58,7 @@ func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcf
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(logger, db, nil, appOpts, g, goctx)
+	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, NopStartChainApis)
 }
 
 func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
@@ -68,7 +73,7 @@ func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(logger, db, nil, appOpts, g, goctx)
+	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, NopStartChainApis)
 }
 
 func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
@@ -77,4 +82,12 @@ func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context
 	// listen for quit signals so the calling parent process can gracefully exit
 	sdkserver.ListenForQuitSignals(g, block, cancelFn, logger)
 	return g, ctx, cancelFn
+}
+
+func NopStartChainApis(
+	chainId string,
+	chainCfg *menc.ChainConfig,
+	ports mctx.NodePorts,
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error) {
+	return nil, nil, client.Context{}, nil, nil, nil
 }

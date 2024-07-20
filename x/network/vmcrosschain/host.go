@@ -269,7 +269,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 }
 
 func returnResultAndAddCrossChainInfo(ctx *Context, callframe *wasmedge.CallingFrame, req types.MsgExecuteCrossChainCallRequest, resp *types.WrappedResponse) ([]interface{}, wasmedge.Result) {
-	types.AddCrossChainCallMetaInfo(ctx.GoContextParent, req, *resp)
+	types.AddCrossChainCallMetaInfo(ctx.GoContextParent, ctx.Ctx.ChainID(), req, *resp)
 	return returnResult(ctx, callframe, resp)
 }
 

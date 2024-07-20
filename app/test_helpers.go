@@ -10,7 +10,9 @@ import (
 	"cosmossdk.io/log"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
@@ -19,12 +21,17 @@ import (
 	ibctesting "github.com/cosmos/ibc-go/v8/testing"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtcfg "github.com/cometbft/cometbft/config"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 
 	config "mythos/v1/config"
+	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	appencoding "mythos/v1/encoding"
+	menc "mythos/v1/encoding"
 	"mythos/v1/multichain"
+	srvconfig "mythos/v1/server/config"
 )
 
 // DefaultTestingAppInit defines the IBC application used for testing
@@ -121,7 +128,7 @@ func NewTestNetworkFixture() network.TestFixture {
 	if err != nil {
 		panic(err)
 	}
-	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx, NopStartChainApis)
 	iapp := appCreator(chainId, chainCfg)
 	app := iapp.(*App)
 
@@ -140,7 +147,7 @@ func NewTestNetworkFixture() network.TestFixture {
 		appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
 		// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 
-		_, appCreator := NewAppCreator(val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx)
+		_, appCreator := NewAppCreator(val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx, NopStartChainApis)
 		iapp := appCreator(chainId, chainCfg)
 		app := iapp.(*App)
 		return app
@@ -156,4 +163,12 @@ func NewTestNetworkFixture() network.TestFixture {
 			Amino:             app.LegacyAmino(),
 		},
 	}
+}
+
+func NopStartChainApis(
+	chainId string,
+	chainCfg *menc.ChainConfig,
+	ports mctx.NodePorts,
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error) {
+	return nil, nil, client.Context{}, nil, nil, nil
 }

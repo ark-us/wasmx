@@ -293,6 +293,7 @@ func (suite *KeeperTestSuite) SetupSubChainApp(mainChainId string, chainId strin
 
 	multichainapp, err := somechain.App.GetMultiChainApp()
 	suite.Require().NoError(err)
+
 	isubchainapp, err := multichainapp.GetApp(chainId)
 	suite.Require().NoError(err)
 	testApp, ok := isubchainapp.(ibcgotesting.TestingApp)

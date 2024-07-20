@@ -53,10 +53,10 @@ mythosd tx wasmx store ./x/network/keeper/testdata/wasmx/simple_storage.wasm --c
 
 # store_code, code_id
 
-mythosd tx wasmx instantiate 53 '{"data":"{}"}' --label "simple_storage" --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --node tcp://localhost:26671 --yes
+mythosd tx wasmx instantiate 53 '{"crosschain_contract":"metaregistry"}' --label "simple_storage" --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --node tcp://localhost:26671 --yes
 
 # instantiate
-# level11ymjqhwavlxfl8r3n0rjqkzdnzssag4dafpj5y2
+# level11t67sqkunyp5etk8khw3yhdxj7ur3dzf2l8dade
 
 # chain level2
 mythosd tx wasmx store ./x/network/keeper/testdata/wasmx/crosschain.wasm --chain-id=level2_2_1002-1 --registry-chain-id=level0_1000-1 --from=node1 --keyring-backend=test --home=./testnet/node1/mythosd --fees=90000000000alvl2 --gas=9000000 --node tcp://localhost:26772 --yes
@@ -67,12 +67,12 @@ mythosd tx wasmx store ./x/network/keeper/testdata/wasmx/crosschain.wasm --chain
 mythosd tx wasmx instantiate 53 '{"crosschain_contract":"metaregistry"}' --label "crosschain" --chain-id=level2_2_1002-1 --registry-chain-id=level0_1000-1 --from=node1 --keyring-backend=test --home=./testnet/node1/mythosd --fees=90000000000alvl2 --gas=9000000 --node tcp://localhost:26772 --yes
 
 # instantiate
-# level21fvm78cvzlpgv4ffrha75se4dsqxrqd7eyszuvg
+# level21umhm4l9nxfhahqshmyd8rlmzwkt2xz36yhycjq
 
 # chain level1
-mythosd tx wasmx execute level11ymjqhwavlxfl8r3n0rjqkzdnzssag4dafpj5y2 '{"set":{"key":"hello","value":"brian"}}' --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --node tcp://localhost:26671 --yes
+mythosd tx wasmx execute level11t67sqkunyp5etk8khw3yhdxj7ur3dzf2l8dade '{"set":{"key":"hello","value":"brian"}}' --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000alvl1 --gas=9000000 --node tcp://localhost:26671 --yes
 
-mythosd query multichain call level11ymjqhwavlxfl8r3n0rjqkzdnzssag4dafpj5y2 '{"get":{"key":"hello"}}' --from node0 --keyring-backend test --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --home=./testnet/node0/mythosd --node tcp://localhost:26671
+mythosd query multichain call level11t67sqkunyp5etk8khw3yhdxj7ur3dzf2l8dade '{"get":{"key":"hello"}}' --from node0 --keyring-backend test --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --home=./testnet/node0/mythosd --node tcp://localhost:26671
 
 # atomic tx sent to chain level2
 
@@ -85,7 +85,7 @@ mythosd tx multichain atomic "/Users/user/dev/blockchain/wasmx-tests/atomictx.js
 
 * atomictx.json
 ```json
-[{"msg_json":"{\"CrossChain\":{\"sender\":\"\",\"from\":\"\",\"to\":\"level11ymjqhwavlxfl8r3n0rjqkzdnzssag4dafpj5y2\",\"msg\":\"eyJkYXRhIjoiZXlKelpYUWlPbnNpYTJWNUlqb2lhR1ZzYkc4aUxDSjJZV3gxWlNJNkluTmhiVzE1SW4xOSJ9\",\"funds\":[],\"dependencies\":[],\"from_chain_id\":\"\",\"to_chain_id\":\"level1_1_1002-1\",\"is_query\":false}}","contract": "level21fvm78cvzlpgv4ffrha75se4dsqxrqd7eyszuvg", "multi_chain_id":"level2_2_1002-1"}]
+[{"msg_json":"{\"CrossChain\":{\"sender\":\"\",\"from\":\"\",\"to\":\"level11t67sqkunyp5etk8khw3yhdxj7ur3dzf2l8dade\",\"msg\":\"eyJkYXRhIjoiZXlKelpYUWlPbnNpYTJWNUlqb2lhR1ZzYkc4aUxDSjJZV3gxWlNJNkluTmhiVzE1SW4xOSJ9\",\"funds\":[],\"dependencies\":[],\"from_chain_id\":\"\",\"to_chain_id\":\"level1_1_1002-1\",\"is_query\":false}}","contract": "level21umhm4l9nxfhahqshmyd8rlmzwkt2xz36yhycjq", "multi_chain_id":"level2_2_1002-1"}]
 
 ```
 

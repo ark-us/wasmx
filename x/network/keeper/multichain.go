@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
@@ -80,17 +81,44 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	var newInternalCallResponseChannel chan types.MsgExecuteCrossChainCallResponseIndexed
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	txhash := tmhash.Sum(ctx.TxBytes())
+	txbz := ctx.TxBytes()
+	txhash := tmhash.Sum(txbz)
 
 	k.Logger(ctx).Info("executing atomic tx", "txhash", hex.EncodeToString(txhash), "tx_count", len(msg.Txs))
-
-	types.SetCrossChainCallMetaInfoNextIndex(k.goContextParent, 0)
 
 	mcctx, err := types.GetMultiChainContext(k.goContextParent)
 	if err != nil {
 		return nil, err
 	}
-	mcctx.CurrentAtomicTxHash = txhash
+	if len(mcctx.CurrentAtomicTxHash) == 0 {
+		mcctx.CurrentAtomicTxHash = txhash
+	} else {
+		if !bytes.Equal(mcctx.CurrentAtomicTxHash, txhash) {
+			return nil, fmt.Errorf("atomic tx hash mismatch: expected %s, actual %s", hex.EncodeToString(mcctx.CurrentAtomicTxHash), hex.EncodeToString(txhash))
+		}
+	}
+
+	expectedChainIds := mcctx.CurrentAtomicTxChainIds
+	sdktx, err := k.actionExecutor.GetApp().GetTxConfig().TxDecoder()(txbz)
+	if err != nil {
+		return nil, err
+	}
+	txWithExtensions, ok := sdktx.(authante.HasExtensionOptionsTx)
+	if ok {
+		opts := txWithExtensions.GetExtensionOptions()
+		if len(opts) > 0 && opts[0].GetTypeUrl() == types.TypeURL_ExtensionOptionAtomicMultiChainTx {
+			ext := opts[0].GetCachedValue().(*types.ExtensionOptionAtomicMultiChainTx)
+			expectedChainIds = ext.ChainIds
+		}
+	}
+
+	if len(mcctx.CurrentAtomicTxChainIds) == 0 {
+		mcctx.CurrentAtomicTxChainIds = expectedChainIds
+	} else {
+		if !slices.Equal(mcctx.CurrentAtomicTxChainIds, expectedChainIds) {
+			return nil, fmt.Errorf("atomic chainIds mismatch: expected %s, actual %s", mcctx.CurrentAtomicTxChainIds, expectedChainIds)
+		}
+	}
 
 	multichainapp, err := cfg.GetMultiChainApp(k.goContextParent)
 	if err != nil {
@@ -191,10 +219,9 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	}()
 
 	for i, txbz := range msg.Txs {
-		mcctx.CurrentSubTxIndex = int32(i)
-		// TODO ????
-		// mcctx.CurrentSubTxIndex must be per chain ??
-		types.SetCrossChainCallMetaInfoNextIndex(k.goContextParent, 0)
+		mcctx.SetCurrentSubTxIndex(ctx.ChainID(), i)
+		mcctx.SetCurrentInternalCrossTx(ctx.ChainID(), 0)
+
 		tx, err := k.actionExecutor.app.TxConfig().TxDecoder()(txbz)
 		if err != nil {
 			return nil, err
@@ -276,7 +303,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 		} else {
 			// the node does not have access to the state of the chain
 			// we will check the internal crosschain calls for this subtx
-			crosschaininfo, _ := types.GetCrossChainCallMetaInfo(k.goContextParent)
+			crosschaininfo := types.GetCrossChainCallMetaInfo(k.goContextParent, ctx.ChainID())
 			if crosschaininfo == nil {
 				return nil, fmt.Errorf("chain %s not found and AtomicTxCrossChainCallInfo not found on parent context: cannot execute cross call", chainId)
 			}
@@ -285,14 +312,16 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 			}
 			calls := crosschaininfo.Subtx[i].Calls
 			for n, call := range calls {
-				// we have a cross-chain call that calls this chain
-				// then we process it
-				// if it calls a subchain that we have access to, then that chain will catch it and process it during the atomic transaction
+				if !slices.Contains(mcctx.CurrentAtomicTxChainIds, call.Request.ToChainId) {
+					return nil, fmt.Errorf("atomic tx with unauthorized chain id: %s; authorized: %s", call.Request.ToChainId, strings.Join(mcctx.CurrentAtomicTxChainIds, ","))
+				}
+				if !slices.Contains(mcctx.CurrentAtomicTxChainIds, call.Request.FromChainId) {
+					return nil, fmt.Errorf("atomic tx with unauthorized chain id: %s; authorized: %s", call.Request.FromChainId, strings.Join(mcctx.CurrentAtomicTxChainIds, ","))
+				}
+
+				// we process only the first cross-chain call that calls this chain
+				// this is the entry in the subtx
 				if call.Request.ToChainId == ctx.ChainID() {
-
-					// TODO if a subchain that we have access to calls this chain, then that subchain will initiate the crosschain request
-					// && !slices.Contains(multichainapp.ChainIds, call.Request.FromChainId)
-
 					resp, err := k.ExecuteCrossChainTx(goCtx, &call.Request)
 					// we compare the result with our expected result
 					errmsg := ""
@@ -305,14 +334,14 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 
 						return nil, fmt.Errorf("subsequent crosschain request result mismatch at subtx %d; index %d; expected %s, found %s", i, n, expected, actual)
 					}
+					break
 				}
-				// TODO what here? wait if we have internal calls that we can process?
-				// execute calls from chains we dont have in state?
 			}
 		}
 	}
 	// reset current txhash
 	mcctx.CurrentAtomicTxHash = []byte{}
+	mcctx.CurrentAtomicTxChainIds = []string{}
 	return response, nil
 }
 
@@ -336,12 +365,14 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	}
 	channelsChainId := msg.ToChainId
 
-	k.Logger(ctx).Info("executing crosschain call", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To, "is_query", msg.IsQuery, "index", mcctx.CurrentInternalCrossTx)
-
 	// all deterministic multichain requests go through here
 	// so this is where we increase the callIndex
-	callIndex := types.GetCrossChainCallMetaInfoNextIndex(k.goContextParent)
-	types.SetCrossChainCallMetaInfoNextIndex(k.goContextParent, callIndex+1)
+	subTxIndex := mcctx.GetCurrentSubTxIndex(ctx.ChainID())
+	callIndex := mcctx.GetCurrentInternalCrossTx(ctx.ChainID())
+	mcctx.SetCurrentInternalCrossTx(ctx.ChainID(), callIndex+1)
+
+	k.Logger(ctx).Info("executing crosschain call", "from_chain_id", msg.FromChainId, "from", msg.From, "to_chain_id", msg.ToChainId, "to", msg.To, "is_query", msg.IsQuery, "subtx", subTxIndex, "crosschaincall_index", callIndex)
+
 	multichainapp, err := cfg.GetMultiChainApp(k.goContextParent)
 	if err != nil {
 		return nil, err
@@ -354,14 +385,14 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 
 		// return &types.MsgExecuteCrossChainCallResponse{Error: "", Data: []byte{}}, nil
 
-		crosschaininfo, _ := types.GetCrossChainCallMetaInfo(k.goContextParent)
+		crosschaininfo := types.GetCrossChainCallMetaInfo(k.goContextParent, ctx.ChainID())
 		if crosschaininfo == nil {
 			return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain %s not found and AtomicTxCrossChainCallInfo not found on parent context: cannot execute cross call", channelsChainId)}, nil
 		}
-		if len(crosschaininfo.Subtx) <= int(mcctx.CurrentSubTxIndex) {
-			return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain %s not found and AtomicTxCrossChainCallInfo index out of bounds: %d out of %d: cannot execute cross call", channelsChainId, mcctx.CurrentSubTxIndex, len(crosschaininfo.Subtx))}, nil
+		if len(crosschaininfo.Subtx) <= subTxIndex {
+			return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain %s not found and AtomicTxCrossChainCallInfo index out of bounds: %d out of %d: cannot execute cross call", channelsChainId, subTxIndex, len(crosschaininfo.Subtx))}, nil
 		}
-		calls := crosschaininfo.Subtx[mcctx.CurrentSubTxIndex].Calls
+		calls := crosschaininfo.Subtx[subTxIndex].Calls
 
 		if int(callIndex) >= len(calls) {
 			return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("chain %s not found and last crosschain call index %d out of bounds", channelsChainId, callIndex)}, nil
@@ -384,6 +415,13 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 		// we execute all subsequent crosschain calls before we return the result
 		// like it would happen when executing subcalls in order
 		for i, call := range calls[callIndex+1:] {
+			if !slices.Contains(mcctx.CurrentAtomicTxChainIds, call.Request.ToChainId) {
+				return nil, fmt.Errorf("atomic tx with unauthorized chain id: %s; authorized: %s", call.Request.ToChainId, strings.Join(mcctx.CurrentAtomicTxChainIds, ","))
+			}
+			if !slices.Contains(mcctx.CurrentAtomicTxChainIds, call.Request.FromChainId) {
+				return nil, fmt.Errorf("atomic tx with unauthorized chain id: %s; authorized: %s", call.Request.FromChainId, strings.Join(mcctx.CurrentAtomicTxChainIds, ","))
+			}
+
 			// we have a cross-chain call that calls this chain
 			// then we process it
 			// if it calls a subchain that we have access to, then that chain will catch it and process it during the atomic transaction
@@ -401,7 +439,7 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 				if call.Response.Error != errmsg || !bytes.Equal(call.Response.Data, resp.Data) {
 					expected := base64.StdEncoding.EncodeToString(call.Response.Data)
 					actual := base64.StdEncoding.EncodeToString(resp.Data)
-					return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("subsequent crosschain request result mismatch at index %d; expected %s, found %s", callIndex+int32(i), expected, actual)}, nil
+					return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("subsequent crosschain request result mismatch at index %d; expected %s, found %s", callIndex+i, expected, actual)}, nil
 				}
 				// we break here because the rest of the internal crosschain calls
 				// are executed above, during k.ExecuteCrossChainTx - this is a nested process
@@ -435,21 +473,19 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 		mcctx.SetInternalCallResultChannel(channelsChainId, &newInternalCallResponseChannel)
 	}
 
-	index := mcctx.CurrentInternalCrossTx
 	req := types.MsgExecuteCrossChainCallRequestIndexed{
-		Index:   index,
+		Index:   int32(callIndex),
 		Request: msg,
 	}
-	mcctx.CurrentInternalCrossTx += 1
 
 	// we set the timer for the tx timeout
 	timeout := time.Millisecond * time.Duration(msg.TimeoutMs)
-	k.Logger(ctx).Info("executing crosschain call with timeout", "index", index, "timeout", timeout, "from_chain_id", msg.FromChainId, "to_chain_id", msg.ToChainId, "is_query", msg.IsQuery, "from", msg.From, "to", msg.To)
+	k.Logger(ctx).Info("executing crosschain call with timeout", "subtx", subTxIndex, "crosschaincall_index", callIndex, "timeout", timeout, "from_chain_id", msg.FromChainId, "to_chain_id", msg.ToChainId, "is_query", msg.IsQuery, "from", msg.From, "to", msg.To)
 
 	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	k.Logger(ctx).Debug("executing crosschain call", "index", index, "timeout", timeout, "from_chain_id", msg.FromChainId, "to_chain_id", msg.ToChainId, "is_query", msg.IsQuery, "from", msg.From, "to", msg.To, "msg", hex.EncodeToString(msg.Msg))
+	k.Logger(ctx).Debug("executing crosschain call", "subtx", subTxIndex, "crosschaincall_index", callIndex, "timeout", timeout, "from_chain_id", msg.FromChainId, "to_chain_id", msg.ToChainId, "is_query", msg.IsQuery, "from", msg.From, "to", msg.To, "msg", hex.EncodeToString(msg.Msg))
 
 	// execute this as a go routine, otherwise execution hangs
 	// we send the request for cross chain execution
@@ -462,14 +498,14 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 	for {
 		select {
 		case resp := <-newInternalCallResponseChannel:
-			k.Logger(ctx).Debug("executed crosschain call", "index", index, "from_chain_id", msg.FromChainId, "to_chain_id", msg.ToChainId, "is_query", msg.IsQuery, "from", msg.From, "to", msg.To, "response_data", hex.EncodeToString(resp.Data.Data), "response_error", resp.Data.Error)
+			k.Logger(ctx).Debug("executed crosschain call", "subtx", subTxIndex, "crosschaincall_index", callIndex, "from_chain_id", msg.FromChainId, "to_chain_id", msg.ToChainId, "is_query", msg.IsQuery, "from", msg.From, "to", msg.To, "response_data", hex.EncodeToString(resp.Data.Data), "response_error", resp.Data.Error)
 			return resp.Data, nil
 		case <-ctxWithTimeout.Done():
-			k.Logger(ctx).Info("stopping crosschain call: timeout", "index", index)
+			k.Logger(ctx).Info("stopping crosschain call: timeout", "subtx", subTxIndex, "crosschaincall_index", callIndex)
 			return &types.MsgExecuteCrossChainCallResponse{Error: "crosschain call timeout"}, nil
 		case <-k.goContextParent.Done():
 			if !announcedCtxClose {
-				k.Logger(ctx).Info("parent context closing: crosschain call in execution, please wait for process to finish or timeout", "index", index, "timeout", timeout)
+				k.Logger(ctx).Info("parent context closing: crosschain call in execution, please wait for process to finish or timeout", "subtx", subTxIndex, "crosschaincall_index", callIndex, "timeout", timeout)
 			}
 			announcedCtxClose = true
 			// TODO if node is closed during an atomic transaction

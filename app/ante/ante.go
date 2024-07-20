@@ -62,6 +62,12 @@ func NewAnteHandler(cdc codec.Codec, txConfig client.TxConfig, options HandlerOp
 							"rejecting tx with ExtensionOptionAtomicMultiChainTx: not for current chain",
 						)
 					}
+					if len(ext.ChainIds) > 2 {
+						return ctx, errorsmod.Wrapf(
+							errortypes.ErrInvalidRequest,
+							"rejecting tx with ExtensionOptionAtomicMultiChainTx: atomic tx running on more than 2 chains",
+						)
+					}
 					// CheckTx - only the AnteHandler is executed
 					// all the rest execute the msgs, so the subtx antehandlers are executed then
 					isCheck := ctx.ExecMode() == sdk.ExecModeCheck || ctx.ExecMode() == sdk.ExecModeReCheck

@@ -71,7 +71,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
-	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx)
+	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx, app.NopStartChainApis)
 	iapp := appCreator(chainId, chainCfg)
 	mapp := iapp.(*app.App)
 

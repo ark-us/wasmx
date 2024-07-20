@@ -137,7 +137,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 				}
 			}
 
-			serverCtx.Logger.Info("starting ABCI with Tendermint")
+			serverCtx.Logger.Info("starting ABCI with WasmX Tendermint")
 
 			// amino is needed here for backwards compatibility of REST routes
 			return startInProcess(serverCtx, clientCtx, appCreator)
@@ -232,13 +232,27 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 		return err
 	}
 
+	apictx := &APICtx{
+		g:         g,
+		ctx:       ctx,
+		svrCtx:    svrCtx,
+		clientCtx: client.Context{},
+		// msrvconfig:      msrvconfig,
+		// tndcfg:          tndcfg,
+		// metricsProvider: metricsProvider,
+		// metrics:         metrics,
+	}
+
 	bapps, appCreator := mapp.NewAppCreator(
 		svrCtx.Logger,
 		db,
 		traceWriter,
 		svrCtx.Viper,
 		g, ctx,
+		apictx.StartChainApis,
 	)
+	apictx.appCreator = appCreator
+	apictx.multiapp = bapps
 
 	config, err := srvconfig.GetConfig(svrCtx.Viper)
 	if err != nil {
@@ -417,14 +431,6 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	// 	cleanupFn func()
 	// )
 
-	multiapp, appCreator := mapp.NewAppCreator(
-		logger,
-		db,
-		traceWriter,
-		svrCtx.Viper,
-		g, ctx,
-	)
-
 	clientCtx = clientCtx.
 		WithHomeDir(home).
 		WithChainID(genDoc.ChainID)
@@ -442,13 +448,20 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		clientCtx:       clientCtx,
 		msrvconfig:      msrvconfig,
 		tndcfg:          tndcfg,
-		appCreator:      appCreator,
 		metricsProvider: metricsProvider,
 		metrics:         metrics,
-		multiapp:        multiapp,
 	}
 
-	multiapp.SetStartAPIs(apictx.StartChainApis)
+	multiapp, appCreator := mapp.NewAppCreator(
+		logger,
+		db,
+		traceWriter,
+		svrCtx.Viper,
+		g, ctx,
+		apictx.StartChainApis,
+	)
+	apictx.appCreator = appCreator
+	apictx.multiapp = multiapp
 
 	// create apps for initial chains
 	initialChains := msrvconfig.Network.InitialChains
@@ -587,6 +600,32 @@ type APICtx struct {
 	multiapp        *mcfg.MultiChainApp
 }
 
+func NewAPICtx(
+	g *errgroup.Group,
+	ctx context.Context,
+	svrCtx *server.Context,
+	clientCtx client.Context,
+	msrvconfig srvconfig.Config,
+	tndcfg *cmtcfg.Config,
+	appCreator func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp,
+	metricsProvider node.MetricsProvider,
+	metrics *telemetry.Metrics,
+	multiapp *mcfg.MultiChainApp,
+) *APICtx {
+	return &APICtx{
+		g:               g,
+		ctx:             ctx,
+		svrCtx:          svrCtx,
+		clientCtx:       clientCtx,
+		msrvconfig:      msrvconfig,
+		tndcfg:          tndcfg,
+		appCreator:      appCreator,
+		metricsProvider: metricsProvider,
+		metrics:         metrics,
+		multiapp:        multiapp,
+	}
+}
+
 func (ac *APICtx) StartChainApis(
 	chainId string,
 	chainCfg *menc.ChainConfig,
@@ -616,7 +655,6 @@ func (ac *APICtx) StartChainApis(
 	if err != nil {
 		return nil, nil, ac.clientCtx, nil, nil, err
 	}
-
 
 	// TODO extract the port base ; define port family range in the toml files
 	cmsrvconfig.Config.API.Address = strings.Replace(cmsrvconfig.Config.API.Address, "1317", fmt.Sprintf("%d", ports.CosmosRestApi), 1)

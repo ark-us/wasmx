@@ -583,7 +583,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	subchain2 := suite.GetChain(subChainId2)
 
 	codeIdTo := subchainapp.StoreCode(sender, wasmbinTo, nil)
-	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinTo", nil)
+	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinTo", nil)
 
 	// execute cross chain transaction
 	// contract message
@@ -700,7 +700,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	subchain2 := suite.GetChain(subChainId2)
 
 	codeIdTo := subchainapp.StoreCode(sender, wasmbinTo, nil)
-	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte{}}, "wasmbinTo", nil)
+	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinTo", nil)
 
 	// store an initial value
 	data := []byte(`{"set":{"key":"hello","value":"brian"}}`)

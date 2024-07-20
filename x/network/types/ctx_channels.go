@@ -24,10 +24,44 @@ type MultiChainContext struct {
 	// chainId => channel
 	InternalCallResultChannels map[string]*chan MsgExecuteCrossChainCallResponseIndexed
 
-	ChainIds               []string
-	CurrentAtomicTxHash    []byte
-	CurrentSubTxIndex      int32
-	CurrentInternalCrossTx int32
+	ChainIds            []string
+	CurrentAtomicTxHash []byte
+	// chain ids set when executing the atomic tx
+	CurrentAtomicTxChainIds []string
+	CurrentSubTxIndex       map[string]int
+	CurrentInternalCrossTx  map[string]int
+
+	// TODO if we support multichain, we will advance in lock step, 1 crosschain call at a time, for each chain, so we will have a common subtx & crosstx indexes
+	// a chain cannot go more than 1 crosschaincall in advance to other chains - a lock step advancement of the atomic tx across all participating chains
+	// chains wait for the crosschaincall index to be incremented before advancing through preprocessed crosschain calls
+	// CurrentSubTxIndexCommon:          0,
+	// CurrentInternalCrossTxCommon:     0,
+}
+
+func (mcctx *MultiChainContext) GetCurrentInternalCrossTx(chainId string) int {
+	index, ok := mcctx.CurrentInternalCrossTx[chainId]
+	if !ok {
+		mcctx.CurrentInternalCrossTx[chainId] = 0
+		return 0
+	}
+	return index
+}
+
+func (mcctx *MultiChainContext) SetCurrentInternalCrossTx(chainId string, index int) {
+	mcctx.CurrentInternalCrossTx[chainId] = index
+}
+
+func (mcctx *MultiChainContext) GetCurrentSubTxIndex(chainId string) int {
+	index, ok := mcctx.CurrentSubTxIndex[chainId]
+	if !ok {
+		mcctx.CurrentSubTxIndex[chainId] = 0
+		return 0
+	}
+	return index
+}
+
+func (mcctx *MultiChainContext) SetCurrentSubTxIndex(chainId string, index int) {
+	mcctx.CurrentSubTxIndex[chainId] = index
 }
 
 func (mcctx *MultiChainContext) GetResultChannel(chainId string) (*chan MsgExecuteAtomicTxResponse, error) {
@@ -91,8 +125,8 @@ func ContextWithMultiChainContext(g *errgroup.Group, ctx context.Context, logger
 		InternalCallChannels:       make(map[string]*chan MsgExecuteCrossChainCallRequestIndexed, 0),
 		InternalCallResultChannels: make(map[string]*chan MsgExecuteCrossChainCallResponseIndexed, 0),
 		CurrentAtomicTxHash:        make([]byte, 0),
-		CurrentSubTxIndex:          0,
-		CurrentInternalCrossTx:     0,
+		CurrentSubTxIndex:          make(map[string]int, 0),
+		CurrentInternalCrossTx:     make(map[string]int, 0),
 	}
 	ctx = context.WithValue(ctx, MultiChainContextKey, mcctx)
 	// close channels when parent context closes

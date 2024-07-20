@@ -67,7 +67,7 @@ func DefaultConfig() network.Config {
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
-	_, appCreator := app.NewAppCreator(logger, dbm.NewMemDB(), nil, appOpts, g, goctx)
+	_, appCreator := app.NewAppCreator(logger, dbm.NewMemDB(), nil, appOpts, g, goctx, app.NopStartChainApis)
 	iapp := appCreator(chainId, chainCfg)
 	tempApp := iapp.(*app.App)
 
@@ -91,6 +91,7 @@ func DefaultConfig() network.Config {
 				val.GetCtx().Logger,
 				dbm.NewMemDB(),
 				nil, appOpts, g, goctx,
+				app.NopStartChainApis,
 			)
 			iapp := appCreator(chainId, chainCfg)
 			return iapp.(*app.App)
