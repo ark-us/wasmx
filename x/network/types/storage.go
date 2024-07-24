@@ -41,10 +41,11 @@ type BlockEntry struct {
 	WriterContract  []byte `json:"writerContract"`
 	Data            []byte `json:"data"` // RequestProcessProposalWithMetaInfo
 	ProposerAddress string `json:"proposer_address"`
-	Header          []byte `json:"header"`      // Block Header
-	LastCommit      []byte `json:"last_commit"` // BlockCommit
-	Evidence        []byte `json:"evidence"`    // EvidenceData
-	Result          []byte `json:"result"`      // ResponseFinalizeBlock
+	Header          []byte `json:"header"`         // Block Header
+	LastCommit      []byte `json:"last_commit"`    // BlockCommit
+	Evidence        []byte `json:"evidence"`       // EvidenceData
+	Result          []byte `json:"result"`         // ResponseFinalizeBlock
+	ValidatorInfo   []byte `json:"validator_info"` // cometbfttypes.Validator
 }
 
 func GetTopicDataKey(topic string) string {

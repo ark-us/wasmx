@@ -1,14 +1,27 @@
 package vm
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/libs/protoio"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmttypes "github.com/cometbft/cometbft/types"
+
+	errorsmod "cosmossdk.io/errors"
+	cometbftenc "github.com/cometbft/cometbft/crypto/encoding"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	mctx "mythos/v1/context"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+
+	networktypes "mythos/v1/x/network/types"
 )
 
 type ResponseOptimisticExecution struct {
@@ -345,6 +358,123 @@ func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []in
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxHeaderHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req cmttypes.Header
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "HeaderHash")
+		return nil, wasmedge.Result_Fail
+	}
+	hash := req.Hash()
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hash)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, vals []networktypes.TendermintValidator) ([]*cmttypes.Validator, error) {
+	cmtvals := make([]*cmttypes.Validator, len(vals))
+	for i, val := range vals {
+		var pubkey cryptotypes.PubKey
+		err := interfaceRegistry.UnpackAny(val.PubKey, &pubkey)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert unpack cryptotypes.PubKey")
+		}
+		tmPk, err := cryptocodec.ToCmtProtoPublicKey(pubkey)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert cryptotypes.PubKey to proto")
+		}
+		tmPk2, err := cometbftenc.PubKeyFromProto(tmPk)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert cryptotypes.PubKey from proto")
+		}
+		valaddr, err := hex.DecodeString(val.Address)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to decode hex address")
+		}
+		v := &cmttypes.Validator{
+			Address:          valaddr,
+			PubKey:           tmPk2,
+			VotingPower:      val.VotingPower,
+			ProposerPriority: val.ProposerPriority,
+		}
+		cmtvals[i] = v
+	}
+	return cmtvals, nil
+}
+
+func wasmxValidatorsHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	fmt.Println("--reqbz--", string(reqbz))
+	var vals networktypes.TendermintValidators
+	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vals)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ValidatorsHash")
+		return nil, wasmedge.Result_Fail
+	}
+	cmtvals, err := validatorsToCmtValidators(ctx.CosmosHandler.Codec().InterfaceRegistry(), vals.Validators)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ValidatorsHash")
+		return nil, wasmedge.Result_Fail
+	}
+	valSet, err := cmttypes.ValidatorSetFromExistingValidators(cmtvals)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ValidatorsHash")
+		return nil, wasmedge.Result_Fail
+	}
+	hash := valSet.Hash()
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hash)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func wasmxBlockCommitVoteBytes(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var vote cmtproto.Vote
+	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vote)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes")
+		return nil, wasmedge.Result_Fail
+	}
+
+	pb := cmttypes.CanonicalizeVote(ctx.Ctx.ChainID(), &vote)
+	bz, err := protoio.MarshalDelimited(&pb)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes")
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 	env := wasmedge.NewModule("consensus")
 	functype__i32 := wasmedge.NewFunctionType(
@@ -373,6 +503,9 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 	env.AddFunction("EndBlock", wasmedge.NewFunction(functype_i32_i32, EndBlock, context, 0))
 	env.AddFunction("Commit", wasmedge.NewFunction(functype__i32, Commit, context, 0))
 	env.AddFunction("RollbackToVersion", wasmedge.NewFunction(functype_i64_i32, RollbackToVersion, context, 0))
+	env.AddFunction("HeaderHash", wasmedge.NewFunction(functype_i32_i32, wasmxHeaderHash, context, 0))
+	env.AddFunction("ValidatorsHash", wasmedge.NewFunction(functype_i32_i32, wasmxValidatorsHash, context, 0))
+	env.AddFunction("BlockCommitVoteBytes", wasmedge.NewFunction(functype_i32_i32, wasmxBlockCommitVoteBytes, context, 0))
 
 	return env
 }

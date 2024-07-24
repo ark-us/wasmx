@@ -28,4 +28,11 @@ type BaseApp interface {
 
 	Info(*abci.RequestInfo) (*abci.ResponseInfo, error)
 	Query(context.Context, *abci.RequestQuery) (*abci.ResponseQuery, error)
+
+	ApplySnapshotChunk(req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error)
+	LoadSnapshotChunk(req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error)
+	OfferSnapshot(req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error)
+	ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)
+
+	CheckTx(req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error)
 }

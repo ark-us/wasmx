@@ -87,7 +87,7 @@ func NewGRPCServer(
 	cfg *config.Config,
 	app servertypes.Application,
 	metricsProvider node.MetricsProvider,
-	client *ABCIClient,
+	client client.CometRPC,
 ) (*grpc.Server, error) {
 	grpccfg := cfg.GRPC
 	maxSendMsgSize := grpccfg.MaxSendMsgSize
@@ -378,7 +378,7 @@ type wsConnection struct {
 	// funcMap    map[string]*RPCFunc
 }
 
-func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Application, networkWrap *ABCIClient, logger log.Logger, cfg *config.Config) error {
+func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Application, networkWrap client.CometRPC, logger log.Logger, cfg *config.Config) error {
 	// listenAddrs := splitAndTrimEmpty(n.config.RPC.ListenAddress, ",", " ")
 	listenAddr := svrCtx.Config.RPC.ListenAddress
 

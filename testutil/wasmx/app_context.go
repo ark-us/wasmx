@@ -12,6 +12,7 @@ import (
 	//nolint
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cometbft/cometbft/config"
 
 	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"
@@ -39,6 +40,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	"mythos/v1/crypto/ethsecp256k1"
+	msrvcfg "mythos/v1/server/config"
 	network "mythos/v1/x/network/keeper"
 	networktypes "mythos/v1/x/network/types"
 	wasmxkeeper "mythos/v1/x/wasmx/keeper"
@@ -79,6 +81,20 @@ type AppContext struct {
 	Faucet    *wasmxkeeper.TestFaucet
 
 	FinalizeBlock func(txs [][]byte) (*abci.ResponseFinalizeBlock, error)
+}
+
+func (s *AppContext) ABCIClient() *network.ABCIClient {
+	ae := s.App.GetActionExecutor()
+	abcicli := network.NewABCIClient(
+		s.App,
+		s.App.BaseApp,
+		s.App.Logger(),
+		s.App.GetNetworkKeeper(),
+		config.DefaultConfig(),
+		&msrvcfg.Config{},
+		ae.(*network.ActionExecutor),
+	)
+	return abcicli.(*network.ABCIClient)
 }
 
 func (s *AppContext) AddressCodec() address.Codec {

@@ -26,7 +26,7 @@ func StartGRPCServer(
 	cfgAll *config.Config,
 	app servertypes.Application,
 	metricsProvider node.MetricsProvider,
-	rpcClient *ABCIClient,
+	rpcClient client.CometRPC,
 ) (*grpc.Server, error) {
 	GRPCAddr := cfgAll.Network.Address
 	ln, err := Listen(GRPCAddr)

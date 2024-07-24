@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	cmtconfig "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/libs/bytes"
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
@@ -13,6 +14,7 @@ import (
 	rpctypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	comettypes "github.com/cometbft/cometbft/types"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
 	"mythos/v1/server/config"
@@ -20,7 +22,7 @@ import (
 
 type Environment struct {
 	app          servertypes.Application
-	networkWrap  *ABCIClient
+	networkWrap  client.CometRPC
 	serverConfig *cmtconfig.Config
 	config       *config.Config
 }
@@ -106,7 +108,7 @@ func (env *Environment) BlockchainInfo(
 	minHeight, maxHeight int64,
 ) (*ctypes.ResultBlockchainInfo, error) {
 	fmt.Println("= WS BlockchainInfo")
-	return nil, fmt.Errorf("BlockchainInfo not implemented")
+	return env.networkWrap.BlockchainInfo(context.TODO(), minHeight, maxHeight)
 }
 
 func (env *Environment) Genesis(*rpctypes.Context) (*ctypes.ResultGenesis, error) {
@@ -126,17 +128,20 @@ func (env *Environment) Block(ctx *rpctypes.Context, height *int64) (*ctypes.Res
 
 func (env *Environment) BlockByHash(_ *rpctypes.Context, hash []byte) (*ctypes.ResultBlock, error) {
 	fmt.Println("= WS BlockByHash")
-	return nil, fmt.Errorf("BlockByHash not implemented")
+	return env.networkWrap.BlockByHash(context.TODO(), hash)
 }
 
 func (env *Environment) BlockResults(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultBlockResults, error) {
 	fmt.Println("= WS BlockResults")
-	return nil, fmt.Errorf("BlockResults not implemented")
+	return env.networkWrap.BlockResults(context.TODO(), heightPtr)
 }
 
+// Commit gets block commit at a given height.
+// If no height is provided, it will fetch the commit for the latest block.
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/commit
 func (env *Environment) Commit(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultCommit, error) {
 	fmt.Println("= WS Commit")
-	return nil, fmt.Errorf("Commit not implemented")
+	return env.networkWrap.Commit(context.TODO(), heightPtr)
 }
 
 func (env *Environment) Header(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultHeader, error) {
@@ -151,7 +156,16 @@ func (env *Environment) HeaderByHash(_ *rpctypes.Context, hash bytes.HexBytes) (
 
 func (env *Environment) CheckTx(_ *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultCheckTx, error) {
 	fmt.Println("= WS CheckTx")
-	return nil, fmt.Errorf("CheckTx not implemented")
+	req := &abci.RequestCheckTx{
+		Tx:   tx,
+		Type: abci.CheckTxType_New,
+	}
+	abciclient := env.networkWrap.(*ABCIClient)
+	resp, err := abciclient.CheckTx(context.TODO(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &ctypes.ResultCheckTx{ResponseCheckTx: *resp}, nil
 }
 
 // Tx allows you to query the transaction results. `nil` could mean the
@@ -181,7 +195,7 @@ func (env *Environment) BlockSearch(
 	orderBy string,
 ) (*ctypes.ResultBlockSearch, error) {
 	fmt.Println("= WS BlockSearch")
-	return nil, fmt.Errorf("BlockSearch not implemented")
+	return env.networkWrap.BlockSearch(context.TODO(), query, pagePtr, perPagePtr, orderBy)
 }
 
 func (env *Environment) Validators(
@@ -190,7 +204,7 @@ func (env *Environment) Validators(
 	pagePtr, perPagePtr *int,
 ) (*ctypes.ResultValidators, error) {
 	fmt.Println("= WS Validators")
-	return nil, fmt.Errorf("Validators not implemented")
+	return env.networkWrap.Validators(context.TODO(), heightPtr, pagePtr, perPagePtr)
 }
 
 func (env *Environment) DumpConsensusState(*rpctypes.Context) (*ctypes.ResultDumpConsensusState, error) {
@@ -225,7 +239,7 @@ func (env *Environment) NumUnconfirmedTxs(*rpctypes.Context) (*ctypes.ResultUnco
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Tx/broadcast_tx_commit
 func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
 	fmt.Println("= WS BroadcastTxCommit")
-	return nil, fmt.Errorf("BroadcastTxCommit not implemented")
+	return env.networkWrap.BroadcastTxCommit(context.TODO(), tx)
 }
 
 func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTx, error) {

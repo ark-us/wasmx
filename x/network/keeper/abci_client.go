@@ -13,14 +13,19 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
+	abcicli "github.com/cometbft/cometbft/abci/client"
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtconfig "github.com/cometbft/cometbft/config"
+	cometbftenc "github.com/cometbft/cometbft/crypto/encoding"
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmtquery "github.com/cometbft/cometbft/libs/pubsub/query"
 	"github.com/cometbft/cometbft/libs/pubsub/query/syntax"
@@ -53,7 +58,7 @@ func NewABCIClient(
 	serverConfig *cmtconfig.Config,
 	config *config.Config,
 	actionExecutor *ActionExecutor,
-) *ABCIClient {
+) sdkclient.CometRPC {
 	logger = logger.With("module", "network", "client", "abci")
 	return &ABCIClient{
 		mapp:           mapp,
@@ -190,6 +195,9 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 
 					if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
 						contractAddressStr, err := mapp.AddressCodec().BytesToString(contractAddress)
+						if err != nil {
+							return nil, err
+						}
 						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
 
 						// we sent directly to the contract
@@ -259,8 +267,62 @@ func (c *ABCIClient) BroadcastTxSync(ctx context.Context, tx cmttypes.Tx) (*rpct
 	// }
 }
 
+// Validators gets the validator set at the given block height.
+//
+// If no height is provided, it will fetch the latest validator set. Note the
+// validators are sorted by their voting power - this is the canonical order
+// for the validators in the set as used in computing their Merkle root.
+//
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/validators
 func (c *ABCIClient) Validators(ctx context.Context, height *int64, page, perPage *int) (*rpctypes.ResultValidators, error) {
-	return nil, fmt.Errorf("ABCIClient.Validators not implemented")
+	entry, blockHeight, err := c.GetBlockEntry(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+
+	var bmeta types.TendermintValidators
+	err = c.nk.Codec().UnmarshalJSON(entry.ValidatorInfo, &bmeta)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to decode cmttypes.Validator")
+	}
+
+	count := len(bmeta.Validators)
+	cmtvals := make([]*cmttypes.Validator, count)
+	for i, val := range bmeta.Validators {
+		var pubkey cryptotypes.PubKey
+		err = c.mapp.InterfaceRegistry().UnpackAny(val.PubKey, &pubkey)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert unpack cryptotypes.PubKey")
+		}
+		tmPk, err := cryptocodec.ToCmtProtoPublicKey(pubkey)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert cryptotypes.PubKey to proto")
+		}
+		tmPk2, err := cometbftenc.PubKeyFromProto(tmPk)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert cryptotypes.PubKey from proto")
+		}
+		valaddr, err := hex.DecodeString(val.Address)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to decode hex address")
+		}
+		v := &cmttypes.Validator{
+			Address:          valaddr,
+			PubKey:           tmPk2,
+			VotingPower:      val.VotingPower,
+			ProposerPriority: val.ProposerPriority,
+		}
+		cmtvals[i] = v
+	}
+
+	result := &rpctypes.ResultValidators{
+		BlockHeight: blockHeight,
+		Validators:  cmtvals,
+		Count:       len(cmtvals),
+		Total:       len(cmtvals), // TODO fixme
+	}
+
+	return result, nil
 }
 
 func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
@@ -335,34 +397,9 @@ func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
 // height is nil for latest block
 func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.ResultBlock, error) {
 	c.logger.Debug("ABCIClient.Block", "height", height)
-	blockHeight := int64(0)
-	var err error
-	if height == nil {
-		blockHeight, err = c.LatestBlockHeight(ctx)
-		c.logger.Debug("ABCIClient.Block", "latest height", blockHeight)
-		if err != nil {
-			return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
-		}
-	} else {
-		blockHeight = *height
-	}
-	c.logger.Debug("ABCIClient.Block", "height", blockHeight)
-
-	// get indexed tx
-	key := types.GetBlockKey(blockHeight)
-	resp, err := c.fsmQuery(key)
+	entry, blockHeight, err := c.GetBlockEntry(ctx, height)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed")
-	}
-
-	if len(resp.Data) == 0 {
-		return nil, fmt.Errorf("block (%d) not found", blockHeight)
-	}
-
-	var entry types.BlockEntry
-	err = json.Unmarshal(resp.Data, &entry)
-	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
+		return nil, err
 	}
 
 	var bmeta types.RequestProcessProposalWithMetaInfo
@@ -397,7 +434,7 @@ func (c *ABCIClient) Block(ctx context.Context, height *int64) (*rpctypes.Result
 	// TODO fixme
 	blockId := cmttypes.BlockID{
 		Hash:          b.Hash,
-		PartSetHeader: cmttypes.PartSetHeader{Total: 0, Hash: b.Hash[0:3]},
+		PartSetHeader: cmttypes.PartSetHeader{Total: 1, Hash: b.Hash},
 	}
 
 	txs := make([]cmttypes.Tx, len(b.Txs))
@@ -435,7 +472,22 @@ func (c *ABCIClient) BlockchainInfo(ctx context.Context, minHeight, maxHeight in
 }
 
 func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.ResultCommit, error) {
-	return nil, fmt.Errorf("ABCIClient.Commit not implemented")
+	c.logger.Debug("ABCIClient.Commit", "height", height)
+	block, err := c.Block(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+	lastCommit := &cmttypes.Commit{
+		Height:  block.Block.Height,
+		BlockID: block.BlockID,
+	}
+	nextHeight := block.Block.Height + 1
+	blockNext, err := c.Block(ctx, &nextHeight)
+	if err == nil && blockNext != nil {
+		lastCommit = blockNext.Block.LastCommit
+	}
+
+	return rpctypes.NewResultCommit(&block.Block.Header, lastCommit, true), nil
 }
 
 func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes.ResultTx, error) {
@@ -648,6 +700,74 @@ func (c *ABCIClient) LatestBlockHeight(ctx context.Context) (int64, error) {
 		return 0, nil
 	}
 	return strconv.ParseInt(string(resp.Data), 10, 64)
+}
+
+// API needed for state sync
+
+func (c *ABCIClient) ApplySnapshotChunk(ctx context.Context, req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error) {
+	return c.bapp.ApplySnapshotChunk(req)
+}
+
+func (c *ABCIClient) LoadSnapshotChunk(ctx context.Context, req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error) {
+	return c.bapp.LoadSnapshotChunk(req)
+}
+
+func (c *ABCIClient) OfferSnapshot(ctx context.Context, req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error) {
+	return c.bapp.OfferSnapshot(req)
+}
+
+func (c *ABCIClient) ListSnapshots(ctx context.Context, req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error) {
+	return c.bapp.ListSnapshots(req)
+}
+
+func (c *ABCIClient) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
+	return c.bapp.CheckTx(req)
+}
+
+func (c *ABCIClient) CheckTxAsync(ctx context.Context, req *abci.RequestCheckTx) (*abcicli.ReqRes, error) {
+	resp, err := c.bapp.CheckTx(req)
+	if err != nil {
+		return nil, err
+	}
+	// TODO
+	// return cli.finishAsyncCall(types.ToRequestCheckTx(req), &types.Response{Value: &types.Response_CheckTx{CheckTx: res}}), nil
+	reqres := abcicli.NewReqRes(abci.ToRequestCheckTx(req))
+	reqres.Response = &abci.Response{Value: &abci.Response_CheckTx{CheckTx: resp}}
+	return reqres, nil
+}
+
+// height is nil for latest block
+func (c *ABCIClient) GetBlockEntry(ctx context.Context, height *int64) (*types.BlockEntry, int64, error) {
+	blockHeight := int64(0)
+	var err error
+	if height == nil {
+		blockHeight, err = c.LatestBlockHeight(ctx)
+		c.logger.Debug("ABCIClient.Block", "latest height", blockHeight)
+		if err != nil {
+			return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		}
+	} else {
+		blockHeight = *height
+	}
+	c.logger.Debug("ABCIClient.Block", "height", blockHeight)
+
+	// get indexed tx
+	key := types.GetBlockKey(blockHeight)
+	resp, err := c.fsmQuery(key)
+	if err != nil {
+		return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, blockHeight, fmt.Errorf("block (%d) not found", blockHeight)
+	}
+
+	var entry types.BlockEntry
+	err = json.Unmarshal(resp.Data, &entry)
+	if err != nil {
+		return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
+	}
+	return &entry, blockHeight, nil
 }
 
 func lookForHash(conditions []syntax.Condition) (hash []byte, ok bool, err error) {
