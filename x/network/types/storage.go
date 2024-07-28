@@ -15,7 +15,7 @@ var BLOCK_LAST_INDEX = "block_last_index"
 var BLOCK_INDEX_KEY = "block_"
 var BLOCK_HASH_KEY = "block_by_hash_"
 var TX_INDEXER = "tx_"
-var PARAMS_KEY = "consensus_params"
+var PARAMS_KEY = "consensus_params."
 var DATA_INDEXER = "data_"
 var INTERVAL_ID_KEY = "intervalIdKey"
 var BLOCK_DELAY = "blockTimeout"
@@ -48,6 +48,12 @@ type BlockEntry struct {
 	ValidatorInfo   []byte `json:"validator_info"` // cometbfttypes.Validator
 }
 
+type ConsensusParamsInfo struct {
+	Height            int64  `json:"height"`
+	LastHeightChanged int64  `json:"last_height_changed"`
+	Params            []byte `json:"params"`
+}
+
 func GetTopicDataKey(topic string) string {
 	return DATA_INDEXER + topic
 }
@@ -62,6 +68,10 @@ func GetBlockKey(index int64) string {
 
 func GetLastBlockHeightKey() string {
 	return BLOCK_LAST_INDEX
+}
+
+func GetConsensusParamsKey(index int64) string {
+	return PARAMS_KEY + strconv.Itoa(int(index))
 }
 
 func GetLastIntervalIdKey() string {

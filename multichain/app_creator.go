@@ -32,5 +32,5 @@ type NewAppCreator = func(
 	appOpts AppOptions,
 	g *errgroup.Group,
 	ctx context.Context,
-	startChainApis func(string, *menc.ChainConfig, mctx.NodePorts) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error),
+	startChainApis func(string, *menc.ChainConfig, mctx.NodePorts) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error),
 ) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp)

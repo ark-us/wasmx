@@ -25,7 +25,9 @@ import (
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtcfg "github.com/cometbft/cometbft/config"
 
+	srvconfig "mythos/v1/server/config"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 
@@ -90,6 +92,10 @@ type MythosApp interface {
 	SimulationManager() *module.SimulationManager
 	TxConfig() client.TxConfig
 	ValidatorAddressCodec() address.Codec
+
+	GetServerConfig() *srvconfig.Config
+	GetTendermintConfig() *cmtcfg.Config
+	GetRpcClient() client.CometRPC
 
 	// baseapp
 	Query(context.Context, *abci.RequestQuery) (*abci.ResponseQuery, error)

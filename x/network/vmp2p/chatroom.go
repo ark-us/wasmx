@@ -98,7 +98,7 @@ func readLoop(cr *ChatRoom) {
 		cm := &ChatRoomMessage{
 			ContractMsg: msg.Data,
 			RoomId:      cr.topicString,
-			Sender:      NodeInfo{Id: msg.ReceivedFrom.String()},
+			Sender:      NodeInfo{Ip: msg.ReceivedFrom.String()},
 			Timestamp:   time.Now(),
 			ProtocolID:  cr.protocolID,
 		}

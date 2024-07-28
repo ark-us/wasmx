@@ -70,6 +70,16 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 
 	c.Logger.Debug("p2p received message", "msg", string(netmsgbz), "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId)
 
+	// handle custom messages
+	p2pctx, err := GetP2PContext(c.Context)
+	if err == nil {
+		handler := p2pctx.GetCustomHandler(contractAddress)
+		if handler != nil {
+			handler(netmsg, contractAddress, senderAddress)
+			return
+		}
+	}
+
 	// TODO roles should be bech32 compatible
 	contractAddressPrefixed, err := c.Context.CosmosHandler.GetAddressOrRole(c.Context.Ctx, contractAddress)
 	if err == nil {

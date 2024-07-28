@@ -310,9 +310,15 @@ require (
 )
 
 replace (
-	cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0
+	cosmossdk.io/store => ../cosmos-sdk/store
+	// cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0
+	github.com/cosmos/iavl => ../iavl
+
+	github.com/cometbft/cometbft => ../cometbft
+	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
+
 	// github.com/loredanacirstea/cosmos-sdk@5ef815b915a4892e8165f5d496c360edac99922c
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240709214022-5ef815b915a4
+	// github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240709214022-5ef815b915a4
 
 	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 

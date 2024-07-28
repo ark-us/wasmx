@@ -4,8 +4,10 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	"encoding/hex"
 	"encoding/json"
 
 	"bufio"
@@ -31,6 +33,8 @@ import (
 
 	vmtypes "mythos/v1/x/wasmx/vm"
 	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+
+	mcfg "mythos/v1/config"
 )
 
 func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -432,6 +436,110 @@ func DisconnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, para
 	return returns, wasmedge.Result_Success
 }
 
+// TODO this is temporary, to be replaced with consensus api methods like ApplySnapshotChunk, LoadSnapshotChunk, OfferSnapshot, ListSnapshots
+func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	response := &StartStateSyncReqResponse{Error: ""}
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StartStateSyncReqRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Logger.Error("state sync failed", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Logger.Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+
+	app := ctx.Context.App.(mcfg.MythosApp)
+
+	stream, found := p2pctx.GetPeer(req.ProtocolId, req.PeerAddress)
+	if !found {
+		stream, err = connectAndListenPeerInternal(ctx, ConnectPeerRequest{ProtocolId: req.ProtocolId, Peer: req.PeerAddress})
+		if err != nil {
+			ctx.Logger.Error("connect to peer failed", "peer", req.PeerAddress, "error", err.Error())
+		}
+	}
+	if stream != nil {
+		tndcfg := app.GetTendermintConfig()
+		tndcfg.StateSync.TrustHash = strings.ToUpper(hex.EncodeToString(req.Hash))
+		tndcfg.StateSync.TrustHeight = req.Height
+		err = startStateSyncRequest(ctx.Logger, tndcfg, ctx.Context.Ctx.ChainID(), app.GetBaseApp(), app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
+		if err != nil {
+			response.Error = err.Error()
+		}
+	} else {
+		response.Error = fmt.Sprintf("state sync failed: connect to peer failed: %s: %s", req.PeerAddress, err.Error())
+	}
+
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
+func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	response := &StartStateSyncRespResponse{Error: ""}
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StartStateSyncRespRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Logger.Error("state sync failed", "error", err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	p2pctx, err := GetP2PContext(ctx.Context)
+	if err != nil {
+		ctx.Logger.Error("p2pcontext not found")
+		return nil, wasmedge.Result_Fail
+	}
+
+	app := ctx.Context.App.(mcfg.MythosApp)
+
+	stream, found := p2pctx.GetPeer(req.ProtocolId, req.PeerAddress)
+	if !found {
+		stream, err = connectAndListenPeerInternal(ctx, ConnectPeerRequest{ProtocolId: req.ProtocolId, Peer: req.PeerAddress})
+		if err != nil {
+			ctx.Logger.Error("connect to peer failed", "peer", req.PeerAddress, "error", err.Error())
+		}
+	}
+	if stream != nil {
+		err = startStateSyncResponse(ctx.Logger, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), app.GetBaseApp(), app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
+		if err != nil {
+			response.Error = err.Error()
+		}
+	} else {
+		response.Error = fmt.Sprintf("state sync failed: connect to peer failed: %s: %s", req.PeerAddress, err.Error())
+	}
+
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	logger := ctx_.GetContext().Logger().With("chain_id", ctx_.GetContext().ChainID())
 	ctx := &Context{Context: ctx_, Logger: logger}
@@ -454,6 +562,9 @@ func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	env.AddFunction("CloseNode", wasmedge.NewFunction(functype__i32, CloseNode, ctx, 0))
 	env.AddFunction("DisconnectChatRoom", wasmedge.NewFunction(functype_i32_i32, DisconnectChatRoom, ctx, 0))
 	env.AddFunction("DisconnectPeer", wasmedge.NewFunction(functype_i32_i32, DisconnectPeer, ctx, 0))
+
+	env.AddFunction("StartStateSyncRequest", wasmedge.NewFunction(functype_i32_i32, StartStateSyncRequest, ctx, 0))
+	env.AddFunction("StartStateSyncResponse", wasmedge.NewFunction(functype_i32_i32, StartStateSyncResponse, ctx, 0))
 	return env
 }
 
@@ -510,7 +621,12 @@ func connectAndListenPeerInternal(ctx *Context, req ConnectPeerRequest) (network
 	stream, err := connectPeerInternal(*p2pctx.Node, req.ProtocolId, req.Peer)
 	if err != nil {
 		ctx.Logger.Info("connect to peer failed", "peer", req.Peer, "protocol_id", req.ProtocolId, "error", err.Error())
-		return nil, err
+		// try again
+		stream, err = connectPeerInternal(*p2pctx.Node, req.ProtocolId, req.Peer)
+		if err != nil {
+			ctx.Logger.Info("connect to peer failed", "peer", req.Peer, "protocol_id", req.ProtocolId, "error", err.Error())
+			return nil, err
+		}
 	}
 	p2pctx.AddPeer(req.ProtocolId, req.Peer, stream)
 

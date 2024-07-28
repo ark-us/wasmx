@@ -22,10 +22,10 @@ type MultiChainApp struct {
 	Apps      map[string]interface{}
 	ChainIds  []string
 	NewApp    func(chainId string, chainCfg *menc.ChainConfig) MythosApp
-	StartAPIs func(chainId string, chainCfg *menc.ChainConfig, ports mctx.NodePorts) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error)
+	StartAPIs func(chainId string, chainCfg *menc.ChainConfig, ports mctx.NodePorts) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error)
 }
 
-func (m *MultiChainApp) SetStartAPIs(startAPIs func(chainId string, chainCfg *menc.ChainConfig, ports mctx.NodePorts) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error)) {
+func (m *MultiChainApp) SetStartAPIs(startAPIs func(chainId string, chainCfg *menc.ChainConfig, ports mctx.NodePorts) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error)) {
 	m.StartAPIs = startAPIs
 }
 

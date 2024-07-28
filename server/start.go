@@ -497,7 +497,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 			WasmxNetworkP2P:  int32(5010+i*portstep) + subchainPortOffset,
 			TendermintRpc:    int32(26670+i*portstep) + subchainPortOffset,
 		}
-		mythosapp_, csvrCtx, _, cmsrvconfig, ctndcfg, err := apictx.StartChainApis(chainId, chainCfg, ports)
+		mythosapp_, csvrCtx, _, cmsrvconfig, ctndcfg, rpcClient, err := apictx.StartChainApis(chainId, chainCfg, ports)
 		if err != nil {
 			panic(err)
 		}
@@ -509,6 +509,10 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		bapp := mythosapp.GetBaseApp()
 		privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
 		genesisDocProvider := getGenDocProvider2(ctndcfg)
+
+		mythosapp.SetServerConfig(cmsrvconfig)
+		mythosapp.SetTendermintConfig(ctndcfg)
+		mythosapp.SetRpcClient(rpcClient)
 
 		// initialize chain if this is block 0
 		// init all chains first and start them afterwards
@@ -532,6 +536,8 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		logger := svrCtx.Logger.With("chain_id", chainId)
 
 		// start the node
+		// TODO send the configs to the smart contract
+		// TODO send cmsrvconfig, ctndcfg with StartNode hook
 		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
 		if err != nil {
 			return err
@@ -630,7 +636,7 @@ func (ac *APICtx) StartChainApis(
 	chainId string,
 	chainCfg *menc.ChainConfig,
 	ports mctx.NodePorts,
-) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error) {
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
 	var mythosapp_ mcfg.MythosApp
 	found := false
 	iapp, err := ac.multiapp.GetApp(chainId)
@@ -642,7 +648,7 @@ func (ac *APICtx) StartChainApis(
 	}
 	mythosapp, ok := mythosapp_.(*mapp.App)
 	if !ok {
-		return nil, nil, ac.clientCtx, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
+		return nil, nil, ac.clientCtx, nil, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
 	}
 	app := servertypes.Application(mythosapp)
 	bapp := mythosapp.GetBaseApp()
@@ -653,7 +659,7 @@ func (ac *APICtx) StartChainApis(
 
 	cmsrvconfig, ctndcfg, err := cloneConfigs(&ac.msrvconfig, ac.tndcfg)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, err
+		return nil, nil, ac.clientCtx, nil, nil, nil, err
 	}
 
 	// TODO extract the port base ; define port family range in the toml files
@@ -705,12 +711,12 @@ func (ac *APICtx) StartChainApis(
 
 	grpcSrv, cclientCtx, err := startGrpcServer(ac.ctx, ac.g, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, err
+		return nil, nil, ac.clientCtx, nil, nil, nil, err
 	}
 
 	err = startAPIServer(ac.ctx, ac.g, cmsrvconfig.Config, cclientCtx, csvrCtx, app, grpcSrv, ac.metrics)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, err
+		return nil, nil, ac.clientCtx, nil, nil, nil, err
 	}
 
 	// var (
@@ -770,7 +776,7 @@ func (ac *APICtx) StartChainApis(
 		// 	}
 		// }()
 	}
-	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, nil
+	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, nil
 }
 
 func cloneConfigs(msrvconfig *srvconfig.Config, tndcfg *cmtcfg.Config) (*srvconfig.Config, *cmtcfg.Config, error) {

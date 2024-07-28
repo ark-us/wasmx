@@ -160,6 +160,7 @@ import (
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtcfg "github.com/cometbft/cometbft/config"
 
 	ante "mythos/v1/app/ante"
 
@@ -196,6 +197,8 @@ import (
 	cfg "mythos/v1/config"
 
 	mcodec "mythos/v1/codec"
+
+	srvconfig "mythos/v1/server/config"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport
@@ -311,6 +314,10 @@ type App struct {
 	addrCodec address.Codec
 
 	minGasPrices sdk.DecCoins
+
+	srvconfig *srvconfig.Config
+	tndcfg    *cmtcfg.Config
+	rpcClient client.CometRPC
 }
 
 // New returns a reference to an initialized blockchain app
@@ -464,6 +471,7 @@ func NewApp(
 		govAuthorityAddr,
 		runtime.EventService{},
 	)
+	// TODO remove the params store & use the wasmx-blocks contract-based storage
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
 
 	// add capability keeper and ScopeToModule for ibc module
@@ -1294,6 +1302,30 @@ func (app *App) GetTxConfig() client.TxConfig {
 
 func (app *App) GetChainCfg() *menc.ChainConfig {
 	return app.chainCfg
+}
+
+func (app *App) SetServerConfig(srvconfig *srvconfig.Config) {
+	app.srvconfig = srvconfig
+}
+
+func (app *App) GetServerConfig() *srvconfig.Config {
+	return app.srvconfig
+}
+
+func (app *App) SetTendermintConfig(tndcfg *cmtcfg.Config) {
+	app.tndcfg = tndcfg
+}
+
+func (app *App) GetTendermintConfig() *cmtcfg.Config {
+	return app.tndcfg
+}
+
+func (app *App) SetRpcClient(rpcClient client.CometRPC) {
+	app.rpcClient = rpcClient
+}
+
+func (app *App) GetRpcClient() client.CometRPC {
+	return app.rpcClient
 }
 
 // AutoCliOpts returns the autocli options for the app.

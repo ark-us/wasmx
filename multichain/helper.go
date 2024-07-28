@@ -88,6 +88,6 @@ func NopStartChainApis(
 	chainId string,
 	chainCfg *menc.ChainConfig,
 	ports mctx.NodePorts,
-) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, error) {
-	return nil, nil, client.Context{}, nil, nil, nil
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
+	return nil, nil, client.Context{}, nil, nil, nil, nil
 }
