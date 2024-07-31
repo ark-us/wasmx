@@ -1,6 +1,9 @@
 package vmp2p
 
 import (
+	"encoding/json"
+	"fmt"
+
 	sm "github.com/cometbft/cometbft/state"
 	cmttypes "github.com/cometbft/cometbft/types"
 )
@@ -72,5 +75,15 @@ func (s BlockStore) DeleteLatestBlock() error {
 }
 
 func (s BlockStore) Close() error {
+	return nil
+}
+
+func (s BlockStore) SaveSeenCommit(height int64, seenCommit *cmttypes.Commit) error {
+	seenCommitbz, err := json.Marshal(seenCommit)
+	fmt.Println("---BlockStore.SaveSeenCommit--", err, string(seenCommitbz))
+	if err != nil {
+		return err
+	}
+	// TODO commitAfterStateSync
 	return nil
 }

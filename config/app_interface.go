@@ -10,6 +10,7 @@ import (
 	address "cosmossdk.io/core/address"
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -102,4 +103,7 @@ type MythosApp interface {
 	Query(context.Context, *abci.RequestQuery) (*abci.ResponseQuery, error)
 	GRPCQueryRouter() *baseapp.GRPCQueryRouter
 	MsgServiceRouter() *baseapp.MsgServiceRouter
+
+	// debugging
+	Db() dbm.DB
 }

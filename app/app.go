@@ -319,6 +319,8 @@ type App struct {
 	srvconfig *srvconfig.Config
 	tndcfg    *cmtcfg.Config
 	rpcClient client.CometRPC
+
+	db dbm.DB
 }
 
 // New returns a reference to an initialized blockchain app
@@ -434,6 +436,7 @@ func NewApp(
 		cmetaKeys:         cmetaKeys,
 		chainCfg:          chainCfg,
 		minGasPrices:      minGasPrices,
+		db:                db,
 	}
 
 	valCodec := mcodec.NewValBech32Codec(chainCfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -1434,6 +1437,10 @@ func (app *App) AccBech32Codec() mcodec.AccBech32Codec {
 
 func (app *App) MinGasPrices() sdk.DecCoins {
 	return app.minGasPrices
+}
+
+func (app *App) Db() dbm.DB {
+	return app.db
 }
 
 func Exit(s string) {

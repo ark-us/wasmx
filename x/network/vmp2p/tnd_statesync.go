@@ -26,6 +26,7 @@ import (
 
 	// "github.com/cosmos/gogoproto/proto"
 
+	mcfg "mythos/v1/config"
 	networktypes "mythos/v1/x/network/types"
 )
 
@@ -44,7 +45,6 @@ type StateSyncContext struct {
 }
 
 func startStateSyncRequest(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
-	fmt.Println("---startStateSync--")
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
@@ -52,6 +52,12 @@ func startStateSyncRequest(ctx *Context, ctndcfg *cmtcfg.Config, chainId string,
 	if err != nil {
 		return err
 	}
+
+	err = resetStoresToVersion0(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = node.StartStateSync(ssctx.stateSyncReactor, ssctx.bcReactor, ssctx.stateSyncProvider, ctndcfg.StateSync, ssctx.stateStore, nil, ssctx.stateSyncGenesis)
 	if err != nil {
 		return fmt.Errorf("failed to start state sync: %w", err)
@@ -233,5 +239,15 @@ func (ssctx *StateSyncContext) handleStateSyncMessageWithError(netmsg P2PMessage
 	// 	ChannelID: msgwrap.ChannelID,
 	// }
 	// ssctx.stateSyncReactor.Receive(e)
+	return nil
+}
+
+func resetStoresToVersion0(ctx *Context) error {
+	mapp := ctx.Context.App.(mcfg.MythosApp)
+
+	err := mapp.GetBaseApp().ResetStores()
+	if err != nil {
+		return err
+	}
 	return nil
 }
