@@ -43,7 +43,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
 	tStoreKey := storetypes.NewTransientStoreKey(types.TStoreKey)
-	mStoreKey := storetypes.NewConsensuslessStoreKey(types.MetaConsensusStoreKey)
+	mStoreKey := storetypes.NewConsensusMetaStoreKey(types.MetaConsensusStoreKey)
 	sStoreKey := storetypes.NewConsensuslessStoreKey(types.SingleConsensusStoreKey)
 
 	db := dbm.NewMemDB()
@@ -52,7 +52,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
 	stateStore.MountStoreWithDB(memStoreKey, storetypes.StoreTypeMemory, nil)
 	stateStore.MountStoreWithDB(tStoreKey, storetypes.StoreTypeTransient, db)
-	stateStore.MountStoreWithDB(mStoreKey, storetypes.StoreTypeConsensusless, db)
+	stateStore.MountStoreWithDB(mStoreKey, storetypes.StoreTypeConsensusMeta, db)
 	stateStore.MountStoreWithDB(sStoreKey, storetypes.StoreTypeConsensusless, db)
 	require.NoError(t, stateStore.LoadLatestVersion())
 

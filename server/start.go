@@ -474,17 +474,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 			panic(err)
 		}
 		// TODO use ports set in toml file; family of ports
-		ports := mctx.NodePorts{
-			CosmosRestApi:    int32(1317+i) + portOffset,
-			CosmosGrpc:       int32(9090+i) + portOffset,
-			WasmxNetworkGrpc: int32(8090+i) + portOffset,
-			WebsrvWebServer:  int32(9900+i) + portOffset,
-			EvmJsonRpc:       int32(8545+i*2) + portOffset,
-			EvmJsonRpcWs:     int32(8546+i) + portOffset,
-			Pprof:            int32(6060+i) + portOffset,
-			WasmxNetworkP2P:  int32(5001+i) + portOffset,
-			TendermintRpc:    int32(26657+i) + portOffset,
-		}
+		ports := mctx.GetInitialChainNodePorts(int32(i), portOffset)
 		// ports for subchains
 		initialPorts := mctx.NodePorts{
 			CosmosRestApi:    int32(1330+i*portstep) + subchainPortOffset,

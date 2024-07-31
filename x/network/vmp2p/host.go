@@ -37,6 +37,16 @@ import (
 	mcfg "mythos/v1/config"
 )
 
+func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, responsebz []byte) ([]interface{}, wasmedge.Result) {
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
@@ -240,6 +250,7 @@ func SendMessageToPeers(_context interface{}, callframe *wasmedge.CallingFrame, 
 }
 
 func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	response := ConnectChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
@@ -248,17 +259,25 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 	var req ConnectChatRoomRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
-		// TODO don't fail here, catch & return error
-		return nil, wasmedge.Result_Fail
+		response.Error = fmt.Sprintf("send message to chat room failed: %s", err.Error())
+		ctx.Logger.Error(response.Error)
+		responsebz, err := json.Marshal(response)
+		if err != nil {
+			return nil, wasmedge.Result_Fail
+		}
+		return returnResult(ctx, callframe, responsebz)
 	}
 	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 	// TODO send error to contract
 	if err != nil {
 		if err.Error() != ERROR_CTX_CANCELED {
+			response.Error = fmt.Sprintf("error chat room connection: topic %s: %s", req.Topic, err.Error())
 			ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
-			// TODO don't fail here, catch & return error
-			return nil, wasmedge.Result_Fail
+			responsebz, err := json.Marshal(response)
+			if err != nil {
+				return nil, wasmedge.Result_Fail
+			}
+			return returnResult(ctx, callframe, responsebz)
 		}
 		// remove chat room; it will be reconnected when needed
 		p2pctx, err := GetP2PContext(ctx.Context)
@@ -266,8 +285,6 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 			p2pctx.DeleteChatRoom(req.ProtocolId, req.Topic)
 		}
 	}
-
-	response := ConnectChatRoomResponse{}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -282,6 +299,7 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 }
 
 func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	response := SendMessageToChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
 	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
@@ -315,15 +333,17 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 			}
 		}
 	}
-	// TODO send errors to contract
 	if cr != nil {
 		err = sendMessageToChatRoomInternal(ctx, cr, req)
 		if err != nil {
-			return nil, wasmedge.Result_Fail
+			response.Error = err.Error()
+			responsebz, err := json.Marshal(response)
+			if err != nil {
+				return nil, wasmedge.Result_Fail
+			}
+			return returnResult(ctx, callframe, responsebz)
 		}
 	}
-
-	response := SendMessageToChatRoomResponse{}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -465,11 +485,12 @@ func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFram
 			ctx.Logger.Error("connect to peer failed", "peer", req.PeerAddress, "error", err.Error())
 		}
 	}
+
 	if stream != nil {
 		tndcfg := app.GetTendermintConfig()
 		tndcfg.StateSync.TrustHash = strings.ToUpper(hex.EncodeToString(req.Hash))
 		tndcfg.StateSync.TrustHeight = req.Height
-		err = startStateSyncRequest(ctx.Logger, tndcfg, ctx.Context.Ctx.ChainID(), app.GetBaseApp(), app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
+		err = startStateSyncRequest(ctx, tndcfg, ctx.Context.Ctx.ChainID(), app.GetBaseApp(), app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
 		if err != nil {
 			response.Error = err.Error()
 		}
@@ -519,7 +540,7 @@ func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFra
 		}
 	}
 	if stream != nil {
-		err = startStateSyncResponse(ctx.Logger, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), app.GetBaseApp(), app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
+		err = startStateSyncResponse(ctx, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), app.GetBaseApp(), app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
 		if err != nil {
 			response.Error = err.Error()
 		}

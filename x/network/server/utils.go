@@ -181,3 +181,26 @@ func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	}
 	return nil
 }
+
+func ConsensusTx(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, msg []byte) error {
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+
+	actionExecutor := mythosapp.GetActionExecutor()
+
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -185,7 +185,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 					}
 				}
 				// }
-				// if consensusless contract -> just execute it
+				// if consensusless or consensusmeta contract -> just execute it
 				// whitelist of contracts exposed like this - just chat
 				if len(contractAddress.Bytes()) > 0 {
 					contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
@@ -198,7 +198,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 						if err != nil {
 							return nil, err
 						}
-						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
+						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless or consensusmeta contract", "address", contractAddressStr)
 
 						// we sent directly to the contract
 						rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{

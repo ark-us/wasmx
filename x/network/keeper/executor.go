@@ -134,7 +134,7 @@ func CreateQueryContext(app mcfg.BaseApp, logger log.Logger, height int64, prove
 func commitCtx(mythosapp mcfg.MythosApp, sdkCtx sdk.Context, commitCacheCtx func(), ctxcachems storetypes.CacheMultiStore) error {
 	commitCacheCtx()
 
-	origtstore := ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.MetaConsensusStoreKey))
+	origtstore := ctxcachems.GetStore(mythosapp.GetCMetaKey(wasmxtypes.MetaConsensusStoreKey))
 	origtstore.(storetypes.CacheWrap).Write()
 
 	origtstore = ctxcachems.GetStore(mythosapp.GetCLessKey(wasmxtypes.SingleConsensusStoreKey))

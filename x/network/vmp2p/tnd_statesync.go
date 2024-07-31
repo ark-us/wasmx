@@ -19,7 +19,6 @@ import (
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
 
-	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -44,13 +43,12 @@ type StateSyncContext struct {
 	onReceive         func(chID byte, msgBytes []byte)
 }
 
-func startStateSyncRequest(sdklogger log.Logger, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
+func startStateSyncRequest(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
 	fmt.Println("---startStateSync--")
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
-
-	ssctx, err := initializeStateSync(sdklogger, ctndcfg, chainId, bapp, rpcClient, p2pctx, protocolId, peeraddress, stream)
+	ssctx, err := initializeStateSync(ctx, ctndcfg, chainId, bapp, rpcClient, p2pctx, protocolId, peeraddress, stream)
 	if err != nil {
 		return err
 	}
@@ -61,23 +59,23 @@ func startStateSyncRequest(sdklogger log.Logger, ctndcfg *cmtcfg.Config, chainId
 	return nil
 }
 
-func startStateSyncResponse(sdklogger log.Logger, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
+func startStateSyncResponse(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
 	fmt.Println("---startStateSyncResponse--")
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
-	_, err := initializeStateSync(sdklogger, ctndcfg, chainId, bapp, rpcClient, p2pctx, protocolId, peeraddress, stream)
+	_, err := initializeStateSync(ctx, ctndcfg, chainId, bapp, rpcClient, p2pctx, protocolId, peeraddress, stream)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func initializeStateSync(sdklogger log.Logger, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) (*StateSyncContext, error) {
+func initializeStateSync(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) (*StateSyncContext, error) {
 	// TODO store peer address, to be checked when we receive state sync messages
 	// add custom handler
 	fmt.Println("---startStateSync--")
-
+	sdklogger := ctx.Logger
 	peeraddr, err := multiaddr.NewMultiaddr(peeraddress)
 	if err != nil {
 		return nil, err
@@ -112,7 +110,12 @@ func initializeStateSync(sdklogger log.Logger, ctndcfg *cmtcfg.Config, chainId s
 	}
 
 	var stateSyncProvider statesync.StateProvider
-	stateStore := StateStore{}
+	stateStore := StateStore{ctx: ctx}
+
+	// stateStore := sm.NewStore(stateDB, sm.StoreOptions{
+	// 	DiscardABCIResponses: ctndcfg.Storage.DiscardABCIResponses,
+	// })
+
 	// TODO get the current state from contract
 	stateSyncGenesis := sm.State{
 		ChainID: chainId,

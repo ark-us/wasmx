@@ -16,6 +16,8 @@ const (
 	TStoreKey = "transient_network"
 
 	CLessStoreKey = "consensusless_network"
+
+	CMetaStoreKey = "consensusmeta_network"
 )
 
 const (

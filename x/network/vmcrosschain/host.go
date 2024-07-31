@@ -107,7 +107,7 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 
 // TODO API can only be used by core contracts
 // like consensus, lobby, etc
-// internal communication with private chains, like level0, or between consensusless
+// internal communication with private chains, like level0, or between consensusless / consensusmeta
 // contracts on different chains, which do not require determinism
 // executeCrossChainTxNonDeterministic(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -127,7 +127,7 @@ func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmed
 		return returnResult(ctx, callframe, resp)
 	}
 
-	// TODO check to & from are consensusless contracts
+	// TODO check to & from are consensusless / consensusmeta? contracts
 	// contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
 
 	// get subchainapp

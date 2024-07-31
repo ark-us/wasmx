@@ -312,15 +312,15 @@ require (
 replace (
 	cosmossdk.io/store => ../cosmos-sdk/store
 	// cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20240426185659-e7b6e142f9f0
-	github.com/cosmos/iavl => ../iavl
-
 	github.com/cometbft/cometbft => ../cometbft
-	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 
-	// github.com/loredanacirstea/cosmos-sdk@5ef815b915a4892e8165f5d496c360edac99922c
-	// github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240709214022-5ef815b915a4
+	// github.com/loredanacirstea/cosmos-sdk@f323956de59fe10b1acd79d5470c44a655325c90
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240729223227-f323956de59f
 
 	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
+
+	// github.com/loredanacirstea/cosmos-iavl@822fc0b7551e0309633bd5e7925cc7847aa61ec5
+	github.com/cosmos/iavl => github.com/loredanacirstea/cosmos-iavl v1.1.3-0.20240729214938-822fc0b7551e
 
 	github.com/cosmos/ibc-go/v8 => github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19
 

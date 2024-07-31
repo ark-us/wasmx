@@ -1294,6 +1294,9 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("create2Account", wasmedge.NewFunction(functype_i32_i32, wasmxCreate2Account, context, 0))
 
 	env.AddFunction("MerkleHash", wasmedge.NewFunction(functype_i32_i32, merkleHash, context, 0))
+	// TODO
+	// env.AddFunction("ProtoMarshal", wasmedge.NewFunction(functype__i32, ProtoMarshal, context, 0))
+	// env.AddFunction("ProtoUnmarshal", wasmedge.NewFunction(functype__i32, ProtoUnmarshal, context, 0))
 
 	env.AddFunction("LoggerInfo", wasmedge.NewFunction(functype_i32_, wasmxLoggerInfo, context, 0))
 	env.AddFunction("LoggerError", wasmedge.NewFunction(functype_i32_, wasmxLoggerError, context, 0))

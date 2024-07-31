@@ -1,7 +1,7 @@
 version: v1
 name: buf.build/ark-us/wasmx
 deps:
-  - buf.build/cometbft/cometbft:4a62c99d422068a5165429b62a7eb824df46cca9
+  - buf.build/cometbft/cometbft:151956229550209d8a1946a4b02a8ed5c4069d78
   - buf.build/cosmos/cosmos-sdk:8a78b2f770c946bfa96c3e94e6b4755f
   - buf.build/cosmos/cosmos-proto
   - buf.build/cosmos/gogo-proto

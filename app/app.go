@@ -258,6 +258,7 @@ type App struct {
 	keys      map[string]*storetypes.KVStoreKey
 	tkeys     map[string]*storetypes.TransientStoreKey
 	memKeys   map[string]*storetypes.MemoryStoreKey
+	cmetaKeys map[string]*storetypes.ConsensusMetaStoreKey
 	clessKeys map[string]*storetypes.ConsensuslessStoreKey
 
 	// keepers
@@ -409,7 +410,8 @@ func NewApp(
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramsTStoreKey, wasmxTStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitiesMemStoreKey, wasmxMemStoreKey)
-	clessKeys := storetypes.NewConsensuslessStoreKeys(wasmxMetaConsensusStoreKey, wasmxSingleConsensusStoreKey)
+	clessKeys := storetypes.NewConsensuslessStoreKeys(wasmxSingleConsensusStoreKey)
+	cmetaKeys := storetypes.NewConsensusMetaStoreKeys(wasmxMetaConsensusStoreKey)
 
 	// register streaming services
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -429,6 +431,7 @@ func NewApp(
 		goRoutineGroup:    goRoutineGroup,
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
+		cmetaKeys:         cmetaKeys,
 		chainCfg:          chainCfg,
 		minGasPrices:      minGasPrices,
 	}
@@ -499,7 +502,7 @@ func NewApp(
 		keys[wasmxStoreKey],
 		memKeys[wasmxMemStoreKey],
 		tkeys[wasmxTStoreKey],
-		clessKeys[wasmxMetaConsensusStoreKey],
+		cmetaKeys[wasmxMetaConsensusStoreKey],
 		clessKeys[wasmxSingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		// TODO?
@@ -985,6 +988,7 @@ func NewApp(
 	app.MountTransientStores(tkeys)
 	app.MountMemoryStores(memKeys)
 	app.MountConsensuslessStores(clessKeys)
+	app.MountConsensusMetaStores(cmetaKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -1212,6 +1216,11 @@ func (app *App) GetMKey(storeKey string) *storetypes.MemoryStoreKey {
 func (app *App) GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey {
 	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
 	return app.clessKeys[key]
+}
+
+func (app *App) GetCMetaKey(storeKey string) *storetypes.ConsensusMetaStoreKey {
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.cmetaKeys[key]
 }
 
 // GetMemKey returns the MemStoreKey for the provided mem key.

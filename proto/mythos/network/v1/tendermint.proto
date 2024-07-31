@@ -7,7 +7,6 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/any.proto";
 import "cosmos_proto/cosmos.proto";
 import "tendermint/abci/types.proto";
-
 //----------------------------------------
 // Request types
 
@@ -106,4 +105,9 @@ message TendermintValidator {
 
 message TendermintValidators {
   repeated TendermintValidator validators = 1 [(gogoproto.nullable) = false];
+}
+
+message ValidatorSet {
+  repeated TendermintValidator validators = 1 [(gogoproto.nullable) = false];
+  TendermintValidator proposer = 2 [(gogoproto.nullable) = false];
 }

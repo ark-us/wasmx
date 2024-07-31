@@ -117,7 +117,9 @@ type ConnectChatRoomRequest struct {
 	Topic      string `json:"topic"`
 }
 
-type ConnectChatRoomResponse struct{}
+type ConnectChatRoomResponse struct {
+	Error string `json:"error"`
+}
 
 type SendMessageToChatRoomRequest struct {
 	Contract   string `json:"contract"`
@@ -127,7 +129,9 @@ type SendMessageToChatRoomRequest struct {
 	Topic      string `json:"topic"`
 }
 
-type SendMessageToChatRoomResponse struct{}
+type SendMessageToChatRoomResponse struct {
+	Error string `json:"error"`
+}
 
 type SendMessageRequest struct {
 	Contract   string `json:"contract"`

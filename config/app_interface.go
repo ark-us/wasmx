@@ -64,6 +64,7 @@ type MythosApp interface {
 	GetActionExecutor() ActionExecutor
 	GetBaseApp() *baseapp.BaseApp
 	GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey
+	GetCMetaKey(storeKey string) *storetypes.ConsensusMetaStoreKey
 	GetChainCfg() *menc.ChainConfig
 	GetGoContextParent() context.Context
 	GetGoRoutineGroup() *errgroup.Group
