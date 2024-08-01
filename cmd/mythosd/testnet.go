@@ -692,6 +692,7 @@ func initTestnetFilesInternal(
 	}
 	networkIpsStr := strings.Join(networkIps, ",")
 	networkIpsStr = strings.Trim(networkIpsStr, ",")
+	// leaderURI is last
 	if leaderURI != "" {
 		networkIpsStr = networkIpsStr + "," + leaderURI
 	}

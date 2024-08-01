@@ -28,6 +28,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtcfg "github.com/cometbft/cometbft/config"
 
+	mctx "mythos/v1/context"
 	srvconfig "mythos/v1/server/config"
 	networktypes "mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -44,7 +45,6 @@ type ActionExecutor interface {
 }
 
 type NetworkKeeper interface {
-
 	// WasmxWrapper
 	ExecuteContract(ctx sdk.Context, msg *networktypes.MsgExecuteContract) (*networktypes.MsgExecuteContractResponse, error)
 	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
@@ -54,9 +54,27 @@ type NetworkKeeper interface {
 	Codec() codec.Codec
 }
 
+type WasmxKeeper interface {
+	GetCodeInfo(ctx sdk.Context, codeID uint64) *wasmxtypes.CodeInfo
+	IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, wasmxtypes.ContractInfo) bool)
+	IterateCodeInfos(ctx sdk.Context, cb func(uint64, wasmxtypes.CodeInfo) bool)
+	ExecuteContractInstantiationInternal(
+		ctx sdk.Context,
+		codeID uint64,
+		codeInfo *wasmxtypes.CodeInfo,
+		creator mcodec.AccAddressPrefixed,
+		contractAddress mcodec.AccAddressPrefixed,
+		storageType wasmxtypes.ContractStorageType,
+		initMsg []byte,
+		deposit sdk.Coins,
+		label string,
+	) (wasmxtypes.ContractResponse, uint64, error)
+}
+
 type MythosApp interface {
 	AddressCodec() address.Codec
 	AppCodec() codec.Codec
+	JSONCodec() codec.JSONCodec
 	BeginBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (sdk.BeginBlock, error)
 	BlockedModuleAccountAddrs() map[string]bool
 	ConsensusAddressCodec() address.Codec
@@ -75,6 +93,7 @@ type MythosApp interface {
 	GetMemKey(storeKey string) *storetypes.MemoryStoreKey
 	GetMultiChainApp() (*MultiChainApp, error)
 	GetNetworkKeeper() NetworkKeeper
+	GetWasmxKeeper() WasmxKeeper
 	// GetScopedIBCKeeper() capabilitykeeper.ScopedKeeper
 	GetStakingKeeper() ibctestingtypes.StakingKeeper
 	GetSubspace(moduleName string) paramstypes.Subspace
@@ -104,6 +123,12 @@ type MythosApp interface {
 	GRPCQueryRouter() *baseapp.GRPCQueryRouter
 	MsgServiceRouter() *baseapp.MsgServiceRouter
 
+	// statesync new app
+	NonDeterministicGetNodePorts() mctx.NodePorts
+	NonDeterministicGetNodePortsInitial() mctx.NodePorts
+	NonDeterministicSetNodePortsInitial(mctx.NodePorts)
+
 	// debugging
 	Db() dbm.DB
+	DebugDb()
 }

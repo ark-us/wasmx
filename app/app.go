@@ -198,6 +198,8 @@ import (
 
 	mcodec "mythos/v1/codec"
 
+	mctx "mythos/v1/context"
+
 	srvconfig "mythos/v1/server/config"
 )
 
@@ -316,9 +318,11 @@ type App struct {
 
 	minGasPrices sdk.DecCoins
 
-	srvconfig *srvconfig.Config
-	tndcfg    *cmtcfg.Config
-	rpcClient client.CometRPC
+	srvconfig    *srvconfig.Config
+	tndcfg       *cmtcfg.Config
+	rpcClient    client.CometRPC
+	ports        mctx.NodePorts
+	initialPorts mctx.NodePorts
 
 	db dbm.DB
 }
@@ -1000,6 +1004,22 @@ func NewApp(
 	app.SetEndBlocker(app.EndBlocker)
 	app.setAnteHandler(encodingConfig.TxConfig)
 
+	// must be before Loading version
+	// requires the snapshot store to be created and registered as a BaseAppOption
+	if manager := app.SnapshotManager(); manager != nil {
+		// err := manager.RegisterExtensions(
+		// 	NewMythosSnapshotter(app, app.CommitMultiStore(), &app.WasmxKeeper),
+		// )
+		// TODO!! wasmvm.CreateUtf8 extension for js/python source codes
+		// TODO cache core wasm contracts in memory
+		err := manager.RegisterExtensions(
+			wasmxmodulekeeper.NewWasmSnapshotter(app.CommitMultiStore(), &app.WasmxKeeper),
+		)
+		if err != nil {
+			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
+		}
+	}
+
 	// In v0.46, the SDK introduces _postHandlers_. PostHandlers are like
 	// antehandlers, but are run _after_ the `runMsgs` execution. They are also
 	// defined as a chain, and have the same signature as antehandlers.
@@ -1036,7 +1056,8 @@ func NewApp(
 
 		// TODO
 		// // Initialize pinned codes in wasmvm as they are not persisted there
-		// if err := app.WasmKeeper.InitializePinnedCodes(ctx); err != nil {
+		// ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+		// if err := app.WasmxKeeper.InitializePinnedCodes(ctx); err != nil {
 		// 	panic(fmt.Sprintf("failed initialize pinned codes %s", err))
 		// }
 	}
@@ -1180,11 +1201,11 @@ func (app *App) LegacyAmino() *codec.LegacyAmino {
 	return app.cdc
 }
 
-// AppCodec returns an app codec.
-//
-// NOTE: This is solely to be used for testing purposes as it may be desirable
-// for modules to register their own custom testing types.
 func (app *App) AppCodec() codec.Codec {
+	return app.appCodec
+}
+
+func (app *App) JSONCodec() codec.JSONCodec {
 	return app.appCodec
 }
 
@@ -1340,6 +1361,23 @@ func (app *App) GetRpcClient() client.CometRPC {
 	return app.rpcClient
 }
 
+// not deterministic!! only for statesync
+func (app *App) NonDeterministicSetNodePorts(ports mctx.NodePorts) {
+	app.ports = ports
+}
+
+func (app *App) NonDeterministicGetNodePorts() mctx.NodePorts {
+	return app.ports
+}
+
+func (app *App) NonDeterministicSetNodePortsInitial(initialPorts mctx.NodePorts) {
+	app.initialPorts = initialPorts
+}
+
+func (app *App) NonDeterministicGetNodePortsInitial() mctx.NodePorts {
+	return app.initialPorts
+}
+
 // AutoCliOpts returns the autocli options for the app.
 func (app *App) AutoCliOpts() autocli.AppOptions {
 	modules := make(map[string]appmodule.AppModule, 0)
@@ -1407,6 +1445,10 @@ func (app *App) GetActionExecutor() cfg.ActionExecutor {
 	return app.actionExecutor
 }
 
+func (app *App) GetWasmxKeeper() cfg.WasmxKeeper {
+	return &app.WasmxKeeper
+}
+
 func (app *App) GetGoContextParent() context.Context {
 	return app.goContextParent
 }
@@ -1439,8 +1481,21 @@ func (app *App) MinGasPrices() sdk.DecCoins {
 	return app.minGasPrices
 }
 
+// only for debugging
 func (app *App) Db() dbm.DB {
 	return app.db
+}
+
+func (app *App) DebugDb() {
+	fmt.Println("*DebugDb*", app.db.Stats())
+	itr, _ := app.db.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		key := itr.Key()
+		value := itr.Value()
+		fmt.Printf("*i0* [%s]:\t[%s]\n", string(key), string(value))
+		fmt.Printf("*i1* [%X]:\t[%X]\n", key, value)
+	}
 }
 
 func Exit(s string) {

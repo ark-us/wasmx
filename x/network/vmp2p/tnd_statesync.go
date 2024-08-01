@@ -1,9 +1,13 @@
 package vmp2p
 
 import (
+	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
+	log "cosmossdk.io/log"
 	abcicli "github.com/cometbft/cometbft/abci/client"
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtsync "github.com/cometbft/cometbft/libs/sync"
@@ -14,6 +18,7 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	sm "github.com/cometbft/cometbft/state"
 	statesync "github.com/cometbft/cometbft/statesync"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/libp2p/go-libp2p/core/network"
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
@@ -21,6 +26,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/server"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 
@@ -31,57 +38,175 @@ import (
 )
 
 type StateSyncContext struct {
-	protocolId        string
-	abciClient        abcicli.Client
-	stateSyncReactor  *statesync.Reactor
-	bcReactor         *MockBlockSyncReactor
-	stateSyncProvider statesync.StateProvider
-	stateStore        *StateStore
-	stateSyncGenesis  sm.State
-	sw                *cmtp2p.Switch
-	peer              *Peer
-	p2pctx            *P2PContext
-	onReceive         func(chID byte, msgBytes []byte)
+	ProtocolId        string
+	AbciClient        abcicli.Client
+	StateSyncReactor  *statesync.Reactor
+	BcReactor         *MockBlockSyncReactor
+	StateSyncProvider statesync.StateProvider
+	StateStore        *StateStore
+	StateSyncGenesis  sm.State
+	Sw                *cmtp2p.Switch
+	Peer              *Peer
+	P2pctx            *P2PContext
+	OnReceive         func(chID byte, msgBytes []byte)
 }
 
-func startStateSyncRequest(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
+func startStateSyncRequest(
+	goContextParent context.Context,
+	sdklogger log.Logger,
+	interfaceRegistry types.InterfaceRegistry,
+	jsonCdc codec.JSONCodec,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	p2pctx *P2PContext,
+	protocolId string,
+	peeraddress string,
+	stream network.Stream,
+) error {
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
-	ssctx, err := initializeStateSync(ctx, ctndcfg, chainId, bapp, rpcClient, p2pctx, protocolId, peeraddress, stream)
+
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
 	if err != nil {
 		return err
 	}
 
-	err = resetStoresToVersion0(ctx)
+	err = resetStoresToVersion0(app)
 	if err != nil {
 		return err
 	}
 
-	err = node.StartStateSync(ssctx.stateSyncReactor, ssctx.bcReactor, ssctx.stateSyncProvider, ctndcfg.StateSync, ssctx.stateStore, nil, ssctx.stateSyncGenesis)
+	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis)
 	if err != nil {
 		return fmt.Errorf("failed to start state sync: %w", err)
 	}
 	return nil
 }
 
-func startStateSyncResponse(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) error {
+func startStateSyncResponse(
+	goContextParent context.Context,
+	sdklogger log.Logger,
+	interfaceRegistry types.InterfaceRegistry,
+	jsonCdc codec.JSONCodec,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	p2pctx *P2PContext,
+	protocolId string,
+	peeraddress string,
+	stream network.Stream,
+) error {
 	fmt.Println("---startStateSyncResponse--")
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
-	_, err := initializeStateSync(ctx, ctndcfg, chainId, bapp, rpcClient, p2pctx, protocolId, peeraddress, stream)
+
+	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func initializeStateSync(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, bapp *baseapp.BaseApp, rpcClient client.CometRPC, p2pctx *P2PContext, protocolId string, peeraddress string, stream network.Stream) (*StateSyncContext, error) {
+type StateSyncP2PCtx struct {
+	GoContextParent        context.Context
+	Logger                 log.Logger
+	HandleStateSyncMessage func(netmsg P2PMessage, contractAddress string, senderAddress string)
+}
+
+func (c *StateSyncP2PCtx) listenPeerStream(stream network.Stream, peeraddrstr string) {
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+	go readDataStd(c.GoContextParent, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
+	c.Logger.Debug("Connected to:", peeraddrstr)
+}
+
+func (c *StateSyncP2PCtx) handleStream(stream network.Stream) {
+	// Create a buffer stream for non-blocking read and write.
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+	go readDataStd(c.GoContextParent, c.Logger, rw, stream.ID(), STREAM_MAIN, c.handleContractMessage)
+}
+
+func (c *StateSyncP2PCtx) handleContractMessage(msgbz []byte, frompeer string) {
+	var msg ContractMessage
+	err := json.Unmarshal(msgbz, &msg)
+	if err != nil {
+		c.Logger.Debug(fmt.Sprintf("ContractMessage unmarshal failed: %s; err: %s", string(msgbz), err.Error()))
+	}
+	netmsg := P2PMessage{
+		Message:   msg.Msg,
+		Timestamp: time.Now(),
+		RoomId:    "",
+		Sender:    NodeInfo{Ip: frompeer},
+	}
+	c.HandleStateSyncMessage(netmsg, msg.ContractAddress, msg.SenderAddress)
+}
+
+func InitializeStateSyncWithPeer(
+	goContextParent context.Context,
+	goRoutineGroup *errgroup.Group,
+	sdklogger log.Logger,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	protocolId string,
+	peeraddress string,
+	privateKey []byte,
+	port string,
+) (*StateSyncContext, error) {
+	p2pctx, err := GetP2PContext(goContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	ssp2pctx := &StateSyncP2PCtx{
+		GoContextParent: goContextParent,
+		Logger:          sdklogger,
+	}
+
+	_, err = startNodeWithIdentityAndGossip(goContextParent, p2pctx, sdklogger, privateKey, port, protocolId, ssp2pctx.handleStream)
+	if err != nil {
+		return nil, err
+	}
+
+	var stream network.Stream
+	for {
+		stream, err = connectAndListenPeerInternal(goContextParent, goRoutineGroup, sdklogger, protocolId, peeraddress, ssp2pctx.listenPeerStream)
+		if err == nil && stream != nil {
+			break
+		}
+		time.Sleep(time.Second * 5)
+	}
+
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
+	if err != nil {
+		return nil, err
+	}
+	ssp2pctx.HandleStateSyncMessage = ssctx.handleStateSyncMessage
+	return ssctx, nil
+}
+
+func InitializeStateSync(
+	goContextParent context.Context,
+	sdklogger log.Logger,
+	interfaceRegistry types.InterfaceRegistry,
+	jsonCdc codec.JSONCodec,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	bapp *baseapp.BaseApp,
+	rpcClient client.CometRPC,
+	p2pctx *P2PContext,
+	protocolId string,
+	peeraddress string,
+	stream network.Stream,
+) (*StateSyncContext, error) {
 	// TODO store peer address, to be checked when we receive state sync messages
 	// add custom handler
-	fmt.Println("---startStateSync--")
-	sdklogger := ctx.Logger
+
 	peeraddr, err := multiaddr.NewMultiaddr(peeraddress)
 	if err != nil {
 		return nil, err
@@ -115,13 +240,6 @@ func initializeStateSync(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, b
 		return nil, err
 	}
 
-	var stateSyncProvider statesync.StateProvider
-	stateStore := StateStore{ctx: ctx}
-
-	// stateStore := sm.NewStore(stateDB, sm.StoreOptions{
-	// 	DiscardABCIResponses: ctndcfg.Storage.DiscardABCIResponses,
-	// })
-
 	// TODO get the current state from contract
 	stateSyncGenesis := sm.State{
 		ChainID: chainId,
@@ -135,9 +253,6 @@ func initializeStateSync(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, b
 		InitialHeight: 1,
 	}
 
-	// sw1 := &Switch{}
-
-	// transport, peerFilters := createTransport(config, nodeInfo, nodeKey, proxyApp)
 	transport := &Transport{}
 	peerFilters := make([]cmtp2p.PeerFilterFunc, 0)
 	// TODO
@@ -156,98 +271,66 @@ func initializeStateSync(ctx *Context, ctndcfg *cmtcfg.Config, chainId string, b
 	sw.SetNodeInfo(nodeInfo)
 	sw.SetNodeKey(nodeKey)
 
-	// sw := *cmtp2p.Switch{
-	// 	BaseService: *cmtservice.NewBaseService(logger, )
-	// }
 	stateSyncReactor.SetSwitch(sw)
-	// stateSyncReactor.SetSwitch(sw1)
-
 	stateSyncReactor.AddPeer(peer)
 	sw.AddPeer(peer)
+	// services are stopped at StateStore.Bootstrap
 	err = stateSyncReactor.Start()
 	if err != nil {
 		return nil, err
 	}
 
+	var stateSyncProvider statesync.StateProvider
+	stateStore := StateStore{
+		ChainId:           chainId,
+		GoContextParent:   goContextParent,
+		Logger:            sdklogger,
+		InterfaceRegistry: interfaceRegistry,
+		JsonCdc:           jsonCdc,
+		StateSyncReactor:  stateSyncReactor,
+		Sw:                sw,
+	}
+
 	ssctx := &StateSyncContext{
-		abciClient:        abciClient,
-		stateSyncReactor:  stateSyncReactor,
-		bcReactor:         bcReactor,
-		stateSyncProvider: stateSyncProvider,
-		stateStore:        &stateStore,
-		stateSyncGenesis:  stateSyncGenesis,
-		peer:              peer,
-		p2pctx:            p2pctx,
-		protocolId:        protocolId,
-		onReceive:         cmtp2p.CreateOnReceive(peer, sw.GetReactorsByCh(), sw.GetMsgTypeByChID()),
+		AbciClient:        abciClient,
+		StateSyncReactor:  stateSyncReactor,
+		BcReactor:         bcReactor,
+		StateSyncProvider: stateSyncProvider,
+		StateStore:        &stateStore,
+		StateSyncGenesis:  stateSyncGenesis,
+		Peer:              peer,
+		P2pctx:            p2pctx,
+		ProtocolId:        protocolId,
+		OnReceive:         cmtp2p.CreateOnReceive(peer, sw.GetReactorsByCh(), sw.GetMsgTypeByChID()),
 	}
 	p2pctx.AddCustomHandler(CUSTOM_HANDLER_STATESYNC, ssctx.handleStateSyncMessage)
 	p2pctx.ssctx = ssctx
 	return ssctx, nil
-
-	// TODO stop state sync
-	// stateSyncReactor.Stop()
 }
 
 func (ssctx *StateSyncContext) handleStateSyncMessage(netmsg P2PMessage, contractAddress string, senderAddress string) {
-	fmt.Println("-handleStateSyncMessage-")
 	err := ssctx.handleStateSyncMessageWithError(netmsg)
 	if err != nil {
-		ssctx.sw.Logger.Debug("handling statesync message failed", "error", err.Error())
+		ssctx.Sw.Logger.Debug("handling statesync message failed", "error", err.Error())
 	}
 }
 
 func (ssctx *StateSyncContext) handleStateSyncMessageWithError(netmsg P2PMessage) error {
-	fmt.Println("-handleStateSyncMessageWithError-", string(netmsg.Message))
 	var msgwrap WrapMsg
 	err := json.Unmarshal(netmsg.Message, &msgwrap)
 	if err != nil {
 		return err
 	}
-	fmt.Println("-handleStateSyncMessageWithError msgwrap-", msgwrap)
-
-	ssctx.onReceive(msgwrap.ChannelID, msgwrap.Msg)
-	fmt.Println("-handleStateSyncMessageWithError onReceive END-")
-
-	// var msg proto.Message
-	// err = proto.Unmarshal(msgwrap.Msg, msg)
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println("-handleStateSyncMessageWithError msg-", msg)
-	// peermultiaddr := netmsg.Sender.Ip
-	// peeraddr, err := multiaddr.NewMultiaddr(peermultiaddr)
-	// if err != nil {
-	// 	return err
-	// }
-	// peerInfo, err := peerstore.AddrInfoFromP2pAddr(peeraddr)
-	// if err != nil {
-	// 	return err
-	// }
-	// stream, found := ssctx.p2pctx.GetPeer(ssctx.protocolId, peermultiaddr)
-	// if found {
-	// 	stream.Close()
-	// 	ssctx.p2pctx.DeletePeer(ssctx.protocolId, peermultiaddr)
-	// 	ssctx.sw.Logger.Debug("p2p disconnect from peer", "protocolID", ssctx.protocolId, "peer", peermultiaddr)
-	// }
-
-	// peer := NewPeer(peermultiaddr, stream, peerInfo, ssctx.protocolId, ssctx.p2pctx)
-
-	// e := cmtp2p.Envelope{
-	// 	Src:       peer,
-	// 	Message:   msg,
-	// 	ChannelID: msgwrap.ChannelID,
-	// }
-	// ssctx.stateSyncReactor.Receive(e)
+	ssctx.OnReceive(msgwrap.ChannelID, msgwrap.Msg)
 	return nil
 }
 
-func resetStoresToVersion0(ctx *Context) error {
-	mapp := ctx.Context.App.(mcfg.MythosApp)
-
-	err := mapp.GetBaseApp().ResetStores()
+func resetStoresToVersion0(app mcfg.MythosApp) error {
+	err := app.GetBaseApp().ResetStores()
 	if err != nil {
 		return err
 	}
+
+	// mapp.DebugDb()
 	return nil
 }

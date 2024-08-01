@@ -293,8 +293,8 @@ func WithP2PContext(ctx context.Context, p2pctx *P2PContext) context.Context {
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 
-func GetP2PContext(ctx *vmtypes.Context) (*P2PContext, error) {
-	p2pctx_ := ctx.GoContextParent.Value(P2PContextKey)
+func GetP2PContext(goContextParent context.Context) (*P2PContext, error) {
+	p2pctx_ := goContextParent.Value(P2PContextKey)
 	p2pctx := (p2pctx_).(*P2PContext)
 	if p2pctx == nil {
 		return nil, fmt.Errorf("p2p context not set")

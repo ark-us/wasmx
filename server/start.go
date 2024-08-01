@@ -56,6 +56,8 @@ import (
 	networkserver "mythos/v1/x/network/server"
 	networkconfig "mythos/v1/x/network/server/config"
 	networkflags "mythos/v1/x/network/server/flags"
+	networktypes "mythos/v1/x/network/types"
+	"mythos/v1/x/network/vmp2p"
 
 	mapp "mythos/v1/app"
 	mcfg "mythos/v1/config"
@@ -487,6 +489,29 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 			WasmxNetworkP2P:  int32(5010+i*portstep) + subchainPortOffset,
 			TendermintRpc:    int32(26670+i*portstep) + subchainPortOffset,
 		}
+
+		// Run state sync
+		// TODO for any multichain
+		if tndcfg.StateSync.Enable {
+			fmt.Println("--START STATE SYNC--")
+			mythosapp, csvrCtx, _, cmsrvconfig, ctndcfg, rpcClient, err := apictx.BuildConfigs(chainId, chainCfg, ports)
+			if err != nil {
+				panic(err)
+			}
+
+			mythosapp.NonDeterministicSetNodePortsInitial(initialPorts)
+
+			privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
+
+			err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
+			if err != nil {
+				panic(err)
+			}
+			// fixme
+			// continue
+			return g.Wait()
+		}
+
 		mythosapp_, csvrCtx, _, cmsrvconfig, ctndcfg, rpcClient, err := apictx.StartChainApis(chainId, chainCfg, ports)
 		if err != nil {
 			panic(err)
@@ -513,6 +538,8 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 				return err
 			}
 		}
+
+		startStateSyncReceiver(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
 	}
 
 	// start nodes for all chains
@@ -622,31 +649,11 @@ func NewAPICtx(
 	}
 }
 
-func (ac *APICtx) StartChainApis(
+func (ac *APICtx) BuildConfigs(
 	chainId string,
 	chainCfg *menc.ChainConfig,
 	ports mctx.NodePorts,
 ) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
-	var mythosapp_ mcfg.MythosApp
-	found := false
-	iapp, err := ac.multiapp.GetApp(chainId)
-	if err == nil {
-		mythosapp_, found = iapp.(mcfg.MythosApp)
-	}
-	if !found {
-		mythosapp_ = ac.appCreator(chainId, chainCfg)
-	}
-	mythosapp, ok := mythosapp_.(*mapp.App)
-	if !ok {
-		return nil, nil, ac.clientCtx, nil, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
-	}
-	app := servertypes.Application(mythosapp)
-	bapp := mythosapp.GetBaseApp()
-
-	mythosapp.Logger().Info("starting chain api servers and clients", "chain_id", chainId)
-
-	cclientCtx := ac.clientCtx.WithChainID(chainId)
-
 	cmsrvconfig, ctndcfg, err := cloneConfigs(&ac.msrvconfig, ac.tndcfg)
 	if err != nil {
 		return nil, nil, ac.clientCtx, nil, nil, nil, err
@@ -661,6 +668,25 @@ func (ac *APICtx) StartChainApis(
 	cmsrvconfig.JsonRpc.WsAddress = strings.Replace(cmsrvconfig.JsonRpc.WsAddress, "8546", fmt.Sprintf("%d", ports.EvmJsonRpcWs), 1)
 	ctndcfg.RPC.ListenAddress = strings.Replace(ctndcfg.RPC.ListenAddress, "26657", fmt.Sprintf("%d", ports.TendermintRpc), 1)
 
+	var mythosapp_ mcfg.MythosApp
+	found := false
+	iapp, err := ac.multiapp.GetApp(chainId)
+	if err == nil {
+		mythosapp_, found = iapp.(mcfg.MythosApp)
+	}
+	if !found {
+		mythosapp_ = ac.appCreator(chainId, chainCfg)
+	}
+	mythosapp, ok := mythosapp_.(*mapp.App)
+	if !ok {
+		return nil, nil, ac.clientCtx, nil, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
+	}
+	bapp := mythosapp.GetBaseApp()
+
+	mythosapp.Logger().Info("starting chain api servers and clients", "chain_id", chainId)
+
+	cclientCtx := ac.clientCtx.WithChainID(chainId)
+
 	csvrCtx := &server.Context{
 		Viper:  ac.svrCtx.Viper,
 		Logger: ac.svrCtx.Logger.With("chain_id", chainId),
@@ -669,6 +695,47 @@ func (ac *APICtx) StartChainApis(
 
 	rpcClient := networkgrpc.NewABCIClient(mythosapp, bapp, csvrCtx.Logger, mythosapp.GetNetworkKeeper(), csvrCtx.Config, cmsrvconfig, mythosapp.GetActionExecutor().(*networkgrpc.ActionExecutor))
 	cclientCtx = cclientCtx.WithClient(rpcClient)
+
+	mythosapp.SetServerConfig(cmsrvconfig)
+	mythosapp.SetTendermintConfig(ctndcfg)
+	mythosapp.SetRpcClient(rpcClient)
+	mythosapp.NonDeterministicSetNodePorts(ports)
+
+	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, nil
+}
+
+func (ac *APICtx) StartChainApis(
+	chainId string,
+	chainCfg *menc.ChainConfig,
+	ports mctx.NodePorts,
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
+	mythosapp_, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, err := ac.BuildConfigs(chainId, chainCfg, ports)
+	if err != nil {
+		return nil, nil, ac.clientCtx, nil, nil, nil, err
+	}
+	mythosapp := mythosapp_.(*mapp.App)
+	app := servertypes.Application(mythosapp)
+
+	// Add the tx service to the gRPC router. We only need to register this
+	// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
+	// case, because it spawns a new local tendermint RPC client.
+	// if cmsrvconfig.API.Enable || cmsrvconfig.GRPC.Enable || cmsrvconfig.Websrv.Enable || cmsrvconfig.JsonRpc.Enable {
+	// Re-assign for making the client available below do not use := to avoid
+	// shadowing the clientCtx variable.
+	app.RegisterTxService(cclientCtx)
+	app.RegisterTendermintService(cclientCtx)
+	app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)
+	// }
+
+	// // Run state sync
+	// // TODO for any multichain
+	// if ctndcfg.StateSync.Enable {
+	// 	err = startStateSync(ac.ctx, ac.g, csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient)
+	// 	if err != nil {
+	// 		return nil, nil, ac.clientCtx, nil, nil, nil, err
+	// 	}
+	// 	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, nil
+	// }
 
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
@@ -687,17 +754,6 @@ func (ac *APICtx) StartChainApis(
 		}
 		return err
 	})
-
-	// Add the tx service to the gRPC router. We only need to register this
-	// service if API or gRPC or JSONRPC is enabled, and avoid doing so in the general
-	// case, because it spawns a new local tendermint RPC client.
-	// if cmsrvconfig.API.Enable || cmsrvconfig.GRPC.Enable || cmsrvconfig.Websrv.Enable || cmsrvconfig.JsonRpc.Enable {
-	// Re-assign for making the client available below do not use := to avoid
-	// shadowing the clientCtx variable.
-	app.RegisterTxService(cclientCtx)
-	app.RegisterTendermintService(cclientCtx)
-	app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)
-	// }
 
 	grpcSrv, cclientCtx, err := startGrpcServer(ac.ctx, ac.g, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
 	if err != nil {
@@ -766,7 +822,68 @@ func (ac *APICtx) StartChainApis(
 		// 	}
 		// }()
 	}
+
 	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, nil
+}
+
+// var StateSyncProtocolId = "tendermintp2p_1_mythos_7000-14"
+var StateSyncProtocolId = "statesync"
+
+func startStateSync(
+	goContextParent context.Context,
+	goRoutineGroup *errgroup.Group,
+	csvrCtx *server.Context,
+	cmsrvconfig *srvconfig.Config,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	privateKey []byte,
+) error {
+	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
+	// the leader node is last
+	if len(peers) < 2 {
+		return fmt.Errorf("state sync needs a node IP to be provided")
+	}
+	peeraddress := strings.Split(peers[len(peers)-1], "@")[1]
+	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
+	port := strings.Split(peers[0], "/")[4]
+
+	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, StateSyncProtocolId, peeraddress, privateKey, port)
+	if err != nil {
+		return err
+	}
+
+	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis)
+	if err != nil {
+		return fmt.Errorf("failed to start state sync: %w", err)
+	}
+	return nil
+}
+
+func startStateSyncReceiver(
+	goContextParent context.Context,
+	goRoutineGroup *errgroup.Group,
+	csvrCtx *server.Context,
+	cmsrvconfig *srvconfig.Config,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	privateKey []byte,
+) {
+	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
+	peeraddress := "/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWRsAfBGbVgKcAV1V8XMoxDQdqrmkmbPasMTcJznnNodDi"
+	// peeraddress := strings.Split(peers[len(peers)-1], "@")[1]
+	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
+	port := strings.Split(peers[0], "/")[4]
+
+	go func() {
+		_, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, StateSyncProtocolId, peeraddress, privateKey, port)
+		if err != nil {
+			csvrCtx.Logger.Error("InitializeStateSyncWithPeer", "error", err.Error())
+		}
+	}()
 }
 
 func cloneConfigs(msrvconfig *srvconfig.Config, tndcfg *cmtcfg.Config) (*srvconfig.Config, *cmtcfg.Config, error) {

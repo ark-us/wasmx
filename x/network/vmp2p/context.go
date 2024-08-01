@@ -2,6 +2,7 @@ package vmp2p
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -12,7 +13,6 @@ import (
 
 	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
-	vmtypes "mythos/v1/x/wasmx/vm"
 )
 
 var STREAM_MAIN = "mainstream"
@@ -21,13 +21,13 @@ var STREAM_MAIN = "mainstream"
 func (c *Context) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Logger, rw, stream.ID(), STREAM_MAIN, c.handleContractMessage)
+	go readDataStd(c.Context.GoContextParent, c.Logger, rw, stream.ID(), STREAM_MAIN, c.handleContractMessage)
 }
 
 // peer stream
 func (c *Context) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
+	go readDataStd(c.Context.GoContextParent, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
 	c.Logger.Debug("Connected to:", peeraddrstr)
 }
 
@@ -71,7 +71,7 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 	c.Logger.Debug("p2p received message", "msg", string(netmsgbz), "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId)
 
 	// handle custom messages
-	p2pctx, err := GetP2PContext(c.Context)
+	p2pctx, err := GetP2PContext(c.Context.GoContextParent)
 	if err == nil {
 		handler := p2pctx.GetCustomHandler(contractAddress)
 		if handler != nil {
@@ -117,9 +117,8 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 	}
 }
 
-func readDataStd(ctx *vmtypes.Context, logger log.Logger, rw *bufio.ReadWriter, protocolID string, frompeer string, handleMessage func(msg []byte, frompeer string)) {
+func readDataStd(goContextParent context.Context, logger log.Logger, rw *bufio.ReadWriter, protocolID string, frompeer string, handleMessage func(msg []byte, frompeer string)) {
 	logger.Debug("reading stream data from peer", "peer", frompeer)
-	goCtx := ctx.GoContextParent
 out:
 	for {
 		msgbz, err := rw.ReadBytes('\n')
@@ -129,7 +128,7 @@ out:
 			}
 			// remove stream if this is a direct peer stream
 			if frompeer != STREAM_MAIN {
-				p2pctx, err := GetP2PContext(ctx)
+				p2pctx, err := GetP2PContext(goContextParent)
 				if err == nil {
 					p2pctx.DeletePeer(protocolID, frompeer)
 				}
@@ -146,7 +145,7 @@ out:
 
 		// if parent context is closing, stop receiving messages
 		select {
-		case <-goCtx.Done():
+		case <-goContextParent.Done():
 			logger.Debug("stopping peer libp2p connection", "peer", frompeer)
 			break out
 		default:

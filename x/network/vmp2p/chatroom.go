@@ -85,7 +85,7 @@ func readLoop(cr *ChatRoom) {
 				logger.Error("Error chat room message read ", "error", err.Error(), "topic", cr.topic)
 			}
 			// remove chat room; it will be reconnected when needed
-			p2pctx, err := GetP2PContext(cr.ctx.Context)
+			p2pctx, err := GetP2PContext(cr.ctx.Context.GoContextParent)
 			if err == nil {
 				p2pctx.DeleteChatRoom(cr.protocolID, cr.topicString)
 			}

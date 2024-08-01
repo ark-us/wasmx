@@ -1,31 +1,43 @@
 package vmp2p
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
+	log "cosmossdk.io/log"
 	abci "github.com/cometbft/cometbft/abci/types"
 	cometbftenc "github.com/cometbft/cometbft/crypto/encoding"
+	cmtp2p "github.com/cometbft/cometbft/p2p"
 	cmtstate "github.com/cometbft/cometbft/proto/tendermint/state"
 	sm "github.com/cometbft/cometbft/state"
+	statesync "github.com/cometbft/cometbft/statesync"
 	cmttypes "github.com/cometbft/cometbft/types"
+	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	pvm "github.com/cometbft/cometbft/privval"
 
 	networkserver "mythos/v1/x/network/server"
 	networktypes "mythos/v1/x/network/types"
 
 	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	vmmc "mythos/v1/x/network/vmmc"
 )
 
 type StateStore struct {
-	ctx *Context
+	ChainId           string
+	GoContextParent   context.Context
+	Logger            log.Logger
+	InterfaceRegistry cdctypes.InterfaceRegistry
+	JsonCdc           codec.JSONCodec
+	StateSyncReactor  *statesync.Reactor
+	Sw                *cmtp2p.Switch
 }
 
 type State struct {
@@ -125,27 +137,43 @@ func (s StateStore) Bootstrap(state sm.State) error {
 	// bootstrap consensus contract
 	// this will update storage contract too
 
-	nextValidators, err := cmtValidatorSetToWasmxValidatorSet(s.ctx.Context.CosmosHandler.Codec().InterfaceRegistry(), state.NextValidators)
+	// // stop state sync
+	// err := s.StateSyncReactor.Stop()
+	// if err != nil {
+	// 	s.Logger.Error("failed to stop statesync reactor", "error", err.Error())
+	// }
+	// err = s.Sw.Stop()
+	// if err != nil {
+	// 	s.Logger.Error("failed to stop statesync switch", "error", err.Error())
+	// }
+
+	chainId := s.ChainId
+	goContextParent := s.GoContextParent
+	logger := s.Logger
+	interfaceRegistry := s.InterfaceRegistry
+	jsonCdc := s.JsonCdc
+
+	nextValidators, err := cmtValidatorSetToWasmxValidatorSet(interfaceRegistry, state.NextValidators)
 	if err != nil {
 		return err
 	}
-	nextValidatorsBz, err := s.ctx.Context.CosmosHandler.JSONCodec().MarshalJSON(nextValidators)
+	nextValidatorsBz, err := jsonCdc.MarshalJSON(nextValidators)
 	if err != nil {
 		return err
 	}
-	validators, err := cmtValidatorSetToWasmxValidatorSet(s.ctx.Context.CosmosHandler.Codec().InterfaceRegistry(), state.Validators)
+	validators, err := cmtValidatorSetToWasmxValidatorSet(interfaceRegistry, state.Validators)
 	if err != nil {
 		return err
 	}
-	validatorsBz, err := s.ctx.Context.CosmosHandler.JSONCodec().MarshalJSON(validators)
+	validatorsBz, err := jsonCdc.MarshalJSON(validators)
 	if err != nil {
 		return err
 	}
-	lastValidators, err := cmtValidatorSetToWasmxValidatorSet(s.ctx.Context.CosmosHandler.Codec().InterfaceRegistry(), state.LastValidators)
+	lastValidators, err := cmtValidatorSetToWasmxValidatorSet(interfaceRegistry, state.LastValidators)
 	if err != nil {
 		return err
 	}
-	lastValidatorsBz, err := s.ctx.Context.CosmosHandler.JSONCodec().MarshalJSON(lastValidators)
+	lastValidatorsBz, err := jsonCdc.MarshalJSON(lastValidators)
 	if err != nil {
 		return err
 	}
@@ -173,34 +201,19 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		return err
 	}
 
-	chainCfg, err := mcfg.GetChainConfig(s.ctx.Context.Ctx.ChainID())
+	chainCfg, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
 		return err
 	}
-	// mapp, ok := s.ctx.Context.GetApplication().(mcfg.MythosApp)
 
-	// for i, chainId := range msrvconfig.Network.InitialChains {
-	// }
-
-	// portOffset := int32(nodeOffset * uint32(len(initialChains)))
-	portOffset := int32(1 * uint32(2))
-	nodePorts := mctx.GetInitialChainNodePorts(1, portOffset)
-
-	ctx := &vmmc.Context{Context: s.ctx.Context}
-	req := &vmmc.StartSubChainMsg{
-		ChainId:     s.ctx.Context.Ctx.ChainID(),
-		ChainConfig: *chainCfg,
-		NodePorts:   nodePorts,
-	}
-	// vmmc.StartApp(ctx, req)
-
-	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
+	multichainapp, err := mcfg.GetMultiChainApp(goContextParent)
 	if err != nil {
 		return err
 	}
+
 	var app mcfg.MythosApp
 	found := false
-	iapp, err := multichainapp.GetApp(req.ChainId)
+	iapp, err := multichainapp.GetApp(chainId)
 	if err == nil {
 		app_, ok := iapp.(mcfg.MythosApp)
 		if ok {
@@ -209,20 +222,69 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		}
 	}
 	if !found {
-		app = multichainapp.NewApp(req.ChainId, &req.ChainConfig)
+		app = multichainapp.NewApp(chainId, chainCfg)
 	}
+
+	// start API servers
+	_, _, _, _, _, _, err = multichainapp.StartAPIs(chainId, chainCfg, app.NonDeterministicGetNodePorts())
+	if err != nil {
+		return err
+	}
+	// this state sync variant only works on external chains (mythos, level0)
+	// not on internal subchains
+	// so we can just get the private validator data from config files
+
+	ctndcfg := app.GetTendermintConfig()
+	cmsrvconfig := app.GetServerConfig()
+	privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
+	pubKey, err := privValidator.GetPubKey()
+	if err != nil {
+		return err
+	}
+	privKey := privValidator.Key.PrivKey
+	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
+	currentIdStr := "0"
+	nodeids := strings.Split(cmsrvconfig.Network.Id, ";")
+	for _, nodeid := range nodeids {
+		chainIdPair := strings.Split(nodeid, ":")
+		if len(chainIdPair) == 1 {
+			currentIdStr = chainIdPair[0]
+		} else if len(chainIdPair) > 1 && chainIdPair[0] == chainId {
+			currentIdStr = chainIdPair[1]
+			break
+		}
+	}
+	currentId, err := strconv.Atoi(currentIdStr)
+	if err != nil {
+		return err
+	}
+
+	// initialize all single consensus contracts from genesis
+	// TODO metaconsensus state sync as an extension
+	err = networkserver.InitializeSingleConsensusContracts(app, logger, app.GetNetworkKeeper())
+	if err != nil {
+		return err
+	}
+
+	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), state.AppHash, &state.ConsensusParams, app.GetBaseApp().AppVersion(), pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers, app.NonDeterministicGetNodePortsInitial())
+	if err != nil {
+		return err
+	}
+
+	// END version for external chains (mythos, level0)
 
 	msg := []byte(fmt.Sprintf(`{"execute":{"action":{"type":"bootstrapAfterStateSync","params": [{"key":"state","value":"%s"}],"event":null}}}`, base64.StdEncoding.EncodeToString(statebz)))
-	err = networkserver.ConsensusTx(app, s.ctx.Logger, app.GetNetworkKeeper(), msg)
+	err = networkserver.ConsensusTx(app, logger, app.GetNetworkKeeper(), msg)
 	if err != nil {
 		return err
 	}
 
-	err = networkserver.StartNode(app, s.ctx.Logger, app.GetNetworkKeeper())
+	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
 	if err != nil {
 		return err
 	}
 
+	// app.DebugDb()
 	return nil
 }
 

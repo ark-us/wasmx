@@ -59,7 +59,6 @@ func (p *Peer) FlushStop() {
 
 // peer's cryptographic ID
 func (p *Peer) ID() p2p.ID {
-	fmt.Println("--Peer.ID-")
 	return p2p.ID(p.MultiAddress)
 }
 
@@ -116,8 +115,6 @@ type WrapMsg struct {
 
 func (p *Peer) Send(e p2p.Envelope) bool {
 	msg := e.Message
-	fmt.Println("--Peer.Send-", e)
-	fmt.Println("--Peer.Send-", e.Src, msg)
 
 	if w, ok := msg.(p2p.Wrapper); ok {
 		msg = w.Wrap()
