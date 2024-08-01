@@ -234,10 +234,14 @@ func (k *WasmxEngine) QueryExecute(
 
 func (k *WasmxEngine) GetCode(checksum types.Checksum, deps []string) (types.WasmCode, error) {
 	if types.HasUtf8Dep(deps) {
-		extension := GetExtensionFromDeps(deps)
-		return k.load_utf8(extension, checksum)
+		return k.GetCodeUtf8(checksum, deps)
 	}
 	return k.load_wasm(checksum)
+}
+
+func (k *WasmxEngine) GetCodeUtf8(checksum types.Checksum, deps []string) (types.WasmCode, error) {
+	extension := GetExtensionFromDeps(deps)
+	return k.load_utf8(extension, checksum)
 }
 
 func (k *WasmxEngine) Cleanup() {

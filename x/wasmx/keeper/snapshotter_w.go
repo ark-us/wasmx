@@ -24,14 +24,14 @@ var _ snapshot.ExtensionSnapshotter = &WasmSnapshotter{}
 const SnapshotFormat = 1
 
 type WasmSnapshotter struct {
-	wasm *Keeper
-	cms  storetypes.MultiStore
+	wasmx *Keeper
+	cms   storetypes.MultiStore
 }
 
-func NewWasmSnapshotter(cms storetypes.MultiStore, wasm *Keeper) *WasmSnapshotter {
+func NewWasmSnapshotter(cms storetypes.MultiStore, wasmx *Keeper) *WasmSnapshotter {
 	return &WasmSnapshotter{
-		wasm: wasm,
-		cms:  cms,
+		wasmx: wasmx,
+		cms:   cms,
 	}
 }
 
@@ -58,7 +58,7 @@ func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapsh
 	seenBefore := make(map[string]bool)
 	var rerr error
 
-	ws.wasm.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
+	ws.wasmx.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
 		// Many code ids may point to the same code hash... only sync it once
 		hexHash := hex.EncodeToString(info.CodeHash)
 		// if seenBefore, just skip this one and move to the next
@@ -67,13 +67,9 @@ func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapsh
 		}
 		seenBefore[hexHash] = true
 
-		// load code and abort on error
-
-		wasmBytes, err := ws.wasm.GetByteCode(ctx, id)
+		// load code and skip on error; we may find native or interpreted contracts
+		wasmBytes, err := ws.wasmx.GetByteCode(ctx, id)
 		if err != nil {
-			// TODO fixme now we just skip
-			// rerr = err
-			// return true
 			return false
 		}
 
@@ -145,10 +141,10 @@ func (ws *WasmSnapshotter) processAllItems(
 			return err
 		}
 
-		if err := cb(ctx, ws.wasm, payload); err != nil {
+		if err := cb(ctx, ws.wasmx, payload); err != nil {
 			return errorsmod.Wrap(err, "processing snapshot item")
 		}
 	}
 
-	return finalize(ctx, ws.wasm)
+	return finalize(ctx, ws.wasmx)
 }
