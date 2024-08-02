@@ -36,7 +36,7 @@ func NewUtf8Snapshotter(cms storetypes.MultiStore, wasmx *Keeper) *Utf8Snapshott
 }
 
 func (ws *Utf8Snapshotter) SnapshotName() string {
-	return types.ModuleName
+	return types.ModuleName + "_utf8"
 }
 
 func (ws *Utf8Snapshotter) SnapshotFormat() uint32 {

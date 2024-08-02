@@ -114,8 +114,19 @@ func startStateSyncResponse(
 
 type StateSyncP2PCtx struct {
 	GoContextParent        context.Context
+	GoRoutineGroup         *errgroup.Group
 	Logger                 log.Logger
 	HandleStateSyncMessage func(netmsg P2PMessage, contractAddress string, senderAddress string)
+	Peer                   string
+	App                    mcfg.MythosApp
+	ctndcfg                *cmtcfg.Config
+	chainId                string
+	rpcClient              client.CometRPC
+	protocolId             string
+	privateKey             []byte
+	port                   string
+	p2pctx                 *P2PContext
+	ssctx                  *StateSyncContext
 }
 
 func (c *StateSyncP2PCtx) listenPeerStream(stream network.Stream, peeraddrstr string) {
@@ -127,7 +138,9 @@ func (c *StateSyncP2PCtx) listenPeerStream(stream network.Stream, peeraddrstr st
 func (c *StateSyncP2PCtx) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.GoContextParent, c.Logger, rw, stream.ID(), STREAM_MAIN, c.handleContractMessage)
+
+	peeraddr := stream.Conn().RemoteMultiaddr().String() + "/p2p/" + stream.Conn().RemotePeer().String()
+	go readDataStd(c.GoContextParent, c.Logger, rw, string(stream.Protocol()), peeraddr, c.handleContractMessage)
 }
 
 func (c *StateSyncP2PCtx) handleContractMessage(msgbz []byte, frompeer string) {
@@ -142,7 +155,44 @@ func (c *StateSyncP2PCtx) handleContractMessage(msgbz []byte, frompeer string) {
 		RoomId:    "",
 		Sender:    NodeInfo{Ip: frompeer},
 	}
+	if c.HandleStateSyncMessage == nil {
+		c.Logger.Error("StateSyncP2PCtx.HandleStateSyncMessage not set")
+		return
+	}
 	c.HandleStateSyncMessage(netmsg, msg.ContractAddress, msg.SenderAddress)
+}
+
+func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddress string, senderAddress string) {
+	// TODO limit the amount of peers trying to connect for state sync
+	peeraddr := netmsg.Sender.Ip
+	// protocol id is chain specific & statesync specific
+	_, found := c.p2pctx.GetPeer(c.protocolId, peeraddr)
+	if !found {
+		var stream network.Stream
+		var err error
+		retries := 10
+		for i := 1; i <= retries; i++ {
+			stream, err = connectAndListenPeerInternal(c.GoContextParent, c.GoRoutineGroup, c.Logger, c.protocolId, peeraddr, c.listenPeerStream)
+			if err == nil && stream != nil {
+				break
+			}
+			time.Sleep(time.Second * 5)
+		}
+		if err != nil {
+			return
+		}
+
+		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream)
+		if err != nil {
+			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "error", err.Error())
+			return
+		}
+		// we only set peer & ssctx if we successfully start state sync
+		c.Peer = peeraddr
+		c.ssctx = ssctx
+		return
+	}
+	c.ssctx.handleStateSyncMessage(netmsg, contractAddress, senderAddress)
 }
 
 func InitializeStateSyncWithPeer(
@@ -174,13 +224,18 @@ func InitializeStateSyncWithPeer(
 	}
 
 	var stream network.Stream
-	for {
+	retries := 10
+	for i := 1; i <= retries; i++ {
 		stream, err = connectAndListenPeerInternal(goContextParent, goRoutineGroup, sdklogger, protocolId, peeraddress, ssp2pctx.listenPeerStream)
 		if err == nil && stream != nil {
 			break
 		}
 		time.Sleep(time.Second * 5)
 	}
+	if err != nil {
+		return nil, err
+	}
+
 
 	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
 	if err != nil {
@@ -188,6 +243,46 @@ func InitializeStateSyncWithPeer(
 	}
 	ssp2pctx.HandleStateSyncMessage = ssctx.handleStateSyncMessage
 	return ssctx, nil
+}
+
+func InitializeStateSyncProvider(
+	goContextParent context.Context,
+	goRoutineGroup *errgroup.Group,
+	sdklogger log.Logger,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	protocolId string,
+	privateKey []byte,
+	port string,
+) error {
+	p2pctx, err := GetP2PContext(goContextParent)
+	if err != nil {
+		return err
+	}
+
+	ssp2pctx := &StateSyncP2PCtx{
+		GoContextParent: goContextParent,
+		GoRoutineGroup:  goRoutineGroup,
+		Logger:          sdklogger,
+		App:             app,
+		ctndcfg:         ctndcfg,
+		chainId:         chainId,
+		rpcClient:       rpcClient,
+		protocolId:      protocolId,
+		privateKey:      privateKey,
+		port:            port,
+		p2pctx:          p2pctx,
+	}
+	ssp2pctx.HandleStateSyncMessage = ssp2pctx.handleStateSyncStart
+
+	_, err = startNodeWithIdentityAndGossip(goContextParent, p2pctx, sdklogger, privateKey, port, protocolId, ssp2pctx.handleStream)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func InitializeStateSync(

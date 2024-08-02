@@ -1014,6 +1014,7 @@ func NewApp(
 		// TODO cache core wasm contracts in memory
 		err := manager.RegisterExtensions(
 			wasmxmodulekeeper.NewWasmSnapshotter(app.CommitMultiStore(), &app.WasmxKeeper),
+			wasmxmodulekeeper.NewUtf8Snapshotter(app.CommitMultiStore(), &app.WasmxKeeper),
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
