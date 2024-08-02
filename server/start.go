@@ -722,6 +722,7 @@ func (ac *APICtx) StartChainApis(
 	// if cmsrvconfig.API.Enable || cmsrvconfig.GRPC.Enable || cmsrvconfig.Websrv.Enable || cmsrvconfig.JsonRpc.Enable {
 	// Re-assign for making the client available below do not use := to avoid
 	// shadowing the clientCtx variable.
+	mythosapp.Logger().Info("registering chain services", "chain_id", chainId)
 	app.RegisterTxService(cclientCtx)
 	app.RegisterTendermintService(cclientCtx)
 	app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	log "cosmossdk.io/log"
+	"golang.org/x/sync/errgroup"
+
 	abcicli "github.com/cometbft/cometbft/abci/client"
+	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtsync "github.com/cometbft/cometbft/libs/sync"
 	"github.com/cometbft/cometbft/node"
@@ -18,12 +20,12 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	sm "github.com/cometbft/cometbft/state"
 	statesync "github.com/cometbft/cometbft/statesync"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/libp2p/go-libp2p/core/network"
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
 
+	log "cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -69,7 +71,7 @@ func startStateSyncRequest(
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, false)
 	if err != nil {
 		return err
 	}
@@ -105,7 +107,7 @@ func startStateSyncResponse(
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
 
-	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
+	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, false)
 	if err != nil {
 		return err
 	}
@@ -182,7 +184,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 			return
 		}
 
-		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream)
+		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, true)
 		if err != nil {
 			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "error", err.Error())
 			return
@@ -236,8 +238,7 @@ func InitializeStateSyncWithPeer(
 		return nil, err
 	}
 
-
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, true)
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +299,7 @@ func InitializeStateSync(
 	protocolId string,
 	peeraddress string,
 	stream network.Stream,
+	externalStateSync bool,
 ) (*StateSyncContext, error) {
 	// TODO store peer address, to be checked when we receive state sync messages
 	// add custom handler
@@ -384,6 +386,7 @@ func InitializeStateSync(
 		JsonCdc:           jsonCdc,
 		StateSyncReactor:  stateSyncReactor,
 		Sw:                sw,
+		ExternalStateSync: externalStateSync,
 	}
 
 	ssctx := &StateSyncContext{

@@ -69,7 +69,7 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 		return
 	}
 
-	c.Logger.Debug("p2p received message", "msg", string(netmsgbz), "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId, "frompeer", netmsg.Sender.Ip)
+	c.Logger.Debug("p2p received message", "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId, "frompeer", netmsg.Sender.Ip)
 
 	// handle custom messages
 	p2pctx, err := GetP2PContext(c.Context.GoContextParent)
