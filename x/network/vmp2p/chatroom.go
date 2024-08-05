@@ -28,11 +28,14 @@ type ChatRoom struct {
 	self        peer.ID
 }
 
+var ERROR_TOPIC_EXISTS = "topic already exists"
+
 // JoinChatRoom tries to subscribe to the PubSub topic for the room name, returning
 // a ChatRoom on success.
 func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, protocolID string, topicString string) (*ChatRoom, error) {
+	topicStr := topicName(topicString)
 	// join the pubsub topic
-	topic, err := ps.Join(topicName(topicString))
+	topic, err := ps.Join(topicStr)
 	if err != nil {
 		return nil, err
 	}

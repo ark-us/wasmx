@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	abcicli "github.com/cometbft/cometbft/abci/client"
-	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
+	// tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtsync "github.com/cometbft/cometbft/libs/sync"
 	"github.com/cometbft/cometbft/node"
@@ -66,17 +66,18 @@ func startStateSyncRequest(
 	protocolId string,
 	peeraddress string,
 	stream network.Stream,
+	connectToPeerFn func() (network.Stream, error),
 ) error {
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, false)
+	err := resetStoresToVersion0(app, sdklogger)
 	if err != nil {
 		return err
 	}
 
-	err = resetStoresToVersion0(app)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
 	if err != nil {
 		return err
 	}
@@ -101,13 +102,14 @@ func startStateSyncResponse(
 	protocolId string,
 	peeraddress string,
 	stream network.Stream,
+	connectToPeerFn func() (network.Stream, error),
 ) error {
 	fmt.Println("---startStateSyncResponse--")
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
 
-	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, false)
+	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
 	if err != nil {
 		return err
 	}
@@ -167,6 +169,11 @@ func (c *StateSyncP2PCtx) handleContractMessage(msgbz []byte, frompeer string) {
 func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddress string, senderAddress string) {
 	// TODO limit the amount of peers trying to connect for state sync
 	peeraddr := netmsg.Sender.Ip
+
+	connectToPeerFn := func() (network.Stream, error) {
+		return connectAndListenPeerInternal(c.GoContextParent, c.GoRoutineGroup, c.Logger, c.protocolId, peeraddr, c.listenPeerStream)
+	}
+
 	// protocol id is chain specific & statesync specific
 	_, found := c.p2pctx.GetPeer(c.protocolId, peeraddr)
 	if !found {
@@ -174,7 +181,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 		var err error
 		retries := 10
 		for i := 1; i <= retries; i++ {
-			stream, err = connectAndListenPeerInternal(c.GoContextParent, c.GoRoutineGroup, c.Logger, c.protocolId, peeraddr, c.listenPeerStream)
+			stream, err = connectToPeerFn()
 			if err == nil && stream != nil {
 				break
 			}
@@ -184,7 +191,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 			return
 		}
 
-		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, true)
+		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, connectToPeerFn, true)
 		if err != nil {
 			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "error", err.Error())
 			return
@@ -225,10 +232,14 @@ func InitializeStateSyncWithPeer(
 		return nil, err
 	}
 
+	connectToPeerFn := func() (network.Stream, error) {
+		return connectAndListenPeerInternal(goContextParent, goRoutineGroup, sdklogger, protocolId, peeraddress, ssp2pctx.listenPeerStream)
+	}
+
 	var stream network.Stream
 	retries := 10
 	for i := 1; i <= retries; i++ {
-		stream, err = connectAndListenPeerInternal(goContextParent, goRoutineGroup, sdklogger, protocolId, peeraddress, ssp2pctx.listenPeerStream)
+		stream, err = connectToPeerFn()
 		if err == nil && stream != nil {
 			break
 		}
@@ -238,7 +249,7 @@ func InitializeStateSyncWithPeer(
 		return nil, err
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, true)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, true)
 	if err != nil {
 		return nil, err
 	}
@@ -299,6 +310,7 @@ func InitializeStateSync(
 	protocolId string,
 	peeraddress string,
 	stream network.Stream,
+	connectToPeerFn func() (network.Stream, error),
 	externalStateSync bool,
 ) (*StateSyncContext, error) {
 	// TODO store peer address, to be checked when we receive state sync messages
@@ -312,7 +324,7 @@ func InitializeStateSync(
 	if err != nil {
 		return nil, err
 	}
-	peer := NewPeer(peeraddress, stream, peerInfo, protocolId, p2pctx)
+	peer := NewPeer(peeraddress, stream, peerInfo, protocolId, p2pctx, connectToPeerFn)
 
 	logger := servercmtlog.CometLoggerWrapper{Logger: sdklogger}
 	bcReactor := &MockBlockSyncReactor{}
@@ -373,6 +385,7 @@ func InitializeStateSync(
 	sw.AddPeer(peer)
 	// services are stopped at StateStore.Bootstrap
 	err = stateSyncReactor.Start()
+	fmt.Println("--stateSyncReactor.Start() err--", err)
 	if err != nil {
 		return nil, err
 	}
@@ -396,6 +409,7 @@ func InitializeStateSync(
 		StateSyncProvider: stateSyncProvider,
 		StateStore:        &stateStore,
 		StateSyncGenesis:  stateSyncGenesis,
+		Sw:                sw,
 		Peer:              peer,
 		P2pctx:            p2pctx,
 		ProtocolId:        protocolId,
@@ -423,12 +437,39 @@ func (ssctx *StateSyncContext) handleStateSyncMessageWithError(netmsg P2PMessage
 	return nil
 }
 
-func resetStoresToVersion0(app mcfg.MythosApp) error {
+func resetStoresToVersion0(app mcfg.MythosApp, logger log.Logger) error {
 	err := app.GetBaseApp().ResetStores()
 	if err != nil {
 		return err
 	}
 
-	// mapp.DebugDb()
+	// remove database
+	db := app.Db()
+	batch := db.NewBatch()
+	defer func() {
+		err = batch.Close()
+	}()
+
+	itr, _ := db.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		batch.Delete(itr.Key())
+	}
+	err = batch.WriteSync()
+	if err != nil {
+		return err
+	}
+
+	// config := app.GetTendermintConfig()
+	// // reset all the data
+	// tmcmd.ResetAll(
+	// 	config.DBDir(),
+	// 	config.P2P.AddrBookFile(),
+	// 	config.PrivValidatorKeyFile(),
+	// 	config.PrivValidatorStateFile(),
+	// 	servercmtlog.CometLoggerWrapper{Logger: logger},
+	// )
+
+	app.DebugDb()
 	return nil
 }

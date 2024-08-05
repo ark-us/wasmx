@@ -456,9 +456,13 @@ func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFram
 
 	app := ctx.Context.App.(mcfg.MythosApp)
 
+	connectToPeerFn := func() (network.Stream, error) {
+		return connectAndListenPeerInternal(ctx.Context.GoContextParent, ctx.Context.GoRoutineGroup, ctx.Logger, req.ProtocolId, req.PeerAddress, ctx.listenPeerStream)
+	}
+
 	stream, found := p2pctx.GetPeer(req.ProtocolId, req.PeerAddress)
 	if !found {
-		stream, err = connectAndListenPeerInternal(ctx.Context.GoContextParent, ctx.Context.GoRoutineGroup, ctx.Logger, req.ProtocolId, req.PeerAddress, ctx.listenPeerStream)
+		stream, err = connectToPeerFn()
 		if err != nil {
 			ctx.Logger.Error("connect to peer failed", "peer", req.PeerAddress, "error", err.Error())
 		}
@@ -473,10 +477,15 @@ func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFram
 		tndcfg := app.GetTendermintConfig()
 		tndcfg.StateSync.TrustHash = strings.ToUpper(hex.EncodeToString(req.Hash))
 		tndcfg.StateSync.TrustHeight = req.Height
-		err = startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
-		if err != nil {
-			response.Error = err.Error()
-		}
+		ctx.Context.GoRoutineGroup.Go(func() error {
+			time.Sleep(time.Second * 5)
+			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
+
+			// err = startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
+			// if err != nil {
+			// 	response.Error = err.Error()
+			// }
+		})
 	} else {
 		response.Error = fmt.Sprintf("state sync failed: connect to peer failed: %s: %s", req.PeerAddress, err.Error())
 	}
@@ -515,9 +524,13 @@ func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFra
 
 	app := ctx.Context.App.(mcfg.MythosApp)
 
+	connectToPeerFn := func() (network.Stream, error) {
+		return connectAndListenPeerInternal(ctx.Context.GoContextParent, ctx.Context.GoRoutineGroup, ctx.Logger, req.ProtocolId, req.PeerAddress, ctx.listenPeerStream)
+	}
+
 	stream, found := p2pctx.GetPeer(req.ProtocolId, req.PeerAddress)
 	if !found {
-		stream, err = connectAndListenPeerInternal(ctx.Context.GoContextParent, ctx.Context.GoRoutineGroup, ctx.Logger, req.ProtocolId, req.PeerAddress, ctx.listenPeerStream)
+		stream, err = connectToPeerFn()
 		if err != nil {
 			ctx.Logger.Error("connect to peer failed", "peer", req.PeerAddress, "error", err.Error())
 		}
@@ -529,7 +542,7 @@ func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFra
 	jsonCdc := ctx.Context.CosmosHandler.JSONCodec()
 
 	if stream != nil {
-		err = startStateSyncResponse(goContextParent, sdklogger, interfaceRegistry, jsonCdc, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream)
+		err = startStateSyncResponse(goContextParent, sdklogger, interfaceRegistry, jsonCdc, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
 		if err != nil {
 			response.Error = err.Error()
 		}
@@ -813,15 +826,26 @@ func connectChatRoomAndListen(ctx *Context, protocolId string, topic string) (*C
 		return nil, err
 	}
 
+	// if we found the room, we unsubscribe and then resubscribe
+	cr, found := p2pctx.GetChatRoom(protocolId, topic)
+	if found && cr != nil {
+		return cr, nil
+		// ctx.Logger.Info("chat room connection found, resubscribing", "topic", topic, "protocolID", protocolId)
+		// cr.Unsubscribe()
+		// err := p2pctx.DeleteChatRoom(protocolId, topic)
+		// ctx.Logger.Debug("failed to delete chat room connection", "error", err.Error(), "topic", topic, "protocolID", protocolId)
+	}
 	err = connectGossipSub(ctx.Context.GoContextParent, ctx.Logger, p2pctx, protocolId)
 	if err != nil {
+		ctx.Logger.Debug("connectGossipSub failed", "error", err.Error(), "topic", topic, "protocolID", protocolId)
 		return nil, err
 	}
 	if p2pctx.Node == nil {
 		return nil, fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
 	}
-	cr, err := connectChatRoomInternal(ctx, p2pctx, *p2pctx.Node, protocolId, topic)
+	cr, err = connectChatRoomInternal(ctx, p2pctx, *p2pctx.Node, protocolId, topic)
 	if err != nil {
+		ctx.Logger.Debug("connectChatRoomInternal failed", "error", err.Error(), "topic", topic, "protocolID", protocolId)
 		return nil, err
 	}
 

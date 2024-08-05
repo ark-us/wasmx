@@ -236,52 +236,60 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		if err != nil {
 			return err
 		}
-
-		ctndcfg := app.GetTendermintConfig()
-		cmsrvconfig := app.GetServerConfig()
-		privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
-		pubKey, err := privValidator.GetPubKey()
-		if err != nil {
-			return err
-		}
-		privKey := privValidator.Key.PrivKey
-		peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
-		currentIdStr := "0"
-		nodeids := strings.Split(cmsrvconfig.Network.Id, ";")
-		for _, nodeid := range nodeids {
-			chainIdPair := strings.Split(nodeid, ":")
-			if len(chainIdPair) == 1 {
-				currentIdStr = chainIdPair[0]
-			} else if len(chainIdPair) > 1 && chainIdPair[0] == chainId {
-				currentIdStr = chainIdPair[1]
-				break
-			}
-		}
-		currentId, err := strconv.Atoi(currentIdStr)
-		if err != nil {
-			return err
-		}
-
-		// initialize all single consensus contracts from genesis
-		// TODO metaconsensus state sync as an extension
-		err = networkserver.InitializeSingleConsensusContracts(app, logger, app.GetNetworkKeeper())
-		if err != nil {
-			return err
-		}
-
-		err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), state.AppHash, &state.ConsensusParams, app.GetBaseApp().AppVersion(), pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers, app.NonDeterministicGetNodePortsInitial())
-		if err != nil {
-			return err
-		}
-
-		// END version for external chains (mythos, level0)
 	}
+
+
+	ctndcfg := app.GetTendermintConfig()
+	cmsrvconfig := app.GetServerConfig()
+	privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
+	pubKey, err := privValidator.GetPubKey()
+	if err != nil {
+		return err
+	}
+	privKey := privValidator.Key.PrivKey
+	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
+	currentIdStr := "0"
+	nodeids := strings.Split(cmsrvconfig.Network.Id, ";")
+	for _, nodeid := range nodeids {
+		chainIdPair := strings.Split(nodeid, ":")
+		if len(chainIdPair) == 1 {
+			currentIdStr = chainIdPair[0]
+		} else if len(chainIdPair) > 1 && chainIdPair[0] == chainId {
+			currentIdStr = chainIdPair[1]
+			break
+		}
+	}
+	currentId, err := strconv.Atoi(currentIdStr)
+	if err != nil {
+		return err
+	}
+
+
+	// initialize all single consensus contracts from genesis
+	// TODO metaconsensus state sync as an extension
+	err = networkserver.InitializeSingleConsensusContracts(app, logger, app.GetNetworkKeeper())
+	if err != nil {
+		return err
+	}
+
+	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), state.AppHash, &state.ConsensusParams, app.GetBaseApp().AppVersion(), pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers, app.NonDeterministicGetNodePortsInitial())
+	if err != nil {
+		return err
+	}
+
+	// END version for external chains (mythos, level0)
+	// }
 
 	msg := []byte(fmt.Sprintf(`{"execute":{"action":{"type":"bootstrapAfterStateSync","params": [{"key":"state","value":"%s"}],"event":null}}}`, base64.StdEncoding.EncodeToString(statebz)))
 	err = networkserver.ConsensusTx(app, logger, app.GetNetworkKeeper(), msg)
 	if err != nil {
 		return err
 	}
+
+	// s.GoContextParent.
+	// return nil
+
+	// TODO send a message to provider to stop state sync
 
 	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
 	if err != nil {

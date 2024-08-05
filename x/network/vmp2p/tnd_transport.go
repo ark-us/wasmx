@@ -46,12 +46,16 @@ func (sw *Transport) Cleanup(p2p.Peer) {
 }
 
 type Peer struct {
-	MultiAddress string
-	Peer         *peerstore.AddrInfo
-	Stream       network.Stream
-	P2pCtx       *P2PContext
-	ProtocolId   string
+	MultiAddress     string
+	Peer             *peerstore.AddrInfo
+	Stream           network.Stream
+	P2pCtx           *P2PContext
+	ProtocolId       string
+	Reconnect        func() (network.Stream, error)
+	ReconnectRetries int
 }
+
+var MaxReconnectRetries = 10
 
 func (p *Peer) FlushStop() {
 	fmt.Println("--Peer.FlushStop-")
@@ -136,13 +140,25 @@ func (p *Peer) Send(e p2p.Envelope) bool {
 	}
 	err = sendMessageToPeersInternal(p.Stream, msgReq)
 	if err != nil {
-		if err.Error() == ERROR_STREAM_RESET {
+		if err.Error() == ERROR_STREAM_RESET && p.ReconnectRetries <= MaxReconnectRetries {
+			// we try to reconnect
+			stream, err := p.Reconnect()
+			if err == nil && stream != nil {
+				p.Stream = stream
+				p.ReconnectRetries += 1
+				return p.Send(e)
+			}
 			// we just remove the stream from the mapping
 			// if later needed, it will try to reconnect
 			p.P2pCtx.DeletePeer(p.ProtocolId, p.MultiAddress)
 		}
+		// reset reconnect tries
+		p.ReconnectRetries = 0
+		p.P2pCtx.ssctx.StateSyncReactor.Logger.Error("failed to send message", "ChannelID", e.ChannelID, "Src", e.Src, "ProtocolId", p.ProtocolId, "PeerAddress", p.MultiAddress)
 		return false
 	}
+	// reset reconnect tries
+	p.ReconnectRetries = 0
 	return true
 }
 
@@ -220,13 +236,16 @@ func NewPeer(
 	peerInfo *peerstore.AddrInfo,
 	protocolId string,
 	p2pctx *P2PContext,
+	connectToPeerFn func() (network.Stream, error),
 ) *Peer {
 	p := &Peer{
-		MultiAddress: multiaddress,
-		Stream:       stream,
-		Peer:         peerInfo,
-		ProtocolId:   protocolId,
-		P2pCtx:       p2pctx,
+		MultiAddress:     multiaddress,
+		Stream:           stream,
+		Peer:             peerInfo,
+		ProtocolId:       protocolId,
+		P2pCtx:           p2pctx,
+		Reconnect:        connectToPeerFn,
+		ReconnectRetries: 0,
 	}
 	return p
 }

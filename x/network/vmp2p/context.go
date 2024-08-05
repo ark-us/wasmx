@@ -15,8 +15,6 @@ import (
 	networktypes "mythos/v1/x/network/types"
 )
 
-var STREAM_MAIN = "mainstream"
-
 // main stream
 func (c *Context) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.

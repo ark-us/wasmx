@@ -1488,7 +1488,9 @@ func (app *App) Db() dbm.DB {
 }
 
 func (app *App) DebugDb() {
-	fmt.Println("*DebugDb*", app.db.Stats())
+	fmt.Println("** DebugDb **")
+	fmt.Println("*Stats*", app.db.Stats())
+	fmt.Println("** DB key-value pairs **")
 	itr, _ := app.db.Iterator(nil, nil)
 	defer itr.Close()
 	for ; itr.Valid(); itr.Next() {
