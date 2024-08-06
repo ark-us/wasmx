@@ -459,7 +459,9 @@ func testnetAddNode(
 			return err
 		}
 		err = os.WriteFile(genesisFileNewMythos, bz, 0o644)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	if generateLevel0 {
@@ -471,7 +473,9 @@ func testnetAddNode(
 			return err
 		}
 		err = os.WriteFile(genesisFileNewLevel0, bz, 0o644)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

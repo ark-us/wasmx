@@ -97,7 +97,6 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	// appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
-	// tempBaseappOptions := DefaultBaseappOptions(appOpts)
 	tempApp := app.NewApp(
 		logger,
 		dbm.NewMemDB(),
@@ -330,7 +329,6 @@ func (a appCreator) newApp(
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
-	fmt.Println("---appCreator newApp--")
 	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 
 	skipUpgradeHeights := make(map[int64]bool)

@@ -5,16 +5,19 @@ import (
 	"os"
 	"path/filepath"
 
+	cast "github.com/spf13/cast"
+
 	store "cosmossdk.io/store"
+	snapshots "cosmossdk.io/store/snapshots"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
+	dbm "github.com/cosmos/cosmos-db"
 	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	flags "github.com/cosmos/cosmos-sdk/client/flags"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/types/mempool"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	cast "github.com/spf13/cast"
 )
 
 // DefaultBaseappOptions returns the default baseapp options provided by Mythos
@@ -33,7 +36,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 
 	chainID := GetChainId(appOpts)
 
-	snapshotStore, err := sdkserver.GetSnapshotStore(appOpts)
+	snapshotStore, err := GetSnapshotStore(appOpts)
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +49,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 	defaultMempool := baseapp.SetMempool(mempool.NoOpMempool{})
 	return []func(*baseapp.BaseApp){
 		baseapp.SetPruning(pruningOpts),
-		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))), // don't change index, we use this
+		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
 		baseapp.SetHaltTime(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltTime))),
 		baseapp.SetMinRetainBlocks(cast.ToUint64(appOpts.Get(sdkserver.FlagMinRetainBlocks))),
@@ -58,7 +61,7 @@ func DefaultBaseappOptions(appOpts sdk.AppOptions) []func(*baseapp.BaseApp) {
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(sdkserver.FlagDisableIAVLFastNode))),
 		defaultMempool,
 		baseapp.SetQueryGasLimit(cast.ToUint64(appOpts.Get(sdkserver.FlagQueryGasLimit))),
-		baseapp.SetChainID(chainID), // must be last option, we change this
+		baseapp.SetChainID(chainID),
 	}
 }
 
@@ -79,4 +82,25 @@ func GetChainId(appOpts sdk.AppOptions) string {
 		}
 	}
 	return chainID
+}
+
+func GetSnapshotStore(appOpts sdk.AppOptions) (*snapshots.Store, error) {
+	chainID := GetChainId(appOpts)
+	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
+	snapshotDir := filepath.Join(homeDir, "data", "snapshots")
+	if err := os.MkdirAll(snapshotDir, 0o744); err != nil {
+		return nil, fmt.Errorf("failed to create snapshots directory: %w", err)
+	}
+	snapshotChainDir := filepath.Join(snapshotDir, chainID)
+
+	snapshotDB, err := dbm.NewDB("metadata", sdkserver.GetAppDBBackend(appOpts), snapshotChainDir)
+	if err != nil {
+		return nil, err
+	}
+	snapshotStore, err := snapshots.NewStore(snapshotDB, snapshotChainDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return snapshotStore, nil
 }

@@ -470,6 +470,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	portOffset := int32(nodeOffset * uint32(len(initialChains)))
 	portstep := 100
 	subchainPortOffset := portOffset * int32(portstep)
+	chainsToStart := []string{}
 	for i, chainId := range initialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
@@ -499,18 +500,27 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 				panic(err)
 			}
 
-			mythosapp.NonDeterministicSetNodePortsInitial(initialPorts)
+			peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
+			// the leader node is last
+			if len(peers) >= 2 {
 
-			privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
+				mythosapp.NonDeterministicSetNodePortsInitial(initialPorts)
 
-			err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
-			if err != nil {
-				panic(err)
+				privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
+
+				err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes(), peers)
+				if err != nil {
+					panic(err)
+				}
+				// fixme
+				continue
+				// return g.Wait()
+			} else {
+				csvrCtx.Logger.Info("not starting statesync", "chain_id", chainId, "reason", "app.toml ips has < 2 ips: statesync provider must be the first ip in the list")
 			}
-			// fixme
-			// continue
-			return g.Wait()
 		}
+
+		chainsToStart = append(chainsToStart, chainId)
 
 		mythosapp_, csvrCtx, _, cmsrvconfig, ctndcfg, rpcClient, err := apictx.StartChainApis(chainId, chainCfg, ports)
 		if err != nil {
@@ -544,7 +554,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 
 	// start nodes for all chains
 	// should be all chains, taken from level0
-	for _, chainId := range multiapp.ChainIds {
+	for _, chainId := range chainsToStart {
 		iapp, _ := multiapp.GetApp(chainId)
 		app, ok := iapp.(mcfg.MythosApp)
 		if !ok {
@@ -728,16 +738,6 @@ func (ac *APICtx) StartChainApis(
 	app.RegisterNodeService(cclientCtx, cmsrvconfig.Config)
 	// }
 
-	// // Run state sync
-	// // TODO for any multichain
-	// if ctndcfg.StateSync.Enable {
-	// 	err = startStateSync(ac.ctx, ac.g, csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient)
-	// 	if err != nil {
-	// 		return nil, nil, ac.clientCtx, nil, nil, nil, err
-	// 	}
-	// 	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, nil
-	// }
-
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	ac.g.Go(func() error {
@@ -844,12 +844,8 @@ func startStateSync(
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	privateKey []byte,
+	peers []string,
 ) error {
-	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
-	// the leader node is last
-	if len(peers) < 2 {
-		return fmt.Errorf("state sync needs a node IP to be provided")
-	}
 	peeraddress := strings.Split(peers[len(peers)-1], "@")[1]
 	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
 	port := strings.Split(peers[0], "/")[4]

@@ -14,7 +14,6 @@ import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 
 	dbm "github.com/cosmos/cosmos-db"
-	baseapp "github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -49,8 +48,6 @@ func NewAppCreator(
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 
-	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-
 	skipUpgradeHeights := make(map[int64]bool)
 	for _, h := range cast.ToIntSlice(appOpts.Get(sdkserver.FlagUnsafeSkipUpgrades)) {
 		skipUpgradeHeights[int64(h)] = true
@@ -67,12 +64,12 @@ func NewAppCreator(
 	}
 
 	appCreator := func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp {
-
 		encodingConfig := menc.MakeEncodingConfig(chainCfg, GetCustomSigners())
 		minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
 
-		baseappOptions[1] = baseapp.SetMinGasPrices(minGasPrices.String())
-		baseappOptions[len(baseappOptions)-1] = baseapp.SetChainID(chainId)
+		appOpts.Set(flags.FlagChainID, chainId)
+		appOpts.Set(sdkserver.FlagMinGasPrices, minGasPrices.String())
+		baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 
 		app := NewApp(
 			logger,
