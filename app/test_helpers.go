@@ -128,7 +128,7 @@ func NewTestNetworkFixture() network.TestFixture {
 	if err != nil {
 		panic(err)
 	}
-	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx, NopStartChainApis)
+	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, chainCfg)
 	app := iapp.(*App)
 
@@ -147,7 +147,7 @@ func NewTestNetworkFixture() network.TestFixture {
 		appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
 		// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 
-		_, appCreator := NewAppCreator(val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx, NopStartChainApis)
+		_, appCreator := NewAppCreator(val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 		iapp := appCreator(chainId, chainCfg)
 		app := iapp.(*App)
 		return app

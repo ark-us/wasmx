@@ -121,7 +121,7 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	}
 
 	// start API servers
-	_, _, _, _, _, _, err = multichainapp.StartAPIs(req.ChainId, &req.ChainConfig, req.NodePorts)
+	_, _, _, _, _, _, err = multichainapp.APICtx.StartChainApis(req.ChainId, &req.ChainConfig, req.NodePorts)
 	if err != nil {
 		return err
 	}

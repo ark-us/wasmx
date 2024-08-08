@@ -11,12 +11,8 @@ import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/math"
 
-	cmtcfg "github.com/cometbft/cometbft/config"
-
 	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -24,7 +20,6 @@ import (
 	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
 	multichain "mythos/v1/multichain"
-	srvconfig "mythos/v1/server/config"
 	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/network/vmp2p"
 	wasmxtypes "mythos/v1/x/wasmx/types"
@@ -38,7 +33,7 @@ func NewAppCreator(
 	appOpts multichain.AppOptions,
 	g *errgroup.Group,
 	ctx context.Context,
-	startChainAPIs func(string, *menc.ChainConfig, mctx.NodePorts) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error),
+	apictx mcfg.APICtxI,
 ) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = vmp2p.WithP2PEmptyContext(ctx)
@@ -89,7 +84,7 @@ func NewAppCreator(
 		return app
 	}
 	bapps.SetAppCreator(appCreator)
-	bapps.SetStartAPIs(startChainAPIs)
+	bapps.SetAPICtx(apictx)
 
 	return bapps, appCreator
 }

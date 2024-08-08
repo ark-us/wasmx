@@ -232,12 +232,11 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		// so we can just get the private validator data from config files
 
 		// start API servers
-		_, _, _, _, _, _, err = multichainapp.StartAPIs(chainId, chainCfg, app.NonDeterministicGetNodePorts())
+		_, _, _, _, _, _, err = multichainapp.APICtx.StartChainApis(chainId, chainCfg, app.NonDeterministicGetNodePorts())
 		if err != nil {
 			return err
 		}
 	}
-
 
 	ctndcfg := app.GetTendermintConfig()
 	cmsrvconfig := app.GetServerConfig()
@@ -263,7 +262,6 @@ func (s StateStore) Bootstrap(state sm.State) error {
 	if err != nil {
 		return err
 	}
-
 
 	// initialize all single consensus contracts from genesis
 	// TODO metaconsensus state sync as an extension

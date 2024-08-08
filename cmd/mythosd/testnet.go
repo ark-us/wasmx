@@ -60,6 +60,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
 	"mythos/v1/multichain"
 	"mythos/v1/server"
@@ -1321,5 +1322,5 @@ func createMockAppCreator() (*mcfg.MultiChainApp, func(chainId string, chainCfg 
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
-	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx, app.NopStartChainApis)
+	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 }

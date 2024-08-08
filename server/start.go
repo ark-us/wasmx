@@ -235,14 +235,10 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 	}
 
 	apictx := &APICtx{
-		g:         g,
-		ctx:       ctx,
-		svrCtx:    svrCtx,
-		clientCtx: client.Context{},
-		// msrvconfig:      msrvconfig,
-		// tndcfg:          tndcfg,
-		// metricsProvider: metricsProvider,
-		// metrics:         metrics,
+		GoRoutineGroup:  g,
+		GoContextParent: ctx,
+		SvrCtx:          svrCtx,
+		ClientCtx:       client.Context{},
 	}
 
 	bapps, appCreator := mapp.NewAppCreator(
@@ -251,10 +247,10 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 		traceWriter,
 		svrCtx.Viper,
 		g, ctx,
-		apictx.StartChainApis,
+		apictx,
 	)
-	apictx.appCreator = appCreator
-	apictx.multiapp = bapps
+	apictx.AppCreator = appCreator
+	apictx.Multiapp = bapps
 
 	config, err := srvconfig.GetConfig(svrCtx.Viper)
 	if err != nil {
@@ -444,14 +440,14 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	metricsProvider := node.DefaultMetricsProvider(tndcfg.Instrumentation)
 
 	apictx := &APICtx{
-		g:               g,
-		ctx:             ctx,
-		svrCtx:          svrCtx,
-		clientCtx:       clientCtx,
-		msrvconfig:      msrvconfig,
-		tndcfg:          tndcfg,
-		metricsProvider: metricsProvider,
-		metrics:         metrics,
+		GoRoutineGroup:  g,
+		GoContextParent: ctx,
+		SvrCtx:          svrCtx,
+		ClientCtx:       clientCtx,
+		SrvCfg:          msrvconfig,
+		TndCfg:          tndcfg,
+		MetricsProvider: metricsProvider,
+		Metrics:         metrics,
 	}
 
 	multiapp, appCreator := mapp.NewAppCreator(
@@ -460,16 +456,14 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		traceWriter,
 		svrCtx.Viper,
 		g, ctx,
-		apictx.StartChainApis,
+		apictx,
 	)
-	apictx.appCreator = appCreator
-	apictx.multiapp = multiapp
+	apictx.AppCreator = appCreator
+	apictx.Multiapp = multiapp
 
 	// create apps for initial chains
 	initialChains := msrvconfig.Network.InitialChains
 	portOffset := int32(nodeOffset * uint32(len(initialChains)))
-	portstep := 100
-	subchainPortOffset := portOffset * int32(portstep)
 	chainsToStart := []string{}
 	for i, chainId := range initialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
@@ -477,19 +471,9 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 			panic(err)
 		}
 		// TODO use ports set in toml file; family of ports
-		ports := mctx.GetInitialChainNodePorts(int32(i), portOffset)
+		ports := mctx.GetChainNodePorts(int32(i), portOffset)
 		// ports for subchains
-		initialPorts := mctx.NodePorts{
-			CosmosRestApi:    int32(1330+i*portstep) + subchainPortOffset,
-			CosmosGrpc:       int32(9100+i*portstep) + subchainPortOffset,
-			WasmxNetworkGrpc: int32(8100+i*portstep) + subchainPortOffset,
-			WebsrvWebServer:  int32(9910+i*portstep) + subchainPortOffset,
-			EvmJsonRpc:       int32(8555+i*portstep) + subchainPortOffset,
-			EvmJsonRpcWs:     int32(8656+i*portstep) + subchainPortOffset,
-			Pprof:            int32(6070+i*portstep) + subchainPortOffset,
-			WasmxNetworkP2P:  int32(5010+i*portstep) + subchainPortOffset,
-			TendermintRpc:    int32(26670+i*portstep) + subchainPortOffset,
-		}
+		initialPorts := mctx.GetChainNodePortsInitial(int32(i), portOffset)
 
 		// Run state sync
 		// TODO for any multichain
@@ -621,16 +605,16 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 }
 
 type APICtx struct {
-	g               *errgroup.Group
-	ctx             context.Context
-	svrCtx          *server.Context
-	clientCtx       client.Context
-	msrvconfig      srvconfig.Config
-	tndcfg          *cmtcfg.Config
-	appCreator      func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp
-	metricsProvider node.MetricsProvider
-	metrics         *telemetry.Metrics
-	multiapp        *mcfg.MultiChainApp
+	GoRoutineGroup  *errgroup.Group
+	GoContextParent context.Context
+	SvrCtx          *server.Context
+	ClientCtx       client.Context
+	SrvCfg          srvconfig.Config
+	TndCfg          *cmtcfg.Config
+	AppCreator      func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp
+	MetricsProvider node.MetricsProvider
+	Metrics         *telemetry.Metrics
+	Multiapp        *mcfg.MultiChainApp
 }
 
 func NewAPICtx(
@@ -646,16 +630,16 @@ func NewAPICtx(
 	multiapp *mcfg.MultiChainApp,
 ) *APICtx {
 	return &APICtx{
-		g:               g,
-		ctx:             ctx,
-		svrCtx:          svrCtx,
-		clientCtx:       clientCtx,
-		msrvconfig:      msrvconfig,
-		tndcfg:          tndcfg,
-		appCreator:      appCreator,
-		metricsProvider: metricsProvider,
-		metrics:         metrics,
-		multiapp:        multiapp,
+		GoRoutineGroup:  g,
+		GoContextParent: ctx,
+		SvrCtx:          svrCtx,
+		ClientCtx:       clientCtx,
+		SrvCfg:          msrvconfig,
+		TndCfg:          tndcfg,
+		AppCreator:      appCreator,
+		MetricsProvider: metricsProvider,
+		Metrics:         metrics,
+		Multiapp:        multiapp,
 	}
 }
 
@@ -664,9 +648,9 @@ func (ac *APICtx) BuildConfigs(
 	chainCfg *menc.ChainConfig,
 	ports mctx.NodePorts,
 ) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
-	cmsrvconfig, ctndcfg, err := cloneConfigs(&ac.msrvconfig, ac.tndcfg)
+	cmsrvconfig, ctndcfg, err := cloneConfigs(&ac.SrvCfg, ac.TndCfg)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, nil, err
+		return nil, nil, ac.ClientCtx, nil, nil, nil, err
 	}
 
 	// TODO extract the port base ; define port family range in the toml files
@@ -680,26 +664,26 @@ func (ac *APICtx) BuildConfigs(
 
 	var mythosapp_ mcfg.MythosApp
 	found := false
-	iapp, err := ac.multiapp.GetApp(chainId)
+	iapp, err := ac.Multiapp.GetApp(chainId)
 	if err == nil {
 		mythosapp_, found = iapp.(mcfg.MythosApp)
 	}
 	if !found {
-		mythosapp_ = ac.appCreator(chainId, chainCfg)
+		mythosapp_ = ac.AppCreator(chainId, chainCfg)
 	}
 	mythosapp, ok := mythosapp_.(*mapp.App)
 	if !ok {
-		return nil, nil, ac.clientCtx, nil, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
+		return nil, nil, ac.ClientCtx, nil, nil, nil, fmt.Errorf("cannot convert MythosApp to App")
 	}
 	bapp := mythosapp.GetBaseApp()
 
 	mythosapp.Logger().Info("starting chain api servers and clients", "chain_id", chainId)
 
-	cclientCtx := ac.clientCtx.WithChainID(chainId)
+	cclientCtx := ac.ClientCtx.WithChainID(chainId)
 
 	csvrCtx := &server.Context{
-		Viper:  ac.svrCtx.Viper,
-		Logger: ac.svrCtx.Logger.With("chain_id", chainId),
+		Viper:  ac.SvrCtx.Viper,
+		Logger: ac.SvrCtx.Logger.With("chain_id", chainId),
 		Config: ctndcfg,
 	}
 
@@ -721,7 +705,7 @@ func (ac *APICtx) StartChainApis(
 ) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
 	mythosapp_, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, err := ac.BuildConfigs(chainId, chainCfg, ports)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, nil, err
+		return nil, nil, ac.ClientCtx, nil, nil, nil, err
 	}
 	mythosapp := mythosapp_.(*mapp.App)
 	app := servertypes.Application(mythosapp)
@@ -740,14 +724,14 @@ func (ac *APICtx) StartChainApis(
 
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
-	ac.g.Go(func() error {
+	ac.GoRoutineGroup.Go(func() error {
 		_, err = networkgrpc.StartGRPCServer(
 			csvrCtx,
 			cclientCtx,
-			ac.ctx,
+			ac.GoContextParent,
 			cmsrvconfig,
 			app,
-			ac.metricsProvider,
+			ac.MetricsProvider,
 			rpcClient,
 		)
 		if err != nil {
@@ -756,14 +740,14 @@ func (ac *APICtx) StartChainApis(
 		return err
 	})
 
-	grpcSrv, cclientCtx, err := startGrpcServer(ac.ctx, ac.g, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
+	grpcSrv, cclientCtx, err := startGrpcServer(ac.GoContextParent, ac.GoRoutineGroup, cmsrvconfig.Config.GRPC, cclientCtx, csvrCtx, app)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, nil, err
+		return nil, nil, ac.ClientCtx, nil, nil, nil, err
 	}
 
-	err = startAPIServer(ac.ctx, ac.g, cmsrvconfig.Config, cclientCtx, csvrCtx, app, grpcSrv, ac.metrics)
+	err = startAPIServer(ac.GoContextParent, ac.GoRoutineGroup, cmsrvconfig.Config, cclientCtx, csvrCtx, app, grpcSrv, ac.Metrics)
 	if err != nil {
-		return nil, nil, ac.clientCtx, nil, nil, nil, err
+		return nil, nil, ac.ClientCtx, nil, nil, nil, err
 	}
 
 	// var (
@@ -777,9 +761,9 @@ func (ac *APICtx) StartChainApis(
 
 		// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 		// that the server is gracefully shut down.
-		ac.g.Go(func() error {
+		ac.GoRoutineGroup.Go(func() error {
 			// httpSrv, httpSrvDone, err
-			_, _, err = jsonrpc.StartJsonRpc(csvrCtx, cclientCtx, ac.ctx, tmRPCAddr, tmEndpoint, cmsrvconfig, chainId, *chainCfg)
+			_, _, err = jsonrpc.StartJsonRpc(csvrCtx, cclientCtx, ac.GoContextParent, tmRPCAddr, tmEndpoint, cmsrvconfig, chainId, *chainCfg)
 			if err != nil {
 				csvrCtx.Logger.Error(err.Error())
 			}
@@ -801,9 +785,9 @@ func (ac *APICtx) StartChainApis(
 	}
 
 	if cmsrvconfig.Websrv.Enable {
-		ac.g.Go(func() error {
+		ac.GoRoutineGroup.Go(func() error {
 			// httpSrv, httpSrvDone, err
-			_, _, err = websrv.StartWebsrv(csvrCtx, cclientCtx, ac.ctx, &cmsrvconfig.Websrv)
+			_, _, err = websrv.StartWebsrv(csvrCtx, cclientCtx, ac.GoContextParent, &cmsrvconfig.Websrv)
 			if err != nil {
 				csvrCtx.Logger.Error(err.Error())
 			}
