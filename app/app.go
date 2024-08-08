@@ -329,6 +329,7 @@ type App struct {
 
 // New returns a reference to an initialized blockchain app
 func NewApp(
+	chainId string,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -352,6 +353,7 @@ func NewApp(
 	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
+	logger = logger.With("chain_id", chainId)
 	bApp := baseapp.NewBaseApp(
 		cfg.Name,
 		logger,
@@ -365,8 +367,10 @@ func NewApp(
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 	bApp.SetOptimisticExecution(func(oexe *oe.OptimisticExecution) { oexe.Disable() })
 
-	chainId := bApp.ChainID()
-	logger = logger.With("chain_id", chainId)
+	if chainId != bApp.ChainID() {
+		panic(fmt.Sprintf("chain id mismatch: expected %s, got %s", chainId, bApp.ChainID()))
+	}
+
 	wasmxStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.StoreKey)
 	websrvStoreKey := cfg.GetMultiChainStoreKey(chainId, websrvmoduletypes.StoreKey)
 	crisisStoreKey := cfg.GetMultiChainStoreKey(chainId, crisistypes.StoreKey)

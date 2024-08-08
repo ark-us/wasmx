@@ -15,6 +15,7 @@ import (
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/math"
+	pruningtypes "cosmossdk.io/store/pruning/types"
 	confixcmd "cosmossdk.io/tools/confix/cmd"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -93,11 +94,12 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir())
-	// appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
-	// appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
-
+	appOpts.Set(flags.FlagChainID, chainId)
+	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
 	tempApp := app.NewApp(
+		chainId,
 		logger,
 		dbm.NewMemDB(),
 		nil, true, make(map[int64]bool, 0),
@@ -105,6 +107,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), chainCfg, encodingConfig, nil, appOpts,
 		// tempBaseappOptions...,
 		// baseapp.SetChainID(mcfg.MYTHOS_CHAIN_ID_TESTNET),
+		baseappOptions...,
 	)
 	rootCmd := &cobra.Command{
 		Use:   mcfg.Name + "d",
@@ -353,6 +356,7 @@ func (a appCreator) newApp(
 	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
 
 	return app.NewApp(
+		chainId,
 		logger,
 		db,
 		traceStore,
@@ -411,6 +415,7 @@ func (a appCreator) appExport(
 	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
 
 	app := app.NewApp(
+		chainId,
 		logger,
 		db,
 		traceStore,

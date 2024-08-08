@@ -2,6 +2,7 @@ package multichain
 
 import (
 	"context"
+	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -37,6 +38,24 @@ func (m DefaultAppOptions) Set(key string, value interface{}) {
 	m[key] = value
 }
 
+type MockApiCtx struct{}
+
+func (*MockApiCtx) BuildConfigs(
+	chainId string,
+	chainCfg *menc.ChainConfig,
+	ports mctx.NodePorts,
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
+	return nil, nil, client.Context{}, nil, nil, nil, fmt.Errorf("ApiCtx.BuildConfigs not implemented")
+}
+
+func (*MockApiCtx) StartChainApis(
+	chainId string,
+	chainCfg *menc.ChainConfig,
+	ports mctx.NodePorts,
+) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
+	return nil, nil, client.Context{}, nil, nil, nil, fmt.Errorf("ApiCtx.StartChainApis not implemented")
+}
+
 func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	// level := "network:debug,wasmx:debug,*:info"
 	// filter, _ := log.ParseLogLevel(level)
@@ -58,7 +77,7 @@ func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcf
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, NopStartChainApis)
+	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
 }
 
 func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
@@ -73,7 +92,7 @@ func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, NopStartChainApis)
+	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
 }
 
 func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
@@ -82,12 +101,4 @@ func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context
 	// listen for quit signals so the calling parent process can gracefully exit
 	sdkserver.ListenForQuitSignals(g, block, cancelFn, logger)
 	return g, ctx, cancelFn
-}
-
-func NopStartChainApis(
-	chainId string,
-	chainCfg *menc.ChainConfig,
-	ports mctx.NodePorts,
-) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
-	return nil, nil, client.Context{}, nil, nil, nil, nil
 }

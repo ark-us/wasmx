@@ -67,6 +67,7 @@ func NewAppCreator(
 		baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 
 		app := NewApp(
+			chainId,
 			logger,
 			db,
 			traceStore,

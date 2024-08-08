@@ -811,13 +811,6 @@ func (ac *APICtx) StartChainApis(
 	return mythosapp, csvrCtx, cclientCtx, cmsrvconfig, ctndcfg, rpcClient, nil
 }
 
-// Note protocol must be different than any other protocol ID and per chain ID
-var StateSyncProtocolId = "statesync"
-
-func GetStateSyncProtocolId(chainId string) string {
-	return StateSyncProtocolId + "_" + chainId
-}
-
 func startStateSync(
 	goContextParent context.Context,
 	goRoutineGroup *errgroup.Group,
@@ -834,7 +827,7 @@ func startStateSync(
 	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
 	port := strings.Split(peers[0], "/")[4]
 
-	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, GetStateSyncProtocolId(chainId), peeraddress, privateKey, port)
+	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), peeraddress, privateKey, port)
 	if err != nil {
 		return err
 	}
@@ -860,7 +853,7 @@ func startStateSyncReceiver(
 	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
 	port := strings.Split(peers[0], "/")[4]
 	go func() {
-		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, GetStateSyncProtocolId(chainId), privateKey, port)
+		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), privateKey, port)
 		if err != nil {
 			csvrCtx.Logger.Error("InitializeStateSyncProvider", "error", err.Error())
 		}
