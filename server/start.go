@@ -465,6 +465,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	initialChains := msrvconfig.Network.InitialChains
 	portOffset := int32(nodeOffset * uint32(len(initialChains)))
 	chainsToStart := []string{}
+	startStateSyncProviders := []func(){}
 	for i, chainId := range initialChains {
 		chainCfg, err := mcfg.GetChainConfig(chainId)
 		if err != nil {
@@ -533,7 +534,14 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 			}
 		}
 
-		startStateSyncReceiver(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
+		if !strings.Contains(chainId, "level0") {
+			ssfn := func(mythosapp *mapp.App, csvrCtx *server.Context, cmsrvconfig *srvconfig.Config, ctndcfg *cmtcfg.Config, chainId string, rpcClient client.CometRPC, privValidator *pvm.FilePV) func() {
+				return func() {
+					startStateSyncProvider(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
+				}
+			}(mythosapp, csvrCtx, cmsrvconfig, ctndcfg, chainId, rpcClient, privValidator)
+			startStateSyncProviders = append(startStateSyncProviders, ssfn)
+		}
 	}
 
 	// start nodes for all chains
@@ -553,6 +561,10 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		if err != nil {
 			return err
 		}
+	}
+
+	for _, ssfn := range startStateSyncProviders {
+		ssfn()
 	}
 
 	// TODO - do we need this? (see simap)
@@ -839,7 +851,7 @@ func startStateSync(
 	return nil
 }
 
-func startStateSyncReceiver(
+func startStateSyncProvider(
 	goContextParent context.Context,
 	goRoutineGroup *errgroup.Group,
 	csvrCtx *server.Context,

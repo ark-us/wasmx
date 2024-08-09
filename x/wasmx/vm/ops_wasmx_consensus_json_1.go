@@ -478,14 +478,14 @@ func wasmxBlockCommitVoteBytes(_context interface{}, callframe *wasmedge.Calling
 	var vote cmtproto.Vote
 	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vote)
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes")
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "unmarshal cmtproto.Vote")
 		return nil, wasmedge.Result_Fail
 	}
 
 	pb := cmttypes.CanonicalizeVote(ctx.Ctx.ChainID(), &vote)
 	bz, err := protoio.MarshalDelimited(&pb)
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes")
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "marshal cmtproto.CanonicalVote")
 		return nil, wasmedge.Result_Fail
 	}
 	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)

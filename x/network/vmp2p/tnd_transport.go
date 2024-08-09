@@ -15,8 +15,6 @@ import (
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 )
 
-var CUSTOM_HANDLER_STATESYNC = "statesync"
-
 type Transport struct{}
 
 type peerConfig struct{}
@@ -135,8 +133,8 @@ func (p *Peer) Send(e p2p.Envelope) bool {
 
 	msgReq := ContractMessage{
 		Msg:             msgWrapBytes,
-		ContractAddress: CUSTOM_HANDLER_STATESYNC,
-		SenderAddress:   CUSTOM_HANDLER_STATESYNC,
+		ContractAddress: p.ProtocolId,
+		SenderAddress:   p.ProtocolId,
 	}
 	err = sendMessageToPeersInternal(p.Stream, msgReq)
 	if err != nil {

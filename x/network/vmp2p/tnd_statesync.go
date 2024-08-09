@@ -135,8 +135,8 @@ type StateSyncP2PCtx struct {
 
 func (c *StateSyncP2PCtx) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.GoContextParent, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
-	c.Logger.Debug("Connected to:", peeraddrstr)
+	go readDataStd(c.GoContextParent, c.Logger, rw, string(stream.Protocol()), peeraddrstr, c.handleContractMessage)
+	c.Logger.Debug("Connected to:", peeraddrstr, "protocol_id", stream.Protocol())
 }
 
 func (c *StateSyncP2PCtx) handleStream(stream network.Stream) {
@@ -193,7 +193,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 
 		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, connectToPeerFn, true)
 		if err != nil {
-			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "error", err.Error())
+			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "protocol_id", c.protocolId, "error", err.Error())
 			return
 		}
 		// we only set peer & ssctx if we successfully start state sync
@@ -202,6 +202,30 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 		return
 	}
 	c.ssctx.handleStateSyncMessage(netmsg, contractAddress, senderAddress)
+}
+
+func StartStateSyncWithChainId(
+	goContextParent context.Context,
+	goRoutineGroup *errgroup.Group,
+	sdklogger log.Logger,
+	ctndcfg *cmtcfg.Config,
+	chainId string,
+	app mcfg.MythosApp,
+	rpcClient client.CometRPC,
+	protocolId string,
+	peeraddress string,
+	privateKey []byte,
+	port string,
+) error {
+	ssctx, err := InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, app, rpcClient, protocolId, peeraddress, privateKey, port)
+	if err != nil {
+		return err
+	}
+	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis)
+	if err != nil {
+		return fmt.Errorf("failed to start state sync: %w", err)
+	}
+	return nil
 }
 
 func InitializeStateSyncWithPeer(
@@ -269,6 +293,7 @@ func InitializeStateSyncProvider(
 	privateKey []byte,
 	port string,
 ) error {
+	sdklogger.Info("start statesync provider service", "chain_id", chainId, "port", port)
 	p2pctx, err := GetP2PContext(goContextParent)
 	if err != nil {
 		return err
@@ -415,7 +440,7 @@ func InitializeStateSync(
 		ProtocolId:        protocolId,
 		OnReceive:         cmtp2p.CreateOnReceive(peer, sw.GetReactorsByCh(), sw.GetMsgTypeByChID()),
 	}
-	p2pctx.AddCustomHandler(CUSTOM_HANDLER_STATESYNC, ssctx.handleStateSyncMessage)
+	p2pctx.AddCustomHandler(protocolId, ssctx.handleStateSyncMessage)
 	p2pctx.ssctx = ssctx
 	return ssctx, nil
 }

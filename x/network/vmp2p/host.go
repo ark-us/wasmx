@@ -13,13 +13,14 @@ import (
 	"bufio"
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	host "github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	peerstore "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"golang.org/x/sync/errgroup"
 
 	multiaddr "github.com/multiformats/go-multiaddr"
 
@@ -586,6 +587,7 @@ func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	env.AddFunction("DisconnectChatRoom", wasmedge.NewFunction(functype_i32_i32, DisconnectChatRoom, ctx, 0))
 	env.AddFunction("DisconnectPeer", wasmedge.NewFunction(functype_i32_i32, DisconnectPeer, ctx, 0))
 
+	// TODO move to vmmc
 	env.AddFunction("StartStateSyncRequest", wasmedge.NewFunction(functype_i32_i32, StartStateSyncRequest, ctx, 0))
 	env.AddFunction("StartStateSyncResponse", wasmedge.NewFunction(functype_i32_i32, StartStateSyncResponse, ctx, 0))
 	return env
@@ -604,27 +606,47 @@ func startNodeWithIdentityAndGossip(
 	var err error
 	if p2pctx.Node != nil {
 		node = *p2pctx.Node
+		addladdr, err := multiaddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + port)
+		if err != nil {
+			return nil, err
+		}
+		err = node.Network().Listen(addladdr)
+		if err != nil {
+			return nil, err
+		}
+
+		// print the node's PeerInfo in multiaddr format
+		peerInfo := peerstore.AddrInfo{
+			ID:    node.ID(),
+			Addrs: node.Addrs(),
+		}
+		addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("p2p node already started", "ID", node.ID(), "newport", port, "addresses", addrs)
 	} else {
 		node, err = startNodeWithIdentityInternal(privateKey, port)
 		if err != nil {
 			logger.Error("start p2p node with identity failed", "error", err.Error())
 			return nil, err
 		}
+		// print the node's PeerInfo in multiaddr format
+		peerInfo := peerstore.AddrInfo{
+			ID:    node.ID(),
+			Addrs: node.Addrs(),
+		}
+		addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs, "port", port)
 	}
 	p2pctx.Node = &node
 
-	// print the node's PeerInfo in multiaddr format
-	peerInfo := peerstore.AddrInfo{
-		ID:    node.ID(),
-		Addrs: node.Addrs(),
-	}
-	addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
-	if err != nil {
-		return nil, err
-	}
-	logger.Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs)
-	node.SetStreamHandler(protocol.ID(protocolId), handleStream)
+	logger.Info("adding p2p protocol", "protocolId", protocolId)
 
+	node.SetStreamHandler(protocol.ID(protocolId), handleStream)
 	err = connectGossipSub(goContextParent, logger, p2pctx, protocolId)
 	if err != nil {
 		return nil, err

@@ -129,6 +129,19 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	if err != nil {
 		return err
 	}
+
+	InitializeStateSyncProvider(
+		ctx.GoContextParent,
+		ctx.GoRoutineGroup,
+		logger,
+		app.GetTendermintConfig(),
+		req.ChainId,
+		app,
+		app.GetRpcClient(),
+		mcfg.GetStateSyncProtocolId(req.ChainId),
+		fmt.Sprintf("%d", req.NodePorts.WasmxNetworkP2P),
+	)
+
 	return nil
 }
 

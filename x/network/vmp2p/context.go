@@ -26,7 +26,7 @@ func (c *Context) handleStream(stream network.Stream) {
 // peer stream
 func (c *Context) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context.GoContextParent, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
+	go readDataStd(c.Context.GoContextParent, c.Logger, rw, string(stream.Protocol()), peeraddrstr, c.handleContractMessage)
 	c.Logger.Debug("Connected to:", peeraddrstr)
 }
 

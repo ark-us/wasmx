@@ -39,3 +39,29 @@ type StartSubChainMsg struct {
 type StartSubChainResponse struct {
 	Error string `json:"error"`
 }
+
+type StateSyncConfig struct {
+	Enable              bool     `json:"enable"`
+	TempDir             string   `json:"temp_dir"`
+	DiscoveryTime       int64    `json:"discovery_time"`
+	ChunkRequestTimeout int64    `json:"chunk_request_timeout"`
+	ChunkFetchers       int32    `json:"chunk_fetchers"`
+	RpcServers          []string `json:"rpc_servers"`
+	TrustPeriod         int64    `json:"trust_period"`
+	TrustHeight         int64    `json:"trust_height"`
+	TrustHash           string   `json:"trust_hash"`
+}
+
+type StateSyncRequestMsg struct {
+	ProtocolId      string           `json:"protocol_id"`
+	PeerAddress     string           `json:"peer_address"`
+	ChainId         string           `json:"chain_id"`
+	ChainConfig     menc.ChainConfig `json:"chain_config"`
+	NodePorts       mctx.NodePorts   `json:"node_ports"`
+	InitialPorts    mctx.NodePorts   `json:"initial_node_ports"`
+	StatesyncConfig StateSyncConfig  `json:"statesync_config"`
+}
+
+type StateSyncResponse struct {
+	Error string `json:"error"`
+}

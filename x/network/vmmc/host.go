@@ -90,6 +90,37 @@ func GetSubChainIds(_context interface{}, callframe *wasmedge.CallingFrame, para
 	return returns, wasmedge.Result_Success
 }
 
+// StartStateSyncRequest(StateSyncRequestMsg): void
+func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req StateSyncRequestMsg
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	err = StartStateSyncWithChainId(ctx, req)
+	response := &StartSubChainResponse{Error: ""}
+	if err != nil {
+		ctx.Logger(ctx.Ctx).Error("could not start subchain app", "error", err.Error())
+		response.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func BuildWasmxMultichainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	context := &Context{Context: ctx_}
 	env := wasmedge.NewModule("multichain")
@@ -105,5 +136,6 @@ func BuildWasmxMultichainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
 	env.AddFunction("InitSubChain", wasmedge.NewFunction(functype_i32_i32, InitSubChain, context, 0))
 	env.AddFunction("StartSubChain", wasmedge.NewFunction(functype_i32_i32, StartSubChain, context, 0))
 	env.AddFunction("GetSubChainIds", wasmedge.NewFunction(functype__i32, GetSubChainIds, context, 0))
+	env.AddFunction("StartStateSync", wasmedge.NewFunction(functype_i32_i32, StartStateSyncRequest, context, 0))
 	return env
 }
