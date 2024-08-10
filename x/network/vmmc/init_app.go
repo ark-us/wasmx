@@ -136,6 +136,7 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 		logger,
 		app.GetTendermintConfig(),
 		req.ChainId,
+		req.ChainConfig,
 		app,
 		app.GetRpcClient(),
 		mcfg.GetStateSyncProtocolId(req.ChainId),

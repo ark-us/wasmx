@@ -36,6 +36,7 @@ import (
 	// "github.com/cosmos/gogoproto/proto"
 
 	mcfg "mythos/v1/config"
+	menc "mythos/v1/encoding"
 	networktypes "mythos/v1/x/network/types"
 )
 
@@ -60,6 +61,7 @@ func startStateSyncRequest(
 	jsonCdc codec.JSONCodec,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	p2pctx *P2PContext,
@@ -77,7 +79,7 @@ func startStateSyncRequest(
 		return err
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
 	if err != nil {
 		return err
 	}
@@ -96,6 +98,7 @@ func startStateSyncResponse(
 	jsonCdc codec.JSONCodec,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	p2pctx *P2PContext,
@@ -109,7 +112,7 @@ func startStateSyncResponse(
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
 
-	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
+	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
 	if err != nil {
 		return err
 	}
@@ -125,6 +128,7 @@ type StateSyncP2PCtx struct {
 	App                    mcfg.MythosApp
 	ctndcfg                *cmtcfg.Config
 	chainId                string
+	chainCfg               menc.ChainConfig
 	rpcClient              client.CometRPC
 	protocolId             string
 	privateKey             []byte
@@ -191,7 +195,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 			return
 		}
 
-		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, connectToPeerFn, true)
+		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.chainCfg, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, connectToPeerFn, true)
 		if err != nil {
 			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "protocol_id", c.protocolId, "error", err.Error())
 			return
@@ -210,6 +214,7 @@ func StartStateSyncWithChainId(
 	sdklogger log.Logger,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	protocolId string,
@@ -217,7 +222,7 @@ func StartStateSyncWithChainId(
 	privateKey []byte,
 	port string,
 ) error {
-	ssctx, err := InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, app, rpcClient, protocolId, peeraddress, privateKey, port)
+	ssctx, err := InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, chainCfg, app, rpcClient, protocolId, peeraddress, privateKey, port)
 	if err != nil {
 		return err
 	}
@@ -234,6 +239,7 @@ func InitializeStateSyncWithPeer(
 	sdklogger log.Logger,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	protocolId string,
@@ -248,7 +254,17 @@ func InitializeStateSyncWithPeer(
 
 	ssp2pctx := &StateSyncP2PCtx{
 		GoContextParent: goContextParent,
+		GoRoutineGroup:  goRoutineGroup,
 		Logger:          sdklogger,
+		App:             app,
+		ctndcfg:         ctndcfg,
+		chainId:         chainId,
+		chainCfg:        chainCfg,
+		rpcClient:       rpcClient,
+		protocolId:      protocolId,
+		privateKey:      privateKey,
+		port:            port,
+		p2pctx:          p2pctx,
 	}
 
 	_, err = startNodeWithIdentityAndGossip(goContextParent, p2pctx, sdklogger, privateKey, port, protocolId, ssp2pctx.handleStream)
@@ -273,7 +289,7 @@ func InitializeStateSyncWithPeer(
 		return nil, err
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, true)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, true)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +303,7 @@ func InitializeStateSyncProvider(
 	sdklogger log.Logger,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	protocolId string,
@@ -306,6 +323,7 @@ func InitializeStateSyncProvider(
 		App:             app,
 		ctndcfg:         ctndcfg,
 		chainId:         chainId,
+		chainCfg:        chainCfg,
 		rpcClient:       rpcClient,
 		protocolId:      protocolId,
 		privateKey:      privateKey,
@@ -329,6 +347,7 @@ func InitializeStateSync(
 	jsonCdc codec.JSONCodec,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	bapp *baseapp.BaseApp,
 	rpcClient client.CometRPC,
 	p2pctx *P2PContext,
@@ -418,6 +437,7 @@ func InitializeStateSync(
 	var stateSyncProvider statesync.StateProvider
 	stateStore := StateStore{
 		ChainId:           chainId,
+		ChainCfg:          chainCfg,
 		GoContextParent:   goContextParent,
 		Logger:            sdklogger,
 		InterfaceRegistry: interfaceRegistry,

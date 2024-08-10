@@ -28,10 +28,12 @@ import (
 	networktypes "mythos/v1/x/network/types"
 
 	mcfg "mythos/v1/config"
+	menc "mythos/v1/encoding"
 )
 
 type StateStore struct {
 	ChainId           string
+	ChainCfg          menc.ChainConfig
 	GoContextParent   context.Context
 	Logger            log.Logger
 	InterfaceRegistry cdctypes.InterfaceRegistry
@@ -149,6 +151,7 @@ func (s StateStore) Bootstrap(state sm.State) error {
 	// }
 
 	chainId := s.ChainId
+	chainCfg := s.ChainCfg
 	goContextParent := s.GoContextParent
 	logger := s.Logger
 	interfaceRegistry := s.InterfaceRegistry
@@ -202,11 +205,6 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		return err
 	}
 
-	chainCfg, err := mcfg.GetChainConfig(chainId)
-	if err != nil {
-		return err
-	}
-
 	multichainapp, err := mcfg.GetMultiChainApp(goContextParent)
 	if err != nil {
 		return err
@@ -223,7 +221,7 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		}
 	}
 	if !found {
-		app = multichainapp.NewApp(chainId, chainCfg)
+		app = multichainapp.NewApp(chainId, &chainCfg)
 	}
 
 	if s.ExternalStateSync {
@@ -232,7 +230,7 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		// so we can just get the private validator data from config files
 
 		// start API servers
-		_, _, _, _, _, _, err = multichainapp.APICtx.StartChainApis(chainId, chainCfg, app.NonDeterministicGetNodePorts())
+		_, _, _, _, _, _, err = multichainapp.APICtx.StartChainApis(chainId, &chainCfg, app.NonDeterministicGetNodePorts())
 		if err != nil {
 			return err
 		}

@@ -480,7 +480,7 @@ func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFram
 		tndcfg.StateSync.TrustHeight = req.Height
 		ctx.Context.GoRoutineGroup.Go(func() error {
 			time.Sleep(time.Second * 5)
-			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
+			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), *app.GetChainCfg(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
 
 			// err = startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
 			// if err != nil {
@@ -543,7 +543,7 @@ func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFra
 	jsonCdc := ctx.Context.CosmosHandler.JSONCodec()
 
 	if stream != nil {
-		err = startStateSyncResponse(goContextParent, sdklogger, interfaceRegistry, jsonCdc, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
+		err = startStateSyncResponse(goContextParent, sdklogger, interfaceRegistry, jsonCdc, app.GetTendermintConfig(), ctx.Context.Ctx.ChainID(), *app.GetChainCfg(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
 		if err != nil {
 			response.Error = err.Error()
 		}

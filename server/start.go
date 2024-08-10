@@ -493,7 +493,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 
 				privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
 
-				err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes(), peers)
+				err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, *chainCfg, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes(), peers)
 				if err != nil {
 					panic(err)
 				}
@@ -537,7 +537,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		if !strings.Contains(chainId, "level0") {
 			ssfn := func(mythosapp *mapp.App, csvrCtx *server.Context, cmsrvconfig *srvconfig.Config, ctndcfg *cmtcfg.Config, chainId string, rpcClient client.CometRPC, privValidator *pvm.FilePV) func() {
 				return func() {
-					startStateSyncProvider(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
+					startStateSyncProvider(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, *chainCfg, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes())
 				}
 			}(mythosapp, csvrCtx, cmsrvconfig, ctndcfg, chainId, rpcClient, privValidator)
 			startStateSyncProviders = append(startStateSyncProviders, ssfn)
@@ -830,6 +830,7 @@ func startStateSync(
 	cmsrvconfig *srvconfig.Config,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	privateKey []byte,
@@ -839,7 +840,7 @@ func startStateSync(
 	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
 	port := strings.Split(peers[0], "/")[4]
 
-	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), peeraddress, privateKey, port)
+	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, chainCfg, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), peeraddress, privateKey, port)
 	if err != nil {
 		return err
 	}
@@ -858,6 +859,7 @@ func startStateSyncProvider(
 	cmsrvconfig *srvconfig.Config,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	privateKey []byte,
@@ -865,7 +867,7 @@ func startStateSyncProvider(
 	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
 	port := strings.Split(peers[0], "/")[4]
 	go func() {
-		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), privateKey, port)
+		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, chainCfg, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), privateKey, port)
 		if err != nil {
 			csvrCtx.Logger.Error("InitializeStateSyncProvider", "error", err.Error())
 		}

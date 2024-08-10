@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 
 	mcfg "mythos/v1/config"
+	menc "mythos/v1/encoding"
 	vmp2p "mythos/v1/x/network/vmp2p"
 )
 
@@ -49,6 +50,7 @@ func StartStateSyncWithChainId(ctx *Context, req StateSyncRequestMsg) error {
 		ctx.Logger(ctx.GetContext()),
 		ctndcfg,
 		req.ChainId,
+		req.ChainConfig,
 		mythosapp,
 		rpcClient,
 		req.ProtocolId,
@@ -64,6 +66,7 @@ func InitializeStateSyncProvider(
 	sdklogger log.Logger,
 	ctndcfg *cmtcfg.Config,
 	chainId string,
+	chainCfg menc.ChainConfig,
 	app mcfg.MythosApp,
 	rpcClient client.CometRPC,
 	protocolId string,
@@ -72,7 +75,7 @@ func InitializeStateSyncProvider(
 	privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
 
 	go func() {
-		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), privValidator.Key.PrivKey.Bytes(), port)
+		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, chainCfg, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), privValidator.Key.PrivKey.Bytes(), port)
 		if err != nil {
 			sdklogger.Error("InitializeStateSyncProvider", "error", err.Error())
 		}
