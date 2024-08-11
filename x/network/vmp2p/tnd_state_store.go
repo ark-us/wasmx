@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	log "cosmossdk.io/log"
@@ -41,6 +39,8 @@ type StateStore struct {
 	StateSyncReactor  *statesync.Reactor
 	Sw                *cmtp2p.Switch
 	ExternalStateSync bool
+	Peers             []string
+	CurrentNodeId     int32
 }
 
 type State struct {
@@ -237,29 +237,12 @@ func (s StateStore) Bootstrap(state sm.State) error {
 	}
 
 	ctndcfg := app.GetTendermintConfig()
-	cmsrvconfig := app.GetServerConfig()
 	privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
 	pubKey, err := privValidator.GetPubKey()
 	if err != nil {
 		return err
 	}
 	privKey := privValidator.Key.PrivKey
-	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
-	currentIdStr := "0"
-	nodeids := strings.Split(cmsrvconfig.Network.Id, ";")
-	for _, nodeid := range nodeids {
-		chainIdPair := strings.Split(nodeid, ":")
-		if len(chainIdPair) == 1 {
-			currentIdStr = chainIdPair[0]
-		} else if len(chainIdPair) > 1 && chainIdPair[0] == chainId {
-			currentIdStr = chainIdPair[1]
-			break
-		}
-	}
-	currentId, err := strconv.Atoi(currentIdStr)
-	if err != nil {
-		return err
-	}
 
 	// initialize all single consensus contracts from genesis
 	// TODO metaconsensus state sync as an extension
@@ -268,7 +251,7 @@ func (s StateStore) Bootstrap(state sm.State) error {
 		return err
 	}
 
-	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), state.AppHash, &state.ConsensusParams, app.GetBaseApp().AppVersion(), pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), int32(currentId), peers, app.NonDeterministicGetNodePortsInitial())
+	err = networkserver.InitConsensusContract(app, logger, app.GetNetworkKeeper(), state.AppHash, &state.ConsensusParams, app.GetBaseApp().AppVersion(), pubKey.Address(), pubKey.Bytes(), privKey.Bytes(), s.CurrentNodeId, s.Peers, app.NonDeterministicGetNodePortsInitial())
 	if err != nil {
 		return err
 	}

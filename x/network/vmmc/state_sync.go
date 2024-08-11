@@ -57,6 +57,8 @@ func StartStateSyncWithChainId(ctx *Context, req StateSyncRequestMsg) error {
 		req.PeerAddress,
 		privValidator.Key.PrivKey.Bytes(),
 		fmt.Sprintf(`%d`, req.NodePorts.WasmxNetworkP2P),
+		req.Peers,
+		req.CurrentNodeId,
 	)
 }
 

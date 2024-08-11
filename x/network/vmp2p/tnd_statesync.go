@@ -67,6 +67,8 @@ func startStateSyncRequest(
 	p2pctx *P2PContext,
 	protocolId string,
 	peeraddress string,
+	peers []string,
+	currentNodeId int32,
 	stream network.Stream,
 	connectToPeerFn func() (network.Stream, error),
 ) error {
@@ -79,7 +81,7 @@ func startStateSyncRequest(
 		return err
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false, peers, currentNodeId)
 	if err != nil {
 		return err
 	}
@@ -112,7 +114,7 @@ func startStateSyncResponse(
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
 
-	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false)
+	_, err := InitializeStateSync(goContextParent, sdklogger, interfaceRegistry, jsonCdc, ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, false, []string{}, 0)
 	if err != nil {
 		return err
 	}
@@ -135,6 +137,8 @@ type StateSyncP2PCtx struct {
 	port                   string
 	p2pctx                 *P2PContext
 	ssctx                  *StateSyncContext
+	peers                  []string
+	currentNodeId          int32
 }
 
 func (c *StateSyncP2PCtx) listenPeerStream(stream network.Stream, peeraddrstr string) {
@@ -195,7 +199,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 			return
 		}
 
-		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.chainCfg, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, connectToPeerFn, true)
+		ssctx, err := InitializeStateSync(c.GoContextParent, c.Logger, c.App.InterfaceRegistry(), c.App.JSONCodec(), c.ctndcfg, c.chainId, c.chainCfg, c.App.GetBaseApp(), c.rpcClient, c.p2pctx, c.protocolId, peeraddr, stream, connectToPeerFn, true, c.peers, c.currentNodeId)
 		if err != nil {
 			c.Logger.Debug("statesync request failed", "frompeer", peeraddr, "protocol_id", c.protocolId, "error", err.Error())
 			return
@@ -221,8 +225,10 @@ func StartStateSyncWithChainId(
 	peeraddress string,
 	privateKey []byte,
 	port string,
+	peers []string,
+	currentNodeId int32,
 ) error {
-	ssctx, err := InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, chainCfg, app, rpcClient, protocolId, peeraddress, privateKey, port)
+	ssctx, err := InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, chainCfg, app, rpcClient, protocolId, peeraddress, privateKey, port, peers, currentNodeId)
 	if err != nil {
 		return err
 	}
@@ -246,6 +252,8 @@ func InitializeStateSyncWithPeer(
 	peeraddress string,
 	privateKey []byte,
 	port string,
+	peers []string,
+	currentNodeId int32,
 ) (*StateSyncContext, error) {
 	p2pctx, err := GetP2PContext(goContextParent)
 	if err != nil {
@@ -265,6 +273,8 @@ func InitializeStateSyncWithPeer(
 		privateKey:      privateKey,
 		port:            port,
 		p2pctx:          p2pctx,
+		peers:           peers,
+		currentNodeId:   currentNodeId,
 	}
 
 	_, err = startNodeWithIdentityAndGossip(goContextParent, p2pctx, sdklogger, privateKey, port, protocolId, ssp2pctx.handleStream)
@@ -289,7 +299,7 @@ func InitializeStateSyncWithPeer(
 		return nil, err
 	}
 
-	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, true)
+	ssctx, err := InitializeStateSync(goContextParent, sdklogger, app.InterfaceRegistry(), app.JSONCodec(), ctndcfg, chainId, chainCfg, app.GetBaseApp(), rpcClient, p2pctx, protocolId, peeraddress, stream, connectToPeerFn, true, peers, currentNodeId)
 	if err != nil {
 		return nil, err
 	}
@@ -329,6 +339,8 @@ func InitializeStateSyncProvider(
 		privateKey:      privateKey,
 		port:            port,
 		p2pctx:          p2pctx,
+		peers:           []string{},
+		currentNodeId:   0,
 	}
 	ssp2pctx.HandleStateSyncMessage = ssp2pctx.handleStateSyncStart
 
@@ -356,6 +368,8 @@ func InitializeStateSync(
 	stream network.Stream,
 	connectToPeerFn func() (network.Stream, error),
 	externalStateSync bool,
+	peers []string,
+	currentNodeId int32,
 ) (*StateSyncContext, error) {
 	// TODO store peer address, to be checked when we receive state sync messages
 	// add custom handler
@@ -445,6 +459,8 @@ func InitializeStateSync(
 		StateSyncReactor:  stateSyncReactor,
 		Sw:                sw,
 		ExternalStateSync: externalStateSync,
+		Peers:             peers,
+		CurrentNodeId:     currentNodeId,
 	}
 
 	ssctx := &StateSyncContext{

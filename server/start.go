@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cast"
@@ -840,7 +841,23 @@ func startStateSync(
 	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
 	port := strings.Split(peers[0], "/")[4]
 
-	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, chainCfg, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), peeraddress, privateKey, port)
+	currentIdStr := "0"
+	nodeids := strings.Split(cmsrvconfig.Network.Id, ";")
+	for _, nodeid := range nodeids {
+		chainIdPair := strings.Split(nodeid, ":")
+		if len(chainIdPair) == 1 {
+			currentIdStr = chainIdPair[0]
+		} else if len(chainIdPair) > 1 && chainIdPair[0] == chainId {
+			currentIdStr = chainIdPair[1]
+			break
+		}
+	}
+	currentId, err := strconv.Atoi(currentIdStr)
+	if err != nil {
+		return err
+	}
+
+	ssctx, err := vmp2p.InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, chainCfg, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), peeraddress, privateKey, port, peers, int32(currentId))
 	if err != nil {
 		return err
 	}

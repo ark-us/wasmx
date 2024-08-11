@@ -156,10 +156,12 @@ type DisconnectChatRoomRequest struct {
 type DisconnectChatRoomResponse struct{}
 
 type StartStateSyncReqRequest struct {
-	Height      int64  `json:"trust_height"`
-	Hash        []byte `json:"trust_hash"`
-	ProtocolId  string `json:"protocol_id"`
-	PeerAddress string `json:"peer_address"`
+	Height        int64    `json:"trust_height"`
+	Hash          []byte   `json:"trust_hash"`
+	ProtocolId    string   `json:"protocol_id"`
+	PeerAddress   string   `json:"peer_address"`
+	Peers         []string `json:"peers"`
+	CurrentNodeId int32    `json:"current_node_id"`
 }
 
 type StartStateSyncReqResponse struct {

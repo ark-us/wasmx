@@ -60,6 +60,8 @@ type StateSyncRequestMsg struct {
 	NodePorts       mctx.NodePorts   `json:"node_ports"`
 	InitialPorts    mctx.NodePorts   `json:"initial_node_ports"`
 	StatesyncConfig StateSyncConfig  `json:"statesync_config"`
+	Peers           []string         `json:"peers"`
+	CurrentNodeId   int32            `json:"current_node_id"`
 }
 
 type StateSyncResponse struct {

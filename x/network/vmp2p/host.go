@@ -436,6 +436,7 @@ func DisconnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, para
 }
 
 // TODO this is temporary, to be replaced with consensus api methods like ApplySnapshotChunk, LoadSnapshotChunk, OfferSnapshot, ListSnapshots
+// we currently dont use this method, because I could not figure out how to properly statesync after resetting the stores
 func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	response := &StartStateSyncReqResponse{Error: ""}
 	ctx := _context.(*Context)
@@ -480,7 +481,7 @@ func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFram
 		tndcfg.StateSync.TrustHeight = req.Height
 		ctx.Context.GoRoutineGroup.Go(func() error {
 			time.Sleep(time.Second * 5)
-			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), *app.GetChainCfg(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
+			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), *app.GetChainCfg(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, req.Peers, req.CurrentNodeId, stream, connectToPeerFn)
 
 			// err = startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
 			// if err != nil {
@@ -666,7 +667,6 @@ func startNodeWithIdentityInternal(_pk []byte, port string) (host.Host, error) {
 		libp2p.Ping(false),
 		identity,
 	)
-
 	if err != nil {
 		return nil, err
 	}
