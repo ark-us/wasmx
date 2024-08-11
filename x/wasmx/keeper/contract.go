@@ -439,26 +439,7 @@ func (k *Keeper) instantiateInternal(
 			return mcodec.AccAddressPrefixed{}, nil, err
 		}
 	}
-	// prepare params for contract instantiate call
-	info := types.NewInfo(creator, creator, deposit)
-	env := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
-	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
-
-	// create prefixed data store
-	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
-	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
-	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
-
-	// prepare querier
-	handler := k.newCosmosHandler(ctx, contractAddress)
-	systemDeps := k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-	// contractDeps, err := k.ContractDepsFromCodeDeps(ctx, codeInfo.Deps)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// instantiate wasm contract
-	res, gasUsed, err := k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, storageType, handler, k.gasMeter(ctx), systemDeps)
+	res, gasUsed, err := k.ExecuteContractInstantiationInternal(ctx, codeID, codeInfo, creator, contractAddress, storageType, initMsg, deposit, label)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if err != nil {
@@ -529,6 +510,42 @@ func (k *Keeper) instantiateInternal(
 	k.Logger(ctx).Debug("instantiated new contract", "address", contractAddress.String())
 
 	return contractAddress, res.Data, nil
+}
+
+func (k *Keeper) ExecuteContractInstantiationInternal(
+	ctx sdk.Context,
+	codeID uint64,
+	codeInfo *types.CodeInfo,
+	creator mcodec.AccAddressPrefixed,
+	contractAddress mcodec.AccAddressPrefixed,
+	storageType types.ContractStorageType,
+	initMsg []byte,
+	deposit sdk.Coins,
+	label string,
+) (types.ContractResponse, uint64, error) {
+	// prepare params for contract instantiate call
+	info := types.NewInfo(creator, creator, deposit)
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
+	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
+
+	// create prefixed data store
+	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
+	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
+	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
+
+	// prepare querier
+	handler := k.newCosmosHandler(ctx, contractAddress)
+	systemDeps := k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
+	// contractDeps, err := k.ContractDepsFromCodeDeps(ctx, codeInfo.Deps)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+
+	// instantiate wasm contract
+	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, storageType, handler, k.gasMeter(ctx), systemDeps)
 }
 
 // PinCode pins the wasm contract in wasmvm cache
@@ -618,7 +635,10 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	}
 	// TODO execute with origin
 	info := types.NewInfo(caller, caller, coins)
-	env := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	if err != nil {
+		return nil, err
+	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
@@ -679,7 +699,10 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute eventual")
 
 	info := types.NewInfo(caller, caller, nil)
-	env := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	if err != nil {
+		return nil, err
+	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
@@ -725,7 +748,10 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 
 	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 
-	env := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, types.MessageInfo{})
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, types.MessageInfo{})
+	if err != nil {
+		return nil, err
+	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
@@ -791,7 +817,10 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	}
 
 	info := types.NewInfo(origin, caller, coins)
-	env := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	if err != nil {
+		return nil, err
+	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -855,7 +884,10 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	}
 
 	info := types.NewInfo(caller, caller, coins)
-	env := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
+	if err != nil {
+		return nil, err
+	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)

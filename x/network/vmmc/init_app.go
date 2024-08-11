@@ -121,7 +121,7 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	}
 
 	// start API servers
-	_, _, _, _, _, err = multichainapp.StartAPIs(req.ChainId, &req.ChainConfig, req.NodePorts)
+	_, _, _, _, _, _, err = multichainapp.APICtx.StartChainApis(req.ChainId, &req.ChainConfig, req.NodePorts)
 	if err != nil {
 		return err
 	}
@@ -129,6 +129,20 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	if err != nil {
 		return err
 	}
+
+	InitializeStateSyncProvider(
+		ctx.GoContextParent,
+		ctx.GoRoutineGroup,
+		logger,
+		app.GetTendermintConfig(),
+		req.ChainId,
+		req.ChainConfig,
+		app,
+		app.GetRpcClient(),
+		mcfg.GetStateSyncProtocolId(req.ChainId),
+		fmt.Sprintf("%d", req.NodePorts.WasmxNetworkP2P),
+	)
+
 	return nil
 }
 

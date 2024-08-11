@@ -3,7 +3,6 @@ package vm
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/protoio"
@@ -418,7 +417,6 @@ func wasmxValidatorsHash(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--reqbz--", string(reqbz))
 	var vals networktypes.TendermintValidators
 	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vals)
 	if err != nil {
@@ -446,6 +444,29 @@ func wasmxValidatorsHash(_context interface{}, callframe *wasmedge.CallingFrame,
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxConsensusParamsHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var cparams *cmttypes.ConsensusParams
+	err = json.Unmarshal(reqbz, &cparams)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ConsensusParamsHash")
+		return nil, wasmedge.Result_Fail
+	}
+	hash := cparams.Hash()
+	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hash)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxBlockCommitVoteBytes(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
@@ -455,14 +476,14 @@ func wasmxBlockCommitVoteBytes(_context interface{}, callframe *wasmedge.Calling
 	var vote cmtproto.Vote
 	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vote)
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes")
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "unmarshal cmtproto.Vote")
 		return nil, wasmedge.Result_Fail
 	}
 
 	pb := cmttypes.CanonicalizeVote(ctx.Ctx.ChainID(), &vote)
 	bz, err := protoio.MarshalDelimited(&pb)
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes")
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "marshal cmtproto.CanonicalVote")
 		return nil, wasmedge.Result_Fail
 	}
 	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)
@@ -505,7 +526,21 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 	env.AddFunction("RollbackToVersion", wasmedge.NewFunction(functype_i64_i32, RollbackToVersion, context, 0))
 	env.AddFunction("HeaderHash", wasmedge.NewFunction(functype_i32_i32, wasmxHeaderHash, context, 0))
 	env.AddFunction("ValidatorsHash", wasmedge.NewFunction(functype_i32_i32, wasmxValidatorsHash, context, 0))
+	env.AddFunction("ConsensusParamsHash", wasmedge.NewFunction(functype_i32_i32, wasmxConsensusParamsHash, context, 0))
 	env.AddFunction("BlockCommitVoteBytes", wasmedge.NewFunction(functype_i32_i32, wasmxBlockCommitVoteBytes, context, 0))
+
+	// TODO
+	// // ApplySnapshotChunk(req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error)
+	// env.AddFunction("ApplySnapshotChunk", wasmedge.NewFunction(functype_i32_i32, ApplySnapshotChunk, context, 0))
+
+	// // LoadSnapshotChunk(req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error)
+	// env.AddFunction("LoadSnapshotChunk", wasmedge.NewFunction(functype_i32_i32, LoadSnapshotChunk, context, 0))
+
+	// // OfferSnapshot(req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error)
+	// env.AddFunction("OfferSnapshot", wasmedge.NewFunction(functype_i32_i32, OfferSnapshot, context, 0))
+
+	// // ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)
+	// env.AddFunction("ListSnapshots", wasmedge.NewFunction(functype_i32_i32, ListSnapshots, context, 0))
 
 	return env
 }

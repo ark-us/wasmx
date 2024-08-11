@@ -28,11 +28,14 @@ type ChatRoom struct {
 	self        peer.ID
 }
 
+var ERROR_TOPIC_EXISTS = "topic already exists"
+
 // JoinChatRoom tries to subscribe to the PubSub topic for the room name, returning
 // a ChatRoom on success.
 func JoinChatRoom(ctx *Context, ps *pubsub.PubSub, selfID peer.ID, protocolID string, topicString string) (*ChatRoom, error) {
+	topicStr := topicName(topicString)
 	// join the pubsub topic
-	topic, err := ps.Join(topicName(topicString))
+	topic, err := ps.Join(topicStr)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +88,7 @@ func readLoop(cr *ChatRoom) {
 				logger.Error("Error chat room message read ", "error", err.Error(), "topic", cr.topic)
 			}
 			// remove chat room; it will be reconnected when needed
-			p2pctx, err := GetP2PContext(cr.ctx.Context)
+			p2pctx, err := GetP2PContext(cr.ctx.Context.GoContextParent)
 			if err == nil {
 				p2pctx.DeleteChatRoom(cr.protocolID, cr.topicString)
 			}
@@ -98,7 +101,7 @@ func readLoop(cr *ChatRoom) {
 		cm := &ChatRoomMessage{
 			ContractMsg: msg.Data,
 			RoomId:      cr.topicString,
-			Sender:      NodeInfo{Id: msg.ReceivedFrom.String()},
+			Sender:      NodeInfo{Ip: msg.ReceivedFrom.String()},
 			Timestamp:   time.Now(),
 			ProtocolID:  cr.protocolID,
 		}

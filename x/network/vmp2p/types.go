@@ -67,11 +67,13 @@ type MdnsService interface {
 }
 
 type P2PContext struct {
-	mtx              sync.Mutex
-	Node             *host.Host
-	PubSub           *pubsub.PubSub
-	Mdns             MdnsService
-	ProtocolContexts map[string]*ProtocolContext // indexed by protocol ID
+	mtx                  sync.Mutex
+	Node                 *host.Host
+	PubSub               *pubsub.PubSub
+	Mdns                 MdnsService
+	ProtocolContexts     map[string]*ProtocolContext // indexed by protocol ID
+	CustomMessageHandler map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string)
+	ssctx                *StateSyncContext
 }
 
 type ProtocolContext struct {
@@ -115,7 +117,9 @@ type ConnectChatRoomRequest struct {
 	Topic      string `json:"topic"`
 }
 
-type ConnectChatRoomResponse struct{}
+type ConnectChatRoomResponse struct {
+	Error string `json:"error"`
+}
 
 type SendMessageToChatRoomRequest struct {
 	Contract   string `json:"contract"`
@@ -125,7 +129,9 @@ type SendMessageToChatRoomRequest struct {
 	Topic      string `json:"topic"`
 }
 
-type SendMessageToChatRoomResponse struct{}
+type SendMessageToChatRoomResponse struct {
+	Error string `json:"error"`
+}
 
 type SendMessageRequest struct {
 	Contract   string `json:"contract"`
@@ -148,6 +154,28 @@ type DisconnectChatRoomRequest struct {
 }
 
 type DisconnectChatRoomResponse struct{}
+
+type StartStateSyncReqRequest struct {
+	Height        int64    `json:"trust_height"`
+	Hash          []byte   `json:"trust_hash"`
+	ProtocolId    string   `json:"protocol_id"`
+	PeerAddress   string   `json:"peer_address"`
+	Peers         []string `json:"peers"`
+	CurrentNodeId int32    `json:"current_node_id"`
+}
+
+type StartStateSyncReqResponse struct {
+	Error string `json:"error"`
+}
+
+type StartStateSyncRespRequest struct {
+	ProtocolId  string `json:"protocol_id"`
+	PeerAddress string `json:"peer_address"`
+}
+
+type StartStateSyncRespResponse struct {
+	Error string `json:"error"`
+}
 
 type MsgStart struct {
 	PrivateKey []byte     `json:"pk"`
@@ -238,6 +266,26 @@ func (p *P2PContext) DeleteChatRoom(protocolID string, topic string) error {
 	return nil
 }
 
+func (p *P2PContext) AddCustomHandler(name string, handler func(netmsg P2PMessage, contractAddress string, senderAddress string)) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	if p.CustomMessageHandler == nil {
+		p.CustomMessageHandler = map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string){}
+	}
+	p.CustomMessageHandler[name] = handler
+}
+
+func (p *P2PContext) GetCustomHandler(name string) func(netmsg P2PMessage, contractAddress string, senderAddress string) {
+	if p.CustomMessageHandler == nil {
+		return nil
+	}
+	handler, ok := p.CustomMessageHandler[name]
+	if !ok {
+		return nil
+	}
+	return handler
+}
+
 func WithP2PEmptyContext(ctx context.Context) context.Context {
 	p2pctx := &P2PContext{ProtocolContexts: map[string]*ProtocolContext{}}
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
@@ -247,8 +295,8 @@ func WithP2PContext(ctx context.Context, p2pctx *P2PContext) context.Context {
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 
-func GetP2PContext(ctx *vmtypes.Context) (*P2PContext, error) {
-	p2pctx_ := ctx.GoContextParent.Value(P2PContextKey)
+func GetP2PContext(goContextParent context.Context) (*P2PContext, error) {
+	p2pctx_ := goContextParent.Value(P2PContextKey)
 	p2pctx := (p2pctx_).(*P2PContext)
 	if p2pctx == nil {
 		return nil, fmt.Errorf("p2p context not set")

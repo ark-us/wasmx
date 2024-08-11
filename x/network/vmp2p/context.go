@@ -2,6 +2,7 @@ package vmp2p
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -12,22 +13,20 @@ import (
 
 	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
-	vmtypes "mythos/v1/x/wasmx/vm"
 )
-
-var STREAM_MAIN = "mainstream"
 
 // main stream
 func (c *Context) handleStream(stream network.Stream) {
 	// Create a buffer stream for non-blocking read and write.
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Logger, rw, stream.ID(), STREAM_MAIN, c.handleContractMessage)
+	peeraddr := stream.Conn().RemoteMultiaddr().String() + "/p2p/" + stream.Conn().RemotePeer().String()
+	go readDataStd(c.Context.GoContextParent, c.Logger, rw, string(stream.Protocol()), peeraddr, c.handleContractMessage)
 }
 
 // peer stream
 func (c *Context) listenPeerStream(stream network.Stream, peeraddrstr string) {
 	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
-	go readDataStd(c.Context, c.Logger, rw, stream.ID(), peeraddrstr, c.handleContractMessage)
+	go readDataStd(c.Context.GoContextParent, c.Logger, rw, string(stream.Protocol()), peeraddrstr, c.handleContractMessage)
 	c.Logger.Debug("Connected to:", peeraddrstr)
 }
 
@@ -68,7 +67,17 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 		return
 	}
 
-	c.Logger.Debug("p2p received message", "msg", string(netmsgbz), "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId)
+	c.Logger.Debug("p2p received message", "sender", senderAddress, "contract", contractAddress, "topic", netmsg.RoomId, "frompeer", netmsg.Sender.Ip)
+
+	// handle custom messages
+	p2pctx, err := GetP2PContext(c.Context.GoContextParent)
+	if err == nil {
+		handler := p2pctx.GetCustomHandler(contractAddress)
+		if handler != nil {
+			handler(netmsg, contractAddress, senderAddress)
+			return
+		}
+	}
 
 	// TODO roles should be bech32 compatible
 	contractAddressPrefixed, err := c.Context.CosmosHandler.GetAddressOrRole(c.Context.Ctx, contractAddress)
@@ -107,9 +116,8 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 	}
 }
 
-func readDataStd(ctx *vmtypes.Context, logger log.Logger, rw *bufio.ReadWriter, protocolID string, frompeer string, handleMessage func(msg []byte, frompeer string)) {
+func readDataStd(goContextParent context.Context, logger log.Logger, rw *bufio.ReadWriter, protocolID string, frompeer string, handleMessage func(msg []byte, frompeer string)) {
 	logger.Debug("reading stream data from peer", "peer", frompeer)
-	goCtx := ctx.GoContextParent
 out:
 	for {
 		msgbz, err := rw.ReadBytes('\n')
@@ -117,12 +125,9 @@ out:
 			if err.Error() != ERROR_STREAM_RESET {
 				logger.Error("Error reading from buffer", "error", err.Error(), "peer", frompeer)
 			}
-			// remove stream if this is a direct peer stream
-			if frompeer != STREAM_MAIN {
-				p2pctx, err := GetP2PContext(ctx)
-				if err == nil {
-					p2pctx.DeletePeer(protocolID, frompeer)
-				}
+			p2pctx, err := GetP2PContext(goContextParent)
+			if err == nil {
+				p2pctx.DeletePeer(protocolID, frompeer)
 			}
 			return
 		}
@@ -136,7 +141,7 @@ out:
 
 		// if parent context is closing, stop receiving messages
 		select {
-		case <-goCtx.Done():
+		case <-goContextParent.Done():
 			logger.Debug("stopping peer libp2p connection", "peer", frompeer)
 			break out
 		default:

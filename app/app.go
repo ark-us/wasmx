@@ -160,6 +160,7 @@ import (
 	ibctestingtypes "github.com/cosmos/ibc-go/v8/testing/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtcfg "github.com/cometbft/cometbft/config"
 
 	ante "mythos/v1/app/ante"
 
@@ -196,6 +197,10 @@ import (
 	cfg "mythos/v1/config"
 
 	mcodec "mythos/v1/codec"
+
+	mctx "mythos/v1/context"
+
+	srvconfig "mythos/v1/server/config"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport
@@ -255,6 +260,7 @@ type App struct {
 	keys      map[string]*storetypes.KVStoreKey
 	tkeys     map[string]*storetypes.TransientStoreKey
 	memKeys   map[string]*storetypes.MemoryStoreKey
+	cmetaKeys map[string]*storetypes.ConsensusMetaStoreKey
 	clessKeys map[string]*storetypes.ConsensuslessStoreKey
 
 	// keepers
@@ -311,10 +317,19 @@ type App struct {
 	addrCodec address.Codec
 
 	minGasPrices sdk.DecCoins
+
+	srvconfig    *srvconfig.Config
+	tndcfg       *cmtcfg.Config
+	rpcClient    client.CometRPC
+	ports        mctx.NodePorts
+	initialPorts mctx.NodePorts
+
+	db dbm.DB
 }
 
 // New returns a reference to an initialized blockchain app
 func NewApp(
+	chainId string,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -338,6 +353,7 @@ func NewApp(
 	// std.RegisterLegacyAminoCodec(cdc)
 	std.RegisterInterfaces(interfaceRegistry)
 
+	logger = logger.With("chain_id", chainId)
 	bApp := baseapp.NewBaseApp(
 		cfg.Name,
 		logger,
@@ -351,8 +367,10 @@ func NewApp(
 	bApp.SetTxEncoder(encodingConfig.TxConfig.TxEncoder())
 	bApp.SetOptimisticExecution(func(oexe *oe.OptimisticExecution) { oexe.Disable() })
 
-	chainId := bApp.ChainID()
-	logger = logger.With("chain_id", chainId)
+	if chainId != bApp.ChainID() {
+		panic(fmt.Sprintf("chain id mismatch: expected %s, got %s", chainId, bApp.ChainID()))
+	}
+
 	wasmxStoreKey := cfg.GetMultiChainStoreKey(chainId, wasmxmoduletypes.StoreKey)
 	websrvStoreKey := cfg.GetMultiChainStoreKey(chainId, websrvmoduletypes.StoreKey)
 	crisisStoreKey := cfg.GetMultiChainStoreKey(chainId, crisistypes.StoreKey)
@@ -402,7 +420,8 @@ func NewApp(
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramsTStoreKey, wasmxTStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitiesMemStoreKey, wasmxMemStoreKey)
-	clessKeys := storetypes.NewConsensuslessStoreKeys(wasmxMetaConsensusStoreKey, wasmxSingleConsensusStoreKey)
+	clessKeys := storetypes.NewConsensuslessStoreKeys(wasmxSingleConsensusStoreKey)
+	cmetaKeys := storetypes.NewConsensusMetaStoreKeys(wasmxMetaConsensusStoreKey)
 
 	// register streaming services
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -422,8 +441,10 @@ func NewApp(
 		goRoutineGroup:    goRoutineGroup,
 		goContextParent:   goContextParent,
 		clessKeys:         clessKeys,
+		cmetaKeys:         cmetaKeys,
 		chainCfg:          chainCfg,
 		minGasPrices:      minGasPrices,
+		db:                db,
 	}
 
 	valCodec := mcodec.NewValBech32Codec(chainCfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -464,6 +485,7 @@ func NewApp(
 		govAuthorityAddr,
 		runtime.EventService{},
 	)
+	// TODO remove the params store & use the wasmx-blocks contract-based storage
 	bApp.SetParamStore(app.ConsensusParamsKeeper.ParamsStore)
 
 	// add capability keeper and ScopeToModule for ibc module
@@ -491,7 +513,7 @@ func NewApp(
 		keys[wasmxStoreKey],
 		memKeys[wasmxMemStoreKey],
 		tkeys[wasmxTStoreKey],
-		clessKeys[wasmxMetaConsensusStoreKey],
+		cmetaKeys[wasmxMetaConsensusStoreKey],
 		clessKeys[wasmxSingleConsensusStoreKey],
 		app.GetSubspace(wasmxmoduletypes.ModuleName),
 		// TODO?
@@ -977,6 +999,7 @@ func NewApp(
 	app.MountTransientStores(tkeys)
 	app.MountMemoryStores(memKeys)
 	app.MountConsensuslessStores(clessKeys)
+	app.MountConsensusMetaStores(cmetaKeys)
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -984,6 +1007,23 @@ func NewApp(
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 	app.setAnteHandler(encodingConfig.TxConfig)
+
+	// must be before Loading version
+	// requires the snapshot store to be created and registered as a BaseAppOption
+	if manager := app.SnapshotManager(); manager != nil {
+		// err := manager.RegisterExtensions(
+		// 	NewMythosSnapshotter(app, app.CommitMultiStore(), &app.WasmxKeeper),
+		// )
+		// TODO!! wasmvm.CreateUtf8 extension for js/python source codes
+		// TODO cache core wasm contracts in memory
+		err := manager.RegisterExtensions(
+			wasmxmodulekeeper.NewWasmSnapshotter(app.CommitMultiStore(), &app.WasmxKeeper),
+			wasmxmodulekeeper.NewUtf8Snapshotter(app.CommitMultiStore(), &app.WasmxKeeper),
+		)
+		if err != nil {
+			panic(fmt.Errorf("failed to register snapshot extension: %s", err))
+		}
+	}
 
 	// In v0.46, the SDK introduces _postHandlers_. PostHandlers are like
 	// antehandlers, but are run _after_ the `runMsgs` execution. They are also
@@ -1021,7 +1061,8 @@ func NewApp(
 
 		// TODO
 		// // Initialize pinned codes in wasmvm as they are not persisted there
-		// if err := app.WasmKeeper.InitializePinnedCodes(ctx); err != nil {
+		// ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+		// if err := app.WasmxKeeper.InitializePinnedCodes(ctx); err != nil {
 		// 	panic(fmt.Sprintf("failed initialize pinned codes %s", err))
 		// }
 	}
@@ -1165,11 +1206,11 @@ func (app *App) LegacyAmino() *codec.LegacyAmino {
 	return app.cdc
 }
 
-// AppCodec returns an app codec.
-//
-// NOTE: This is solely to be used for testing purposes as it may be desirable
-// for modules to register their own custom testing types.
 func (app *App) AppCodec() codec.Codec {
+	return app.appCodec
+}
+
+func (app *App) JSONCodec() codec.JSONCodec {
 	return app.appCodec
 }
 
@@ -1204,6 +1245,11 @@ func (app *App) GetMKey(storeKey string) *storetypes.MemoryStoreKey {
 func (app *App) GetCLessKey(storeKey string) *storetypes.ConsensuslessStoreKey {
 	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
 	return app.clessKeys[key]
+}
+
+func (app *App) GetCMetaKey(storeKey string) *storetypes.ConsensusMetaStoreKey {
+	key := cfg.GetMultiChainStoreKey(app.ChainID(), storeKey)
+	return app.cmetaKeys[key]
 }
 
 // GetMemKey returns the MemStoreKey for the provided mem key.
@@ -1296,6 +1342,47 @@ func (app *App) GetChainCfg() *menc.ChainConfig {
 	return app.chainCfg
 }
 
+func (app *App) SetServerConfig(srvconfig *srvconfig.Config) {
+	app.srvconfig = srvconfig
+}
+
+func (app *App) GetServerConfig() *srvconfig.Config {
+	return app.srvconfig
+}
+
+func (app *App) SetTendermintConfig(tndcfg *cmtcfg.Config) {
+	app.tndcfg = tndcfg
+}
+
+func (app *App) GetTendermintConfig() *cmtcfg.Config {
+	return app.tndcfg
+}
+
+func (app *App) SetRpcClient(rpcClient client.CometRPC) {
+	app.rpcClient = rpcClient
+}
+
+func (app *App) GetRpcClient() client.CometRPC {
+	return app.rpcClient
+}
+
+// not deterministic!! only for statesync
+func (app *App) NonDeterministicSetNodePorts(ports mctx.NodePorts) {
+	app.ports = ports
+}
+
+func (app *App) NonDeterministicGetNodePorts() mctx.NodePorts {
+	return app.ports
+}
+
+func (app *App) NonDeterministicSetNodePortsInitial(initialPorts mctx.NodePorts) {
+	app.initialPorts = initialPorts
+}
+
+func (app *App) NonDeterministicGetNodePortsInitial() mctx.NodePorts {
+	return app.initialPorts
+}
+
 // AutoCliOpts returns the autocli options for the app.
 func (app *App) AutoCliOpts() autocli.AppOptions {
 	modules := make(map[string]appmodule.AppModule, 0)
@@ -1363,6 +1450,10 @@ func (app *App) GetActionExecutor() cfg.ActionExecutor {
 	return app.actionExecutor
 }
 
+func (app *App) GetWasmxKeeper() cfg.WasmxKeeper {
+	return &app.WasmxKeeper
+}
+
 func (app *App) GetGoContextParent() context.Context {
 	return app.goContextParent
 }
@@ -1393,6 +1484,25 @@ func (app *App) AccBech32Codec() mcodec.AccBech32Codec {
 
 func (app *App) MinGasPrices() sdk.DecCoins {
 	return app.minGasPrices
+}
+
+// only for debugging
+func (app *App) Db() dbm.DB {
+	return app.db
+}
+
+func (app *App) DebugDb() {
+	fmt.Println("** DebugDb **")
+	fmt.Println("*Stats*", app.db.Stats())
+	fmt.Println("** DB key-value pairs **")
+	itr, _ := app.db.Iterator(nil, nil)
+	defer itr.Close()
+	for ; itr.Valid(); itr.Next() {
+		key := itr.Key()
+		value := itr.Value()
+		fmt.Printf("*i0* [%s]:\t[%s]\n", string(key), string(value))
+		fmt.Printf("*i1* [%X]:\t[%X]\n", key, value)
+	}
 }
 
 func Exit(s string) {

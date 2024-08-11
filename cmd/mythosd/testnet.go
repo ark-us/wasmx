@@ -60,6 +60,7 @@ import (
 	app "mythos/v1/app"
 	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
+	mctx "mythos/v1/context"
 	menc "mythos/v1/encoding"
 	"mythos/v1/multichain"
 	"mythos/v1/server"
@@ -419,7 +420,6 @@ func testnetAddNode(
 	leaderURI string,
 ) error {
 	generateMythos := slices.Contains(args.initialChains, "mythos")
-	generateLevel0 := slices.Contains(args.initialChains, "level0")
 
 	args.numValidators = nodeIndex + 1
 	args.sameMachine = true
@@ -459,19 +459,9 @@ func testnetAddNode(
 			return err
 		}
 		err = os.WriteFile(genesisFileNewMythos, bz, 0o644)
-		return err
-	}
-
-	if generateLevel0 {
-		genesisFileLevel0 := strings.Replace(genesisFile0, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
-		genesisFileNewLevel0 := strings.Replace(genesisFileNew, ".json", "_"+mcfg.LEVEL0_CHAIN_ID+".json", 1)
-
-		bz, err = os.ReadFile(genesisFileLevel0)
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(genesisFileNewLevel0, bz, 0o644)
-		return err
 	}
 	return nil
 }
@@ -555,6 +545,10 @@ func initTestnetFilesInternal(
 	nodeDirs := make([]string, args.numValidators)
 	kbs := make([]keyring.Keyring, args.numValidators)
 	inBuf := bufio.NewReader(cmd.InOrStdin())
+
+	nodeOffset := int32(nodeIndexStart)
+	portOffset := nodeOffset * int32(len(initialChainIds))
+
 	// generate private keys, node IDs, and initial transactions
 	for i := nodeIndexStart; i < args.numValidators; i++ {
 		nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, i)
@@ -563,11 +557,15 @@ func initTestnetFilesInternal(
 		nodeDirNames[i] = nodeDirName
 		nodeDirs[i] = nodeDir
 
-		nodeConfig.SetRoot(nodeDir)
-		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 		if args.sameMachine {
-			nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(26657+i)
+			nodeOffset = int32(i)
+			portOffset = nodeOffset * int32(len(initialChainIds))
 		}
+		ports := mctx.GetChainNodePorts(0, portOffset)
+		ports0 := mctx.GetChainNodePorts(1, portOffset)
+
+		nodeConfig.SetRoot(nodeDir)
+		nodeConfig.RPC.ListenAddress = "tcp://0.0.0.0:" + strconv.Itoa(int(ports.TendermintRpc))
 		if args.noCors {
 			nodeConfig.RPC.CORSAllowedOrigins = []string{"*"}
 		}
@@ -632,13 +630,8 @@ func initTestnetFilesInternal(
 			return err
 		}
 
-		host := fmt.Sprintf("%s@%s:%s", addrstr, nodeIPs[i], "8090")
-		host0 := fmt.Sprintf("%s@%s:%s", addrstr0, nodeIPs[i], "8090")
-		// if args.sameMachine && !args.p2p {
-		// 	ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
-		// 	host = fmt.Sprintf("%s@%s", addrstr, ipaddr)
-		// 	host0 = fmt.Sprintf("%s@%s", addrstr0, ipaddr)
-		// }
+		host := fmt.Sprintf("%s@%s:%d", addrstr, nodeIPs[i], ports.WasmxNetworkGrpc)
+		host0 := fmt.Sprintf("%s@%s:%d", addrstr0, nodeIPs[i], ports0.WasmxNetworkGrpc)
 
 		if args.p2p {
 			valStr := addrstr
@@ -651,38 +644,21 @@ func initTestnetFilesInternal(
 				return err
 			}
 			identity := libp2p.Identity(pkcrypto)
-			p2pPort := "5001"
 
-			if args.sameMachine {
-				ipaddr := strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(5001+i), 1)
-				ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
-				parts := strings.Split(ipaddr, ":")
-				node, err := libp2p.New(
-					libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", parts[0], parts[1])),
-					libp2p.Ping(false),
-					identity,
-				)
-				if err != nil {
-					return err
-				}
-				p2pid := node.ID()
-				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr, parts[0], parts[1], p2pid)
-				host0 = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr0, parts[0], parts[1], p2pid)
-			} else {
-				ipaddr := nodeIPs[i]
-				ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
-				node, err := libp2p.New(
-					libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%s", ipaddr, p2pPort)),
-					libp2p.Ping(false),
-					identity,
-				)
-				if err != nil {
-					return err
-				}
-				p2pid := node.ID()
-				host = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr, nodeIPs[i], p2pPort, p2pid)
-				host0 = fmt.Sprintf("%s@/ip4/%s/tcp/%s/p2p/%s", valStr0, nodeIPs[i], p2pPort, p2pid)
+			ipaddr := "127.0.0.1"
+			// ipaddr := nodeIPs[i]
+			// ipaddr = strings.Replace(ipaddr, "0.0.0.0", "127.0.0.1", 1)
+			node, err := libp2p.New(
+				libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/%s/tcp/%d", ipaddr, ports.WasmxNetworkP2P)),
+				libp2p.Ping(false),
+				identity,
+			)
+			if err != nil {
+				return err
 			}
+			p2pid := node.ID()
+			host = fmt.Sprintf("%s@/ip4/%s/tcp/%d/p2p/%s", valStr, ipaddr, ports.WasmxNetworkP2P, p2pid)
+			host0 = fmt.Sprintf("%s@/ip4/%s/tcp/%d/p2p/%s", valStr0, ipaddr, ports0.WasmxNetworkP2P, p2pid)
 		}
 
 		valaddr[i] = addr
@@ -692,6 +668,7 @@ func initTestnetFilesInternal(
 	}
 	networkIpsStr := strings.Join(networkIps, ",")
 	networkIpsStr = strings.Trim(networkIpsStr, ",")
+	// leaderURI is last
 	if leaderURI != "" {
 		networkIpsStr = networkIpsStr + "," + leaderURI
 	}
@@ -739,14 +716,8 @@ func initTestnetFilesInternal(
 
 		// value copy, not reference!
 		appConfigCopy := *appConfig
-		if args.sameMachine {
-			// appConfigCopy.API.Address = strings.Replace(appConfig.API.Address, "1317", strconv.Itoa(1317+i), 1)
-			// appConfigCopy.GRPC.Address = strings.Replace(appConfig.GRPC.Address, "9090", strconv.Itoa(9090+i), 1)
-			// appConfigCopy.JsonRpc.Address = strings.Replace(appConfig.JsonRpc.Address, "8545", strconv.Itoa(8555+i*2), 1)
-			// appConfigCopy.JsonRpc.WsAddress = strings.Replace(appConfig.JsonRpc.WsAddress, "8546", strconv.Itoa(8556+i), 1)
-			// appConfigCopy.Websrv.Address = strings.Replace(appConfig.Websrv.Address, "9999", strconv.Itoa(9900+i), 1)
-			// appConfigCopy.Network.Address = strings.Replace(appConfig.Network.Address, "8090", strconv.Itoa(8090+i), 1)
-		}
+		// we do not care about other ports, they are set by the application
+
 		// current index for mythos, then level0
 		appConfigCopy.Network.Id = fmt.Sprintf("%s:%d;%s:%d", chainId, int32(i-nodeIndexStart), chainId0, 0)
 
@@ -777,75 +748,71 @@ func initTestnetFilesInternal(
 				}
 			}
 		}
+	}
 
-		if generateLevel0 {
-			// initialize level0
-			genBalanceCoins := make([]sdk.Coins, len(genBalances))
-			for i := 0; i < len(genBalances); i++ {
-				genBalanceCoins[i] = genBalances[i].Coins
+	if generateLevel0 {
+		// initialize level0
+		genBalanceCoins := make([]sdk.Coins, len(genBalances))
+		for i := 0; i < len(genBalances); i++ {
+			genBalanceCoins[i] = genBalances[i].Coins
+		}
+
+		// set this only after we get address bytes
+		mcfg.SetGlobalChainConfigById(chainId0)
+
+		valAddrCodec = level0app.TxConfig().SigningContext().ValidatorAddressCodec()
+
+		for i := nodeIndexStart; i < args.numValidators; i++ {
+			// we add the nodeid to this folder, so we only have 1 gentx for each level0
+			gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId0+nodeIDs[i])
+			nodeDirName := nodeDirNames[i]
+			kb := kbs[i]
+			// memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
+			memo := networkIps0[i]
+
+			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
+			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
+			for i, coin := range genBalanceCoins[i] {
+				coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
 			}
-
-			// set this only after we get address bytes
-			mcfg.SetGlobalChainConfigById(chainId0)
-
-			valAddrCodec = level0app.TxConfig().SigningContext().ValidatorAddressCodec()
-
-			for i := nodeIndexStart; i < args.numValidators; i++ {
-				// we add the nodeid to this folder, so we only have 1 gentx for each level0
-				gentxsDir := filepath.Join(args.outputDir, "gentxs_"+chainId0+nodeIDs[i])
-				nodeDirName := nodeDirNames[i]
-				kb := kbs[i]
-				// memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], nodeIPs[i], p2pListenAddress)
-				memo := networkIps0[i]
-
-				addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
-				coins := make([]sdk.Coin, len(genBalanceCoins[i]))
-				for i, coin := range genBalanceCoins[i] {
-					coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
-				}
-				valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
-				if err != nil {
-					return err
-				}
-				valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
-				err = createGentx(clientCtx, level0app.TxConfig(), chainId0, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg0.BaseDenom, kb, cmd)
-				if err != nil {
-					return err
-				}
+			valStr, err := valAddrCodec.BytesToString(sdk.ValAddress(addrprefixed.Bytes()))
+			if err != nil {
+				return err
 			}
-			genBalances := []banktypes.Balance{}
-			genAccounts := []cosmosmodtypes.GenesisAccount{}
-
-			for i := nodeIndexStart; i < args.numValidators; i++ {
-				addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
-				genAccount := cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
-				genAccounts = append(genAccounts, genAccount)
-				addrstr := addrprefixed.String()
-
-				coins := make([]sdk.Coin, len(genBalanceCoins[i]))
-				for i, coin := range genBalanceCoins[i] {
-					coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
-				}
-				genBalance := banktypes.Balance{Address: addrstr, Coins: coins}
-				genBalances = append(genBalances, genBalance)
-
-				genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
-
-				if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
-					return err
-				}
-				err = collectGenFiles(
-					clientCtx,
-					level0app.TxConfig(),
-					nodeConfig, chainId0, nodeIDs[i], valPubKeys[i], i,
-					args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, genFile, "gentxs_"+chainId0+nodeIDs[i],
-				)
-				if err != nil {
-					return err
-				}
+			valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
+			err = createGentx(clientCtx, level0app.TxConfig(), chainId0, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg0.BaseDenom, kb, cmd)
+			if err != nil {
+				return err
 			}
+		}
+		genBalances := []banktypes.Balance{}
+		genAccounts := []cosmosmodtypes.GenesisAccount{}
 
-			if err := initGenFiles(clientCtx, mbm, chainId0, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
+		for i := nodeIndexStart; i < args.numValidators; i++ {
+			addrprefixed := mcodec.MustUnwrapAccBech32Codec(addrCodec0).BytesToAccAddressPrefixed(genAccounts0[i])
+			genAccount := cosmosmodtypes.NewBaseAccount(addrprefixed, nil, 0, 0)
+			genAccounts = append(genAccounts, genAccount)
+			addrstr := addrprefixed.String()
+
+			coins := make([]sdk.Coin, len(genBalanceCoins[i]))
+			for i, coin := range genBalanceCoins[i] {
+				coins[i] = sdk.NewCoin(chaincfg0.BaseDenom, coin.Amount)
+			}
+			genBalance := banktypes.Balance{Address: addrstr, Coins: coins}
+			genBalances = append(genBalances, genBalance)
+
+			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
+
+			if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
+				return err
+			}
+			err = collectGenFiles(
+				clientCtx,
+				level0app.TxConfig(),
+				nodeConfig, chainId0, nodeIDs[i], valPubKeys[i], i,
+				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, genFile, "gentxs_"+chainId0+nodeIDs[i],
+			)
+			if err != nil {
 				return err
 			}
 		}
@@ -1316,5 +1283,5 @@ func createMockAppCreator() (*mcfg.MultiChainApp, func(chainId string, chainCfg 
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
-	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx, app.NopStartChainApis)
+	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 }

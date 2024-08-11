@@ -329,16 +329,7 @@ func InitChain(
 	}
 	privKey := privValidator.Key.PrivKey
 
-	ipsMapForChain := ""
-	chainips := strings.Split(cfgAll.Network.Ips, ";")
-	for _, chainip := range chainips {
-		ips := strings.Split(chainip, ":")
-		if ips[0] == chainId {
-			ipsMapForChain = ips[1]
-			break
-		}
-	}
-	peers := strings.Split(ipsMapForChain, ",")
+	peers := types.GetPeersFromConfigIps(chainId, cfgAll.Network.Ips)
 
 	currentIdStr := "0"
 	nodeids := strings.Split(cfgAll.Network.Id, ";")

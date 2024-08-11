@@ -217,12 +217,16 @@ func (env *Environment) GetConsensusState(*rpctypes.Context) (*ctypes.ResultCons
 	return nil, fmt.Errorf("GetConsensusState not implemented")
 }
 
+// ConsensusParams gets the consensus parameters at the given block height.
+// If no height is provided, it will fetch the latest consensus params.
+// More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/consensus_params
 func (env *Environment) ConsensusParams(
 	_ *rpctypes.Context,
 	heightPtr *int64,
 ) (*ctypes.ResultConsensusParams, error) {
 	fmt.Println("= WS ConsensusParams")
-	return nil, fmt.Errorf("ConsensusParams not implemented")
+	client := env.networkWrap.(*ABCIClient)
+	return client.ConsensusParams(context.TODO(), heightPtr)
 }
 
 func (env *Environment) UnconfirmedTxs(_ *rpctypes.Context, limitPtr *int) (*ctypes.ResultUnconfirmedTxs, error) {

@@ -21,6 +21,7 @@ import (
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	mctx "mythos/v1/context"
 	"mythos/v1/x/network/types"
@@ -175,6 +176,94 @@ func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper) error {
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+		var erreur error
+
+		mythosapp.GetWasmxKeeper().IterateContractInfo(ctx, func(addr sdk.AccAddress, cinfo wasmxtypes.ContractInfo) bool {
+			// TODO metaconsensus state sync as an extension and remove from here
+			if cinfo.StorageType != wasmxtypes.ContractStorageType_SingleConsensus && cinfo.StorageType != wasmxtypes.ContractStorageType_MetaConsensus {
+				return false
+			}
+			// we only need to run contract instantiation
+			// so contracts persist instantiation storage
+			bootstrapAddr, err := mcodec.AccAddressPrefixedFromBech32(cinfo.Creator)
+			if err != nil {
+				erreur = err
+				return true
+			}
+			contractAddressBech32, err := mythosapp.AddressCodec().BytesToString(addr)
+			if err != nil {
+				erreur = err
+				return true
+			}
+			contractAddress, err := mcodec.AccAddressPrefixedFromBech32(contractAddressBech32)
+			if err != nil {
+				erreur = err
+				return true
+			}
+			codeInfo := mythosapp.GetWasmxKeeper().GetCodeInfo(ctx, cinfo.CodeId)
+			if codeInfo == nil {
+				erreur = fmt.Errorf("no code info found for codeID %d", cinfo.CodeId)
+				return true
+			}
+
+			_, _, err = mythosapp.GetWasmxKeeper().ExecuteContractInstantiationInternal(
+				ctx,
+				cinfo.CodeId,
+				codeInfo,
+				bootstrapAddr,
+				contractAddress,
+				cinfo.StorageType,
+				cinfo.InitMessage,
+				nil,
+				cinfo.Label,
+			)
+			if err != nil {
+				erreur = err
+				return true
+			}
+
+			return false
+		})
+		if erreur != nil {
+			return nil, erreur
+		}
+		return nil, nil
+	}
+
+	actionExecutor := mythosapp.GetActionExecutor()
+	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ConsensusTx(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, msg []byte) error {
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+
+	actionExecutor := mythosapp.GetActionExecutor()
+
 	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
 	if err != nil {
 		return err

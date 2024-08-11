@@ -185,7 +185,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 					}
 				}
 				// }
-				// if consensusless contract -> just execute it
+				// if consensusless or consensusmeta contract -> just execute it
 				// whitelist of contracts exposed like this - just chat
 				if len(contractAddress.Bytes()) > 0 {
 					contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
@@ -198,7 +198,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 						if err != nil {
 							return nil, err
 						}
-						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless contract", "address", contractAddressStr)
+						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless or consensusmeta contract", "address", contractAddressStr)
 
 						// we sent directly to the contract
 						rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
@@ -477,12 +477,40 @@ func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.Resul
 	if err != nil {
 		return nil, err
 	}
-	lastCommit := &cmttypes.Commit{
-		Height:  block.Block.Height,
-		BlockID: block.BlockID,
+	var lastCommit *cmttypes.Commit
+	lastCommit = nil
+
+	latestHeight, err := c.LatestBlockHeight(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	// If the next block has not been committed yet,
+	// use a non-canonical commit
+	if block.Block.Height == latestHeight {
+		resp, err := c.consensusQuery("getLastBlockCommit", "[]")
+		if err != nil {
+			return nil, err
+		}
+		var commit cmttypes.Commit
+		err = json.Unmarshal(resp.Data, &commit)
+		if err != nil {
+			return nil, err
+		}
+		if commit.Height != block.Block.Height {
+			return nil, fmt.Errorf("ABCIClient.Commit commit height mismatch block height: expected %d, got %d", block.Block.Height, commit.Height)
+		}
+		return rpctypes.NewResultCommit(&block.Block.Header, &commit, true), nil
+	}
+
+	// Return the canonical commit (comes from the block at height+1)
 	nextHeight := block.Block.Height + 1
 	blockNext, err := c.Block(ctx, &nextHeight)
+
+	// LoadBlockCommit returns the Commit for the given height.
+	// This commit consists of the +2/3 and other Precommit-votes for block at `height`,
+	// and it comes from the block.LastCommit for `height+1`.
+	// If no commit is found for the given height, it returns nil.
 	if err == nil && blockNext != nil {
 		lastCommit = blockNext.Block.LastCommit
 	}
@@ -666,13 +694,39 @@ func (c *ABCIClient) BlockSearch(
 }
 
 func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
-	cb := func(goctx context.Context) (any, error) {
+	msg := fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key)
+	return c.storageQuery(msg)
+}
 
-		msg := []byte(fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key))
+func (c *ABCIClient) storageQuery(msg string) (*wasmxtypes.ContractResponse, error) {
+	cb := func(goctx context.Context) (any, error) {
 		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
 			Sender:   wasmxtypes.ROLE_STORAGE,
 			Contract: wasmxtypes.ROLE_STORAGE,
-			Msg:      msg,
+			Msg:      []byte(msg),
+		})
+	}
+	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
+	if err != nil {
+		return nil, err
+	}
+	rresp := qresp.(*types.MsgQueryContractResponse)
+
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(rresp.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *ABCIClient) consensusQuery(method string, params string) (*wasmxtypes.ContractResponse, error) {
+	cb := func(goctx context.Context) (any, error) {
+		msg := fmt.Sprintf(`{"execute":{"action":{"type":"%s","params":%s,"event":null}}}`, method, params)
+		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      []byte(msg),
 		})
 	}
 	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
@@ -768,6 +822,42 @@ func (c *ABCIClient) GetBlockEntry(ctx context.Context, height *int64) (*types.B
 		return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
 	}
 	return &entry, blockHeight, nil
+}
+
+// height is nil for latest block
+func (c *ABCIClient) ConsensusParams(ctx context.Context, height *int64) (*rpctypes.ResultConsensusParams, error) {
+	response := &rpctypes.ResultConsensusParams{}
+	blockHeight := int64(0)
+	var err error
+	if height == nil {
+		blockHeight, err = c.LatestBlockHeight(ctx)
+		c.logger.Debug("ABCIClient.ConsensusParams", "latest height", blockHeight)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.ConsensusParams failed")
+		}
+	} else {
+		blockHeight = *height
+	}
+	response.BlockHeight = blockHeight
+	c.logger.Debug("ABCIClient.ConsensusParams", "height", blockHeight)
+
+	msg := fmt.Sprintf(`{"getConsensusParams":{"height":%d}}`, blockHeight)
+	resp, err := c.storageQuery(msg)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.ConsensusParams failed")
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("consensus params (%d) not found", blockHeight)
+	}
+
+	var params cmttypes.ConsensusParams
+	err = json.Unmarshal(resp.Data, &params)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.ConsensusParams failed to decode ConsensusParams")
+	}
+	response.ConsensusParams = params
+	return response, nil
 }
 
 func lookForHash(conditions []syntax.Condition) (hash []byte, ok bool, err error) {

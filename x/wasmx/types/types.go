@@ -67,14 +67,14 @@ func NewCodeInfo(codeHash []byte, creatorBech32 string, deps []string, metadata 
 }
 
 // NewEnv initializes the environment for a contract instance
-func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string, contractAddr mcodec.AccAddressPrefixed, codeHash []byte, bytecode []byte, systemDeps []string, info MessageInfo) Env {
+func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string, contractAddr mcodec.AccAddressPrefixed, codeHash []byte, bytecode []byte, systemDeps []string, info MessageInfo) (Env, error) {
 	// safety checks before casting below
 	if ctx.BlockHeight() < 0 {
-		panic("Block height must never be negative")
+		return Env{}, fmt.Errorf("block height must never be negative: %s", ctx.ChainID())
 	}
 	nano := ctx.BlockTime().UnixNano()
 	if nano < 1 {
-		panic("Block (unix) time must never be empty or negative ")
+		return Env{}, fmt.Errorf("block (unix) time must never be empty or negative: %s", ctx.ChainID())
 	}
 
 	blockGasLimit := DefaultBlockGasLimit
@@ -84,7 +84,7 @@ func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string,
 
 	chainId, err := ParseEvmChainID(ctx.ChainID())
 	if err != nil {
-		panic(fmt.Sprintf("Chain ID cannot be parsed for wasmx: %s", err.Error()))
+		return Env{}, fmt.Errorf("chain ID cannot be parsed for wasmx: %s: %s", ctx.ChainID(), err.Error())
 	}
 	// TODO add Transaction.hash
 	// txhash := tmhash.Sum(ctx.TxBytes())
@@ -113,7 +113,7 @@ func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string,
 		},
 		CurrentCall: info,
 	}
-	return env
+	return env, nil
 }
 
 // NewInfo initializes the MessageInfo for a contract instance
