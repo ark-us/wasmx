@@ -3,7 +3,6 @@ package vm
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/protoio"
@@ -418,7 +417,6 @@ func wasmxValidatorsHash(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	fmt.Println("--reqbz--", string(reqbz))
 	var vals networktypes.TendermintValidators
 	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vals)
 	if err != nil {
