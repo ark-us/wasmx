@@ -79,7 +79,9 @@ func CacheChainConfig(chainId string, conf menc.ChainConfig) {
 	PrefixesMap[chainId] = conf
 }
 
+var LEVEL0_BASE_NAME = "level0"
 var LEVEL0_CHAIN_ID = "level0_1000-1"
+var MYTHOS_BASE_NAME = "mythos"
 var MYTHOS_CHAIN_ID_TEST = "mythos_7001-1"
 var MYTHOS_CHAIN_ID_TESTNET = "mythos_7000-14"
 var DEFAULT_MYTHOS_CONFIG = menc.ChainConfig{
@@ -120,10 +122,10 @@ func init() {
 		MYTHOS_CHAIN_ID_TESTNET,
 		LEVEL0_CHAIN_ID,
 	}
-	PrefixesMap["mythos"] = DEFAULT_MYTHOS_CONFIG
+	PrefixesMap[MYTHOS_BASE_NAME] = DEFAULT_MYTHOS_CONFIG
 	PrefixesMap[MYTHOS_CHAIN_ID_TEST] = DEFAULT_MYTHOS_CONFIG
 	PrefixesMap[MYTHOS_CHAIN_ID_TESTNET] = DEFAULT_MYTHOS_CONFIG
-	PrefixesMap["level0"] = DEFAULT_LEVEL0_CONFIG
+	PrefixesMap[LEVEL0_BASE_NAME] = DEFAULT_LEVEL0_CONFIG
 	PrefixesMap[LEVEL0_CHAIN_ID] = DEFAULT_LEVEL0_CONFIG
 }
 
