@@ -443,7 +443,6 @@ func InitializeStateSync(
 	sw.AddPeer(peer)
 	// services are stopped at StateStore.Bootstrap
 	err = stateSyncReactor.Start()
-	fmt.Println("--stateSyncReactor.Start() err--", err)
 	if err != nil {
 		return nil, err
 	}

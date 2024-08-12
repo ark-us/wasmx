@@ -97,7 +97,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 
 			chainId := mcctx.ClientCtx.ChainID
 			config, _ := mcfg.GetChainConfig(chainId)
-			customValCdc := mcodec.NewAccBech32Codec(config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+			customValCdc := mcodec.NewValBech32Codec(config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
 			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
