@@ -25,6 +25,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	mcfg "mythos/v1/config"
+	"mythos/v1/multichain"
 	"mythos/v1/x/cosmosmod/client/cli"
 	"mythos/v1/x/cosmosmod/keeper"
 	"mythos/v1/x/cosmosmod/types"
@@ -41,12 +42,13 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
-	cdc  codec.BinaryCodec
-	ccdc codec.Codec
+	cdc        codec.BinaryCodec
+	ccdc       codec.Codec
+	appCreator multichain.NewAppCreator
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc, ccdc: ccdc}
+func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
+	return AppModuleBasic{cdc: cdc, ccdc: ccdc, appCreator: appCreator}
 }
 
 // Name returns the name of the module as a string
@@ -89,7 +91,7 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
 func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.NewTxCmd(a.ccdc.InterfaceRegistry().SigningContext().ValidatorAddressCodec(), a.ccdc.InterfaceRegistry().SigningContext().AddressCodec())
+	return cli.NewTxCmd(a.ccdc.InterfaceRegistry().SigningContext().ValidatorAddressCodec(), a.ccdc.InterfaceRegistry().SigningContext().AddressCodec(), a.appCreator)
 }
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this root command are used by end-users to generate new queries to the subset of the state defined by the module
@@ -123,9 +125,10 @@ func NewAppModule(
 	slashing keeper.KeeperSlashing,
 	distribution keeper.KeeperDistribution,
 	app mcfg.BaseApp,
+	appCreator multichain.NewAppCreator,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc, ccdc),
+		AppModuleBasic: NewAppModuleBasic(cdc, ccdc, appCreator),
 		bank:           bank,
 		staking:        staking,
 		gov:            gov,

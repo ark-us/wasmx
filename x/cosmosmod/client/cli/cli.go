@@ -10,9 +10,11 @@ import (
 	gov "mythos/v1/x/cosmosmod/client/cli/gov"
 	staking "mythos/v1/x/cosmosmod/client/cli/staking"
 	"mythos/v1/x/cosmosmod/types"
+
+	"mythos/v1/multichain"
 )
 
-func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
+func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Cosmos transaction subcommands",
@@ -23,7 +25,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 
 	txCmd.AddCommand(
 		bank.NewTxCmd(ac),
-		staking.NewTxCmd(valAddrCodec, ac),
+		staking.NewTxCmd(valAddrCodec, ac, appCreator),
 		gov.NewTxCmd(ac),
 	)
 

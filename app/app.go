@@ -648,7 +648,7 @@ func NewApp(
 		govAuthorityAddr,
 		addrCodec,
 	)
-	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, *app.SlashingKeeper, *app.DistrKeeper, app)
+	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, *app.SlashingKeeper, *app.DistrKeeper, app, NewAppCreator)
 
 	// TODO remove
 	app.MintKeeper = mintkeeper.NewKeeper(

@@ -35,7 +35,7 @@ var (
 )
 
 // NewTxCmd returns a root CLI command handler for all x/staking transaction commands.
-func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
+func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	stakingTxCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Staking transaction subcommands",
@@ -45,7 +45,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 	}
 
 	stakingTxCmd.AddCommand(
-		NewCreateValidatorCmd(valAddrCodec, ac),
+		NewCreateValidatorCmd(valAddrCodec, ac, appCreator),
 		NewEditValidatorCmd(valAddrCodec, ac),
 		NewDelegateCmd(valAddrCodec, ac),
 		NewRedelegateCmd(valAddrCodec, ac),
@@ -57,7 +57,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 }
 
 // NewCreateValidatorCmd returns a CLI command handler for creating a MsgCreateValidator transaction.
-func NewCreateValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Command {
+func NewCreateValidatorCmd(valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-validator [path/to/validator.json]",
 		Short: "create new validator initialized with a self-delegation to it",
@@ -100,12 +100,15 @@ where we can get the pubkey using "%s tendermint show-validator"
 			customValCdc := mcodec.NewValBech32Codec(config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
+			_, appCreator := createMockAppCreator(appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+
 			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			validator, err := parseAndValidateValidatorJSON(mcctx.ClientCtx.Codec, args[0])
+			validator, err := parseAndValidateValidatorJSON(chainapp.AppCodec(), args[0])
 			if err != nil {
 				return err
 			}
