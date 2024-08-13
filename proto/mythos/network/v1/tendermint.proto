@@ -97,10 +97,13 @@ message RequestProcessProposalWithMetaInfo {
 }
 
 message TendermintValidator {
-  string                       address           = 1;
-  google.protobuf.Any pub_key = 2 [(cosmos_proto.accepts_interface) = "cosmos.crypto.PubKey"];
-  int64                       voting_power      = 3;
-  int64                       proposer_priority = 4;
+  // bech32 operator address
+  string operator_address = 1;
+  // hex-format address derived from consensus public key
+  string                       hex_address           = 2;
+  google.protobuf.Any pub_key = 3 [(cosmos_proto.accepts_interface) = "cosmos.crypto.PubKey"];
+  int64                       voting_power      = 4;
+  int64                       proposer_priority = 5;
 }
 
 message TendermintValidators {

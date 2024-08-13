@@ -396,7 +396,7 @@ func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, val
 		if err != nil {
 			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to convert cryptotypes.PubKey from proto")
 		}
-		valaddr, err := hex.DecodeString(val.Address)
+		valaddr, err := hex.DecodeString(val.HexAddress)
 		if err != nil {
 			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to decode hex address")
 		}

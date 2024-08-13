@@ -345,7 +345,8 @@ func cmtValidatorToWasmxValidator(interfaceRegistry cdctypes.InterfaceRegistry, 
 	}
 
 	v := &networktypes.TendermintValidator{
-		Address:          hex.EncodeToString(val.Address),
+		OperatorAddress:  "", // we will update this in the contracts
+		HexAddress:       hex.EncodeToString(val.Address),
 		PubKey:           keyAny,
 		VotingPower:      val.VotingPower,
 		ProposerPriority: val.ProposerPriority,
