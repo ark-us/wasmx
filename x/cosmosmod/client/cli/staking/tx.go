@@ -32,6 +32,7 @@ import (
 // default values
 var (
 	DefaultTokens = sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction)
+	FlagMemo      = "memo"
 )
 
 // NewTxCmd returns a root CLI command handler for all x/staking transaction commands.
@@ -122,8 +123,9 @@ where we can get the pubkey using "%s tendermint show-validator"
 		},
 	}
 
-	cmd.Flags().String(cli.FlagIP, "", fmt.Sprintf("The node's public IP. It takes effect only when used in combination with --%s", flags.FlagGenerateOnly))
-	cmd.Flags().String(cli.FlagNodeID, "", "The node's ID")
+	// cmd.Flags().String(cli.FlagIP, "", fmt.Sprintf("The node's public IP. It takes effect only when used in combination with --%s", flags.FlagGenerateOnly))
+	// cmd.Flags().String(cli.FlagNodeID, "", "The node's ID")
+	cmd.Flags().String(FlagMemo, "", "The node's networking address")
 	flags.AddTxFlagsToCmd(cmd)
 	multichain.AddMultiChainFlagsToCmd(cmd)
 
@@ -429,15 +431,9 @@ func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.
 		return txf, nil, err
 	}
 
-	genOnly, _ := fs.GetBool(flags.FlagGenerateOnly)
-	if genOnly {
-		ip, _ := fs.GetString(cli.FlagIP)
-		p2pPort, _ := fs.GetUint(cli.FlagP2PPort)
-		nodeID, _ := fs.GetString(cli.FlagNodeID)
-
-		if nodeID != "" && ip != "" && p2pPort > 0 {
-			txf = txf.WithMemo(fmt.Sprintf("%s@%s:%d", nodeID, ip, p2pPort))
-		}
+	memo, _ := fs.GetString(FlagMemo)
+	if memo != "" {
+		txf = txf.WithMemo(memo)
 	}
 
 	return txf, msg, nil
