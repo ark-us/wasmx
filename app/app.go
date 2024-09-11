@@ -1043,6 +1043,7 @@ func NewApp(
 	// At startup, after all modules have been registered, check that all prot
 	// annotations are correct.
 	// TODO reenable this! fix the libp2p proto issue
+	// TODO uncomment & use cosmos/gogoproto v1.5.0
 	// protoFiles, err := proto.MergedRegistry()
 	// if err != nil {
 	// 	panic(err)

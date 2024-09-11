@@ -176,7 +176,35 @@ mythosd tx multichain atomic "/Users/user/dev/blockchain/wasmx-tests/atomictx.js
 
 ```
 
+## statesync mythos & create validator
+
+```bash
+
+mythosd tx cosmosmod bank send node0 mythos1zye6csr7sc4wjndjsrcp3wyc2gjl2yt8s6qqkr 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 900000 --chain-id=mythos_7000-14 --yes
+
+
+HOMEMAIN=./testnet/node1/mythosd
+RPC="http://localhost:26657"
+RECENT_HEIGHT=$(curl -s $RPC/block | jq -r .result.block.header.height)
+TRUST_HEIGHT=$((RECENT_HEIGHT - 1))
+TRUST_HASH=$(curl -s "$RPC/block?height=$TRUST_HEIGHT" | jq -r .result.block_id.hash)
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
+s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$RPC,$RPC\"| ; \
+s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$TRUST_HEIGHT| ; \
+s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOMEMAIN/config/config.toml
+
+# change validator public key in validator.json
+mythosd tendermint show-validator --home ./testnet/node1/mythosd
+
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --node tcp://127.0.0.1:26659 --memo="mythos13z0jpfstdz9vak05cxluuzcz45kkykhvyjrrz9@/ip4/127.0.0.1/tcp/5003/p2p/12D3KooWE1i2djarT6guanTcwcgRkVqbgkbq2J8UKCdk1RNxnTc4" --yes
+
+```
+
+
 ## statesync subchains
+
+```bash
 
 mythosd query multichain call level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"StartStateSync":{"chain_id":"level1_1_1002-1","peer_address":"level01nhewan89fjza66xx5qmcxa6qnakvnwgtcs9g72@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWMueZKu4k4NcfDPYhd3HAQeuEaqSz9BM2Ls4JewcmKzmT","rpc":"tcp://127.0.0.1:26771","chain_config":{"Bech32PrefixAccAddr":"level1","Bech32PrefixAccPub":"level1","Bech32PrefixValAddr":"level1","Bech32PrefixValPub":"level1","Bech32PrefixConsAddr":"level1","Bech32PrefixConsPub":"level1","Name":"level1","HumanCoinUnit":"lvl1","BaseDenom":"alvl1","DenomUnit":"lvl1","BaseDenomUnit":18,"BondBaseDenom":"aslvl1","BondDenom":"slvl1"},"statesync_config":{"rpc_servers":["http://localhost:26771","http://localhost:26771"],"trust_period":36000000,"trust_height":21,"trust_hash":"8D4A93D4F81A38B592E313DF2F765CE62A7ACF33B1685735A6CA8F7DD5A1ACF1","enable":true,"temp_dir":"","discovery_time":15000,"chunk_request_timeout":10000,"chunk_fetchers":4}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --node tcp://localhost:26662
 
+```
