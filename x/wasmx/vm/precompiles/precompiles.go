@@ -138,6 +138,9 @@ var (
 	//go:embed 4f.metaregistry_json_0.0.1.wasm
 	metaregistryjson []byte
 
+	//go:embed 50.tay_interpreter_v0.0.1.wasm
+	tay_interpreter []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -282,6 +285,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = []byte(LobbyP2Pv001(libaddrstr))
 	case types.METAREGISTRY_v001:
 		wasmbin = metaregistryjson
+	case types.INTERPRETER_TAY:
+		wasmbin = tay_interpreter
 	}
 	return wasmbin
 }

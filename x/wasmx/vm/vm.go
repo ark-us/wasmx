@@ -18,6 +18,7 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
+	vmi "mythos/v1/x/wasmx/vm/interfaces"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
@@ -103,6 +104,36 @@ func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []ty
 		}
 	}
 	return cleanups, nil
+}
+
+func getMemoryHandler(systemDeps []types.SystemDep) vmi.MemoryHandler {
+	handler := getMemoryHandlerFromDeps(systemDeps)
+	if handler != nil {
+		return handler
+	}
+	// default is assemblyscript memory
+	// if we change this, we should add the dependency in the system contracts
+	return MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT]
+}
+
+func getMemoryHandlerFromDeps(systemDeps []types.SystemDep) vmi.MemoryHandler {
+	for _, systemDep := range systemDeps {
+		handler, found := MemoryDepHandler[systemDep.Role]
+		if !found {
+			handler, found = MemoryDepHandler[systemDep.Label]
+		}
+		if found {
+			return handler
+		}
+	}
+	// look in dep.Deps
+	for _, systemDep := range systemDeps {
+		handler := getMemoryHandlerFromDeps(systemDep.Deps)
+		if handler != nil {
+			return handler
+		}
+	}
+	return nil
 }
 
 // run in inverse order
@@ -261,6 +292,7 @@ func ExecuteWasmInterpreted(
 		ContractRouter:  contractRouter,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
+		MemoryHandler:   getMemoryHandler(systemDeps),
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -380,6 +412,7 @@ func ExecuteWasm(
 		App:             app,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
+		MemoryHandler:   getMemoryHandler(systemDeps),
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
@@ -443,7 +476,6 @@ func ExecuteWasm(
 			return types.ContractResponse{}, err
 		}
 	}
-
 	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(

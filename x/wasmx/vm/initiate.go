@@ -4,7 +4,10 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
+	vmi "mythos/v1/x/wasmx/vm/interfaces"
 	"mythos/v1/x/wasmx/vm/interpreters"
+	memas "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	memtay "mythos/v1/x/wasmx/vm/memory/taylor"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
@@ -153,6 +156,8 @@ var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
 var DependenciesMap = map[string]bool{}
 
+var MemoryDepHandler = map[string]vmi.MemoryHandler{}
+
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
@@ -182,6 +187,9 @@ func init() {
 	DependenciesMap[types.WASMX_VM_EXPORT] = true
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
+
+	MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.MemoryHandlerAS{}
+	MemoryDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.MemoryHandlerTay{}
 }
 
 func SetSystemDepHandler(

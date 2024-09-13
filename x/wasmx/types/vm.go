@@ -196,6 +196,7 @@ var ROLE_CONSENSUS = "consensus"
 var ROLE_INTERPRETER_PYTHON = "interpreter_python"
 var ROLE_INTERPRETER_JS = "interpreter_javascript"
 var ROLE_INTERPRETER_FSM = "interpreter_state_machine"
+var ROLE_INTERPRETER_TAY = "interpreter_tay"
 
 var ROLE_LIBRARY = "deplibrary"
 
@@ -228,6 +229,8 @@ var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
 var INTERPRETER_JS = "interpreter_javascript_utf8_0.1.0"
 
 var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
+
+var INTERPRETER_TAY = "tay_interpreter_v0.0.1"
 
 var STORAGE_CHAIN = "storage_chain"
 
@@ -269,9 +272,9 @@ var MEMORY_EXPORT_MALLOC = "malloc"
 var MEMORY_EXPORT_ALLOCATE = "allocate"
 var MEMORY_EXPORT_AS = "__new"
 
-// TODO
 var WASMX_MEMORY_DEFAULT = "memory_default_1"
 var WASMX_MEMORY_ASSEMBLYSCRIPT = "memory_assemblyscript_1"
+var WASMX_MEMORY_TAYLOR = "memory_taylor"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 

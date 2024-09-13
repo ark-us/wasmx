@@ -11,6 +11,7 @@ import (
 	"cosmossdk.io/log"
 	"cosmossdk.io/math"
 
+	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
@@ -64,6 +65,7 @@ func NewAppCreator(
 
 		appOpts.Set(flags.FlagChainID, chainId)
 		appOpts.Set(sdkserver.FlagMinGasPrices, minGasPrices.String())
+		appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 		baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
 
 		app := NewApp(

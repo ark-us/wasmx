@@ -18,19 +18,18 @@ import (
 	mcodec "mythos/v1/codec"
 	networktypes "mythos/v1/x/network/types"
 	"mythos/v1/x/wasmx/types"
-	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 	mem "mythos/v1/x/wasmx/vm/memory/common"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 func sha256(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	data, err := asmem.ReadMemFromPtr(callframe, params[0])
+	data, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	hashbz := tmhash.Sum(data)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hashbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hashbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -46,7 +45,7 @@ func getEnv(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, envbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, envbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -58,7 +57,7 @@ func getEnv(_context interface{}, callframe *wasmedge.CallingFrame, params []int
 
 func wasmxGetChainId(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(ctx.Env.Chain.ChainIdFull))
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(ctx.Env.Chain.ChainIdFull))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -71,7 +70,7 @@ func wasmxGetChainId(_context interface{}, callframe *wasmedge.CallingFrame, par
 // address -> account
 func getAccount(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	addr, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addr, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -87,7 +86,7 @@ func getAccount(_context interface{}, callframe *wasmedge.CallingFrame, params [
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, codebz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, codebz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -98,7 +97,7 @@ func getAccount(_context interface{}, callframe *wasmedge.CallingFrame, params [
 
 func keccak256Util(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	data, err := asmem.ReadMemFromPtr(callframe, params[0])
+	data, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -128,7 +127,7 @@ func keccak256Util(_context interface{}, callframe *wasmedge.CallingFrame, param
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, result)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, result)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -141,7 +140,7 @@ func keccak256Util(_context interface{}, callframe *wasmedge.CallingFrame, param
 // call request -> call response
 func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -178,7 +177,7 @@ func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, responsebz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -188,7 +187,7 @@ func externalCall(_context interface{}, callframe *wasmedge.CallingFrame, params
 
 func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -248,7 +247,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, responsebz)
 	if err != nil {
 		ctx.Ctx.Logger().Error("wasmxCall allocate memory", "err", err.Error())
 		return nil, wasmedge.Result_Fail
@@ -259,7 +258,7 @@ func wasmxCall(_context interface{}, callframe *wasmedge.CallingFrame, params []
 
 func wasmxGetBalance(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	addr, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addr, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -268,7 +267,7 @@ func wasmxGetBalance(_context interface{}, callframe *wasmedge.CallingFrame, par
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, balance.Amount.BigInt().FillBytes(make([]byte, 32)))
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, balance.Amount.BigInt().FillBytes(make([]byte, 32)))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -279,13 +278,13 @@ func wasmxGetBalance(_context interface{}, callframe *wasmedge.CallingFrame, par
 
 func wasmxGetBlockHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	bz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	bz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	blockNumber := big.NewInt(0).SetBytes(bz)
 	data := ctx.CosmosHandler.GetBlockHash(blockNumber.Uint64())
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, data)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, data)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -300,7 +299,7 @@ func wasmxGetCurrentBlock(_context interface{}, callframe *wasmedge.CallingFrame
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -311,7 +310,7 @@ func wasmxGetCurrentBlock(_context interface{}, callframe *wasmedge.CallingFrame
 
 func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	rolebz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	rolebz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -319,7 +318,7 @@ func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, addr.Bytes())
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, addr.Bytes())
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -330,7 +329,7 @@ func wasmxGetAddressByRole(_context interface{}, callframe *wasmedge.CallingFram
 
 func wasmxGetRoleByAddress(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	addrbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addrbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -339,7 +338,7 @@ func wasmxGetRoleByAddress(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(role))
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(role))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -350,7 +349,7 @@ func wasmxGetRoleByAddress(_context interface{}, callframe *wasmedge.CallingFram
 
 func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -374,7 +373,7 @@ func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFram
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, responsebz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -385,7 +384,7 @@ func wasmxExecuteCosmosMsg(_context interface{}, callframe *wasmedge.CallingFram
 
 func wasmxDecodeCosmosTxToJson(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -393,7 +392,7 @@ func wasmxDecodeCosmosTxToJson(_context interface{}, callframe *wasmedge.Calling
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, jsonbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, jsonbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -404,7 +403,7 @@ func wasmxDecodeCosmosTxToJson(_context interface{}, callframe *wasmedge.Calling
 
 func wasmxVerifyCosmosTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -417,7 +416,7 @@ func wasmxVerifyCosmosTx(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -430,7 +429,7 @@ func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.Cal
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -468,7 +467,7 @@ func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.Cal
 	}
 
 	contractbz := mem.PaddLeftTo32(contractAddress.Bytes())
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, contractbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, contractbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -480,7 +479,7 @@ func wasmxCreate2AccountInterpreted(_context interface{}, callframe *wasmedge.Ca
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -520,7 +519,7 @@ func wasmxCreate2AccountInterpreted(_context interface{}, callframe *wasmedge.Ca
 	}
 
 	contractbz := mem.PaddLeftTo32(contractAddress.Bytes())
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, contractbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, contractbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -532,7 +531,7 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -564,7 +563,7 @@ func wasmxCreateAccount(_context interface{}, callframe *wasmedge.CallingFrame, 
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -576,7 +575,7 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -609,7 +608,7 @@ func wasmxCreate2Account(_context interface{}, callframe *wasmedge.CallingFrame,
 	if err != nil {
 		return returns, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -631,7 +630,7 @@ type GrpcResponse struct {
 func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	databz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	databz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -675,7 +674,7 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -725,7 +724,7 @@ type ReadFromBackgroundProcessResponse struct {
 func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -759,7 +758,7 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 func wasmxStartBackgroundProcess(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -792,7 +791,7 @@ func wasmxStartBackgroundProcess(_context interface{}, callframe *wasmedge.Calli
 func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -853,7 +852,7 @@ func wasmxWriteToBackgroundProcess(_context interface{}, callframe *wasmedge.Cal
 func wasmxReadFromBackgroundProcess(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -919,7 +918,7 @@ func prepareResponse(ctx *Context, callframe *wasmedge.CallingFrame, resp interf
 	if err != nil {
 		return 0, nil
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return 0, err
 	}
@@ -937,7 +936,7 @@ type FinalizeBlockWrap struct {
 
 func merkleHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	data, err := asmem.ReadMemFromPtr(callframe, params[0])
+	data, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -947,7 +946,7 @@ func merkleHash(_context interface{}, callframe *wasmedge.CallingFrame, params [
 		return nil, wasmedge.Result_Fail
 	}
 	hashbz := merkle.HashFromByteSlices(val.Slices)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hashbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hashbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -958,11 +957,11 @@ func merkleHash(_context interface{}, callframe *wasmedge.CallingFrame, params [
 
 func ed25519Sign(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	privbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	privbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	msgbz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	msgbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -971,7 +970,7 @@ func ed25519Sign(_context interface{}, callframe *wasmedge.CallingFrame, params 
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, signature)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, signature)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -982,15 +981,16 @@ func ed25519Sign(_context interface{}, callframe *wasmedge.CallingFrame, params 
 }
 
 func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	pubkeybz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	ctx := _context.(*Context)
+	pubkeybz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	signaturebz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	signaturebz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	msgbz, err := asmem.ReadMemFromPtr(callframe, params[2])
+	msgbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[2])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1007,13 +1007,13 @@ func ed25519Verify(_context interface{}, callframe *wasmedge.CallingFrame, param
 // TODO replace this with sha256.Sum256(bz)[:20]
 func ed25519PubToHex(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
-	pubkeybz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	pubkeybz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
 	pubKey := ed25519.PubKey(pubkeybz)
 	hexAddr := pubKey.Address()
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hexAddr)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hexAddr)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1026,7 +1026,7 @@ func ed25519PubToHex(_context interface{}, callframe *wasmedge.CallingFrame, par
 // addr_canonicalize(string) -> ArrayBuffer;
 func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addrStrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addrStrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1034,7 +1034,7 @@ func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, pa
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, addr.Bytes())
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, addr.Bytes())
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1043,12 +1043,13 @@ func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
-func wasmxAddrEquivalent(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	addr1StrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+func wasmxAddrEquivalent(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	addr1StrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	addr2StrBz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	addr2StrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1073,7 +1074,7 @@ func wasmxAddrEquivalent(context interface{}, callframe *wasmedge.CallingFrame, 
 // addr_humanize(ArrayBuffer) -> string;
 func wasmxHumanize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1083,7 +1084,7 @@ func wasmxHumanize(context interface{}, callframe *wasmedge.CallingFrame, params
 		return nil, wasmedge.Result_Fail
 	}
 
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addrstr))
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addrstr))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1095,11 +1096,11 @@ func wasmxHumanize(context interface{}, callframe *wasmedge.CallingFrame, params
 // addr_humanize_mc(ArrayBuffer) -> string;
 func wasmxHumanizeMultiChain(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	prefixBz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	prefixBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[1])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1113,7 +1114,7 @@ func wasmxHumanizeMultiChain(context interface{}, callframe *wasmedge.CallingFra
 		return nil, wasmedge.Result_Fail
 	}
 
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addrstr))
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(addrstr))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1125,7 +1126,7 @@ func wasmxHumanizeMultiChain(context interface{}, callframe *wasmedge.CallingFra
 // addr_canonicalize_mc(string) -> ArrayBuffer;
 func wasmxCanonicalizeMultiChain(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	addrStrBz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	addrStrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1137,7 +1138,7 @@ func wasmxCanonicalizeMultiChain(context interface{}, callframe *wasmedge.Callin
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1151,8 +1152,8 @@ type LoggerLog struct {
 	Parts []string `json:"parts"`
 }
 
-func getLoggerData(callframe *wasmedge.CallingFrame, params []interface{}) (string, []any, error) {
-	message, err := asmem.ReadMemFromPtr(callframe, params[0])
+func getLoggerData(ctx *Context, callframe *wasmedge.CallingFrame, params []interface{}) (string, []any, error) {
+	message, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return "", nil, err
 	}
@@ -1170,7 +1171,7 @@ func getLoggerData(callframe *wasmedge.CallingFrame, params []interface{}) (stri
 
 func wasmxLoggerInfo(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	msg, parts, err := getLoggerData(callframe, params)
+	msg, parts, err := getLoggerData(ctx, callframe, params)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1184,7 +1185,7 @@ func wasmxLoggerInfo(context interface{}, callframe *wasmedge.CallingFrame, para
 
 func wasmxLoggerError(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	msg, parts, err := getLoggerData(callframe, params)
+	msg, parts, err := getLoggerData(ctx, callframe, params)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1195,7 +1196,7 @@ func wasmxLoggerError(context interface{}, callframe *wasmedge.CallingFrame, par
 
 func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	msg, parts, err := getLoggerData(callframe, params)
+	msg, parts, err := getLoggerData(ctx, callframe, params)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1206,7 +1207,7 @@ func wasmxLoggerDebug(context interface{}, callframe *wasmedge.CallingFrame, par
 
 func wasmxLoggerDebugExtended(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	msg, parts, err := getLoggerData(callframe, params)
+	msg, parts, err := getLoggerData(ctx, callframe, params)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
@@ -1217,7 +1218,7 @@ func wasmxLoggerDebugExtended(context interface{}, callframe *wasmedge.CallingFr
 
 func wasmxEmitCosmosEvents(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-	evsbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	evsbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}

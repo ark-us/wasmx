@@ -25,6 +25,29 @@ func ReadMem(callframe *wasmedge.CallingFrame, pointer interface{}, size interfa
 	return result, nil
 }
 
+func ReadMemUntilNull(callframe *wasmedge.CallingFrame, pointer interface{}) ([]byte, error) {
+	result := []byte{}
+	ptr := pointer.(int32)
+	mem := callframe.GetMemoryByIndex(0)
+	if mem == nil {
+		return nil, fmt.Errorf("could not find memory")
+	}
+	bz, err := mem.GetData(uint(ptr), 1)
+	if err != nil {
+		return nil, err
+	}
+	for bz[0] != 0 {
+		result = append(result, bz[0])
+		ptr = ptr + 1
+		bz, err = mem.GetData(uint(ptr), 1)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 func WriteMem(callframe *wasmedge.CallingFrame, data []byte, pointer interface{}) error {
 	ptr := pointer.(int32)
 	length := len(data)

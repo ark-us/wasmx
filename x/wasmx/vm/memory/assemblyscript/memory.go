@@ -22,6 +22,26 @@ const AS_ARRAY_BUFFER_TYPE = int32(1)
 // rtSize	-4	    u32	    Size of the data following the header
 //           0		Payload starts here
 
+type MemoryHandlerAS struct{}
+
+func (MemoryHandlerAS) ReadMemFromPtr(callframe *wasmedge.CallingFrame, pointer interface{}) ([]byte, error) {
+	return ReadMemFromPtr(callframe, pointer)
+}
+func (MemoryHandlerAS) AllocateWriteMem(vm *wasmedge.VM, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
+	return AllocateWriteMem(vm, callframe, data)
+}
+func (MemoryHandlerAS) ReadJsString(arr []byte) string {
+	return ReadJsString(arr)
+}
+
+func (MemoryHandlerAS) ReadStringFromPtr(callframe *wasmedge.CallingFrame, pointer interface{}) (string, error) {
+	mm, err := ReadMemFromPtr(callframe, pointer)
+	if err != nil {
+		return "", err
+	}
+	return ReadJsString(mm), nil
+}
+
 func ReadMemFromPtr(callframe *wasmedge.CallingFrame, pointer interface{}) ([]byte, error) {
 	lengthbz, err := mem.ReadMem(callframe, pointer.(int32)-AS_PTR_LENGHT_OFFSET, int32(AS_PTR_LENGHT_OFFSET))
 	if err != nil {

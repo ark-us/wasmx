@@ -208,6 +208,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	// for authorizing cosmos messages sent by the contract, we check the sender/signer is the contract
 	// so we initialize the cosmos handler with the target contract
 	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(to)
+	sysDeps := newrouter[routerAddress].ContractInfo.SystemDeps
 
 	newctx := &Context{
 		GoRoutineGroup:  ctx.GoRoutineGroup,
@@ -221,6 +222,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		App:             ctx.App,
 		NativeHandler:   ctx.NativeHandler,
 		dbIterators:     map[int32]types.Iterator{},
+		MemoryHandler:   getMemoryHandler(sysDeps),
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -236,7 +238,6 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			CurrentCall: callContext,
 		},
 	}
-
 	_, err := newrouter[routerAddress].Execute(newctx)
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert

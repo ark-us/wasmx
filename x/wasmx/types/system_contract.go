@@ -64,6 +64,7 @@ var ADDR_MULTICHAIN_REGISTRY_LOCAL = "0x000000000000000000000000000000000000004b
 var ADDR_LOBBY = "0x000000000000000000000000000000000000004d"
 var ADDR_LOBBY_LIBRARY = "0x000000000000000000000000000000000000004e"
 var ADDR_METAREGISTRY = "0x000000000000000000000000000000000000004f"
+var ADDR_INTERPRETER_TAY = "0x0000000000000000000000000000000000000050"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -221,6 +222,15 @@ func InterpreterPrecompiles() SystemContracts {
 			Role:        ROLE_INTERPRETER,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_INTERPRETER_TAY,
+			Label:       INTERPRETER_TAY,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_INTERPRETER,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps: []string{WASMX_MEMORY_TAYLOR},
 		},
 	}
 }
