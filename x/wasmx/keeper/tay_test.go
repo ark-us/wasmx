@@ -2,10 +2,12 @@ package keeper_test
 
 import (
 	_ "embed"
+	"fmt"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	testdata "mythos/v1/x/wasmx/keeper/testdata/taylor"
 	"mythos/v1/x/wasmx/types"
 )
 
@@ -17,9 +19,9 @@ func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
-	codeId := appA.StoreCode(sender, []byte(SimpleStorageTay), deps)
+	codeId := appA.StoreCode(sender, []byte(testdata.SimpleStorageTay), deps)
 
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "SimpleContractTay", nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{"instantiate":{}}`)}, "SimpleContractTay", nil)
 
 	key := []byte("hello")
 	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
@@ -33,51 +35,35 @@ func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {
 	s.Require().Equal([]byte("sammy"), resp)
 }
 
-var SimpleStorageTay = `(do
-(def! replaceAll (fn* (sourcestr oldstr newstr)
-  (apply str
-    (map (fn* (s) (if (= s oldstr) newstr s)) (seq sourcestr))
-  )
-))
-(def! json-to-hm (fn* (jsonstr)
-  (eval (read-string (replaceAll (replaceAll jsonstr ":" " ") "," " ")))
-))
-(def! store (fn* (key val) (do (println "store" key val) (wasmx-storageStore (string-encode key) (string-encode val)))))
-(def! load (fn* (key) (wasmx-storageLoad (string-encode key))))
-(def! instantiate (fn* (obj)
-	(println "instantiated")
-))
-(def! main (fn* (obj) (do
-   (println "main" obj)
-   (println "main set?" (contains? obj "set"))
-   (println "main get?" (contains? obj "get"))
-  (if (contains? obj "set")
-    (let* (
-        params (get obj "set")
-        ff (println "set params" params)
-      )
-      (do
-        (println "set" params)
-        (store (get params "key") (get params "value"))
-        (wasmx-finish b[])
-      )
-    )
-    (if (contains? obj "get")
-      (let* (
-          params (get obj "get")
-          ff (println "get params" params)
-        )
-        (wasmx-finish (load (get params "key")))
-      )
-      (throw "function not found")
-    )
-  )
-)))
-(println "before main calld")
-(let* (
-  calld (string-decode (wasmx-getCallData))
-  dfd (println "calld" calld)
-)
-  (main (json-to-hm calld))
-)
-)`
+func (suite *KeeperTestSuite) TestInterpreterTayERC20() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+	deps := []string{types.INTERPRETER_TAY}
+	codeId := appA.StoreCode(sender, []byte(testdata.ERC20Tay), deps)
+
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"name":"Token","symbol":"TKN","decimals":8}}`)}, "ERC20Tay", nil)
+
+	data := []byte(`{"getName":{}}`)
+	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal([]byte("Token"), resp)
+
+	data = []byte(`{"getSymbol":{}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal([]byte("TKN"), resp)
+
+	data = []byte(`{"getDecimals":{}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(8, resp)
+
+	data = []byte(`{"mint":{}}`)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	data = []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, senderPrefixed.String()))
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(1000, resp)
+}

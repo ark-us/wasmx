@@ -1,0 +1,27 @@
+(do
+(import "sdk")
+
+(def! main (fn* (obj) (do
+    (println "main" obj)
+    (if (contains? obj "instantiate")
+        (wasmx-finish b[])
+    (if (contains? obj "set")
+        (let* (
+            params (get obj "set")
+        )
+            (do
+                (store-string (get params "key") (get params "value"))
+                (wasmx-finish b[])
+            )
+        )
+    (if (contains? obj "get")
+        (let* (
+            params (get obj "get")
+            )
+            (wasmx-finish (load-string-bz (get params "key")))
+        )
+        (throw "function not found")
+    )))
+)))
+(main (json-parse (get-calldata)))
+)
