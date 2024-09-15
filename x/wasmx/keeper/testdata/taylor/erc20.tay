@@ -46,13 +46,16 @@
     )
 )))
 
-(def! mint (fn* () (let* (receiver (get-caller)) (do
-  (println "mint" receiver)
-  (moveto receiver u[0 0 0 1000])
+(def! mint (fn* () (let* (
+        receiver (get-caller)
+        amount u[0 0 0 1000]
+    ) (do
+    (println "mint" receiver)
+    (moveto receiver amount)
+    (set-supply (u256.add_m amount (get-supply)))
 ))))
 (def! transfer (fn* (receiver value) (do
-  (println "transfer" receiver value)
-  (println "transfer value hex" (u256.to_hex value))
+  (println "transfer" receiver (u256.to_hex value))
   (movefrom (get-caller) value)
   (moveto receiver value)
 )))
@@ -64,19 +67,25 @@
 )))
 
 (def! getName (fn* ()
-    (string.encode (get (get-info) "name"))
+    (string.encode (json-stringify {"name" (get (get-info) "name")}))
 ))
 (def! getSymbol (fn* ()
-    (string.encode (get (get-info) "symbol"))
+    (string.encode (json-stringify {"symbol" (get (get-info) "symbol")}))
 ))
 (def! getDecimals (fn* ()
-    (i32.encode (get (get-info) "decimals"))
+    (string.encode (json-stringify {"decimals" (get (get-info) "decimals")}))
 ))
-(def! balanceOf (fn* (owner)
-  (u256.encode (get-balance owner))
-))
+(def! balanceOf (fn* (owner) (let* (
+    b (get-balance owner)
+    ;; pp (println "balanceOf hex" (u256.to_hex b))
+)
+    (string.encode (json-stringify {"balance" b }))
+    ;; (u256.to_hex b)
+)))
 (def! totalSupply (fn* ()
-    (u256.encode (get-supply))
+    (string.encode (json-stringify {"supply"
+        (u256.to_hex (get-supply))
+    }))
 ))
 (def! allowance (fn* (spender) (do
     ;; TODO
@@ -120,5 +129,6 @@
         (wasmx-finish (getDecimals))
     (throw "function not found")))))))))
 )))
+(println "calldata" (get-calldata))
 (main (json-parse (get-calldata)))
 )

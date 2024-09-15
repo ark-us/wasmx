@@ -6,6 +6,9 @@ import (
 )
 
 var (
+	//go:embed json.tay
+	JsonTay string
+
 	//go:embed sdk.tay
 	SdkTay string
 
@@ -14,9 +17,19 @@ var (
 
 	//go:embed erc20.tay
 	eRC20Tay string
+
+	//go:embed json_test.tay
+	jsonTestTay string
 )
 
+func applyImports(content string) string {
+	content = strings.ReplaceAll(content, `(import "sdk")`, SdkTay)
+	content = strings.ReplaceAll(content, `(import "json")`, JsonTay)
+	return content
+}
+
 var (
-	SimpleStorageTay = strings.ReplaceAll(simpleStorageTay, `(import "sdk")`, SdkTay)
-	ERC20Tay         = strings.ReplaceAll(eRC20Tay, `(import "sdk")`, SdkTay)
+	SimpleStorageTay = applyImports(simpleStorageTay)
+	ERC20Tay         = applyImports(eRC20Tay)
+	JsonTestTay      = applyImports(jsonTestTay)
 )

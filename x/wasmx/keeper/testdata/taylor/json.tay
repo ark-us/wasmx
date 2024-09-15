@@ -1,0 +1,128 @@
+(def! json-parse (fn* (jsonstr)
+  (dict-parse (replace-all (replace-all jsonstr ":" " ") "," " "))
+))
+;; (def! json-stringify (fn* (obj) (let* (
+;;     kk (keys obj)
+;; )
+;; )))
+
+(def! numberchars "0123456789e-+.")
+;; (def! strchars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+.!?@")
+(def! ischar? (fn* (v listofchars)
+    (if (= listofchars "")
+        false
+        (if (= v (first listofchars)) true
+            (ischar? v (rest listofchars))
+        )
+    )
+))
+
+(def! take-while (fn* (valstr charcomparefn acc)
+    (if (= valstr "")
+        ["" ""]
+        (if (charcomparefn (first valstr) acc)
+            (let* (
+                    result (take-while (rest valstr) charcomparefn "")
+                )
+                [(str acc (first valstr) (first result)) (nth result 1)]
+            )
+            [acc valstr]
+        )
+    )
+))
+
+(def! parse-number (fn* (s) (let* (
+        pair (take-while s (fn* (c acc) (ischar? c numberchars)))
+    )
+    [(read-string (first pair)) (nth pair 1)]
+)))
+
+(def! parse-string (fn* (s) (let* (
+    pair (take-while s (fn* (c acc)
+        (if (= c "\"")
+            ;; if quote, return false unless it was escaped
+            (if (= "\\" (nth acc (- (count acc) 1))) true false)
+            true
+        )
+    ))
+)
+    [(first pair) (rest (nth pair 1))] ;; skip the last quote
+)))
+
+;; (def! parse-array (fn* (s) (let* (
+;;         rest (subs s 1)
+;;     )
+;;     (loop* [result [] s rest]
+;;     (if (= (first s) \])
+;;         [result (subs s 1)]
+;;         (let* [[elem new-rest] (parse-value s)
+;;                 new-s (if (= (first new-rest) \,) (subs new-rest 1) new-rest)]
+;;         (recur (conj result elem) new-s))))
+;; )))
+
+;; (def! parse-object
+;;   (fn* (s)
+;;     (let* [rest (subs s 1)]
+;;       (loop* [result {} s rest]
+;;         (if (= (first s) \})
+;;           [result (subs s 1)]
+;;           (let* [[key new-rest] (parse-string s)
+;;                  [value newer-rest] (parse-value (subs new-rest 1))
+;;                  new-s (if (= (first newer-rest) \,) (subs newer-rest 1) newer-rest)]
+;;             (recur (assoc result key value) new-s)))))))
+
+;; (def! parse-value (fn* (s)
+;;     (cond
+;;         (= (first s) " ") (parse-value (rest s))
+;;         (= (first s) "\"") (parse-string s)
+;;         (= (first s) "[") (parse-array s)
+;;         (= (first s) "{") (parse-object s)
+;;         true (parse-number s))
+;; ))
+
+;; (def! json-parse
+;;   (fn* (jsonstr)
+;;     (first (parse-value jsonstr))))
+
+(def! interpose (fn* (listv sep acc) (let* (
+    len (count listv)
+)
+    (if (= len 0)
+        acc
+        (str
+            acc
+            (first listv)
+            (if (> len 1) (interpose (rest listv) sep sep) "")
+        )
+    )
+)))
+
+(def! encode-array (fn* (v)
+    (str "[" (interpose (map json-stringify v) "," "") "]")))
+
+(def! encode-object (fn* (m) (let* (
+    pairs (map (fn* (k) (str (pr-str k) ":" (json-stringify (get m k)))) (keys m))
+    p (println "pairs" pairs)
+    content (interpose pairs "," "" )
+    p (println "content" content)
+)
+    (str "{" content "}")
+)))
+
+(def! encode-u256 (fn* (v)
+    (pr-str (u256.to_hex v))
+))
+
+(def! encode-buffer (fn* (v)
+    (pr-str (buffer.to_hex v))
+))
+
+(def! json-stringify (fn* (malobj) (do
+    (cond
+      (string? malobj) (pr-str malobj)
+      (vector? malobj) (encode-array malobj)
+      (map? malobj) (encode-object malobj)
+      (u256? malobj) (encode-u256 malobj)
+      (buffer? malobj) (encode-buffer malobj)
+      true (pr-str malobj))
+)))

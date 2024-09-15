@@ -1,0 +1,10 @@
+(do
+(import "sdk")
+
+(def! main (fn* (obj) (let* (
+    ret (assoc obj "additional" {"obj" {"a" 8 "b" 9} "another" 4 })
+)
+    (wasmx-finish (string.encode (json-stringify ret)))
+)))
+(main (json-parse (get-calldata)))
+)
