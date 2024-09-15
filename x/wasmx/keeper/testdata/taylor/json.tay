@@ -1,10 +1,11 @@
-(def! json-parse (fn* (jsonstr)
-  (dict-parse (replace-all (replace-all jsonstr ":" " ") "," " "))
+(def! json-parse (fn* (dictstr)
+  (eval (read-string dictstr))
 ))
-;; (def! json-stringify (fn* (obj) (let* (
-;;     kk (keys obj)
-;; )
-;; )))
+(def! replace-all (fn* (sourcestr oldstr newstr)
+  (apply str
+    (map (fn* (s) (if (= s oldstr) newstr s)) (seq sourcestr))
+  )
+))
 
 (def! numberchars "0123456789e-+.")
 ;; (def! strchars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+.!?@")
@@ -49,41 +50,6 @@
     [(first pair) (rest (nth pair 1))] ;; skip the last quote
 )))
 
-;; (def! parse-array (fn* (s) (let* (
-;;         rest (subs s 1)
-;;     )
-;;     (loop* [result [] s rest]
-;;     (if (= (first s) \])
-;;         [result (subs s 1)]
-;;         (let* [[elem new-rest] (parse-value s)
-;;                 new-s (if (= (first new-rest) \,) (subs new-rest 1) new-rest)]
-;;         (recur (conj result elem) new-s))))
-;; )))
-
-;; (def! parse-object
-;;   (fn* (s)
-;;     (let* [rest (subs s 1)]
-;;       (loop* [result {} s rest]
-;;         (if (= (first s) \})
-;;           [result (subs s 1)]
-;;           (let* [[key new-rest] (parse-string s)
-;;                  [value newer-rest] (parse-value (subs new-rest 1))
-;;                  new-s (if (= (first newer-rest) \,) (subs newer-rest 1) newer-rest)]
-;;             (recur (assoc result key value) new-s)))))))
-
-;; (def! parse-value (fn* (s)
-;;     (cond
-;;         (= (first s) " ") (parse-value (rest s))
-;;         (= (first s) "\"") (parse-string s)
-;;         (= (first s) "[") (parse-array s)
-;;         (= (first s) "{") (parse-object s)
-;;         true (parse-number s))
-;; ))
-
-;; (def! json-parse
-;;   (fn* (jsonstr)
-;;     (first (parse-value jsonstr))))
-
 (def! interpose (fn* (listv sep acc) (let* (
     len (count listv)
 )
@@ -102,9 +68,7 @@
 
 (def! encode-object (fn* (m) (let* (
     pairs (map (fn* (k) (str (pr-str k) ":" (json-stringify (get m k)))) (keys m))
-    p (println "pairs" pairs)
     content (interpose pairs "," "" )
-    p (println "content" content)
 )
     (str "{" content "}")
 )))
@@ -117,7 +81,7 @@
     (pr-str (buffer.to_hex v))
 ))
 
-(def! json-stringify (fn* (malobj) (do
+(def! json-stringify-mal (fn* (malobj) (do
     (cond
       (string? malobj) (pr-str malobj)
       (vector? malobj) (encode-array malobj)

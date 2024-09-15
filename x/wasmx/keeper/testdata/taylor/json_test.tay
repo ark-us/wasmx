@@ -1,10 +1,20 @@
 (do
 (import "sdk")
 
-(def! main (fn* (obj) (let* (
-    ret (assoc obj "additional" {"obj" {"a" 8 "b" 9} "another" 4 })
-)
-    (wasmx-finish (string.encode (json-stringify ret)))
+(def! main (fn* (obj) (do
+    (println "main" obj)
+    (if (contains? obj "instantiate")
+        (wasmx-finish b[])
+    (if (contains? obj "identity")
+        (wasmx-finish (string.encode (json-stringify (get obj "identity"))))
+    (if (contains? obj "add")
+        (let* (
+            ret (assoc (get obj "add") "additional" {"obj" {"a" 8 "b" 9} "another" 4 })
+        )
+            (wasmx-finish (string.encode (json-stringify ret)))
+        )
+        (throw "function not found")
+    )))
 )))
 (main (json-parse (get-calldata)))
 )

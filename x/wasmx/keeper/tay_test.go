@@ -91,7 +91,27 @@ func (suite *KeeperTestSuite) TestInterpreterTayJson() {
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{"instantiate":{}}`)}, "JsonTestTay", nil)
 
-	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
+	data := []byte(`{"add":{"set":{"key":"hello","value":"sammy"}}}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(`{"additional":{"obj":{"a":8,"b":9},"another":4},"set":{"key":"hello","value":"sammy"}}`, string(resp))
+
+	data = []byte(`{"identity":[1, 2, 3]}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(`[1,2,3]`, string(resp))
+
+	data = []byte(`{"identity":{"set":{"key":"hello","value":"sammy", "somearr": [6, "aaa", 5], "somev": true}}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(`{"set":{"key":"hello","value":"sammy","somearr":[6,"aaa",5],"somev":true}}`, string(resp))
+
+	data = []byte(`{"identity":"ana"}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(`"ana"`, string(resp))
+
+	data = []byte(`{"identity":5}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(`5`, string(resp))
+
+	data = []byte(`{"identity":true}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(`true`, string(resp))
 }

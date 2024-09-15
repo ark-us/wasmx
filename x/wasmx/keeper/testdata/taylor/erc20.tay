@@ -12,7 +12,7 @@
 )
     (if (= v "")
         {}
-        (dict-parse v)
+        (json-parse v)
     )
 )))
 (def! set-info (fn* (obj)

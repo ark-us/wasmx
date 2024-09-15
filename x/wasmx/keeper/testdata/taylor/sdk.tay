@@ -1,13 +1,4 @@
 (import "json")
-
-(def! dict-parse (fn* (dictstr)
-  (eval (read-string dictstr))
-))
-(def! replace-all (fn* (sourcestr oldstr newstr)
-  (apply str
-    (map (fn* (s) (if (= s oldstr) newstr s)) (seq sourcestr))
-  )
-))
 (def! store-string (fn* (key value)
     (wasmx-storageStore (string.encode key) (string.encode value))
 ))
