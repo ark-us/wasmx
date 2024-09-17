@@ -1,0 +1,74 @@
+(do
+(import "sdk")
+
+;; returns a list of buffer objects
+(def! storageLoadRange (fn* (startkeybz endkeybz reverse)
+    (map (fn* (v) (base64.decode v))
+        (json-parse (string-decode (wasmx-storageLoadRange (string.encode (json-stringify {"start_key" startkeybz "end_key" endkeybz "reverse" reverse})))))
+    )
+))
+
+(def! storageLoadRangePairs (fn* (startkeybz endkeybz reverse) (let* (
+    buf (wasmx-storageLoadRange (string.encode (json-stringify {"start_key" startkeybz "end_key" endkeybz "reverse" reverse})))
+    resp (json-parse (string-decode buf))
+    values
+)
+    (get resp "values") ;; StoragePair[] {key,value}
+)))
+
+(def! wasmxlog (fn* (typestr databuf topicsbufarr)
+    (wasmx-log (string.encode (json-stringify {
+        "type" typestr
+        "data" databuf
+        "topics" topicsbufarr
+    })))
+))
+
+(def! main (fn* (obj) (do
+    (println "main" obj)
+    (if (contains? obj "instantiate")
+        (wasmx-finish b[])
+    (if (contains? obj "base64dec")
+        (wasmx-finish (base64.decode (get (get obj "base64dec") "value")))
+    (if (contains? obj "base64enc") (let* (
+            val (get (get obj "base64enc") "value")
+            p (println "val" val (string.encode val))
+            encval (base64.encode (string.encode val))
+            p (println "encval" encval)
+        )
+        (wasmx-finish (string.encode encval)))
+    (if (contains? obj "sha256") (let* (
+            bval (get (get obj "sha256") "value")
+            p (println "bval" bval)
+            bufval (base64.decode bval)
+            p (println "bufval" bufval)
+        )
+            (wasmx-finish (wasmx-keccak256 bufval)))
+    (if (contains? obj "getChainId")
+        (wasmx-finish (wasmx-getChainId))
+    (if (contains? obj "getCaller")
+        (wasmx-finish (wasmx-getCaller))
+    (if (contains? obj "getAddress")
+        (wasmx-finish (wasmx-getAddress))
+    (if (contains? obj "storageStore") (let* (params (get obj "storageStore"))
+        (do (wasmx-storageStore (base64.decode (get params "key")) (base64.decode (get params "value")))
+            (wasmx-finish b[])))
+    (if (contains? obj "storageLoad") (let* (params (get obj "storageLoad"))
+            (wasmx-finish (wasmx-storageLoad (base64.decode (get params "key")) (base64.decode (get params "value")))))
+    (if (contains? obj "storageLoadRange") (let* (params (get obj "storageLoadRange"))
+        (wasmx-finish (string.encode
+            (json-stringify (map (fn* (v) (base64.encode v))
+                (storageLoadRange (get params "startkey") (get params "endkey") false)
+            ))
+        )))
+    (if (contains? obj "storageLoadRangePairs") (let* (params (get obj "storageLoadRangePairs"))
+        (wasmx-finish (string.encode
+            (json-stringify (storageLoadRangePairs (get params "startkey") (get params "endkey") false))
+        )))
+    (if (contains? obj "log")
+        (do (wasmxlog (json-parse (get params "log"))) (wasmx-finish b[]))
+    (throw "function not found")
+    ))))))))))))
+)))
+(main (json-parse (get-calldata)))
+)

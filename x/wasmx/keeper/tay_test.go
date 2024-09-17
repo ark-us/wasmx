@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 
 	sdkmath "cosmossdk.io/math"
@@ -114,4 +115,68 @@ func (suite *KeeperTestSuite) TestInterpreterTayJson() {
 	data = []byte(`{"identity":true}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal(`true`, string(resp))
+}
+
+func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+
+	appA := s.AppContext()
+	senderP := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderP, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+	deps := []string{types.INTERPRETER_TAY}
+	codeId := appA.StoreCode(sender, []byte(testdata.OpcodesTay), deps)
+
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{"instantiate":{}}`)}, "OpcodesTay", nil)
+
+	data := []byte(`{"getChainId":{}}`)
+	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("level0_1000-1", string(resp))
+
+	data = []byte(`{"base64dec":{"value":"aGVsbG9vYQ=="}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("hellooa", string(resp))
+
+	data = []byte(`{"base64dec":{"value":"aGVsbG8="}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("hello", string(resp))
+
+	data = []byte(`{"base64enc":{"value":"hellooa"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("aGVsbG9vYQ==", string(resp))
+
+	data = []byte(`{"base64enc":{"value":"hello"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("aGVsbG8=", string(resp))
+
+	data = []byte(`{"sha256":{"value":"aGVsbG8="}}`) // hello
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8", hex.EncodeToString(resp))
+
+	data = []byte(`{"getCaller":{}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(senderP.String(), string(resp))
+
+	data = []byte(`{"getAddress":{}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(contractAddress.String(), string(resp))
+
+	data = []byte(`{"storageStore":{"key":"hello","value":"sammy"}}`)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	data = []byte(`{"storageLoad":{"key":"hello"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("sammy", string(resp))
+
+	data = []byte(`{"storageStore":{"key":"hella","value":"bart"}}`)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	data = []byte(`{"storageLoadRange":{"startkey":"hella","endkey":"hello"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("sammy", string(resp))
+
+	data = []byte(`{"storageLoadRangePairs":{"startkey":"hella","endkey":"hello"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("sammy", string(resp))
 }
