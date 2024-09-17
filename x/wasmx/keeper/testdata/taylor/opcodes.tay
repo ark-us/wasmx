@@ -1,29 +1,6 @@
 (do
 (import "sdk")
 
-;; returns a list of buffer objects
-(def! storageLoadRange (fn* (startkeybz endkeybz reverse)
-    (map (fn* (v) (base64.decode v))
-        (json-parse (string-decode (wasmx-storageLoadRange (string.encode (json-stringify {"start_key" startkeybz "end_key" endkeybz "reverse" reverse})))))
-    )
-))
-
-(def! storageLoadRangePairs (fn* (startkeybz endkeybz reverse) (let* (
-    buf (wasmx-storageLoadRange (string.encode (json-stringify {"start_key" startkeybz "end_key" endkeybz "reverse" reverse})))
-    resp (json-parse (string-decode buf))
-    values
-)
-    (get resp "values") ;; StoragePair[] {key,value}
-)))
-
-(def! wasmxlog (fn* (typestr databuf topicsbufarr)
-    (wasmx-log (string.encode (json-stringify {
-        "type" typestr
-        "data" databuf
-        "topics" topicsbufarr
-    })))
-))
-
 (def! main (fn* (obj) (do
     (println "main" obj)
     (if (contains? obj "instantiate")
@@ -59,22 +36,32 @@
     (if (contains? obj "getAddress")
         (wasmx-finish (string.encode (get-address)))
     (if (contains? obj "storageStore") (let* (params (get obj "storageStore"))
-        (do (wasmx-storageStore (base64.decode (get params "key")) (base64.decode (get params "value")))
+        (do (wasmx-storageStore (string.encode (get params "key")) (string.encode (get params "value")))
             (wasmx-finish b[])))
     (if (contains? obj "storageLoad") (let* (params (get obj "storageLoad"))
-            (wasmx-finish (wasmx-storageLoad (base64.decode (get params "key")) (base64.decode (get params "value")))))
+            (wasmx-finish (wasmx-storageLoad (string.encode (get params "key")))))
     (if (contains? obj "storageLoadRange") (let* (params (get obj "storageLoadRange"))
         (wasmx-finish (string.encode
             (json-stringify (map (fn* (v) (base64.encode v))
-                (storageLoadRange (get params "startkey") (get params "endkey") false)
+                (storageLoadRange (string.encode (get params "startkey")) (string.encode (get params "endkey")) false)
             ))
         )))
     (if (contains? obj "storageLoadRangePairs") (let* (params (get obj "storageLoadRangePairs"))
         (wasmx-finish (string.encode
-            (json-stringify (storageLoadRangePairs (get params "startkey") (get params "endkey") false))
+            (json-stringify (storageLoadRangePairs (string.encode (get params "startkey")) (string.encode (get params "endkey")) false))
         )))
     (if (contains? obj "log")
-        (do (wasmxlog (json-parse (get params "log"))) (wasmx-finish b[]))
+        (do
+            (wasmx-log (string.encode (json-stringify (get obj "log"))))
+            (wasmx-finish b[])
+        )
+    (if (contains? obj "setFinishData")
+        (do
+            (wasmx-setFinishData (string.encode "hello"))
+            (wasmx-finish (wasmx-getFinishData))
+        )
+    (if (contains? obj "revert") (do
+        (wasmx-revert (string.encode "someerror")))
     (if (contains? obj "add") (let* (
             params (get obj "add")
             v (u256.add_m (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
@@ -120,13 +107,84 @@
             v (u256.eq (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
         )
         (wasmx-finish (string.encode (if v "true" "false"))))
+    (if (contains? obj "iszero") (let* (
+            params (get obj "iszero")
+            v (u256.iszero (u256.from_hex (get params "a")))
+        )
+        (wasmx-finish (string.encode (if v "true" "false"))))
     (if (contains? obj "not") (let* (
-            params (get obj "add")
-            v (u256.add_m (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+            params (get obj "not")
+            v (u256.not (u256.from_hex (get params "a")))
         )
         (wasmx-finish (u256.encode v)))
+    (if (contains? obj "and") (let* (
+            params (get obj "and")
+            v (u256.and (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "or") (let* (
+            params (get obj "or")
+            v (u256.or (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "xor") (let* (
+            params (get obj "xor")
+            v (u256.xor (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "shr") (let* (
+            params (get obj "shr")
+            v (u256.shr (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "shl") (let* (
+            params (get obj "shl")
+            v (u256.shl (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "sar") (let* (
+            params (get obj "sar")
+            v (u256.sar (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "sdiv") (let* (
+            params (get obj "sdiv")
+            v (u256.sdiv (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "sgt") (let* (
+            params (get obj "sgt")
+            v (u256.sgt (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "slt") (let* (
+            params (get obj "slt")
+            v (u256.slt (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "smod") (let* (
+            params (get obj "smod")
+            v (u256.smod (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "signextend") (let* (
+            params (get obj "signextend")
+            v (u256.signextend (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "addmod") (let* (
+            params (get obj "addmod")
+            v (u256.addmod (u256.from_hex (get params "a")) (u256.from_hex (get params "b")) (u256.from_hex (get params "c")))
+        )
+        (wasmx-finish (u256.encode v)))
+    (if (contains? obj "mulmod") (let* (
+            params (get obj "mulmod")
+            v (u256.mulmod (u256.from_hex (get params "a")) (u256.from_hex (get params "b")) (u256.from_hex (get params "c")))
+        )
+        (wasmx-finish (u256.encode v)))
+
     (throw "function not found")
-    ))))))))))))))))))))))))
+    ))))))))))))))))))))))))))))))))))))))))
 )))
 (main (json-parse (get-calldata)))
 )

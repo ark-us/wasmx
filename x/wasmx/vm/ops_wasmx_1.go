@@ -163,11 +163,20 @@ func wasmxStorageLoadRangePairs(context interface{}, callframe *wasmedge.Calling
 		return nil, wasmedge.Result_Fail
 	}
 	pairs := make([]StoragePair, 0)
+	startKey := req.StartKey
+	endKey := req.EndKey
+	if len(startKey) == 0 {
+		startKey = nil
+	}
+	if len(endKey) == 0 {
+		endKey = nil
+	}
+
 	var iter types.Iterator
 	if req.Reverse {
-		iter = ctx.ContractStore.ReverseIterator(req.StartKey, req.EndKey)
+		iter = ctx.ContractStore.ReverseIterator(startKey, endKey)
 	} else {
-		iter = ctx.ContractStore.Iterator(req.StartKey, req.EndKey)
+		iter = ctx.ContractStore.Iterator(startKey, endKey)
 	}
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {

@@ -44,3 +44,28 @@
 (def! get-calldata (fn* ()
     (string.decode (wasmx-getCallData))
 ))
+(def! get-chainId (fn* ()
+    (string.decode (wasmx-getChainId))
+))
+;; returns a list of buffer objects
+(def! storageLoadRange (fn* (startkeybz endkeybz reverse)
+    (map (fn* (v) (base64.decode v))
+        (json-parse (string.decode (wasmx-storageLoadRange (string.encode (json-stringify {"start_key" startkeybz "end_key" endkeybz "reverse" reverse})))))
+    )
+))
+
+(def! storageLoadRangePairs (fn* (startkeybz endkeybz reverse) (let* (
+    buf (wasmx-storageLoadRangePairs (string.encode (json-stringify {"start_key" startkeybz "end_key" endkeybz "reverse" reverse})))
+    resp (json-parse (string.decode buf))
+    values
+)
+    (get resp "values") ;; StoragePair[] {key,value}
+)))
+
+(def! wasmxlog (fn* (typestr databuf topicsbufarr)
+    (wasmx-log (string.encode (json-stringify {
+        "type" typestr
+        "data" databuf
+        "topics" topicsbufarr
+    })))
+))
