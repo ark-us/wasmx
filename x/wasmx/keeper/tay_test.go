@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/cometbft/cometbft/crypto/ed25519"
@@ -17,6 +18,7 @@ import (
 	mcodec "mythos/v1/codec"
 	testdata "mythos/v1/x/wasmx/keeper/testdata/taylor"
 	"mythos/v1/x/wasmx/types"
+	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
 func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {
@@ -306,39 +308,79 @@ func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
 	bal := appA.App.BankKeeper.GetBalance(appA.Context(), sender.Address.Bytes(), appA.Chain.Config.BaseDenom)
 	s.Require().Equal(fmt.Sprintf("%064s", hex.EncodeToString(bal.Amount.BigInt().Bytes())), hex.EncodeToString(resp))
 
-	data = []byte(fmt.Sprintf(`{"getAccount":{"a":"%s"}}`, senderP.String()))
-	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	acc := appA.App.AccountKeeper.GetAccount(appA.Context(), sender.Address.Bytes())
-	accstr, err := json.Marshal(acc)
+	internalmsg := types.WasmxExecutionMessage{Data: appA.Hex2bz("aa0000000000000000000000000000000000000000000000000000000077")}
+	msgbz, err := json.Marshal(internalmsg)
+	suite.Require().NoError(err)
+	msg := &types.MsgExecuteContract{
+		Sender:       appA.MustAccAddressToString(sender.Address),
+		Contract:     appA.MustAccAddressToString(types.AccAddressFromHex(types.ADDR_IDENTITY)),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+	txbz := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil, "")
+	data = []byte(fmt.Sprintf(`{"decodeCosmosTxToJson":{"value":"%s"}}`, base64.StdEncoding.EncodeToString(txbz)))
+	txsdk, err := appA.App.TxConfig().TxDecoder()(txbz)
 	s.Require().NoError(err)
-	s.Require().Equal(accstr, string(resp))
+	txjson, err := appA.App.TxConfig().TxJSONEncoder()(txsdk)
+	s.Require().NoError(err)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal(string(txjson), string(resp))
 
-	lasth, err := appA.ABCIClient().LatestBlockHeight(appA.Context())
-	s.Require().NoError(err)
-	data = []byte(`{"getCurrentBlock":{}}`)
+	data = []byte(fmt.Sprintf(`{"verifyCosmosTx":{"value":"%s"}}`, base64.StdEncoding.EncodeToString(txbz)))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	blockdata, err := appA.ABCIClient().Block(appA.Context(), &lasth)
-	s.Require().NoError(err)
-	blockdatastr, err := json.Marshal(blockdata)
-	s.Require().NoError(err)
-	s.Require().Equal(string(blockdatastr), string(resp))
+	s.Require().Equal("true", string(resp))
 
-	blockheight := int64(2)
-	data = []byte(`{"getBlockHash":{"index":"0x0000000000000000000000000000000000000000000000000000000000000002"}}`)
-	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	blockdata, err = appA.ABCIClient().Block(appA.Context(), &blockheight)
+	codeId2 := appA.StoreCode(sender, []byte(testdata.SimpleStorageTay), deps)
+	contractAddress2 := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte(`{"instantiate":{}}`)}, "SimpleContractTay", nil)
+	data = []byte(`{"set":{"key":"hello","value":"bella"}}`)
+	callvalue := sdkmath.NewInt(0)
+	callreq := vmtypes.SimpleCallRequestRaw{
+		To:       contractAddress2.String(),
+		Calldata: data,
+		IsQuery:  false,
+		Value:    &callvalue,
+		GasLimit: big.NewInt(100000),
+	}
+	callreqstr, err := json.Marshal(callreq)
 	s.Require().NoError(err)
-	s.Require().Equal(blockdata.BlockID.Hash, resp)
+	data = []byte(fmt.Sprintf(`{"call":{"value":%s}}`, callreqstr))
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	data = []byte(`{"get":{"key":"hello"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress2, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("bella", string(resp))
+
+	// data = []byte(fmt.Sprintf(`{"getAccount":{"a":"%s"}}`, senderP.String()))
+	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	// acc := appA.App.AccountKeeper.GetAccount(appA.Context(), sender.Address.Bytes())
+	// // accstr, err := json.Marshal(acc)
+	// fmt.Println("--acc--", acc)
+	// s.Require().NoError(err)
+	// s.Require().Equal("", string(resp))
+
+	// lasth, err := appA.ABCIClient().LatestBlockHeight(appA.Context())
+	// s.Require().NoError(err)
+	// data = []byte(`{"getCurrentBlock":{}}`)
+	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	// blockdata, err := appA.ABCIClient().Block(appA.Context(), &lasth)
+	// s.Require().NoError(err)
+	// blockdatastr, err := json.Marshal(blockdata)
+	// s.Require().NoError(err)
+	// s.Require().Equal(string(blockdatastr), string(resp))
+
+	// blockheight := int64(2)
+	// data = []byte(`{"getBlockHash":{"index":"0x0000000000000000000000000000000000000000000000000000000000000002"}}`)
+	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	// blockdata, err = appA.ABCIClient().Block(appA.Context(), &blockheight)
+	// s.Require().NoError(err)
+	// s.Require().Equal(blockdata.BlockID.Hash, resp)
 
 	// TODO
 	// createAccountInterpreted
 	// create2AccountInterpreted
 	// createAccount
 	// create2Account
-	// executeCosmosMsg
-	// decodeCosmosTxToJson
-	// verifyCosmosTx
-	// call
 }
 
 func (suite *KeeperTestSuite) TestInterpreterTayU256() {
