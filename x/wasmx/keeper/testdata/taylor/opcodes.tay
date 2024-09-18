@@ -62,6 +62,58 @@
         )
     (if (contains? obj "revert") (do
         (wasmx-revert (string.encode "someerror")))
+    (if (contains? obj "getBlockHash") (let* (
+        v (get (get obj "getBlockHash")"index")
+    )
+        (wasmx-finish (getBlockHash (u256.from_hex v))))
+    (if (contains? obj "getCurrentBlock")
+        (wasmx-finish (wasmx-getCurrentBlock))
+    (if (contains? obj "humanize") (let* (
+            params (get obj "humanize")
+        )
+        (wasmx-finish (string.encode (addr-humanize (addr-canonicalize (get params "value"))))))
+    (if (contains? obj "addr_equivalent") (let* (
+            params (get obj "addr_equivalent")
+            v (addr-equivalent (get params "a") (get params "b"))
+        )
+        (wasmx-finish (string.encode (if v "true" "false"))))
+    (if (contains? obj "humanize_mc") (let* (
+            params (get obj "humanize_mc")
+            prefixed (addr-canonicalize-mc (get params "a"))
+            p (println "prefixed" prefixed)
+            p (println "bz" (get prefixed "bz"))
+            p (println "prefix" (get prefixed "prefix"))
+	        ;; v (addr-humanize-mc (base64.decode (get prefixed "bz")) (get prefixed "prefix"))
+            ;; p (println "v" v)
+        )
+            ;; (wasmx-finish (string.encode v)))
+            (wasmx-finish (string.encode (addr-humanize-mc (base64.decode (get prefixed "bz")) (get prefixed "prefix")))))
+    ;; (if (contains? obj "LoggerInfo") (let* (
+    ;;         params (get obj "LoggerInfo")
+    ;;     )
+    ;;     (do
+    ;;         (logger-info (get params "a") [])
+    ;;         (wasmx-finish b[])))
+    ;; (if (contains? obj "LoggerError") (let* (
+    ;;         params (get obj "LoggerError")
+    ;;     )
+    ;;     (do
+    ;;         (logger-error (get params "a") [])
+    ;;         (wasmx-finish b[])))
+    ;; (if (contains? obj "LoggerDebug") (let* (
+    ;;         params (get obj "LoggerDebug")
+    ;;     )
+    ;;     (do
+    ;;         (logger-debug (get params "a") [])
+    ;;         (wasmx-finish b[])))
+    ;; (if (contains? obj "getAddressByRole") (let* (
+    ;;         params (get obj "getAddressByRole")
+    ;;     )
+    ;;     (wasmx-finish (string.encode (get-address-by-role (get params "a")))))
+    ;; (if (contains? obj "getRoleByAddress") (let* (
+    ;;         params (get obj "getRoleByAddress")
+    ;;     )
+    ;;     (wasmx-finish (string.encode (get-role-by-address (get params "a")))))
     (if (contains? obj "add") (let* (
             params (get obj "add")
             v (u256.add_m (u256.from_hex (get params "a")) (u256.from_hex (get params "b")))
@@ -184,7 +236,7 @@
         (wasmx-finish (u256.encode v)))
 
     (throw "function not found")
-    ))))))))))))))))))))))))))))))))))))))))
+    )))))))))))))))))))))))))))))))))))))))))))))
 )))
 (main (json-parse (get-calldata)))
 )

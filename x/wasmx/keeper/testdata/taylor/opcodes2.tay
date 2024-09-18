@@ -1,0 +1,80 @@
+(do
+(import "sdk")
+
+(def! main (fn* (obj) (do
+    (println "main" obj)
+    (if (contains? obj "instantiate")
+        (wasmx-finish b[])
+    (if (contains? obj "LoggerInfo") (let* (
+            params (get obj "LoggerInfo")
+        )
+        (do
+            (logger-info (get params "a") [])
+            (wasmx-finish b[])))
+    (if (contains? obj "LoggerError") (let* (
+            params (get obj "LoggerError")
+        )
+        (do
+            (logger-error (get params "a") [])
+            (wasmx-finish b[])))
+    (if (contains? obj "LoggerDebug") (let* (
+            params (get obj "LoggerDebug")
+        )
+        (do
+            (logger-debug (get params "a") [])
+            (wasmx-finish b[])))
+    (if (contains? obj "getAddressByRole") (let* (
+            params (get obj "getAddressByRole")
+        )
+        (wasmx-finish (string.encode (get-address-by-role (get params "a")))))
+    (if (contains? obj "getRoleByAddress") (let* (
+            params (get obj "getRoleByAddress")
+        )
+        (wasmx-finish (string.encode (get-role-by-address (get params "a")))))
+    (if (contains? obj "emitCosmosEvents")
+        (do
+            (wasmx-emitCosmosEvents (string.encode (json-stringify (get obj "emitCosmosEvents"))))
+            (wasmx-finish b[])
+        )
+    (if (contains? obj "MerkleHash") (let* (
+            params (get obj "MerkleHash")
+            val {"slices" (get params "a")}
+        )
+        (wasmx-finish (wasmx-MerkleHash (string.encode (json-stringify val)))))
+    (if (contains? obj "ed25519Sign") (let* (
+        params (get obj "ed25519Sign")
+        msg (get params "msg")
+        privkey (base64.decode (get params "privkey"))
+        signed (wasmx-ed25519Sign privkey (string.encode msg))
+    )
+        (wasmx-finish signed))
+    (if (contains? obj "ed25519Verify") (let* (
+        params (get obj "ed25519Verify")
+        msg (get params "msg")
+        pubkey (base64.decode (get params "pubkey"))
+        signature (base64.decode (get params "signature"))
+        signed (wasmx-ed25519Verify pubkey signature (string.encode msg))
+    )
+        (wasmx-finish (string.encode (if signed "true" "false"))))
+    (if (contains? obj "ed25519PubToHex") (let* (
+        params (get obj "ed25519PubToHex")
+        pubkey (base64.decode (get params "pubkey"))
+    )
+        (wasmx-finish (wasmx-ed25519PubToHex pubkey)))
+    (if (contains? obj "getCurrentBlock")
+        (wasmx-finish (wasmx-getCurrentBlock))
+    (if (contains? obj "getBalance") (let* (
+        params (get obj "getBalance")
+        addr (get params "a")
+    )
+        (wasmx-finish (wasmx-getBalance (addr-canonicalize addr))))
+    (if (contains? obj "getAccount") (let* (
+        params (get obj "getAccount")
+        addr (get params "a")
+    )
+        (wasmx-finish (wasmx-getAccount (addr-canonicalize addr))))
+    (throw "function not found")
+    ))))))))))))))
+)))
+(main (json-parse (get-calldata)))
+)

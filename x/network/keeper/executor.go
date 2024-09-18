@@ -16,8 +16,10 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 
 	mcfg "mythos/v1/config"
+	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -91,9 +93,9 @@ func CreateQueryContext(app mcfg.BaseApp, logger log.Logger, height int64, prove
 		ProposerAddress:    []byte("proposer"),
 		NextValidatorsHash: []byte("proposer"),
 		AppHash:            app.LastCommitID().Hash,
-		// Version: tmversion.Consensus{
-		// 	Block: version.BlockProtocol,
-		// },
+		Version: tmversion.Consensus{
+			Block: types.RequestInfo.BlockVersion,
+		},
 		// LastBlockId: tmproto.BlockID{
 		// 	Hash: tmhash.Sum([]byte("block_id")),
 		// 	PartSetHeader: tmproto.PartSetHeader{

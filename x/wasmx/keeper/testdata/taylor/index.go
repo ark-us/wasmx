@@ -21,6 +21,9 @@ var (
 	//go:embed opcodes.tay
 	opcodesTay string
 
+	//go:embed opcodes2.tay
+	opcodesTay2 string
+
 	//go:embed json_test.tay
 	jsonTestTay string
 )
@@ -36,4 +39,5 @@ var (
 	ERC20Tay         = applyImports(eRC20Tay)
 	JsonTestTay      = applyImports(jsonTestTay)
 	OpcodesTay       = applyImports(opcodesTay)
+	OpcodesTay2      = applyImports(opcodesTay2)
 )
