@@ -504,65 +504,69 @@ func (suite *KeeperTestSuite) TestInterpreterTayU256() {
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe", hex.EncodeToString(resp))
 
-	// data = []byte(`{"signextend":{"a":"0x00000000000000000000000000000000000000000000000000000000000ffff4","b": "0x0000000000000000000000000000000000000000000000000000000000000020"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020", hex.EncodeToString(resp))
+	data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x000000000000000000000000000000000000000000000000000000000000000c"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", hex.EncodeToString(resp))
 
-	// data = []byte(`{"sdiv":{"a":"0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4","b": "0x0000000000000000000000000000000000000000000000000000000000000002"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa", hex.EncodeToString(resp))
+	data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000000","b": "0xaa0000000000000000000000000000000000000000000000000000000000000c"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x000000000000000000000000000000000000000000000000000000000000000c"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", hex.EncodeToString(resp))
+	data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000110","b": "0xc84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000000","b": "0xaa0000000000000000000000000000000000000000000000000000000000000c"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("aa0000000000000000000000000000000000000000000000000000000000000c", hex.EncodeToString(resp))
+	data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000080","b": "0xc84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000110","b": "0xc84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(resp))
+	data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000100","b": "0xc84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000080","b": "0xc84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("00000000000000000000000000000000c84a6e6ec1e7f30f5c812eeba420f769", hex.EncodeToString(resp))
+	data = []byte(`{"shr":{"a":"0x00000000000000000000000000000000000000000000000000000000000000aa","b": "0x983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("000000000000000000000000000000000000000000260f6fa86bffb7bb894f56", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shr":{"a":"0x0000000000000000000000000000000000000000000000000000000000000100","b": "0xc84a6e6ec1e7f30f5c812eeba420f76900000000000000000000000000000000"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(resp))
+	data = []byte(`{"shl":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x000000000000000000000000000000000000000000000000000000000000000c"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000030", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shr":{"a":"0x00000000000000000000000000000000000000000000000000000000000000aa","b": "0x983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("000000000000000000000000000000000000000000260f6fa86bffb7bb894f56", hex.EncodeToString(resp))
+	data = []byte(`{"shl":{"a":"0x00000000000000000000000000000000000000000000000000000000000000aa","b": "0x983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("ce5eb700bda45880968354000000000000000000000000000000000000000000", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shl":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x000000000000000000000000000000000000000000000000000000000000000c"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000030", hex.EncodeToString(resp))
+	data = []byte(`{"sar":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x000000000000000000000000000000000000000000000000000000000000000c"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", hex.EncodeToString(resp))
 
-	// data = []byte(`{"shl":{"a":"0x00000000000000000000000000000000000000000000000000000000000000aa","b": "0x983dbea1affedeee253d5921804d11ce119058ba35f397adc02f69162025a0d5"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("ce5eb700bda45880968354000000000000000000000000000000000000000000", hex.EncodeToString(resp))
-
-	// data = []byte(`{"sar":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x000000000000000000000000000000000000000000000000000000000000000c"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", hex.EncodeToString(resp))
-
-	// data = []byte(`{"sar":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", hex.EncodeToString(resp))
+	data = []byte(`{"sar":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd", hex.EncodeToString(resp))
 
 	data = []byte(`{"addmod":{"a":"0x0000000000000000000000000000000000000000000000000000000000000005","b": "0x0000000000000000000000000000000000000000000000000000000000000003","c":"0x0000000000000000000000000000000000000000000000000000000000000003"}}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000002", hex.EncodeToString(resp))
 
-	// data = []byte(`{"mulmod":{"a":"0x0000000000000000000000000000000000000000000000000000000000000005","b": "0x0000000000000000000000000000000000000000000000000000000000000003","c":"0x0000000000000000000000000000000000000000000000000000000000000004"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", hex.EncodeToString(resp))
+	data = []byte(`{"mulmod":{"a":"0x0000000000000000000000000000000000000000000000000000000000000005","b": "0x0000000000000000000000000000000000000000000000000000000000000003","c":"0x0000000000000000000000000000000000000000000000000000000000000004"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000003", hex.EncodeToString(resp))
 
-	// data = []byte(`{"exp":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x0000000000000000000000000000000000000000000000000000000000000003"}}`)
-	// resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	// s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000008", hex.EncodeToString(resp))
+	data = []byte(`{"exp":{"a":"0x0000000000000000000000000000000000000000000000000000000000000002","b": "0x0000000000000000000000000000000000000000000000000000000000000003"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000008", hex.EncodeToString(resp))
+
+	data = []byte(`{"sdiv":{"a":"0x0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4","b": "0x0000000000000000000000000000000000000000000000000000000000000002"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0x07fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa", hex.EncodeToString(resp))
+
+	data = []byte(`{"sdiv":{"a":"0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4","b": "0x0000000000000000000000000000000000000000000000000000000000000002"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa", hex.EncodeToString(resp))
+
+	data = []byte(`{"signextend":{"a":"0x00000000000000000000000000000000000000000000000000000000000ffff4","b": "0x0000000000000000000000000000000000000000000000000000000000000020"}}`)
+	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020", hex.EncodeToString(resp))
 }
 
 // TODO byte

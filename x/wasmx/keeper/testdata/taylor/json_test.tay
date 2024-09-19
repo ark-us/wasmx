@@ -13,7 +13,7 @@
         )
             (wasmx-finish (string.encode (json-stringify ret)))
         )
-        (throw "function not found")
+        (throw (str "function not found: " obj))
     )))
 )))
 (main (json-parse (get-calldata)))
