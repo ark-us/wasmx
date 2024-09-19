@@ -2,6 +2,8 @@ package ibctesting
 
 import (
 	"encoding/json"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -165,11 +167,11 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 	}
 
 	wasmxGenesis := wasmxtypes.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress, 1, false, "{}")
-	// mydir, err := os.Getwd()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
+	mydir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
 	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 
 	return app, genesisState, nil
