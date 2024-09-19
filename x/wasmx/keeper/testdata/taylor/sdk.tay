@@ -143,3 +143,23 @@
 )
     resp
 )))
+
+(def! create-contract (fn* (codeid msgbz label funds) (let* (
+    val {"code_id" codeid "msg" msgbz "label" label "funds" funds}
+)
+    (json-parse (string.decode (wasmx-createAccount (string.encode (json-stringify val)))))
+)))
+
+(def! create-contract2 (fn* (codeid msgbz label saltbz funds) (let* (
+    val {"code_id" codeid "msg" msgbz "label" label "salt" saltbz "funds" funds}
+)
+    (json-parse (string.decode (wasmx-create2Account (string.encode (json-stringify val)))))
+)))
+
+(def! create-contract-interpreted (fn* (bytecodebz balance)
+    (wasmx-createAccountInterpreted (string.encode (json-stringify {"bytecode" bytecodebz "balance" (u256.to_hex balance)})))
+))
+
+(def! create-contract-interpreted2 (fn* (bytecodebz balance)
+    (wasmx-create2AccountInterpreted (string.encode (json-stringify {"bytecode" bytecodebz "balance" (u256.to_hex balance)})))
+))

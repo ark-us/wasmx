@@ -77,10 +77,8 @@
 ))
 (def! balanceOf (fn* (owner) (let* (
     b (get-balance owner)
-    ;; pp (println "balanceOf hex" (u256.to_hex b))
 )
-    (string.encode (json-stringify {"balance" b }))
-    ;; (u256.to_hex b)
+    (string.encode (json-stringify {"balance" (u256.to_hex b) }))
 )))
 (def! totalSupply (fn* ()
     (string.encode (json-stringify {"supply"
@@ -127,7 +125,7 @@
         (wasmx-finish (getSymbol))
     (if (contains? obj "getDecimals")
         (wasmx-finish (getDecimals))
-    (throw "function not found")))))))))
+    (throw (str "function not found: " obj))))))))))
 )))
 (println "calldata" (get-calldata))
 (main (json-parse (get-calldata)))

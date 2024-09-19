@@ -235,7 +235,7 @@
         )
         (wasmx-finish (u256.encode v)))
 
-    (throw "function not found")
+    (throw (str "function not found: " obj))
     )))))))))))))))))))))))))))))))))))))))))))))
 )))
 (main (json-parse (get-calldata)))

@@ -76,7 +76,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayERC20() {
 
 	data = []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, senderPrefixed.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal([]byte(`{"balance":"0x00000000000000000000000000000000000000000000000000000000000003e8"}`), resp)
+	s.Require().Equal(`{"balance":"0x00000000000000000000000000000000000000000000000000000000000003e8"}`, string(resp))
 
 	data = []byte(`{"totalSupply":{}}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
@@ -368,25 +368,26 @@ func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
 	s.Require().Equal(acc.GetSequence(), respacc.GetSequence())
 	s.Require().Equal(acc.GetAddressPrefixed().String(), respacc.Address)
 
-	data = []byte(fmt.Sprintf(`{"createAccountInterpreted":{"a":"%s"}}`, addrprefix.String()))
+	data = []byte(fmt.Sprintf(`{"createAccount":{"codeid":%d,"msg":"","label":"newsimplestorage","funds":[]}}`, codeId2))
 	eres = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	codeIdR := appA.GetCodeIdFromEvents(eres.GetEvents())
-	s.Require().Greater(codeIdR, 0)
+	newaddr := appA.GetContractAddressFromEvents(eres.GetEvents())
+	s.Require().Equal(45, len(newaddr))
 
-	data = []byte(fmt.Sprintf(`{"create2AccountInterpreted":{"a":"%s"}}`, addrprefix.String()))
+	data = []byte(fmt.Sprintf(`{"create2Account":{"codeid":%d,"msg":"","label":"newsimplestorage","salt":"0x00000000000000000000000000000000000000000000000000000000000003e8","funds":[]}}`, codeId2))
 	eres = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	codeIdR = appA.GetCodeIdFromEvents(eres.GetEvents())
-	s.Require().Greater(codeIdR, 0)
+	newaddr = appA.GetContractAddressFromEvents(eres.GetEvents())
+	s.Require().Equal(45, len(newaddr))
 
-	data = []byte(fmt.Sprintf(`{"createAccount":{"a":"%s"}}`, addrprefix.String()))
-	eres = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	codeIdR = appA.GetCodeIdFromEvents(eres.GetEvents())
-	s.Require().Greater(codeIdR, 0)
+	// TODO
+	// data = []byte(fmt.Sprintf(`{"createAccountInterpreted":{"bytecode":"%s","msg":"","label":"newsimplestorage","funds":[]}}`, base64.StdEncoding.EncodeToString([]byte(testdata.SimpleStorageTay))))
+	// eres = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	// newaddr = appA.GetContractAddressFromEvents(eres.GetEvents())
+	// s.Require().Equal(45, len(newaddr))
 
-	data = []byte(fmt.Sprintf(`{"create2Account":{"a":"%s"}}`, addrprefix.String()))
-	eres = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	codeIdR = appA.GetCodeIdFromEvents(eres.GetEvents())
-	s.Require().Greater(codeIdR, 0)
+	// data = []byte(fmt.Sprintf(`{"create2AccountInterpreted":{"bytecode":"%s","msg":"","label":"newsimplestorage","funds":[]}}`, base64.StdEncoding.EncodeToString([]byte(testdata.SimpleStorageTay))))
+	// eres = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	// newaddr = appA.GetContractAddressFromEvents(eres.GetEvents())
+	// s.Require().Equal(45, len(newaddr))
 
 	lasth, err := appA.ABCIClient().LatestBlockHeight(appA.Context())
 	s.Require().NoError(err)

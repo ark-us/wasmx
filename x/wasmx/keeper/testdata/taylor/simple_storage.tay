@@ -20,7 +20,7 @@
             )
             (wasmx-finish (load-string-bz (get params "key")))
         )
-        (throw "function not found")
+        (throw (str "function not found: " obj))
     )))
 )))
 (main (json-parse (get-calldata)))

@@ -438,6 +438,7 @@ func wasmxCreateAccountInterpreted(_context interface{}, callframe *wasmedge.Cal
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	// TODO metadata should come from the request
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
 	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
