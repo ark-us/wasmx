@@ -101,3 +101,45 @@
 (def! get-role-by-address (fn* (addrstr)
     (string.decode (wasmx-getRoleByAddress (addr-canonicalize addrstr)))
 ))
+
+;; roles
+(def! ROLE_BANK "bank")
+(def! ROLE_AUTH "auth")
+
+;; utils
+
+(def! call-contract (fn* (req) (let* (
+    ;; base64 encode calldata
+    req (assoc req "calldata" (base64.encode (string.encode (get req "calldata"))))
+    ;; set defaults if fields not present
+    req (if (contains? req "value") req (assoc req "value" (u256.from_hex "0x0000000000000000000000000000000000000000000000000000000000000000")))
+    req (if (contains? req "gasLimit") req (assoc req "gasLimit" 2000000))
+    req (if (contains? req "isQuery") req (assoc req "isQuery" true))
+    reqstr (json-stringify {
+        "to" (get req "to")
+        "calldata" (get req "calldata")
+        "isQuery" (get req "isQuery")
+        "value" (u256.to_hex (get req "value"))
+        "gasLimit" (get req "gasLimit")
+    })
+    resp (wasmx-call (string.encode reqstr))
+    decoded (json-parse (string.decode resp))
+    success (get decoded "success")
+    data (string.decode (base64.decode (get decoded "data")))
+)
+    {"success" (= success 0) "data" data}
+)))
+
+(def! call-bank (fn* (req) (let* (
+    req (assoc req "to" ROLE_BANK)
+    resp (call-contract req)
+)
+    resp
+)))
+
+(def! call-auth (fn* (req) (let* (
+    req (assoc req "to" ROLE_AUTH)
+    resp (call-contract req)
+)
+    resp
+)))
