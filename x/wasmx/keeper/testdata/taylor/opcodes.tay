@@ -231,12 +231,17 @@
         (wasmx-finish (u256.encode v)))
     (if (contains? obj "mulmod") (let* (
             params (get obj "mulmod")
-            v (u256.mulmod (u256.from_hex (get params "a")) (u256.from_hex (get params "b")) (u256.from_hex (get params "c")))
+            val (u256.mulmod (u256.from_hex (get params "a")) (u256.from_hex (get params "b")) (u256.from_hex (get params "c")))
         )
-        (wasmx-finish (u256.encode v)))
-
+        (wasmx-finish (u256.encode val)))
+    (if (contains? obj "byte") (let* (
+        params (get obj "byte")
+        buf (buffer.from_hex (get params "a"))
+        index (get params "b")
+    )
+        (wasmx-finish (i32.encode (buffer.byte buf index))))
     (throw (str "function not found: " obj))
-    )))))))))))))))))))))))))))))))))))))))))))))
+    ))))))))))))))))))))))))))))))))))))))))))))))
 )))
 (main (json-parse (get-calldata)))
 )
