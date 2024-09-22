@@ -62,7 +62,7 @@ func (k *Keeper) ActivateSystemContract(
 	}
 
 	if contract.Pinned {
-		if err := k.PinCode(ctx, codeID, compiledFolderPath); err != nil {
+		if err := k.PinCodeAndStore(ctx, codeID, compiledFolderPath); err != nil {
 			return sdkerr.Wrap(err, "pin system contract: "+contract.Label)
 		}
 	}

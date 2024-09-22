@@ -198,8 +198,7 @@ func (m msgServer) CompileContract(goCtx context.Context, msg *types.MsgCompileC
 		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Authority),
 	))
-
-	err := m.Keeper.PinCode(ctx, msg.CodeId, "")
+	err := m.Keeper.PinCodeAndStore(ctx, msg.CodeId, "")
 	if err != nil {
 		return nil, err
 	}

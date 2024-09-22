@@ -38,8 +38,12 @@ func (k *Keeper) Deploy(
 	return k.CreateInterpreted(ctx, &creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{})
 }
 
-func (k *Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+func (k *Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) (*types.CodeInfo, error) {
 	return k.pinCode(ctx, codeId, compiledFolderPath)
+}
+
+func (k *Keeper) PinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+	return k.pinCodeAndStore(ctx, codeId, compiledFolderPath)
 }
 
 func (k *Keeper) UnpinCode(ctx sdk.Context, codeId uint64) error {
@@ -549,16 +553,25 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 }
 
 // PinCode pins the wasm contract in wasmvm cache
-func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) (*types.CodeInfo, error) {
 	codeInfo := k.GetCodeInfo(ctx, codeId)
 	if codeInfo == nil {
-		return sdkerr.Wrap(types.ErrNotFound, "code info")
+		return nil, sdkerr.Wrap(types.ErrNotFound, "code info")
 	}
 
 	if err := k.wasmvm.Pin(codeInfo.CodeHash, compiledFolderPath); err != nil {
+		return nil, sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
+	}
+	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
+	return codeInfo, nil
+}
+
+// PinCode pins the wasm contract in wasmvm cache
+func (k *Keeper) pinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
+	codeInfo, err := k.pinCode(ctx, codeId, compiledFolderPath)
+	if err != nil {
 		return sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
 	}
-
 	codeInfo.Pinned = true
 	k.storeCodeInfo(ctx, codeId, *codeInfo)
 	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
