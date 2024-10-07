@@ -131,8 +131,6 @@ mythosd tx multichain atomic "/Users/user/dev/blockchain/wasmx-tests/atomictx.js
 
 ```
 
-
-
 ## multiregistry multi-chain, cross-chain transaction
 
 ```bash
@@ -180,7 +178,60 @@ mythosd tx multichain atomic "/Users/user/dev/blockchain/wasmx-tests/atomictx.js
 
 ```bash
 
-mythosd tx cosmosmod bank send node0 mythos1zye6csr7sc4wjndjsrcp3wyc2gjl2yt8s6qqkr 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 900000 --chain-id=mythos_7000-14 --yes
+mythosd testnet init-files --network.initial-chains=mythos --output-dir=$(pwd)/testnet --chain-id=mythos_7000-14 --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
+
+HOMEMAIN=./testnet/node0/mythosd
+sed -i.bak -E "s|^(snapshot-interval[[:space:]]+=[[:space:]]+).*$|\110|" $HOMEMAIN/config/app.toml
+
+mythosd testnet add-node 1 "mythos1y23ljx5p0r0c6f9umttr73uuetly338n7pyz9h@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWCGtqm7YufRVjfrq591tTg6RnXLTXCZGFuSoQvQ3MuG4N" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
+
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
+
+mythosd tx cosmosmod bank send node0 mythos1pdya3tu98y6grwr28vsfaw6jd9prdzrza88m5y 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 900000 --chain-id=mythos_7000-14 --yes
+
+mythosd tendermint unsafe-reset-all --home=./testnet/node1/mythosd
+
+HOMEMAIN=./testnet/node1/mythosd
+RPC="http://localhost:26657"
+RECENT_HEIGHT=$(curl -s $RPC/block | jq -r .result.block.header.height)
+TRUST_HEIGHT=$((RECENT_HEIGHT - 1))
+TRUST_HASH=$(curl -s "$RPC/block?height=$TRUST_HEIGHT" | jq -r .result.block_id.hash)
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
+s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$RPC,$RPC\"| ; \
+s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$TRUST_HEIGHT| ; \
+s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOMEMAIN/config/config.toml
+
+
+mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1
+
+# after sync, disable statesync ./config/config.toml
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1false|" $HOMEMAIN/config/config.toml
+
+# change validator public key in validator.json
+mythosd tendermint show-validator --home ./testnet/node1/mythosd
+
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1pdya3tu98y6grwr28vsfaw6jd9prdzrza88m5y@/ip4/127.0.0.1/tcp/5003/p2p/12D3KooWN8nCZMKQWQ88BZRYLJTHiaBmCBrCZqHEE9d4U4Mekotv" --node tcp://127.0.0.1:26658 --yes
+
+```
+
+
+## statesync subchains
+
+* similar to the statesync & create validator example, but for mythos,level0
+
+```sh
+mythosd testnet init-files --network.initial-chains=mythos,level0 --output-dir=$(pwd)/testnet --chain-id=mythos_7000-14 --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
+
+HOMEMAIN=./testnet/node0/mythosd
+sed -i.bak -E "s|^(snapshot-interval[[:space:]]+=[[:space:]]+).*$|\110|" $HOMEMAIN/config/app.toml
+
+mythosd testnet add-node 1 "mythos1h6f2786lg4pfascv5u558cejwgdz34muq4h3y6@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRYvgppijsGusBF6GQbiNYLogwdKu2fe2xCpf8Zzt7YLB" --network.initial-chains=mythos,level0 --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
+
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
+
+mythosd tx cosmosmod bank send node0 mythos1pdya3tu98y6grwr28vsfaw6jd9prdzrza88m5y 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 900000 --chain-id=mythos_7000-14 --yes
+
+mythosd tendermint unsafe-reset-all --home=./testnet/node1/mythosd
 
 
 HOMEMAIN=./testnet/node1/mythosd
@@ -193,16 +244,69 @@ s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$RPC,$RPC\"| ; \
 s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$TRUST_HEIGHT| ; \
 s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOMEMAIN/config/config.toml
 
+mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1
+
+# after sync, disable statesync ./config/config.toml
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1false|" $HOMEMAIN/config/config.toml
+
 # change validator public key in validator.json
 mythosd tendermint show-validator --home ./testnet/node1/mythosd
 
-mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --node tcp://127.0.0.1:26659 --memo="mythos13z0jpfstdz9vak05cxluuzcz45kkykhvyjrrz9@/ip4/127.0.0.1/tcp/5003/p2p/12D3KooWE1i2djarT6guanTcwcgRkVqbgkbq2J8UKCdk1RNxnTc4" --yes
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1pdya3tu98y6grwr28vsfaw6jd9prdzrza88m5y@/ip4/127.0.0.1/tcp/5003/p2p/12D3KooWN8nCZMKQWQ88BZRYLJTHiaBmCBrCZqHEE9d4U4Mekotv" --node tcp://127.0.0.1:26659 --yes
 
 ```
 
+### create a subchain with the first 2 nodes
 
-## statesync subchains
+### add a 3rd node
 
+```bash
+mythosd testnet add-node 2 "mythos1h6f2786lg4pfascv5u558cejwgdz34muq4h3y6@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRYvgppijsGusBF6GQbiNYLogwdKu2fe2xCpf8Zzt7YLB" --network.initial-chains=mythos,level0 --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
+
+mythosd tendermint unsafe-reset-all --home=./testnet/node2/mythosd
+
+HOMEMAIN=./testnet/node2/mythosd
+RPC="http://localhost:26657"
+RECENT_HEIGHT=$(curl -s $RPC/block | jq -r .result.block.header.height)
+TRUST_HEIGHT=$((RECENT_HEIGHT - 1))
+TRUST_HASH=$(curl -s "$RPC/block?height=$TRUST_HEIGHT" | jq -r .result.block_id.hash)
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
+s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$RPC,$RPC\"| ; \
+s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$TRUST_HEIGHT| ; \
+s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOMEMAIN/config/config.toml
+
+mythosd start --home=./testnet/node2/mythosd --same-machine-node-index=2
+
+# after sync, disable statesync ./config/config.toml
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1false|" $HOMEMAIN/config/config.toml
+
+mythosd tx cosmosmod bank send node0 mythos1mdydtxr8jfqtn00j82kmadyc434umkr9v9l0rk 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 900000 --chain-id=mythos_7000-14 --yes
+
+# change validator public key in validator.json
+mythosd tendermint show-validator --home ./testnet/node2/mythosd
+
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node2 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node2/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1mdydtxr8jfqtn00j82kmadyc434umkr9v9l0rk@/ip4/127.0.0.1/tcp/5005/p2p/12D3KooWPURJqPBkWX6SWoU7qDYUcS2sWKMJ1JRP8ygQBUqH53dF" --node tcp://127.0.0.1:26661 --yes
+
+```
+
+Now we have 3 validators on Mythos. And a level1 chain. We will sync the level1 chain on our 3rd node.
+
+* replace peer_address with a level1 peer address; we can use the level0 bech32 address, it will be converted.
+* rpc is also for level1 peer
+
+```sh
+
+RPC="http://localhost:26771"
+RECENT_HEIGHT=$(curl -s $RPC/block | jq -r .result.block.header.height)
+TRUST_HEIGHT=$((RECENT_HEIGHT - 1))
+TRUST_HASH=$(curl -s "$RPC/block?height=$TRUST_HEIGHT" | jq -r .result.block_id.hash)
+echo $RECENT_HEIGHT
+echo $TRUST_HEIGHT
+echo $TRUST_HASH
+
+mythosd query multichain call level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"StartStateSync":{"chain_id":"level1_1_1002-1","peer_address":"level01h6f2786lg4pfascv5u558cejwgdz34mu2q8d5x@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWRYvgppijsGusBF6GQbiNYLogwdKu2fe2xCpf8Zzt7YLB","rpc":"tcp://127.0.0.1:26771","chain_config":{"Bech32PrefixAccAddr":"level1","Bech32PrefixAccPub":"level1","Bech32PrefixValAddr":"level1","Bech32PrefixValPub":"level1","Bech32PrefixConsAddr":"level1","Bech32PrefixConsPub":"level1","Name":"level1","HumanCoinUnit":"lvl1","BaseDenom":"alvl1","DenomUnit":"lvl1","BaseDenomUnit":18,"BondBaseDenom":"aslvl1","BondDenom":"slvl1"},"statesync_config":{"rpc_servers":["http://localhost:26771","http://localhost:26771"],"trust_period":36000000,"trust_height":233,"trust_hash":"E0639C4A8793F4296CC9F3E89DEFDE3C543FBCB38B6FF3F266630FA73C94EE65","enable":true,"temp_dir":"","discovery_time":15000,"chunk_request_timeout":10000,"chunk_fetchers":4}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --node tcp://localhost:26662
+
+```
 ```bash
 
 mythosd query multichain call level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"StartStateSync":{"chain_id":"level1_1_1002-1","peer_address":"level01nhewan89fjza66xx5qmcxa6qnakvnwgtcs9g72@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWMueZKu4k4NcfDPYhd3HAQeuEaqSz9BM2Ls4JewcmKzmT","rpc":"tcp://127.0.0.1:26771","chain_config":{"Bech32PrefixAccAddr":"level1","Bech32PrefixAccPub":"level1","Bech32PrefixValAddr":"level1","Bech32PrefixValPub":"level1","Bech32PrefixConsAddr":"level1","Bech32PrefixConsPub":"level1","Name":"level1","HumanCoinUnit":"lvl1","BaseDenom":"alvl1","DenomUnit":"lvl1","BaseDenomUnit":18,"BondBaseDenom":"aslvl1","BondDenom":"slvl1"},"statesync_config":{"rpc_servers":["http://localhost:26771","http://localhost:26771"],"trust_period":36000000,"trust_height":21,"trust_hash":"8D4A93D4F81A38B592E313DF2F765CE62A7ACF33B1685735A6CA8F7DD5A1ACF1","enable":true,"temp_dir":"","discovery_time":15000,"chunk_request_timeout":10000,"chunk_fetchers":4}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --node tcp://localhost:26662

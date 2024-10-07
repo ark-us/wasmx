@@ -641,7 +641,7 @@ func startNodeWithIdentityAndGossip(
 		if err != nil {
 			return nil, err
 		}
-		logger.Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs, "port", port)
+		logger.Info("started p2p node with identity", "ID", peerInfo.ID, "addresses", addrs, "newport", port)
 	}
 	p2pctx.Node = &node
 
