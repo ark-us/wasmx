@@ -90,6 +90,7 @@ func GetSubChainIds(_context interface{}, callframe *wasmedge.CallingFrame, para
 	return returns, wasmedge.Result_Success
 }
 
+// this is what we use to statesync subchains
 // StartStateSyncRequest(StateSyncRequestMsg): void
 func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
