@@ -48,7 +48,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 		k.actionExecutor.GetLogger().Debug("eventual execution triggered", "description", description)
 		err := k.startTimeoutInternal(description, msg, chainId)
 		if err != nil {
-			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err)
+			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err, "description", description)
 			errCh <- err
 		}
 		k.actionExecutor.GetLogger().Debug("eventual execution ended", "description", description)

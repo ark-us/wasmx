@@ -89,6 +89,9 @@ func (k *Keeper) startBackgroundProcessInternal(
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
 	ctx_ := sdk.UnwrapSDKContext(goCtx)
 	_, err = k.wasmxKeeper.Execute(ctx_, contractAddr, senderAddr, msgbz, nil, nil, true)
+	if err != nil {
+		return err
+	}
 	// we only commit if callback was successful
 	err = commitCtx(mythosapp, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {

@@ -74,11 +74,11 @@ func MultiChainCtx(clientCtx client.Context, customSigners []signing.CustomGetSi
 	config, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
 		if _, err := mcfg.GetChainConfig(registryId); err != nil {
-			return clientCtx, mcodec.AccBech32Codec{}, nil, fmt.Errorf("registry chain id must be an initial chain")
+			return clientCtx, mcodec.AccBech32Codec{}, nil, fmt.Errorf("could not get registry chain config: %s", err.Error())
 		}
 		config, err = GetSubChainConfig(clientCtx, chainId, registryId)
 		if err != nil {
-			return clientCtx, mcodec.AccBech32Codec{}, config, err
+			return clientCtx, mcodec.AccBech32Codec{}, config, fmt.Errorf("could not get chain config by registry id: %s", err.Error())
 		}
 	}
 	mcfg.SetGlobalChainConfig(chainId, *config)
@@ -169,7 +169,7 @@ func GetSubChainConfigBz(clientCtx client.Context, subchainId string, registryId
 	}
 	data2, err := decodeQueryResponse(res.Data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode config query response: %s: %s", hex.EncodeToString(res.Data), err.Error())
 	}
 	return data2, nil
 }

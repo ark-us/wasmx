@@ -74,7 +74,7 @@ func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string,
 	}
 	nano := ctx.BlockTime().UnixNano()
 	if nano < 1 {
-		return Env{}, fmt.Errorf("block (unix) time must never be empty or negative: %s", ctx.ChainID())
+		return Env{}, fmt.Errorf("block (unix) time must never be empty or negative: chainId %s, height: %d", ctx.ChainID(), ctx.BlockHeight())
 	}
 
 	blockGasLimit := DefaultBlockGasLimit

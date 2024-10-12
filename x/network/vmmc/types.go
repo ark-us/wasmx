@@ -53,15 +53,16 @@ type StateSyncConfig struct {
 }
 
 type StateSyncRequestMsg struct {
-	ProtocolId      string           `json:"protocol_id"`
-	PeerAddress     string           `json:"peer_address"`
-	ChainId         string           `json:"chain_id"`
-	ChainConfig     menc.ChainConfig `json:"chain_config"`
-	NodePorts       mctx.NodePorts   `json:"node_ports"`
-	InitialPorts    mctx.NodePorts   `json:"initial_node_ports"`
-	StatesyncConfig StateSyncConfig  `json:"statesync_config"`
-	Peers           []string         `json:"peers"`
-	CurrentNodeId   int32            `json:"current_node_id"`
+	ProtocolId                  string           `json:"protocol_id"`
+	PeerAddress                 string           `json:"peer_address"`
+	ChainId                     string           `json:"chain_id"`
+	ChainConfig                 menc.ChainConfig `json:"chain_config"`
+	NodePorts                   mctx.NodePorts   `json:"node_ports"`
+	InitialPorts                mctx.NodePorts   `json:"initial_node_ports"`
+	StatesyncConfig             StateSyncConfig  `json:"statesync_config"`
+	Peers                       []string         `json:"peers"`
+	CurrentNodeId               int32            `json:"current_node_id"`
+	VerificationContractAddress string           `json:"verification_contract_address"`
 }
 
 type StateSyncResponse struct {

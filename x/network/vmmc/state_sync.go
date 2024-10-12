@@ -13,6 +13,7 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/client"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
 	vmp2p "mythos/v1/x/network/vmp2p"
@@ -44,6 +45,15 @@ func StartStateSyncWithChainId(ctx *Context, req StateSyncRequestMsg) error {
 	ctndcfg.StateSync.DiscoveryTime = time.Millisecond * time.Duration(req.StatesyncConfig.DiscoveryTime)
 	ctndcfg.StateSync.ChunkRequestTimeout = time.Millisecond * time.Duration(req.StatesyncConfig.ChunkRequestTimeout)
 
+	var verificationContract *mcodec.AccAddressPrefixed
+	if req.VerificationContractAddress != "" {
+		verificationContract_, err := mcodec.AccAddressPrefixedFromBech32(req.VerificationContractAddress)
+		if err != nil {
+			return err
+		}
+		verificationContract = &verificationContract_
+	}
+
 	return vmp2p.StartStateSyncWithChainId(
 		ctx.GoContextParent,
 		ctx.GoRoutineGroup,
@@ -59,6 +69,7 @@ func StartStateSyncWithChainId(ctx *Context, req StateSyncRequestMsg) error {
 		fmt.Sprintf(`%d`, req.NodePorts.WasmxNetworkP2P),
 		req.Peers,
 		req.CurrentNodeId,
+		verificationContract,
 	)
 }
 

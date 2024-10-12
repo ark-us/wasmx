@@ -71,7 +71,7 @@ func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageReques
 				k.actionExecutor.GetLogger().Error("closing p2p message receival thread", err.Error())
 				return res, nil
 			}
-			k.actionExecutor.GetLogger().Debug("eventual execution failed", "error", err.Error())
+			k.actionExecutor.GetLogger().Debug("p2p message execution failed", "error", err.Error())
 			return nil, err
 		}
 		return res, nil

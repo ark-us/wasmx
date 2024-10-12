@@ -10,6 +10,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	abcicli "github.com/cometbft/cometbft/abci/client"
+	"github.com/cometbft/cometbft/light"
+
 	// tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtsync "github.com/cometbft/cometbft/libs/sync"
@@ -35,6 +37,7 @@ import (
 
 	// "github.com/cosmos/gogoproto/proto"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	menc "mythos/v1/encoding"
 	networktypes "mythos/v1/x/network/types"
@@ -109,7 +112,6 @@ func startStateSyncResponse(
 	stream network.Stream,
 	connectToPeerFn func() (network.Stream, error),
 ) error {
-	fmt.Println("---startStateSyncResponse--")
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
 	}
@@ -212,6 +214,7 @@ func (c *StateSyncP2PCtx) handleStateSyncStart(netmsg P2PMessage, contractAddres
 	c.ssctx.handleStateSyncMessage(netmsg, contractAddress, senderAddress)
 }
 
+// this is used to state-sync even subchains (see vmmc.StartStateSyncWithChainId)
 func StartStateSyncWithChainId(
 	goContextParent context.Context,
 	goRoutineGroup *errgroup.Group,
@@ -227,12 +230,16 @@ func StartStateSyncWithChainId(
 	port string,
 	peers []string,
 	currentNodeId int32,
+	verificationContract *mcodec.AccAddressPrefixed,
 ) error {
+	sdklogger = sdklogger.With("chain_id", chainId)
 	ssctx, err := InitializeStateSyncWithPeer(goContextParent, goRoutineGroup, sdklogger, ctndcfg, chainId, chainCfg, app, rpcClient, protocolId, peeraddress, privateKey, port, peers, currentNodeId)
 	if err != nil {
 		return err
 	}
-	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis)
+	lightClientVerification := NewClientVerification(verificationContract)
+	lightClientOption := light.SetVerifyCommitLight(lightClientVerification.VerifyCommitLight)
+	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis, lightClientOption)
 	if err != nil {
 		return fmt.Errorf("failed to start state sync: %w", err)
 	}

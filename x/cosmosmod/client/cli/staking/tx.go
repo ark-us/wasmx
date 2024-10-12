@@ -25,7 +25,6 @@ import (
 	cli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
 
 	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
 	"mythos/v1/multichain"
 )
 
@@ -97,8 +96,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 			}
 
 			chainId := mcctx.ClientCtx.ChainID
-			config, _ := mcfg.GetChainConfig(chainId)
-			customValCdc := mcodec.NewValBech32Codec(config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
+			customValCdc := mcodec.NewValBech32Codec(mcctx.Config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
 			_, appCreator := createMockAppCreator(appFactory, 0)
@@ -111,10 +109,10 @@ where we can get the pubkey using "%s tendermint show-validator"
 
 			validator, err := parseAndValidateValidatorJSON(chainapp.AppCodec(), args[0])
 			if err != nil {
-				return err
+				return fmt.Errorf("could not parse validator JSON file: %s", err.Error())
 			}
 
-			txf, msg, err := newBuildCreateValidatorMsg(mcctx.ClientCtx, customValCodec, mcctx.CustomAddrCodec, txf, cmd.Flags(), validator, valAddrCodec)
+			txf, msg, err := newBuildCreateValidatorMsg(mcctx.ClientCtx, customValCodec, mcctx.CustomAddrCodec, txf, cmd.Flags(), validator)
 			if err != nil {
 				return err
 			}
@@ -400,7 +398,7 @@ $ %s tx staking cancel-unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake
 	return cmd
 }
 
-func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.ValBech32Codec, customAddrCodec mcodec.AccBech32Codec, txf tx.Factory, fs *flag.FlagSet, val validator, valAc address.Codec) (tx.Factory, *types.MsgCreateValidator, error) {
+func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.ValBech32Codec, valAc address.Codec, txf tx.Factory, fs *flag.FlagSet, val validator) (tx.Factory, *types.MsgCreateValidator, error) {
 	valAddr := customValCodec.BytesToValAddressPrefixed(clientCtx.GetFromAddress())
 
 	description := types.NewDescription(
@@ -418,6 +416,7 @@ func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.
 			return txf, nil, err
 		}
 	}
+
 	msg := &types.MsgCreateValidator{
 		Description:       description,
 		ValidatorAddress:  valAddr.String(),
