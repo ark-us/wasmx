@@ -270,3 +270,25 @@ func ConsensusTx(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg
 	}
 	return nil
 }
+
+func ConsensusQuery(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, msg []byte) (*types.MsgQueryContractResponse, error) {
+	cb := func(goctx context.Context) (any, error) {
+		ctx := sdk.UnwrapSDKContext(goctx)
+		res, err := networkServer.QueryContract(ctx, &types.MsgQueryContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+
+	actionExecutor := mythosapp.GetActionExecutor()
+	resp, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*types.MsgQueryContractResponse), nil
+}

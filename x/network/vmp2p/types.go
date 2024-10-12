@@ -10,6 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
+	cmttypes "github.com/cometbft/cometbft/types"
+
 	"cosmossdk.io/log"
 
 	vmtypes "mythos/v1/x/wasmx/vm"
@@ -302,4 +304,17 @@ func GetP2PContext(goContextParent context.Context) (*P2PContext, error) {
 		return nil, fmt.Errorf("p2p context not set")
 	}
 	return p2pctx, nil
+}
+
+type VerifyCommitLightRequest struct {
+	ChainId string                `json:"chain_id"`
+	BlockID cmttypes.BlockID      `json:"block_id"`
+	Height  int64                 `json:"height"`
+	Commit  cmttypes.Commit       `json:"commit"`
+	ValSet  cmttypes.ValidatorSet `json:"valset"`
+}
+
+type VerifyCommitLightResponse struct {
+	Valid bool   `json:"valid"`
+	Error string `json:"error"`
 }
