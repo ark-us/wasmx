@@ -684,9 +684,14 @@ func wasmxGrpcRequest(_context interface{}, callframe *wasmedge.CallingFrame, pa
 }
 
 type StartTimeoutRequest struct {
+	Id       string `json:"id"`
 	Contract string `json:"contract"`
 	Delay    int64  `json:"delay"`
 	Args     []byte `json:"args"`
+}
+
+type CancelTimeoutRequest struct {
+	Id string `json:"id"`
 }
 
 type StartBackgroundProcessRequest struct {
@@ -736,6 +741,7 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 	}
 
 	msgtosend := &networktypes.MsgStartTimeoutRequest{
+		Id:       req.Id,
 		Sender:   ctx.Env.Contract.Address.String(),
 		Contract: req.Contract,
 		Delay:    req.Delay,
@@ -752,6 +758,33 @@ func wasmxStartTimeout(_context interface{}, callframe *wasmedge.CallingFrame, p
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
+	return returns, wasmedge.Result_Success
+}
+
+// TODO move this to a restricted role
+func wasmxCancelTimeout(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 0)
+	reqbz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	var req CancelTimeoutRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+
+	msgtosend := &networktypes.MsgCancelTimeoutRequest{
+		Id:     req.Id,
+		Sender: ctx.Env.Contract.Address.String(),
+	}
+	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
+		return nil, wasmedge.Result_Fail
+	}
+	ctx.Ctx.EventManager().EmitEvents(evs)
 	return returns, wasmedge.Result_Success
 }
 
@@ -1327,9 +1360,13 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("externalCall", wasmedge.NewFunction(functype_i32_i32, externalCall, context, 0))
 	env.AddFunction("grpcRequest", wasmedge.NewFunction(functype_i32_i32, wasmxGrpcRequest, context, 0))
 	env.AddFunction("startTimeout", wasmedge.NewFunction(functype_i32_, wasmxStartTimeout, context, 0))
+	env.AddFunction("cancelTimeout", wasmedge.NewFunction(functype_i32_, wasmxCancelTimeout, context, 0))
 	env.AddFunction("startBackgroundProcess", wasmedge.NewFunction(functype_i32_, wasmxStartBackgroundProcess, context, 0))
 	env.AddFunction("writeToBackgroundProcess", wasmedge.NewFunction(functype_i32_i32, wasmxWriteToBackgroundProcess, context, 0))
 	env.AddFunction("readFromBackgroundProcess", wasmedge.NewFunction(functype_i32_i32, wasmxReadFromBackgroundProcess, context, 0))
+
+	// TODO
+	// env.AddFunction("endBackgroundProcess", wasmedge.NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
 
 	return env
 }

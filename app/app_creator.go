@@ -41,6 +41,7 @@ func NewAppCreator(
 	ctx = networktypes.ContextWithMultiChainContext(g, ctx, logger)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	ctx, _ = mctx.WithExecutionMetaInfoEmpty(ctx)
+	ctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 

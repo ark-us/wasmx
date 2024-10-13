@@ -230,6 +230,7 @@ func StartStateSyncWithChainId(
 	port string,
 	peers []string,
 	currentNodeId int32,
+	verificationChainId string,
 	verificationContract *mcodec.AccAddressPrefixed,
 ) error {
 	sdklogger = sdklogger.With("chain_id", chainId)
@@ -237,7 +238,22 @@ func StartStateSyncWithChainId(
 	if err != nil {
 		return err
 	}
-	lightClientVerification := NewClientVerification(verificationContract)
+
+	// get subchainapp for the verification contract
+	multichainapp, err := mcfg.GetMultiChainApp(goContextParent)
+	if err != nil {
+		return err
+	}
+	verificationIApp, err := multichainapp.GetApp(verificationChainId)
+	if err != nil {
+		return err
+	}
+	verificationApp, ok := verificationIApp.(mcfg.MythosApp)
+	if !ok {
+		return err
+	}
+
+	lightClientVerification := NewClientVerification(verificationApp, sdklogger, verificationContract)
 	lightClientOption := light.SetVerifyCommitLight(lightClientVerification.VerifyCommitLight)
 	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis, lightClientOption)
 	if err != nil {

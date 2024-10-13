@@ -25,6 +25,9 @@ service Msg {
     // StartTimeout
     rpc StartTimeout(MsgStartTimeoutRequest) returns (MsgStartTimeoutResponse);
 
+    // CancelTimeout
+    rpc CancelTimeout(MsgCancelTimeoutRequest) returns (MsgCancelTimeoutResponse);
+
     rpc StartBackgroundProcess(MsgStartBackgroundProcessRequest) returns (MsgStartBackgroundProcessResponse);
 
     // MultiChainWrap wraps a message to be executed on one of the available chains
@@ -149,10 +152,21 @@ message MsgStartTimeoutRequest {
     string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     int64 delay = 3;
     bytes args = 4;
+    string id = 5;
 }
 
 // MsgStartTimeoutResponse
 message MsgStartTimeoutResponse {}
+
+// MsgCancelTimeoutRequest
+message MsgCancelTimeoutRequest {
+    option (cosmos.msg.v1.signer) = "sender";
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string id = 2;
+}
+
+// MsgStartTimeoutResponse
+message MsgCancelTimeoutResponse {}
 
 // MsgStartBackgroundProcessRequest
 message MsgStartBackgroundProcessRequest {

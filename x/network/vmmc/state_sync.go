@@ -69,6 +69,7 @@ func StartStateSyncWithChainId(ctx *Context, req StateSyncRequestMsg) error {
 		fmt.Sprintf(`%d`, req.NodePorts.WasmxNetworkP2P),
 		req.Peers,
 		req.CurrentNodeId,
+		req.VerificationChainId,
 		verificationContract,
 	)
 }

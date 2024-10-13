@@ -62,6 +62,7 @@ type StateSyncRequestMsg struct {
 	StatesyncConfig             StateSyncConfig  `json:"statesync_config"`
 	Peers                       []string         `json:"peers"`
 	CurrentNodeId               int32            `json:"current_node_id"`
+	VerificationChainId         string           `json:"verification_chain_id"`
 	VerificationContractAddress string           `json:"verification_contract_address"`
 }
 

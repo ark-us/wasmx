@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mctx "mythos/v1/context"
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
@@ -25,19 +26,42 @@ func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutR
 	return &types.MsgStartTimeoutResponse{}, nil
 }
 
+// TODO make sure this is not be called from outside, only from wasmx
+func (k *Keeper) CancelTimeout(goCtx context.Context, msg *types.MsgCancelTimeoutRequest) (*types.MsgCancelTimeoutResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	resp := &types.MsgCancelTimeoutResponse{}
+
+	timeoutKey := TimeoutKey(ctx.ChainID(), msg.Sender, msg.Id)
+	cancelfn, err := mctx.GetTimeoutGoroutine(k.goContextParent, timeoutKey)
+	if err != nil || cancelfn == nil {
+		return resp, err
+	}
+	cancelfn()
+	err = mctx.RemoveTimeoutGoroutine(k.goContextParent, timeoutKey)
+	if err != nil {
+		k.actionExecutor.GetLogger().Error("error removing goroutine", "error", err.Error())
+	}
+	return &types.MsgCancelTimeoutResponse{}, nil
+}
+
 func (k *Keeper) startTimeoutInternalGoroutine(
 	msg *types.MsgStartTimeoutRequest,
 	chainId string,
 ) error {
+	description := fmt.Sprintf("chain_id=%s, delay %dms, contract %s, args: %s ", chainId, msg.Delay, msg.Contract, string(msg.Args))
+
 	select {
 	case <-k.goContextParent.Done():
-		k.actionExecutor.GetLogger().Info("parent context was closed, we do not start the delayed execution")
+		k.actionExecutor.GetLogger().Info("parent context was closed, we do not start the delayed execution", "description", description)
 		return nil
 	default:
 		// continue
 	}
 
-	description := fmt.Sprintf("chain_id=%s, delay %dms, contract %s, args: %s ", chainId, msg.Delay, msg.Contract, string(msg.Args))
+	timeoutKey := TimeoutKey(chainId, msg.Sender, msg.Id)
+	goctx, cancel := context.WithCancel(k.goContextParent)
+
+	mctx.SetTimeoutGoroutine(k.goContextParent, timeoutKey, cancel)
 
 	// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
 	intervalEnded := make(chan bool, 1)
@@ -46,7 +70,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("eventual execution triggered", "description", description)
-		err := k.startTimeoutInternal(description, msg, chainId)
+		err := k.startTimeoutInternal(goctx, description, msg, chainId)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err, "description", description)
 			errCh <- err
@@ -65,18 +89,22 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 }
 
 func (k *Keeper) startTimeoutInternal(
+	goctx context.Context,
 	description string,
 	msg *types.MsgStartTimeoutRequest,
 	chainId string,
 ) error {
-	// sleep first and then load the context
-	time.Sleep(time.Duration(msg.Delay) * time.Millisecond)
+	duration := time.Duration(msg.Delay) * time.Millisecond
 
+	// either sleep action finishes first or the goroutine context is canceled or the parent context is finished (node is stopping)
 	select {
-	case <-k.goContextParent.Done():
-		k.actionExecutor.GetLogger().Info("parent context was closed, we do not start the delayed execution")
+	case <-goctx.Done():
+		k.actionExecutor.GetLogger().Debug("delayed action was canceled, we do not start the timeout", "description", description)
 		return nil
-	default:
+	case <-k.goContextParent.Done():
+		k.actionExecutor.GetLogger().Info("parent context was closed, we do not start the delayed execution", "description", description)
+		return nil
+	case <-time.After(duration):
 		// continue
 	}
 	k.actionExecutor.GetLogger().Debug("eventual execution started", "description", description)
@@ -101,9 +129,13 @@ func (k *Keeper) startTimeoutInternal(
 	}
 	// disregard result
 	bapp := k.actionExecutor.GetBaseApp()
-	_, err := k.actionExecutor.Execute(k.goContextParent, bapp.LastBlockHeight(), cb)
+	_, err := k.actionExecutor.Execute(goctx, bapp.LastBlockHeight(), cb)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func TimeoutKey(chainId string, sender string, id string) string {
+	return fmt.Sprintf("%s_%s_%s", chainId, sender, id)
 }

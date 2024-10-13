@@ -91,6 +91,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 	goctx = networktypes.ContextWithMultiChainContext(g, goctx, logger)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	goctx, _ = mctx.WithExecutionMetaInfoEmpty(goctx)
+	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir())

@@ -21,8 +21,12 @@ type ClientVerification struct {
 	mythosapp mcfg.MythosApp
 }
 
-func NewClientVerification(addr *mcodec.AccAddressPrefixed) ClientVerification {
-	return ClientVerification{Address: addr}
+func NewClientVerification(mythosapp mcfg.MythosApp, logger log.Logger, addr *mcodec.AccAddressPrefixed) ClientVerification {
+	return ClientVerification{
+		mythosapp: mythosapp,
+		logger:    logger,
+		Address:   addr,
+	}
 }
 
 func (v ClientVerification) VerifyCommitLight(chainID string, blockID cmttypes.BlockID, height int64, commit *cmttypes.Commit, valset *cmttypes.ValidatorSet) error {
@@ -32,7 +36,6 @@ func (v ClientVerification) VerifyCommitLight(chainID string, blockID cmttypes.B
 		return valset.VerifyCommitLight(chainID, blockID, height, commit)
 	}
 
-	// TODO call the verification contract
 	return v.VerifyCommitLightByContract(chainID, blockID, height, commit, valset)
 }
 
