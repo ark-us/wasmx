@@ -48,6 +48,41 @@ type CliMultiChainCtx struct {
 	ForwardedTx bool
 }
 
+func MultiChainCtxByChainIdWithAppMsgs(
+	clientCtx client.Context,
+	flags *flag.FlagSet,
+	customSigners []signing.CustomGetSigner,
+	appCreatorFactory NewAppCreator,
+) (*CliMultiChainCtx, error) {
+	subchainId, err := flags.GetString(sdkflags.FlagChainID)
+	if err != nil {
+		return &CliMultiChainCtx{}, fmt.Errorf("subchainId: %s", err)
+	}
+	registryId, err := flags.GetString(FlagRegistryChainId)
+	if err != nil {
+		return &CliMultiChainCtx{}, fmt.Errorf("registry chainId: %s", err)
+	}
+	clientCtx, customAddrCodec, config, err := MultiChainCtx(clientCtx, customSigners, subchainId, registryId)
+	_, appCreator := CreateNoLoggerAppCreatorTemp(appCreatorFactory, 0)
+	isubchainapp := appCreator(subchainId, config)
+	subchainapp := isubchainapp.(AppwithTxConfig)
+
+	clientCtx = clientCtx.
+		WithCodec(subchainapp.AppCodec()).
+		WithInterfaceRegistry(subchainapp.InterfaceRegistry()).
+		WithTxConfig(subchainapp.TxConfig()).
+		WithLegacyAmino(subchainapp.LegacyAmino())
+
+	return &CliMultiChainCtx{
+		ClientCtx:       clientCtx,
+		CustomAddrCodec: customAddrCodec,
+		Config:          config,
+		SubchainId:      subchainId,
+		RegistryId:      registryId,
+		ForwardedTx:     false,
+	}, err
+}
+
 func MultiChainCtxByChainId(clientCtx client.Context, flags *flag.FlagSet, customSigners []signing.CustomGetSigner) (*CliMultiChainCtx, error) {
 	subchainId, err := flags.GetString(sdkflags.FlagChainID)
 	if err != nil {

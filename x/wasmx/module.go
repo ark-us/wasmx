@@ -23,6 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	mcfg "mythos/v1/config"
+	"mythos/v1/multichain"
 	"mythos/v1/x/wasmx/client/cli"
 	"mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
@@ -39,13 +40,14 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
-	cdc       codec.BinaryCodec
-	ccdc      codec.Codec
-	addrCodec cdcaddress.Codec
+	cdc        codec.BinaryCodec
+	ccdc       codec.Codec
+	addrCodec  cdcaddress.Codec
+	appCreator multichain.NewAppCreator
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc, ccdc: ccdc, addrCodec: addrCodec}
+func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
+	return AppModuleBasic{cdc: cdc, ccdc: ccdc, addrCodec: addrCodec, appCreator: appCreator}
 }
 
 // Name returns the name of the module as a string
@@ -88,7 +90,7 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
 func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd(a.ccdc.InterfaceRegistry().SigningContext().AddressCodec())
+	return cli.GetTxCmd(a.ccdc.InterfaceRegistry().SigningContext().AddressCodec(), a.appCreator)
 }
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this root command are used by end-users to generate new queries to the subset of the state defined by the module
@@ -111,9 +113,10 @@ func NewAppModule(
 	cdc codec.Codec,
 	ccdc codec.Codec,
 	keeper keeper.Keeper,
+	appCreator multichain.NewAppCreator,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc, ccdc, keeper.AddressCodec()),
+		AppModuleBasic: NewAppModuleBasic(cdc, ccdc, keeper.AddressCodec(), appCreator),
 		keeper:         keeper,
 	}
 }

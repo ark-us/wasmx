@@ -20,6 +20,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
+	mcodec "mythos/v1/codec"
 	"mythos/v1/multichain"
 	"mythos/v1/x/wasmx/ioutils"
 	"mythos/v1/x/wasmx/types"
@@ -50,7 +51,7 @@ const (
 )
 
 // GetTxCmd returns the transaction commands for this module
-func GetTxCmd(ac address.Codec) *cobra.Command {
+func GetTxCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      fmt.Sprintf("%s transactions subcommands", types.ModuleName),
@@ -60,19 +61,19 @@ func GetTxCmd(ac address.Codec) *cobra.Command {
 		SilenceUsage:               true,
 	}
 	txCmd.AddCommand(
-		StoreCodeCmd(ac),
-		// DeployCmd(),
-		InstantiateContractCmd(ac),
-		InstantiateContract2Cmd(ac),
-		ExecuteContractCmd(ac),
-		NewRegisterRoleProposalCmd(ac),
-		NewDeregisterRoleProposalCmd(ac),
+		StoreCodeCmd(ac, appCreator),
+		// DeployCmd(appCreator),
+		InstantiateContractCmd(ac, appCreator),
+		InstantiateContract2Cmd(ac, appCreator),
+		ExecuteContractCmd(ac, appCreator),
+		NewRegisterRoleProposalCmd(ac, appCreator),
+		NewDeregisterRoleProposalCmd(ac, appCreator),
 	)
 	return txCmd
 }
 
 // StoreCodeCmd will upload code to be reused.
-func StoreCodeCmd(ac address.Codec) *cobra.Command {
+func StoreCodeCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "store [wasm file]",
 		Short:   "Upload a wasm binary",
@@ -84,7 +85,7 @@ func StoreCodeCmd(ac address.Codec) *cobra.Command {
 				return err
 			}
 
-			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
@@ -95,12 +96,11 @@ func StoreCodeCmd(ac address.Codec) *cobra.Command {
 			if err = msg.ValidateBasic(); err != nil {
 				return err
 			}
-			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-			msgMultiChain, err := mcctx.MultiChainWrap(&msg, fromAddr)
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
-			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, &msg)
 		},
 		SilenceUsage: true,
 	}
@@ -150,6 +150,7 @@ func ParseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddr
 // 			if err != nil {
 // 				return err
 // 			}
+//         // TODO MultiChainCtxByChainIdWithAppMsgs
 
 // 			sender := clientCtx.GetFromAddress()
 // 			evmByteCode, err := hex.DecodeString(args[0])
@@ -175,7 +176,7 @@ func ParseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddr
 // }
 
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
-func InstantiateContractCmd(ac address.Codec) *cobra.Command {
+func InstantiateContractCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --admin [address,optional] --amount [coins,optional] ",
 		Short: "Instantiate a wasm contract",
@@ -192,7 +193,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
@@ -205,13 +206,11 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 				return err
 			}
 
-			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
-
-			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 		SilenceUsage: true,
 	}
@@ -224,7 +223,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 }
 
 // InstantiateContract2Cmd will instantiate a contract from previously uploaded code with predicable address generated
-func InstantiateContract2Cmd(ac address.Codec) *cobra.Command {
+func InstantiateContract2Cmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use: "instantiate2 [code_id_int64] [json_encoded_init_args] [salt] --label [text] --admin [address,optional] --amount [coins,optional] " +
@@ -246,7 +245,11 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			if err != nil {
+				return err
+			}
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -274,13 +277,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
-			if err != nil {
-				return err
-			}
-
-			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 		SilenceUsage: true,
 	}
@@ -337,7 +334,7 @@ func parseInstantiateArgs(addrCodec address.Codec, rawCodeID, initMsg string, kr
 }
 
 // ExecuteContractCmd will instantiate a contract from previously uploaded code.
-func ExecuteContractCmd(ac address.Codec) *cobra.Command {
+func ExecuteContractCmd(_ address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "execute [contract_addr_bech32] [json_encoded_send_args] --amount [coins,optional]",
 		Short:   "Execute a command on a wasm contract",
@@ -348,24 +345,28 @@ func ExecuteContractCmd(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
-			msg, err := parseExecuteArgs(mcctx.CustomAddrCodec, args[0], args[1], mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			toAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			if err != nil {
+				return err
+			}
+			toAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
+			msg, err := parseExecuteArgs(mcctx.CustomAddrCodec, toAddr, args[1], mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
 			if err != nil {
 				return err
 			}
 			if err := msg.ValidateBasic(); err != nil {
 				return err
 			}
-			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-			msgMultiChain, err := mcctx.MultiChainWrap(&msg, fromAddr)
-			if err != nil {
-				return err
-			}
 
-			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, &msg)
 		},
 		SilenceUsage: true,
 	}
@@ -376,7 +377,7 @@ func ExecuteContractCmd(ac address.Codec) *cobra.Command {
 	return cmd
 }
 
-func parseExecuteArgs(addrCodec address.Codec, contractAddr string, execMsg string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgExecuteContract, error) {
+func parseExecuteArgs(addrCodec address.Codec, contractAddr mcodec.AccAddressPrefixed, execMsg string, sender sdk.AccAddress, flags *flag.FlagSet) (types.MsgExecuteContract, error) {
 	amountStr, err := flags.GetString(flagAmount)
 	if err != nil {
 		return types.MsgExecuteContract{}, fmt.Errorf("amount: %s", err)
@@ -396,7 +397,7 @@ func parseExecuteArgs(addrCodec address.Codec, contractAddr string, execMsg stri
 	}
 	return types.MsgExecuteContract{
 		Sender:   senderstr,
-		Contract: contractAddr,
+		Contract: contractAddr.String(),
 		Funds:    amount,
 		Msg:      msgbz,
 	}, nil

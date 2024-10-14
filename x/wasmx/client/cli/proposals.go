@@ -22,7 +22,7 @@ import (
 
 // NewRegisterRoleProposalCmd returns a CLI command handler for registering a
 // role contract handler
-func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
+func NewRegisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "register-role [role] [role_label] [contract_address]",
 		Args:    cobra.ExactArgs(3),
@@ -35,7 +35,11 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			if err != nil {
+				return err
+			}
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -77,12 +81,7 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 				return err
 			}
 
-			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
-			if err != nil {
-				return err
-			}
-
-			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 
@@ -105,7 +104,7 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 
 // NewDeregisterRoleProposalCmd returns a CLI command handler for registering a
 // deregistration of a webserver route smart contract handler
-func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
+func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deregister-role [contract_address]",
 		Args:    cobra.ExactArgs(1),
@@ -118,7 +117,7 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
@@ -157,12 +156,11 @@ func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msgMultiChain, err := mcctx.MultiChainWrap(msg, fromAddr)
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
-
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msgMultiChain)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 

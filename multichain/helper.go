@@ -3,6 +3,8 @@ package multichain
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/sync/errgroup"
 
@@ -93,6 +95,15 @@ func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
 	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
+}
+
+func CreateNoLoggerAppCreatorTemp(appCreatorFactory NewAppCreator, index int64) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	tempNodeHome := filepath.Join(userHomeDir, fmt.Sprintf(".mythostmp_%d", index))
+	return CreateNoLoggerAppCreator(appCreatorFactory, tempNodeHome)
 }
 
 func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {
