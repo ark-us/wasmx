@@ -230,7 +230,7 @@ func InterpreterPrecompiles() SystemContracts {
 			Pinned:      false,
 			Role:        ROLE_INTERPRETER,
 			StorageType: ContractStorageType_CoreConsensus,
-			Deps: []string{WASMX_MEMORY_TAYLOR},
+			Deps:        []string{WASMX_MEMORY_TAYLOR},
 		},
 	}
 }
@@ -474,7 +474,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
 	}
 
-	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"5000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":5000},{"key":"timeoutPrevote","value":5000},{"key":"timeoutPrecommit","value":5000}],"initialState":"uninitialized"}}`)})
+	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"5000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":10000},{"key":"timeoutPrevote","value":5000},{"key":"timeoutPrecommit","value":10000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
 	}

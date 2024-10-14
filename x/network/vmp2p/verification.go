@@ -74,7 +74,9 @@ func (v ClientVerification) VerifyCommitLightByContract(chainID string, blockID 
 		return nil
 	}
 	if len(resp.Error) > 0 {
+		v.logger.Error("verify commit light by contract", "error", resp.Error)
 		return fmt.Errorf(resp.Error)
 	}
+	v.logger.Error("verify commit light by contract", "error", "failed without error")
 	return fmt.Errorf("commit verification failed without error")
 }

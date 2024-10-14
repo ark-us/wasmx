@@ -134,6 +134,16 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 				return int32(1), []byte(errmsg)
 			}
 		}
+		// TODO execution should be stopped, queries are ok
+		// if fromStorageType == types.ContractStorageType_SingleConsensus && toStorageType == types.ContractStorageType_CoreConsensus {
+		// 	errmsg := "non-deterministic contract tried to execute deterministic (core consensus) contract"
+		// 	ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
+		// 	errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
+		// 	return int32(1), []byte(errmsg)
+		// }
+
+		// right now single consensus contracts can call metaconsensus contracts
+		// and this is used to update chain information for a simple node statesync when the node is not a validator
 	}
 	callContext := types.MessageInfo{
 		Origin:   ctx.Env.CurrentCall.Origin,
