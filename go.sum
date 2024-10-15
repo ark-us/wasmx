@@ -2028,8 +2028,8 @@ github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-b
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
 github.com/linxGnu/grocksdb v1.8.14 h1:HTgyYalNwBSG/1qCQUIott44wU5b2Y9Kr3z7SK5OfGQ=
 github.com/linxGnu/grocksdb v1.8.14/go.mod h1:QYiYypR2d4v63Wj1adOOfzglnoII0gLj3PNh4fZkcFA=
-github.com/loredanacirstea/cometbft v0.38.7-0.20240805220512-e256431402c1 h1:s+E99A5kY4HZ85iwE1wQt70SRFiBELfyfwiBOMtWH0k=
-github.com/loredanacirstea/cometbft v0.38.7-0.20240805220512-e256431402c1/go.mod h1:8rSPxzUJYquCN8uuBgbUHOMg2KAwvr7CyUw+6ukO4nw=
+github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07 h1:oe9kLQT0Q8Mzs9eX5N/TANNIR8XA9hGCKkzXBqrlX+M=
+github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07/go.mod h1:8rSPxzUJYquCN8uuBgbUHOMg2KAwvr7CyUw+6ukO4nw=
 github.com/loredanacirstea/cosmos-iavl v1.0.0-rc.1.0.20240805221208-c3d360cff250 h1:ZXwPIy20U9pf/qqivL0xl53I+628nZhTl3MPBBm0ULI=
 github.com/loredanacirstea/cosmos-iavl v1.0.0-rc.1.0.20240805221208-c3d360cff250/go.mod h1:jLeUvm6bGT1YutCaL2fIar/8vGUE8cPZvh/gXEWDaDM=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20240809115954-9491cdbcc5f3 h1:vIRGC0dJ/xT5Isb0G+tUIp+QQklWH6mf0Z9A2f3ClKY=
