@@ -483,6 +483,7 @@ func initTestnetFilesInternal(
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
 	}
+	chainId := args.chainID
 	chaincfg, err := mcfg.GetChainConfig(args.chainID)
 	if err != nil {
 		panic(err)
@@ -493,7 +494,6 @@ func initTestnetFilesInternal(
 	valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 	_, appCreator := createMockAppCreator()
 
-	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
 	chaincfgmyt, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
 		panic(err)
