@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	menc "mythos/v1/encoding"
+	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
 const FEE_COLLECTOR = "fee_collector"
@@ -69,6 +70,16 @@ var ChainIdsInit = []string{}
 
 func GetChainConfig(chainId string) (*menc.ChainConfig, error) {
 	conf, ok := PrefixesMap[chainId]
+	if !ok {
+		chainIdParsed, err := wasmxtypes.ParseChainID(chainId)
+		if err != nil {
+			return nil, err
+		}
+		conf, ok = PrefixesMap[chainIdParsed.BaseName]
+		if ok {
+			CacheChainConfig(chainId, conf)
+		}
+	}
 	if !ok {
 		return nil, fmt.Errorf("chain_id configuration not found: %s", chainId)
 	}
