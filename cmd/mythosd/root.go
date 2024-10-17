@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,10 +14,14 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	"golang.org/x/sync/errgroup"
+
 	"cosmossdk.io/log"
 	"cosmossdk.io/math"
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	confixcmd "cosmossdk.io/tools/confix/cmd"
+
+	sdksigning "cosmossdk.io/x/tx/signing"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -158,7 +163,14 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		},
 	}
 
-	initRootCmd(rootCmd, encodingConfig, tempApp.BasicModuleManager)
+	apictx := &server.APICtx{
+		GoRoutineGroup:  g,
+		GoContextParent: goctx,
+		SvrCtx:          &sdkserver.Context{},
+		ClientCtx:       initClientCtx,
+	}
+
+	initRootCmd(rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx)
 
 	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
@@ -191,11 +203,20 @@ func initRootCmd(
 	rootCmd *cobra.Command,
 	encodingConfig appencoding.EncodingConfig,
 	basicManager module.BasicManager,
+	g *errgroup.Group,
+	ctx context.Context,
+	apictx mcfg.APICtxI,
+	clientCtx client.Context,
 ) {
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
 	a := appCreator{
 		encodingConfig,
+		g,
+		ctx,
+		apictx,
+		clientCtx,
+		rootCmd,
 	}
 
 	rootCmd.AddCommand(
@@ -324,6 +345,11 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 
 type appCreator struct {
 	encodingConfig appencoding.EncodingConfig
+	g              *errgroup.Group
+	ctx            context.Context
+	apictx         mcfg.APICtxI
+	clientCtx      client.Context
+	cmd            *cobra.Command
 }
 
 // newApp creates a new Cosmos SDK app
@@ -333,44 +359,16 @@ func (a appCreator) newApp(
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
-	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-
-	skipUpgradeHeights := make(map[int64]bool)
-	for _, h := range cast.ToIntSlice(appOpts.Get(sdkserver.FlagUnsafeSkipUpgrades)) {
-		skipUpgradeHeights[int64(h)] = true
-	}
+	_, appCreator := app.NewAppCreator(logger, db, traceStore, appOpts.(multichain.AppOptions), a.g, a.ctx, a.apictx)
 
 	chainId := mcfg.GetChainId(appOpts)
-	gasPricesStr := cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))
-	gasPrices, err := sdk.ParseDecCoins(gasPricesStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid minimum gas prices: %v", err))
-	}
-	minGasAmount := math.LegacyNewDec(0)
-	if len(gasPrices) > 0 {
-		minGasAmount = gasPrices[0].Amount
-	}
-	chainCfg, err := mcfg.GetChainConfig(chainId)
+	registryId := cast.ToString(appOpts.Get(multichain.FlagRegistryChainId))
+	_, _, config, err := multichain.MultiChainCtx(a.clientCtx, []sdksigning.CustomGetSigner{}, chainId, registryId)
 	if err != nil {
 		panic(err)
 	}
-	minGasPrices := sdk.NewDecCoins(sdk.NewDecCoin(chainCfg.BaseDenom, minGasAmount.RoundInt()))
-
-	return app.NewApp(
-		chainId,
-		logger,
-		db,
-		traceStore,
-		true,
-		skipUpgradeHeights,
-		cast.ToString(appOpts.Get(flags.FlagHome)),
-		cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)),
-		chainCfg,
-		a.encodingConfig,
-		minGasPrices,
-		appOpts,
-		baseappOptions...,
-	)
+	mapp := appCreator(chainId, config)
+	return mapp.(*app.App)
 }
 
 // appExport creates a new simapp (optionally at a given height)
