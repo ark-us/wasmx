@@ -43,7 +43,7 @@ func CreateQueryContext(app mcfg.BaseApp, logger log.Logger, height int64, prove
 
 	lastBlockHeight := qms.LatestVersion()
 	if lastBlockHeight == 0 {
-		return sdk.Context{}, nil, nil, errorsmod.Wrapf(sdkerrors.ErrInvalidHeight, "%s is not ready; please wait for first block", app.Name())
+		return sdk.Context{}, nil, nil, errorsmod.Wrapf(sdkerrors.ErrInvalidHeight, "%s is not ready; please wait for first block", app.ChainID())
 	}
 
 	if height > lastBlockHeight {

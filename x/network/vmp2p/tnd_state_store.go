@@ -136,7 +136,7 @@ func (s StateStore) SaveFinalizeBlockResponse(int64, *abci.ResponseFinalizeBlock
 
 // Bootstrap is used for bootstrapping state when not starting from a initial height.
 func (s StateStore) Bootstrap(state sm.State) error {
-	fmt.Println("---StateStore.Bootstrap--", state)
+	// fmt.Println("---StateStore.Bootstrap--", state)
 	// bootstrap consensus contract
 	// this will update storage contract too
 
@@ -200,7 +200,7 @@ func (s StateStore) Bootstrap(state sm.State) error {
 	}
 
 	statebz, err := json.Marshal(cstate)
-	fmt.Println("---StateStore.Bootstrap--", err, string(statebz))
+	// fmt.Println("---StateStore.Bootstrap--", err, string(statebz))
 	if err != nil {
 		return err
 	}

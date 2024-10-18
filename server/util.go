@@ -49,6 +49,7 @@ func AddCommands(
 		sdkserver.ExportCmd(appExport, defaultNodeHome),
 		version.NewVersionCommand(),
 		NewRollbackCmd(appCreator, defaultNodeHome),
+		NewResetChainData(appCreator, defaultNodeHome),
 	)
 }
 

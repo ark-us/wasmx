@@ -8,7 +8,9 @@ import (
 	tndtypes "github.com/cometbft/cometbft/proto/tendermint/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	errorsmod "cosmossdk.io/errors"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	mcfg "mythos/v1/config"
@@ -118,6 +120,11 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	}
 	if !found {
 		app = multichainapp.NewApp(req.ChainId, &req.ChainConfig)
+	}
+
+	cms := app.GetBaseApp().CommitMultiStore()
+	if cms.LatestVersion() == 0 {
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidHeight, "%s is not ready; please wait for first block", app.Name())
 	}
 
 	// start API servers
