@@ -27,6 +27,20 @@ type Environment struct {
 	config       *config.Config
 }
 
+func NewEnvironment(
+	app servertypes.Application,
+	networkWrap client.CometRPC,
+	serverConfig *cmtconfig.Config,
+	config *config.Config,
+) Environment {
+	return Environment{
+		app,
+		networkWrap,
+		serverConfig,
+		config,
+	}
+}
+
 // Routes is a map of available routes.
 func (env *Environment) GetRoutes() cometcore.RoutesMap {
 	return cometcore.RoutesMap{

@@ -27,6 +27,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtcfg "github.com/cometbft/cometbft/config"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
 	mctx "mythos/v1/context"
 	srvconfig "mythos/v1/server/config"
@@ -39,6 +40,7 @@ import (
 
 type ActionExecutor interface {
 	Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error)
+	ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, cb func(goctx context.Context) (any, error)) (any, error)
 	GetApp() MythosApp
 	GetBaseApp() BaseApp
 	GetLogger() log.Logger
@@ -52,6 +54,8 @@ type NetworkKeeper interface {
 
 	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
 	Codec() codec.Codec
+
+	GetHeaderByHeight(app MythosApp, logger log.Logger, height int64, prove bool) (*cmtproto.Header, error)
 }
 
 type WasmxKeeper interface {

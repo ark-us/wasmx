@@ -45,7 +45,7 @@ type ABCIClient struct {
 	bapp           cfg.BaseApp
 	nk             types.WasmxWrapper
 	logger         log.Logger
-	actionExecutor *ActionExecutor
+	actionExecutor cfg.ActionExecutor
 	serverConfig   *cmtconfig.Config
 	config         *config.Config
 }
@@ -57,7 +57,7 @@ func NewABCIClient(
 	networkKeeper types.WasmxWrapper,
 	serverConfig *cmtconfig.Config,
 	config *config.Config,
-	actionExecutor *ActionExecutor,
+	actionExecutor cfg.ActionExecutor,
 ) sdkclient.CometRPC {
 	logger = logger.With("module", "network", "client", "abci")
 	return &ABCIClient{
@@ -226,7 +226,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			}
 			return rresp, nil
 		}
-		_, err = mapp.GetActionExecutor().Execute(context.Background(), bapp.LastBlockHeight(), cb)
+		_, err = mapp.GetActionExecutor().ExecuteWithHeader(context.Background(), GetMockHeader(bapp, bapp.LastBlockHeight()), cb)
 		// TODO handle resp, err ?
 		if err != nil {
 			c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())
@@ -338,6 +338,9 @@ func (c *ABCIClient) Status(context.Context) (*rpctypes.ResultStatus, error) {
 	pubKey, err := privVal.GetPubKey()
 	if err != nil {
 		return nil, err
+	}
+	if c.serverConfig == nil {
+		return nil, fmt.Errorf("error calling Info: serverConfig is nil")
 	}
 	result := &rpctypes.ResultStatus{
 		NodeInfo: cometp2p.DefaultNodeInfo{
@@ -693,54 +696,20 @@ func (c *ABCIClient) BlockSearch(
 	return nil, fmt.Errorf("ABCIClient.BlockSearch not implemented")
 }
 
+// Important! fsmQuery must not create a cycle, so it must only use ExecuteWithHeader
 func (c *ABCIClient) fsmQuery(key string) (*wasmxtypes.ContractResponse, error) {
 	msg := fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key)
 	return c.storageQuery(msg)
 }
 
+// Important! storageQuery must not create a cycle, so it must only use ExecuteWithHeader
 func (c *ABCIClient) storageQuery(msg string) (*wasmxtypes.ContractResponse, error) {
-	cb := func(goctx context.Context) (any, error) {
-		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
-			Sender:   wasmxtypes.ROLE_STORAGE,
-			Contract: wasmxtypes.ROLE_STORAGE,
-			Msg:      []byte(msg),
-		})
-	}
-	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
-	if err != nil {
-		return nil, err
-	}
-	rresp := qresp.(*types.MsgQueryContractResponse)
-
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(rresp.Data, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
+	return StorageQuery(c.nk, c.actionExecutor, c.bapp, msg)
 }
 
 func (c *ABCIClient) consensusQuery(method string, params string) (*wasmxtypes.ContractResponse, error) {
-	cb := func(goctx context.Context) (any, error) {
-		msg := fmt.Sprintf(`{"execute":{"action":{"type":"%s","params":%s,"event":null}}}`, method, params)
-		return c.nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
-			Msg:      []byte(msg),
-		})
-	}
-	qresp, err := c.actionExecutor.Execute(context.Background(), c.bapp.LastBlockHeight(), cb)
-	if err != nil {
-		return nil, err
-	}
-	rresp := qresp.(*types.MsgQueryContractResponse)
-
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(rresp.Data, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
+	msg := fmt.Sprintf(`{"execute":{"action":{"type":"%s","params":%s,"event":null}}}`, method, params)
+	return ContractQuery(c.nk, c.actionExecutor, c.bapp, msg, wasmxtypes.ROLE_CONSENSUS, wasmxtypes.ROLE_CONSENSUS)
 }
 
 func (c *ABCIClient) LatestBlockHeight(ctx context.Context) (int64, error) {
@@ -803,25 +772,29 @@ func (c *ABCIClient) GetBlockEntry(ctx context.Context, height *int64) (*types.B
 	} else {
 		blockHeight = *height
 	}
-	c.logger.Debug("ABCIClient.Block", "height", blockHeight)
+	return c.GetBlockEntryByHeight(ctx, blockHeight)
+}
+
+// Important! GetBlockEntryByHeight must not create a cycle, so it must only use ExecuteWithHeader
+func (c *ABCIClient) GetBlockEntryByHeight(ctx context.Context, height int64) (*types.BlockEntry, int64, error) {
 
 	// get indexed tx
-	key := types.GetBlockKey(blockHeight)
+	key := types.GetBlockKey(height)
 	resp, err := c.fsmQuery(key)
 	if err != nil {
-		return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, height, errorsmod.Wrapf(err, "ABCIClient.Block failed")
 	}
 
 	if len(resp.Data) == 0 {
-		return nil, blockHeight, fmt.Errorf("block (%d) not found", blockHeight)
+		return nil, height, fmt.Errorf("block (%d) not found", height)
 	}
 
 	var entry types.BlockEntry
 	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
-		return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
+		return nil, height, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
 	}
-	return &entry, blockHeight, nil
+	return &entry, height, nil
 }
 
 // height is nil for latest block
@@ -868,4 +841,32 @@ func lookForHash(conditions []syntax.Condition) (hash []byte, ok bool, err error
 		}
 	}
 	return
+}
+
+// Important! StorageQuery must not create a cycle, so it must only use ExecuteWithHeader
+func StorageQuery(nk types.WasmxWrapper, actionExecutor cfg.ActionExecutor, bapp cfg.BaseApp, msg string) (*wasmxtypes.ContractResponse, error) {
+	return ContractQuery(nk, actionExecutor, bapp, msg, wasmxtypes.ROLE_STORAGE, wasmxtypes.ROLE_STORAGE)
+}
+
+// Important! ContractQuery must not create a cycle, so it must only use ExecuteWithHeader
+func ContractQuery(nk types.WasmxWrapper, actionExecutor cfg.ActionExecutor, bapp cfg.BaseApp, msg string, sender, contract string) (*wasmxtypes.ContractResponse, error) {
+	cb := func(goctx context.Context) (any, error) {
+		return nk.QueryContract(sdk.UnwrapSDKContext(goctx), &types.MsgQueryContract{
+			Sender:   sender,
+			Contract: contract,
+			Msg:      []byte(msg),
+		})
+	}
+	qresp, err := actionExecutor.ExecuteWithHeader(context.Background(), GetMockHeader(bapp, bapp.LastBlockHeight()), cb)
+	if err != nil {
+		return nil, err
+	}
+	rresp := qresp.(*types.MsgQueryContractResponse)
+
+	var resp wasmxtypes.ContractResponse
+	err = json.Unmarshal(rresp.Data, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }

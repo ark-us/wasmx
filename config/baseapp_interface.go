@@ -35,4 +35,5 @@ type BaseApp interface {
 	ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)
 
 	CheckTx(req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error)
+	GetCheckStateContext() sdk.Context
 }

@@ -142,6 +142,7 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 		if err != nil {
 			return nil, err
 		}
+
 		return res, nil
 	}
 
@@ -151,6 +152,19 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	if err != nil {
 		return err
 	}
+
+	// we update checkState on the baseapp
+	bapp := mythosapp.GetBaseApp()
+	lastHeight := bapp.LastBlockHeight()
+	if lastHeight > 0 {
+		logger.Info("setting checkTx header from last known block", "height", lastHeight)
+		header, err := networkServer.GetHeaderByHeight(mythosapp, logger, lastHeight, false)
+		if err != nil || header == nil {
+			return fmt.Errorf("StartNode: could not get header by heaight for checkTx: %v", err)
+		}
+		bapp.SetCheckStateHeader(*header)
+	}
+
 	return nil
 }
 
