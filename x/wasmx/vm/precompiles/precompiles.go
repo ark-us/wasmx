@@ -120,9 +120,6 @@ var (
 	//go:embed 48.level0_0.0.1.wasm
 	level0_contract []byte
 
-	//go:embed 49.leveln_0.0.1.wasm
-	leveln_contract []byte
-
 	//go:embed 4a.multichain_registry_0.0.1.wasm
 	multichain_registry []byte
 
@@ -140,6 +137,9 @@ var (
 
 	//go:embed 50.tay_interpreter_v0.0.1.wasm
 	tay_interpreter []byte
+
+	//go:embed 51.level0_ondemand_0.0.1.wasm
+	level0_ondemand_contract []byte
 
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
@@ -266,8 +266,15 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 			panic(err)
 		}
 		wasmbin = []byte(Level0P2Pv001(libaddrstr))
-	case types.LEVELN_v001:
-		wasmbin = leveln_contract
+	case "level0_ondemand_library":
+		wasmbin = level0_ondemand_contract
+	case types.LEVEL0_ONDEMAND_v001:
+		libaddr := types.AccAddressFromHex(types.ADDR_LEVEL0_ONDEMAND_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(Level0OnDemand001(libaddrstr))
 	case types.MULTICHAIN_REGISTRY_v001:
 		wasmbin = multichain_registry
 	case types.MULTICHAIN_REGISTRY_LOCAL_v001:

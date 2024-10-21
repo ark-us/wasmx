@@ -66,6 +66,9 @@ var ADDR_LOBBY_LIBRARY = "0x000000000000000000000000000000000000004e"
 var ADDR_METAREGISTRY = "0x000000000000000000000000000000000000004f"
 var ADDR_INTERPRETER_TAY = "0x0000000000000000000000000000000000000050"
 
+var ADDR_LEVEL0_ONDEMAND = "0x0000000000000000000000000000000000000051"
+var ADDR_LEVEL0_ONDEMAND_LIBRARY = "0x0000000000000000000000000000000000000052"
+
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func StarterPrecompiles() SystemContracts {
@@ -509,6 +512,11 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("DefaultSystemContracts: cannot marshal metaregistryInitMsg message")
 	}
 
+	level0OnDemandInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":5000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000},{"key":"batchTimeout","value":1000}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("DefaultSystemContracts: cannot marshal level0OnDemandInitMsg message")
+	}
+
 	return []SystemContract{
 		{
 			Address:     ADDR_CONSENSUS_RAFT_LIBRARY,
@@ -662,6 +670,24 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Role:        ROLE_METAREGISTRY,
 			StorageType: ContractStorageType_MetaConsensus,
 			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LEVEL0_ONDEMAND_LIBRARY,
+			Label:       "level0_ondemand_library",
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_LIBRARY,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_LEVEL0_ONDEMAND,
+			Label:       LEVEL0_ONDEMAND_v001,
+			InitMessage: level0OnDemandInitMsg,
+			Pinned:      false,
+			// Role:        ROLE_CONSENSUS,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_ONDEMAND_LIBRARY, ROLE_LIBRARY)},
 		},
 	}
 }
