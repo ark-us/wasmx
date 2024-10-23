@@ -162,7 +162,7 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 		if err != nil || header == nil {
 			// we do not throw an error now because this will happen right after bootstrap, when we do not have block data
 			// TODO reconsider this when we have block sync too, so we can sync at least the last block
-			logger.Info("StartNode: could not get header by height for checkTx: %v", err)
+			logger.Info("StartNode: could not get header by height for checkTx: %s", err.Error())
 			return nil
 		}
 		bapp.SetCheckStateHeader(*header)
