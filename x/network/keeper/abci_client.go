@@ -226,7 +226,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			}
 			return rresp, nil
 		}
-		_, err = mapp.GetActionExecutor().ExecuteWithHeader(context.Background(), GetMockHeader(bapp, bapp.LastBlockHeight()), cb)
+		_, err = mapp.GetActionExecutor().ExecuteWithMockHeader(context.Background(), cb)
 		// TODO handle resp, err ?
 		if err != nil {
 			c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())
@@ -857,7 +857,7 @@ func ContractQuery(nk types.WasmxWrapper, actionExecutor cfg.ActionExecutor, bap
 			Msg:      []byte(msg),
 		})
 	}
-	qresp, err := actionExecutor.ExecuteWithHeader(context.Background(), GetMockHeader(bapp, bapp.LastBlockHeight()), cb)
+	qresp, err := actionExecutor.ExecuteWithMockHeader(context.Background(), cb)
 	if err != nil {
 		return nil, err
 	}

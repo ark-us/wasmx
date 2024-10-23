@@ -148,7 +148,7 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 
 	actionExecutor := mythosapp.GetActionExecutor()
 
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,10 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 		logger.Info("setting checkTx header from last known block", "height", lastHeight)
 		header, err := networkServer.GetHeaderByHeight(mythosapp, logger, lastHeight, false)
 		if err != nil || header == nil {
-			return fmt.Errorf("StartNode: could not get header by heaight for checkTx: %v", err)
+			// we do not throw an error now because this will happen right after bootstrap, when we do not have block data
+			// TODO reconsider this when we have block sync too, so we can sync at least the last block
+			logger.Info("StartNode: could not get header by height for checkTx: %v", err)
+			return nil
 		}
 		bapp.SetCheckStateHeader(*header)
 	}
@@ -190,7 +193,7 @@ func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
 	if err != nil {
 		return err
 	}
@@ -255,7 +258,7 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
 	if err != nil {
 		return err
 	}
@@ -278,7 +281,7 @@ func ConsensusTx(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg
 
 	actionExecutor := mythosapp.GetActionExecutor()
 
-	_, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
 	if err != nil {
 		return err
 	}
@@ -300,7 +303,7 @@ func ConsensusQuery(mythosapp mcfg.MythosApp, logger log.Logger, networkServer m
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	resp, err := actionExecutor.Execute(mythosapp.GetGoContextParent(), mythosapp.GetBaseApp().LastBlockHeight(), cb)
+	resp, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
 	if err != nil {
 		return nil, err
 	}

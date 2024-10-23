@@ -524,7 +524,8 @@ func initTestnetFilesInternal(
 	appConfig := config.DefaultConfig()
 	appConfig.MinGasPrices = args.minGasPrices
 	appConfig.API.Enable = true
-	appConfig.API.RPCReadTimeout = 20
+	appConfig.API.RPCReadTimeout = 30
+	appConfig.API.RPCWriteTimeout = 30
 	appConfig.Telemetry.Enabled = true
 	appConfig.Telemetry.PrometheusRetentionTime = 60
 	appConfig.Telemetry.EnableHostnameLabel = false

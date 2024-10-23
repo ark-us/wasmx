@@ -197,6 +197,10 @@ func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(go
 	return r.ExecuteWithHeader(goCtx, *header, cb)
 }
 
+func (r *ActionExecutor) ExecuteWithMockHeader(goCtx context.Context, cb func(goctx context.Context) (any, error)) (any, error) {
+	return r.ExecuteWithHeader(context.Background(), GetMockHeader(r.GetBaseApp(), r.GetBaseApp().LastBlockHeight()), cb)
+}
+
 func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, cb func(goctx context.Context) (any, error)) (any, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()

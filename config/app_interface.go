@@ -41,6 +41,7 @@ import (
 type ActionExecutor interface {
 	Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error)
 	ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, cb func(goctx context.Context) (any, error)) (any, error)
+	ExecuteWithMockHeader(goCtx context.Context, cb func(goctx context.Context) (any, error)) (any, error)
 	GetApp() MythosApp
 	GetBaseApp() BaseApp
 	GetLogger() log.Logger

@@ -76,9 +76,10 @@ func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageReques
 		}
 		return res, nil
 	}
+	// p2p entrypoint is always used on consensusless contracts
+	// these are part of the core, we do not need to provide block context
 	// disregard result
-	bapp := k.actionExecutor.GetBaseApp()
-	_, err := k.actionExecutor.Execute(k.goContextParent, bapp.LastBlockHeight(), cb)
+	_, err := k.actionExecutor.ExecuteWithMockHeader(k.goContextParent, cb)
 	if err != nil {
 		return err
 	}
