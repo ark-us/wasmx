@@ -526,6 +526,7 @@ func initTestnetFilesInternal(
 	appConfig.API.Enable = true
 	appConfig.API.RPCReadTimeout = 30
 	appConfig.API.RPCWriteTimeout = 30
+	appConfig.API.Address = "tcp://0.0.0.0:1317"
 	appConfig.Telemetry.Enabled = true
 	appConfig.Telemetry.PrometheusRetentionTime = 60
 	appConfig.Telemetry.EnableHostnameLabel = false
