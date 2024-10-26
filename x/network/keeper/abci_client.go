@@ -467,6 +467,7 @@ func (c *ABCIClient) BlockByHash(ctx context.Context, hash []byte) (*rpctypes.Re
 }
 
 func (c *ABCIClient) BlockResults(ctx context.Context, height *int64) (*rpctypes.ResultBlockResults, error) {
+	// getHeight
 	return nil, fmt.Errorf("ABCIClient.BlockResults not implemented")
 }
 
@@ -761,16 +762,14 @@ func (c *ABCIClient) CheckTxAsync(ctx context.Context, req *abci.RequestCheckTx)
 
 // height is nil for latest block
 func (c *ABCIClient) GetBlockEntry(ctx context.Context, height *int64) (*types.BlockEntry, int64, error) {
-	blockHeight := int64(0)
-	var err error
-	if height == nil {
-		blockHeight, err = c.LatestBlockHeight(ctx)
-		c.logger.Debug("ABCIClient.Block", "latest height", blockHeight)
-		if err != nil {
-			return nil, blockHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed")
-		}
-	} else {
-		blockHeight = *height
+	latestHeight, err := c.LatestBlockHeight(ctx)
+	c.logger.Debug("ABCIClient.Block", "latest height", latestHeight)
+	if err != nil {
+		return nil, latestHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+	}
+	blockHeight, err := getHeight(latestHeight, height)
+	if err != nil {
+		return nil, latestHeight, err
 	}
 	return c.GetBlockEntryByHeight(ctx, blockHeight)
 }
@@ -800,17 +799,17 @@ func (c *ABCIClient) GetBlockEntryByHeight(ctx context.Context, height int64) (*
 // height is nil for latest block
 func (c *ABCIClient) ConsensusParams(ctx context.Context, height *int64) (*rpctypes.ResultConsensusParams, error) {
 	response := &rpctypes.ResultConsensusParams{}
-	blockHeight := int64(0)
-	var err error
-	if height == nil {
-		blockHeight, err = c.LatestBlockHeight(ctx)
-		c.logger.Debug("ABCIClient.ConsensusParams", "latest height", blockHeight)
-		if err != nil {
-			return nil, errorsmod.Wrapf(err, "ABCIClient.ConsensusParams failed")
-		}
-	} else {
-		blockHeight = *height
+
+	latestHeight, err := c.LatestBlockHeight(ctx)
+	c.logger.Debug("ABCIClient.ConsensusParams", "latest height", latestHeight)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.ConsensusParams failed")
 	}
+	blockHeight, err := getHeight(latestHeight, height)
+	if err != nil {
+		return nil, err
+	}
+
 	response.BlockHeight = blockHeight
 	c.logger.Debug("ABCIClient.ConsensusParams", "height", blockHeight)
 
@@ -869,4 +868,27 @@ func ContractQuery(nk types.WasmxWrapper, actionExecutor cfg.ActionExecutor, bap
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func getHeight(latestHeight int64, heightPtr *int64) (int64, error) {
+	if heightPtr != nil {
+		height := *heightPtr
+		if height <= 0 {
+			return 0, fmt.Errorf("height must be greater than 0, but got %d", height)
+		}
+		if height > latestHeight {
+			return 0, fmt.Errorf("height %d must be less than or equal to the current blockchain height %d",
+				height, latestHeight)
+		}
+		// TODO implement base - the lowest available block in storage
+		// state synced nodes do not contain all blocks
+		// base := env.BlockStore.Base()
+		base := int64(1)
+		if height < base {
+			return 0, fmt.Errorf("height %d is not available, lowest height is %d",
+				height, base)
+		}
+		return height, nil
+	}
+	return latestHeight, nil
 }
