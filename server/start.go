@@ -480,21 +480,22 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 		// Run state sync
 		// TODO for any multichain
 		if tndcfg.StateSync.Enable {
-			fmt.Println("--START STATE SYNC--")
 			mythosapp, csvrCtx, _, cmsrvconfig, ctndcfg, rpcClient, err := apictx.BuildConfigs(chainId, chainCfg, ports)
 			if err != nil {
 				panic(err)
 			}
 
 			peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
-			// the leader node is last
+			currentNodeId, err := networktypes.GetCurrentNodeIdFromConfig(chainId, cmsrvconfig.Network.Id)
+			if err != nil {
+				panic(err)
+			}
 			if len(peers) >= 2 {
-
 				mythosapp.NonDeterministicSetNodePortsInitial(initialPorts)
 
 				privValidator := pvm.LoadOrGenFilePV(ctndcfg.PrivValidatorKeyFile(), ctndcfg.PrivValidatorStateFile())
 
-				err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, *chainCfg, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes(), peers)
+				err = startStateSync(mythosapp.GetGoContextParent(), mythosapp.GetGoRoutineGroup(), csvrCtx, cmsrvconfig, ctndcfg, chainId, *chainCfg, mythosapp, rpcClient, privValidator.Key.PrivKey.Bytes(), peers, currentNodeId)
 				if err != nil {
 					panic(err)
 				}
@@ -836,10 +837,22 @@ func startStateSync(
 	rpcClient client.CometRPC,
 	privateKey []byte,
 	peers []string,
+	currentNodeId int,
 ) error {
-	peeraddress := strings.Split(peers[len(peers)-1], "@")[1]
+	if len(peers) <= currentNodeId {
+		return fmt.Errorf("peers index out of bounds")
+	}
+	if len(peers) < 2 {
+		return fmt.Errorf("need at least 2 peers")
+	}
 	// mythos1q77zrfhdctzgugutmnypyp0z2mg657e2hdwpqz@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWRRtnJfsJbRDMrMQQd5wopPDsjM9urKsLb9VzA1Y49udr
-	port := strings.Split(peers[0], "/")[4]
+	port := strings.Split(peers[currentNodeId], "/")[4]
+
+	peerId := 0
+	if currentNodeId == 0 {
+		peerId = 1
+	}
+	peeraddress := strings.Split(peers[peerId], "@")[1]
 
 	currentIdStr := "0"
 	nodeids := strings.Split(cmsrvconfig.Network.Id, ";")

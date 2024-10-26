@@ -676,6 +676,8 @@ func initTestnetFilesInternal(
 		networkIpsStr = networkIpsStr + "," + leaderURI
 	}
 
+	basePow := int64(500)
+
 	for i := nodeIndexStart; i < args.numValidators; i++ {
 		gentxsDir := filepath.Join(args.outputDir, "gentxs")
 		nodeDirName := nodeDirNames[i]
@@ -684,7 +686,8 @@ func initTestnetFilesInternal(
 		kb := kbs[i]
 		memo := networkIps[i]
 
-		accStakingTokens := sdk.TokensFromConsensusPower(5000, mcfg.PowerReduction)
+		powdelta := int64((args.numValidators - i) * 10)
+		accStakingTokens := sdk.TokensFromConsensusPower(basePow+powdelta, mcfg.PowerReduction)
 		coins := sdk.Coins{
 			sdk.NewCoin(chaincfg.BaseDenom, accStakingTokens),
 		}
@@ -697,7 +700,7 @@ func initTestnetFilesInternal(
 		if err != nil {
 			return err
 		}
-		valTokens := sdk.TokensFromConsensusPower(100, mcfg.PowerReduction)
+		valTokens := sdk.TokensFromConsensusPower(basePow/5+powdelta, mcfg.PowerReduction)
 		err = createGentx(clientCtx, mythosapp.TxConfig(), args.chainID, valStr, valPubKeys[i], valTokens, nodeDirName, gentxsDir, memo, chaincfg.BaseDenom, kb, cmd)
 		if err != nil {
 			return err
