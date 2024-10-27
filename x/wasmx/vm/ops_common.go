@@ -224,7 +224,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		GoRoutineGroup:  ctx.GoRoutineGroup,
 		GoContextParent: ctx.GoContextParent,
 		Ctx:             tempCtx,
-		Logger:          ctx.Logger,
+		Logger:          GetVmLogger(ctx.Logger, ctx.Env.Chain.ChainIdFull, to.String()),
 		GasMeter:        ctx.GasMeter,
 		ContractStore:   contractStore,
 		CosmosHandler:   newCosmosHandler,

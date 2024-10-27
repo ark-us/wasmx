@@ -8,7 +8,7 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 
 ## testnet
 
-```
+```bash
 
 mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --nocors --libp2p --min-level-validators 2
 
@@ -25,6 +25,18 @@ mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 
 mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1
 
+# logging
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0 --log_level="x/wasmx:debug,*:info"
+
+# logging by chain
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0 --log_level="x/wasmx_mythos_7000-14:debug,*:info"
+
+# logging by contract
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0 --log_level="x/wasmx_mythos_7000-14_mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzp0fe53n:debug,*:info"
+
+# extended logging - use x/wasmx_extended as prefix
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0 --log_level="x/wasmx_mythos_7000-14_mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzp0fe53n:debug,x/wasmx_extended_mythos_7000-14_mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzp0fe53n:debug,*:info"
+
 # create chain levels after chain start
 mythosd testnet create-levels 1 2 --chain-id="mythos_7000-14" --keyring-backend test --home ./testnet
 
@@ -33,7 +45,7 @@ mythosd testnet create-levels 1 2 --chain-id="mythos_7000-14" --keyring-backend 
 
 ## Run tests
 
-```
+```bash
 go test -v ./...
 
 go test --count=1 -short -v ./...
@@ -44,7 +56,7 @@ go test --count=1 -timeout 300s -v -run KeeperTestSuite/TestEwasmFibonacci ./x/w
 
 ```
 * for macos 14
-```
+```bash
 CGO_LDFLAGS='-Wl,-rpath,/Users/user/.wasmedge/lib' go test --count=1 -short -v ./...
 ```
 
@@ -81,7 +93,7 @@ CGO_LDFLAGS='-Wl,-rpath,/Users/user/.wasmedge/lib' go test --count=1 -short -v .
 
 ## Multichain Commands
 
-```
+```bash
 
 mythosd tx multichain register-subchain logos lyt 18 1 "10000000000" --chain-id="leveln_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
 
@@ -95,7 +107,7 @@ mythosd tx multichain init-subchain logos_10001-1 --chain-id="leveln_1000-1" --f
 
 ```
 
-```
+```bash
 mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl.json --chain-id="level0_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
 
 mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl2.json --chain-id="level0_1000-1" --from node1 --keyring-backend test --home ./testnet/node1/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
@@ -103,7 +115,7 @@ mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-t
 
 ## Create a hierarchy of multichains
 
-```
+```bash
 mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=3 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
 
 mythosd start --home=./testnet/node0/mythosd

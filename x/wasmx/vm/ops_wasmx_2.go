@@ -1245,7 +1245,8 @@ func wasmxLoggerDebugExtended(context interface{}, callframe *wasmedge.CallingFr
 	if err != nil {
 		return nil, wasmedge.Result_Fail
 	}
-	ctx.Logger(ctx.Ctx).Debug(msg, parts...)
+	newmodule := GetVmLoggerExtended(ctx.Logger, ctx.Env.Chain.ChainIdFull, ctx.Env.Contract.Address.String())
+	newmodule(ctx.Ctx).Debug(msg, parts...)
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Success
 }

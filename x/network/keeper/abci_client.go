@@ -59,7 +59,7 @@ func NewABCIClient(
 	config *config.Config,
 	actionExecutor cfg.ActionExecutor,
 ) sdkclient.CometRPC {
-	logger = logger.With("module", "network", "client", "abci")
+	logger = logger.With(log.ModuleKey, "network", "client", "abci")
 	return &ABCIClient{
 		mapp:           mapp,
 		bapp:           bapp,

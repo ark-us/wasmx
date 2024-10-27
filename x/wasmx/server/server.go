@@ -13,6 +13,8 @@ import (
 	"golang.org/x/net/netutil"
 	"golang.org/x/sync/errgroup"
 
+	"cosmossdk.io/log"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	flags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -45,7 +47,7 @@ func StartJsonRpc(
 	// tmWsClient := ConnectTmWS(tmRPCAddr, tmEndpoint, svrCtx.Logger)
 	var tmWsClient *rpcclient.WSClient
 
-	logger := svrCtx.Logger.With("module", "geth")
+	logger := svrCtx.Logger.With(log.ModuleKey, "geth")
 	logLevel := cast.ToString(svrCtx.Viper.Get(flags.FlagLogLevel))
 	switch logLevel {
 	case zerolog.DebugLevel.String():

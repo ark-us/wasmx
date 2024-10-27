@@ -28,6 +28,8 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	"cosmossdk.io/log"
+
 	pruningtypes "cosmossdk.io/store/pruning/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -288,7 +290,7 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 		return fmt.Errorf("error creating listener: %v", err)
 	}
 
-	svr.SetLogger(servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger.With("module", "abci-server")})
+	svr.SetLogger(servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger.With(log.ModuleKey, "abci-server")})
 
 	g.Go(func() error {
 		if err := svr.Start(); err != nil {
@@ -1052,7 +1054,7 @@ func startGrpcServer(
 	// Start the gRPC server in a goroutine. Note, the provided ctx will ensure
 	// that the server is gracefully shut down.
 	g.Go(func() error {
-		return servergrpc.StartGRPCServer(ctx, svrCtx.Logger.With("module", "grpc-server"), config, grpcSrv)
+		return servergrpc.StartGRPCServer(ctx, svrCtx.Logger.With(log.ModuleKey, "grpc-server"), config, grpcSrv)
 	})
 	return grpcSrv, clientCtx, nil
 }
@@ -1071,7 +1073,7 @@ func startAPIServer(
 		return nil
 	}
 
-	apiSrv := api.New(clientCtx, svrCtx.Logger.With("module", "api-server"), grpcSrv)
+	apiSrv := api.New(clientCtx, svrCtx.Logger.With(log.ModuleKey, "api-server"), grpcSrv)
 	app.RegisterAPIRoutes(apiSrv, svrCfg.API)
 
 	if svrCfg.Telemetry.Enabled {

@@ -250,7 +250,7 @@ func (k *Keeper) AccBech32Codec() mcodec.AccBech32Codec {
 }
 
 func GetLogger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName), "chain_id", ctx.ChainID())
+	return ctx.Logger().With(log.ModuleKey, fmt.Sprintf("x/%s", types.ModuleName), "chain_id", ctx.ChainID())
 }
 
 // 0755 = User:rwx Group:r-x World:r-x

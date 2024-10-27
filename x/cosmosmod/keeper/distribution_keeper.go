@@ -77,7 +77,7 @@ func NewKeeperDistribution(
 }
 
 func (k *KeeperDistribution) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.DistributionModuleName()), "chain_id", ctx.ChainID())
+	return ctx.Logger().With(log.ModuleKey, fmt.Sprintf("x/%s", types.DistributionModuleName()), "chain_id", ctx.ChainID())
 }
 
 // GetAuthority returns the module's authority.

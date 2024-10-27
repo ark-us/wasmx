@@ -12,6 +12,8 @@ import (
 
 	"github.com/cometbft/cometbft/node"
 
+	"cosmossdk.io/log"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -34,7 +36,7 @@ func StartGRPCServer(
 		return nil, err
 	}
 
-	svrCtx.Logger = svrCtx.Logger.With("module", "network")
+	svrCtx.Logger = svrCtx.Logger.With(log.ModuleKey, "network")
 
 	// TODO we are starting the consensus protocol before the grpc server is running; we should start it after
 	grpcServer, err := NewGRPCServer(ctx, svrCtx, clientCtx, cfgAll, app, metricsProvider, rpcClient)

@@ -16,6 +16,8 @@ import (
 
 	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
+
+	multichain "mythos/v1/multichain"
 )
 
 // AddCommands adds server commands
@@ -78,7 +80,7 @@ func NewDefaultLogger(flags *pflag.FlagSet) log.Logger {
 	if err != nil && level == "" {
 		level = "info"
 	}
-	filter, _ := log.ParseLogLevel(level)
+	filter, _ := multichain.ParseLogLevel(level)
 	return log.NewLogger(
 		os.Stdout,
 		log.FilterOption(filter),

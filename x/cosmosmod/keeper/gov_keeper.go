@@ -67,7 +67,7 @@ func NewKeeperGov(
 }
 
 func (k *KeeperGov) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.GovModuleName()), "chain_id", ctx.ChainID())
+	return ctx.Logger().With(log.ModuleKey, fmt.Sprintf("x/%s", types.GovModuleName()), "chain_id", ctx.ChainID())
 }
 
 // GetAuthority returns the module's authority.

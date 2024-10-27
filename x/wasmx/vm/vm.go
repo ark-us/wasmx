@@ -249,6 +249,30 @@ func parseDependencyOrHexAddr(contractVersion string, part string) string {
 	return dep
 }
 
+func GetVmLogger(
+	logger func(ctx sdk.Context) log.Logger,
+	chainId string,
+	contractAddress string,
+) func(ctx sdk.Context) log.Logger {
+	newlogger := func(ctx sdk.Context) log.Logger {
+		moduleName := fmt.Sprintf("x/%s_%s_%s", types.ModuleName, chainId, contractAddress)
+		return logger(ctx).With(log.ModuleKey, moduleName)
+	}
+	return newlogger
+}
+
+func GetVmLoggerExtended(
+	logger func(ctx sdk.Context) log.Logger,
+	chainId string,
+	contractAddress string,
+) func(ctx sdk.Context) log.Logger {
+	newlogger := func(ctx sdk.Context) log.Logger {
+		moduleName := fmt.Sprintf("x/%s_extended_%s_%s", types.ModuleName, chainId, contractAddress)
+		return logger(ctx).With(log.ModuleKey, moduleName)
+	}
+	return newlogger
+}
+
 func ExecuteWasmInterpreted(
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
@@ -283,7 +307,7 @@ func ExecuteWasmInterpreted(
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
 		Ctx:             ctx,
-		Logger:          logger,
+		Logger:          GetVmLogger(logger, env.Chain.ChainIdFull, env.Contract.Address.String()),
 		GasMeter:        gasMeter,
 		Env:             &env,
 		ContractStore:   kvstore,
@@ -403,7 +427,7 @@ func ExecuteWasm(
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
 		Ctx:             ctx,
-		Logger:          logger,
+		Logger:          GetVmLogger(logger, env.Chain.ChainIdFull, env.Contract.Address.String()),
 		GasMeter:        gasMeter,
 		Env:             &env,
 		ContractStore:   kvstore,

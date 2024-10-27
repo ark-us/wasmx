@@ -376,7 +376,7 @@ func StartRPC(svrCtx *server.Context, ctx context.Context, app servertypes.Appli
 	env := Environment{app: app, networkWrap: networkWrap, serverConfig: svrCtx.Config, config: cfg}
 	routes := env.GetRoutes()
 	wm := WebsocketManager{logger: logger}
-	rpcLogger := servercmtlog.CometLoggerWrapper{Logger: logger.With("module", "rpc-server")}
+	rpcLogger := servercmtlog.CometLoggerWrapper{Logger: logger.With(log.ModuleKey, "rpc-server")}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/websocket", wm.WebsocketHandler)
 	cometjsonserver.RegisterRPCFuncs(mux, routes, rpcLogger)

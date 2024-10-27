@@ -60,7 +60,7 @@ func (*MockApiCtx) StartChainApis(
 
 func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	// level := "network:debug,wasmx:debug,*:info"
-	// filter, _ := log.ParseLogLevel(level)
+	// filter, _ := multichain.ParseLogLevel(level)
 	// logger := log.NewLogger(
 	// 	os.Stderr,
 	// 	log.LevelOption(1), // info=1

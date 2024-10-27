@@ -180,7 +180,7 @@ func NewBackend(
 		ctx:                 ctx,
 		clientCtx:           clientCtx,
 		queryClient:         rpctypes.NewQueryClient(clientCtx),
-		logger:              logger.With("module", "backend"),
+		logger:              logger.With(log.ModuleKey, "backend"),
 		chainID:             evmChainID,
 		cfg:                 appConf,
 		chainConfig:         &conf,

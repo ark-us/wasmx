@@ -60,7 +60,7 @@ func NewKeeperSlashing(
 }
 
 func (k *KeeperSlashing) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.SlashingModuleName()), "chain_id", ctx.ChainID())
+	return ctx.Logger().With(log.ModuleKey, fmt.Sprintf("x/%s", types.SlashingModuleName()), "chain_id", ctx.ChainID())
 }
 
 // GetAuthority returns the module's authority.

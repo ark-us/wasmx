@@ -421,7 +421,7 @@ func InitializeStateSync(
 		proxy.NewAppConnQuery(abciClient, proxyMetrics),
 		ssMetrics,
 	)
-	stateSyncReactor.SetLogger(logger.With("module", "statesync"))
+	stateSyncReactor.SetLogger(logger.With(log.ModuleKey, "statesync"))
 
 	// state, genDoc, err := node.LoadStateFromDBOrGenesisDocProvider(stateDB, genesisDocProvider(chainId))
 
