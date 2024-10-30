@@ -181,6 +181,7 @@ func (suite *KeeperTestSuite) SetupTest() {
 		require.NoError(t, err)
 		suite.SetupApp(chainId, chaincfg, int32(i))
 	}
+	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 }
 
 func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfig, index int32) {
@@ -561,32 +562,35 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 		lastInterval = "0"
 	}
 
-	// if strings.Contains(currentState, "Tendermint-P2P") && strings.Contains(currentState, "Proposer") {
-	// 	parts := strings.Split(currentState, ".")
-	// 	currentState = strings.Join(parts[0:(len(parts)-1)], ".")
-	// }
-
 	app := suite.chain.App
-	cb := func(goctx context.Context) (any, error) {
-		// msg1 := []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
-		// msg1 := []byte(`{"delay":"heartbeatTimeout","state":"#RAFT-FULL-1.initialized.Leader.active","intervalId":2}`)
-		msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
+	cb := func(blockDelay, currentState, lastInterval string) func(goctx context.Context) (any, error) {
+		return func(goctx context.Context) (any, error) {
+			msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
 
-		_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
-			Sender:   wasmxtypes.ROLE_CONSENSUS,
-			Contract: wasmxtypes.ROLE_CONSENSUS,
-			Msg:      msg1,
-		})
-		if err != nil {
-			return nil, err
+			_, err := suite.chain.App.NetworkKeeper.ExecuteEntryPoint(suite.chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+				Sender:   wasmxtypes.ROLE_CONSENSUS,
+				Contract: wasmxtypes.ROLE_CONSENSUS,
+				Msg:      msg1,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return nil, nil
 		}
-		return nil, nil
 	}
-	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
+	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb(blockDelay, currentState, lastInterval))
 	if err != nil {
 		return nil, err
 	}
 
+	if strings.Contains(strings.ToLower(currentState), "ondemand") {
+		lastInterval = suite.GetLastInterval(suite.chain.GetContext())
+		currentState = suite.GetCurrentState(suite.chain.GetContext())
+		_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb("batchTimeout", currentState, lastInterval))
+		if err != nil {
+			return nil, err
+		}
+	}
 	lastBlock := suite.App().LastBlockHeight()
 	res, err := suite.GetBlock(suite.chain.GetContext(), lastBlock)
 	if err != nil {

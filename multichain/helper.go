@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -59,16 +60,16 @@ func (*MockApiCtx) StartChainApis(
 }
 
 func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
-	// level := "network:debug,wasmx:debug,*:info"
-	// filter, _ := multichain.ParseLogLevel(level)
-	// logger := log.NewLogger(
-	// 	os.Stderr,
-	// 	log.LevelOption(1), // info=1
-	// 	log.FilterOption(filter),
-	// 	log.TimeFormatOption(time.RFC3339),
-	// )
-	logger := log.NewNopLogger()
-
+	// level := "x/wasmx:debug,*:info"
+	level := "error"
+	filter, _ := ParseLogLevel(level)
+	logger := log.NewLogger(
+		os.Stderr,
+		// log.LevelOption(1), // info=1
+		log.FilterOption(filter),
+		log.TimeFormatOption(time.RFC3339),
+	)
+	// logger := log.NewNopLogger()
 	db := dbm.NewMemDB()
 	appOpts := DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, homeDir)
