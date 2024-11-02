@@ -609,7 +609,7 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 		Msg:    msgbz,
 		Funds:  funds,
 	}
-	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, 15000000, nil)
 	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
@@ -620,7 +620,7 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 }
 
 func (s *AppContext) ExecuteContract(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {
-	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 1500000, nil)
+	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 10000000, nil)
 }
 
 func (s *AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) *abci.ExecTxResult {

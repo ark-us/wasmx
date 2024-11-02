@@ -141,6 +141,9 @@ var (
 	//go:embed 51.level0_ondemand_0.0.1.wasm
 	level0_ondemand_contract []byte
 
+	//go:embed 60.roles_0.0.1.wasm
+	roles_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -247,6 +250,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = gov_cont_contract
 	case types.AUTH_v001:
 		wasmbin = auth_contract
+	case types.ROLES_v001:
+		wasmbin = roles_contract
 	case types.SLASHING_v001:
 		wasmbin = slashing_contract
 	case types.DISTRIBUTION_v001:

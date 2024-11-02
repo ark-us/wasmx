@@ -9,6 +9,8 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	mcodec "mythos/v1/codec"
 )
 
 type SystemContracts = []SystemContract
@@ -69,6 +71,8 @@ var ADDR_INTERPRETER_TAY = "0x0000000000000000000000000000000000000050"
 var ADDR_LEVEL0_ONDEMAND = "0x0000000000000000000000000000000000000051"
 var ADDR_LEVEL0_ONDEMAND_LIBRARY = "0x0000000000000000000000000000000000000052"
 
+var ADDR_ROLES = "0x0000000000000000000000000000000000000060"
+
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func StarterPrecompiles() SystemContracts {
@@ -85,6 +89,15 @@ func StarterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      false,
 			Role:        ROLE_AUTH,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_ROLES,
+			Label:       ROLES_v001,
+			InitMessage: initMsg,
+			Pinned:      false,
+			Role:        ROLE_ROLES,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -242,12 +255,12 @@ func BasePrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal init message")
+		panic("BasePrecompiles: cannot marshal init message")
 	}
 
 	storageInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"initialBlockIndex":1}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal storageInitMsg message")
+		panic("BasePrecompiles: cannot marshal storageInitMsg message")
 	}
 	return []SystemContract{
 		{
@@ -334,14 +347,14 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 	// note we use ROLE_BANK for redirected messages through cosmosmod
 	bankInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"authorities":["%s","%s","%s","%s","%s"]}`, ROLE_STAKING, ROLE_GOVERNANCE, ROLE_BANK, feeCollectorBech32, mintBech32))})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal bankInitMsg message")
+		panic("CosmosPrecompiles: cannot marshal bankInitMsg message")
 	}
 
 	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
 	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
 	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal govInitMsg message")
+		panic("CosmosPrecompiles: cannot marshal govInitMsg message")
 	}
 
 	return []SystemContract{
@@ -423,20 +436,20 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 func HookPrecompiles() SystemContracts {
 	hooksbz, err := json.Marshal(DEFAULT_HOOKS)
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooks message")
+		panic("HookPrecompiles: cannot marshal hooks message")
 	}
 	hooksInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksbz))})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsg message")
+		panic("HookPrecompiles: cannot marshal hooksInitMsg message")
 	}
 
 	hooksnoncbz, err := json.Marshal(DEFAULT_HOOKS_NONC)
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooks nonc message")
+		panic("HookPrecompiles: cannot marshal hooks nonc message")
 	}
 	hooksInitMsgNonC, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"hooks":%s}`, hooksnoncbz))})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal hooksInitMsgNonC message")
+		panic("HookPrecompiles: cannot marshal hooksInitMsgNonC message")
 	}
 	return []SystemContract{
 		{
@@ -469,52 +482,52 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 
 	raftInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal raftInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal raftInitMsg message")
 	}
 
 	tendermintInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":15000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal tendermintInitMsg message")
 	}
 
 	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"2000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":15000},{"key":"timeoutPrevote","value":15000},{"key":"timeoutPrecommit","value":15000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal tendermintInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal tendermintInitMsg message")
 	}
 
 	avaInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"sampleSize","value":"2"},{"key":"betaThreshold","value":2},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":80}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal avaInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal avaInitMsg message")
 	}
 
 	timeInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"chain_id":"time_666-1","interval_ms":100}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal timeInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal timeInitMsg message")
 	}
 
 	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":3000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal level0InitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal level0InitMsg message")
 	}
 
-	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"current_level","value":0},{"key":"min_validators_count","value":%d},{"key":"enable_eid_check","value":%t},{"key":"erc20CodeId","value":27},{"key":"derc20CodeId","value":28},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`, minValidatorCount, enableEIDCheck))})
+	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"current_level","value":0},{"key":"min_validators_count","value":%d},{"key":"enable_eid_check","value":%t},{"key":"erc20CodeId","value":28},{"key":"derc20CodeId","value":29},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`, minValidatorCount, enableEIDCheck))})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal lobbyInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal lobbyInitMsg message")
 	}
 
 	mutichainLocalInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"ids":[],"initialPorts":%s}`, initialPortValues))})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal mutichainLocalInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal mutichainLocalInitMsg message")
 	}
 
 	metaregistryInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"params":{"current_level":0}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal metaregistryInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal metaregistryInitMsg message")
 	}
 
 	level0OnDemandInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":2000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000},{"key":"batchTimeout","value":1000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
-		panic("DefaultSystemContracts: cannot marshal level0OnDemandInitMsg message")
+		panic("ConsensusPrecompiles: cannot marshal level0OnDemandInitMsg message")
 	}
 
 	return []SystemContract{
@@ -693,7 +706,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 }
 
 func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool) SystemContracts {
-	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%t,"erc20CodeId":27,"derc20CodeId":28,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck))})
+	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%t,"erc20CodeId":28,"derc20CodeId":29,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck))})
 	if err != nil {
 		panic("MultiChainPrecompiles: cannot marshal mutichainInitMsg message")
 	}
@@ -738,7 +751,7 @@ func ChatPrecompiles() SystemContracts {
 	}
 }
 
-func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
+func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues)
 	for i, val := range consensusPrecompiles {
 		if val.Label == CONSENSUS_TENDERMINTP2P {
@@ -756,10 +769,15 @@ func DefaultSystemContracts(feeCollectorBech32 string, mintBech32 string, minVal
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
+
+	precompiles, err := FillRoles(precompiles, accBech32Codec)
+	if err != nil {
+		panic(err)
+	}
 	return precompiles
 }
 
-func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
+func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
 	// DEFAULT_HOOKS_NONC
 	hooksNonC := []Hook{
 		{
@@ -821,6 +839,7 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, min
 			consensusPrecompiles[i].Role = ROLE_CONSENSUS
 		}
 	}
+	// initialize roles
 
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
@@ -832,6 +851,11 @@ func DefaultTimeChainContracts(feeCollectorBech32 string, mintBech32 string, min
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
+
+	precompiles, err = FillRoles(precompiles, accBech32Codec)
+	if err != nil {
+		panic(err)
+	}
 	return precompiles
 }
 
@@ -936,4 +960,27 @@ func ValidateNonZeroAddress(address string) error {
 		)
 	}
 	return ValidateAddress(address)
+}
+
+func FillRoles(precompiles SystemContracts, accBech32Codec mcodec.AccBech32Codec) (SystemContracts, error) {
+	roles := make([]RoleJSON, 0)
+	for _, precompile := range precompiles {
+		prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
+		roles = append(roles, RoleJSON{Role: precompile.Role, Label: precompile.Label, ContractAddress: prefixedAddr.String()})
+	}
+	msgInit := RolesGenesis{Roles: roles}
+	msgInitBz, err := json.Marshal(msgInit)
+	if err != nil {
+		return nil, err
+	}
+	msgbz, err := json.Marshal(&WasmxExecutionMessage{Data: msgInitBz})
+	if err != nil {
+		return nil, err
+	}
+	for i, precompile := range precompiles {
+		if precompile.Role == ROLE_ROLES {
+			precompiles[i].InitMessage = msgbz
+		}
+	}
+	return precompiles, nil
 }

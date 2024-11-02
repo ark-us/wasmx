@@ -116,7 +116,7 @@ type WasmxCosmosHandler interface {
 	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
 	WithNewAddress(addr mcodec.AccAddressPrefixed) WasmxCosmosHandler
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
-	GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string
+	GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) string
 	JSONCodec() codec.JSONCodec
 	GetAlias(addr mcodec.AccAddressPrefixed) (mcodec.AccAddressPrefixed, bool)
 	Codec() codec.Codec
@@ -174,19 +174,27 @@ var DEFAULT_SYS_DEP = EWASM_ENV_1
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_ENV_1:            true,
 	WASMX_ENV_2:            true,
+	EWASM_ENV_0:            true,
 	EWASM_ENV_1:            true,
 	CW_ENV_8:               true,
 	WASMX_CONSENSUS_JSON_1: true,
+	SYS_ENV_1:              true,
+	WASI_SNAPSHOT_PREVIEW1: true,
+	WASI_UNSTABLE:          true,
 }
 
 var ROLE_EID_REGISTRY = "eid_registry"
 var ROLE_STORAGE = "storage"
 var ROLE_STAKING = "staking"
 var ROLE_BANK = "bank"
+var ROLE_DENOM = "denom"
 var ROLE_HOOKS = "hooks"
 var ROLE_HOOKS_NONC = "hooks_nonconsensus"
 var ROLE_GOVERNANCE = "gov"
 var ROLE_AUTH = "auth"
+
+// Note! role contract should not have any other depedencies aside from the host import interface
+var ROLE_ROLES = "roles"
 var ROLE_SLASHING = "slashing"
 var ROLE_DISTRIBUTION = "distribution"
 var ROLE_INTERPRETER = "interpreter"
@@ -253,6 +261,7 @@ var HOOKS_v001 = "hooks_0.0.1"
 var GOV_v001 = "gov_0.0.1"
 var GOV_CONT_v001 = "gov_cont_0.0.1"
 var AUTH_v001 = "auth_0.0.1"
+var ROLES_v001 = "roles_0.0.1"
 var SLASHING_v001 = "slashing_0.0.1"
 var DISTRIBUTION_v001 = "distribution_0.0.1"
 var CHAT_v001 = "chat_0.0.1"

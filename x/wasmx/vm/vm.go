@@ -328,8 +328,11 @@ func ExecuteWasmInterpreted(
 		context.ContractRouter[addrstr] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
+	selfContext := GetContractContext(context, env.Contract.Address.Bytes())
+	if selfContext == nil {
+		selfContext = buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 
+	}
 	contractstr := env.Contract.Address.String()
 
 	if selfContext == nil {
@@ -460,8 +463,11 @@ func ExecuteWasm(
 		context.ContractRouter[addrstr] = contractContext
 	}
 	// add itself
-	selfContext := buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
+	selfContext := GetContractContext(context, env.Contract.Address.Bytes())
+	if selfContext == nil {
+		selfContext = buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
 
+	}
 	contractstr := env.Contract.Address.String()
 
 	if selfContext == nil {

@@ -224,7 +224,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 
 		var wasmxGenState wasmxtypes.GenesisState
 		testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
-		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, 1, false, "{}")
+		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec, feeCollectorBech32, mintAddressBech32, 1, false, "{}")
 		genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
 	}
 	testApp, resInit := ibctesting.InitAppChain(t, testApp, genesisState, chainId)

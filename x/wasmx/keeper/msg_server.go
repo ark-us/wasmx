@@ -366,28 +366,28 @@ func (m msgServer) RegisterRole(goCtx context.Context, msg *types.MsgRegisterRol
 }
 
 func (m msgServer) DeregisterRole(goCtx context.Context, msg *types.MsgDeregisterRole) (*types.MsgDeregisterRoleResponse, error) {
-	if err := msg.ValidateBasic(); err != nil {
-		return nil, err
-	}
-	ctx := sdk.UnwrapSDKContext(goCtx)
+	// if err := msg.ValidateBasic(); err != nil {
+	// 	return nil, err
+	// }
+	// ctx := sdk.UnwrapSDKContext(goCtx)
 
-	authority := m.Keeper.GetAuthority()
-	if authority != msg.Authority {
-		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
-	}
+	// authority := m.Keeper.GetAuthority()
+	// if authority != msg.Authority {
+	// 	return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+	// }
 
-	contractAddress, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.ContractAddress)
-	if err != nil {
-		return nil, sdkerr.Wrap(err, "contract address")
-	}
+	// contractAddress, err := m.accBech32Codec.StringToAccAddressPrefixed(msg.ContractAddress)
+	// if err != nil {
+	// 	return nil, sdkerr.Wrap(err, "contract address")
+	// }
 
-	ctx.EventManager().EmitEvent(sdk.NewEvent(
-		types.EventTypeDeregisterRole,
-		sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
-		sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
-	))
+	// ctx.EventManager().EmitEvent(sdk.NewEvent(
+	// 	types.EventTypeDeregisterRole,
+	// 	sdk.NewAttribute(sdk.AttributeKeyModule, types.ModuleName),
+	// 	sdk.NewAttribute(types.AttributeKeyContractAddr, msg.ContractAddress),
+	// ))
 
-	m.Keeper.DeregisterRole(ctx, contractAddress)
+	// m.Keeper.DeregisterRole(ctx, contractAddress)
 
 	return &types.MsgDeregisterRoleResponse{}, nil
 }

@@ -334,10 +334,8 @@ func wasmxGetRoleByAddress(_context interface{}, callframe *wasmedge.CallingFram
 		return nil, wasmedge.Result_Fail
 	}
 	addr := sdk.AccAddress(addrbz)
-	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, addr)
-	if err != nil {
-		return nil, wasmedge.Result_Fail
-	}
+	contractAddr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(addr)
+	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, contractAddr)
 	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(role))
 	if err != nil {
 		return nil, wasmedge.Result_Fail
@@ -1077,6 +1075,22 @@ func wasmxCanonicalize(context interface{}, callframe *wasmedge.CallingFrame, pa
 	return returns, wasmedge.Result_Success
 }
 
+func wasmxValidateBech32Addr(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+	ctx := context.(*Context)
+	addrStrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
+	if err != nil {
+		return nil, wasmedge.Result_Fail
+	}
+	valid := int32(0)
+	_, err = mcodec.AccAddressPrefixedFromBech32(string(addrStrBz))
+	if err == nil {
+		valid = int32(1)
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = valid
+	return returns, wasmedge.Result_Success
+}
+
 func wasmxAddrEquivalent(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := _context.(*Context)
 	addr1StrBz, err := ctx.MemoryHandler.ReadMemFromPtr(callframe, params[0])
@@ -1343,6 +1357,7 @@ func BuildWasmxEnv2(context *Context) *wasmedge.Module {
 	env.AddFunction("ed25519Verify", wasmedge.NewFunction(functype_i32i32i32_i32, ed25519Verify, context, 0))
 	env.AddFunction("ed25519PubToHex", wasmedge.NewFunction(functype_i32_i32, ed25519PubToHex, context, 0))
 
+	env.AddFunction("validate_bech32_address", wasmedge.NewFunction(functype_i32_i32, wasmxValidateBech32Addr, context, 0))
 	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32_i32, wasmxHumanize, context, 0))
 	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32_i32, wasmxCanonicalize, context, 0))
 	env.AddFunction("addr_equivalent", wasmedge.NewFunction(functype_i32i32_i32, wasmxAddrEquivalent, context, 0))

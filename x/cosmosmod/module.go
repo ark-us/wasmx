@@ -12,6 +12,7 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
+	cdcaddress "cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -24,6 +25,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	"mythos/v1/multichain"
 	"mythos/v1/x/cosmosmod/client/cli"
@@ -44,11 +46,12 @@ var (
 type AppModuleBasic struct {
 	cdc        codec.BinaryCodec
 	ccdc       codec.Codec
+	addrCodec  cdcaddress.Codec
 	appCreator multichain.NewAppCreator
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc, ccdc: ccdc, appCreator: appCreator}
+func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
+	return AppModuleBasic{cdc: cdc, ccdc: ccdc, addrCodec: addrCodec, appCreator: appCreator}
 }
 
 // Name returns the name of the module as a string
@@ -68,7 +71,7 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
 func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesisState(mcfg.DenomUnit, mcfg.BaseDenomUnit, mcfg.Name))
+	return cdc.MustMarshalJSON(types.DefaultGenesisState(a.addrCodec.(mcodec.AccBech32Codec), mcfg.DenomUnit, mcfg.BaseDenomUnit, mcfg.Name))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form
@@ -125,10 +128,11 @@ func NewAppModule(
 	slashing keeper.KeeperSlashing,
 	distribution keeper.KeeperDistribution,
 	app mcfg.BaseApp,
+	addrCodec cdcaddress.Codec,
 	appCreator multichain.NewAppCreator,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc, ccdc, appCreator),
+		AppModuleBasic: NewAppModuleBasic(cdc, ccdc, addrCodec, appCreator),
 		bank:           bank,
 		staking:        staking,
 		gov:            gov,

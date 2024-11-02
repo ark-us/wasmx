@@ -22,6 +22,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	mcodec "mythos/v1/codec"
 	mcfg "mythos/v1/config"
 	"mythos/v1/multichain"
 	"mythos/v1/x/wasmx/client/cli"
@@ -71,7 +72,7 @@ func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	mintAddress, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
 	bootstrapAccount, _ := a.addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
 
-	return cdc.MustMarshalJSON(types.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress, 3, false, "{}"))
+	return cdc.MustMarshalJSON(types.DefaultGenesisState(a.addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 3, false, "{}"))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form

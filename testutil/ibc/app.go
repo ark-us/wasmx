@@ -82,6 +82,8 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 
 	bondAmt := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
 
+	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+
 	for i, val := range valSet.Validators {
 		pk, err := cryptocodec.FromTmPubKeyInterface(val.PubKey)
 		if err != nil {
@@ -127,7 +129,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 		// add genesis acc tokens and delegated tokens to total supply
 		totalSupply = totalSupply.Add(b.Coins.Add(sdk.NewCoin(chaincfg.BaseDenom, bondAmt))...)
 	}
-	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(chaincfg.DenomUnit, chaincfg.BaseDenomUnit)
+	bankGenesis := cosmosmodtypes.DefaultBankGenesisState(addrCodec.(mcodec.AccBech32Codec), chaincfg.DenomUnit, chaincfg.BaseDenomUnit)
 	bankGenesis.Supply = totalSupply
 	bankGenesis.Balances = balances
 
@@ -149,8 +151,6 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 	cosmosmodGenesis := cosmosmodtypes.NewGenesisState(*stakingGenesis, *bankGenesis, *govGenesis, *authGenesis, *slashingGenesis, *distributionGenesis)
 	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(cosmosmodGenesis)
 
-	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
-
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 
 	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
@@ -166,7 +166,7 @@ func BuildGenesisData(valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.Gen
 		return app, nil, err
 	}
 
-	wasmxGenesis := wasmxtypes.DefaultGenesisState(bootstrapAccount, feeCollector, mintAddress, 1, false, "{}")
+	wasmxGenesis := wasmxtypes.DefaultGenesisState(addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 1, false, "{}")
 	mydir, err := os.Getwd()
 	if err != nil {
 		panic(err)

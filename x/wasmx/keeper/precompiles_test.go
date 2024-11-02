@@ -192,7 +192,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 	s.Require().Equal(expected, qres)
 
 	calldata = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd"
-	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 1500000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calldata)}, nil, nil, 5500000, nil)
 	s.Require().NoError(err)
 	s.Require().True(res.IsErr(), res.GetLog())
 

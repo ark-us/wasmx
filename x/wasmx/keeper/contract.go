@@ -124,14 +124,8 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPr
 	}
 	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 	filepath := k.wasmvm.GetFilePath(codeInfo)
-	label := k.GetRoleLabelByContract(ctx, addr.Bytes())
-	role := k.GetRoleByLabel(ctx, label)
-	rolename := ""
-	if role != nil {
-		rolename = role.Role
-	}
 
-	return types.ContractDependency{
+	cdep := types.ContractDependency{
 		Address:       addr,
 		StoreKey:      prefixStoreKey,
 		FilePath:      filepath,
@@ -141,9 +135,25 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPr
 		CodeId:        contractInfo.CodeId,
 		SystemDepsRaw: codeInfo.Deps,
 		StorageType:   contractInfo.StorageType,
-		Role:          rolename,
-		Label:         label,
-	}, nil
+	}
+
+	// shortcut for roles contract, to avoid cycle
+	if bytes.Equal(k.GetRoleContractAddress(ctx), addr.Bytes()) {
+		cdep.Role = types.ROLE_ROLES
+		cdep.Label = contractInfo.Label
+		return cdep, nil
+	}
+
+	label := k.GetRoleLabelByContract(ctx, addr)
+	role := k.GetRoleByLabel(ctx, label)
+	rolename := ""
+	if role != nil {
+		rolename = role.Role
+	}
+
+	cdep.Role = rolename
+	cdep.Label = label
+	return cdep, nil
 }
 
 func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
@@ -574,7 +584,6 @@ func (k *Keeper) pinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderP
 	}
 	codeInfo.Pinned = true
 	k.storeCodeInfo(ctx, codeId, *codeInfo)
-	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypePinCode,
@@ -1009,11 +1018,15 @@ func (k *Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []t
 	var sdeps []types.SystemDep
 	for _, dep := range depLabels {
 		if dep[0:2] != "0x" {
-			sdep, err := k.SystemDepFromLabel(ctx, dep)
-			if err != nil {
-				sdep = types.SystemDep{
-					Label: dep,
-					Role:  dep,
+			sdep := types.SystemDep{
+				Label: dep,
+				Role:  dep,
+			}
+			// supported host interfaces are not roles for contracts
+			if _, ok := types.SUPPORTED_HOST_INTERFACES[dep]; !ok {
+				_sdep, err := k.SystemDepFromLabel(ctx, dep)
+				if err == nil {
+					sdep = _sdep
 				}
 			}
 			sdeps = append(sdeps, sdep)

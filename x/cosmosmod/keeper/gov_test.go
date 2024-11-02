@@ -150,7 +150,7 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensusStr}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus.Bytes())
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)

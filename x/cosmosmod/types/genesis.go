@@ -16,6 +16,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	mcodec "mythos/v1/codec"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 )
 
@@ -122,10 +123,10 @@ func DefaultStakingGenesisState(baseDenom string) *StakingGenesisState {
 	}
 }
 
-func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32) []DenomDeploymentInfo {
+func DefaultBankDenoms(accBech32Codec mcodec.AccBech32Codec, denomUnit string, baseDenomUnit uint32) []DenomDeploymentInfo {
 	erc20jsonCodeId := -1
 	derc20jsonCodeId := -1
-	for i, sysc := range wasmxtypes.DefaultSystemContracts("", "", 1, false, "{}") {
+	for i, sysc := range wasmxtypes.DefaultSystemContracts(accBech32Codec, "", "", 1, false, "{}") {
 		if sysc.Label == wasmxtypes.ERC20_v001 {
 			erc20jsonCodeId = i + 1
 		} else if sysc.Label == wasmxtypes.DERC20_v001 {
@@ -251,8 +252,8 @@ func DefaultBankDenoms(denomUnit string, baseDenomUnit uint32) []DenomDeployment
 }
 
 // DefaultBankGenesisState returns a default bank module genesis state.
-func DefaultBankGenesisState(denomUnit string, baseDenomUnit uint32) *BankGenesisState {
-	return NewBankGenesisState(banktypes.DefaultParams(), []banktypes.Balance{}, sdk.Coins{}, DefaultBankDenoms(denomUnit, baseDenomUnit), []banktypes.SendEnabled{})
+func DefaultBankGenesisState(accBech32Codec mcodec.AccBech32Codec, denomUnit string, baseDenomUnit uint32) *BankGenesisState {
+	return NewBankGenesisState(banktypes.DefaultParams(), []banktypes.Balance{}, sdk.Coins{}, DefaultBankDenoms(accBech32Codec, denomUnit, baseDenomUnit), []banktypes.SendEnabled{})
 }
 
 // DefaultGovGenesisState returns a default bank module genesis state.
@@ -302,10 +303,10 @@ func DefaultAuthGenesisState() *AuthGenesisState {
 
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
-func DefaultGenesisState(denomUnit string, baseDenomUnit uint32, baseDenom string) *GenesisState {
+func DefaultGenesisState(accBech32Codec mcodec.AccBech32Codec, denomUnit string, baseDenomUnit uint32, baseDenom string) *GenesisState {
 	return &GenesisState{
 		Staking: *DefaultStakingGenesisState(baseDenom),
-		Bank:    *DefaultBankGenesisState(denomUnit, baseDenomUnit),
+		Bank:    *DefaultBankGenesisState(accBech32Codec, denomUnit, baseDenomUnit),
 		Gov:     *DefaultGovGenesisState(),
 		Auth:    *DefaultAuthGenesisState(),
 	}

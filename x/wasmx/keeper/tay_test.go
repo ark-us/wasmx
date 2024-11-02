@@ -219,7 +219,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 	s.Require().Equal("hello", string(resp))
 
 	data = []byte(`{"revert":{}}`)
-	eres, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1500000, nil)
+	eres, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 5500000, nil)
 	s.Require().NoError(err)
 	s.Require().True(eres.IsErr())
 	s.Require().Contains(eres.Log, "someerror")
@@ -266,14 +266,13 @@ func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
 
 	data = []byte(`{"getAddressByRole":{"a":"bank"}}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	addr, found := appA.App.WasmxKeeper.GetContractAddressByRole(appA.Context(), "bank")
-	s.Require().True(found)
-	addrprefix := appA.BytesToAccAddressPrefixed(addr)
+	addrprefix, err := appA.App.WasmxKeeper.GetAddressOrRole(appA.Context(), "bank")
+	s.Require().NoError(err)
 	s.Require().Equal(addrprefix.String(), string(resp))
 
 	data = []byte(fmt.Sprintf(`{"getRoleByAddress":{"a":"%s"}}`, addrprefix.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	role := appA.App.WasmxKeeper.GetRoleByContractAddress(appA.Context(), addr)
+	role := appA.App.WasmxKeeper.GetRoleByContractAddress(appA.Context(), addrprefix)
 	s.Require().Equal(role, string(resp))
 
 	data = []byte(`{"emitCosmosEvents":[{"type":"newtype","attributes":[{"key":"somekey","value":"someval","index":true}]}]}`)

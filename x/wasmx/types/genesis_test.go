@@ -3,12 +3,14 @@ package types_test
 import (
 	"testing"
 
-	"mythos/v1/x/wasmx/types"
-
 	"github.com/stretchr/testify/require"
+
+	mcodec "mythos/v1/codec"
+	"mythos/v1/x/wasmx/types"
 )
 
 func TestGenesisState_Validate(t *testing.T) {
+	addrCodec := mcodec.NewAccBech32Codec("myth", mcodec.NewAddressPrefixedFromAcc).(mcodec.AccBech32Codec)
 	for _, tc := range []struct {
 		desc     string
 		genState *types.GenesisState
@@ -16,7 +18,7 @@ func TestGenesisState_Validate(t *testing.T) {
 	}{
 		{
 			desc:     "default is valid",
-			genState: types.DefaultGenesisState("feecollector", "mint", "bootstrap", 1, false, "{}"),
+			genState: types.DefaultGenesisState(addrCodec, "feecollector", "mint", "bootstrap", 1, false, "{}"),
 			valid:    true,
 		},
 		{

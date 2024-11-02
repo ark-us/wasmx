@@ -75,7 +75,7 @@ func (k *Keeper) ActivateSystemContract(
 	contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
 	// register role first, to be able to initialize the account keeper
 	if contract.Role != "" {
-		k.RegisterRole(ctx, contract.Role, contract.Label, contractAddress)
+		k.RegisterRoleInitial(ctx, contract.Role, contract.Label, contractAddress)
 	}
 	if contract.Native {
 		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr.String(), "", contract.InitMessage, contract.Label)
@@ -97,6 +97,12 @@ func (k *Keeper) ActivateSystemContract(
 	}
 
 	k.ImportContractState(ctx, contractAddress.Bytes(), contract.StorageType, contract.ContractState)
+
+	// this must be stored separately, as the gateway for other roles
+	// do this after instantiation to avoid a cycle for the ROLES contract instantiation
+	if contract.Role == types.ROLE_ROLES {
+		k.SetRoleContractAddress(ctx, contractAddress.Bytes())
+	}
 
 	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddress.String(), "hex_address", contract.Address, "code_id", codeID, "role", contract.Role)
 	return nil

@@ -184,7 +184,7 @@ func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole str
 	}
 	return mcodec.AccAddressPrefixed{}, err
 }
-func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr sdk.AccAddress) string {
+func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) string {
 	return h.Keeper.GetRoleByContractAddress(ctx, addr)
 }
 

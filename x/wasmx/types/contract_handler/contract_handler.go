@@ -29,7 +29,7 @@ type ContractHandler interface {
 }
 
 type KeeperInterface interface {
-	GetContractAddressByRole(ctx sdk.Context, role string) (sdk.AccAddress, bool)
+	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
 	Query(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg types.RawContractMessage, funds sdk.Coins, deps []string) ([]byte, error)
 	Execute(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg types.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
 
@@ -67,13 +67,13 @@ func (m ContractHandlerMap) Query(ctx sdk.Context, req ContractHandlerMessage) (
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "json encoding failed: %s", err.Error())
 	}
 
-	contractAddress, found := m.Keeper.GetContractAddressByRole(ctx, req.Role)
-	if !found {
+	contractAddress, err := m.Keeper.GetAddressOrRole(ctx, req.Role)
+	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "role not registered")
 	}
 
 	tmpctx, _ := ctx.CacheContext()
-	responseBz, err := m.Keeper.Query(tmpctx, m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress), m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(req.Sender), msgbz, nil, nil)
+	responseBz, err := m.Keeper.Query(tmpctx, contractAddress, m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(req.Sender), msgbz, nil, nil)
 	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "query failed: %s", err.Error())
 	}
@@ -105,12 +105,12 @@ func (m ContractHandlerMap) Execute(ctx sdk.Context, req ContractHandlerMessage)
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "json encoding failed: %s", err.Error())
 	}
 
-	contractAddress, found := m.Keeper.GetContractAddressByRole(ctx, req.Role)
-	if !found {
+	contractAddress, err := m.Keeper.GetAddressOrRole(ctx, req.Role)
+	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "role not registered")
 	}
 
-	response, err := m.Keeper.Execute(ctx, m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress), m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(req.Sender), msgbz, nil, nil, false)
+	response, err := m.Keeper.Execute(ctx, contractAddress, m.Keeper.AccBech32Codec().BytesToAccAddressPrefixed(req.Sender), msgbz, nil, nil, false)
 	if err != nil {
 		return nil, sdkerr.Wrapf(types.ErrInvalidCoreContractCall, "execution failed: %s", err.Error())
 	}

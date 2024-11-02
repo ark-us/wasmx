@@ -105,7 +105,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 		Msg:    msgbz,
 		Funds:  nil,
 	}
-	res, err = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 5000000, nil)
+	res, err = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 15000000, nil)
 	s.Require().NoError(err)
 	suite.Require().True(res.IsErr(), res.GetLog())
 	suite.Require().Contains(res.GetLog(), "invalid address for system contracts")

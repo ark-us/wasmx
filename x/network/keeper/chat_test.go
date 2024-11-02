@@ -62,11 +62,11 @@ func (suite *KeeperTestSuite) TestChat() {
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
-	chatAddress, found := appA.App.WasmxKeeper.GetContractAddressByRole(appA.Context(), wasmxtypes.ROLE_CHAT)
-	s.Require().True(found)
+	chatAddress, err := appA.App.WasmxKeeper.GetAddressOrRole(appA.Context(), wasmxtypes.ROLE_CHAT)
+	s.Require().NoError(err)
 
 	msg := []byte(`{"JoinRoom":{"roomId":"room101"}}`)
-	_, err := suite.broadcastMessage(msg, sender, chatAddress)
+	_, err = suite.broadcastMessage(msg, sender, chatAddress.Bytes())
 	suite.Require().NoError(err)
 
 	// we just need sender2 to send a transaction, in order to have its public key registered
@@ -77,7 +77,7 @@ func (suite *KeeperTestSuite) TestChat() {
 	msg = []byte(`{"GetRooms":{}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
 		Sender:   appA.MustAccAddressToString(sender.Address),
-		Contract: appA.MustAccAddressToString(chatAddress),
+		Contract: chatAddress.String(),
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -90,19 +90,19 @@ func (suite *KeeperTestSuite) TestChat() {
 	suite.Require().Equal(1, len(rooms[0].Peers))
 	suite.Require().Equal(sender.Address, rooms[0].Peers[0].Address)
 
-	suite.sendMessage(sender, "room101", "hello1", chatAddress)
-	suite.sendMessage(sender, "room101", "hello2", chatAddress)
-	suite.sendMessage(sender, "room101", "hello3", chatAddress)
-	suite.sendMessage(sender, "room101", "hello4", chatAddress)
-	suite.sendMessage(sender, "room101", "hello5", chatAddress)
-	suite.sendMessage(sender, "room101", "hello6", chatAddress)
-	suite.sendMessage(sender, "room101", "hello7", chatAddress)
-	suite.sendMessage(sender, "room101", "hello8", chatAddress)
-	suite.sendMessage(sender, "room101", "hello9", chatAddress)
-	suite.sendMessage(sender, "room101", "hello10", chatAddress)
-	suite.sendMessage(sender, "room101", "hello11", chatAddress)
+	suite.sendMessage(sender, "room101", "hello1", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello2", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello3", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello4", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello5", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello6", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello7", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello8", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello9", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello10", chatAddress.Bytes())
+	suite.sendMessage(sender, "room101", "hello11", chatAddress.Bytes())
 
-	block := suite.getBlock(sender, "room101", 11, chatAddress)
+	block := suite.getBlock(sender, "room101", 11, chatAddress.Bytes())
 	suite.Require().Equal(int64(11), block.Header.Height)
 	decodedTx, err := appA.App.TxDecode(block.Data)
 	suite.Require().NoError(err)
@@ -112,15 +112,15 @@ func (suite *KeeperTestSuite) TestChat() {
 	err = json.Unmarshal(msgExec.Msg, &msgexecmsg)
 	suite.Require().NoError(err)
 	suite.Require().Contains(string(msgexecmsg.Data), "hello11")
-	suite.sendMessageFromOther(sender2, "room101", "hello12", chatAddress)
+	suite.sendMessageFromOther(sender2, "room101", "hello12", chatAddress.Bytes())
 
 	msg = []byte(`{"GetBlock":{"roomId":"room101","index":12}}`)
-	qrespbz = suite.queryChat(sender, chatAddress, msg)
+	qrespbz = suite.queryChat(sender, chatAddress.Bytes(), msg)
 	err = json.Unmarshal(qrespbz, &block)
 	suite.Require().NoError(err)
 
 	msg = []byte(`{"GetBlocks":{"roomId":"room101"}}`)
-	qrespbz = suite.queryChat(sender, chatAddress, msg)
+	qrespbz = suite.queryChat(sender, chatAddress.Bytes(), msg)
 	blocksbz := qrespbz
 	var blocks []ChatBlock
 	err = json.Unmarshal(qrespbz, &blocks)
@@ -128,7 +128,7 @@ func (suite *KeeperTestSuite) TestChat() {
 	suite.Require().Equal(12, len(blocks))
 
 	msg = []byte(`{"GetMessages":{"roomId":"room101"}}`)
-	qrespbz = suite.queryChat(sender, chatAddress, msg)
+	qrespbz = suite.queryChat(sender, chatAddress.Bytes(), msg)
 	var messages []ChatMessage
 	err = json.Unmarshal(qrespbz, &messages)
 	suite.Require().NoError(err)

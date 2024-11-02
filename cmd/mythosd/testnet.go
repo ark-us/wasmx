@@ -907,10 +907,12 @@ func initGenFiles(
 		panic(err)
 	}
 
+	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
+
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
-	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(mcfg.DenomUnit, uint32(mcfg.BaseDenomUnit))
+	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(addrCodec.(mcodec.AccBech32Codec), mcfg.DenomUnit, uint32(mcfg.BaseDenomUnit))
 	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
@@ -942,7 +944,6 @@ func initGenFiles(
 	mintGenState.Params.MintDenom = mcfg.BaseDenom
 	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
-	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
 	if err != nil {
 		panic(err)
@@ -959,7 +960,7 @@ func initGenFiles(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
@@ -1018,14 +1019,14 @@ func initGenFilesLevel0(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
 
-	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(chaincfg.DenomUnit, uint32(chaincfg.BaseDenomUnit))
+	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(addrCodec.(mcodec.AccBech32Codec), chaincfg.DenomUnit, uint32(chaincfg.BaseDenomUnit))
 	cosmosmodGenState.Bank.Balances = []banktypes.Balance{genBalance}
 	cosmosmodGenState.Staking.Params.BondDenom = chaincfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = chaincfg.BaseDenom

@@ -438,7 +438,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus.Bytes())
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
@@ -569,7 +569,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	proposal := &wasmxtypes.MsgRegisterRole{Authority: appA.App.WasmxKeeper.GetAuthority(), Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensus.String()}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus.Bytes())
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)

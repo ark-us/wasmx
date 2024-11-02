@@ -29,11 +29,6 @@ type WasmxJsonLog struct {
 // getCallData(): ArrayBuffer
 func getCallData(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
 	ctx := context.(*Context)
-
-	bz := ctx.Env.CurrentCall.CallData
-	if len(bz) > 100 {
-		bz = bz[0:100]
-	}
 	ptr, err := ctx.MemoryHandler.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, ctx.Env.CurrentCall.CallData)
 	if err != nil {
 		return nil, wasmedge.Result_Fail
