@@ -15,8 +15,6 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgExecuteContract{}, "wasmx/MsgExecuteContract", nil)
 	cdc.RegisterConcrete(&MsgCompileContract{}, "wasmx/MsgCompileContract", nil)
 	cdc.RegisterConcrete(&MsgExecuteEth{}, "wasmx/MsgExecuteEth", nil)
-	cdc.RegisterConcrete(&MsgRegisterRole{}, "wasmx/MsgRegisterRole", nil)
-	cdc.RegisterConcrete(&MsgDeregisterRole{}, "wasmx/MsgDeregisterRole", nil)
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
@@ -28,8 +26,6 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgExecuteContract{},
 		&MsgCompileContract{},
 		&MsgExecuteEth{},
-		&MsgRegisterRole{},
-		&MsgDeregisterRole{},
 	)
 
 	registry.RegisterImplementations(

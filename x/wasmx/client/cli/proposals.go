@@ -20,15 +20,14 @@ import (
 	"mythos/v1/x/wasmx/types"
 )
 
-// NewRegisterRoleProposalCmd returns a CLI command handler for registering a
-// role contract handler
-func NewRegisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+// NewProposalExecuteContractCmd returns a CLI command handler for executing any contract (public or internal)
+func NewProposalExecuteContractCmd(ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "register-role [role] [role_label] [contract_address]",
-		Args:    cobra.ExactArgs(3),
-		Short:   "Submit a governance proposal to register a contract for a system role.",
-		Long:    "Submit a governance proposal to register a contract for a system role.",
-		Example: fmt.Sprintf("$ %s tx wasmx register-role <role> <role_label> <contract-address> --title=<title> --description=<description> --deposit=<deposit> --from=<key_or_address>", version.AppName),
+		Use:     "propose-execution [contract_address] [json_args]",
+		Args:    cobra.ExactArgs(2),
+		Short:   "Submit a governance proposal to execute any contract",
+		Long:    "Submit a governance proposal to execute any contract",
+		Example: fmt.Sprintf("$ %s tx wasmx propose-execution <contract-address> <json_args> --title=<title> --description=<description> --deposit=<deposit> --from=<key_or_address>", version.AppName),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -64,9 +63,11 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAp
 				return err
 			}
 
-			role := args[0]
-			label := args[1]
-			contractAddress := args[2]
+			toAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			if err != nil {
+				return err
+			}
+			toAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
 
 			authority, err := mcctx.CustomAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
 			if err != nil {
@@ -74,14 +75,18 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAp
 			}
 			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
 
-			content := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: role, Label: label, ContractAddress: contractAddress}
+			msg, err := parseExecuteArgs(mcctx.CustomAddrCodec, toAddr, args[1], mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
+			if err != nil {
+				return err
+			}
+			msg.Sender = authority
 
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromAddr.String(), "", title, description, false)
+			proposal, err := gov1.NewMsgSubmitProposal([]sdk.Msg{&msg}, deposit, fromAddr.String(), "", title, description, false)
 			if err != nil {
 				return err
 			}
 
-			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, proposal)
 		},
 	}
 
@@ -98,84 +103,6 @@ func NewRegisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAp
 		panic(err)
 	}
 	flags.AddTxFlagsToCmd(cmd)
-	multichain.AddMultiChainFlagsToCmd(cmd)
-	return cmd
-}
-
-// NewDeregisterRoleProposalCmd returns a CLI command handler for registering a
-// deregistration of a webserver route smart contract handler
-func NewDeregisterRoleProposalCmd(ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "deregister-role [contract_address]",
-		Args:    cobra.ExactArgs(1),
-		Short:   "Submit a governance proposal to deregister a role contract handler.",
-		Long:    "Submit a governance proposal to deregister a role contract handler.",
-		Example: fmt.Sprintf("$ %s tx gov submit-legacy-proposal deregister-role <contract-address> --from=<key_or_address>", version.AppName),
-
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
-			if err != nil {
-				return err
-			}
-
-			title, err := cmd.Flags().GetString(cli.FlagTitle)
-			if err != nil {
-				return err
-			}
-
-			description, err := cmd.Flags().GetString(cli.FlagDescription)
-			if err != nil {
-				return err
-			}
-
-			depositStr, err := cmd.Flags().GetString(cli.FlagDeposit)
-			if err != nil {
-				return err
-			}
-
-			deposit, err := sdk.ParseCoinsNormalized(depositStr)
-			if err != nil {
-				return err
-			}
-
-			contractAddress := args[0]
-
-			authority, err := mcctx.CustomAddrCodec.BytesToString(sdk.AccAddress(address.Module(types.ROLE_GOVERNANCE)))
-			if err != nil {
-				return err
-			}
-			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-
-			content := &types.MsgDeregisterRole{Authority: authority, Title: title, Description: description, ContractAddress: contractAddress}
-
-			msg, err := gov1.NewMsgSubmitProposal([]sdk.Msg{content}, deposit, fromAddr.String(), "", title, description, false)
-			if err != nil {
-				return err
-			}
-			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
-			if err != nil {
-				return err
-			}
-			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
-		},
-	}
-
-	cmd.Flags().String(cli.FlagTitle, "", "title of proposal")
-	cmd.Flags().String(cli.FlagDescription, "", "description of proposal")
-	cmd.Flags().String(cli.FlagDeposit, "1amyt", "deposit of proposal")
-	if err := cmd.MarkFlagRequired(cli.FlagTitle); err != nil {
-		panic(err)
-	}
-	if err := cmd.MarkFlagRequired(cli.FlagDescription); err != nil {
-		panic(err)
-	}
-	if err := cmd.MarkFlagRequired(cli.FlagDeposit); err != nil {
-		panic(err)
-	}
 	multichain.AddMultiChainFlagsToCmd(cmd)
 	return cmd
 }

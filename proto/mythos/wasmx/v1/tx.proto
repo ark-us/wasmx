@@ -39,12 +39,6 @@ service Msg {
     rpc ExecuteWithOriginContract(MsgExecuteWithOriginContract) returns (MsgExecuteContractResponse);
     // ExecuteDelegate submits the given message data to a smart contract
     rpc ExecuteDelegateContract(MsgExecuteDelegateContract) returns (MsgExecuteDelegateContractResponse);
-
-    // gov authorized
-    // Register contract address for system role
-    rpc RegisterRole(MsgRegisterRole) returns (MsgRegisterRoleResponse);
-    // Deregister contract address for system role
-    rpc DeregisterRole(MsgDeregisterRole) returns (MsgDeregisterRoleResponse);
 }
 
 // MsgStoreCode submit Wasm code to the system
@@ -308,48 +302,3 @@ message MsgCompileContract {
 }
 
 message MsgCompileContractResponse {}
-
-// Gov Authorized
-
-// RegisterRouteProposal is a gov Content type to register a web server route
-message MsgRegisterRole {
-    option (cosmos.msg.v1.signer) = "authority";
-    option (amino.name) = "wasmx/MsgRegisterRole";
-
-    option (gogoproto.equal) = false;
-    option (gogoproto.goproto_getters) = true;
-
-    // authority is the address that controls the module.
-    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    // title of the proposal
-    string title = 2;
-    // description of the proposal
-    string description = 3;
-    // smart contract role
-    string role = 4;
-    // smart contract label
-    string label = 5;
-    // contract address in bech32 format
-    string contract_address = 6 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-message MsgRegisterRoleResponse {}
-
-message MsgDeregisterRole {
-    option (cosmos.msg.v1.signer) = "authority";
-    option (amino.name) = "wasmx/MsgDeregisterRole";
-
-    option (gogoproto.equal) = false;
-    option (gogoproto.goproto_getters) = true;
-
-    // authority is the address that controls the module.
-    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    // title of the proposal
-    string title = 2;
-    // description of the proposal
-    string description = 3;
-    // Contract address in bech32 format
-    string contract_address = 4 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-}
-
-message MsgDeregisterRoleResponse {}

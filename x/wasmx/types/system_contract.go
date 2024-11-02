@@ -965,8 +965,13 @@ func ValidateNonZeroAddress(address string) error {
 func FillRoles(precompiles SystemContracts, accBech32Codec mcodec.AccBech32Codec) (SystemContracts, error) {
 	roles := make([]RoleJSON, 0)
 	for _, precompile := range precompiles {
-		prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
-		roles = append(roles, RoleJSON{Role: precompile.Role, Label: precompile.Label, ContractAddress: prefixedAddr.String()})
+		if precompile.Role != "" {
+			if precompile.Label == "" {
+				panic(fmt.Sprintf("label cannot be empty for role %s", precompile.Role))
+			}
+			prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
+			roles = append(roles, RoleJSON{Role: precompile.Role, Label: precompile.Label, ContractAddress: prefixedAddr.String()})
+		}
 	}
 	msgInit := RolesGenesis{Roles: roles}
 	msgInitBz, err := json.Marshal(msgInit)

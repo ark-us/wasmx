@@ -66,8 +66,7 @@ func GetTxCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Comm
 		InstantiateContractCmd(ac, appCreator),
 		InstantiateContract2Cmd(ac, appCreator),
 		ExecuteContractCmd(ac, appCreator),
-		NewRegisterRoleProposalCmd(ac, appCreator),
-		NewDeregisterRoleProposalCmd(ac, appCreator),
+		NewProposalExecuteContractCmd(ac, appCreator),
 	)
 	return txCmd
 }

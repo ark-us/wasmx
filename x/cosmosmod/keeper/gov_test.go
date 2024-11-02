@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -146,8 +147,16 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	suite.Require().NoError(err)
 
 	newConsensusStr := newConsensus.String()
+	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
+	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"consensus","label":"%s","contract_address":"%s"}}`, newlabel, newConsensusStr))
+	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+	proposal := &wasmxtypes.MsgExecuteContract{
+		Sender:   authority,
+		Contract: rolesAddr.String(),
+		Msg:      msgbz,
+	}
 
-	proposal := &wasmxtypes.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "consensus", Label: newlabel, ContractAddress: newConsensusStr}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)

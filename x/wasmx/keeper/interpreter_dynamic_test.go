@@ -3,12 +3,15 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
@@ -26,7 +29,8 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	}
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
@@ -42,7 +46,18 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	description := "Register interpreter"
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	interpreterAddressStr := interpreterAddress.String()
-	proposal := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddressStr}
+
+	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
+
+	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"interpreter","label":"%s","contract_address":"%s"}}`, newlabel, interpreterAddressStr))
+	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+
+	proposal := &types.MsgExecuteContract{
+		Sender:   authority,
+		Contract: rolesAddr.String(),
+		Msg:      msgbz,
+	}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
 
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress)
