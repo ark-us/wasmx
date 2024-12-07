@@ -15,10 +15,8 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	mctx "mythos/v1/context"
-	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 
 	networktypes "mythos/v1/x/network/types"
 )
@@ -38,93 +36,93 @@ type WrapResult struct {
 }
 
 // PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
-func PrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func PrepareProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	var req abci.RequestPrepareProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	resp, err := ctx.GetApplication().PrepareProposal(&req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "PrepareProposal")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // ProcessProposal(*abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error)
-func ProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func ProcessProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req abci.RequestProcessProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	bapp := ctx.GetApplication()
 	resp, err := bapp.ProcessProposal(&req)
 
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ProcessProposal")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func OptimisticExecution(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func OptimisticExecution(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	resbz, err := asmem.ReadMemFromPtr(callframe, params[1])
+	resbz, err := rnh.ReadMemFromPtr(params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req abci.RequestProcessProposal
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var res abci.ResponseProcessProposal
 	err = json.Unmarshal(resbz, &res)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	bapp := ctx.GetApplication()
 	oe := bapp.GetOptimisticExecution()
@@ -140,47 +138,47 @@ func OptimisticExecution(_context interface{}, callframe *wasmedge.CallingFrame,
 	_, err = oe.WaitResult()
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	metainfo, err := mctx.GetExecutionMetaInfoEncoded(ctx.GoContextParent, ctx.GetCosmosHandler().Codec())
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	respbz, err := json.Marshal(&ResponseOptimisticExecution{MetaInfo: metainfo})
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // FinalizeBlock(*abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error)
-func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req WrapRequestFinalizeBlock
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	// set metainfo on the parent context, so it is available during execution
 	err = mctx.SetExecutionMetaInfo(ctx.GoContextParent, ctx.CosmosHandler.Codec(), req.MetaInfo)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	bapp := ctx.GetApplication()
@@ -196,7 +194,7 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	respwrap := &FinalizeBlockWrap{
 		Error: errmsg,
@@ -204,28 +202,28 @@ func FinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, param
 	}
 	respwrapbz, err := json.Marshal(respwrap)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respwrapbz)
+	ptr, err := rnh.AllocateWriteMem(respwrapbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // BeginBlock(*abci.RequestFinalizeBlock) (sdk.BeginBlock, error)
-func BeginBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func BeginBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req abci.RequestFinalizeBlock
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	resp, err := ctx.GetApplication().BeginBlock(&req)
 	errmsg := ""
@@ -235,7 +233,7 @@ func BeginBlock(_context interface{}, callframe *wasmedge.CallingFrame, params [
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	respwrap := &FinalizeBlockWrap{
 		Error: errmsg,
@@ -243,23 +241,23 @@ func BeginBlock(_context interface{}, callframe *wasmedge.CallingFrame, params [
 	}
 	respwrapbz, err := json.Marshal(respwrap)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respwrapbz)
+	ptr, err := rnh.AllocateWriteMem(respwrapbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // EndBlock(metadata string) (*abci.ResponseFinalizeBlock, error)
-func EndBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func EndBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	metadata, err := asmem.ReadMemFromPtr(callframe, params[0])
+	metadata, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	resp, err := ctx.GetApplication().EndBlock(metadata)
 	errmsg := ""
@@ -269,7 +267,7 @@ func EndBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []i
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	respwrap := &FinalizeBlockWrap{
 		Error: errmsg,
@@ -277,107 +275,107 @@ func EndBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []i
 	}
 	respwrapbz, err := json.Marshal(respwrap)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respwrapbz)
+	ptr, err := rnh.AllocateWriteMem(respwrapbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // Commit() (*abci.ResponseCommit, error)
-func Commit(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func Commit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	resp, err := ctx.GetApplication().Commit()
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "Commit")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func RollbackToVersion(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func RollbackToVersion(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	err := ctx.GetApplication().CommitMultiStore().RollbackToVersion(params[0].(int64))
 	errMsg := ""
 	if err != nil {
 		errMsg = err.Error()
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, []byte(errMsg))
+	ptr, err := rnh.AllocateWriteMem([]byte(errMsg))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func CheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func CheckTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req abci.RequestCheckTx
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	resp, err := ctx.GetApplication().CheckTx(&req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "CheckTx")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func wasmxHeaderHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxHeaderHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req cmttypes.Header
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "HeaderHash")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	hash := req.Hash()
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hash)
+	ptr, err := rnh.AllocateWriteMem(hash)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, vals []networktypes.TendermintValidator) ([]*cmttypes.Validator, error) {
@@ -411,123 +409,108 @@ func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, val
 	return cmtvals, nil
 }
 
-func wasmxValidatorsHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxValidatorsHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var vals networktypes.TendermintValidators
 	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vals)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ValidatorsHash")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	cmtvals, err := validatorsToCmtValidators(ctx.CosmosHandler.Codec().InterfaceRegistry(), vals.Validators)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ValidatorsHash")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	valSet, err := cmttypes.ValidatorSetFromExistingValidators(cmtvals)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ValidatorsHash")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	hash := valSet.Hash()
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hash)
+	ptr, err := rnh.AllocateWriteMem(hash)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func wasmxConsensusParamsHash(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxConsensusParamsHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var cparams *cmttypes.ConsensusParams
 	err = json.Unmarshal(reqbz, &cparams)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "ConsensusParamsHash")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	hash := cparams.Hash()
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, hash)
+	ptr, err := rnh.AllocateWriteMem(hash)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func wasmxBlockCommitVoteBytes(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func wasmxBlockCommitVoteBytes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var vote cmtproto.Vote
 	err = ctx.CosmosHandler.Codec().UnmarshalJSON(reqbz, &vote)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "unmarshal cmtproto.Vote")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	pb := cmttypes.CanonicalizeVote(ctx.Ctx.ChainID(), &vote)
 	bz, err := protoio.MarshalDelimited(&pb)
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "marshal cmtproto.CanonicalVote")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, bz)
+	ptr, err := rnh.AllocateWriteMem(bz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
-	env := wasmedge.NewModule("consensus")
-	functype__i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i64_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-
-	env.AddFunction("CheckTx", wasmedge.NewFunction(functype_i32_i32, CheckTx, context, 0))
-	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, PrepareProposal, context, 0))
-	env.AddFunction("ProcessProposal", wasmedge.NewFunction(functype_i32_i32, ProcessProposal, context, 0))
-	env.AddFunction("OptimisticExecution", wasmedge.NewFunction(functype_i32i32_i32, OptimisticExecution, context, 0))
-	env.AddFunction("FinalizeBlock", wasmedge.NewFunction(functype_i32_i32, FinalizeBlock, context, 0))
-	env.AddFunction("BeginBlock", wasmedge.NewFunction(functype_i32_i32, BeginBlock, context, 0))
-	env.AddFunction("EndBlock", wasmedge.NewFunction(functype_i32_i32, EndBlock, context, 0))
-	env.AddFunction("Commit", wasmedge.NewFunction(functype__i32, Commit, context, 0))
-	env.AddFunction("RollbackToVersion", wasmedge.NewFunction(functype_i64_i32, RollbackToVersion, context, 0))
-	env.AddFunction("HeaderHash", wasmedge.NewFunction(functype_i32_i32, wasmxHeaderHash, context, 0))
-	env.AddFunction("ValidatorsHash", wasmedge.NewFunction(functype_i32_i32, wasmxValidatorsHash, context, 0))
-	env.AddFunction("ConsensusParamsHash", wasmedge.NewFunction(functype_i32_i32, wasmxConsensusParamsHash, context, 0))
-	env.AddFunction("BlockCommitVoteBytes", wasmedge.NewFunction(functype_i32_i32, wasmxBlockCommitVoteBytes, context, 0))
+func BuildWasmxConsensusJson1(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("CheckTx", CheckTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("PrepareProposal", PrepareProposal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ProcessProposal", ProcessProposal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("OptimisticExecution", OptimisticExecution, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("FinalizeBlock", FinalizeBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("BeginBlock", BeginBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("EndBlock", EndBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Commit", Commit, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("RollbackToVersion", RollbackToVersion, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("HeaderHash", wasmxHeaderHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ValidatorsHash", wasmxValidatorsHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ConsensusParamsHash", wasmxConsensusParamsHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("BlockCommitVoteBytes", wasmxBlockCommitVoteBytes, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+	}
 
 	// TODO
 	// // ApplySnapshotChunk(req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error)
@@ -542,5 +525,5 @@ func BuildWasmxConsensusJson1(context *Context) *wasmedge.Module {
 	// // ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)
 	// env.AddFunction("ListSnapshots", wasmedge.NewFunction(functype_i32_i32, ListSnapshots, context, 0))
 
-	return env
+	return vm.BuildModule(rnh, "consensus", context, fndefs)
 }

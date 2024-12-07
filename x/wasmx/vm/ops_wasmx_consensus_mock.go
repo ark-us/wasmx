@@ -1,95 +1,76 @@
 package vm
 
 import (
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
-	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
-func BuildWasmxConsensusJson1Mock(context *Context) *wasmedge.Module {
-	env := wasmedge.NewModule("consensus")
-	functype__i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i64_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
+func BuildWasmxConsensusJson1Mock(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("CheckTx", MockCheckTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("PrepareProposal", MockPrepareProposal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ProcessProposal", MockProcessProposal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("FinalizeBlock", MockFinalizeBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("BeginBlock", MockFinalizeBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("EndBlock", MockFinalizeBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Commit", MockCommit, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("RollbackToVersion", MockRollbackToVersion, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
+	}
 
-	env.AddFunction("CheckTx", wasmedge.NewFunction(functype_i32_i32, MockCheckTx, context, 0))
-	env.AddFunction("PrepareProposal", wasmedge.NewFunction(functype_i32_i32, MockPrepareProposal, context, 0))
-	env.AddFunction("ProcessProposal", wasmedge.NewFunction(functype_i32_i32, MockProcessProposal, context, 0))
-	env.AddFunction("FinalizeBlock", wasmedge.NewFunction(functype_i32_i32, MockFinalizeBlock, context, 0))
-	env.AddFunction("BeginBlock", wasmedge.NewFunction(functype_i32_i32, MockFinalizeBlock, context, 0))
-	env.AddFunction("EndBlock", wasmedge.NewFunction(functype_i32_i32, MockFinalizeBlock, context, 0))
-	env.AddFunction("Commit", wasmedge.NewFunction(functype__i32, MockCommit, context, 0))
-	env.AddFunction("RollbackToVersion", wasmedge.NewFunction(functype_i64_i32, MockRollbackToVersion, context, 0))
-
-	return env
+	return vm.BuildModule(rnh, "consensus", context, fndefs)
 }
 
-func MockCheckTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+func MockCheckTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
+	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
-func MockPrepareProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+func MockPrepareProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
+	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
-func MockProcessProposal(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+func MockProcessProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
+	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
-func MockFinalizeBlock(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+func MockFinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
+	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
-func MockCommit(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+func MockCommit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
+	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
-func MockRollbackToVersion(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := _context.(*Context)
+func MockRollbackToVersion(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ptr, err := asmem.AllocateWriteMem(ctx.MustGetVmFromContext(), callframe, make([]byte, 0))
+	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }

@@ -73,7 +73,7 @@ type WazeroVm struct {
 	cleanups []func()
 }
 
-// TODO get cache from ctx?
+// TODO clean cache!
 func NewWazeroVm(ctx sdk.Context) memc.IVm {
 	cache, ok := ctx.Value(CONTEXT_CACHE_KEY).(wazero.CompilationCache)
 	if !ok {

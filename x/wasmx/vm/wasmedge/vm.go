@@ -201,6 +201,7 @@ func (wm *WasmEdgeVm) BuildModule(rnh memc.RuntimeHandler, modname string, conte
 
 func (wm *WasmEdgeVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, context interface{}, fndefs []WasmEdgeFn) *wasmedge.Module {
 	envmod := wasmedge.NewModule(modname)
+	wm.cleanups = append(wm.cleanups, envmod.Release)
 	for _, fndef := range fndefs {
 		envmod.AddFunction(fndef.name, wasmedge.NewFunction(wasmedge.NewFunctionType(fndef.inputTypes, fndef.outputTypes), fndef.WrappedFn(rnh), context, uint(fndef.cost)))
 	}

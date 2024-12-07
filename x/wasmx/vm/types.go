@@ -15,7 +15,7 @@ import (
 	mcodec "mythos/v1/codec"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
-	vmi "mythos/v1/x/wasmx/vm/interfaces"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
 var (
@@ -105,7 +105,7 @@ type Context struct {
 	CosmosEvents    []types.Event
 	Messages        []cw8types.SubMsg `json:"messages"`
 	dbIterators     map[int32]types.Iterator
-	MemoryHandler   vmi.MemoryHandler
+	RuntimeHandler  memc.RuntimeHandler
 }
 
 func (ctx *Context) GetCosmosHandler() types.WasmxCosmosHandler {

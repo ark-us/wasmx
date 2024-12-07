@@ -18,19 +18,18 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
-	vmi "mythos/v1/x/wasmx/vm/interfaces"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
-func Ewasm_wrapper(context interface{}, _ *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	wrapper := context.(EwasmFunctionWrapper)
+func Ewasm_wrapper(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	wrapper := _context.(EwasmFunctionWrapper)
 	fmt.Println("Go: ewasm_wrapper entering", wrapper.Name, params)
 	returns, err := wrapper.Vm.Execute(wrapper.Name, params...)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	fmt.Println("Go: ewasm_wrapper: leaving", wrapper.Name, returns)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 func InitiateWasm(context *Context, contractVm memc.IVm, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (memc.IVm, error) {
@@ -87,7 +86,7 @@ func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []ty
 	return cleanups, nil
 }
 
-func getMemoryHandler(systemDeps []types.SystemDep) vmi.MemoryHandler {
+func getMemoryHandler(systemDeps []types.SystemDep) memc.RuntimeHandler {
 	handler := getMemoryHandlerFromDeps(systemDeps)
 	if handler != nil {
 		return handler
@@ -97,7 +96,7 @@ func getMemoryHandler(systemDeps []types.SystemDep) vmi.MemoryHandler {
 	return MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT]
 }
 
-func getMemoryHandlerFromDeps(systemDeps []types.SystemDep) vmi.MemoryHandler {
+func getMemoryHandlerFromDeps(systemDeps []types.SystemDep) memc.RuntimeHandler {
 	for _, systemDep := range systemDeps {
 		handler, found := MemoryDepHandler[systemDep.Role]
 		if !found {
@@ -297,7 +296,7 @@ func ExecuteWasmInterpreted(
 		ContractRouter:  contractRouter,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
-		MemoryHandler:   getMemoryHandler(systemDeps),
+		RuntimeHandler:  getMemoryHandler(systemDeps),
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
@@ -420,7 +419,7 @@ func ExecuteWasm(
 		App:             app,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
-		MemoryHandler:   getMemoryHandler(systemDeps),
+		RuntimeHandler:  getMemoryHandler(systemDeps),
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 

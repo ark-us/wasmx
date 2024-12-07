@@ -24,108 +24,104 @@ import (
 
 	multiaddr "github.com/multiformats/go-multiaddr"
 
+	errorsmod "cosmossdk.io/errors"
+
 	"cosmossdk.io/log"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 
 	vmtypes "mythos/v1/x/wasmx/vm"
-	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 
 	mcfg "mythos/v1/config"
 )
 
-func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, responsebz []byte) ([]interface{}, wasmedge.Result) {
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+func returnResult(ctx *Context, rnh memc.RuntimeHandler, responsebz []byte) ([]interface{}, error) {
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func StartNodeWithIdentity(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func StartNodeWithIdentity(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req StartNodeWithIdentityRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	_, err = startNodeWithIdentityAndGossip(ctx.Context.GoContextParent, p2pctx, ctx.Logger, req.PrivateKey, req.Port, req.ProtocolId, ctx.handleStream)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	response := StartNodeWithIdentityResponse{Error: "", Data: make([]byte, 0)}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func GetNodeInfo(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func GetNodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, errorsmod.Wrapf(err, "p2pcontext not found")
 	}
 	if p2pctx.Node == nil {
 		ctx.Logger.Error(ERROR_NODE_NOT_INSTANTIATED)
-		return nil, wasmedge.Result_Fail
-	}
-	if p2pctx.Node == nil {
-		ctx.Logger.Error(ERROR_NODE_NOT_INSTANTIATED)
-		return nil, wasmedge.Result_Fail
+		return nil, fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
 	}
 	node := *p2pctx.Node
 	response := NodeInfo{Id: node.ID().String(), Ip: node.Addrs()[0].String()}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func ConnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := ConnectPeerResponse{}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req ConnectPeerRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	_, err = connectAndListenPeerInternal(ctx.Context.GoContextParent, ctx.Context.GoRoutineGroup, ctx.Logger, req.ProtocolId, req.Peer, ctx.listenPeerStream)
@@ -135,41 +131,41 @@ func ConnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // sends to all connected peers
-func SendMessage(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func SendMessage(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	var req SendMessageRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Debug("could not unmarshal SendMessageRequest", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	peers, err := p2pctx.GetPeers(req.ProtocolId)
 	if err != nil {
 		ctx.Logger.Error(err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	reqPeers := SendMessageToPeersRequest{
@@ -180,60 +176,60 @@ func SendMessage(_context interface{}, callframe *wasmedge.CallingFrame, params 
 	}
 	err = sendMessageToPeersCommon(ctx, reqPeers)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	response := SendMessageResponse{}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func SendMessageToPeers(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func SendMessageToPeers(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req SendMessageToPeersRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("send message to peers failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	err = sendMessageToPeersCommon(ctx, req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	response := SendMessageToPeersResponse{}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := ConnectChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req ConnectChatRoomRequest
 	err = json.Unmarshal(requestbz, &req)
@@ -242,9 +238,9 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 		ctx.Logger.Error(response.Error)
 		responsebz, err := json.Marshal(response)
 		if err != nil {
-			return nil, wasmedge.Result_Fail
+			return nil, err
 		}
-		return returnResult(ctx, callframe, responsebz)
+		return returnResult(ctx, rnh, responsebz)
 	}
 	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 	// TODO send error to contract
@@ -254,9 +250,9 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 			ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
 			responsebz, err := json.Marshal(response)
 			if err != nil {
-				return nil, wasmedge.Result_Fail
+				return nil, err
 			}
-			return returnResult(ctx, callframe, responsebz)
+			return returnResult(ctx, rnh, responsebz)
 		}
 		// remove chat room; it will be reconnected when needed
 		p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
@@ -266,35 +262,35 @@ func ConnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, par
 	}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func SendMessageToChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := SendMessageToChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req SendMessageToChatRoomRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	cr, found := p2pctx.GetChatRoom(req.ProtocolId, req.Topic)
@@ -303,7 +299,7 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 		if err != nil {
 			if err.Error() != ERROR_CTX_CANCELED {
 				ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
-				return nil, wasmedge.Result_Fail
+				return nil, err
 			}
 			// remove chat room; it will be reconnected when needed
 			p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
@@ -318,34 +314,34 @@ func SendMessageToChatRoom(_context interface{}, callframe *wasmedge.CallingFram
 			response.Error = err.Error()
 			responsebz, err := json.Marshal(response)
 			if err != nil {
-				return nil, wasmedge.Result_Fail
+				return nil, err
 			}
-			return returnResult(ctx, callframe, responsebz)
+			return returnResult(ctx, rnh, responsebz)
 		}
 	}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func CloseNode(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if p2pctx.Node == nil {
 		ctx.Logger.Error(ERROR_NODE_NOT_INSTANTIATED)
-		return nil, wasmedge.Result_Fail
+		return nil, fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
 	}
 	node := *p2pctx.Node
 	err = node.Close()
@@ -357,25 +353,25 @@ func CloseNode(_context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func DisconnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func DisconnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req DisconnectChatRoomRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("disconnect chat room failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	cr, found := p2pctx.GetChatRoom(req.ProtocolId, req.Topic)
 	if found {
@@ -386,33 +382,33 @@ func DisconnectChatRoom(_context interface{}, callframe *wasmedge.CallingFrame, 
 	response := DisconnectChatRoomResponse{}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func DisconnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func DisconnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req DisconnectPeerRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("send message to chat room failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	stream, found := p2pctx.GetPeer(req.ProtocolId, req.Peer)
 	if found {
@@ -424,36 +420,36 @@ func DisconnectPeer(_context interface{}, callframe *wasmedge.CallingFrame, para
 	response := DisconnectPeerResponse{}
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // TODO this is temporary, to be replaced with consensus api methods like ApplySnapshotChunk, LoadSnapshotChunk, OfferSnapshot, ListSnapshots
 // we currently dont use this method, because I could not figure out how to properly statesync after resetting the stores
-func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func StartStateSyncRequest(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &StartStateSyncReqResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req StartStateSyncReqRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("state sync failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	app := ctx.Context.App.(mcfg.MythosApp)
@@ -494,34 +490,34 @@ func StartStateSyncRequest(_context interface{}, callframe *wasmedge.CallingFram
 
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func StartStateSyncResponse(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &StartStateSyncRespResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req StartStateSyncRespRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		ctx.Logger.Error("state sync failed", "error", err.Error())
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
 	if err != nil {
 		ctx.Logger.Error("p2pcontext not found")
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	app := ctx.Context.App.(mcfg.MythosApp)
@@ -554,44 +550,39 @@ func StartStateSyncResponse(_context interface{}, callframe *wasmedge.CallingFra
 
 	responsebz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, responsebz)
+	ptr, err := rnh.AllocateWriteMem(responsebz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func BuildWasmxP2P1(ctx_ *vmtypes.Context) *wasmedge.Module {
+func BuildWasmxP2P1(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	logger := ctx_.GetContext().Logger().With("chain_id", ctx_.GetContext().ChainID())
 	ctx := &Context{Context: ctx_, Logger: logger}
-	env := wasmedge.NewModule(HOST_WASMX_ENV_P2P)
-	functype__i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	env.AddFunction("StartNodeWithIdentity", wasmedge.NewFunction(functype_i32_i32, StartNodeWithIdentity, ctx, 0))
-	env.AddFunction("GetNodeInfo", wasmedge.NewFunction(functype__i32, GetNodeInfo, ctx, 0))
-	env.AddFunction("ConnectPeer", wasmedge.NewFunction(functype_i32_i32, ConnectPeer, ctx, 0))
-	env.AddFunction("SendMessage", wasmedge.NewFunction(functype_i32_i32, SendMessage, ctx, 0))
-	env.AddFunction("SendMessageToPeers", wasmedge.NewFunction(functype_i32_i32, SendMessageToPeers, ctx, 0))
-	env.AddFunction("ConnectChatRoom", wasmedge.NewFunction(functype_i32_i32, ConnectChatRoom, ctx, 0))
-	env.AddFunction("SendMessageToChatRoom", wasmedge.NewFunction(functype_i32_i32, SendMessageToChatRoom, ctx, 0))
-	env.AddFunction("CloseNode", wasmedge.NewFunction(functype__i32, CloseNode, ctx, 0))
-	env.AddFunction("DisconnectChatRoom", wasmedge.NewFunction(functype_i32_i32, DisconnectChatRoom, ctx, 0))
-	env.AddFunction("DisconnectPeer", wasmedge.NewFunction(functype_i32_i32, DisconnectPeer, ctx, 0))
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("StartNodeWithIdentity", StartNodeWithIdentity, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("GetNodeInfo", GetNodeInfo, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ConnectPeer", ConnectPeer, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("SendMessage", SendMessage, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("SendMessageToPeers", SendMessageToPeers, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ConnectChatRoom", ConnectChatRoom, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("SendMessageToChatRoom", SendMessageToChatRoom, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("CloseNode", CloseNode, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("DisconnectChatRoom", DisconnectChatRoom, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("DisconnectPeer", DisconnectPeer, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 
-	// TODO move to vmmc
-	env.AddFunction("StartStateSyncRequest", wasmedge.NewFunction(functype_i32_i32, StartStateSyncRequest, ctx, 0))
-	env.AddFunction("StartStateSyncResponse", wasmedge.NewFunction(functype_i32_i32, StartStateSyncResponse, ctx, 0))
-	return env
+		// TODO move to vmmc
+		vm.BuildFn("StartStateSyncRequest", StartStateSyncRequest, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("StartStateSyncResponse", StartStateSyncResponse, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+	}
+
+	return vm.BuildModule(rnh, HOST_WASMX_ENV_P2P, ctx, fndefs)
 }
 
 func startNodeWithIdentityAndGossip(

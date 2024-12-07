@@ -26,8 +26,8 @@ type WasmxJsonLog struct {
 }
 
 // getCallData(): ArrayBuffer
-func getCallData(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func getCallData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	ptr, err := rnh.AllocateWriteMem(ctx.Env.CurrentCall.CallData)
 	if err != nil {
 		return nil, err
@@ -37,8 +37,8 @@ func getCallData(context interface{}, rnh memc.RuntimeHandler, params []interfac
 	return returns, nil
 }
 
-func wasmxGetCaller(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxGetCaller(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	addr := types.PaddLeftTo32(ctx.Env.CurrentCall.Sender.Bytes())
 	ptr, err := rnh.AllocateWriteMem(addr)
 	if err != nil {
@@ -50,8 +50,8 @@ func wasmxGetCaller(context interface{}, rnh memc.RuntimeHandler, params []inter
 	return returns, nil
 }
 
-func wasmxGetAddress(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxGetAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	addr := types.PaddLeftTo32(ctx.Env.Contract.Address.Bytes())
 	ptr, err := rnh.AllocateWriteMem(addr)
 	if err != nil {
@@ -64,8 +64,8 @@ func wasmxGetAddress(context interface{}, rnh memc.RuntimeHandler, params []inte
 }
 
 // storageStore(key: ArrayBuffer, value: ArrayBuffer)
-func wasmxStorageStore(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	key, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -81,8 +81,8 @@ func wasmxStorageStore(context interface{}, rnh memc.RuntimeHandler, params []in
 }
 
 // storageLoad(key: ArrayBuffer): ArrayBuffer
-func wasmxStorageLoad(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	keybz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -100,8 +100,8 @@ func wasmxStorageLoad(context interface{}, rnh memc.RuntimeHandler, params []int
 	return returns, nil
 }
 
-func wasmxStorageLoadRange(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxStorageLoadRange(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -145,8 +145,8 @@ func wasmxStorageLoadRange(context interface{}, rnh memc.RuntimeHandler, params 
 	return returns, nil
 }
 
-func wasmxStorageLoadRangePairs(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxStorageLoadRangePairs(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	reqbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -192,8 +192,8 @@ func wasmxStorageLoadRangePairs(context interface{}, rnh memc.RuntimeHandler, pa
 	return returns, nil
 }
 
-func wasmxLog(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -225,19 +225,19 @@ func wasmxLog(context interface{}, rnh memc.RuntimeHandler, params []interface{}
 }
 
 // SSTORE key_ptr: i32, value_ptr: i32,
-func storageStoreGlobal(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func storageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
 
 // SLOAD key_ptr: i32, result_ptr: i32
-func storageLoadGlobal(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func storageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
 
-func wasmxGetReturnData(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxGetReturnData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	newptr, err := rnh.AllocateWriteMem(ctx.ReturnData)
 	if err != nil {
 		return nil, err
@@ -247,8 +247,8 @@ func wasmxGetReturnData(context interface{}, rnh memc.RuntimeHandler, params []i
 	return returns, nil
 }
 
-func wasmxGetFinishData(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxGetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	newptr, err := rnh.AllocateWriteMem(ctx.FinishData)
 	if err != nil {
 		return nil, err
@@ -258,8 +258,8 @@ func wasmxGetFinishData(context interface{}, rnh memc.RuntimeHandler, params []i
 	return returns, nil
 }
 
-func wasmxSetFinishData(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxSetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -269,19 +269,8 @@ func wasmxSetFinishData(context interface{}, rnh memc.RuntimeHandler, params []i
 	return returns, nil
 }
 
-func wasmxSetReturnData(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	ctx.ReturnData = data
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
-func wasmxFinish(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxFinish(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -295,8 +284,8 @@ func wasmxFinish(context interface{}, rnh memc.RuntimeHandler, params []interfac
 	return returns, nil
 }
 
-func wasmxRevert(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func wasmxRevert(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
@@ -308,16 +297,16 @@ func wasmxRevert(context interface{}, rnh memc.RuntimeHandler, params []interfac
 }
 
 // message: usize, fileName: usize, line: u32, column: u32
-func asAbort(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func asAbort(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	message, _ := rnh.ReadMemFromPtr(params[0])
 	fileName, _ := rnh.ReadMemFromPtr(params[1])
-	ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", ctx.MemoryHandler.ReadJsString(message), ctx.MemoryHandler.ReadJsString(fileName), params[2], params[3]))
-	return wasmxRevert(context, rnh, params)
+	ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", ctx.RuntimeHandler.ReadJsString(message), ctx.RuntimeHandler.ReadJsString(fileName), params[2], params[3]))
+	return wasmxRevert(_context, rnh, params)
 }
 
-func asConsoleLog(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func asConsoleLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	message, err := rnh.ReadStringFromPtr(params[0])
 	if err == nil {
 		ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx: console.log: %s", message))
@@ -328,8 +317,8 @@ func asConsoleLog(context interface{}, rnh memc.RuntimeHandler, params []interfa
 	return returns, nil
 }
 
-func asConsoleInfo(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func asConsoleInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	message, err := rnh.ReadStringFromPtr(params[0])
 	if err == nil {
 		ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx: console.info: %s", message))
@@ -340,8 +329,8 @@ func asConsoleInfo(context interface{}, rnh memc.RuntimeHandler, params []interf
 	return returns, nil
 }
 
-func asConsoleError(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func asConsoleError(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	message, err := rnh.ReadStringFromPtr(params[0])
 	if err == nil {
 		ctx.Logger(ctx.Ctx).Error(fmt.Sprintf("wasmx: console.error: %s", message))
@@ -352,22 +341,22 @@ func asConsoleError(context interface{}, rnh memc.RuntimeHandler, params []inter
 	return returns, nil
 }
 
-func asConsoleDebug(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := context.(*Context)
+func asConsoleDebug(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	message, _ := rnh.ReadStringFromPtr(params[0])
 	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("wasmx: console.debug: %s", message))
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
 
-func asDateNow(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func asDateNow(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	returns[0] = float64(time.Now().UTC().UnixMilli())
 	return returns, nil
 }
 
 // TODO - move this only for non-deterministic contracts
-func asSeed(context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func asSeed(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	var b [8]byte
 	_, err := crypto_rand.Read(b[:])
@@ -395,7 +384,7 @@ func BuildWasmxEnv1(context *Context, rnh memc.RuntimeHandler) (interface{}, err
 		vm.BuildFn("getReturnData", wasmxGetReturnData, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getFinishData", wasmxGetFinishData, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("setFinishData", wasmxSetFinishData, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("setReturnData", wasmxSetReturnData, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("setReturnData", wasmxSetFinishData, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("finish", wasmxFinish, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("revert", wasmxRevert, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("storageLoad_global", storageLoadGlobal, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),

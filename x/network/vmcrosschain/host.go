@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-
-	"github.com/second-state/WasmEdge-go/wasmedge"
+	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
@@ -15,24 +14,24 @@ import (
 	"mythos/v1/x/network/types"
 	wasmxtypes "mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm"
-	asmem "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
 // TODO!! this API should only be used by core contracts
 
 // executeCrossChainTx(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
-func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func executeCrossChainTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	// we expect from & chain id to be set correctly by the multichain registry contract
@@ -53,29 +52,29 @@ func executeCrossChainTx(_context interface{}, callframe *wasmedge.CallingFrame,
 		if res != nil {
 			err = rres.Unmarshal(res)
 			if err != nil {
-				return nil, wasmedge.Result_Fail
+				return nil, err
 			}
 		}
 		resp.Data = rres.Data
 		resp.Error = rres.Error
 	}
-	return returnResultAndAddCrossChainInfo(ctx, callframe, req, resp)
+	return returnResultAndAddCrossChainInfo(ctx, rnh, req, resp)
 }
 
 // executeCrossChainQuery(*QueryCrossChainRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
-func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func executeCrossChainQuery(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	// we expect sender & chain id to be set correctly by the multichain registry contract
@@ -95,14 +94,14 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 		if res != nil {
 			err = rres.Unmarshal(res)
 			if err != nil {
-				return nil, wasmedge.Result_Fail
+				return nil, err
 			}
 		}
 		resp.Data = rres.Data
 		resp.Error = rres.Error
 	}
 
-	return returnResultAndAddCrossChainInfo(ctx, callframe, req, resp)
+	return returnResultAndAddCrossChainInfo(ctx, rnh, req, resp)
 }
 
 // TODO API can only be used by core contracts
@@ -110,21 +109,21 @@ func executeCrossChainQuery(_context interface{}, callframe *wasmedge.CallingFra
 // internal communication with private chains, like level0, or between consensusless / consensusmeta
 // contracts on different chains, which do not require determinism
 // executeCrossChainTxNonDeterministic(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
-func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func executeCrossChainTxNonDeterministic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
 
 	// we do not want to fail and end the transaction
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		resp.Error = "cannot unmarshal request" + err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	// TODO check to & from are consensusless / consensusmeta? contracts
@@ -134,17 +133,17 @@ func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmed
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 	iapp, err := multichainapp.GetApp(req.ToChainId)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 	app, ok := iapp.(mcfg.MythosApp)
 	if !ok {
 		resp.Error = "error App interface from multichainapp"
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	cb := func(goctx context.Context) (any, error) {
@@ -165,35 +164,36 @@ func executeCrossChainTxNonDeterministic(_context interface{}, callframe *wasmed
 	_, err = app.GetActionExecutor().Execute(context.Background(), app.GetBaseApp().LastBlockHeight(), cb)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
-	return returnResult(ctx, callframe, resp)
+	return returnResult(ctx, rnh, resp)
 }
 
 // !! this is non-deterministic !! it must not be used inside a transaction
 // to make the query deterministic, we need to use ExecuteCrossChainTx
 // to ensure the cross-chain queries are executed in the same order for all validators
-func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func executeCrossChainQueryNonDeterministic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
 
 	// TODO check that we are in a query environment
 	execmode := ctx.Ctx.ExecMode()
 	if execmode != sdk.ExecModeQuery {
-		ctx.Logger(ctx.Ctx).Error("tried to execute non-deterministic cross-chain query as part of a transaction; reverting tx")
-		return nil, wasmedge.Result_Fail
+		errmsg := "tried to execute non-deterministic cross-chain query as part of a transaction; reverting tx"
+		ctx.Logger(ctx.Ctx).Error(errmsg)
+		return nil, fmt.Errorf(errmsg)
 	}
 	// otherwise revert
 
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req types.MsgExecuteCrossChainCallRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	// TODO set role
@@ -213,7 +213,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	}
 	contractCallBz, err := contractCall.Marshal()
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	contractQuery := &abci.RequestQuery{
 		Path: "/mythos.wasmx.v1.Query/SmartContractCall",
@@ -221,7 +221,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	}
 	contractQueryBz, err := contractQuery.Marshal()
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	mcQuery := types.QueryMultiChainRequest{
 		MultiChainId: req.ToChainId,
@@ -229,7 +229,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	}
 	mcQueryBz, err := mcQuery.Marshal()
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	qreq := &abci.RequestQuery{
@@ -239,7 +239,7 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	res, err := ctx.CosmosHandler.SubmitCosmosQuery(qreq)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	// var rres types.QueryCrossChainResponse
@@ -247,106 +247,104 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, callframe *was
 	err = rres.Unmarshal(res)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	var wres wasmxtypes.QuerySmartContractCallResponse
 	err = wres.Unmarshal(rres.Data)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	innerq := &wasmxtypes.WasmxQueryResponse{}
 	err = json.Unmarshal(wres.Data, innerq)
 	if err != nil {
 		resp.Error = err.Error()
-		return returnResult(ctx, callframe, resp)
+		return returnResult(ctx, rnh, resp)
 	}
 
 	resp.Data = innerq.Data
-	return returnResult(ctx, callframe, resp)
+	return returnResult(ctx, rnh, resp)
 }
 
-func returnResultAndAddCrossChainInfo(ctx *Context, callframe *wasmedge.CallingFrame, req types.MsgExecuteCrossChainCallRequest, resp *types.WrappedResponse) ([]interface{}, wasmedge.Result) {
+func returnResultAndAddCrossChainInfo(ctx *Context, rnh memc.RuntimeHandler, req types.MsgExecuteCrossChainCallRequest, resp *types.WrappedResponse) ([]interface{}, error) {
 	types.AddCrossChainCallMetaInfo(ctx.GoContextParent, ctx.Ctx.ChainID(), req, *resp)
-	return returnResult(ctx, callframe, resp)
+	return returnResult(ctx, rnh, resp)
 }
 
-func returnResult(ctx *Context, callframe *wasmedge.CallingFrame, resp *types.WrappedResponse) ([]interface{}, wasmedge.Result) {
+func returnResult(ctx *Context, rnh memc.RuntimeHandler, resp *types.WrappedResponse) ([]interface{}, error) {
 	respbz, err := ctx.GetCosmosHandler().Codec().MarshalJSON(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // isAtomicTxInExecution(*MsgIsAtomicTxInExecutionRequest) (*abci.MsgIsAtomicTxInExecutionResponse, error)
-func isAtomicTxInExecution(_context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func isAtomicTxInExecution(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := asmem.ReadMemFromPtr(callframe, params[0])
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	var req MsgIsAtomicTxInExecutionRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	resp := &MsgIsAtomicTxInExecutionResponse{IsInExecution: false}
 
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	_, err = multichainapp.GetApp(req.SubChainId)
 	if err != nil {
-		return returnIsInExecutionResult(ctx, callframe, resp)
+		return returnIsInExecutionResult(ctx, rnh, resp)
 	}
 
 	// check if chain has channel opened
 	mcctx, err := types.GetMultiChainContext(ctx.GoContextParent)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if bytes.Equal(mcctx.CurrentAtomicTxHash, req.TxHash) {
 		resp.IsInExecution = true
 	}
-	return returnIsInExecutionResult(ctx, callframe, resp)
+	return returnIsInExecutionResult(ctx, rnh, resp)
 }
 
-func returnIsInExecutionResult(ctx *Context, callframe *wasmedge.CallingFrame, resp *MsgIsAtomicTxInExecutionResponse) ([]interface{}, wasmedge.Result) {
+func returnIsInExecutionResult(ctx *Context, rnh memc.RuntimeHandler, resp *MsgIsAtomicTxInExecutionResponse) ([]interface{}, error) {
 	respbz, err := json.Marshal(resp)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ptr, err := asmem.AllocateWriteMem(ctx.Context.MustGetVmFromContext(), callframe, respbz)
+	ptr, err := rnh.AllocateWriteMem(respbz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context) *wasmedge.Module {
+func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	context := &Context{Context: ctx_}
-	env := wasmedge.NewModule(HOST_WASMX_ENV_CROSSCHAIN)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("executeCrossChainTx", executeCrossChainTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("executeCrossChainQuery", executeCrossChainQuery, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("executeCrossChainQueryNonDeterministic", executeCrossChainQueryNonDeterministic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("executeCrossChainTxNonDeterministic", executeCrossChainTxNonDeterministic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("isAtomicTxInExecution", isAtomicTxInExecution, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+	}
 
-	env.AddFunction("executeCrossChainTx", wasmedge.NewFunction(functype_i32_i32, executeCrossChainTx, context, 0))
-	env.AddFunction("executeCrossChainQuery", wasmedge.NewFunction(functype_i32_i32, executeCrossChainQuery, context, 0))
-	env.AddFunction("executeCrossChainQueryNonDeterministic", wasmedge.NewFunction(functype_i32_i32, executeCrossChainQueryNonDeterministic, context, 0))
-	env.AddFunction("executeCrossChainTxNonDeterministic", wasmedge.NewFunction(functype_i32_i32, executeCrossChainTxNonDeterministic, context, 0))
-	env.AddFunction("isAtomicTxInExecution", wasmedge.NewFunction(functype_i32_i32, isAtomicTxInExecution, context, 0))
-	return env
+	return vm.BuildModule(rnh, HOST_WASMX_ENV_CROSSCHAIN, context, fndefs)
 }

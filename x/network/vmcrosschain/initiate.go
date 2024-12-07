@@ -1,23 +1,24 @@
 package vmcrosschain
 
 import (
-	"github.com/second-state/WasmEdge-go/wasmedge"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm"
 )
 
 // !!!!This is an internal API only to be used by trusted system contracts
-func InstantiateWasmxCrossChainJson(context *vmtypes.Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	var cleanups []func()
+func InstantiateWasmxCrossChainJson(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
 	var err error
-	wasmx := BuildWasmxCrosschainJson1(context)
-	err = contractVm.RegisterModule(wasmx)
+	wasmx, err := BuildWasmxCrosschainJson1(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	cleanups = append(cleanups, wasmx.Release)
-	return cleanups, nil
+	err = rnh.GetVm().RegisterModule(wasmx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func Setup() {

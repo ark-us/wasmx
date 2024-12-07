@@ -1,22 +1,21 @@
 package vmp2p
 
 import (
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	"mythos/v1/x/wasmx/types"
 	vmtypes "mythos/v1/x/wasmx/vm"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
-func InstantiateWasmxP2PJson(context *vmtypes.Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	var cleanups []func()
-	var err error
-	wasmx := BuildWasmxP2P1(context)
-	err = contractVm.RegisterModule(wasmx)
+func InstantiateWasmxP2PJson(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	wasmx, err := BuildWasmxP2P1(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	cleanups = append(cleanups, wasmx.Release)
-	return cleanups, nil
+	err = rnh.GetVm().RegisterModule(wasmx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func Setup() {

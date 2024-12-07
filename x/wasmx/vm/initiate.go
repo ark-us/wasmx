@@ -6,7 +6,8 @@ import (
 	memas "mythos/v1/x/wasmx/vm/memory/assemblyscript"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 	memtay "mythos/v1/x/wasmx/vm/memory/taylor"
-	"mythos/v1/x/wasmx/vm/wasmutils"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (
@@ -17,136 +18,142 @@ var (
 	ALLOWED_CW8_EXPORTS  = []string{"interface_version_8", "allocate", "deallocate", "instantiate", "execute", "query", "migrate", "reply", "sudo", "ibc_channel_open", "ibc_channel_connect", "ibc_channel_close", "ibc_packet_receive", "ibc_packet_ack", "ibc_packet_timeout"}
 )
 
-func InitiateSysEnv1(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	sys := BuildSysEnv(context)
-	var cleanups []func()
-	cleanups = append(cleanups, sys.Release)
-	err := contractVm.RegisterModule(sys)
+func InitiateSysEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	sys, err := BuildSysEnv(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	return cleanups, nil
+	err = rnh.GetVm().RegisterModule(sys)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func InitiateWasmxEnv1(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	wasmx := BuildWasmxEnv1(context)
-	env := BuildAssemblyScriptEnv(context)
+func InitiateWasmxEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	wasmx, err := BuildWasmxEnv1(context, rnh)
+	if err != nil {
+		return err
+	}
+	env, err := BuildAssemblyScriptEnv(context, rnh)
+	if err != nil {
+		return err
+	}
+	vm := rnh.GetVm()
 
-	var cleanups []func()
-	cleanups = append(cleanups, wasmx.Release)
-	err := contractVm.RegisterModule(wasmx)
+	err = vm.RegisterModule(wasmx)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	cleanups = append(cleanups, env.Release)
-	err = contractVm.RegisterModule(env)
+	err = vm.RegisterModule(env)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	return cleanups, nil
+	return nil
 }
 
-func InitiateKeccak256(newvm func() memc.IVm) (memc.IVm, []func(), error) {
-	var cleanups []func()
+func InitiateKeccak256(ctx sdk.Context, newvm func(ctx sdk.Context) memc.IVm) (memc.IVm, error) {
 	var err error
-	keccakVm := newvm()
+	keccakVm := newvm(ctx)
 	err = keccakVm.InstantiateWasm("", interpreters.Keccak256Util)
 	if err != nil {
-		return nil, cleanups, err
+		return nil, err
 	}
-	cleanups = append(cleanups, keccakVm.Release)
-	return keccakVm, cleanups, nil
+	return keccakVm, nil
 }
 
-func InitiateWasmxEnv2(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	keccakVm, cleanups, err := InitiateKeccak256(contractVm.New)
+func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	vm := rnh.GetVm()
+	keccakVm, err := InitiateKeccak256(context.Ctx, vm.New)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
 	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
 
-	wasmx := BuildWasmxEnv2(context)
-	env := BuildAssemblyScriptEnv(context)
-	cleanups = append(cleanups, wasmx.Release)
-
-	err = contractVm.RegisterModule(wasmx)
+	wasmx, err := BuildWasmxEnv2(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	cleanups = append(cleanups, env.Release)
-	err = contractVm.RegisterModule(env)
+	env, err := BuildAssemblyScriptEnv(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	return cleanups, nil
+	err = vm.RegisterModule(wasmx)
+	if err != nil {
+		return err
+	}
+	err = vm.RegisterModule(env)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func InstantiateWasmxConsensusJson(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	var cleanups []func()
+func InstantiateWasmxConsensusJson(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
 	var err error
-	wasmx := BuildWasmxConsensusJson1(context)
-	err = contractVm.RegisterModule(wasmx)
+	wasmx, err := BuildWasmxConsensusJson1(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	cleanups = append(cleanups, wasmx.Release)
-	return cleanups, nil
+	err = rnh.GetVm().RegisterModule(wasmx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func InitiateInterpreter(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	var cleanups []func()
-	err := wasmutils.InstantiateWasm(contractVm, dep.FilePath, nil)
-
+func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	err := rnh.GetVm().InstantiateWasm(dep.FilePath, nil)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	return cleanups, nil
+	return nil
 }
 
-func InitiateWasi(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	var cleanups []func()
-
+func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
 	// TODO better
-	env1 := BuildWasiWasmxEnv(context)
-	cleanups = append(cleanups, env1.Release)
-	err := contractVm.RegisterModule(env1)
+	env1, err := BuildWasiWasmxEnv(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-
-	keccakVm, cleanups2, err := InitiateKeccak256()
-	cleanups = append(cleanups, cleanups2...)
+	err = rnh.GetVm().RegisterModule(env1)
 	if err != nil {
-		return cleanups, err
+		return err
+	}
+	keccakVm, err := InitiateKeccak256(context.Ctx, rnh.GetVm().New)
+	if err != nil {
+		return err
 	}
 	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
 
-	return cleanups, nil
+	return nil
 }
 
-func InitiateEwasmTypeEnv(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	ewasmEnv := BuildEwasmEnv(context)
-	var cleanups []func()
-	cleanups = append(cleanups, ewasmEnv.Release)
-	err := contractVm.RegisterModule(ewasmEnv)
+func InitiateEwasmTypeEnv(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	ewasmEnv, err := BuildEwasmEnv(context, rnh)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	return cleanups, nil
-}
-
-func InitiateCosmWasmEnv8(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
-	wasmx := BuildCosmWasm_8(context)
-	var cleanups []func()
-	cleanups = append(cleanups, wasmx.Release)
-	err := contractVm.RegisterModule(wasmx)
+	err = rnh.GetVm().RegisterModule(ewasmEnv)
 	if err != nil {
-		return cleanups, err
+		return err
 	}
-	return cleanups, nil
+	return nil
 }
 
-var SystemDepHandler = map[string]func(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error){}
+func InitiateCosmWasmEnv8(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	wasmx, err := BuildCosmWasm_8(context, rnh)
+	if err != nil {
+		return err
+	}
+	err = rnh.GetVm().RegisterModule(wasmx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+var SystemDepHandler = map[string]func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error{}
 
 type ExecuteFunctionInterface func(context *Context, vm memc.IVm, funcName string, args []interface{}) ([]int32, error)
 
@@ -154,7 +161,7 @@ var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
 var DependenciesMap = map[string]bool{}
 
-var MemoryDepHandler = map[string]func(vm memc.IVm, mem memc.IMemory) memc.MemoryHandler{}
+var MemoryDepHandler = map[string]func(vm memc.IVm, mem memc.IMemory) memc.RuntimeHandler{}
 
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
@@ -186,13 +193,13 @@ func init() {
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
 
-	MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewMemoryHandlerAS
-	MemoryDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewMemoryHandlerTay
+	MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
+	MemoryDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
 }
 
 func SetSystemDepHandler(
 	key string,
-	handler func(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error),
+	handler func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error,
 ) {
 	SystemDepHandler[key] = handler
 }

@@ -13,11 +13,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	crypto "mythos/v1/crypto"
 	cw8types "mythos/v1/x/wasmx/cw8/types"
 	"mythos/v1/x/wasmx/types"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
 // A kibi (kilo binary)
@@ -82,55 +81,55 @@ const ED25519_VERIFY_CODE_INVALID = uint32(1)
 // https://github.com/CosmWasm/cosmwasm/blob/0dae968db91734045239f45e982cddb1e5f11115/packages/std/src/imports.rs
 
 // db_read(key: u32) -> u32;
-func cw_8_db_read(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func cw_8_db_read(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	ctx := context.(*Context)
-	key, err := readMemFromPtrCw(callframe, params[0])
+	ctx := _context.(*Context)
+	key, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	// TODO MAX_LENGTH_DB_KEY
 	data := ctx.ContractStore.Get(key)
 	if len(data) == 0 {
 		returns[0] = 0
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	region, err := allocateWriteMemCw(ctx, callframe, data)
+	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), data)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = region.Pointer
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // db_write(key: u32, value: u32);
-func cw_8_db_write(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func cw_8_db_write(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	// TODO env.is_storage_readonly
-	key, err := readMemFromPtrCw(callframe, params[0])
+	key, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	data, err := readMemFromPtrCw(callframe, params[1])
+	data, err := readMemCw(rnh.GetMemory(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	ctx := context.(*Context)
+	ctx := _context.(*Context)
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmx")
 	ctx.ContractStore.Set(key, data)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // db_remove(key: u32);
-func cw_8_db_remove(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	key, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_db_remove(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	key, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	ctx.ContractStore.Delete(key)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 var (
@@ -140,15 +139,15 @@ var (
 
 // scan creates an iterator, which can be read by consecutive next() calls
 // db_scan(start_ptr: u32, end_ptr: u32, order: i32) -> u32;
-func cw_8_db_scan(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	startKey, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_db_scan(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	startKey, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	endKey, err := readMemFromPtrCw(callframe, params[1])
+	endKey, err := readMemCw(rnh.GetMemory(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	order := params[2].(int32)
 
@@ -162,16 +161,16 @@ func cw_8_db_scan(context interface{}, callframe *wasmedge.CallingFrame, params 
 	ctx.dbIterators[int32(count)] = iter
 	returns := make([]interface{}, 1)
 	returns[0] = count
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // db_next(iterator_id: u32) -> u32;
-func cw_8_db_next(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func cw_8_db_next(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	iterid := params[0].(int32)
 	iterator, ok := ctx.dbIterators[iterid]
 	if !ok {
-		return nil, wasmedge.Result_Fail
+		return nil, fmt.Errorf("cw_8_db_next out of bounds: %d", iterid)
 	}
 
 	values := make([][]byte, 2)
@@ -186,80 +185,80 @@ func cw_8_db_next(context interface{}, callframe *wasmedge.CallingFrame, params 
 
 	out_data := encode_sections(values)
 	returns := make([]interface{}, 1)
-	region, err := allocateWriteMemCw(ctx, callframe, out_data)
+	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), out_data)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns[0] = region.Pointer
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // addr_validate(source_ptr: u32) -> u32;
-func cw_8_addr_validate(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	addrBz, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_addr_validate(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	addrBz, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	addr, err := addr_canonicalize(ctx.CosmosHandler.AddressCodec(), addrBz)
 	if err != nil {
-		return cwError(ctx, callframe, err.Error())
+		return cwError(rnh, err.Error())
 	}
 	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if string(addrBz) != addrstr {
-		return cwError(ctx, callframe, "address validation failed")
+		return cwError(rnh, "address validation failed")
 	}
-	_, err = allocateWriteMemCw(ctx, callframe, []byte(addr.Bytes()))
+	_, err = writeMemCw(rnh.GetVm(), rnh.GetMemory(), []byte(addr.Bytes()))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = 0
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // addr_canonicalize(source_ptr: u32, destination_ptr: u32) -> u32;
-func cw_8_addr_canonicalize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	addrBz, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_addr_canonicalize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	addrBz, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	data, err := addr_canonicalize(ctx.CosmosHandler.AddressCodec(), addrBz)
 	if err != nil {
-		return cwError(ctx, callframe, err.Error())
+		return cwError(rnh, err.Error())
 	}
-	_, err = writeMemToDestinationCw(ctx, callframe, data.Bytes(), params[1])
+	_, err = writeMemToDestinationCw(rnh.GetMemory(), data.Bytes(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = 0
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // addr_humanize(source_ptr: u32, destination_ptr: u32) -> u32;
-func cw_8_addr_humanize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	addrBz, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_addr_humanize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	addrBz, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	addr := sdk.AccAddress(addrBz)
 	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	_, err = writeMemToDestinationCw(ctx, callframe, []byte(addrstr), params[1])
+	_, err = writeMemToDestinationCw(rnh.GetMemory(), []byte(addrstr), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = 0
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // / Verifies message hashes against a signature with a public key, using the
@@ -267,19 +266,19 @@ func cw_8_addr_humanize(context interface{}, callframe *wasmedge.CallingFrame, p
 // / Returns 0 on verification success, 1 on verification failure, and values
 // / greater than 1 in case of error.
 // secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
-func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	msgHash, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_secp256k1_verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	msgHash, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	signature, err := readMemFromPtrCw(callframe, params[1])
+	signature, err := readMemCw(rnh.GetMemory(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	publicKeyBz, err := readMemFromPtrCw(callframe, params[2])
+	publicKeyBz, err := readMemCw(rnh.GetMemory(), params[2])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
 
@@ -292,22 +291,23 @@ func cw_8_secp256k1_verify(context interface{}, callframe *wasmedge.CallingFrame
 	} else {
 		returns[0] = SECP256K1_VERIFY_CODE_INVALID
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // secp256k1_recover_pubkey(message_hash_ptr: u32, signature_ptr: u32, recovery_param: u32) -> u64;
-func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	ctx.Logger(ctx.Ctx).Error("cosmwasm8: secp256k1_recover_pubkey: Not implemented")
+func cw_8_secp256k1_recover_pubkey(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	errmsg := "cosmwasm8: secp256k1_recover_pubkey: Not implemented"
+	ctx.Logger(ctx.Ctx).Error(errmsg)
 	// TODO
-	return nil, wasmedge.Result_Fail
-	msgHash, err := readMemFromPtrCw(callframe, params[0])
+	return nil, fmt.Errorf(errmsg)
+	msgHash, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	signature, err := readMemFromPtrCw(callframe, params[1])
+	signature, err := readMemCw(rnh.GetMemory(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	// TODO use this
 	recoveryParam := params[2].(int32)
@@ -316,15 +316,15 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
 	recoveredPublicKey, err := crypto.Secp256k1Recover(msgHash, signature)
 	if err != nil {
-		return cwError(ctx, callframe, err.Error())
+		return cwError(rnh, err.Error())
 	}
-	region, err := allocateWriteMemCw(ctx, callframe, recoveredPublicKey)
+	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), recoveredPublicKey)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = uint64(region.Pointer)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // / Verifies a message against a signature with a public key, using the
@@ -332,29 +332,29 @@ func cw_8_secp256k1_recover_pubkey(context interface{}, callframe *wasmedge.Call
 // / Returns 0 on verification success, 1 on verification failure, and values
 // / greater than 1 in case of error.
 // ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
-func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	msg, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_ed25519_verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	msg, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if len(msg) > MAX_LENGTH_ED25519_MESSAGE {
 		if err != nil {
-			return nil, wasmedge.Result_Fail
+			return nil, err
 		}
 	}
-	signature, err := readMemFromPtrCw(callframe, params[1])
+	signature, err := readMemCw(rnh.GetMemory(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if len(signature) != MAX_LENGTH_ED25519_SIGNATURE {
 		if err != nil {
-			return nil, wasmedge.Result_Fail
+			return nil, err
 		}
 	}
-	publicKeyBz, err := readMemFromPtrCw(callframe, params[2])
+	publicKeyBz, err := readMemCw(rnh.GetMemory(), params[2])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
 
@@ -367,7 +367,7 @@ func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, 
 	} else {
 		returns[0] = ED25519_VERIFY_CODE_INVALID
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // / Verifies a batch of messages against a batch of signatures and public keys, using the
@@ -390,31 +390,32 @@ func cw_8_ed25519_verify(context interface{}, callframe *wasmedge.CallingFrame, 
 // /  - The "one-public key, with zero messages and zero signatures" case, is considered the empty
 // / case.
 // /  - The empty case (no messages, no signatures and no public keys) returns true.
-func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	ctx.Logger(ctx.Ctx).Error("cosmwasm8: ed25519_batch_verify: Not implemented")
+func cw_8_ed25519_batch_verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	errmsg := "cosmwasm8: ed25519_batch_verify: Not implemented"
+	ctx.Logger(ctx.Ctx).Error(errmsg)
 	// TODO
-	return nil, wasmedge.Result_Fail
+	return nil, fmt.Errorf(errmsg)
 
-	msgs, err := readMemFromPtrCw(callframe, params[0])
+	msgs, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	signatures, err := readMemFromPtrCw(callframe, params[1])
+	signatures, err := readMemCw(rnh.GetMemory(), params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if len(signatures) == 0 {
-		return nil, wasmedge.Result_Fail
+		return nil, fmt.Errorf("cw_8_ed25519_batch_verify: no signatures")
 	}
-	publicKeysBz, err := readMemFromPtrCw(callframe, params[2])
+	publicKeysBz, err := readMemCw(rnh.GetMemory(), params[2])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 
 	count := len(signatures) / MAX_LENGTH_ED25519_SIGNATURE
 	if count > MAX_COUNT_ED25519_BATCH {
-		return nil, wasmedge.Result_Fail
+		return nil, fmt.Errorf("cw_8_ed25519_batch_verify: too many signatures")
 	}
 	// countPublicKeys := len(publicKeysBz) / EDDSA_PUBKEY_LEN
 
@@ -429,68 +430,68 @@ func cw_8_ed25519_batch_verify(context interface{}, callframe *wasmedge.CallingF
 	} else {
 		returns[0] = ED25519_VERIFY_CODE_INVALID
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // / Writes a debug message (UFT-8 encoded) to the host for debugging purposes.
 // / The host is free to log or process this in any way it considers appropriate.
 // / In production environments it is expected that those messages are discarded.
 // debug(source_ptr: u32);
-func cw_8_debug(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	msgBz, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_debug(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	msgBz, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	ctx.Logger(ctx.Ctx).Debug("cosmwasm8: debug: " + string(msgBz))
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // / Executes a query on the chain (import). Not to be confused with the
 // / query export, which queries the state of the contract.
 // query_chain(request: u32) -> u32;
-func cw_8_query_chain(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	databz, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_query_chain(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	databz, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	if len(databz) > MAX_LENGTH_QUERY_CHAIN_REQUEST {
-		return nil, wasmedge.Result_Fail
+		return nil, fmt.Errorf("cw_8_query_chain: query too big")
 	}
 	var req cw8types.QueryRequest
 	err = json.Unmarshal(databz, &req)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	result, err := ctx.CosmosHandler.WasmVMQueryHandler(ctx.Env.Contract.Address, req)
 	response := cw8types.ToQuerierResult(result, err)
 	responseBz, err := json.Marshal(response)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	region, err := allocateWriteMemCw(ctx, callframe, responseBz)
+	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), responseBz)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = uint64(region.Pointer)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // abort(source_ptr: u32);
-func cw_8_abort(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	data, err := readMemFromPtrCw(callframe, params[0])
+func cw_8_abort(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	data, err := readMemCw(rnh.GetMemory(), params[0])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 0)
 	ctx.FinishData = data
 	ctx.ReturnData = data
 	ctx.Logger(ctx.Ctx).Debug("cosmwasm8: abort: " + string(data))
-	return returns, wasmedge.Result_Fail
+	return returns, fmt.Errorf("abort")
 }
 
 func addr_canonicalize(addressCodec address.Codec, addrUtf8 []byte) (sdk.AccAddress, error) {
@@ -507,61 +508,38 @@ func addr_canonicalize(addressCodec address.Codec, addrUtf8 []byte) (sdk.AccAddr
 	return addr, nil
 }
 
-func cwError(ctx *Context, callframe *wasmedge.CallingFrame, cwErr string) ([]interface{}, wasmedge.Result) {
-	_, err := allocateWriteMemCw(ctx, callframe, []byte(cwErr))
+func cwError(rnh memc.RuntimeHandler, cwErr string) ([]interface{}, error) {
+	_, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), []byte(cwErr))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	return nil, wasmedge.Result_Success
+	return nil, nil
 }
 
-func BuildCosmWasm_8(context *Context) *wasmedge.Module {
-	env := wasmedge.NewModule("env")
-	functype_i32i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32_i64 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I64},
-	)
+func BuildCosmWasm_8(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("db_read", cw_8_db_read, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("db_write", cw_8_db_write, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("db_remove", cw_8_db_remove, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("db_scan", cw_8_db_scan, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("db_next", cw_8_db_next, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("addr_validate", cw_8_addr_validate, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("addr_canonicalize", cw_8_addr_canonicalize, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("addr_humanize", cw_8_addr_humanize, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("secp256k1_verify", cw_8_secp256k1_verify, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("secp256k1_recover_pubkey", cw_8_secp256k1_recover_pubkey, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ed25519_verify", cw_8_ed25519_verify, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ed25519_batch_verify", cw_8_ed25519_batch_verify, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("debug", cw_8_debug, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("query_chain", cw_8_query_chain, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("abort", cw_8_abort, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+	}
 
-	env.AddFunction("db_read", wasmedge.NewFunction(functype_i32_i32, cw_8_db_read, context, 0))
-	env.AddFunction("db_write", wasmedge.NewFunction(functype_i32i32_, cw_8_db_write, context, 0))
-	env.AddFunction("db_remove", wasmedge.NewFunction(functype_i32_, cw_8_db_remove, context, 0))
-	env.AddFunction("db_scan", wasmedge.NewFunction(functype_i32i32i32_i32, cw_8_db_scan, context, 0))
-	env.AddFunction("db_next", wasmedge.NewFunction(functype_i32_i32, cw_8_db_next, context, 0))
-	env.AddFunction("addr_validate", wasmedge.NewFunction(functype_i32_i32, cw_8_addr_validate, context, 0))
-	env.AddFunction("addr_canonicalize", wasmedge.NewFunction(functype_i32i32_i32, cw_8_addr_canonicalize, context, 0))
-	env.AddFunction("addr_humanize", wasmedge.NewFunction(functype_i32i32_i32, cw_8_addr_humanize, context, 0))
-	env.AddFunction("secp256k1_verify", wasmedge.NewFunction(functype_i32i32i32_i32, cw_8_secp256k1_verify, context, 0))
-	env.AddFunction("secp256k1_recover_pubkey", wasmedge.NewFunction(functype_i32i32i32_i64, cw_8_secp256k1_recover_pubkey, context, 0))
-	env.AddFunction("ed25519_verify", wasmedge.NewFunction(functype_i32i32i32_i32, cw_8_ed25519_verify, context, 0))
-	env.AddFunction("ed25519_batch_verify", wasmedge.NewFunction(functype_i32i32i32_i32, cw_8_ed25519_batch_verify, context, 0))
-	env.AddFunction("debug", wasmedge.NewFunction(functype_i32_, cw_8_debug, context, 0))
-	env.AddFunction("query_chain", wasmedge.NewFunction(functype_i32_i32, cw_8_query_chain, context, 0))
-	env.AddFunction("abort", wasmedge.NewFunction(functype_i32_, cw_8_abort, context, 0))
-
-	return env
+	return vm.BuildModule(rnh, "env", context, fndefs)
 }
 
-func BuildArgsCw(context *Context, contractVm *wasmedge.VM) ([]byte, []byte, []byte, error) {
+func BuildArgsCw(context *Context) ([]byte, []byte, []byte, error) {
 	addrstr := context.Env.Contract.Address.String()
 	senderstr := context.Env.CurrentCall.Sender.String()
 	env := cw8types.Env{
@@ -594,30 +572,30 @@ func BuildArgsCw(context *Context, contractVm *wasmedge.VM) ([]byte, []byte, []b
 }
 
 // instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	envBz, infoBz, msgBz, err := BuildArgsCw(context, contractVm)
+func ExecuteCw8Execute(context *Context, rnh memc.RuntimeHandler, funcName string) ([]interface{}, error) {
+	envBz, infoBz, msgBz, err := BuildArgsCw(context)
 	if err != nil {
 		return nil, err
 	}
-	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
-
-	envRegion, err := writeMemCw(contractVm, activeMemory, envBz)
+	vm := rnh.GetVm()
+	mem := rnh.GetMemory()
+	envRegion, err := writeMemCw(vm, mem, envBz)
 	if err != nil {
 		return nil, err
 	}
-	infoRegion, err := writeMemCw(contractVm, activeMemory, infoBz)
+	infoRegion, err := writeMemCw(vm, mem, infoBz)
 	if err != nil {
 		return nil, err
 	}
-	msgRegion, err := writeMemCw(contractVm, activeMemory, msgBz)
+	msgRegion, err := writeMemCw(vm, mem, msgBz)
 	if err != nil {
 		return nil, err
 	}
-	res, execErr := contractVm.Execute(funcName, envRegion.Pointer, infoRegion.Pointer, msgRegion.Pointer)
+	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, infoRegion.Pointer, msgRegion.Pointer})
 	if len(res) == 0 {
 		return nil, execErr
 	}
-	data, err := readMemCw(activeMemory, res[0])
+	data, err := readMemCw(mem, res[0])
 	if err != nil {
 		if execErr != nil {
 			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
@@ -652,26 +630,26 @@ func ExecuteCw8Execute(context *Context, contractVm *wasmedge.VM, funcName strin
 }
 
 // reply(env_ptr: u32, msg_ptr: u32)
-func ExecuteCw8Reply(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	envBz, _, msgBz, err := BuildArgsCw(context, contractVm)
+func ExecuteCw8Reply(context *Context, rnh memc.RuntimeHandler, funcName string) ([]interface{}, error) {
+	envBz, _, msgBz, err := BuildArgsCw(context)
 	if err != nil {
 		return nil, err
 	}
-	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
-
-	envRegion, err := writeMemCw(contractVm, activeMemory, envBz)
+	vm := rnh.GetVm()
+	mem := rnh.GetMemory()
+	envRegion, err := writeMemCw(vm, mem, envBz)
 	if err != nil {
 		return nil, err
 	}
-	msgRegion, err := writeMemCw(contractVm, activeMemory, msgBz)
+	msgRegion, err := writeMemCw(vm, mem, msgBz)
 	if err != nil {
 		return nil, err
 	}
-	res, execErr := contractVm.Execute(funcName, envRegion.Pointer, msgRegion.Pointer)
+	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, msgRegion.Pointer})
 	if len(res) == 0 {
 		return nil, execErr
 	}
-	data, err := readMemCw(activeMemory, res[0])
+	data, err := readMemCw(mem, res[0])
 	if err != nil {
 		if execErr != nil {
 			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
@@ -704,26 +682,26 @@ func ExecuteCw8Reply(context *Context, contractVm *wasmedge.VM, funcName string)
 	return nil, err
 }
 
-func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	envBz, _, msgBz, err := BuildArgsCw(context, contractVm)
+func ExecuteCw8Query(context *Context, rnh memc.RuntimeHandler, funcName string) ([]interface{}, error) {
+	envBz, _, msgBz, err := BuildArgsCw(context)
 	if err != nil {
 		return nil, err
 	}
-	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
-
-	envRegion, err := writeMemCw(contractVm, activeMemory, envBz)
+	vm := rnh.GetVm()
+	mem := rnh.GetMemory()
+	envRegion, err := writeMemCw(vm, mem, envBz)
 	if err != nil {
 		return nil, err
 	}
-	msgRegion, err := writeMemCw(contractVm, activeMemory, msgBz)
+	msgRegion, err := writeMemCw(vm, mem, msgBz)
 	if err != nil {
 		return nil, err
 	}
-	res, execErr := contractVm.Execute(funcName, envRegion.Pointer, msgRegion.Pointer)
+	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, msgRegion.Pointer})
 	if len(res) == 0 {
 		return nil, execErr
 	}
-	data, err := readMemCw(activeMemory, res[0])
+	data, err := readMemCw(mem, res[0])
 	if err != nil {
 		if execErr != nil {
 			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
@@ -752,22 +730,18 @@ func ExecuteCw8Query(context *Context, contractVm *wasmedge.VM, funcName string)
 }
 
 // instantiate/execute(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecuteCw8(context *Context, rnh memc.RuntimeHandler, funcName string, args []interface{}) ([]interface{}, error) {
 	switch funcName {
 	case types.ENTRY_POINT_QUERY:
-		return ExecuteCw8Query(context, contractVm, funcName)
+		return ExecuteCw8Query(context, rnh, funcName)
 	case types.ENTRY_POINT_REPLY:
-		return ExecuteCw8Reply(context, contractVm, funcName)
+		return ExecuteCw8Reply(context, rnh, funcName)
 	}
 	// instantiate, execute
-	return ExecuteCw8Execute(context, contractVm, funcName)
+	return ExecuteCw8Execute(context, rnh, funcName)
 }
 
-func writeMemToDestinationCw(ctx *Context, callframe *wasmedge.CallingFrame, data []byte, ptr interface{}) (*Region, error) {
-	mem := callframe.GetMemoryByIndex(0)
-	if mem == nil {
-		return nil, fmt.Errorf("could not find memory")
-	}
+func writeMemToDestinationCw(mem memc.IMemory, data []byte, ptr interface{}) (*Region, error) {
 	region, err := NewRegion(mem, ptr)
 	if err != nil {
 		return nil, err
@@ -779,21 +753,8 @@ func writeMemToDestinationCw(ctx *Context, callframe *wasmedge.CallingFrame, dat
 	return region, nil
 }
 
-func allocateWriteMemCw(ctx *Context, callframe *wasmedge.CallingFrame, data []byte) (*Region, error) {
-	addrstr := ctx.Env.Contract.Address.String()
-	contractCtx, ok := ctx.ContractRouter[addrstr]
-	if !ok {
-		return nil, sdkerr.Wrapf(sdkerr.Error{}, "contract context not found for address %s", addrstr)
-	}
-	mem := callframe.GetMemoryByIndex(0)
-	if mem == nil {
-		return nil, fmt.Errorf("could not find memory")
-	}
-	return writeMemCw(contractCtx.Vm, mem, data)
-}
-
-func writeMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, data []byte) (*Region, error) {
-	res, err := vm.Execute(types.MEMORY_EXPORT_ALLOCATE, int32(len(data)))
+func writeMemCw(vm memc.IVm, mem memc.IMemory, data []byte) (*Region, error) {
+	res, err := vm.Call(types.MEMORY_EXPORT_ALLOCATE, []interface{}{int32(len(data))})
 	if err != nil {
 		return nil, err
 	}
@@ -809,7 +770,7 @@ func writeMemCw(vm *wasmedge.VM, mem *wasmedge.Memory, data []byte) (*Region, er
 	return region, nil
 }
 
-func readMemCw(mem *wasmedge.Memory, ptr interface{}) ([]byte, error) {
+func readMemCw(mem memc.IMemory, ptr interface{}) ([]byte, error) {
 	region, err := NewRegion(mem, ptr)
 	if err != nil {
 		return nil, err
@@ -824,14 +785,6 @@ func readMemCw(mem *wasmedge.Memory, ptr interface{}) ([]byte, error) {
 	return dest, nil
 }
 
-func readMemFromPtrCw(callframe *wasmedge.CallingFrame, pointer interface{}) ([]byte, error) {
-	mem := callframe.GetMemoryByIndex(0)
-	if mem == nil {
-		return nil, fmt.Errorf("could not find memory")
-	}
-	return readMemCw(mem, pointer)
-}
-
 type Region struct {
 	// The pointer to where the region is defined in memory
 	Pointer int32
@@ -843,17 +796,17 @@ type Region struct {
 	Length uint32
 }
 
-func NewRegion(mem *wasmedge.Memory, pointer interface{}) (*Region, error) {
+func NewRegion(mem memc.IMemory, pointer interface{}) (*Region, error) {
 	ptr := pointer.(int32)
-	offsetBz, err := mem.GetData(uint(ptr), 4)
+	offsetBz, err := mem.Read(ptr, 4)
 	if err != nil {
 		return nil, err
 	}
-	capacityBz, err := mem.GetData(uint(ptr)+4, 4)
+	capacityBz, err := mem.Read(ptr+4, 4)
 	if err != nil {
 		return nil, err
 	}
-	lengthBz, err := mem.GetData(uint(ptr)+8, 4)
+	lengthBz, err := mem.Read(ptr+8, 4)
 	if err != nil {
 		return nil, err
 	}
@@ -887,7 +840,7 @@ func (r *Region) Validate() error {
 	return nil
 }
 
-func (r *Region) Write(mem *wasmedge.Memory, data []byte) error {
+func (r *Region) Write(mem memc.IMemory, data []byte) error {
 	// writing nothing in memory gives the error "wrong VM workflow"
 	if len(data) == 0 {
 		return nil
@@ -895,7 +848,7 @@ func (r *Region) Write(mem *wasmedge.Memory, data []byte) error {
 	if int(r.Capacity) < len(data) {
 		return sdkerr.Wrapf(sdkerr.Error{}, "region write too small")
 	}
-	err := mem.SetData(data, uint(r.Offset), uint(len(data)))
+	err := mem.Write(int32(r.Offset), data)
 	if err != nil {
 		return err
 	}
@@ -903,15 +856,15 @@ func (r *Region) Write(mem *wasmedge.Memory, data []byte) error {
 	// Update the region reference
 	r.Length = uint32(len(data))
 	lengthBz := binary.LittleEndian.AppendUint32([]byte{}, r.Length)
-	err = mem.SetData(lengthBz, uint(r.Pointer)+8, 4)
+	err = mem.Write(r.Pointer+8, lengthBz)
 	return err
 }
 
-func (r *Region) Read(mem *wasmedge.Memory) ([]byte, error) {
+func (r *Region) Read(mem memc.IMemory) ([]byte, error) {
 	if r.Length == 0 {
 		return nil, nil
 	}
-	return mem.GetData(uint(r.Offset), uint(r.Length))
+	return mem.Read(int32(r.Offset), int32(r.Length))
 }
 
 func encode_sections(sections [][]byte) []byte {

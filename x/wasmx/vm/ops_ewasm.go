@@ -13,7 +13,7 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
-	mem "mythos/v1/x/wasmx/vm/memory/common"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
 )
 
@@ -22,353 +22,368 @@ var (
 	LOG_TYPE_EWASM   = "ewasm"
 )
 
-func useGas(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func useGas(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	gasToConsume := params[0].(int64)
 	// panics with out of gas error when out of gas
 	ctx.GasMeter.ConsumeGas(uint64(gasToConsume), "ewasm")
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // GAS -> i64
-func getGasLeft(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = int64(ctx.GasMeter.GasConsumed())
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // SLOAD key_ptr: i32, result_ptr: i32
-func storageLoad(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func storageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	keybz, err := mem.ReadMem(callframe, params[0], int32(32))
+	keybz, err := rnh.GetMemory().Read(params[0], int32(32))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	data := ctx.ContractStore.Get(keybz)
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
-	err = mem.WriteMem(callframe, data, params[1])
+	err = rnh.GetMemory().Write(params[1], data)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // SSTORE key_ptr: i32, value_ptr: i32,
-func storageStore(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	keybz, err := mem.ReadMem(callframe, params[0], int32(32))
+func storageStore(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keybz, err := rnh.GetMemory().Read(params[0], int32(32))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	valuebz, err := mem.ReadMem(callframe, params[1], int32(32))
+	valuebz, err := rnh.GetMemory().Read(params[1], int32(32))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "ewasm")
 	ctx.ContractStore.Set(keybz, valuebz)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // SELFBALANCE result_ptr: i32
-func getBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getBalance(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	balance, err := BankGetBalance(ctx, ctx.Env.Contract.Address, ctx.Env.Chain.Denom)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	mem.WriteBigInt(callframe, balance.Amount.BigInt(), params[0])
+	err = memc.WriteBigInt(rnh.GetMemory(), balance.Amount.BigInt(), params[0])
+	if err != nil {
+		return nil, err
+	}
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // BALANCE value_ptr: i32, result_ptr: i32,
-func getExternalBalance(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	addressbz, err := mem.ReadMem(callframe, params[0], int32(32))
+func getExternalBalance(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	addressbz, err := rnh.GetMemory().Read(params[0], int32(32))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addressbz))
 	balance, err := BankGetBalance(ctx, addr, ctx.Env.Chain.Denom)
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
-	mem.WriteBigInt(callframe, balance.Amount.BigInt(), params[1])
+	err = memc.WriteBigInt(rnh.GetMemory(), balance.Amount.BigInt(), params[1])
+	if err != nil {
+		return nil, err
+	}
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // ADDRESS result_ptr: i32
-func getAddress(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.Contract.Address.Bytes())
-	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
+	err := rnh.GetMemory().Write(params[0], addr.Bytes())
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CALLER result_ptr: i32
-func getCaller(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getCaller(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender.Bytes())
-	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
+	err := rnh.GetMemory().Write(params[0], addr.Bytes())
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CALLVALUE  result_ptr: i32
-func getCallValue(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	mem.WriteBigInt(callframe, ctx.Env.CurrentCall.Funds, params[0])
+func getCallValue(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	err := memc.WriteBigInt(rnh.GetMemory(), ctx.Env.CurrentCall.Funds, params[0])
+	if err != nil {
+		return returns, err
+	}
+	return returns, nil
 }
 
 // CALLDATASIZE -> i32
-func getCallDataSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getCallDataSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = len(ctx.Env.CurrentCall.CallData)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CALLDATACOPY result_ptr: i32, data_ptr: i32, data_len: i32,
-func callDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func callDataCopy(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	ctx := context.(*Context)
+	ctx := _context.(*Context)
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
-	part := mem.ReadAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
-	err := mem.WriteMem(callframe, part, params[0])
+	part := memc.ReadAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
+	err := rnh.GetMemory().Write(params[0], part)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // RETURNDATASIZE -> i32
-func getReturnDataSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getReturnDataSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = len(ctx.ReturnData)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // RETURNDATACOPY result_ptr: i32, data_ptr: i32, data_len: i32
-func returnDataCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func returnDataCopy(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := ctx.ReturnData[dataStart:dataLen]
-	err := mem.WriteMem(callframe, part, params[0])
+	err := rnh.GetMemory().Write(params[0], part)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CODESIZE -> i32
-func getCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getCodeSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = len(ctx.Env.Contract.Bytecode)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // EXTCODESIZE address_ptr: i32 -> i32
-func getExternalCodeSize(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func getExternalCodeSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	returns[0] = int32(100000)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CODECOPY result_ptr: i32, code_ptr: i32, data_len: i32
 // works only for constructor args that need to be copied at deployment time
-func codeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func codeCopy(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	codePtr := params[1].(int32)
 	dataLen := params[2].(int32)
-	part := mem.ReadAndFillWithZero(ctx.Env.Contract.Bytecode, codePtr, dataLen)
-	err := mem.WriteMem(callframe, part, params[0])
+	part := memc.ReadAndFillWithZero(ctx.Env.Contract.Bytecode, codePtr, dataLen)
+	err := rnh.GetMemory().Write(params[0], part)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // EXTCODECOPY address_ptr: i32, result_ptr: i32, code_ptr: i32, data_len: i32
-func externalCodeCopy(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func externalCodeCopy(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // EXTCODEHASH address_ptr: i32, result_ptr: i32
-func getExternalCodeHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getExternalCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	addressbz, err := mem.ReadMem(callframe, params[0], int32(32))
+	addressbz, err := rnh.GetMemory().Read(params[0], int32(32))
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	data := ctx.CosmosHandler.GetCodeHash(vmtypes.CleanupAddress(addressbz))
-	err = mem.WriteMem(callframe, data, params[1])
+	err = rnh.GetMemory().Write(params[1], data)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // GASPRICE result_ptr: i32
-func getTxGasPrice(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	mem.WriteBigInt(callframe, ctx.Env.Transaction.GasPrice, params[0])
+func getTxGasPrice(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	err := memc.WriteBigInt(rnh.GetMemory(), ctx.Env.Transaction.GasPrice, params[0])
+	if err != nil {
+		return returns, err
+	}
+	return returns, nil
 }
 
 // ORIGIN result_ptr: i32
-func getTxOrigin(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getTxOrigin(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin.Bytes())
-	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
+	err := rnh.GetMemory().Write(params[0], addr.Bytes())
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // NUMBER -> i64
-func getBlockNumber(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getBlockNumber(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = int64(ctx.Env.Block.Height)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // COINBASE result_ptr: i32
-func getBlockCoinbase(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getBlockCoinbase(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.Block.Proposer.Bytes())
-	err := mem.WriteMem(callframe, addr.Bytes(), params[0])
+	err := rnh.GetMemory().Write(params[0], addr.Bytes())
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // BLOCKHASH block_number: i64, result_ptr: i32
-func getBlockHash(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getBlockHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	blockNumber := params[0].(int64)
 	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
-	err := mem.WriteMem(callframe, data, params[1])
+	err := rnh.GetMemory().Write(params[1], data)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // GASLIMIT -> i64
-func getBlockGasLimit(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getBlockGasLimit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	returns[0] = int64(ctx.Env.Block.GasLimit)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // TIMESTAMP -> i64
-func getBlockTimestamp(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func getBlockTimestamp(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	// EVM time is in seconds since unix epoch
 	// ctx.Env.Block.Time is in nanoseconds
 	timestamp := time.Unix(0, int64(ctx.Env.Block.Timestamp))
 	returns[0] = timestamp.Unix()
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // DIFFICULTY result_ptr: i32
-func getBlockDifficulty(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func getBlockDifficulty(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := mem.WriteMem(callframe, data, params[0])
+	err := rnh.GetMemory().Write(params[0], data)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // PREVRANDAO result_ptr: i32
-func prevrandao(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func prevrandao(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	// TODO random
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := mem.WriteMem(callframe, data, params[0])
+	err := rnh.GetMemory().Write(params[0], data)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CHAINID result_ptr: i32
-func getChainId(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	mem.WriteBigInt(callframe, ctx.Env.Chain.ChainId, params[0])
+func getChainId(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	err := memc.WriteBigInt(rnh.GetMemory(), ctx.Env.Chain.ChainId, params[0])
+	if err != nil {
+		return returns, err
+	}
+	return returns, nil
 }
 
 // BASEFEE result_ptr: i32
-func getBaseFee(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func getBaseFee(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := mem.WriteMem(callframe, data, params[0])
+	err := rnh.GetMemory().Write(params[0], data)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CALL gas_limit: i64, address_ptr: i32, value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 // Returns 0 on success, 1 on failure and 2 on revert
-func call(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func call(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
+	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
 
-	value, err := mem.ReadBigInt(callframe, params[2], int32(32))
+	value, err := memc.ReadBigInt(rnh.GetMemory(), params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	calldata, err := mem.ReadMem(callframe, params[3], params[4])
+	calldata, err := rnh.GetMemory().Read(params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 	var success int32
 	var returnData []byte
@@ -400,35 +415,35 @@ func call(context interface{}, callframe *wasmedge.CallingFrame, params []interf
 		}
 	}
 	returns[0] = success
-	err = mem.WriteMemBoundBySize(callframe, returnData, params[5], params[6])
+	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CALLCODE gas_limit: i64, address_ptr: i32, value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
-func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func callCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
+	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	value, err := mem.ReadBigInt(callframe, params[2], int32(32))
+	value, err := memc.ReadBigInt(rnh.GetMemory(), params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	calldata, err := mem.ReadMem(callframe, params[3], params[4])
+	calldata, err := rnh.GetMemory().Read(params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 
 	// We don't need to send funds because it would be sending funds
@@ -455,30 +470,30 @@ func callCode(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	}
 	returns[0] = success
 
-	err = mem.WriteMemBoundBySize(callframe, returnData, params[5], params[6])
+	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CALLDELEGATE gas_limit: i64, address_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
-func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func callDelegate(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
+	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	calldata, err := mem.ReadMem(callframe, params[2], params[3])
+	calldata, err := rnh.GetMemory().Read(params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 
 	// We don't need to send funds because it would be sending funds
@@ -505,32 +520,32 @@ func callDelegate(context interface{}, callframe *wasmedge.CallingFrame, params 
 	}
 	returns[0] = success
 
-	err = mem.WriteMemBoundBySize(callframe, returnData, params[4], params[5])
+	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[4], params[5])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // STATICCALL gas_limit: i64, address_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32, result_len: i32 -> i32
 // Returns 0 on success, 1 on failure and 2 on revert
-func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	// TODO static
-	ctx := context.(*Context)
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := mem.ReadMem(callframe, params[1], int32(32))
+	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
-	calldata, err := mem.ReadMem(callframe, params[2], params[3])
+	calldata, err := rnh.GetMemory().Read(params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
 
 	var success int32
@@ -555,31 +570,31 @@ func callStatic(context interface{}, callframe *wasmedge.CallingFrame, params []
 	}
 	returns[0] = success
 
-	err = mem.WriteMemBoundBySize(callframe, returnData, params[4], params[5])
+	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[4], params[5])
 	if err != nil {
 		returns[0] = int32(1)
-		return returns, wasmedge.Result_Success
+		return returns, nil
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CREATE value_ptr: i32, data_ptr: i32, data_len: i32, result_ptr: i32
-func create(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func create(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	value, err := mem.ReadBigInt(callframe, params[0], int32(32))
+	value, err := memc.ReadBigInt(rnh.GetMemory(), params[0], int32(32))
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	data, err := mem.ReadMem(callframe, params[1], params[2])
+	data, err := rnh.GetMemory().Read(params[1], params[2])
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
 	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
 	var sdeps []string
 	contractstr := ctx.Env.Contract.Address.String()
@@ -599,36 +614,36 @@ func create(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 		[]byte{},
 	)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	err = mem.WriteMem(callframe, mem.PaddLeftTo32(contractAddress.Bytes()), params[3])
+	err = rnh.GetMemory().Write(params[3], memc.PaddLeftTo32(contractAddress.Bytes()))
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // CREATE2 value_ptr: i32, data_ptr: i32, data_len: i32, salt_ptr: i32, result_ptr: i32
-func create2(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func create2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	value, err := mem.ReadBigInt(callframe, params[0], int32(32))
+	value, err := memc.ReadBigInt(rnh.GetMemory(), params[0], int32(32))
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	data, err := mem.ReadMem(callframe, params[1], params[2])
+	data, err := rnh.GetMemory().Read(params[1], params[2])
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	salt, err := mem.ReadMem(callframe, params[3], int32(32))
+	salt, err := rnh.GetMemory().Read(params[3], int32(32))
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
 	metadata := types.CodeMetadata{}
 	// TODO info from provenance ?
 	initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
 	var sdeps []string
 	contractstr := ctx.Env.Contract.Address.String()
@@ -648,27 +663,27 @@ func create2(context interface{}, callframe *wasmedge.CallingFrame, params []int
 		salt,
 	)
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	err = mem.WriteMem(callframe, mem.PaddLeftTo32(contractAddress.Bytes()), params[3])
+	err = rnh.GetMemory().Write(params[3], memc.PaddLeftTo32(contractAddress.Bytes()))
 	if err != nil {
-		return returns, wasmedge.Result_Fail
+		return returns, err
 	}
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // SELFDESTRUCT address_ptr: i32
-func selfDestruct(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func selfDestruct(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // LOG data_ptr: i32, data_len: i32, topic_count: i32, topic_ptr1: i32, topic_ptr2: i32, topic_ptr3: i32, topic_ptr4: i32
-func ewasmLog(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	data, err := mem.ReadMem(callframe, params[0], params[1])
+func ewasmLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	data, err := rnh.GetMemory().Read(params[0], params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	dependency := types.DEFAULT_SYS_DEP
 	if len(ctx.Env.Contract.SystemDeps) > 0 {
@@ -680,9 +695,9 @@ func ewasmLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
 
 	for i := 0; i < topicCount; i++ {
-		topic, err := mem.ReadMem(callframe, topicPtrs[i], int32(32))
+		topic, err := rnh.GetMemory().Read(topicPtrs[i], int32(32))
 		if err != nil {
-			return nil, wasmedge.Result_Fail
+			return nil, err
 		}
 		var topic_ [32]byte
 		copy(topic_[:], topic)
@@ -690,15 +705,15 @@ func ewasmLog(context interface{}, callframe *wasmedge.CallingFrame, params []in
 	}
 	ctx.Logs = append(ctx.Logs, log)
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // RETURN data_ptr: i32, data_len: i32
-func finish(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	result, err := mem.ReadMem(callframe, params[0], params[1])
+func finish(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	result, err := rnh.GetMemory().Read(params[0], params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = result
@@ -709,180 +724,116 @@ func finish(context interface{}, callframe *wasmedge.CallingFrame, params []inte
 }
 
 // STOP data_ptr: i32, data_len: i32
-func stop(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func stop(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
 	return returns, wasmedge.Result_Terminate
 }
 
 // REVERT data_ptr: i32, data_len: i32
-func revert(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
-	result, err := mem.ReadMem(callframe, params[0], params[1])
+func revert(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	result, err := rnh.GetMemory().Read(params[0], params[1])
 	if err != nil {
-		return nil, wasmedge.Result_Fail
+		return nil, err
 	}
 	returns := make([]interface{}, 1)
 	returns[0] = result
 	ctx.FinishData = result
 	ctx.ReturnData = result
-	return returns, wasmedge.Result_Fail
+	return returns, fmt.Errorf("revert")
 }
 
 // msg_ptr: i32, _msg_len: i32
-func sendCosmosMsg(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func sendCosmosMsg(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // msg_ptr: i32, _msg_len: i32
-func sendCosmosQuery(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func sendCosmosQuery(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // value: i32
-func debugPrinti32(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func debugPrinti32(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrinti32: %d, %d", params[0].(int32), params[1].(int32)))
 	returns := make([]interface{}, 1)
 	returns[0] = params[0]
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // value: i64
-func debugPrinti64(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
-	ctx := context.(*Context)
+func debugPrinti64(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrinti64: %d, %d", params[0].(int64), params[1].(int32)))
 	returns := make([]interface{}, 1)
 	returns[0] = params[0]
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
 // value_ptr: i32, value_len: i32
-func debugPrintMemHex(context interface{}, callframe *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
+func debugPrintMemHex(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	pointer := params[0].(int32)
 	size := params[1].(int32)
-	mem := callframe.GetMemoryByIndex(0)
-	data, _ := mem.GetData(uint(pointer), uint(size))
-	ctx := context.(*Context)
+	mem := rnh.GetMemory()
+	data, _ := mem.Read(uint(pointer), uint(size))
+	ctx := _context.(*Context)
 	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrintMemHex: %s", hex.EncodeToString(data)))
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Success
+	return returns, nil
 }
 
-func BuildEwasmEnv(context *Context) *wasmedge.Module {
-	ewasmEnv := wasmedge.NewModule("env")
+func BuildEwasmEnv(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("ethereum_useGas", useGas, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getGasLeft", getGasLeft, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ethereum_storageLoad", storageLoad, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_storageStore", storageStore, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getBalance", getBalance, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getExternalBalance", getExternalBalance, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getAddress", getAddress, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getCaller", getCaller, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getCallValue", getCallValue, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getCallDataSize", getCallDataSize, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_callDataCopy", callDataCopy, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getReturnDataSize", getReturnDataSize, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_returnDataCopy", returnDataCopy, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getCodeSize", getCodeSize, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_getExternalCodeSize", getExternalCodeSize, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_codeCopy", codeCopy, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_externalCodeCopy", externalCodeCopy, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getExternalCodeHash", getExternalCodeHash, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getTxGasPrice", getTxGasPrice, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getTxOrigin", getTxOrigin, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getBlockNumber", getBlockNumber, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ethereum_getBlockCoinbase", getBlockCoinbase, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getBlockHash", getBlockHash, []interface{}{vm.ValType_I64(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getBlockGasLimit", getBlockGasLimit, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ethereum_getBlockTimestamp", getBlockTimestamp, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ethereum_getBlockDifficulty", getBlockDifficulty, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_prevrandao", prevrandao, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getChainId", getChainId, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_getBaseFee", getBaseFee, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_call", call, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_callCode", callCode, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_callDelegate", callDelegate, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_callStatic", callStatic, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_create", create, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_create2", create2, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_selfDestruct", selfDestruct, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_log", ewasmLog, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_finish", finish, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_stop", stop, []interface{}{}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_revert", revert, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("ethereum_sendCosmosMsg", sendCosmosMsg, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_sendCosmosQuery", sendCosmosQuery, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_debugPrinti32", debugPrinti32, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ethereum_debugPrinti64", debugPrinti64, []interface{}{vm.ValType_I64(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ethereum_debugPrintMemHex", debugPrintMemHex, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+	}
 
-	functype__ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{},
-	)
-	functype_i64_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64},
-		[]wasmedge.ValType{},
-	)
-	functype__i64 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I64},
-	)
-	functype_i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype__i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i64i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i64i32_i64 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I64},
-	)
-	functype_i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i32i32i32i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i32i32i32i32i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-	functype_i64i32i32i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i64i32i32i32i32i32_i32 := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I64, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{wasmedge.ValType_I32},
-	)
-	functype_i32i32i32i32i32i32i32_ := wasmedge.NewFunctionType(
-		[]wasmedge.ValType{wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32, wasmedge.ValType_I32},
-		[]wasmedge.ValType{},
-	)
-
-	ewasmEnv.AddFunction("ethereum_useGas", wasmedge.NewFunction(functype_i64_, useGas, context, 0))
-	ewasmEnv.AddFunction("ethereum_getGasLeft", wasmedge.NewFunction(functype__i64, getGasLeft, context, 0))
-	ewasmEnv.AddFunction("ethereum_storageLoad", wasmedge.NewFunction(functype_i32i32_, storageLoad, context, 0))
-	ewasmEnv.AddFunction("ethereum_storageStore", wasmedge.NewFunction(functype_i32i32_, storageStore, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBalance", wasmedge.NewFunction(functype_i32_, getBalance, context, 0))
-	ewasmEnv.AddFunction("ethereum_getExternalBalance", wasmedge.NewFunction(functype_i32i32_, getExternalBalance, context, 0))
-	ewasmEnv.AddFunction("ethereum_getAddress", wasmedge.NewFunction(functype_i32_, getAddress, context, 0))
-	ewasmEnv.AddFunction("ethereum_getCaller", wasmedge.NewFunction(functype_i32_, getCaller, context, 0))
-	ewasmEnv.AddFunction("ethereum_getCallValue", wasmedge.NewFunction(functype_i32_, getCallValue, context, 0))
-	ewasmEnv.AddFunction("ethereum_getCallDataSize", wasmedge.NewFunction(functype__i32, getCallDataSize, context, 0))
-	ewasmEnv.AddFunction("ethereum_callDataCopy", wasmedge.NewFunction(functype_i32i32i32_, callDataCopy, context, 0))
-	ewasmEnv.AddFunction("ethereum_getReturnDataSize", wasmedge.NewFunction(functype__i32, getReturnDataSize, context, 0))
-	ewasmEnv.AddFunction("ethereum_returnDataCopy", wasmedge.NewFunction(functype_i32i32i32_, returnDataCopy, context, 0))
-	ewasmEnv.AddFunction("ethereum_getCodeSize", wasmedge.NewFunction(functype__i32, getCodeSize, context, 0))
-	ewasmEnv.AddFunction("ethereum_getExternalCodeSize", wasmedge.NewFunction(functype_i32_i32, getExternalCodeSize, context, 0))
-	ewasmEnv.AddFunction("ethereum_codeCopy", wasmedge.NewFunction(functype_i32i32i32_, codeCopy, context, 0))
-	ewasmEnv.AddFunction("ethereum_externalCodeCopy", wasmedge.NewFunction(functype_i32i32i32i32_, externalCodeCopy, context, 0))
-	ewasmEnv.AddFunction("ethereum_getExternalCodeHash", wasmedge.NewFunction(functype_i32i32_, getExternalCodeHash, context, 0))
-	ewasmEnv.AddFunction("ethereum_getTxGasPrice", wasmedge.NewFunction(functype_i32_, getTxGasPrice, context, 0))
-	ewasmEnv.AddFunction("ethereum_getTxOrigin", wasmedge.NewFunction(functype_i32_, getTxOrigin, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockNumber", wasmedge.NewFunction(functype__i64, getBlockNumber, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockCoinbase", wasmedge.NewFunction(functype_i32_, getBlockCoinbase, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockHash", wasmedge.NewFunction(functype_i64i32_, getBlockHash, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockGasLimit", wasmedge.NewFunction(functype__i64, getBlockGasLimit, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockTimestamp", wasmedge.NewFunction(functype__i64, getBlockTimestamp, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBlockDifficulty", wasmedge.NewFunction(functype_i32_, getBlockDifficulty, context, 0))
-	ewasmEnv.AddFunction("ethereum_prevrandao", wasmedge.NewFunction(functype_i32_, prevrandao, context, 0))
-	ewasmEnv.AddFunction("ethereum_getChainId", wasmedge.NewFunction(functype_i32_, getChainId, context, 0))
-	ewasmEnv.AddFunction("ethereum_getBaseFee", wasmedge.NewFunction(functype_i32_, getBaseFee, context, 0))
-	ewasmEnv.AddFunction("ethereum_call", wasmedge.NewFunction(functype_i64i32i32i32i32i32i32_i32, call, context, 0))
-	ewasmEnv.AddFunction("ethereum_callCode", wasmedge.NewFunction(functype_i64i32i32i32i32i32i32_i32, callCode, context, 0))
-	ewasmEnv.AddFunction("ethereum_callDelegate", wasmedge.NewFunction(functype_i64i32i32i32i32i32_i32, callDelegate, context, 0))
-	ewasmEnv.AddFunction("ethereum_callStatic", wasmedge.NewFunction(functype_i64i32i32i32i32i32_i32, callStatic, context, 0))
-	ewasmEnv.AddFunction("ethereum_create", wasmedge.NewFunction(functype_i32i32i32i32_, create, context, 0))
-	ewasmEnv.AddFunction("ethereum_create2", wasmedge.NewFunction(functype_i32i32i32i32i32_, create2, context, 0))
-	ewasmEnv.AddFunction("ethereum_selfDestruct", wasmedge.NewFunction(functype_i32_, selfDestruct, context, 0))
-	ewasmEnv.AddFunction("ethereum_log", wasmedge.NewFunction(functype_i32i32i32i32i32i32i32_, ewasmLog, context, 0))
-	ewasmEnv.AddFunction("ethereum_finish", wasmedge.NewFunction(functype_i32i32_, finish, context, 0))
-	ewasmEnv.AddFunction("ethereum_stop", wasmedge.NewFunction(functype__, stop, context, 0))
-	ewasmEnv.AddFunction("ethereum_revert", wasmedge.NewFunction(functype_i32i32_, revert, context, 0))
-	ewasmEnv.AddFunction("ethereum_sendCosmosMsg", wasmedge.NewFunction(functype_i32i32_i32, sendCosmosMsg, context, 0))
-	ewasmEnv.AddFunction("ethereum_sendCosmosQuery", wasmedge.NewFunction(functype_i32i32_i32, sendCosmosQuery, context, 0))
-	ewasmEnv.AddFunction("ethereum_debugPrinti32", wasmedge.NewFunction(functype_i32i32_i32, debugPrinti32, context, 0))
-	ewasmEnv.AddFunction("ethereum_debugPrinti64", wasmedge.NewFunction(functype_i64i32_i64, debugPrinti64, context, 0))
-	ewasmEnv.AddFunction("ethereum_debugPrintMemHex", wasmedge.NewFunction(functype_i32i32_, debugPrintMemHex, context, 0))
-
-	return ewasmEnv
+	return vm.BuildModule(rnh, "env", context, fndefs)
 }
