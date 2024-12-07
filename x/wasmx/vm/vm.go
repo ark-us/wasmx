@@ -19,7 +19,7 @@ import (
 
 	"mythos/v1/x/wasmx/types"
 	vmi "mythos/v1/x/wasmx/vm/interfaces"
-	"mythos/v1/x/wasmx/vm/wasmutils"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
 func Ewasm_wrapper(context interface{}, _ *wasmedge.CallingFrame, params []interface{}) ([]interface{}, wasmedge.Result) {
@@ -33,26 +33,7 @@ func Ewasm_wrapper(context interface{}, _ *wasmedge.CallingFrame, params []inter
 	return returns, wasmedge.Result_Success
 }
 
-func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (*wasmedge.VM, []func(), error) {
-	// TODO
-	// wasmedge.SetLogOff()
-	wasmedge.SetLogErrorLevel()
-	// wasmedge.SetLogDebugLevel()
-
-	conf := wasmedge.NewConfigure()
-	// conf.SetStatisticsInstructionCounting(true)
-	// conf.SetStatisticsTimeMeasuring(true)
-	// TODO allow wasi only for core contracts
-	conf.AddConfig(wasmedge.WASI)
-	contractVm := wasmedge.NewVMWithConfig(conf)
-	// contractVm := wasmedge.NewVM()
-	var cleanups []func()
-	var err error
-
-	// first in, last cleaned up
-	cleanups = append(cleanups, conf.Release)
-	cleanups = append(cleanups, contractVm.Release)
-
+func InitiateWasm(context *Context, contractVm memc.IVm, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (memc.IVm, error) {
 	// set default
 	if len(systemDeps) == 0 {
 		label := types.DEFAULT_SYS_DEP
@@ -77,9 +58,9 @@ func InitiateWasm(context *Context, filePath string, wasmbuffer []byte, systemDe
 	}
 
 	if filePath != "" || len(wasmbuffer) > 0 {
-		err = wasmutils.InstantiateWasm(contractVm, filePath, wasmbuffer)
+		err = contractVm.InstantiateWasm(filePath, wasmbuffer)
 	}
-	return contractVm, cleanups, err
+	return contractVm, err
 }
 
 func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []types.SystemDep) ([]func(), error) {

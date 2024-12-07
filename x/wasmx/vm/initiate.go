@@ -1,12 +1,10 @@
 package vm
 
 import (
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	"mythos/v1/x/wasmx/types"
-	vmi "mythos/v1/x/wasmx/vm/interfaces"
 	"mythos/v1/x/wasmx/vm/interpreters"
 	memas "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 	memtay "mythos/v1/x/wasmx/vm/memory/taylor"
 	"mythos/v1/x/wasmx/vm/wasmutils"
 )
@@ -19,7 +17,7 @@ var (
 	ALLOWED_CW8_EXPORTS  = []string{"interface_version_8", "allocate", "deallocate", "instantiate", "execute", "query", "migrate", "reply", "sudo", "ibc_channel_open", "ibc_channel_connect", "ibc_channel_close", "ibc_packet_receive", "ibc_packet_ack", "ibc_packet_timeout"}
 )
 
-func InitiateSysEnv1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateSysEnv1(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	sys := BuildSysEnv(context)
 	var cleanups []func()
 	cleanups = append(cleanups, sys.Release)
@@ -30,7 +28,7 @@ func InitiateSysEnv1(context *Context, contractVm *wasmedge.VM, dep *types.Syste
 	return cleanups, nil
 }
 
-func InitiateWasmxEnv1(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateWasmxEnv1(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	wasmx := BuildWasmxEnv1(context)
 	env := BuildAssemblyScriptEnv(context)
 
@@ -48,11 +46,11 @@ func InitiateWasmxEnv1(context *Context, contractVm *wasmedge.VM, dep *types.Sys
 	return cleanups, nil
 }
 
-func InitiateKeccak256() (*wasmedge.VM, []func(), error) {
+func InitiateKeccak256(newvm func() memc.IVm) (memc.IVm, []func(), error) {
 	var cleanups []func()
 	var err error
-	keccakVm := wasmedge.NewVM()
-	err = wasmutils.InstantiateWasm(keccakVm, "", interpreters.Keccak256Util)
+	keccakVm := newvm()
+	err = keccakVm.InstantiateWasm("", interpreters.Keccak256Util)
 	if err != nil {
 		return nil, cleanups, err
 	}
@@ -60,8 +58,8 @@ func InitiateKeccak256() (*wasmedge.VM, []func(), error) {
 	return keccakVm, cleanups, nil
 }
 
-func InitiateWasmxEnv2(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
-	keccakVm, cleanups, err := InitiateKeccak256()
+func InitiateWasmxEnv2(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
+	keccakVm, cleanups, err := InitiateKeccak256(contractVm.New)
 	if err != nil {
 		return cleanups, err
 	}
@@ -83,7 +81,7 @@ func InitiateWasmxEnv2(context *Context, contractVm *wasmedge.VM, dep *types.Sys
 	return cleanups, nil
 }
 
-func InstantiateWasmxConsensusJson(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InstantiateWasmxConsensusJson(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	var err error
 	wasmx := BuildWasmxConsensusJson1(context)
@@ -95,7 +93,7 @@ func InstantiateWasmxConsensusJson(context *Context, contractVm *wasmedge.VM, de
 	return cleanups, nil
 }
 
-func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateInterpreter(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 	err := wasmutils.InstantiateWasm(contractVm, dep.FilePath, nil)
 
@@ -105,7 +103,7 @@ func InitiateInterpreter(context *Context, contractVm *wasmedge.VM, dep *types.S
 	return cleanups, nil
 }
 
-func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateWasi(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	var cleanups []func()
 
 	// TODO better
@@ -126,7 +124,7 @@ func InitiateWasi(context *Context, contractVm *wasmedge.VM, dep *types.SystemDe
 	return cleanups, nil
 }
 
-func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateEwasmTypeEnv(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	ewasmEnv := BuildEwasmEnv(context)
 	var cleanups []func()
 	cleanups = append(cleanups, ewasmEnv.Release)
@@ -137,7 +135,7 @@ func InitiateEwasmTypeEnv(context *Context, contractVm *wasmedge.VM, dep *types.
 	return cleanups, nil
 }
 
-func InitiateCosmWasmEnv8(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error) {
+func InitiateCosmWasmEnv8(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error) {
 	wasmx := BuildCosmWasm_8(context)
 	var cleanups []func()
 	cleanups = append(cleanups, wasmx.Release)
@@ -148,15 +146,15 @@ func InitiateCosmWasmEnv8(context *Context, contractVm *wasmedge.VM, dep *types.
 	return cleanups, nil
 }
 
-var SystemDepHandler = map[string]func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error){}
+var SystemDepHandler = map[string]func(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error){}
 
-type ExecuteFunctionInterface func(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error)
+type ExecuteFunctionInterface func(context *Context, vm memc.IVm, funcName string, args []interface{}) ([]int32, error)
 
 var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
 var DependenciesMap = map[string]bool{}
 
-var MemoryDepHandler = map[string]vmi.MemoryHandler{}
+var MemoryDepHandler = map[string]func(vm memc.IVm, mem memc.IMemory) memc.MemoryHandler{}
 
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
@@ -188,13 +186,13 @@ func init() {
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
 
-	MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.MemoryHandlerAS{}
-	MemoryDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.MemoryHandlerTay{}
+	MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewMemoryHandlerAS
+	MemoryDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewMemoryHandlerTay
 }
 
 func SetSystemDepHandler(
 	key string,
-	handler func(context *Context, contractVm *wasmedge.VM, dep *types.SystemDep) ([]func(), error),
+	handler func(context *Context, contractVm memc.IVm, dep *types.SystemDep) ([]func(), error),
 ) {
 	SystemDepHandler[key] = handler
 }
@@ -217,33 +215,24 @@ func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInte
 	return ExecuteDefaultMain
 }
 
-func ExecuteDefault(context *Context, contractVm *wasmedge.VM, funcName string) ([]interface{}, error) {
-	return contractVm.Execute(funcName)
+func ExecuteDefault(context *Context, contractVm memc.IVm, funcName string) ([]int32, error) {
+	return contractVm.Call(funcName, []interface{}{})
 }
 
-func ExecuteDefaultContract(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecuteDefaultContract(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == types.ENTRY_POINT_EXECUTE || funcName == types.ENTRY_POINT_QUERY {
 		funcName = "main"
 	}
-	return contractVm.Execute(funcName)
+	return contractVm.Call(funcName, []interface{}{})
 }
 
-func ExecuteDefaultMain(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
-	return contractVm.Execute("main")
+func ExecuteDefaultMain(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+	return contractVm.Call("main", []interface{}{})
 }
 
-func ExecuteFSM(context *Context, contractVm *wasmedge.VM, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecuteFSM(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == types.ENTRY_POINT_EXECUTE || funcName == types.ENTRY_POINT_QUERY || funcName == types.ENTRY_POINT_INSTANTIATE {
 		funcName = "main"
 	}
-	return contractVm.Execute(funcName)
-}
-
-func VerifyEnv(version string, imports []*wasmedge.ImportType) error {
-	// TODO check that all imports are supported by the given version
-
-	// for _, mimport := range imports {
-	// 	fmt.Println("Import:", mimport.GetModuleName(), mimport.GetExternalName())
-	// }
-	return nil
+	return contractVm.Call(funcName, []interface{}{})
 }

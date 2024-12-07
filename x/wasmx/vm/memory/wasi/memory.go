@@ -1,39 +1,37 @@
 package wasi
 
 import (
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	"mythos/v1/x/wasmx/types"
-	mem "mythos/v1/x/wasmx/vm/memory/common"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
-func WriteMemDefaultMalloc(vm *wasmedge.VM, callframe *wasmedge.CallingFrame, data []byte) (int32, error) {
+func WriteMemDefaultMalloc(vm memc.IVm, mem memc.IMemory, data []byte) (int32, error) {
 	datalen := int32(len(data))
 	ptr, err := AllocateMemDefaultMalloc(vm, datalen)
 	if err != nil {
 		return 0, err
 	}
-	err = mem.WriteMem(callframe, data, ptr)
+	err = mem.Write(ptr, data)
 	if err != nil {
 		return 0, err
 	}
 	return ptr, nil
 }
 
-func WriteDynMemDefaultMalloc(vm *wasmedge.VM, callframe *wasmedge.CallingFrame, data []byte) (uint64, error) {
-	ptr, err := WriteMemDefaultMalloc(vm, callframe, data)
+func WriteDynMemDefaultMalloc(vm memc.IVm, mem memc.IMemory, data []byte) (uint64, error) {
+	ptr, err := WriteMemDefaultMalloc(vm, mem, data)
 	if err != nil {
 		return 0, err
 	}
 	return BuildPtr64(ptr, int32(len(data))), nil
 }
 
-func AllocateMemDefaultMalloc(vm *wasmedge.VM, size int32) (int32, error) {
-	result, err := vm.Execute(types.MEMORY_EXPORT_MALLOC, size)
+func AllocateMemDefaultMalloc(vm memc.IVm, size int32) (int32, error) {
+	result, err := vm.Call(types.MEMORY_EXPORT_MALLOC, []interface{}{size})
 	if err != nil {
 		return 0, err
 	}
-	return result[0].(int32), nil
+	return result[0], nil
 }
 
 func BuildPtr64(ptr int32, datalen int32) uint64 {

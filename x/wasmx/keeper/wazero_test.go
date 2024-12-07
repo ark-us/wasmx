@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -52,6 +53,7 @@ func AllocWriteMem(ctx context.Context, m api.Module, data []byte) (uint32, erro
 }
 
 func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
+	var err error
 	wasmbin := wasmxSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
@@ -66,7 +68,17 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 
 	storageMap := map[string][]byte{}
 
-	r := wazero.NewRuntime(appA.Context())
+	cache := wazero.NewCompilationCache()
+	// cache, err := wazero.NewCompilationCacheWithDir("/Users/user/dev/blockchain/wasmx/build")
+	s.Require().NoError(err)
+	defer cache.Close(appA.Context())
+	// config := wazero.NewRuntimeConfigInterpreter().WithCompilationCache(cache)
+	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache)
+
+	// r := wazero.NewRuntime(appA.Context())
+	r := wazero.NewRuntimeWithConfig(appA.Context(), config)
+	// r2 := wazero.NewRuntimeWithConfig(appA.Context(), config)
+
 	fmt.Println("--TestWazeroWasmxSimpleStorage r--", r)
 	defer r.Close(appA.Context())
 
@@ -81,6 +93,7 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 		size := len(vmctx.Env.CurrentCall.CallData)
 		result, err := m.ExportedFunction(types.MEMORY_EXPORT_AS).Call(ctx, uint64(size), uint64(AS_ARRAY_BUFFER_TYPE))
 		fmt.Println("--getCallData allocate--", err, result)
+
 		ptr := result[0]
 
 		fmt.Println("--getCallData write mem--", ptr, string(vmctx.Env.CurrentCall.CallData))
@@ -104,7 +117,6 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 		valuebz, err := ReadMemFromPtr(mem, valueptr)
 		fmt.Println("--storageStore key, value--", err, string(valuebz))
 		storageMap[string(keybz)] = valuebz
-
 	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("storageStore")
 
 	wasmxEnv = wasmxEnv.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
@@ -127,10 +139,6 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 		valuebz, err := ReadMemFromPtr(mem, ptr)
 		fmt.Println("--finish value--", err, string(valuebz))
 		vmctx.FinishData = valuebz
-
-		// x, y := api.DecodeI32(stack[0]), api.DecodeI32(stack[1])
-		// sum := x + y
-		// stack[0] = api.EncodeI32(sum)
 	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("finish")
 
 	wasmxEnv = wasmxEnv.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
@@ -148,9 +156,9 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 		success := mem.Write(uint32(ptr), vmctx.Env.CurrentCall.CallData)
 		fmt.Println("--revert success--", success)
 
-		// x, y := api.DecodeI32(stack[0]), api.DecodeI32(stack[1])
-		// sum := x + y
-		// stack[0] = api.EncodeI32(sum)
+		fmt.Println("--pre revert--")
+		panic("revert fn")
+		fmt.Println("--post revert--")
 	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("revert")
 
 	wasmxEnv = wasmxEnv.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
@@ -181,7 +189,7 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 
 	ctx = ctx.WithValue("vmctx", vmCtx)
 
-	_, err := wasmxEnv.Instantiate(ctx)
+	_, err = wasmxEnv.Instantiate(ctx)
 	s.Require().NoError(err)
 
 	_, err = envEnv.Instantiate(ctx)
@@ -194,38 +202,21 @@ func (suite *KeeperTestSuite) TestWazeroWasmxSimpleStorage() {
 	s.Require().NoError(err)
 	fmt.Println("---respi---", respi)
 
-	resp, _ := mod.ExportedFunction("main").Call(ctx)
+	start := time.Now()
+
+	resp, err := mod.ExportedFunction("main").Call(ctx)
 	s.Require().NoError(err)
 	fmt.Println("---resp---", resp, vmCtx.FinishData, string(vmCtx.FinishData))
 
 	calldata = []byte(`{"get":{"key":"hello"}}`)
 	vmCtx.Env.CurrentCall.CallData = calldata
-	resp, _ = mod.ExportedFunction("main").Call(ctx)
+	resp, err = mod.ExportedFunction("main").Call(ctx)
 	s.Require().NoError(err)
+
+	elapsed := time.Since(start)
+	fmt.Printf("Elapsed time: %s\n", elapsed)
 
 	fmt.Println("---resp---", resp, vmCtx.FinishData, string(vmCtx.FinishData))
 
 	return
-
-	codeId := appA.StoreCode(sender, wasmbin, nil)
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
-
-	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
-	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-
-	wasmlogs := appA.GetWasmxEvents(res.GetEvents())
-	emptyDataLogs := appA.GetEventsByAttribute(wasmlogs, "data", "0x")
-	topicLogs := appA.GetEventsByAttribute(wasmlogs, "topic", "0x68656c6c6f000000000000000000000000000000000000000000000000000000")
-	s.Require().Equal(1, len(wasmlogs), res.GetEvents())
-	s.Require().Equal(1, len(emptyDataLogs), res.GetEvents())
-	s.Require().Equal(1, len(topicLogs), res.GetEvents())
-
-	initvalue := "sammy"
-	keybz := []byte("hello")
-	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
-	suite.Require().Equal(initvalue, string(queryres))
-
-	data = []byte(`{"get":{"key":"hello"}}`)
-	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	suite.Require().Equal(string(qres), "sammy")
 }
