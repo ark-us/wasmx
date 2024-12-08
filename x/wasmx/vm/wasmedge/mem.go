@@ -12,12 +12,25 @@ type WasmEdgeMemory struct {
 	*wasmedge.Memory
 }
 
-func (wm WasmEdgeMemory) Read(ptr interface{}, size interface{}) ([]byte, error) {
+const MEM_PAGE_SIZE = 64 * 1024 // 64KiB
+func (wm WasmEdgeMemory) Size() uint32 {
+	return uint32(wm.Memory.GetPageSize() * MEM_PAGE_SIZE)
+}
+
+func (wm WasmEdgeMemory) ReadRaw(ptr interface{}, size interface{}) ([]byte, error) {
 	return ReadMem(wm.Memory, ptr.(int32), size.(int32))
 }
 
-func (wm WasmEdgeMemory) Write(ptr interface{}, data []byte) error {
+func (wm WasmEdgeMemory) WriteRaw(ptr interface{}, data []byte) error {
 	return WriteMem(wm.Memory, ptr.(int32), data)
+}
+
+func (wm WasmEdgeMemory) Read(ptr int32, size int32) ([]byte, error) {
+	return ReadMem(wm.Memory, ptr, size)
+}
+
+func (wm WasmEdgeMemory) Write(ptr int32, data []byte) error {
+	return WriteMem(wm.Memory, ptr, data)
 }
 
 func ReadMem(mem *wasmedge.Memory, ptr int32, length int32) ([]byte, error) {

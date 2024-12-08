@@ -14,12 +14,24 @@ type WazeroMemory struct {
 	api.Memory
 }
 
-func (wm WazeroMemory) Read(ptr interface{}, size interface{}) ([]byte, error) {
+func (wm WazeroMemory) Size() uint32 {
+	return wm.Memory.Size()
+}
+
+func (wm WazeroMemory) ReadRaw(ptr interface{}, size interface{}) ([]byte, error) {
 	return ReadMem(wm.Memory, ptr.(int32), size.(int32))
 }
 
-func (wm WazeroMemory) Write(ptr interface{}, data []byte) error {
+func (wm WazeroMemory) WriteRaw(ptr interface{}, data []byte) error {
 	return WriteMem(wm.Memory, ptr.(int32), data)
+}
+
+func (wm WazeroMemory) Read(ptr int32, size int32) ([]byte, error) {
+	return ReadMem(wm.Memory, ptr, size)
+}
+
+func (wm WazeroMemory) Write(ptr int32, data []byte) error {
+	return WriteMem(wm.Memory, ptr, data)
 }
 
 func ReadMem(mem api.Memory, ptr int32, length int32) ([]byte, error) {

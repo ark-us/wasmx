@@ -10,7 +10,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
@@ -26,7 +25,7 @@ func wasi_getEnv(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), data)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return returns, err
 	}
@@ -36,11 +35,15 @@ func wasi_getEnv(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 func wasiStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	keybz, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	valuebz, err := rnh.GetMemory().Read(params[2], params[3])
+	keybz, err := mem.ReadRaw(params[0], params[1])
+	if err != nil {
+		return nil, err
+	}
+	valuebz, err := mem.ReadRaw(params[2], params[3])
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +57,11 @@ func wasiStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []in
 func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	keybz, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	keybz, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +69,7 @@ func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), data)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return returns, err
 	}
@@ -74,7 +81,7 @@ func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []int
 func wasiGetCallData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	ctx := _context.(*Context)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), ctx.Env.CurrentCall.CallData)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), ctx.Env.CurrentCall.CallData)
 	if err != nil {
 		return returns, err
 	}
@@ -85,7 +92,11 @@ func wasiGetCallData(_context interface{}, rnh memc.RuntimeHandler, params []int
 func wasiSetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
 	ctx := _context.(*Context)
-	data, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	data, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +112,11 @@ func wasiSetExitCode(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if code == 0 {
 		return returns, nil
 	}
-	errorMsg, err := rnh.GetMemory().Read(params[1], params[2])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	errorMsg, err := mem.ReadRaw(params[1], params[2])
 	if err != nil {
 		return nil, err
 	}
@@ -115,18 +130,22 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
-	value, err := memc.ReadBigInt(rnh.GetMemory(), params[2], int32(32))
+	value, err := memc.ReadBigInt(mem, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
-	calldata, err := rnh.GetMemory().Read(params[3], params[4])
+	calldata, err := mem.ReadRaw(params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -142,8 +161,8 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, addr.Bytes())
-		if contractContext == nil {
+		contractInfo := GetContractDependency(ctx, addr)
+		if contractInfo == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
@@ -153,11 +172,11 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 				Value:      value,
 				GasLimit:   big.NewInt(gasLimit),
 				Calldata:   calldata,
-				Bytecode:   contractContext.ContractInfo.Bytecode,
-				CodeHash:   contractContext.ContractInfo.CodeHash,
-				FilePath:   contractContext.ContractInfo.FilePath,
-				CodeId:     contractContext.ContractInfo.CodeId,
-				SystemDeps: contractContext.ContractInfo.SystemDepsRaw,
+				Bytecode:   contractInfo.Bytecode,
+				CodeHash:   contractInfo.CodeHash,
+				FilePath:   contractInfo.FilePath,
+				CodeId:     contractInfo.CodeId,
+				SystemDeps: contractInfo.SystemDepsRaw,
 				IsQuery:    false,
 			}
 			success, returnData = WasmxCall(ctx, req)
@@ -173,7 +192,7 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), responsebz)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), responsebz)
 	if err != nil {
 		return returns, err
 	}
@@ -184,15 +203,18 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
 	gasLimit := params[0].(int64)
-	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
+	addrbz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
-	calldata, err := rnh.GetMemory().Read(params[2], params[3])
+	calldata, err := mem.ReadRaw(params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -201,8 +223,8 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	var success int32
 	var returnData []byte
 
-	contractContext := GetContractContext(ctx, addr.Bytes())
-	if contractContext == nil {
+	contractInfo := GetContractDependency(ctx, addr)
+	if contractInfo == nil {
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
@@ -212,11 +234,11 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 			Value:      big.NewInt(0),
 			GasLimit:   big.NewInt(gasLimit),
 			Calldata:   calldata,
-			Bytecode:   contractContext.ContractInfo.Bytecode,
-			CodeHash:   contractContext.ContractInfo.CodeHash,
-			FilePath:   contractContext.ContractInfo.FilePath,
-			CodeId:     contractContext.ContractInfo.CodeId,
-			SystemDeps: contractContext.ContractInfo.SystemDepsRaw,
+			Bytecode:   contractInfo.Bytecode,
+			CodeHash:   contractInfo.CodeHash,
+			FilePath:   contractInfo.FilePath,
+			CodeId:     contractInfo.CodeId,
+			SystemDeps: contractInfo.SystemDepsRaw,
 			IsQuery:    true,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -230,7 +252,7 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), responsebz)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), responsebz)
 	if err != nil {
 		return returns, err
 	}
@@ -241,7 +263,11 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 // address -> account
 func wasi_getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addr, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addr, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +292,7 @@ func wasi_getAccount(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), codebz)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), codebz)
 	if err != nil {
 		return nil, err
 	}
@@ -277,37 +303,45 @@ func wasi_getAccount(_context interface{}, rnh memc.RuntimeHandler, params []int
 
 func wasi_keccak256(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	data, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
 	if ctx.ContractRouter["keccak256"] == nil {
 		return nil, fmt.Errorf("missing keccak256 wasm module")
 	}
-	keccakVm := ctx.ContractRouter["keccak256"].Vm
+	keccakRnh := ctx.ContractRouter["keccak256"].RuntimeHandler
 	input_offset := int32(0)
 	input_length := int32(len(data))
 	output_offset := input_length
 	context_offset := output_offset + int32(32)
 
-	keccakMem := keccakVm.GetActiveModule().FindMemory("memory")
+	keccakVm := keccakRnh.GetVm()
+	keccakMem, err := keccakVm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
 	if keccakMem == nil {
 		return nil, fmt.Errorf("missing keccak256 wasm memory")
 	}
-	err = keccakMem.SetData(data, uint(input_offset), uint(input_length))
+	err = keccakMem.Write(input_offset, data)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = keccakVm.Execute("keccak", context_offset, input_offset, input_length, output_offset)
+	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset})
 	if err != nil {
 		return nil, err
 	}
-	result, err := keccakMem.GetData(uint(output_offset), uint(32))
+	result, err := keccakMem.Read(output_offset, 32)
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), result)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), result)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +353,11 @@ func wasi_keccak256(_context interface{}, rnh memc.RuntimeHandler, params []inte
 // getBalance(address): i256
 func wasi_getBalance(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addr, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addr, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +367,7 @@ func wasi_getBalance(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 	balancebz := balance.Amount.BigInt().FillBytes(make([]byte, 32))
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), balancebz)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), balancebz)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +381,7 @@ func wasi_getBlockHash(_context interface{}, rnh memc.RuntimeHandler, params []i
 	ctx := _context.(*Context)
 	blockNumber := params[0].(int64)
 	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), data)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return nil, err
 	}
@@ -358,11 +396,15 @@ func wasi_instantiateAccount(_context interface{}, rnh memc.RuntimeHandler, para
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	codeId := params[0].(int64)
-	initMsg, err := rnh.GetMemory().Read(params[1], params[2])
+	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	balance, err := memc.ReadBigInt(rnh.GetMemory(), params[3], params[4])
+	initMsg, err := mem.ReadRaw(params[1], params[2])
+	if err != nil {
+		return nil, err
+	}
+	balance, err := memc.ReadBigInt(mem, params[3], params[4])
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +414,7 @@ func wasi_instantiateAccount(_context interface{}, rnh memc.RuntimeHandler, para
 		return nil, err
 	}
 	contractbz := memc.PaddLeftTo32(contractAddress.Bytes())
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), contractbz)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), contractbz)
 	if err != nil {
 		return nil, err
 	}
@@ -386,15 +428,19 @@ func wasi_instantiateAccount2(_context interface{}, rnh memc.RuntimeHandler, par
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
 	codeId := params[0].(int64)
-	salt, err := rnh.GetMemory().Read(params[1], int32(32))
+	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	initMsg, err := rnh.GetMemory().Read(params[2], params[3])
+	salt, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		return nil, err
 	}
-	balance, err := memc.ReadBigInt(rnh.GetMemory(), params[4], params[5])
+	initMsg, err := mem.ReadRaw(params[2], params[3])
+	if err != nil {
+		return nil, err
+	}
+	balance, err := memc.ReadBigInt(mem, params[4], params[5])
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +450,7 @@ func wasi_instantiateAccount2(_context interface{}, rnh memc.RuntimeHandler, par
 		return nil, err
 	}
 	contractbz := memc.PaddLeftTo32(contractAddress.Bytes())
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), contractbz)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), contractbz)
 	if err != nil {
 		return nil, err
 	}
@@ -415,13 +461,17 @@ func wasi_instantiateAccount2(_context interface{}, rnh memc.RuntimeHandler, par
 // getCodeHash(address): bytes32
 func wasi_getCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addr, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addr, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
 	checksum := ctx.CosmosHandler.GetCodeHash(address)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), checksum)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), checksum)
 	if err != nil {
 		return nil, err
 	}
@@ -433,13 +483,17 @@ func wasi_getCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []in
 // getCode(address): []byte
 func wasi_getCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addr, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addr, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
 	code := ctx.CosmosHandler.GetCode(address)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), code)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), code)
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +526,11 @@ func wasi_getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []int
 // bech32StringToBytes(ptr, len): i64
 func wasi_bech32StringToBytes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addrbz, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +539,7 @@ func wasi_bech32StringToBytes(_context interface{}, rnh memc.RuntimeHandler, par
 		return nil, err
 	}
 	data := types.PaddLeftTo32(addr)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), data)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +552,11 @@ func wasi_bech32StringToBytes(_context interface{}, rnh memc.RuntimeHandler, par
 // bech32BytesToString(ptr): i64
 func wasi_bech32BytesToString(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addrbz, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +568,7 @@ func wasi_bech32BytesToString(_context interface{}, rnh memc.RuntimeHandler, par
 	}
 
 	data := []byte(addrstr)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), rnh.GetMemory(), data)
+	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +579,11 @@ func wasi_bech32BytesToString(_context interface{}, rnh memc.RuntimeHandler, par
 
 func wasiLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	data, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -582,36 +648,36 @@ func BuildWasiWasmxEnv(context *Context, rnh memc.RuntimeHandler) (interface{}, 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)
 }
 
-func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]interface{}, error) {
-	var res []interface{}
+func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+	var res []int32
 	var err error
 
 	// WASI standard does not have instantiate
 	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
 	// TODO consider extracting this in a dependency
 	if funcName == types.ENTRY_POINT_INSTANTIATE {
-		fnNames, _ := contractVm.GetFunctionList()
+		fnNames := contractVm.GetFunctionList()
 		found := false
 		for _, name := range fnNames {
 			// WASI reactor
 			if name == "_initialize" {
 				found = true
-				res, err = contractVm.Execute("_initialize")
+				res, err = contractVm.Call("_initialize", []interface{}{})
 			}
 			// note that custom entries do not have access to WASI endpoints at this time
 			if name == "main.instantiate" {
 				found = true
-				res, err = contractVm.Execute("main.instantiate")
+				res, err = contractVm.Call("main.instantiate", []interface{}{})
 			}
 		}
 		if !found {
 			return nil, nil
 		}
 	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
-		res, err = contractVm.Execute(funcName)
+		res, err = contractVm.Call(funcName, []interface{}{})
 	} else {
 		// WASI command - no args, no return
-		res, err = contractVm.Execute("_start")
+		res, err = contractVm.Call("_start", []interface{}{})
 		// fmt.Println("--ExecuteWasi-_start, err", res, err)
 
 		// res, err = contractVm.Execute("_initialize")
@@ -629,12 +695,12 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 	return res, nil
 }
 
-func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
-
-	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	// TODO
+	// wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	inputFile := path.Join(dir, "main.py")
 	content, err := os.ReadFile(context.Env.Contract.FilePath)
@@ -666,32 +732,34 @@ set_finishdata(res or b'')
 		return nil, err
 	}
 
-	wasimodule.InitWasi(
-		[]string{
-			``,
-			"main.py",
-			string(context.Env.CurrentCall.CallData),
-			// --quiet
-		},
-		// os.Environ(), // The envs
-		[]string{},
-		// The mapping preopens
-		[]string{
-			// ".:.",
-			// fmt.Sprintf(`%s:.`, dir),
-			// fmt.Sprintf(`%s:%s`, dir, dir),
-			fmt.Sprintf(`.:%s`, dir),
-			// fmt.Sprintf(`/:%s`, dir),
-		},
-	)
+	// TODO
+	// wasimodule.InitWasi(
+	// 	[]string{
+	// 		``,
+	// 		"main.py",
+	// 		string(context.Env.CurrentCall.CallData),
+	// 		// --quiet
+	// 	},
+	// 	// os.Environ(), // The envs
+	// 	[]string{},
+	// 	// The mapping preopens
+	// 	[]string{
+	// 		// ".:.",
+	// 		// fmt.Sprintf(`%s:.`, dir),
+	// 		// fmt.Sprintf(`%s:%s`, dir, dir),
+	// 		fmt.Sprintf(`.:%s`, dir),
+	// 		// fmt.Sprintf(`/:%s`, dir),
+	// 	},
+	// )
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 }
 
-func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
-	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	// TODO
+	// wasimodule := contractVm.GetImportModule(wasmedge.WASI)
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	fileName := filepath.Base(context.Env.Contract.FilePath)
 	inputFileName := "main.js"
@@ -717,36 +785,38 @@ wasmx.setFinishData(res || new ArrayBuffer(0));
 		return nil, err
 	}
 
-	wasimodule.InitWasi(
-		[]string{
-			``,
-			inputFileName,
-			string(context.Env.CurrentCall.CallData),
-		},
-		[]string{},
-		[]string{
-			fmt.Sprintf(`.:%s`, dir),
-		},
-	)
+	// TODO
+	// wasimodule.InitWasi(
+	// 	[]string{
+	// 		``,
+	// 		inputFileName,
+	// 		string(context.Env.CurrentCall.CallData),
+	// 	},
+	// 	[]string{},
+	// 	[]string{
+	// 		fmt.Sprintf(`.:%s`, dir),
+	// 	},
+	// )
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 }
 
-func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	// if funcName == "execute" || funcName == "query" {
 	// 	funcName = "main"
 	// }
 
-	wasimodule := contractVm.GetImportModule(wasmedge.WASI)
-	wasimodule.InitWasi(
-		[]string{
-			``,
-		},
-		// os.Environ(), // The envs
-		[]string{},
-		// The mapping preopens
-		[]string{
-			// fmt.Sprintf(`.:%s`, dir),
-		},
-	)
+	// TODO
+	// wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+	// wasimodule.InitWasi(
+	// 	[]string{
+	// 		``,
+	// 	},
+	// 	// os.Environ(), // The envs
+	// 	[]string{},
+	// 	// The mapping preopens
+	// 	[]string{
+	// 		// fmt.Sprintf(`.:%s`, dir),
+	// 	},
+	// )
 	return ExecuteWasi(context, contractVm, funcName, args)
 }

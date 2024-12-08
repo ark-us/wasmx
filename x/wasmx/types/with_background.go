@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/second-state/WasmEdge-go/wasmedge"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
 type ContextKey string
@@ -13,7 +13,7 @@ const BackgroundProcessesContextKey ContextKey = "background-context"
 
 type BackgroundProcess struct {
 	Label          string
-	ContractVm     *wasmedge.VM
+	RuntimeHandler memc.RuntimeHandler
 	ExecuteHandler func(funcName string) ([]byte, error)
 }
 

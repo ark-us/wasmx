@@ -5,7 +5,11 @@ import (
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
-func WriteMemDefaultMalloc(vm memc.IVm, mem memc.IMemory, data []byte) (int32, error) {
+func WriteMemDefaultMalloc(vm memc.IVm, data []byte) (int32, error) {
+	mem, err := vm.GetMemory()
+	if err != nil {
+		return 0, err
+	}
 	datalen := int32(len(data))
 	ptr, err := AllocateMemDefaultMalloc(vm, datalen)
 	if err != nil {
@@ -18,8 +22,8 @@ func WriteMemDefaultMalloc(vm memc.IVm, mem memc.IMemory, data []byte) (int32, e
 	return ptr, nil
 }
 
-func WriteDynMemDefaultMalloc(vm memc.IVm, mem memc.IMemory, data []byte) (uint64, error) {
-	ptr, err := WriteMemDefaultMalloc(vm, mem, data)
+func WriteDynMemDefaultMalloc(vm memc.IVm, data []byte) (uint64, error) {
+	ptr, err := WriteMemDefaultMalloc(vm, data)
 	if err != nil {
 		return 0, err
 	}

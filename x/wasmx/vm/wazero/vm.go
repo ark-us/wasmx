@@ -11,6 +11,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
@@ -57,6 +58,9 @@ func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler) func(ctx context.Context, m
 		}
 		results, err := f.fn(ctx, rnh, params)
 		if err != nil {
+			if err.Error() == memc.VM_TERMINATE_ERROR {
+				panic(err)
+			}
 			panic(err)
 		}
 		for i, res := range results {
@@ -66,11 +70,12 @@ func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler) func(ctx context.Context, m
 }
 
 type WazeroVm struct {
-	ctx      context.Context
-	cache    wazero.CompilationCache
-	vm       api.Module
-	r        wazero.Runtime
-	cleanups []func()
+	ctx         context.Context
+	cache       wazero.CompilationCache
+	vm          api.Module
+	r           wazero.Runtime
+	cleanups    []func()
+	moduleNames []string
 }
 
 // TODO clean cache!
@@ -81,11 +86,15 @@ func NewWazeroVm(ctx sdk.Context) memc.IVm {
 		ctx = ctx.WithValue(CONTEXT_CACHE_KEY, cache)
 	}
 	var cleanups []func()
-	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache)
+	// TODO WASI
+	// NewRuntimeConfigCompiler
+	config := wazero.NewRuntimeConfig().WithCloseOnContextDone(true).WithCompilationCache(cache)
+
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 	cleanups = append(cleanups, func() {
 		r.Close(ctx)
 	})
+
 	return &WazeroVm{
 		ctx:      ctx,
 		cache:    cache,
@@ -99,8 +108,9 @@ func (wm *WazeroVm) New(ctx sdk.Context) memc.IVm {
 }
 
 func (wm *WazeroVm) Cleanup() {
-	for _, fn := range wm.cleanups {
-		fn()
+	// run in inverse order
+	for i := len(wm.cleanups) - 1; i >= 0; i-- {
+		wm.cleanups[i]()
 	}
 }
 
@@ -111,7 +121,9 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}) ([]int32, error) {
 	}
 	result, err := wm.vm.ExportedFunction(funcname).Call(wm.ctx, _args...)
 	if err != nil {
-		return nil, err
+		if err.Error() != memc.VM_TERMINATE_ERROR {
+			return nil, err
+		}
 	}
 	_result := make([]int32, len(result))
 	for i, res := range result {
@@ -126,6 +138,48 @@ func (wm *WazeroVm) GetMemory() (memc.IMemory, error) {
 		return nil, fmt.Errorf("could not find memory")
 	}
 	return WazeroMemory{mem}, nil
+}
+
+func (wm *WazeroVm) GetFunctionList() []string {
+	fnlist := []string{}
+	for fnname := range wm.vm.ExportedFunctionDefinitions() {
+		fnlist = append(fnlist, fnname)
+	}
+	return fnlist
+}
+
+func (wm *WazeroVm) ListRegisteredModule() []string {
+	return wm.moduleNames
+}
+
+func (wm *WazeroVm) FindGlobal(name string) interface{} {
+	glob := wm.vm.ExportedGlobal(name)
+	val := glob.Get()
+	switch glob.Type() {
+	case api.ValueTypeI32:
+		return int32(val)
+	case api.ValueTypeI64:
+		return int64(val)
+	case api.ValueTypeF32:
+		return float32(val)
+	case api.ValueTypeF64:
+		return float64(val)
+	default:
+		return val
+	}
+}
+
+func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) error {
+	// wm.vm.
+
+	// WithWorkDirFS
+
+	// mod := wm.vm.GetImportModule(wasmedge.WASI)
+	// if mod == nil {
+	// 	return fmt.Errorf("WASI module not found")
+	// }
+	// mod.InitWasi(args, envs, preopens)
+	return nil
 }
 
 func (wm *WazeroVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
@@ -153,8 +207,55 @@ func (wm *WazeroVm) RegisterModule(mod interface{}) error {
 }
 
 func (wm *WazeroVm) RegisterModuleInner(mod wazero.HostModuleBuilder) error {
-	_, err := mod.Instantiate(wm.ctx)
-	return err
+	_mod, err := mod.Instantiate(wm.ctx)
+	if err != nil {
+		return err
+	}
+	wm.moduleNames = append(wm.moduleNames, _mod.Name())
+	return nil
+}
+
+func (wm *WazeroVm) InitWASI(args []string, envs []string, preopens []string) error {
+	wasiConfig := wazero.NewModuleConfig()
+	// Add arguments
+	for _, arg := range args {
+		wasiConfig = wasiConfig.WithArgs(arg)
+	}
+
+	// Add environment variables
+	for _, env := range envs {
+		keyValue := splitEnv(env)
+		if keyValue != nil {
+			wasiConfig = wasiConfig.WithEnv(keyValue[0], keyValue[1])
+		}
+	}
+
+	// Add preopened directories
+	for _, dir := range preopens {
+		wasiConfig = wasiConfig.WithFSConfig(wazero.NewFSConfig().WithDirMount(dir, "/"))
+	}
+
+	// Instantiate the WASI module
+	_, err := wasi_snapshot_preview1.Instantiate(wm.ctx, wm.r)
+	if err != nil {
+		return err
+	}
+	wm.moduleNames = append(wm.moduleNames, wasi_snapshot_preview1.ModuleName)
+
+	// TODO WASI
+	// // InstantiateModule runs the "_start" function, WASI's "main".
+	// // * Set the program name (arg[0]) to "wasi"; arg[1] should be "/test.txt".
+	// if _, err = r.InstantiateWithConfig(ctx, catWasm, config.WithArgs("wasi", os.Args[1])); err != nil {
+	// 	// Note: Most compilers do not exit the module after running "_start",
+	// 	// unless there was an error. This allows you to call exported functions.
+	// 	if exitErr, ok := err.(*sys.ExitError); ok && exitErr.ExitCode() != 0 {
+	// 		fmt.Fprintf(os.Stderr, "exit_code: %d\n", exitErr.ExitCode())
+	// 	} else if !ok {
+	// 		log.Panicln(err)
+	// 	}
+	// }
+
+	return nil
 }
 
 func (wm *WazeroVm) ValType_I32() interface{} {
@@ -239,4 +340,14 @@ func FromValTypeSlice(input []api.ValueType) []interface{} {
 		result[i] = v
 	}
 	return result
+}
+
+// Helper function to split "KEY=VALUE" into [KEY, VALUE]
+func splitEnv(env string) []string {
+	for i, c := range env {
+		if c == '=' {
+			return []string{env[:i], env[i+1:]}
+		}
+	}
+	return nil
 }

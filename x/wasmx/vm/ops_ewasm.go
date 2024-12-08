@@ -10,7 +10,6 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
@@ -43,7 +42,11 @@ func getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 func storageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	keybz, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	keybz, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +54,7 @@ func storageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
-	err = rnh.GetMemory().Write(params[1], data)
+	err = mem.WriteRaw(params[1], data)
 	if err != nil {
 		return returns, err
 	}
@@ -61,11 +64,15 @@ func storageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 // SSTORE key_ptr: i32, value_ptr: i32,
 func storageStore(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	keybz, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	valuebz, err := rnh.GetMemory().Read(params[1], int32(32))
+	keybz, err := mem.ReadRaw(params[0], int32(32))
+	if err != nil {
+		return nil, err
+	}
+	valuebz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +89,11 @@ func getBalance(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	if err != nil {
 		return nil, err
 	}
-	err = memc.WriteBigInt(rnh.GetMemory(), balance.Amount.BigInt(), params[0])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = memc.WriteBigInt(mem, balance.Amount.BigInt(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +104,11 @@ func getBalance(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 // BALANCE value_ptr: i32, result_ptr: i32,
 func getExternalBalance(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addressbz, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addressbz, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +117,7 @@ func getExternalBalance(_context interface{}, rnh memc.RuntimeHandler, params []
 	if err != nil {
 		return nil, err
 	}
-	err = memc.WriteBigInt(rnh.GetMemory(), balance.Amount.BigInt(), params[1])
+	err = memc.WriteBigInt(mem, balance.Amount.BigInt(), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +130,11 @@ func getAddress(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.Contract.Address.Bytes())
-	err := rnh.GetMemory().Write(params[0], addr.Bytes())
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[0], addr.Bytes())
 	if err != nil {
 		return returns, err
 	}
@@ -127,7 +146,11 @@ func getCaller(_context interface{}, rnh memc.RuntimeHandler, params []interface
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Sender.Bytes())
-	err := rnh.GetMemory().Write(params[0], addr.Bytes())
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return returns, err
+	}
+	err = mem.WriteRaw(params[0], addr.Bytes())
 	if err != nil {
 		return returns, err
 	}
@@ -138,7 +161,11 @@ func getCaller(_context interface{}, rnh memc.RuntimeHandler, params []interface
 func getCallValue(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	err := memc.WriteBigInt(rnh.GetMemory(), ctx.Env.CurrentCall.Funds, params[0])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return returns, err
+	}
+	err = memc.WriteBigInt(mem, ctx.Env.CurrentCall.Funds, params[0])
 	if err != nil {
 		return returns, err
 	}
@@ -160,7 +187,11 @@ func callDataCopy(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := memc.ReadAndFillWithZero(ctx.Env.CurrentCall.CallData, dataStart, dataLen)
-	err := rnh.GetMemory().Write(params[0], part)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return returns, err
+	}
+	err = mem.WriteRaw(params[0], part)
 	if err != nil {
 		return returns, err
 	}
@@ -182,7 +213,11 @@ func returnDataCopy(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	dataStart := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := ctx.ReturnData[dataStart:dataLen]
-	err := rnh.GetMemory().Write(params[0], part)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return returns, err
+	}
+	err = mem.WriteRaw(params[0], part)
 	if err != nil {
 		return returns, err
 	}
@@ -212,7 +247,11 @@ func codeCopy(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	codePtr := params[1].(int32)
 	dataLen := params[2].(int32)
 	part := memc.ReadAndFillWithZero(ctx.Env.Contract.Bytecode, codePtr, dataLen)
-	err := rnh.GetMemory().Write(params[0], part)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return returns, err
+	}
+	err = mem.WriteRaw(params[0], part)
 	if err != nil {
 		return returns, err
 	}
@@ -229,12 +268,16 @@ func externalCodeCopy(_context interface{}, rnh memc.RuntimeHandler, params []in
 func getExternalCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	addressbz, err := rnh.GetMemory().Read(params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addressbz, err := mem.ReadRaw(params[0], int32(32))
 	if err != nil {
 		return nil, err
 	}
 	data := ctx.CosmosHandler.GetCodeHash(vmtypes.CleanupAddress(addressbz))
-	err = rnh.GetMemory().Write(params[1], data)
+	err = mem.WriteRaw(params[1], data)
 	if err != nil {
 		return returns, err
 	}
@@ -245,7 +288,11 @@ func getExternalCodeHash(_context interface{}, rnh memc.RuntimeHandler, params [
 func getTxGasPrice(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	err := memc.WriteBigInt(rnh.GetMemory(), ctx.Env.Transaction.GasPrice, params[0])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = memc.WriteBigInt(mem, ctx.Env.Transaction.GasPrice, params[0])
 	if err != nil {
 		return returns, err
 	}
@@ -257,7 +304,11 @@ func getTxOrigin(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.CurrentCall.Origin.Bytes())
-	err := rnh.GetMemory().Write(params[0], addr.Bytes())
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[0], addr.Bytes())
 	if err != nil {
 		return returns, err
 	}
@@ -277,7 +328,11 @@ func getBlockCoinbase(_context interface{}, rnh memc.RuntimeHandler, params []in
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
 	addr := types.Evm32AddressFromAcc(ctx.Env.Block.Proposer.Bytes())
-	err := rnh.GetMemory().Write(params[0], addr.Bytes())
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[0], addr.Bytes())
 	if err != nil {
 		return returns, err
 	}
@@ -290,7 +345,11 @@ func getBlockHash(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	returns := make([]interface{}, 0)
 	blockNumber := params[0].(int64)
 	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
-	err := rnh.GetMemory().Write(params[1], data)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[1], data)
 	if err != nil {
 		return returns, err
 	}
@@ -320,7 +379,11 @@ func getBlockTimestamp(_context interface{}, rnh memc.RuntimeHandler, params []i
 func getBlockDifficulty(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := rnh.GetMemory().Write(params[0], data)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[0], data)
 	if err != nil {
 		return returns, err
 	}
@@ -332,7 +395,11 @@ func prevrandao(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	// TODO random
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := rnh.GetMemory().Write(params[0], data)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[0], data)
 	if err != nil {
 		return returns, err
 	}
@@ -343,7 +410,11 @@ func prevrandao(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 func getChainId(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	err := memc.WriteBigInt(rnh.GetMemory(), ctx.Env.Chain.ChainId, params[0])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = memc.WriteBigInt(mem, ctx.Env.Chain.ChainId, params[0])
 	if err != nil {
 		return returns, err
 	}
@@ -354,7 +425,11 @@ func getChainId(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 func getBaseFee(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	data := types.EMPTY_BYTES32
 	returns := make([]interface{}, 0)
-	err := rnh.GetMemory().Write(params[0], data)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = mem.WriteRaw(params[0], data)
 	if err != nil {
 		return returns, err
 	}
@@ -368,19 +443,23 @@ func call(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
 
-	value, err := memc.ReadBigInt(rnh.GetMemory(), params[2], int32(32))
+	value, err := memc.ReadBigInt(mem, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
-	calldata, err := rnh.GetMemory().Read(params[3], params[4])
+	calldata, err := mem.ReadRaw(params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -395,8 +474,8 @@ func call(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, addr.Bytes())
-		if contractContext == nil {
+		contractInfo := GetContractDependency(ctx, addr)
+		if contractInfo == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
@@ -406,8 +485,8 @@ func call(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 				Value:    value,
 				GasLimit: big.NewInt(gasLimit),
 				Calldata: calldata,
-				Bytecode: contractContext.ContractInfo.Bytecode,
-				CodeHash: contractContext.ContractInfo.CodeHash,
+				Bytecode: contractInfo.Bytecode,
+				CodeHash: contractInfo.CodeHash,
 				IsQuery:  false,
 			}
 			success, returnData = WasmxCall(ctx, req)
@@ -415,7 +494,7 @@ func call(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 		}
 	}
 	returns[0] = success
-	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[5], params[6])
+	err = memc.WriteMemBoundBySize(mem, returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -429,18 +508,22 @@ func callCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	value, err := memc.ReadBigInt(rnh.GetMemory(), params[2], int32(32))
+	value, err := memc.ReadBigInt(mem, params[2], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
-	calldata, err := rnh.GetMemory().Read(params[3], params[4])
+	calldata, err := mem.ReadRaw(params[3], params[4])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -450,8 +533,9 @@ func callCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	// from the current contract to itself
 	var success int32
 	var returnData []byte
-	contractContext := GetContractContext(ctx, addr)
-	if contractContext == nil {
+	addrPrefixed := ctx.GetCosmosHandler().AccBech32Codec().BytesToAccAddressPrefixed(addr)
+	contractInfo := GetContractDependency(ctx, addrPrefixed)
+	if contractInfo == nil {
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
@@ -461,8 +545,8 @@ func callCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 			Value:    value,
 			GasLimit: big.NewInt(gasLimit),
 			Calldata: calldata,
-			Bytecode: contractContext.ContractInfo.Bytecode,
-			CodeHash: contractContext.ContractInfo.CodeHash,
+			Bytecode: contractInfo.Bytecode,
+			CodeHash: contractInfo.CodeHash,
 			IsQuery:  false,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -470,7 +554,7 @@ func callCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	}
 	returns[0] = success
 
-	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[5], params[6])
+	err = memc.WriteMemBoundBySize(mem, returnData, params[5], params[6])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -484,13 +568,17 @@ func callDelegate(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
 	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
-	calldata, err := rnh.GetMemory().Read(params[2], params[3])
+	calldata, err := mem.ReadRaw(params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -500,8 +588,9 @@ func callDelegate(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	// from the current contract to itself
 	var success int32
 	var returnData []byte
-	contractContext := GetContractContext(ctx, addr)
-	if contractContext == nil {
+	addrPrefixed := ctx.GetCosmosHandler().AccBech32Codec().BytesToAccAddressPrefixed(addr)
+	contractInfo := GetContractDependency(ctx, addrPrefixed)
+	if contractInfo == nil {
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
@@ -511,8 +600,8 @@ func callDelegate(_context interface{}, rnh memc.RuntimeHandler, params []interf
 			Value:    ctx.Env.CurrentCall.Funds,
 			GasLimit: big.NewInt(gasLimit),
 			Calldata: calldata,
-			Bytecode: contractContext.ContractInfo.Bytecode,
-			CodeHash: contractContext.ContractInfo.CodeHash,
+			Bytecode: contractInfo.Bytecode,
+			CodeHash: contractInfo.CodeHash,
 			IsQuery:  false,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -520,7 +609,7 @@ func callDelegate(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	}
 	returns[0] = success
 
-	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[4], params[5])
+	err = memc.WriteMemBoundBySize(mem, returnData, params[4], params[5])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -536,13 +625,17 @@ func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	returns := make([]interface{}, 1)
 
 	gasLimit := params[0].(int64)
-	addrbz, err := rnh.GetMemory().Read(params[1], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	addrbz, err := mem.ReadRaw(params[1], int32(32))
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
 	}
 	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
-	calldata, err := rnh.GetMemory().Read(params[2], params[3])
+	calldata, err := mem.ReadRaw(params[2], params[3])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -550,8 +643,8 @@ func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 
 	var success int32
 	var returnData []byte
-	contractContext := GetContractContext(ctx, addr.Bytes())
-	if contractContext == nil {
+	contractInfo := GetContractDependency(ctx, addr)
+	if contractInfo == nil {
 		// ! we return success here in case the contract does not exist
 		success = int32(0)
 	} else {
@@ -561,8 +654,8 @@ func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 			Value:    big.NewInt(0),
 			GasLimit: big.NewInt(gasLimit),
 			Calldata: calldata,
-			Bytecode: contractContext.ContractInfo.Bytecode,
-			CodeHash: contractContext.ContractInfo.CodeHash,
+			Bytecode: contractInfo.Bytecode,
+			CodeHash: contractInfo.CodeHash,
 			IsQuery:  true,
 		}
 		success, returnData = WasmxCall(ctx, req)
@@ -570,7 +663,7 @@ func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	}
 	returns[0] = success
 
-	err = memc.WriteMemBoundBySize(rnh.GetMemory(), returnData, params[4], params[5])
+	err = memc.WriteMemBoundBySize(mem, returnData, params[4], params[5])
 	if err != nil {
 		returns[0] = int32(1)
 		return returns, nil
@@ -582,11 +675,15 @@ func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 func create(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	value, err := memc.ReadBigInt(rnh.GetMemory(), params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	value, err := memc.ReadBigInt(mem, params[0], int32(32))
 	if err != nil {
 		return returns, err
 	}
-	data, err := rnh.GetMemory().Read(params[1], params[2])
+	data, err := mem.ReadRaw(params[1], params[2])
 	if err != nil {
 		return returns, err
 	}
@@ -616,7 +713,7 @@ func create(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 	if err != nil {
 		return returns, err
 	}
-	err = rnh.GetMemory().Write(params[3], memc.PaddLeftTo32(contractAddress.Bytes()))
+	err = mem.WriteRaw(params[3], memc.PaddLeftTo32(contractAddress.Bytes()))
 	if err != nil {
 		return returns, err
 	}
@@ -627,15 +724,19 @@ func create(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 func create2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	value, err := memc.ReadBigInt(rnh.GetMemory(), params[0], int32(32))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	value, err := memc.ReadBigInt(mem, params[0], int32(32))
 	if err != nil {
 		return returns, err
 	}
-	data, err := rnh.GetMemory().Read(params[1], params[2])
+	data, err := mem.ReadRaw(params[1], params[2])
 	if err != nil {
 		return returns, err
 	}
-	salt, err := rnh.GetMemory().Read(params[3], int32(32))
+	salt, err := mem.ReadRaw(params[3], int32(32))
 	if err != nil {
 		return returns, err
 	}
@@ -665,7 +766,7 @@ func create2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return returns, err
 	}
-	err = rnh.GetMemory().Write(params[3], memc.PaddLeftTo32(contractAddress.Bytes()))
+	err = mem.WriteRaw(params[3], memc.PaddLeftTo32(contractAddress.Bytes()))
 	if err != nil {
 		return returns, err
 	}
@@ -681,7 +782,11 @@ func selfDestruct(_context interface{}, rnh memc.RuntimeHandler, params []interf
 // LOG data_ptr: i32, data_len: i32, topic_count: i32, topic_ptr1: i32, topic_ptr2: i32, topic_ptr3: i32, topic_ptr4: i32
 func ewasmLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	data, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -695,7 +800,7 @@ func ewasmLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	topicPtrs := []interface{}{params[3], params[4], params[5], params[6]}
 
 	for i := 0; i < topicCount; i++ {
-		topic, err := rnh.GetMemory().Read(topicPtrs[i], int32(32))
+		topic, err := mem.ReadRaw(topicPtrs[i], int32(32))
 		if err != nil {
 			return nil, err
 		}
@@ -711,7 +816,11 @@ func ewasmLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 // RETURN data_ptr: i32, data_len: i32
 func finish(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	result, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	result, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -720,19 +829,23 @@ func finish(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 	ctx.FinishData = result
 	ctx.ReturnData = result
 	// terminate the WASM execution
-	return returns, wasmedge.Result_Terminate
+	return returns, fmt.Errorf(memc.VM_TERMINATE_ERROR)
 }
 
 // STOP data_ptr: i32, data_len: i32
 func stop(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	return returns, wasmedge.Result_Terminate
+	return returns, fmt.Errorf(memc.VM_TERMINATE_ERROR)
 }
 
 // REVERT data_ptr: i32, data_len: i32
 func revert(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	result, err := rnh.GetMemory().Read(params[0], params[1])
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	result, err := mem.ReadRaw(params[0], params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -777,8 +890,11 @@ func debugPrinti64(_context interface{}, rnh memc.RuntimeHandler, params []inter
 func debugPrintMemHex(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	pointer := params[0].(int32)
 	size := params[1].(int32)
-	mem := rnh.GetMemory()
-	data, _ := mem.Read(uint(pointer), uint(size))
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	data, _ := mem.Read(pointer, size)
 	ctx := _context.(*Context)
 	ctx.Logger(ctx.Ctx).Debug(fmt.Sprintf("Go: debugPrintMemHex: %s", hex.EncodeToString(data)))
 	returns := make([]interface{}, 0)

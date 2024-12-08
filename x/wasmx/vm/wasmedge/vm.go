@@ -46,9 +46,14 @@ func (f WasmEdgeFn) WrappedFn(rnh memc.RuntimeHandler) func(context interface{},
 		vm := rnh.GetVm().(*WasmEdgeVm)
 		vm.callframe = callframe
 		res, err := f.fn(context, rnh, params)
+		// 0, 1, 2 are used by wasmedge for success, terminate, fail
 		if err != nil {
+			if err.Error() == memc.VM_TERMINATE_ERROR {
+				return res, wasmedge.Result_Terminate
+			}
 			return res, wasmedge.Result_Fail
 		}
+		// TODO terminate
 		return res, wasmedge.Result_Success
 	}
 }
@@ -91,8 +96,9 @@ func (wm *WasmEdgeVm) New(ctx sdk.Context) memc.IVm {
 }
 
 func (wm *WasmEdgeVm) Cleanup() {
-	for _, fn := range wm.cleanups {
-		fn()
+	// run in inverse order
+	for i := len(wm.cleanups) - 1; i >= 0; i-- {
+		wm.cleanups[i]()
 	}
 }
 
@@ -105,11 +111,49 @@ func (wm *WasmEdgeVm) Call(funcname string, args []interface{}) ([]int32, error)
 }
 
 func (wm *WasmEdgeVm) GetMemory() (memc.IMemory, error) {
-	mem := wm.callframe.GetMemoryByIndex(0)
-	if mem == nil {
-		return nil, fmt.Errorf("could not find memory")
+	var mem *wasmedge.Memory
+	if wm.callframe != nil {
+		mem = wm.callframe.GetMemoryByIndex(0)
+		if mem == nil {
+			return nil, fmt.Errorf("could not find memory")
+		}
 	}
+	if wm.vm == nil {
+		return nil, fmt.Errorf("could not find wasm vm")
+	}
+	mod := wm.vm.GetActiveModule()
+	if mod == nil {
+		return nil, fmt.Errorf("could not find vm active module")
+	}
+	mem = mod.FindMemory("memory")
 	return WasmEdgeMemory{mem}, nil
+}
+
+func (wm *WasmEdgeVm) GetFunctionList() []string {
+	fnlist, _ := wm.vm.GetFunctionList()
+	return fnlist
+}
+
+// func (wm *WasmEdgeVm) ListGlobals() []string {
+// 	return wm.vm.GetActiveModule().ListGlobal()
+// }
+
+func (wm *WasmEdgeVm) FindGlobal(name string) interface{} {
+	glob := wm.vm.GetActiveModule().FindGlobal(name)
+	return glob.GetValue()
+}
+
+func (wm *WasmEdgeVm) ListRegisteredModule() []string {
+	return wm.vm.ListRegisteredModule()
+}
+
+func (wm *WasmEdgeVm) InitWasi(args []string, envs []string, preopens []string) error {
+	mod := wm.vm.GetImportModule(wasmedge.WASI)
+	if mod == nil {
+		return fmt.Errorf("WASI module not found")
+	}
+	mod.InitWasi(args, envs, preopens)
+	return nil
 }
 
 func (wm *WasmEdgeVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
@@ -206,15 +250,6 @@ func (wm *WasmEdgeVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, 
 		envmod.AddFunction(fndef.name, wasmedge.NewFunction(wasmedge.NewFunctionType(fndef.inputTypes, fndef.outputTypes), fndef.WrappedFn(rnh), context, uint(fndef.cost)))
 	}
 	return envmod
-}
-
-func (wm *WasmEdgeVm) VerifyEnv(version string, imports []*wasmedge.ImportType) error {
-	// TODO check that all imports are supported by the given version
-
-	// for _, mimport := range imports {
-	// 	fmt.Println("Import:", mimport.GetModuleName(), mimport.GetExternalName())
-	// }
-	return nil
 }
 
 func toValTypeSlice(input []interface{}) ([]wasmedge.ValType, error) {

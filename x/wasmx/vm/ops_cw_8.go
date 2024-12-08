@@ -84,7 +84,7 @@ const ED25519_VERIFY_CODE_INVALID = uint32(1)
 func cw_8_db_read(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	ctx := _context.(*Context)
-	key, err := readMemCw(rnh.GetMemory(), params[0])
+	key, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func cw_8_db_read(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		returns[0] = 0
 		return returns, nil
 	}
-	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), data)
+	region, err := writeMemCw(rnh.GetVm(), data)
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +105,11 @@ func cw_8_db_read(_context interface{}, rnh memc.RuntimeHandler, params []interf
 // db_write(key: u32, value: u32);
 func cw_8_db_write(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	// TODO env.is_storage_readonly
-	key, err := readMemCw(rnh.GetMemory(), params[0])
+	key, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
-	data, err := readMemCw(rnh.GetMemory(), params[1])
+	data, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func cw_8_db_write(_context interface{}, rnh memc.RuntimeHandler, params []inter
 // db_remove(key: u32);
 func cw_8_db_remove(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	key, err := readMemCw(rnh.GetMemory(), params[0])
+	key, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -141,11 +141,11 @@ var (
 // db_scan(start_ptr: u32, end_ptr: u32, order: i32) -> u32;
 func cw_8_db_scan(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	startKey, err := readMemCw(rnh.GetMemory(), params[0])
+	startKey, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
-	endKey, err := readMemCw(rnh.GetMemory(), params[1])
+	endKey, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func cw_8_db_next(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 	out_data := encode_sections(values)
 	returns := make([]interface{}, 1)
-	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), out_data)
+	region, err := writeMemCw(rnh.GetVm(), out_data)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func cw_8_db_next(_context interface{}, rnh memc.RuntimeHandler, params []interf
 // addr_validate(source_ptr: u32) -> u32;
 func cw_8_addr_validate(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addrBz, err := readMemCw(rnh.GetMemory(), params[0])
+	addrBz, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func cw_8_addr_validate(_context interface{}, rnh memc.RuntimeHandler, params []
 	if string(addrBz) != addrstr {
 		return cwError(rnh, "address validation failed")
 	}
-	_, err = writeMemCw(rnh.GetVm(), rnh.GetMemory(), []byte(addr.Bytes()))
+	_, err = writeMemCw(rnh.GetVm(), []byte(addr.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func cw_8_addr_validate(_context interface{}, rnh memc.RuntimeHandler, params []
 // addr_canonicalize(source_ptr: u32, destination_ptr: u32) -> u32;
 func cw_8_addr_canonicalize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addrBz, err := readMemCw(rnh.GetMemory(), params[0])
+	addrBz, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func cw_8_addr_canonicalize(_context interface{}, rnh memc.RuntimeHandler, param
 	if err != nil {
 		return cwError(rnh, err.Error())
 	}
-	_, err = writeMemToDestinationCw(rnh.GetMemory(), data.Bytes(), params[1])
+	_, err = writeMemToDestinationCw(rnh.GetVm(), data.Bytes(), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func cw_8_addr_canonicalize(_context interface{}, rnh memc.RuntimeHandler, param
 // addr_humanize(source_ptr: u32, destination_ptr: u32) -> u32;
 func cw_8_addr_humanize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addrBz, err := readMemCw(rnh.GetMemory(), params[0])
+	addrBz, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func cw_8_addr_humanize(_context interface{}, rnh memc.RuntimeHandler, params []
 	if err != nil {
 		return nil, err
 	}
-	_, err = writeMemToDestinationCw(rnh.GetMemory(), []byte(addrstr), params[1])
+	_, err = writeMemToDestinationCw(rnh.GetVm(), []byte(addrstr), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -268,15 +268,15 @@ func cw_8_addr_humanize(_context interface{}, rnh memc.RuntimeHandler, params []
 // secp256k1_verify(message_hash_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
 func cw_8_secp256k1_verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	msgHash, err := readMemCw(rnh.GetMemory(), params[0])
+	msgHash, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
-	signature, err := readMemCw(rnh.GetMemory(), params[1])
+	signature, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
-	publicKeyBz, err := readMemCw(rnh.GetMemory(), params[2])
+	publicKeyBz, err := readMemCw(rnh.GetVm(), params[2])
 	if err != nil {
 		return nil, err
 	}
@@ -301,11 +301,11 @@ func cw_8_secp256k1_recover_pubkey(_context interface{}, rnh memc.RuntimeHandler
 	ctx.Logger(ctx.Ctx).Error(errmsg)
 	// TODO
 	return nil, fmt.Errorf(errmsg)
-	msgHash, err := readMemCw(rnh.GetMemory(), params[0])
+	msgHash, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
-	signature, err := readMemCw(rnh.GetMemory(), params[1])
+	signature, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func cw_8_secp256k1_recover_pubkey(_context interface{}, rnh memc.RuntimeHandler
 	if err != nil {
 		return cwError(rnh, err.Error())
 	}
-	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), recoveredPublicKey)
+	region, err := writeMemCw(rnh.GetVm(), recoveredPublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +334,7 @@ func cw_8_secp256k1_recover_pubkey(_context interface{}, rnh memc.RuntimeHandler
 // ed25519_verify(message_ptr: u32, signature_ptr: u32, public_key_ptr: u32) -> u32;
 func cw_8_ed25519_verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	msg, err := readMemCw(rnh.GetMemory(), params[0])
+	msg, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func cw_8_ed25519_verify(_context interface{}, rnh memc.RuntimeHandler, params [
 			return nil, err
 		}
 	}
-	signature, err := readMemCw(rnh.GetMemory(), params[1])
+	signature, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +352,7 @@ func cw_8_ed25519_verify(_context interface{}, rnh memc.RuntimeHandler, params [
 			return nil, err
 		}
 	}
-	publicKeyBz, err := readMemCw(rnh.GetMemory(), params[2])
+	publicKeyBz, err := readMemCw(rnh.GetVm(), params[2])
 	if err != nil {
 		return nil, err
 	}
@@ -397,18 +397,18 @@ func cw_8_ed25519_batch_verify(_context interface{}, rnh memc.RuntimeHandler, pa
 	// TODO
 	return nil, fmt.Errorf(errmsg)
 
-	msgs, err := readMemCw(rnh.GetMemory(), params[0])
+	msgs, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
-	signatures, err := readMemCw(rnh.GetMemory(), params[1])
+	signatures, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
 	if len(signatures) == 0 {
 		return nil, fmt.Errorf("cw_8_ed25519_batch_verify: no signatures")
 	}
-	publicKeysBz, err := readMemCw(rnh.GetMemory(), params[2])
+	publicKeysBz, err := readMemCw(rnh.GetVm(), params[2])
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +439,7 @@ func cw_8_ed25519_batch_verify(_context interface{}, rnh memc.RuntimeHandler, pa
 // debug(source_ptr: u32);
 func cw_8_debug(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	msgBz, err := readMemCw(rnh.GetMemory(), params[0])
+	msgBz, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +453,7 @@ func cw_8_debug(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 // query_chain(request: u32) -> u32;
 func cw_8_query_chain(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	databz, err := readMemCw(rnh.GetMemory(), params[0])
+	databz, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +471,7 @@ func cw_8_query_chain(_context interface{}, rnh memc.RuntimeHandler, params []in
 	if err != nil {
 		return nil, err
 	}
-	region, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), responseBz)
+	region, err := writeMemCw(rnh.GetVm(), responseBz)
 	if err != nil {
 		return nil, err
 	}
@@ -483,7 +483,7 @@ func cw_8_query_chain(_context interface{}, rnh memc.RuntimeHandler, params []in
 // abort(source_ptr: u32);
 func cw_8_abort(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := readMemCw(rnh.GetMemory(), params[0])
+	data, err := readMemCw(rnh.GetVm(), params[0])
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +509,7 @@ func addr_canonicalize(addressCodec address.Codec, addrUtf8 []byte) (sdk.AccAddr
 }
 
 func cwError(rnh memc.RuntimeHandler, cwErr string) ([]interface{}, error) {
-	_, err := writeMemCw(rnh.GetVm(), rnh.GetMemory(), []byte(cwErr))
+	_, err := writeMemCw(rnh.GetVm(), []byte(cwErr))
 	if err != nil {
 		return nil, err
 	}
@@ -572,22 +572,20 @@ func BuildArgsCw(context *Context) ([]byte, []byte, []byte, error) {
 }
 
 // instantiate(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8Execute(context *Context, rnh memc.RuntimeHandler, funcName string) ([]interface{}, error) {
+func ExecuteCw8Execute(context *Context, vm memc.IVm, funcName string) ([]int32, error) {
 	envBz, infoBz, msgBz, err := BuildArgsCw(context)
 	if err != nil {
 		return nil, err
 	}
-	vm := rnh.GetVm()
-	mem := rnh.GetMemory()
-	envRegion, err := writeMemCw(vm, mem, envBz)
+	envRegion, err := writeMemCw(vm, envBz)
 	if err != nil {
 		return nil, err
 	}
-	infoRegion, err := writeMemCw(vm, mem, infoBz)
+	infoRegion, err := writeMemCw(vm, infoBz)
 	if err != nil {
 		return nil, err
 	}
-	msgRegion, err := writeMemCw(vm, mem, msgBz)
+	msgRegion, err := writeMemCw(vm, msgBz)
 	if err != nil {
 		return nil, err
 	}
@@ -595,7 +593,7 @@ func ExecuteCw8Execute(context *Context, rnh memc.RuntimeHandler, funcName strin
 	if len(res) == 0 {
 		return nil, execErr
 	}
-	data, err := readMemCw(mem, res[0])
+	data, err := readMemCw(vm, res[0])
 	if err != nil {
 		if execErr != nil {
 			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
@@ -630,18 +628,16 @@ func ExecuteCw8Execute(context *Context, rnh memc.RuntimeHandler, funcName strin
 }
 
 // reply(env_ptr: u32, msg_ptr: u32)
-func ExecuteCw8Reply(context *Context, rnh memc.RuntimeHandler, funcName string) ([]interface{}, error) {
+func ExecuteCw8Reply(context *Context, vm memc.IVm, funcName string) ([]int32, error) {
 	envBz, _, msgBz, err := BuildArgsCw(context)
 	if err != nil {
 		return nil, err
 	}
-	vm := rnh.GetVm()
-	mem := rnh.GetMemory()
-	envRegion, err := writeMemCw(vm, mem, envBz)
+	envRegion, err := writeMemCw(vm, envBz)
 	if err != nil {
 		return nil, err
 	}
-	msgRegion, err := writeMemCw(vm, mem, msgBz)
+	msgRegion, err := writeMemCw(vm, msgBz)
 	if err != nil {
 		return nil, err
 	}
@@ -649,7 +645,7 @@ func ExecuteCw8Reply(context *Context, rnh memc.RuntimeHandler, funcName string)
 	if len(res) == 0 {
 		return nil, execErr
 	}
-	data, err := readMemCw(mem, res[0])
+	data, err := readMemCw(vm, res[0])
 	if err != nil {
 		if execErr != nil {
 			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
@@ -682,18 +678,16 @@ func ExecuteCw8Reply(context *Context, rnh memc.RuntimeHandler, funcName string)
 	return nil, err
 }
 
-func ExecuteCw8Query(context *Context, rnh memc.RuntimeHandler, funcName string) ([]interface{}, error) {
+func ExecuteCw8Query(context *Context, vm memc.IVm, funcName string) ([]int32, error) {
 	envBz, _, msgBz, err := BuildArgsCw(context)
 	if err != nil {
 		return nil, err
 	}
-	vm := rnh.GetVm()
-	mem := rnh.GetMemory()
-	envRegion, err := writeMemCw(vm, mem, envBz)
+	envRegion, err := writeMemCw(vm, envBz)
 	if err != nil {
 		return nil, err
 	}
-	msgRegion, err := writeMemCw(vm, mem, msgBz)
+	msgRegion, err := writeMemCw(vm, msgBz)
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +695,7 @@ func ExecuteCw8Query(context *Context, rnh memc.RuntimeHandler, funcName string)
 	if len(res) == 0 {
 		return nil, execErr
 	}
-	data, err := readMemCw(mem, res[0])
+	data, err := readMemCw(vm, res[0])
 	if err != nil {
 		if execErr != nil {
 			return nil, sdkerr.Wrapf(execErr, "cannot read returned data: %s", err.Error())
@@ -730,18 +724,22 @@ func ExecuteCw8Query(context *Context, rnh memc.RuntimeHandler, funcName string)
 }
 
 // instantiate/execute(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8(context *Context, rnh memc.RuntimeHandler, funcName string, args []interface{}) ([]interface{}, error) {
+func ExecuteCw8(context *Context, vm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	switch funcName {
 	case types.ENTRY_POINT_QUERY:
-		return ExecuteCw8Query(context, rnh, funcName)
+		return ExecuteCw8Query(context, vm, funcName)
 	case types.ENTRY_POINT_REPLY:
-		return ExecuteCw8Reply(context, rnh, funcName)
+		return ExecuteCw8Reply(context, vm, funcName)
 	}
 	// instantiate, execute
-	return ExecuteCw8Execute(context, rnh, funcName)
+	return ExecuteCw8Execute(context, vm, funcName)
 }
 
-func writeMemToDestinationCw(mem memc.IMemory, data []byte, ptr interface{}) (*Region, error) {
+func writeMemToDestinationCw(vm memc.IVm, data []byte, ptr interface{}) (*Region, error) {
+	mem, err := vm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
 	region, err := NewRegion(mem, ptr)
 	if err != nil {
 		return nil, err
@@ -753,7 +751,11 @@ func writeMemToDestinationCw(mem memc.IMemory, data []byte, ptr interface{}) (*R
 	return region, nil
 }
 
-func writeMemCw(vm memc.IVm, mem memc.IMemory, data []byte) (*Region, error) {
+func writeMemCw(vm memc.IVm, data []byte) (*Region, error) {
+	mem, err := vm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
 	res, err := vm.Call(types.MEMORY_EXPORT_ALLOCATE, []interface{}{int32(len(data))})
 	if err != nil {
 		return nil, err
@@ -770,7 +772,11 @@ func writeMemCw(vm memc.IVm, mem memc.IMemory, data []byte) (*Region, error) {
 	return region, nil
 }
 
-func readMemCw(mem memc.IMemory, ptr interface{}) ([]byte, error) {
+func readMemCw(vm memc.IVm, ptr interface{}) ([]byte, error) {
+	mem, err := vm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
 	region, err := NewRegion(mem, ptr)
 	if err != nil {
 		return nil, err

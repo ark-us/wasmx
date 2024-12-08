@@ -8,6 +8,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const VM_TERMINATE_ERROR = "terminate"
+
 type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}) ([]interface{}, error)
 
 type IFn interface {
@@ -19,9 +21,14 @@ type IFn interface {
 }
 
 type IMemory interface {
-	Read(ptr interface{}, size interface{}) ([]byte, error)
-	Write(ptr interface{}, data []byte) error
+	Size() uint32
+	ReadRaw(ptr interface{}, size interface{}) ([]byte, error)
+	WriteRaw(ptr interface{}, data []byte) error
+	Read(ptr int32, size int32) ([]byte, error)
+	Write(ptr int32, data []byte) error
 }
+
+type NewIVmFn = func(ctx sdk.Context) IVm
 
 type IVm interface {
 	Call(name string, args []interface{}) ([]int32, error)
@@ -35,11 +42,14 @@ type IVm interface {
 	ValType_I32() interface{}
 	ValType_I64() interface{}
 	ValType_F64() interface{}
+	GetFunctionList() []string
+	FindGlobal(name string) interface{}
+	ListRegisteredModule() []string
 }
 
 type RuntimeHandler interface {
 	GetVm() IVm
-	GetMemory() IMemory
+	GetMemory() (IMemory, error)
 	ReadMemFromPtr(pointer interface{}) ([]byte, error)
 	AllocateWriteMem(data []byte) (int32, error)
 	ReadStringFromPtr(pointer interface{}) (string, error)
@@ -68,16 +78,16 @@ func WriteMemBoundBySize(mem IMemory, data []byte, ptr interface{}, size interfa
 	if len(data) < size.(int) {
 		size = int32(len(data))
 	}
-	return mem.Write(ptr, data[0:size.(int)])
+	return mem.WriteRaw(ptr, data[0:size.(int)])
 }
 
 func WriteBigInt(mem IMemory, value *big.Int, pointer interface{}) error {
 	data := value.FillBytes(make([]byte, 32))
-	return mem.Write(pointer, data)
+	return mem.WriteRaw(pointer, data)
 }
 
 func ReadBigInt(mem IMemory, pointer interface{}, size interface{}) (*big.Int, error) {
-	data, err := mem.Read(pointer, size)
+	data, err := mem.ReadRaw(pointer, size)
 	if err != nil {
 		return nil, err
 	}

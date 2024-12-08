@@ -179,13 +179,13 @@ func EvmToJsonCall(addrCodec mcodec.AccBech32Codec, method *aabi.Method, context
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(context, contractAddress.Bytes())
-		if contractContext == nil {
+		contractInfo := GetContractDependency(context, contractAddress)
+		if contractInfo == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
-			req.Bytecode = contractContext.ContractInfo.Bytecode
-			req.CodeHash = contractContext.ContractInfo.CodeHash
+			req.Bytecode = contractInfo.Bytecode
+			req.CodeHash = contractInfo.CodeHash
 			success, returnData = WasmxCall(context, req)
 		}
 	}

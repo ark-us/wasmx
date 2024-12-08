@@ -14,23 +14,33 @@ import (
 )
 
 // Returns nil if there is no contract
-func GetContractContext(ctx *Context, addr sdk.AccAddress) *ContractContext {
+func GetContractContext(ctx *Context, addr sdk.AccAddress) *Context {
 	addrCodec := ctx.GetCosmosHandler().AddressCodec()
 	addrstr, err := addrCodec.BytesToString(addr)
 	if err != nil {
 		return nil
 	}
 	depContext, ok := ctx.ContractRouter[addrstr]
-	if ok {
-		return depContext
+	if !ok {
+		return nil
 	}
-	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
+	return depContext
+}
+
+func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.ContractDependency {
+	depContext, ok := ctx.ContractRouter[addr.String()]
+	if ok {
+		return depContext.ContractInfo
+	}
+	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr.Bytes())
 	if err != nil {
 		return nil
 	}
-	depContext = buildExecutionContextClassic(dep)
-	ctx.ContractRouter[addrstr] = depContext
-	return depContext
+	// cache it
+	ctx.ContractRouter[addr.String()] = &Context{
+		ContractInfo: &dep,
+	}
+	return &dep
 }
 
 func BankGetBalance(ctx *Context, addr mcodec.AccAddressPrefixed, denom string) (sdk.Coin, error) {
@@ -203,7 +213,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			}
 		}
 		ci := newrouter[routerAddress].ContractInfo
-		newrouter[routerAddress].ContractInfo = types.ContractDependency{
+		newrouter[routerAddress].ContractInfo = &types.ContractDependency{
 			Address:       ci.Address,
 			Role:          ci.Role,
 			Label:         ci.Label,
@@ -226,7 +236,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	// so we initialize the cosmos handler with the target contract
 	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(to)
 	sysDeps := newrouter[routerAddress].ContractInfo.SystemDeps
-
+	rnh := getRuntimeHandler(ctx.newIVmFn, tempCtx, sysDeps)
 	newctx := &Context{
 		GoRoutineGroup:  ctx.GoRoutineGroup,
 		GoContextParent: ctx.GoContextParent,
@@ -239,7 +249,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		App:             ctx.App,
 		NativeHandler:   ctx.NativeHandler,
 		dbIterators:     map[int32]types.Iterator{},
-		MemoryHandler:   getMemoryHandler(sysDeps),
+		RuntimeHandler:  rnh,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -255,7 +265,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			CurrentCall: callContext,
 		},
 	}
-	_, err := newrouter[routerAddress].Execute(newctx)
+	_, err := newctx.Execute()
 	var success int32
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
@@ -273,8 +283,8 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	return success, newctx.ReturnData
 }
 
-func cloneContractRouter(router map[string]*ContractContext) map[string]*ContractContext {
-	newrouter := make(map[string]*ContractContext, 0)
+func cloneContractRouter(router map[string]*Context) map[string]*Context {
+	newrouter := make(map[string]*Context, 0)
 	for k := range router {
 		newrouter[k] = router[k].CloneShallow()
 	}

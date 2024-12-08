@@ -103,26 +103,27 @@ func keccak256Util(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	if ctx.ContractRouter["keccak256"] == nil {
 		return nil, fmt.Errorf("missing keccak256 wasm")
 	}
-	keccakVm := ctx.ContractRouter["keccak256"].Vm
+	keccakRnh := ctx.ContractRouter["keccak256"].RuntimeHandler
 	input_offset := int32(0)
 	input_length := int32(len(data))
 	output_offset := input_length
 	context_offset := output_offset + int32(32)
 
-	keccakMem := keccakVm.GetActiveModule().FindMemory("memory")
-	if keccakMem == nil {
-		return nil, fmt.Errorf("missing keccak256 wasm memory")
+	keccakVm := keccakRnh.GetVm()
+	keccakMem, err := keccakVm.GetMemory()
+	if err != nil {
+		return nil, err
 	}
-	err = keccakMem.SetData(data, uint(input_offset), uint(input_length))
+	err = keccakMem.Write(input_offset, data)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = keccakVm.Execute("keccak", context_offset, input_offset, input_length, output_offset)
+	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset})
 	if err != nil {
 		return nil, err
 	}
-	result, err := keccakMem.GetData(uint(output_offset), uint(32))
+	result, err := keccakMem.Read(output_offset, 32)
 	if err != nil {
 		return nil, err
 	}
@@ -214,8 +215,8 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 	if err != nil {
 		success = int32(2)
 	} else {
-		contractContext := GetContractContext(ctx, to.Bytes())
-		if contractContext == nil {
+		contractInfo := GetContractDependency(ctx, to)
+		if contractInfo == nil {
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
@@ -229,8 +230,8 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 				Value:    req.Value.BigInt(),
 				GasLimit: gasLimit,
 				Calldata: req.Calldata,
-				Bytecode: contractContext.ContractInfo.Bytecode,
-				CodeHash: contractContext.ContractInfo.CodeHash,
+				Bytecode: contractInfo.Bytecode,
+				CodeHash: contractInfo.CodeHash,
 				IsQuery:  req.IsQuery,
 			}
 			success, returnData = WasmxCall(ctx, req)
@@ -861,12 +862,13 @@ func wasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler
 		return returns, nil
 	}
 
-	mod := proc.ContractVm.GetActiveModule()
-	ptrGlobal := mod.FindGlobal(req.PtrFunc).GetValue()
-	dataptr := uint(ptrGlobal.(int32))
-
-	activeMemory := mod.FindMemory("memory")
-	err = activeMemory.SetData(req.Data, dataptr, uint(len(req.Data)))
+	vm := proc.RuntimeHandler.GetVm()
+	ptrGlobal := vm.FindGlobal(req.PtrFunc)
+	activeMemory, err := proc.RuntimeHandler.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = activeMemory.Write(ptrGlobal.(int32), req.Data)
 	if err != nil {
 		resp.Error = err.Error()
 	}
@@ -922,15 +924,14 @@ func wasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHandle
 		returns[0] = ptr
 		return returns, nil
 	}
-	mod := proc.ContractVm.GetActiveModule()
-	lengthGlobal := mod.FindGlobal(req.LenFunc).GetValue()
-	reslen := uint(lengthGlobal.(int32))
-
-	ptrGlobal := mod.FindGlobal(req.PtrFunc).GetValue()
-	resptr := uint(ptrGlobal.(int32))
-
-	activeMemory := mod.FindMemory("memory")
-	byteArray, err := activeMemory.GetData(resptr, reslen)
+	vm := proc.RuntimeHandler.GetVm()
+	lengthGlobal := vm.FindGlobal(req.LenFunc)
+	ptrGlobal := vm.FindGlobal(req.PtrFunc)
+	activeMemory, err := proc.RuntimeHandler.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	byteArray, err := activeMemory.Read(ptrGlobal.(int32), lengthGlobal.(int32))
 	if err != nil {
 		resp.Error = err.Error()
 	} else {

@@ -21,30 +21,37 @@ const AS_ARRAY_BUFFER_TYPE = int32(1)
 //           0		Payload starts here
 
 type RuntimeHandlerAS struct {
-	vm  memc.IVm
-	mem memc.IMemory
+	vm memc.IVm
 }
 
 var _ memc.RuntimeHandler = (*RuntimeHandlerAS)(nil)
 
-func NewRuntimeHandlerAS(vm memc.IVm, mem memc.IMemory) memc.RuntimeHandler {
-	return RuntimeHandlerAS{vm, mem}
+func NewRuntimeHandlerAS(vm memc.IVm) memc.RuntimeHandler {
+	return RuntimeHandlerAS{vm}
 }
 
 func (h RuntimeHandlerAS) GetVm() memc.IVm {
 	return h.vm
 }
 
-func (h RuntimeHandlerAS) GetMemory() memc.IMemory {
-	return h.mem
+func (h RuntimeHandlerAS) GetMemory() (memc.IMemory, error) {
+	return h.vm.GetMemory()
 }
 
 func (h RuntimeHandlerAS) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
-	return ReadMemFromPtr(h.mem, pointer)
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	return ReadMemFromPtr(mem, pointer)
 }
 
 func (h RuntimeHandlerAS) AllocateWriteMem(data []byte) (int32, error) {
-	return AllocateWriteMem(h.vm, h.mem, data)
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return 0, err
+	}
+	return AllocateWriteMem(h.vm, mem, data)
 }
 
 func (RuntimeHandlerAS) ReadJsString(arr []byte) string {
@@ -52,7 +59,11 @@ func (RuntimeHandlerAS) ReadJsString(arr []byte) string {
 }
 
 func (h RuntimeHandlerAS) ReadStringFromPtr(pointer interface{}) (string, error) {
-	mm, err := ReadMemFromPtr(h.mem, pointer)
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return "", err
+	}
+	mm, err := ReadMemFromPtr(mem, pointer)
 	if err != nil {
 		return "", err
 	}
@@ -65,7 +76,7 @@ func ReadMemFromPtr(mem memc.IMemory, pointer interface{}) ([]byte, error) {
 		return nil, err
 	}
 	length := binary.LittleEndian.Uint32(lengthbz)
-	data, err := mem.Read(pointer, int32(length))
+	data, err := mem.ReadRaw(pointer, int32(length))
 	if err != nil {
 		return nil, err
 	}

@@ -8,11 +8,10 @@ import (
 	sdkerr "cosmossdk.io/errors"
 
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/second-state/WasmEdge-go/wasmedge"
 
 	"mythos/v1/x/wasmx/types"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 	"mythos/v1/x/wasmx/vm/precompiles"
-	"mythos/v1/x/wasmx/vm/wasmutils"
 )
 
 const LENGTH_SIZE = 4
@@ -47,12 +46,19 @@ func init() {
 
 func SecretSharing(context *Context, input []byte) ([]byte, error) {
 	wasmbin := precompiles.GetPrecompileByLabel(context.CosmosHandler.AddressCodec(), "secret_sharing")
-	wasmedge.SetLogErrorLevel()
-	conf := wasmedge.NewConfigure(wasmedge.WASI)
-	vm := wasmedge.NewVMWithConfig(conf)
-	err := wasmutils.InstantiateWasm(vm, "", wasmbin)
+
+	// needs WASI
+	vm := context.newIVmFn(context.Ctx)
+	defer func() {
+		vm.Cleanup()
+	}()
+	err := vm.InstantiateWasm("", wasmbin)
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: invalid wasm")
+	}
+	mem, err := vm.GetMemory()
+	if err != nil {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: missing memory")
 	}
 
 	fabi, err := SecretSharingAbi.MethodById(input[0:4])
@@ -73,7 +79,7 @@ func SecretSharing(context *Context, input []byte) ([]byte, error) {
 			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot unpack input")
 		}
 
-		shares, err := ShamirSplit(vm, []byte(args.Secret), args.Count, args.Threshold)
+		shares, err := ShamirSplit(vm, mem, []byte(args.Secret), args.Count, args.Threshold)
 		if err != nil {
 			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot split")
 		}
@@ -98,7 +104,7 @@ func SecretSharing(context *Context, input []byte) ([]byte, error) {
 			return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret recover: marshaling failed")
 		}
 
-		secret, err := ShamirRecover(vm, bz)
+		secret, err := ShamirRecover(vm, mem, bz)
 		if err != nil {
 			// TODO return error? or just empty result
 			return nil, nil
@@ -109,27 +115,23 @@ func SecretSharing(context *Context, input []byte) ([]byte, error) {
 		}
 		return result, nil
 	}
-
-	vm.Release()
-	conf.Release()
-
 	return nil, nil
 }
 
-func ShamirSplit(vm *wasmedge.VM, secret []byte, count uint32, threshold uint32) (*ResultShares, error) {
+func ShamirSplit(vm memc.IVm, mem memc.IMemory, secret []byte, count uint32, threshold uint32) (*ResultShares, error) {
 	inputLen := len(secret)
-	inputPointer, err := allocateInput(vm, secret)
+	inputPointer, err := allocateInput(vm, mem, secret)
 	if err != nil {
 		return nil, err
 	}
 
 	// Run the function. Given the pointer to the subject.
-	result, err := vm.Execute("ShamirSplit", inputPointer, int32(inputLen), int32(count), int32(threshold))
+	result, err := vm.Call("ShamirSplit", []interface{}{inputPointer, int32(inputLen), int32(count), int32(threshold)})
 	if err != nil {
 		return nil, err
 	}
 
-	memData, err := getResult(vm, result)
+	memData, err := getResult(mem, result)
 	if err != nil {
 		return nil, err
 	}
@@ -141,24 +143,24 @@ func ShamirSplit(vm *wasmedge.VM, secret []byte, count uint32, threshold uint32)
 	}
 
 	// Deallocate the subject, and the output.
-	vm.Execute("free", inputPointer)
+	vm.Call("free", []interface{}{inputPointer})
 	return shares, nil
 }
 
-func ShamirRecover(vm *wasmedge.VM, input []byte) (*ResultSecret, error) {
+func ShamirRecover(vm memc.IVm, mem memc.IMemory, input []byte) (*ResultSecret, error) {
 	inputLen := len(input)
-	inputPointer, err := allocateInput(vm, input)
+	inputPointer, err := allocateInput(vm, mem, input)
 	if err != nil {
 		return nil, err
 	}
 
 	// Run the function. Given the pointer to the subject.
-	result, err := vm.Execute("ShamirRecover", inputPointer, int32(inputLen))
+	result, err := vm.Call("ShamirRecover", []interface{}{inputPointer, int32(inputLen)})
 	if err != nil {
 		return nil, err
 	}
 
-	memData, err := getResult(vm, result)
+	memData, err := getResult(mem, result)
 	if err != nil {
 		return nil, err
 	}
@@ -170,16 +172,13 @@ func ShamirRecover(vm *wasmedge.VM, input []byte) (*ResultSecret, error) {
 	}
 
 	// Deallocate the subject, and the output.
-	vm.Execute("free", inputPointer)
+	vm.Call("free", []interface{}{inputPointer})
 	return data, nil
 }
 
-func getResult(vm *wasmedge.VM, result []interface{}) ([]byte, error) {
-	mod := vm.GetActiveModule()
-	mem := mod.FindMemory("memory")
-
-	outputPointer := result[0].(int32)
-	memData, err := mem.GetData(uint(outputPointer), LENGTH_SIZE)
+func getResult(mem memc.IMemory, result []int32) ([]byte, error) {
+	outputPointer := result[0]
+	memData, err := mem.Read(outputPointer, LENGTH_SIZE)
 	if err != nil {
 		return nil, err
 	}
@@ -187,28 +186,26 @@ func getResult(vm *wasmedge.VM, result []interface{}) ([]byte, error) {
 	outputPointer = outputPointer + LENGTH_SIZE
 
 	// Read the result
-	memData, err = mem.GetData(uint(outputPointer), uint(resultLength))
+	memData, err = mem.Read(outputPointer, int32(resultLength))
 	if err != nil {
 		return nil, err
 	}
 	return memData, nil
 }
 
-func allocateInput(vm *wasmedge.VM, input []byte) (int32, error) {
+func allocateInput(vm memc.IVm, mem memc.IMemory, input []byte) (int32, error) {
 	inputLen := len(input)
 
 	// Allocate memory for the input, and get a pointer to it.
 	// Include a byte for the NULL terminator we add below.
-	allocateResult, err := vm.Execute(types.MEMORY_EXPORT_MALLOC, int32(inputLen+1))
+	allocateResult, err := vm.Call(types.MEMORY_EXPORT_MALLOC, []interface{}{int32(inputLen + 1)})
 	if err != nil {
 		return 0, err
 	}
-	inputPointer := allocateResult[0].(int32)
+	inputPointer := allocateResult[0]
 
 	// Write the subject into the memory.
-	mod := vm.GetActiveModule()
-	mem := mod.FindMemory("memory")
-	memData, err := mem.GetData(uint(inputPointer), uint(inputLen+1))
+	memData, err := mem.Read(inputPointer, int32(inputLen)+1)
 	if err != nil {
 		return 0, err
 	}

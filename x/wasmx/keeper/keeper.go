@@ -26,6 +26,7 @@ import (
 	"mythos/v1/x/wasmx/types"
 	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
 	"mythos/v1/x/wasmx/types/contract_handler/alias"
+	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
 // contractMemoryLimit is the memory limit of each contract execution (in MiB)
@@ -53,6 +54,8 @@ type (
 		accBech32Codec        mcodec.AccBech32Codec
 		ak                    types.AccountKeeper
 		bank                  types.BankKeeperWasmx
+
+		newIVmFn memc.NewIVmFn
 
 		cch *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
@@ -100,6 +103,7 @@ func NewKeeper(
 	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
 	app types.Application,
+	newIVmFn memc.NewIVmFn,
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
@@ -139,7 +143,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger)
+	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, newIVmFn)
 	if err != nil {
 		panic(err)
 	}
@@ -177,6 +181,7 @@ func NewKeeper(
 		binDir:        binDir,
 		authority:     authority,
 		app:           app,
+		newIVmFn:      newIVmFn,
 	}
 
 	// cosmwasm support

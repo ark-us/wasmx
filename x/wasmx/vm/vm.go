@@ -21,113 +21,85 @@ import (
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
 
-func Ewasm_wrapper(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	wrapper := _context.(EwasmFunctionWrapper)
-	fmt.Println("Go: ewasm_wrapper entering", wrapper.Name, params)
-	returns, err := wrapper.Vm.Execute(wrapper.Name, params...)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Go: ewasm_wrapper: leaving", wrapper.Name, returns)
-	return returns, nil
-}
-
-func InitiateWasm(context *Context, contractVm memc.IVm, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) (memc.IVm, error) {
+func InitiateWasm(context *Context, rnh memc.RuntimeHandler, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {
 	// set default
 	if len(systemDeps) == 0 {
 		label := types.DEFAULT_SYS_DEP
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
-
-	_cleanups, err := initiateWasmDeps(context, contractVm, systemDeps)
-	cleanups = append(cleanups, _cleanups...)
+	err := initiateWasmDeps(context, rnh, systemDeps)
 	if err != nil {
-		return nil, cleanups, err
+		return err
 	}
-
+	contractVm := rnh.GetVm()
 	registered := contractVm.ListRegisteredModule()
 	// register mocks if dependencies are not already registered
 	if !slices.Contains(registered, "consensus") {
-		mock := BuildWasmxConsensusJson1Mock(context)
+		mock, err := BuildWasmxConsensusJson1Mock(context, rnh)
+		if err != nil {
+			return err
+		}
 		err = contractVm.RegisterModule(mock)
 		if err != nil {
-			return nil, cleanups, err
+			return err
 		}
-		cleanups = append(cleanups, mock.Release)
 	}
-
 	if filePath != "" || len(wasmbuffer) > 0 {
 		err = contractVm.InstantiateWasm(filePath, wasmbuffer)
 	}
-	return contractVm, err
+	return err
 }
 
-func initiateWasmDeps(context *Context, contractVm *wasmedge.VM, systemDeps []types.SystemDep) ([]func(), error) {
-	cleanups := make([]func(), 0)
+func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []types.SystemDep) error {
 	for _, systemDep := range systemDeps {
 		// system deps of system deps
-		_cleanups, err := initiateWasmDeps(context, contractVm, systemDep.Deps)
-		cleanups = append(cleanups, _cleanups...)
+		err := initiateWasmDeps(context, rnh, systemDep.Deps)
 		if err != nil {
-			return cleanups, err
+			return err
 		}
 		handler, found := SystemDepHandler[systemDep.Role]
 		if !found {
 			handler, found = SystemDepHandler[systemDep.Label]
 		}
 		if found {
-			releaseFn, err := handler(context, contractVm, &systemDep)
-			cleanups = append(cleanups, releaseFn...)
+			err := handler(context, rnh, &systemDep)
 			if err != nil {
-				return cleanups, err
+				return err
 			}
-		}
-	}
-	return cleanups, nil
-}
-
-func getMemoryHandler(systemDeps []types.SystemDep) memc.RuntimeHandler {
-	handler := getMemoryHandlerFromDeps(systemDeps)
-	if handler != nil {
-		return handler
-	}
-	// default is assemblyscript memory
-	// if we change this, we should add the dependency in the system contracts
-	return MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT]
-}
-
-func getMemoryHandlerFromDeps(systemDeps []types.SystemDep) memc.RuntimeHandler {
-	for _, systemDep := range systemDeps {
-		handler, found := MemoryDepHandler[systemDep.Role]
-		if !found {
-			handler, found = MemoryDepHandler[systemDep.Label]
-		}
-		if found {
-			return handler
-		}
-	}
-	// look in dep.Deps
-	for _, systemDep := range systemDeps {
-		handler := getMemoryHandlerFromDeps(systemDep.Deps)
-		if handler != nil {
-			return handler
 		}
 	}
 	return nil
 }
 
-// run in inverse order
-func runCleanups(cleanups []func()) {
-	for i := len(cleanups) - 1; i >= 0; i-- {
-		cleanups[i]()
+func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []types.SystemDep) memc.RuntimeHandler {
+	vm := newIVmFn(ctx)
+	handler := getRuntimeHandlerFromDeps(vm, systemDeps)
+	if handler != nil {
+		return handler
 	}
+	// default is assemblyscript memory
+	// if we change this, we should add the dependency in the system contracts
+	return RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT](vm)
 }
 
-func buildExecutionContextClassic(info types.ContractDependency) *ContractContext {
-	contractCtx := &ContractContext{
-		ContractInfo: info,
+func getRuntimeHandlerFromDeps(vm memc.IVm, systemDeps []types.SystemDep) memc.RuntimeHandler {
+	for _, systemDep := range systemDeps {
+		handler, found := RuntimeDepHandler[systemDep.Role]
+		if !found {
+			handler, found = RuntimeDepHandler[systemDep.Label]
+		}
+		if found {
+			return handler(vm)
+		}
 	}
-	return contractCtx
+	// look in dep.Deps
+	for _, systemDep := range systemDeps {
+		handler := getRuntimeHandlerFromDeps(vm, systemDep.Deps)
+		if handler != nil {
+			return handler
+		}
+	}
+	return nil
 }
 
 func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
@@ -196,6 +168,15 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	return report, nil
 }
 
+func VerifyEnv(version string, imports []*wasmedge.ImportType) error {
+	// TODO check that all imports are supported by the given version
+
+	// for _, mimport := range imports {
+	// 	fmt.Println("Import:", mimport.GetModuleName(), mimport.GetExternalName())
+	// }
+	return nil
+}
+
 func AotCompile(inPath string, outPath string) error {
 	// Create Configure
 	// conf := wasmedge.NewConfigure(wasmedge.THREADS, wasmedge.EXTENDED_CONST, wasmedge.TAIL_CALL, wasmedge.MULTI_MEMORIES)
@@ -261,15 +242,15 @@ func ExecuteWasmInterpreted(
 	funcName string,
 	env types.Env,
 	msg []byte,
-	storeKey []byte, kvstore prefix.Store,
-	storageType types.ContractStorageType,
+	kvstore prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []types.SystemDep,
+	contractInfo types.ContractDependency,
 	dependencies []types.ContractDependency,
 	isdebug bool,
 	inBackground bool,
 	app types.Application,
+	newIVmFn memc.NewIVmFn,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -278,11 +259,11 @@ func ExecuteWasmInterpreted(
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not decode wasm execution message")
 	}
 
-	var cleanups []func()
-	conf := wasmedge.NewConfigure()
-	cleanups = append(cleanups, conf.Release)
-
-	var contractRouter ContractRouter = make(map[string]*ContractContext)
+	var contractRouter ContractRouter = make(map[string]*Context)
+	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps)
+	defer func() {
+		rnh.GetVm().Cleanup()
+	}()
 	context := &Context{
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
@@ -296,50 +277,35 @@ func ExecuteWasmInterpreted(
 		ContractRouter:  contractRouter,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
-		RuntimeHandler:  getMemoryHandler(systemDeps),
+		RuntimeHandler:  rnh,
+		ContractInfo:    &contractInfo,
+		newIVmFn:        newIVmFn,
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for _, dep := range dependencies {
-		contractContext := buildExecutionContextClassic(dep)
-		if contractContext == nil {
-			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for %s", dep.Address)
-		}
 		addrstr := dep.Address.String()
-		context.ContractRouter[addrstr] = contractContext
+		context.ContractRouter[addrstr] = &Context{ContractInfo: &dep}
 	}
 	// add itself
-	selfContext := GetContractContext(context, env.Contract.Address.Bytes())
-	if selfContext == nil {
-		selfContext = buildExecutionContextClassic(types.ContractDependency{FilePath: "", Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-
-	}
 	contractstr := env.Contract.Address.String()
-
-	if selfContext == nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependenci execution context for self %s", contractstr)
-	}
-	context.ContractRouter[contractstr] = selfContext
-	contractVm, _cleanups, err := InitiateWasm(context, "", nil, systemDeps)
-	cleanups = append(cleanups, _cleanups...)
-	defer func() {
-		runCleanups(cleanups)
-	}()
+	err = InitiateWasm(context, rnh, "", nil, contractInfo.SystemDeps)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-	selfContext.Vm = contractVm
+	context.RuntimeHandler = rnh
 
-	setExecutionBytecode(context, contractVm, funcName)
-	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
-	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
-	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	setExecutionBytecode(context, rnh, funcName)
+	context.ContractInfo.Bytecode = context.Env.Contract.Bytecode
+	context.ContractInfo.CodeHash = context.Env.Contract.CodeHash
+	context.ContractRouter[contractstr] = context
+	executeHandler := GetExecuteFunctionHandler(contractInfo.SystemDeps)
 
 	if inBackground {
 		err = types.AddBackgroundProcesses(goContextParent, &types.BackgroundProcess{
-			Label:      contractstr,
-			ContractVm: contractVm,
+			Label:          contractstr,
+			RuntimeHandler: rnh,
 			ExecuteHandler: func(funcName_ string) ([]byte, error) {
-				_, err := executeHandler(context, contractVm, funcName_, make([]interface{}, 0))
+				_, err := executeHandler(context, rnh.GetVm(), funcName_, make([]interface{}, 0))
 				if err != nil {
 					return nil, err
 				}
@@ -351,7 +317,7 @@ func ExecuteWasmInterpreted(
 		}
 	}
 
-	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
+	_, err = executeHandler(context, rnh.GetVm(), funcName, make([]interface{}, 0))
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(
@@ -362,7 +328,8 @@ func ExecuteWasmInterpreted(
 			funcName,
 			string(context.FinishData),
 		)
-		resp := handleContractErrorResponse(contractVm, context.FinishData, isdebug, wrapErr)
+
+		resp := handleContractErrorResponse(rnh.GetVm(), context.FinishData, isdebug, wrapErr)
 		if isdebug {
 			// we don't fail for debug/tracing transactions
 			return resp, nil
@@ -372,7 +339,7 @@ func ExecuteWasmInterpreted(
 		// return types.ContractResponse{}, err
 	}
 
-	response := handleContractResponse(context, contractVm, isdebug)
+	response := handleContractResponse(context, rnh.GetVm(), isdebug)
 	return response, nil
 }
 
@@ -384,15 +351,15 @@ func ExecuteWasm(
 	funcName string,
 	env types.Env,
 	msg []byte,
-	storeKey []byte, kvstore prefix.Store,
-	storageType types.ContractStorageType,
+	kvstore prefix.Store,
 	cosmosHandler types.WasmxCosmosHandler,
 	gasMeter types.GasMeter,
-	systemDeps []types.SystemDep,
+	contractInfo types.ContractDependency,
 	dependencies []types.ContractDependency,
 	isdebug bool,
 	inBackground bool,
 	app types.Application,
+	newIVmFn memc.NewIVmFn,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -401,11 +368,11 @@ func ExecuteWasm(
 		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not decode wasm execution message")
 	}
 
-	var cleanups []func()
-	conf := wasmedge.NewConfigure()
-	cleanups = append(cleanups, conf.Release)
-
-	var contractRouter ContractRouter = make(map[string]*ContractContext)
+	var contractRouter ContractRouter = make(map[string]*Context)
+	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps)
+	defer func() {
+		rnh.GetVm().Cleanup()
+	}()
 	context := &Context{
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
@@ -419,7 +386,7 @@ func ExecuteWasm(
 		App:             app,
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
-		RuntimeHandler:  getMemoryHandler(systemDeps),
+		RuntimeHandler:  rnh,
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 
@@ -428,54 +395,34 @@ func ExecuteWasm(
 	if found {
 		data, err := context.NativeHandler.Execute(context, env.Contract.Address, ethMsg.Data)
 		if err != nil {
-			runCleanups(cleanups)
 			return types.ContractResponse{Data: data}, err
 		}
 		return types.ContractResponse{Data: data}, nil
 	}
 
 	for _, dep := range dependencies {
-		contractContext := buildExecutionContextClassic(dep)
-		if contractContext == nil {
-			return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for %s", dep.Address)
-		}
 		addrstr := dep.Address.String()
-		context.ContractRouter[addrstr] = contractContext
+		context.ContractRouter[addrstr] = &Context{ContractInfo: &dep}
 	}
 	// add itself
-	selfContext := GetContractContext(context, env.Contract.Address.Bytes())
-	if selfContext == nil {
-		selfContext = buildExecutionContextClassic(types.ContractDependency{FilePath: env.Contract.FilePath, Bytecode: []byte{}, CodeHash: []byte{}, StoreKey: storeKey, StorageType: storageType, SystemDeps: systemDeps})
-
-	}
 	contractstr := env.Contract.Address.String()
-
-	if selfContext == nil {
-		return types.ContractResponse{}, sdkerr.Wrapf(err, "could not build dependency execution context for self %s", contractstr)
-	}
-	context.ContractRouter[contractstr] = selfContext
-
-	contractVm, _cleanups, err := InitiateWasm(context, env.Contract.FilePath, nil, systemDeps)
-	cleanups = append(cleanups, _cleanups...)
-	defer func() {
-		runCleanups(cleanups)
-	}()
+	err = InitiateWasm(context, rnh, env.Contract.FilePath, nil, contractInfo.SystemDeps)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
-	selfContext.Vm = contractVm
+	context.RuntimeHandler = rnh
 
-	setExecutionBytecode(context, contractVm, funcName)
-	selfContext.ContractInfo.Bytecode = context.Env.Contract.Bytecode
-	selfContext.ContractInfo.CodeHash = context.Env.Contract.CodeHash
-
-	executeHandler := GetExecuteFunctionHandler(systemDeps)
+	setExecutionBytecode(context, rnh, funcName)
+	context.ContractInfo.Bytecode = context.Env.Contract.Bytecode
+	context.ContractInfo.CodeHash = context.Env.Contract.CodeHash
+	context.ContractRouter[contractstr] = context
+	executeHandler := GetExecuteFunctionHandler(contractInfo.SystemDeps)
 	if inBackground {
 		err = types.AddBackgroundProcesses(goContextParent, &types.BackgroundProcess{
-			Label:      contractstr,
-			ContractVm: contractVm,
+			Label:          contractstr,
+			RuntimeHandler: rnh,
 			ExecuteHandler: func(funcName_ string) ([]byte, error) {
-				_, err := executeHandler(context, contractVm, funcName_, make([]interface{}, 0))
+				_, err := executeHandler(context, rnh.GetVm(), funcName_, make([]interface{}, 0))
 				if err != nil {
 					return nil, err
 				}
@@ -486,7 +433,7 @@ func ExecuteWasm(
 			return types.ContractResponse{}, err
 		}
 	}
-	_, err = executeHandler(context, contractVm, funcName, make([]interface{}, 0))
+	_, err = executeHandler(context, rnh.GetVm(), funcName, make([]interface{}, 0))
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(
 			err,
@@ -496,7 +443,7 @@ func ExecuteWasm(
 			funcName,
 			hex.EncodeToString(context.FinishData),
 		)
-		resp := handleContractErrorResponse(contractVm, context.FinishData, isdebug, wrapErr)
+		resp := handleContractErrorResponse(rnh.GetVm(), context.FinishData, isdebug, wrapErr)
 		if isdebug {
 			return resp, nil
 		}
@@ -504,14 +451,14 @@ func ExecuteWasm(
 		// runCleanups(cleanups)
 		// return types.ContractResponse{}, err
 	}
-	response := handleContractResponse(context, contractVm, isdebug)
+	response := handleContractResponse(context, rnh.GetVm(), isdebug)
 	return response, nil
 }
 
 // deploymentBytecode = constructorBytecode + runtimeBytecode
 // codesize/codecopy at deployment = deploymentBytecode + args
 // codesize/codecopy at runtime execution = runtimeBytecode
-func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName string) {
+func setExecutionBytecode(context *Context, rnh memc.RuntimeHandler, funcName string) {
 	// for interpreted code
 	// TODO improve detection of interpreted code
 	if len(context.Env.Contract.Bytecode) > 0 {
@@ -535,29 +482,29 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 		)
 		return
 	}
-
-	fnList, _ := contractVm.GetFunctionList()
+	vm := rnh.GetVm()
+	fnList := vm.GetFunctionList()
 
 	if slices.Contains(fnList, "evm_bytecode") {
-		retvalues, err := contractVm.Execute("evm_bytecode")
+		activeMemory, err := rnh.GetMemory()
+		if err != nil {
+			return
+		}
+		retvalues, err := vm.Call("evm_bytecode", []interface{}{})
 		if err != nil {
 			return
 		}
 
-		memoffset := retvalues[0].(int32)
-		constructorLength := retvalues[1].(int32)
-		runtimeLength := retvalues[2].(int32)
-		activeMemory := contractVm.GetActiveModule().FindMemory("memory")
-		if activeMemory == nil {
-			return
-		}
-		executionBytecode, err := activeMemory.GetData(uint(memoffset+constructorLength), uint(runtimeLength))
+		memoffset := retvalues[0]
+		constructorLength := retvalues[1]
+		runtimeLength := retvalues[2]
+		executionBytecode, err := activeMemory.Read(memoffset+constructorLength, runtimeLength)
 		if err != nil {
 			return
 		}
 
 		if funcName == types.ENTRY_POINT_INSTANTIATE {
-			constructorBytecode, err := activeMemory.GetData(uint(memoffset), uint(constructorLength))
+			constructorBytecode, err := activeMemory.Read(memoffset, constructorLength)
 			if err != nil {
 				return
 			}
@@ -569,7 +516,7 @@ func setExecutionBytecode(context *Context, contractVm *wasmedge.VM, funcName st
 	}
 }
 
-func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug bool) types.ContractResponse {
+func handleContractResponse(context *Context, vm memc.IVm, isdebug bool) types.ContractResponse {
 	data := context.FinishData
 	logs := context.Logs
 	messages := context.Messages
@@ -616,7 +563,7 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 
 	var mem []byte
 	if isdebug {
-		mem = getMemory(contractVm)
+		mem = getMemory(vm)
 	}
 
 	return types.ContractResponse{
@@ -627,10 +574,10 @@ func handleContractResponse(context *Context, contractVm *wasmedge.VM, isdebug b
 	}
 }
 
-func handleContractErrorResponse(contractVm *wasmedge.VM, data []byte, isdebug bool, err error) types.ContractResponse {
+func handleContractErrorResponse(vm memc.IVm, data []byte, isdebug bool, err error) types.ContractResponse {
 	var mem []byte
 	if isdebug {
-		mem = getMemory(contractVm)
+		mem = getMemory(vm)
 	}
 
 	return types.ContractResponse{
@@ -640,14 +587,12 @@ func handleContractErrorResponse(contractVm *wasmedge.VM, data []byte, isdebug b
 	}
 }
 
-const MEM_PAGE_SIZE = 64 * 1024 // 64KiB
-func getMemory(contractVm *wasmedge.VM) []byte {
-	activeMemory := contractVm.GetActiveModule().FindMemory("memory")
-	if activeMemory == nil {
+func getMemory(vm memc.IVm) []byte {
+	activeMemory, err := vm.GetMemory()
+	if err != nil {
 		return nil
 	}
-	pageSize := activeMemory.GetPageSize()
-	membz, err := activeMemory.GetData(uint(0), uint(pageSize*MEM_PAGE_SIZE))
+	membz, err := activeMemory.Read(int32(0), int32(activeMemory.Size()))
 	if err != nil {
 		return nil
 	}

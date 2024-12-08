@@ -122,6 +122,10 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPr
 	if err != nil {
 		return types.ContractDependency{}, err
 	}
+	return k.GetContractDependencyInner(ctx, addr, contractInfo, codeInfo, prefixStoreKey)
+}
+
+func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddressPrefixed, contractInfo types.ContractInfo, codeInfo types.CodeInfo, prefixStoreKey []byte) (types.ContractDependency, error) {
 	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 	filepath := k.wasmvm.GetFilePath(codeInfo)
 
@@ -545,21 +549,15 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
 
-	// create prefixed data store
-	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
-	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
-	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
+	// TODO make this more efficient, we get same info 2 times
+	contractInfo, err := k.GetContractDependency(ctx, contractAddress)
+	prefixStore := k.ContractStore(ctx, storageType, contractInfo.StoreKey)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	systemDeps := k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-	// contractDeps, err := k.ContractDepsFromCodeDeps(ctx, codeInfo.Deps)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
 
 	// instantiate wasm contract
-	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStoreKey, prefixStore, storageType, handler, k.gasMeter(ctx), systemDeps)
+	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, k.gasMeter(ctx), contractInfo)
 }
 
 // PinCode pins the wasm contract in wasmvm cache
@@ -637,7 +635,6 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	// e.g. dep = {value, type}
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
-	systemDeps := k.SystemDepsFromCodeDeps(ctx, allDeps)
 	contractDeps, err := k.ContractDepsFromCodeDeps(ctx, allDeps)
 	if err != nil {
 		return nil, err
@@ -663,9 +660,12 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps, inBackground)
+	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -707,8 +707,6 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	// e.g. dep = {value, type}
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
-
-	systemDeps := k.SystemDepsFromCodeDeps(ctx, allDeps)
 	contractDeps, err := k.ContractDepsFromCodeDeps(ctx, allDeps)
 	if err != nil {
 		return nil, err
@@ -727,9 +725,12 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps, inBackground)
+	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
+	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -768,8 +769,6 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	// replyCosts := k.gasRegister.ReplyCosts(true, reply)
 	// ctx.GasMeter().ConsumeGas(replyCosts, "Loading WasmX module: reply")
 
-	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, types.MessageInfo{})
 	if err != nil {
 		return nil, err
@@ -785,8 +784,11 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		return nil, sdkerr.Wrap(err, "marshal reply failed")
 	}
 
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
+
 	// TODO costJSONDeserialization
-	res, gasUsed, execErr := k.wasmvm.Reply(ctx, &codeInfo, env, replyBz, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, nil)
+	res, gasUsed, execErr := k.wasmvm.Reply(ctx, &codeInfo, env, replyBz, store, handler, k.gasMeter(ctx), extendedContractInfo, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -846,9 +848,10 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	var systemDeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
 
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, nil, false)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, nil, false)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -892,7 +895,6 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	// e.g. dep = {value, type}
 	// if we cannot just load all the modules in the same VM
 	allDeps := append(codeInfo.Deps, dependencies...)
-	systemDeps := k.SystemDepsFromCodeDeps(ctx, allDeps)
 	contractDeps, err := k.ContractDepsFromCodeDeps(ctx, allDeps)
 	if err != nil {
 		return nil, err
@@ -912,8 +914,11 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, prefixStoreKey, k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey), contractInfo.GetStorageType(), handler, k.gasMeter(ctx), systemDeps, contractDeps, isdebug)
+	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
+	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)

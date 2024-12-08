@@ -15,35 +15,50 @@ const BUFFER_VALUE_OFFSET = 12
 // BUFFER: ptr - 4 bytes ref|type - 4 bytes length - 4 bytes value ptr - value
 
 type RuntimeHandlerTay struct {
-	vm  memc.IVm
-	mem memc.IMemory
+	vm memc.IVm
 }
 
 var _ memc.RuntimeHandler = (*RuntimeHandlerTay)(nil)
 
-func NewRuntimeHandlerTay(vm memc.IVm, mem memc.IMemory) memc.RuntimeHandler {
-	return RuntimeHandlerTay{vm, mem}
+func NewRuntimeHandlerTay(vm memc.IVm) memc.RuntimeHandler {
+	return RuntimeHandlerTay{vm}
 }
 
 func (h RuntimeHandlerTay) GetVm() memc.IVm {
 	return h.vm
 }
 
-func (h RuntimeHandlerTay) GetMemory() memc.IMemory {
-	return h.mem
+func (h RuntimeHandlerTay) GetMemory() (memc.IMemory, error) {
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	return mem, nil
 }
 
 func (h RuntimeHandlerTay) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
-	return ReadMemFromPtr(h.mem, pointer)
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	return ReadMemFromPtr(mem, pointer)
 }
 func (h RuntimeHandlerTay) AllocateWriteMem(data []byte) (int32, error) {
-	return AllocateWriteMem(h.vm, h.mem, data)
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return 0, err
+	}
+	return AllocateWriteMem(h.vm, mem, data)
 }
 func (RuntimeHandlerTay) ReadJsString(arr []byte) string {
 	return ReadJsString(arr)
 }
 func (h RuntimeHandlerTay) ReadStringFromPtr(pointer interface{}) (string, error) {
-	bz, err := memc.ReadMemUntilNull(h.mem, pointer)
+	mem, err := h.vm.GetMemory()
+	if err != nil {
+		return "", err
+	}
+	bz, err := memc.ReadMemUntilNull(mem, pointer)
 	if err != nil {
 		return "", err
 	}

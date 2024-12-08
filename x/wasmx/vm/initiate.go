@@ -4,6 +4,7 @@ import (
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm/interpreters"
 	memas "mythos/v1/x/wasmx/vm/memory/assemblyscript"
+	membase "mythos/v1/x/wasmx/vm/memory/base"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 	memtay "mythos/v1/x/wasmx/vm/memory/taylor"
 
@@ -52,23 +53,24 @@ func InitiateWasmxEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.Sys
 	return nil
 }
 
-func InitiateKeccak256(ctx sdk.Context, newvm func(ctx sdk.Context) memc.IVm) (memc.IVm, error) {
+func InitiateKeccak256(ctx sdk.Context, newvm memc.NewIVmFn) (memc.RuntimeHandler, error) {
 	var err error
 	keccakVm := newvm(ctx)
 	err = keccakVm.InstantiateWasm("", interpreters.Keccak256Util)
 	if err != nil {
 		return nil, err
 	}
-	return keccakVm, nil
+	keccakRnh := membase.NewRuntimeHandlerBase(keccakVm)
+	return keccakRnh, nil
 }
 
 func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
 	vm := rnh.GetVm()
-	keccakVm, err := InitiateKeccak256(context.Ctx, vm.New)
+	keccakRnh, err := InitiateKeccak256(context.Ctx, vm.New)
 	if err != nil {
 		return err
 	}
-	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
+	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
 
 	wasmx, err := BuildWasmxEnv2(context, rnh)
 	if err != nil {
@@ -120,11 +122,11 @@ func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDe
 	if err != nil {
 		return err
 	}
-	keccakVm, err := InitiateKeccak256(context.Ctx, rnh.GetVm().New)
+	keccakRnh, err := InitiateKeccak256(context.Ctx, rnh.GetVm().New)
 	if err != nil {
 		return err
 	}
-	context.ContractRouter["keccak256"] = &ContractContext{Vm: keccakVm}
+	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
 
 	return nil
 }
@@ -161,7 +163,7 @@ var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
 var DependenciesMap = map[string]bool{}
 
-var MemoryDepHandler = map[string]func(vm memc.IVm, mem memc.IMemory) memc.RuntimeHandler{}
+var RuntimeDepHandler = map[string]func(vm memc.IVm) memc.RuntimeHandler{}
 
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
@@ -193,8 +195,8 @@ func init() {
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
 
-	MemoryDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
-	MemoryDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
+	RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
+	RuntimeDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
 }
 
 func SetSystemDepHandler(

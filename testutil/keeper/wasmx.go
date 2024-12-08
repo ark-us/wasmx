@@ -37,6 +37,7 @@ import (
 
 	"mythos/v1/x/wasmx/keeper"
 	"mythos/v1/x/wasmx/types"
+	wasmedgeVm "mythos/v1/x/wasmx/vm/wasmedge"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
@@ -156,6 +157,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		consCodec,
 		addrCodec,
 		mapp,
+		wasmedgeVm.NewWasmEdgeVm,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())
