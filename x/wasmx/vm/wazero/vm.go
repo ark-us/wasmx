@@ -165,7 +165,7 @@ func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) er
 
 	// WithWorkDirFS
 
-	// mod := wm.vm.GetImportModule(wasmedge.WASI)
+	// mod := wm.vm.GetImportModule(WASI)
 	// if mod == nil {
 	// 	return fmt.Errorf("WASI module not found")
 	// }

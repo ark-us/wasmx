@@ -32,7 +32,6 @@ func GetQueryCmd(ac address.Codec) *cobra.Command {
 	return queryCmd
 }
 
-// GetCmdLibVersion gets current wasmedge version.
 func GetCmdGetBalance(ac address.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "balance [owner_address] [denom]",

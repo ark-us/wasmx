@@ -86,7 +86,7 @@ func ReadMemFromPtr(mem memc.IMemory, pointer interface{}) ([]byte, error) {
 
 func AllocateMemVm(vm memc.IVm, mem memc.IMemory, size int32) (int32, error) {
 	if vm == nil {
-		return 0, fmt.Errorf("memory allocation failed, no wasmedge VM instance found")
+		return 0, fmt.Errorf("memory allocation failed, no VM instance found")
 	}
 	args := []interface{}{size, AS_ARRAY_BUFFER_TYPE}
 	result, err := vm.Call(types.MEMORY_EXPORT_AS, args)

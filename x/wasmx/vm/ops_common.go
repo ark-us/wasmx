@@ -93,7 +93,7 @@ func BankSendCoin(ctx *Context, from mcodec.AccAddressPrefixed, to mcodec.AccAdd
 func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 	// initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
 	// if err != nil {
-	// 	return returns, wasmedge.Result_Fail
+	// 	return returns, err
 	// }
 
 	bankAddress, err := ctx.GetCosmosHandler().GetAddressOrRole(ctx.Ctx, types.ROLE_BANK)

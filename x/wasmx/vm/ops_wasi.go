@@ -519,7 +519,7 @@ func wasi_sendCosmosQuery(_context interface{}, rnh memc.RuntimeHandler, params 
 // getGasLeft(): i64
 func wasi_getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	returns[0] = 0
+	returns[0] = int32(0)
 	return returns, nil
 }
 
@@ -632,8 +632,8 @@ func BuildWasiWasmxEnv(context *Context, rnh memc.RuntimeHandler) (interface{}, 
 		vm.BuildFn("getCode", wasi_getCode, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("keccak256", wasi_keccak256, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
 
-		// env.AddFunction("createAccount", wasmedge.NewFunction(functype_i32i32i32i32_i64, wasi_createAccount, context, 0))
-		// env.AddFunction("createAccount2", wasmedge.NewFunction(functype_i32i32i32i32i32_i64, wasi_createAccount2, context, 0))
+		// env.AddFunction("createAccount", NewFunction(functype_i32i32i32i32_i64, wasi_createAccount, context, 0))
+		// env.AddFunction("createAccount2", NewFunction(functype_i32i32i32i32i32_i64, wasi_createAccount2, context, 0))
 
 		vm.BuildFn("instantiateAccount", wasi_instantiateAccount, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("instantiateAccount2", wasi_instantiateAccount2, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),

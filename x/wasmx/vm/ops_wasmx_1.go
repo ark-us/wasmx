@@ -278,9 +278,6 @@ func wasmxFinish(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	returns := make([]interface{}, 0)
 	ctx.FinishData = data
 	ctx.ReturnData = data
-	// TODO fixme wasmedge fails if we terminate
-	// terminate the WASM execution
-	// return returns, wasmedge.Result_Terminate
 	return returns, nil
 }
 

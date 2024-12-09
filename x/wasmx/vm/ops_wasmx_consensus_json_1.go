@@ -514,16 +514,16 @@ func BuildWasmxConsensusJson1(context *Context, rnh memc.RuntimeHandler) (interf
 
 	// TODO
 	// // ApplySnapshotChunk(req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error)
-	// env.AddFunction("ApplySnapshotChunk", wasmedge.NewFunction(functype_i32_i32, ApplySnapshotChunk, context, 0))
+	// env.AddFunction("ApplySnapshotChunk", NewFunction(functype_i32_i32, ApplySnapshotChunk, context, 0))
 
 	// // LoadSnapshotChunk(req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error)
-	// env.AddFunction("LoadSnapshotChunk", wasmedge.NewFunction(functype_i32_i32, LoadSnapshotChunk, context, 0))
+	// env.AddFunction("LoadSnapshotChunk", NewFunction(functype_i32_i32, LoadSnapshotChunk, context, 0))
 
 	// // OfferSnapshot(req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error)
-	// env.AddFunction("OfferSnapshot", wasmedge.NewFunction(functype_i32_i32, OfferSnapshot, context, 0))
+	// env.AddFunction("OfferSnapshot", NewFunction(functype_i32_i32, OfferSnapshot, context, 0))
 
 	// // ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)
-	// env.AddFunction("ListSnapshots", wasmedge.NewFunction(functype_i32_i32, ListSnapshots, context, 0))
+	// env.AddFunction("ListSnapshots", NewFunction(functype_i32_i32, ListSnapshots, context, 0))
 
 	return vm.BuildModule(rnh, "consensus", context, fndefs)
 }

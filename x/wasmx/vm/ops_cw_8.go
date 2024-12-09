@@ -91,7 +91,7 @@ func cw_8_db_read(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	// TODO MAX_LENGTH_DB_KEY
 	data := ctx.ContractStore.Get(key)
 	if len(data) == 0 {
-		returns[0] = 0
+		returns[0] = int32(0)
 		return returns, nil
 	}
 	region, err := writeMemCw(rnh.GetVm(), data)
@@ -216,7 +216,7 @@ func cw_8_addr_validate(_context interface{}, rnh memc.RuntimeHandler, params []
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = 0
+	returns[0] = int32(0)
 	return returns, nil
 }
 
@@ -236,7 +236,7 @@ func cw_8_addr_canonicalize(_context interface{}, rnh memc.RuntimeHandler, param
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = 0
+	returns[0] = int32(0)
 	return returns, nil
 }
 
@@ -257,7 +257,7 @@ func cw_8_addr_humanize(_context interface{}, rnh memc.RuntimeHandler, params []
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = 0
+	returns[0] = int32(0)
 	return returns, nil
 }
 

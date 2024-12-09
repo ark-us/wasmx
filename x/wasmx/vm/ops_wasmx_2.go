@@ -1026,9 +1026,9 @@ func ed25519Verify(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	pubKey := ed25519.PubKey(pubkeybz)
 	isSigner := pubKey.VerifySignature(msgbz, signaturebz)
 	returns := make([]interface{}, 1)
-	returns[0] = 0
+	returns[0] = int32(0)
 	if isSigner {
-		returns[0] = 1
+		returns[0] = int32(1)
 	}
 	return returns, nil
 }
@@ -1105,9 +1105,9 @@ func wasmxAddrEquivalent(_context interface{}, rnh memc.RuntimeHandler, params [
 
 	same := bytes.Equal(addr1.Bytes(), addr2.Bytes())
 	returns := make([]interface{}, 1)
-	returns[0] = 0
+	returns[0] = int32(0)
 	if same {
-		returns[0] = 1
+		returns[0] = int32(1)
 	}
 	return returns, nil
 }
@@ -1329,8 +1329,8 @@ func BuildWasmxEnv2(context *Context, rnh memc.RuntimeHandler) (interface{}, err
 		vm.BuildFn("verifyCosmosTx", wasmxVerifyCosmosTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 
 		// TODO
-		// env.AddFunction("ProtoMarshal", wasmedge.NewFunction(functype__i32, ProtoMarshal, context, 0))
-		// env.AddFunction("ProtoUnmarshal", wasmedge.NewFunction(functype__i32, ProtoUnmarshal, context, 0))
+		// env.AddFunction("ProtoMarshal", NewFunction(functype__i32, ProtoMarshal, context, 0))
+		// env.AddFunction("ProtoUnmarshal", NewFunction(functype__i32, ProtoUnmarshal, context, 0))
 
 		// TODO move externalCall, grpcRequest, startTimeout to only system API
 		// move them to the network module: vmnetwork
@@ -1344,7 +1344,7 @@ func BuildWasmxEnv2(context *Context, rnh memc.RuntimeHandler) (interface{}, err
 		vm.BuildFn("readFromBackgroundProcess", wasmxReadFromBackgroundProcess, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 
 		// TODO
-		// env.AddFunction("endBackgroundProcess", wasmedge.NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
+		// env.AddFunction("endBackgroundProcess", NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
 	}
 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)

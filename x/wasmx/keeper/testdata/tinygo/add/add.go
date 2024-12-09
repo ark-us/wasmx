@@ -8,7 +8,7 @@ func add(x, y uint32) uint32 {
 
 // main is required for the `wasi` target, even if it isn't used.
 func main() {
-	println("Hello TinyGo from WasmEdge!")
+	println("Hello TinyGo from WasmX!")
 }
 
 //go:wasm-module myadd
