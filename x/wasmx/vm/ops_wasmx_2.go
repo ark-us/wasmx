@@ -1288,6 +1288,7 @@ func BuildWasmxEnv2(context *Context, rnh memc.RuntimeHandler) (interface{}, err
 		vm.BuildFn("storageLoadRange", wasmxStorageLoadRange, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageLoadRangePairs", wasmxStorageLoadRangePairs, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("log", wasmxLog, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("emitCosmosEvents", wasmxEmitCosmosEvents, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("getReturnData", wasmxGetReturnData, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getFinishData", wasmxGetFinishData, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("setFinishData", wasmxSetFinishData, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),

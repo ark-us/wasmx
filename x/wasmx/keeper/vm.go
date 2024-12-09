@@ -219,7 +219,6 @@ func (k *WasmxEngine) QueryExecute(
 	} else {
 		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.newIVmFn)
 	}
-
 	if err != nil {
 		return data, 0, err
 	}

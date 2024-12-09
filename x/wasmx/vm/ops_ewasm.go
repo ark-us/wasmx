@@ -176,7 +176,7 @@ func getCallValue(_context interface{}, rnh memc.RuntimeHandler, params []interf
 func getCallDataSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = len(ctx.Env.CurrentCall.CallData)
+	returns[0] = int32(len(ctx.Env.CurrentCall.CallData))
 	return returns, nil
 }
 

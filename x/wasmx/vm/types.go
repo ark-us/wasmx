@@ -60,7 +60,7 @@ func (c *Context) CloneShallow() *Context {
 		Ctx:             c.Ctx,
 		Logger:          c.Logger,
 		GasMeter:        c.GasMeter,
-		Env:             c.Env,
+		Env:             c.Env, // TODO clone
 		ContractRouter:  c.ContractRouter,
 		ContractStore:   c.ContractStore,
 		CosmosHandler:   c.CosmosHandler,
@@ -69,12 +69,12 @@ func (c *Context) CloneShallow() *Context {
 		ReturnData:      c.ReturnData,
 		FinishData:      c.FinishData,
 		CurrentCallId:   c.CurrentCallId,
-		Logs:            c.Logs,
-		CosmosEvents:    c.CosmosEvents,
-		Messages:        c.Messages,
+		Logs:            c.Logs,         // TODO clone?
+		CosmosEvents:    c.CosmosEvents, // TODO clone?
+		Messages:        c.Messages,     // TODO clone?
 		dbIterators:     c.dbIterators,
 		RuntimeHandler:  c.RuntimeHandler,
-		ContractInfo:    c.ContractInfo,
+		ContractInfo:    c.ContractInfo, // TODO clone
 		newIVmFn:        c.newIVmFn,
 	}
 }

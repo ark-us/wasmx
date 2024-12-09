@@ -387,6 +387,8 @@ func ExecuteWasm(
 		NativeHandler:   NativeMap,
 		dbIterators:     map[int32]types.Iterator{},
 		RuntimeHandler:  rnh,
+		ContractInfo:    &contractInfo,
+		newIVmFn:        newIVmFn,
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 

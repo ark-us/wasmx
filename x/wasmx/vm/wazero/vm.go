@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	sdkerrors "cosmossdk.io/errors"
 
@@ -48,15 +49,15 @@ func (f WazeroFn) Fn(context interface{}, rnh memc.RuntimeHandler, params []inte
 	return f.fn(context, rnh, params)
 }
 
-func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler) func(ctx context.Context, m api.Module, stack []uint64) {
+func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler, _context interface{}, inputTypes []api.ValueType, outputTypes []api.ValueType) func(ctx context.Context, m api.Module, stack []uint64) {
 	return func(ctx context.Context, m api.Module, stack []uint64) {
 		vm := rnh.GetVm().(*WazeroVm)
 		vm.vm = m
-		params := make([]interface{}, len(stack))
-		for i, val := range stack {
-			params[i] = val
+		params := make([]interface{}, len(inputTypes))
+		for i, val := range stack[0:len(inputTypes)] {
+			params[i] = ValueFromUint64(val, inputTypes[i])
 		}
-		results, err := f.fn(ctx, rnh, params)
+		results, err := f.fn(_context, rnh, params)
 		if err != nil {
 			if err.Error() == memc.VM_TERMINATE_ERROR {
 				panic(err)
@@ -64,7 +65,7 @@ func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler) func(ctx context.Context, m
 			panic(err)
 		}
 		for i, res := range results {
-			stack[i] = res.(uint64)
+			stack[i] = ValueToUint64(res, outputTypes[i])
 		}
 	}
 }
@@ -88,7 +89,7 @@ func NewWazeroVm(ctx sdk.Context) memc.IVm {
 	var cleanups []func()
 	// TODO WASI
 	// NewRuntimeConfigCompiler
-	config := wazero.NewRuntimeConfig().WithCloseOnContextDone(true).WithCompilationCache(cache)
+	config := wazero.NewRuntimeConfig().WithCloseOnContextDone(true).WithCompilationCache(cache).WithDebugInfoEnabled(true)
 
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 	cleanups = append(cleanups, func() {
@@ -121,7 +122,8 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}) ([]int32, error) {
 	}
 	result, err := wm.vm.ExportedFunction(funcname).Call(wm.ctx, _args...)
 	if err != nil {
-		if err.Error() != memc.VM_TERMINATE_ERROR {
+		expected := memc.VM_TERMINATE_ERROR + " (recovered by wazero)"
+		if !strings.Contains(err.Error(), expected) {
 			return nil, err
 		}
 	}
@@ -155,18 +157,7 @@ func (wm *WazeroVm) ListRegisteredModule() []string {
 func (wm *WazeroVm) FindGlobal(name string) interface{} {
 	glob := wm.vm.ExportedGlobal(name)
 	val := glob.Get()
-	switch glob.Type() {
-	case api.ValueTypeI32:
-		return int32(val)
-	case api.ValueTypeI64:
-		return int64(val)
-	case api.ValueTypeF32:
-		return float32(val)
-	case api.ValueTypeF64:
-		return float64(val)
-	default:
-		return val
-	}
+	return ValueFromUint64(val, glob.Type())
 }
 
 func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) error {
@@ -309,12 +300,12 @@ func (wm *WazeroVm) BuildModule(rnh memc.RuntimeHandler, modname string, context
 	return mod, nil
 }
 
-func (wm *WazeroVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, context interface{}, fndefs []WazeroFn) wazero.HostModuleBuilder {
+func (wm *WazeroVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, _context interface{}, fndefs []WazeroFn) wazero.HostModuleBuilder {
 	envmod := wm.r.NewHostModuleBuilder(modname)
 	// TODO cost for each function
 	for _, fndef := range fndefs {
 		envmod = envmod.NewFunctionBuilder().WithGoModuleFunction(
-			api.GoModuleFunc(fndef.WrappedFn(rnh)),
+			api.GoModuleFunc(fndef.WrappedFn(rnh, _context, fndef.inputTypes, fndef.outputTypes)),
 			fndef.inputTypes,
 			fndef.outputTypes,
 		).Export(fndef.name)
@@ -350,4 +341,34 @@ func splitEnv(env string) []string {
 		}
 	}
 	return nil
+}
+
+func ValueFromUint64(val uint64, t api.ValueType) interface{} {
+	switch t {
+	case api.ValueTypeI32:
+		return api.DecodeI32(val)
+	case api.ValueTypeI64:
+		return int64(val)
+	case api.ValueTypeF32:
+		return api.DecodeF32(val)
+	case api.ValueTypeF64:
+		return api.DecodeF64(val)
+	default:
+		return val
+	}
+}
+
+func ValueToUint64(val interface{}, t api.ValueType) uint64 {
+	switch t {
+	case api.ValueTypeI32:
+		return api.EncodeI32(val.(int32))
+	case api.ValueTypeI64:
+		return api.EncodeI64(val.(int64))
+	case api.ValueTypeF32:
+		return api.EncodeF32(val.(float32))
+	case api.ValueTypeF64:
+		return api.EncodeF64(val.(float64))
+	default:
+		return val.(uint64)
+	}
 }

@@ -3,6 +3,7 @@ package assemblyscript
 import (
 	"encoding/binary"
 	"fmt"
+	"unicode/utf16"
 
 	"mythos/v1/x/wasmx/types"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
@@ -107,12 +108,20 @@ func AllocateWriteMem(vm memc.IVm, mem memc.IMemory, data []byte) (int32, error)
 	return ptr, nil
 }
 
-func ReadJsString(arr []byte) string {
-	msg := []byte{}
-	for i, char := range arr {
-		if i%2 == 0 {
-			msg = append(msg, char)
-		}
+// ReadJsString converts a byte slice to a UTF-16 encoded string.
+func ReadJsString(data []byte) string {
+	// Ensure the data has an even number of bytes (required for UTF-16 encoding)
+	if len(data)%2 != 0 {
+		data = append([]byte{0}, data...)
 	}
-	return string(msg)
+
+	// Convert bytes to uint16 values
+	u16 := make([]uint16, len(data)/2)
+	for i := 0; i < len(data); i += 2 {
+		u16[i/2] = uint16(data[i]) | uint16(data[i+1])<<8
+	}
+
+	// Decode UTF-16 to a Go string
+	runes := utf16.Decode(u16)
+	return string(runes)
 }

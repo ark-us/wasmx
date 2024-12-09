@@ -250,6 +250,8 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		NativeHandler:   ctx.NativeHandler,
 		dbIterators:     map[int32]types.Iterator{},
 		RuntimeHandler:  rnh,
+		newIVmFn:        ctx.newIVmFn,
+		ContractInfo:    newrouter[routerAddress].ContractInfo,
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,

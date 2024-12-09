@@ -238,7 +238,7 @@ func (k *Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, 
 	return checksum, report.Dependencies, nil
 }
 
-func (k *Keeper) createSourceInterpreted(ctx sdk.Context, sourceCode []byte, deps []string) (checksum []byte, reportDeps []string, err error) {
+func (k *Keeper) createSourceInterpreted(_ sdk.Context, sourceCode []byte, deps []string) (checksum []byte, reportDeps []string, err error) {
 	// TODO actually run the source code in the compiler
 	// and verify that it is valid
 	// maybe store the compiled bytecode
@@ -549,9 +549,15 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	}
 	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
 
-	// TODO make this more efficient, we get same info 2 times
-	contractInfo, err := k.GetContractDependency(ctx, contractAddress)
-	prefixStore := k.ContractStore(ctx, storageType, contractInfo.StoreKey)
+	// create prefixed data store
+	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
+	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
+	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
+
+	contractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, types.ContractInfo{CodeId: codeID, StorageType: storageType}, *codeInfo, prefixStoreKey)
+	if err != nil {
+		return types.ContractResponse{}, 0, err
+	}
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -661,6 +667,9 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -726,6 +735,9 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -785,6 +797,9 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	}
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
 	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
 
 	// TODO costJSONDeserialization
@@ -849,6 +864,9 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
 	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
 
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, nil, false)
@@ -915,6 +933,9 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
@@ -938,7 +959,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 func (k *Keeper) handleResponseEvents(
 	ctx sdk.Context,
 	contractAddrBech32 string,
-	ibcPort string,
+	_ string, // ibcPort string,
 	attrs []types.EventAttribute,
 	evts types.Events,
 ) error {
