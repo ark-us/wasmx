@@ -18,6 +18,7 @@ import (
 	"mythos/v1/x/wasmx/types"
 	"mythos/v1/x/wasmx/vm"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
+	utils "mythos/v1/x/wasmx/vm/utils"
 )
 
 type WasmxEngine struct {
@@ -61,7 +62,7 @@ func (k *WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error
 	filepath := k.build_path(k.DataDir, checksum)
 
 	// Read and write permissions for the owner and read-only permissions for everyone else
-	err := os.WriteFile(filepath, wasmBytecode, 0644)
+	err := utils.SafeWriteFile(filepath, wasmBytecode)
 	if err != nil {
 		return nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
@@ -75,7 +76,7 @@ func (k *WasmxEngine) CreateUtf8(sourceCode []byte, extension string) (types.Che
 	filepath := k.build_path_utf8(k.SourcesDir, checksum, extension)
 
 	// Read and write permissions for the owner and read-only permissions for everyone else
-	err := os.WriteFile(filepath, sourceCode, 0644)
+	err := utils.SafeWriteFile(filepath, sourceCode)
 	if err != nil {
 		return nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}
@@ -316,7 +317,7 @@ func copyFile(sourceFile string, destinationFile string) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(destinationFile, input, 0644)
+	err = utils.SafeWriteFile(destinationFile, input)
 	if err != nil {
 		return err
 	}

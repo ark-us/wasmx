@@ -266,7 +266,3 @@ const nodeDirPerm = 0o755
 func createDirsIfNotExist(dirpath string) error {
 	return os.MkdirAll(dirpath, nodeDirPerm)
 }
-
-func createFileIfNotExist(filepath string) error {
-	return os.WriteFile(filepath, []byte{}, 0644)
-}

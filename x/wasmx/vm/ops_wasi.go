@@ -15,6 +15,7 @@ import (
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 	wasimem "mythos/v1/x/wasmx/vm/memory/wasi"
 	vmtypes "mythos/v1/x/wasmx/vm/types"
+	utils "mythos/v1/x/wasmx/vm/utils"
 )
 
 // getEnv(): ArrayBuffer
@@ -727,7 +728,7 @@ else:
 set_finishdata(res or b'')
 `, string(content), funcName)
 
-	err = os.WriteFile(inputFile, []byte(strcontent), 0644)
+	err = utils.SafeWriteFile(inputFile, []byte(strcontent))
 	if err != nil {
 		return nil, err
 	}
@@ -780,7 +781,7 @@ wasmx.setFinishData(res || new ArrayBuffer(0));
 
 	`, fileName, funcName)
 
-	err := os.WriteFile(inputFile, []byte(strcontent), 0644)
+	err := utils.SafeWriteFile(inputFile, []byte(strcontent))
 	if err != nil {
 		return nil, err
 	}
