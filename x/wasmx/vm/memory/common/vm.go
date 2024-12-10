@@ -12,12 +12,38 @@ const VM_TERMINATE_ERROR = "terminate"
 
 type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}) ([]interface{}, error)
 
+type IWasmVmMeta interface {
+	NewWasmVm(ctx sdk.Context) IVm
+	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
+	AotCompile(ctx sdk.Context, inPath string, outPath string) error
+}
+
 type IFn interface {
 	Name() string
 	InputTypes() []interface{}
 	OutputTypes() []interface{}
 	Fn(context interface{}, mod RuntimeHandler, params []interface{}) ([]interface{}, error)
 	Cost() int32
+}
+
+type WasmExport interface {
+	Name() string
+	// InputTypes() []interface{}
+	// OutputTypes() []interface{}
+	Fn() interface{}
+}
+
+type WasmImport interface {
+	Name() string
+	// InputTypes() []interface{}
+	// OutputTypes() []interface{}
+	Fn() interface{}
+	ModuleName() string
+}
+
+type WasmMeta interface {
+	ListImports() []WasmImport
+	ListExports() []WasmExport
 }
 
 type IMemory interface {
@@ -54,6 +80,12 @@ type RuntimeHandler interface {
 	AllocateWriteMem(data []byte) (int32, error)
 	ReadStringFromPtr(pointer interface{}) (string, error)
 	ReadJsString(arr []byte) string
+}
+
+// Contains static analysis info of the contract (the Wasm code to be precise).
+// This type is returned by VM.AnalyzeCode().
+type AnalysisReport struct {
+	Dependencies []string
 }
 
 func ReadMemUntilNull(mem IMemory, pointer interface{}) ([]byte, error) {

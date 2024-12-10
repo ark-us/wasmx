@@ -226,7 +226,7 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 
 func (k *Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, reportDeps []string, err error) {
 	ctx.GasMeter().ConsumeGas(k.gasRegister.CompileCosts(len(wasmCode)), "Compiling wasm bytecode")
-	report, err := k.wasmvm.AnalyzeWasm(wasmCode)
+	report, err := k.wasmvm.AnalyzeWasm(ctx, wasmCode)
 	if err != nil {
 		return checksum, nil, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 	}

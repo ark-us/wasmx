@@ -20,6 +20,59 @@ import (
 var CONTEXT_CACHE_KEY = "wazero_cache"
 
 var _ memc.IVm = (*WazeroVm)(nil)
+var _ memc.IWasmVmMeta = (*WazeroVmMeta)(nil)
+
+type WazeroExport struct {
+	name string
+	fn   interface{}
+}
+
+func (f WazeroExport) Name() string {
+	return f.name
+}
+
+func (f WazeroExport) Fn() interface{} {
+	return f.fn
+}
+
+type WazeroImport struct {
+	moduleName string
+	name       string
+	fn         interface{}
+}
+
+type WazeroMeta struct {
+	imports []WazeroImport
+	exports []WazeroExport
+}
+
+func (f WazeroMeta) ListImports() []memc.WasmImport {
+	result := make([]memc.WasmImport, len(f.imports))
+	for i, v := range f.imports {
+		result[i] = v
+	}
+	return result
+}
+
+func (f WazeroMeta) ListExports() []memc.WasmExport {
+	result := make([]memc.WasmExport, len(f.exports))
+	for i, v := range f.exports {
+		result[i] = v
+	}
+	return result
+}
+
+func (f WazeroImport) ModuleName() string {
+	return f.moduleName
+}
+
+func (f WazeroImport) Name() string {
+	return f.name
+}
+
+func (f WazeroImport) Fn() interface{} {
+	return f.fn
+}
 
 type WazeroFn struct {
 	name        string
@@ -311,6 +364,64 @@ func (wm *WazeroVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, _c
 		).Export(fndef.name)
 	}
 	return envmod
+}
+
+type WazeroVmMeta struct{}
+
+func (WazeroVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
+	return NewWazeroVm(ctx)
+}
+
+func (WazeroVmMeta) AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (memc.WasmMeta, error) {
+	config := wazero.NewRuntimeConfigInterpreter()
+	r := wazero.NewRuntimeWithConfig(ctx, config)
+	cmod, err := r.CompileModule(ctx, wasmbuffer)
+	if err != nil {
+		return nil, err
+	}
+
+	imports := cmod.ImportedFunctions()
+	exports := cmod.ExportedFunctions()
+	meta := &WazeroMeta{}
+	meta.imports = make([]WazeroImport, len(imports))
+	meta.exports = make([]WazeroExport, len(exports))
+
+	for i, mimport := range imports {
+		moduleName, name, _ := mimport.Import()
+		if moduleName == "" {
+			moduleName = mimport.ModuleName()
+		}
+		if name == "" {
+			name = mimport.Name()
+		}
+		meta.imports[i] = WazeroImport{
+			moduleName: moduleName,
+			name:       name,
+			fn:         mimport.GoFunction(),
+		}
+	}
+	i := 0
+	for name, mexport := range exports {
+		if name == "" {
+			name = mexport.Name()
+		}
+		if name == "" {
+			names := mexport.ExportNames()
+			if len(names) > 0 {
+				name = names[0]
+			}
+		}
+		meta.exports[i] = WazeroExport{
+			name: name,
+			fn:   mexport.GoFunction(),
+		}
+		i++
+	}
+	return meta, nil
+}
+
+func (WazeroVmMeta) AotCompile(ctx sdk.Context, inPath string, outPath string) error {
+	return nil
 }
 
 func toValTypeSlice(input []interface{}) ([]api.ValueType, error) {

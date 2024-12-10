@@ -54,12 +54,6 @@ func (o OutOfGasError) Error() string {
 	return "Out of gas"
 }
 
-// Contains static analysis info of the contract (the Wasm code to be precise).
-// This type is returned by VM.AnalyzeCode().
-type AnalysisReport struct {
-	Dependencies []string
-}
-
 //---------- Env ---------
 
 type RawBytes []byte

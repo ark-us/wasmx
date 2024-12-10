@@ -157,7 +157,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		consCodec,
 		addrCodec,
 		mapp,
-		wasmedgeVm.NewWasmEdgeVm,
+		wasmedgeVm.WasmEdgeVmMeta{},
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

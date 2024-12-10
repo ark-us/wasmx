@@ -2,6 +2,7 @@ package wasmedge
 
 import (
 	"fmt"
+	"strings"
 
 	sdkerrors "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -12,6 +13,79 @@ import (
 )
 
 var _ memc.IVm = (*WasmEdgeVm)(nil)
+var _ memc.IWasmVmMeta = (*WasmEdgeVmMeta)(nil)
+
+type WasmEdgeExport struct {
+	name string
+	// inputTypes  []wasmedge.ValType
+	// outputTypes []wasmedge.ValType
+	fn interface{}
+}
+
+func (f WasmEdgeExport) Name() string {
+	return f.name
+}
+
+// func (f WasmEdgeExport) InputTypes() []interface{} {
+// 	return FromValTypeSlice(f.inputTypes)
+// }
+
+// func (f WasmEdgeExport) OutputTypes() []interface{} {
+// 	return FromValTypeSlice(f.outputTypes)
+// }
+
+func (f WasmEdgeExport) Fn() interface{} {
+	return f.fn
+}
+
+type WasmEdgeImport struct {
+	moduleName string
+	name       string
+	// inputTypes  []wasmedge.ValType
+	// outputTypes []wasmedge.ValType
+	fn interface{}
+}
+
+func (f WasmEdgeImport) ModuleName() string {
+	return f.moduleName
+}
+
+func (f WasmEdgeImport) Name() string {
+	return f.name
+}
+
+// func (f WasmEdgeImport) InputTypes() []interface{} {
+// 	return FromValTypeSlice(f.inputTypes)
+// }
+
+// func (f WasmEdgeImport) OutputTypes() []interface{} {
+// 	return FromValTypeSlice(f.outputTypes)
+// }
+
+func (f WasmEdgeImport) Fn() interface{} {
+	return f.fn
+}
+
+type WasmEdgeMeta struct {
+	imports []WasmEdgeImport
+	exports []WasmEdgeExport
+}
+
+func (f WasmEdgeMeta) ListImports() []memc.WasmImport {
+	result := make([]memc.WasmImport, len(f.imports))
+	for i, v := range f.imports {
+		result[i] = v
+	}
+	return result
+}
+
+func (f WasmEdgeMeta) ListExports() []memc.WasmExport {
+	result := make([]memc.WasmExport, len(f.exports))
+	for i, v := range f.exports {
+		result[i] = v
+	}
+	return result
+}
 
 type WasmEdgeFn struct {
 	name        string
@@ -62,33 +136,6 @@ type WasmEdgeVm struct {
 	vm        *wasmedge.VM
 	callframe *wasmedge.CallingFrame
 	cleanups  []func()
-}
-
-func NewWasmEdgeVm(_ sdk.Context) memc.IVm {
-	var cleanups []func()
-
-	// wasmedge.SetLogOff()
-	wasmedge.SetLogErrorLevel()
-	// wasmedge.SetLogDebugLevel()
-
-	conf := wasmedge.NewConfigure()
-	cleanups = append(cleanups, conf.Release)
-
-	// conf.SetStatisticsInstructionCounting(true)
-	// conf.SetStatisticsTimeMeasuring(true)
-	// TODO allow wasi only for core contracts
-	conf.AddConfig(wasmedge.WASI)
-	contractVm := wasmedge.NewVMWithConfig(conf)
-	// contractVm := wasmedge.NewVM()
-
-	// first in, last cleaned up
-	cleanups = append(cleanups, conf.Release)
-	cleanups = append(cleanups, contractVm.Release)
-
-	return &WasmEdgeVm{
-		vm:       contractVm,
-		cleanups: cleanups,
-	}
 }
 
 func (wm *WasmEdgeVm) New(ctx sdk.Context) memc.IVm {
@@ -252,6 +299,95 @@ func (wm *WasmEdgeVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, 
 	return envmod
 }
 
+type WasmEdgeVmMeta struct{}
+
+func (WasmEdgeVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
+	return NewWasmEdgeVm(ctx)
+}
+
+func (WasmEdgeVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (memc.WasmMeta, error) {
+	loader := wasmedge.NewLoader()
+	defer func() {
+		loader.Release()
+	}()
+	ast, err := loader.LoadBuffer(wasmbuffer)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		ast.Release()
+	}()
+	imports := ast.ListImports()
+	exports := ast.ListExports()
+	meta := &WasmEdgeMeta{}
+	meta.imports = make([]WasmEdgeImport, len(imports))
+	meta.exports = make([]WasmEdgeExport, len(exports))
+
+	for i, mimport := range imports {
+		// mimport.GetExternalType()
+		meta.imports[i] = WasmEdgeImport{
+			moduleName: mimport.GetModuleName(),
+			name:       mimport.GetExternalName(),
+			fn:         mimport.GetExternalValue(),
+		}
+	}
+	for i, mexport := range exports {
+		meta.exports[i] = WasmEdgeExport{
+			name: mexport.GetExternalName(),
+			fn:   mexport.GetExternalValue(),
+		}
+	}
+	return meta, nil
+}
+
+func (WasmEdgeVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string) error {
+	// Create Configure
+	// conf := wasmedge.NewConfigure(wasmedge.THREADS, wasmedge.EXTENDED_CONST, wasmedge.TAIL_CALL, wasmedge.MULTI_MEMORIES)
+
+	// Create Compiler
+	// compiler := wasmedge.NewCompilerWithConfig(conf)
+	compiler := wasmedge.NewCompiler()
+	defer func() {
+		compiler.Release()
+		// conf.Release()
+	}()
+
+	// Compile WASM AOT
+	err := compiler.Compile(inPath, outPath)
+	if err != nil {
+		fmt.Println("Go: Compile WASM to AOT mode Failed!!")
+		return err
+	}
+	return nil
+}
+
+func NewWasmEdgeVm(_ sdk.Context) memc.IVm {
+	var cleanups []func()
+
+	// wasmedge.SetLogOff()
+	wasmedge.SetLogErrorLevel()
+	// wasmedge.SetLogDebugLevel()
+
+	conf := wasmedge.NewConfigure()
+	cleanups = append(cleanups, conf.Release)
+
+	// conf.SetStatisticsInstructionCounting(true)
+	// conf.SetStatisticsTimeMeasuring(true)
+	// TODO allow wasi only for core contracts
+	conf.AddConfig(wasmedge.WASI)
+	contractVm := wasmedge.NewVMWithConfig(conf)
+	// contractVm := wasmedge.NewVM()
+
+	// first in, last cleaned up
+	cleanups = append(cleanups, conf.Release)
+	cleanups = append(cleanups, contractVm.Release)
+
+	return &WasmEdgeVm{
+		vm:       contractVm,
+		cleanups: cleanups,
+	}
+}
+
 func toValTypeSlice(input []interface{}) ([]wasmedge.ValType, error) {
 	result := make([]wasmedge.ValType, len(input))
 	for i, v := range input {
@@ -270,4 +406,16 @@ func FromValTypeSlice(input []wasmedge.ValType) []interface{} {
 		result[i] = v
 	}
 	return result
+}
+
+// Returns the hex address of the interpreter if exists or the version string
+func parseDependencyOrHexAddr(contractVersion string, part string) string {
+	dep := contractVersion
+	if strings.Contains(contractVersion, part) {
+		v := contractVersion[len(part):]
+		if len(v) > 2 && v[0:2] == "0x" {
+			dep = v
+		}
+	}
+	return dep
 }

@@ -214,9 +214,8 @@ func SetExecuteFunctionHandler(
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
-	if len(systemDeps) > 0 {
-		depName := systemDeps[0].Label
-		executeFn, ok := ExecuteFunctionHandler[depName]
+	for _, dep := range systemDeps {
+		executeFn, ok := ExecuteFunctionHandler[dep.Label]
 		if ok {
 			return executeFn
 		}

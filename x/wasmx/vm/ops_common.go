@@ -272,6 +272,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
 		success = int32(2)
+		// note, just log the error here, because it may contain non-deterministic data added by the WASM runtime
 		newctx.Logger(newctx.Ctx).Debug(err.Error())
 	} else {
 		success = int32(0)

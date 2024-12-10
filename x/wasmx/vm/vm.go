@@ -102,23 +102,19 @@ func getRuntimeHandlerFromDeps(vm memc.IVm, systemDeps []types.SystemDep) memc.R
 	return nil
 }
 
-func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
-	report := types.AnalysisReport{}
-	loader := wasmedge.NewLoader()
-	ast, err := loader.LoadBuffer(wasmbuffer)
-	defer func() {
-		ast.Release()
-		loader.Release()
-	}()
+func AnalyzeWasm(ctx sdk.Context, vmMeta memc.IWasmVmMeta, wasmbuffer []byte) (memc.AnalysisReport, error) {
+	report := memc.AnalysisReport{}
+	meta, err := vmMeta.AnalyzeWasm(ctx, wasmbuffer)
 	if err != nil {
 		return report, err
 	}
-	imports := ast.ListImports()
-	exports := ast.ListExports()
+
 	uniqueDeps := make(map[string]bool)
+	exports := meta.ListExports()
+	imports := meta.ListImports()
 
 	for _, mexport := range exports {
-		fname := mexport.GetExternalName()
+		fname := mexport.Name()
 		var dep string
 		for key, ok := range DependenciesMap {
 			if !ok {
@@ -146,7 +142,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	}
 
 	for _, mimport := range imports {
-		fname := mimport.GetModuleName()
+		fname := mimport.ModuleName()
 		var dep string
 
 		if strings.Contains(fname, types.WASI_VM_EXPORT) {
@@ -168,7 +164,7 @@ func AnalyzeWasm(wasmbuffer []byte) (types.AnalysisReport, error) {
 	return report, nil
 }
 
-func VerifyEnv(version string, imports []*wasmedge.ImportType) error {
+func VerifyEnv(version string, imports []memc.WasmImport) error {
 	// TODO check that all imports are supported by the given version
 
 	// for _, mimport := range imports {

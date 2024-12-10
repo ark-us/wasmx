@@ -55,7 +55,7 @@ type (
 		ak                    types.AccountKeeper
 		bank                  types.BankKeeperWasmx
 
-		newIVmFn memc.NewIVmFn
+		WasmRuntime memc.IWasmVmMeta
 
 		cch *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
@@ -103,7 +103,7 @@ func NewKeeper(
 	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
 	app types.Application,
-	newIVmFn memc.NewIVmFn,
+	wasmRuntime memc.IWasmVmMeta,
 ) *Keeper {
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
@@ -143,7 +143,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, newIVmFn)
+	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
 	if err != nil {
 		panic(err)
 	}
@@ -181,7 +181,7 @@ func NewKeeper(
 		binDir:        binDir,
 		authority:     authority,
 		app:           app,
-		newIVmFn:      newIVmFn,
+		WasmRuntime:   wasmRuntime,
 	}
 
 	// cosmwasm support
