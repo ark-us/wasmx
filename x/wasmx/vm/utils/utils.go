@@ -1,13 +1,19 @@
 package utils
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 )
 
-func SafeWriteFile(path string, content []byte) (err error) {
-	dirPath, fileName := filepath.Split(path)
+func SafeWriteFile(path string, data []byte) (err error) {
+	content := bytes.NewReader(data)
+	return SafeWriteReader(path, content)
+}
 
+func SafeWriteReader(path string, content io.Reader) (err error) {
+	dirPath, fileName := filepath.Split(path)
 	file, err := os.CreateTemp(dirPath, fileName+".*.tmp")
 	if err != nil {
 		return
@@ -18,7 +24,7 @@ func SafeWriteFile(path string, content []byte) (err error) {
 			_ = os.Remove(file.Name())
 		}
 	}()
-	if err = os.WriteFile(path, content, 0644); err != nil {
+	if _, err = io.Copy(file, content); err != nil {
 		return
 	}
 	if err = file.Sync(); err != nil {
