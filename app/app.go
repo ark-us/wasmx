@@ -174,7 +174,8 @@ import (
 
 	networkmoduletypes "mythos/v1/x/network/types"
 
-	wasmedgeVm "mythos/v1/x/wasmx/vm/wasmedge"
+	// wasmedgeVm "mythos/v1/x/wasmx/vm/wasmedge"
+	wazeroVm "mythos/v1/x/wasmx/vm/wazero"
 
 	wasmxmodule "mythos/v1/x/wasmx"
 
@@ -534,7 +535,8 @@ func NewApp(
 		consCodec,
 		addrCodec,
 		app,
-		wasmedgeVm.NewWasmEdgeVm,
+		// wasmedgeVm.WasmEdgeVmMeta{},
+		wazeroVm.WazeroVmMeta{},
 	)
 
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(

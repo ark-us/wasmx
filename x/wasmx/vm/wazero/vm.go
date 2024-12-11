@@ -14,6 +14,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
+	"mythos/v1/x/wasmx/types"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 	"mythos/v1/x/wasmx/vm/utils"
 )
@@ -220,7 +221,8 @@ func (wm *WazeroVm) FindGlobal(name string) interface{} {
 }
 
 func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) error {
-	// wm.vm.
+	// modcfg := wazero.NewModuleConfig().WithArgs(args).WithEnv(envs).WithFSConfig()
+	// wm.r.InstantiateWithConfig(ctx, wasmbuffer, modcfg)
 
 	// WithWorkDirFS
 
@@ -234,15 +236,14 @@ func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) er
 
 func (wm *WazeroVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
 	var err error
-	if strings.Contains(filePath, "pinned") {
-
+	if strings.Contains(filePath, types.PINNED_FOLDER) {
 		content, err := os.Open(filePath)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "load original wasm file failed %s", filePath)
 		}
 
-		// TODO better
-		originalWasmPath := strings.Replace(filePath, "/pinned/", "/", 1)
+		// TODO better - just provide the original wasm & the pinned file
+		originalWasmPath := strings.Replace(filePath, fmt.Sprintf("/%s/", types.PINNED_FOLDER), "/", 1)
 		origwasmbuffer, err := os.ReadFile(originalWasmPath)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "load wasm file failed %s", originalWasmPath)
