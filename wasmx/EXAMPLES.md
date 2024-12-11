@@ -242,7 +242,7 @@ mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=2
 ```bash
 
 # 26658
-mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl.json --chain-id="level0_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl.json --chain-id="level0_1000-1" --from node0 --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace --node tcp://localhost:26658
 
 mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl2.json --chain-id="level0_1000-1" --from node1 --keyring-backend test --home ./testnet/node1/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace --node tcp://localhost:26660
 
@@ -263,13 +263,17 @@ RPC="http://localhost:26871" # node2?
 RECENT_HEIGHT=$(curl -s $RPC/block | jq -r .result.block.header.height) && echo $RECENT_HEIGHT
 TRUST_HEIGHT=$((RECENT_HEIGHT - 1)) && echo $TRUST_HEIGHT
 TRUST_HASH=$(curl -s "$RPC/block?height=$TRUST_HEIGHT" | jq -r .result.block_id.hash) && echo $TRUST_HASH
+sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1true| ; \
+s|^(rpc_servers[[:space:]]+=[[:space:]]+).*$|\1\"$RPC,$RPC\"| ; \
+s|^(trust_height[[:space:]]+=[[:space:]]+).*$|\1$TRUST_HEIGHT| ; \
+s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOMEMAIN/config/config.toml
 
 # sync one of the below nodes:
 
 # sync node2
-mythosd tx wasmx execute level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"RegisterNewChain":{"chain_id":"level1_1_1002-1","chain_config":{"Bech32PrefixAccAddr":"level1","Bech32PrefixAccPub":"level1","Bech32PrefixValAddr":"level1","Bech32PrefixValPub":"level1","Bech32PrefixConsAddr":"level1","Bech32PrefixConsPub":"level1","Name":"level1","HumanCoinUnit":"lvl1","BaseDenom":"alvl1","DenomUnit":"lvl1","BaseDenomUnit":18,"BondBaseDenom":"aslvl1","BondDenom":"slvl1"}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --fees 200000000000alvl --gas 90000000 --yes --node tcp://localhost:26662
+mythosd tx wasmx execute level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"RegisterNewChain":{"chain_id":"level1_1_1003-1","chain_config":{"Bech32PrefixAccAddr":"level1","Bech32PrefixAccPub":"level1","Bech32PrefixValAddr":"level1","Bech32PrefixValPub":"level1","Bech32PrefixConsAddr":"level1","Bech32PrefixConsPub":"level1","Name":"level1","HumanCoinUnit":"lvl1","BaseDenom":"alvl1","DenomUnit":"lvl1","BaseDenomUnit":18,"BondBaseDenom":"aslvl1","BondDenom":"slvl1"}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --fees 200000000000alvl --gas 90000000 --yes --node tcp://localhost:26662
 
-mythosd query multichain call level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"StartStateSync":{"chain_id":"level1_1_1002-1","verification_chain_id":"level0_1000-1","verification_contract_address":"level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzgx7e3zq","peer_address":"level01flavtls3x5e703v02e9p9uzeqhgr6fnl0gxgvv@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWFSxoPaQ58BbzbS9SyPSUTiPRhMZbKZNwqoFpHMt2Y1mr","rpc":"tcp://127.0.0.1:26771","statesync_config":{"rpc_servers":["http://localhost:26771","http://localhost:26771"],"trust_period":36000000,"trust_height":10,"trust_hash":"6EAD3DC7DCCA3AE62A3CC48B43BBFDF08755716556465EB6A8AD70C886BE818A","enable":true,"temp_dir":"","discovery_time":15000,"chunk_request_timeout":10000,"chunk_fetchers":4}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --node tcp://localhost:26662
+mythosd query multichain call level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"StartStateSync":{"chain_id":"level1_1_1003-1","verification_chain_id":"level0_1000-1","verification_contract_address":"level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzgx7e3zq","peer_address":"level01tguzspm27fsz0ew7vftcrng209xy6wdy2uh52z@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWLnZg8W5w2LhGvL5HpNHyeavUaEW64UnM6ppbE7D1SUky","rpc":"tcp://127.0.0.1:26771","statesync_config":{"rpc_servers":["http://localhost:26771","http://localhost:26771"],"trust_period":36000000,"trust_height":48,"trust_hash":"BFE41C5C0E52B486DC955EFB3D55348C89A0228DE7AEBE2CEFB131C5B76F3646","enable":true,"temp_dir":"","discovery_time":15000,"chunk_request_timeout":10000,"chunk_fetchers":4}}}' --chain-id=level0_1000-1 --from=node2 --keyring-backend=test --home=./testnet/node2/mythosd --node tcp://localhost:26662
 
 # sync node1
 mythosd tx wasmx execute level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"RegisterNewChain":{"chain_id":"level1_1_1002-1","chain_config":{"Bech32PrefixAccAddr":"level1","Bech32PrefixAccPub":"level1","Bech32PrefixValAddr":"level1","Bech32PrefixValPub":"level1","Bech32PrefixConsAddr":"level1","Bech32PrefixConsPub":"level1","Name":"level1","HumanCoinUnit":"lvl1","BaseDenom":"alvl1","DenomUnit":"lvl1","BaseDenomUnit":18,"BondBaseDenom":"aslvl1","BondDenom":"slvl1"}}}' --chain-id=level0_1000-1 --from=node1 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000alvl --gas 90000000 --yes --node tcp://localhost:26660
@@ -293,7 +297,7 @@ mythosd query multichain call level01qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqztgdv8vl '{"S
 
 ```bash
 
-mythosd tx cosmosmod bank send node0 level01dt4cfv4clcgqn8wjvwnshelujtvv447rvpk6f9 1200000000000000000alvl1 --keyring-backend test --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --home ./testnet/node0/mythosd --fees 200000000000alvl1 --gas 900000 --node tcp://localhost:26771 --yes
+mythosd tx cosmosmod bank send node0 level11pxs442hryt8t28zzglt3j26j7whdj2spf8lcp5 1200000000000000000alvl1 --keyring-backend test --chain-id=level1_1_1003-1 --registry-chain-id=level0_1000-1 --home ./testnet/node0/mythosd --fees 200000000000alvl1 --gas 900000 --node tcp://localhost:26771 --yes
 
 # mythosd tx cosmosmod bank send node1 level01dt4cfv4clcgqn8wjvwnshelujtvv447rvpk6f9 1200000000000000000alvl1 --keyring-backend test --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --home ./testnet/node1/mythosd --fees 200000000000alvl1 --gas 900000 --node tcp://localhost:26971 --yes
 
@@ -304,7 +308,7 @@ mythosd tendermint show-validator --home ./testnet/node2/mythosd
 # node1 --node tcp://127.0.0.1:26971
 # node0 --node tcp://127.0.0.1:26771
 
-mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator_create_level1.json --from node2 --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --keyring-backend=test --home=./testnet/node2/mythosd --fees 200000000000000alvl1 --gas auto --gas-adjustment 1.4 --memo="level113f6qef74sg5t0f5sqrcvh6ua9m37z0cagz3c4f@/ip4/127.0.0.1/tcp/5006/p2p/12D3KooWN4nTTdxYr6wifCjWodh5crgaor285adeHpe6D56MaGCK" --node tcp://127.0.0.1:26771 --yes
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator_create_level1.json --from node2 --chain-id=level1_1_1003-1 --registry-chain-id=level0_1000-1 --keyring-backend=test --home=./testnet/node2/mythosd --fees 200000000000000alvl1 --gas auto --gas-adjustment 1.4 --memo="level11pxs442hryt8t28zzglt3j26j7whdj2spf8lcp5@/ip4/127.0.0.1/tcp/5006/p2p/12D3KooWMcgbf4q75YpHDDuqBX59WNAA1Z7XLPg6kVZuoQfToiX4" --node tcp://127.0.0.1:26771 --yes
 
 # mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator_create_level1.json --from node0 --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1 --keyring-backend=test --home=./testnet/node0/mythosd --fees 200000000000000alvl1 --gas auto --gas-adjustment 1.4 --memo="level11dt4cfv4clcgqn8wjvwnshelujtvv447r8lp3yw@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWFGCwap3oNgvHy5PRZhRe5nF7Z1AiExme3YFWE9mzyXDa" --node tcp://127.0.0.1:26971 --yes
 
