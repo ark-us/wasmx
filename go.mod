@@ -62,6 +62,7 @@ require (
 	github.com/rs/cors v1.10.0
 	github.com/rs/zerolog v1.32.0
 	github.com/spf13/viper v1.18.2
+	github.com/tetratelabs/wazero v1.8.2
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/net v0.24.0
 	golang.org/x/sync v0.7.0
@@ -264,7 +265,6 @@ require (
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
-	github.com/tetratelabs/wazero v1.8.2 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
 	github.com/tidwall/buntdb v1.3.0 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
@@ -337,4 +337,7 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// https://github.com/cosmos/cosmos-sdk/blob/e0bda6d7bc73fc4d6664c77c71d46cdc99ee0e6a/UPGRADING.md#replaces
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+
+	// github.com/loredanacirstea/wazero@95d56baa2c4ca15f74ae79ce443488a01dcbaa64
+	github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero v0.0.0-20241211204703-95d56baa2c4c
 )

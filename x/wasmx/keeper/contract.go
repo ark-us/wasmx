@@ -573,7 +573,7 @@ func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath stri
 		return nil, sdkerr.Wrap(types.ErrNotFound, "code info")
 	}
 
-	if err := k.wasmvm.Pin(codeInfo.CodeHash, compiledFolderPath); err != nil {
+	if err := k.wasmvm.Pin(ctx, codeInfo.CodeHash, compiledFolderPath); err != nil {
 		return nil, sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
 	}
 	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))

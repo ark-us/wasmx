@@ -242,16 +242,16 @@ func (k *WasmxEngine) Cleanup() {
 
 }
 
-func (k *WasmxEngine) Pin(checksum types.Checksum, compiledFolderPath string) error {
+func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFolderPath string) error {
 	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
 	if compiledFolderPath != "" {
-		compiledPath := k.build_path(compiledFolderPath, checksum) + ".so"
+		compiledPath := k.build_path(compiledFolderPath, checksum)
 		err := copyFile(compiledPath, pinnedPath)
 		if err == nil {
 			return nil
 		}
 	}
-	return k.pin_code(k.build_path(k.DataDir, checksum), pinnedPath)
+	return k.pin_code(ctx, k.build_path(k.DataDir, checksum), pinnedPath)
 }
 
 func (k *WasmxEngine) Unpin(checksum types.Checksum) error {
@@ -260,8 +260,8 @@ func (k *WasmxEngine) Unpin(checksum types.Checksum) error {
 	return nil
 }
 
-func (k *WasmxEngine) pin_code(inPath string, outPath string) error {
-	return vm.AotCompile(inPath, outPath)
+func (k *WasmxEngine) pin_code(ctx sdk.Context, inPath string, outPath string) error {
+	return k.WasmRuntime.AotCompile(ctx, inPath, outPath)
 }
 
 func (k *WasmxEngine) checksum(wasmBytecode types.WasmCode) types.Checksum {
@@ -285,7 +285,7 @@ func (k *WasmxEngine) build_path(dataDir string, checksum types.Checksum) string
 }
 
 func (k *WasmxEngine) build_path_pinned(dataDir string, checksum types.Checksum) string {
-	return path.Join(dataDir, types.PINNED_FOLDER, hex.EncodeToString(checksum)+".so")
+	return path.Join(dataDir, types.PINNED_FOLDER, hex.EncodeToString(checksum))
 }
 
 func (k *WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, extension string) string {

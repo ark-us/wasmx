@@ -15,8 +15,6 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	"mythos/v1/x/wasmx/types"
 	memc "mythos/v1/x/wasmx/vm/memory/common"
 )
@@ -170,27 +168,6 @@ func VerifyEnv(version string, imports []memc.WasmImport) error {
 	// for _, mimport := range imports {
 	// 	fmt.Println("Import:", mimport.GetModuleName(), mimport.GetExternalName())
 	// }
-	return nil
-}
-
-func AotCompile(inPath string, outPath string) error {
-	// Create Configure
-	// conf := wasmedge.NewConfigure(wasmedge.THREADS, wasmedge.EXTENDED_CONST, wasmedge.TAIL_CALL, wasmedge.MULTI_MEMORIES)
-
-	// Create Compiler
-	// compiler := wasmedge.NewCompilerWithConfig(conf)
-	compiler := wasmedge.NewCompiler()
-	defer func() {
-		compiler.Release()
-		// conf.Release()
-	}()
-
-	// Compile WASM AOT
-	err := compiler.Compile(inPath, outPath)
-	if err != nil {
-		fmt.Println("Go: Compile WASM to AOT mode Failed!!")
-		return err
-	}
 	return nil
 }
 

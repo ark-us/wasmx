@@ -15,6 +15,7 @@ import (
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	memc "mythos/v1/x/wasmx/vm/memory/common"
+	"mythos/v1/x/wasmx/vm/utils"
 )
 
 var CONTEXT_CACHE_KEY = "wazero_cache"
@@ -142,7 +143,12 @@ func NewWazeroVm(ctx sdk.Context) memc.IVm {
 	var cleanups []func()
 	// TODO WASI
 	// NewRuntimeConfigCompiler
-	config := wazero.NewRuntimeConfig().WithCloseOnContextDone(true).WithCompilationCache(cache).WithDebugInfoEnabled(true)
+	// NewRuntimeConfig
+	// .WithDebugInfoEnabled(true)
+	// TODO check if compiler is suppported
+	config := wazero.NewRuntimeConfigCompiler().
+		WithCloseOnContextDone(false). // for now, we let the execution finish in case we need to save block data in our core contracts
+		WithCompilationCache(cache)    // .WithDebugInfoEnabled(true)
 
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 	cleanups = append(cleanups, func() {
@@ -228,17 +234,41 @@ func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) er
 
 func (wm *WazeroVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
 	var err error
-	if wasmbuffer == nil {
-		wasmbuffer, err = os.ReadFile(filePath)
+	if strings.Contains(filePath, "pinned") {
+
+		content, err := os.Open(filePath)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "load wasm file failed %s", filePath)
+			return sdkerrors.Wrapf(err, "load original wasm file failed %s", filePath)
 		}
+
+		// TODO better
+		originalWasmPath := strings.Replace(filePath, "/pinned/", "/", 1)
+		origwasmbuffer, err := os.ReadFile(originalWasmPath)
+		if err != nil {
+			return sdkerrors.Wrapf(err, "load wasm file failed %s", originalWasmPath)
+		}
+		compiledmod, err := wm.r.DeserializeCompiledModule(wm.ctx, origwasmbuffer, content)
+		if err != nil {
+			return sdkerrors.Wrapf(err, "module deserialization failed from buffer")
+		}
+		vm, err := wm.r.InstantiateModule(wm.ctx, compiledmod, wazero.NewModuleConfig())
+		if err != nil {
+			return sdkerrors.Wrapf(err, "load wasm file failed from buffer")
+		}
+		wm.vm = vm
+	} else {
+		if wasmbuffer == nil {
+			wasmbuffer, err = os.ReadFile(filePath)
+			if err != nil {
+				return sdkerrors.Wrapf(err, "load wasm file failed %s", filePath)
+			}
+		}
+		vm, err := wm.r.Instantiate(wm.ctx, wasmbuffer)
+		if err != nil {
+			return sdkerrors.Wrapf(err, "load wasm file failed from buffer")
+		}
+		wm.vm = vm
 	}
-	vm, err := wm.r.Instantiate(wm.ctx, wasmbuffer)
-	if err != nil {
-		return sdkerrors.Wrapf(err, "load wasm file failed from buffer")
-	}
-	wm.vm = vm
 	return nil
 }
 
@@ -421,6 +451,22 @@ func (WazeroVmMeta) AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (memc.WasmMe
 }
 
 func (WazeroVmMeta) AotCompile(ctx sdk.Context, inPath string, outPath string) error {
+	config := wazero.NewRuntimeConfigCompiler()
+	r := wazero.NewRuntimeWithConfig(ctx, config)
+
+	wasmbuffer, err := os.ReadFile(inPath)
+	if err != nil {
+		return err
+	}
+
+	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbuffer)
+	if err != nil {
+		return err
+	}
+	err = utils.SafeWriteReader(outPath, reader)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
