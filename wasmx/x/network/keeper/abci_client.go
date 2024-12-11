@@ -34,10 +34,10 @@ import (
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	cfg "mythos/v1/config"
-	"mythos/v1/server/config"
-	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	cfg "wasmx/v1/config"
+	"wasmx/v1/server/config"
+	"wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 type ABCIClient struct {

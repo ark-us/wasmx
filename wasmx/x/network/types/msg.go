@@ -13,7 +13,7 @@ import (
 
 	"cosmossdk.io/x/tx/signing"
 
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 var (

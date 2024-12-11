@@ -22,12 +22,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	"mythos/v1/multichain"
-	"mythos/v1/x/wasmx/client/cli"
-	"mythos/v1/x/wasmx/keeper"
-	"mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	"wasmx/v1/multichain"
+	"wasmx/v1/x/wasmx/client/cli"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var (

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	keepertest "mythos/v1/testutil/keeper"
-	"mythos/v1/x/wasmx/keeper"
-	"mythos/v1/x/wasmx/types"
+	keepertest "wasmx/v1/testutil/keeper"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 )
 
 func setupMsgServer(t testing.TB) (types.MsgServer, context.Context) {

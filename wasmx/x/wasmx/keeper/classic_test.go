@@ -12,10 +12,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 
-	mcfg "mythos/v1/config"
-	wasmxkeeper "mythos/v1/x/wasmx/keeper"
-	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
-	"mythos/v1/x/wasmx/types"
+	mcfg "wasmx/v1/config"
+	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
+	testdata "wasmx/v1/x/wasmx/keeper/testdata/classic"
+	"wasmx/v1/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestSendingCoinsToNewAccount() {

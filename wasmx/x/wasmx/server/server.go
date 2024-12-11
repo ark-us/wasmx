@@ -24,10 +24,10 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
-	menc "mythos/v1/encoding"
-	"mythos/v1/server/config"
-	"mythos/v1/x/wasmx/rpc"
-	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
+	menc "wasmx/v1/encoding"
+	"wasmx/v1/server/config"
+	"wasmx/v1/x/wasmx/rpc"
+	jsonrpcconfig "wasmx/v1/x/wasmx/server/config"
 )
 
 // StartJsonRpc starts the web server

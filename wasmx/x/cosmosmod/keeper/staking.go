@@ -19,11 +19,11 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	"mythos/v1/x/cosmosmod/types"
-	networktypes "mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	"wasmx/v1/x/cosmosmod/types"
+	networktypes "wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // BondedRatio the fraction of the staking tokens which are currently bonded

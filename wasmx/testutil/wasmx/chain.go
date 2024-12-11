@@ -52,22 +52,22 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
-	app "mythos/v1/app"
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	menc "mythos/v1/encoding"
-	"mythos/v1/server/config"
-	ibctesting "mythos/v1/testutil/ibc"
-	"mythos/v1/x/network/keeper"
-	"mythos/v1/x/network/types"
-	wasmxkeeper "mythos/v1/x/wasmx/keeper"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	app "wasmx/v1/app"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	menc "wasmx/v1/encoding"
+	"wasmx/v1/server/config"
+	ibctesting "wasmx/v1/testutil/ibc"
+	"wasmx/v1/x/network/keeper"
+	"wasmx/v1/x/network/types"
+	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 
-	networkserver "mythos/v1/x/network/server"
-	networkconfig "mythos/v1/x/network/server/config"
+	networkserver "wasmx/v1/x/network/server"
+	networkconfig "wasmx/v1/x/network/server/config"
 
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions

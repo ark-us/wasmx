@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"unicode/utf16"
 
-	"mythos/v1/x/wasmx/types"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 const AS_PTR_LENGHT_OFFSET = int32(4)

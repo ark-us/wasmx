@@ -18,10 +18,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	menc "mythos/v1/encoding"
-	srvconfig "mythos/v1/server/config"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	menc "wasmx/v1/encoding"
+	srvconfig "wasmx/v1/server/config"
 )
 
 // DefaultAppOptions is a stub implementing AppOptions

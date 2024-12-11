@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/json"
 
-	cw8types "mythos/v1/x/wasmx/cw8/types"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
 )
 
 //------- Results / Msgs -------------

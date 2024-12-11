@@ -18,7 +18,7 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // ExceedBlockGasLimitError defines the error message when tx execution exceeds the block gas limit.

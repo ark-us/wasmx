@@ -12,10 +12,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	"mythos/v1/crypto/ethsecp256k1"
+	"wasmx/v1/crypto/ethsecp256k1"
 
-	cw8types "mythos/v1/x/wasmx/cw8/types"
-	"mythos/v1/x/wasmx/types"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var (

@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	"mythos/v1/x/websrv/types"
+	"wasmx/v1/x/websrv/types"
 )
 
 // GetQueryCmd returns the cli query commands for this module

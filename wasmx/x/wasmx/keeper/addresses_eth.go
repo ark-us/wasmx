@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 )
 
 // AddressGenerator abstract address generator to be used for a single contract address

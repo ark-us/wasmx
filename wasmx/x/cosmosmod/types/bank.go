@@ -6,7 +6,7 @@ import (
 	codec "github.com/cosmos/cosmos-sdk/codec"
 	exported "github.com/cosmos/cosmos-sdk/x/bank/exported"
 
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 )
 
 type QueryAddressByDenomResponse struct {

@@ -14,8 +14,8 @@ import (
 
 	tndtypes "github.com/cometbft/cometbft/rpc/core/types"
 
-	rpctypes "mythos/v1/x/wasmx/rpc/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	rpctypes "wasmx/v1/x/wasmx/rpc/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // GetTransactionByHash returns the Ethereum format transaction identified by Ethereum transaction hash

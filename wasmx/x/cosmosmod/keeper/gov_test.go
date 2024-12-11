@@ -11,9 +11,9 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
-	networktypes "mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
-	precompiles "mythos/v1/x/wasmx/vm/precompiles"
+	networktypes "wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	precompiles "wasmx/v1/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestContinuousVoting() {

@@ -25,12 +25,12 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	"mythos/v1/multichain"
-	"mythos/v1/x/cosmosmod/client/cli"
-	"mythos/v1/x/cosmosmod/keeper"
-	"mythos/v1/x/cosmosmod/types"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	"wasmx/v1/multichain"
+	"wasmx/v1/x/cosmosmod/client/cli"
+	"wasmx/v1/x/cosmosmod/keeper"
+	"wasmx/v1/x/cosmosmod/types"
 )
 
 var (

@@ -11,7 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 )
 
 type BankKeeper interface {

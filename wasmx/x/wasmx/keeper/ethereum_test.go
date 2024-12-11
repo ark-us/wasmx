@@ -10,12 +10,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 
-	"mythos/v1/crypto/ethsecp256k1"
-	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
-	"mythos/v1/x/wasmx/types"
-	cch "mythos/v1/x/wasmx/types/contract_handler"
-	"mythos/v1/x/wasmx/types/contract_handler/alias"
-	"mythos/v1/x/wasmx/vm/precompiles"
+	"wasmx/v1/crypto/ethsecp256k1"
+	testdata "wasmx/v1/x/wasmx/keeper/testdata/classic"
+	"wasmx/v1/x/wasmx/types"
+	cch "wasmx/v1/x/wasmx/types/contract_handler"
+	"wasmx/v1/x/wasmx/types/contract_handler/alias"
+	"wasmx/v1/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestSendEthTx() {

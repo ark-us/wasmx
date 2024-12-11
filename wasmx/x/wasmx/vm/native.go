@@ -4,8 +4,8 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/x/wasmx/types"
 )
 
 type NativeMapI map[string]func(context *Context, input []byte) ([]byte, error)

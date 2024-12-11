@@ -18,9 +18,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
-	"mythos/v1/multichain"
-	wasmxtypes "mythos/v1/x/wasmx/types"
-	"mythos/v1/x/websrv/types"
+	"wasmx/v1/multichain"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	"wasmx/v1/x/websrv/types"
 )
 
 var (

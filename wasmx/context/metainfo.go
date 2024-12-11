@@ -8,7 +8,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 )
 
 type ExecutionMetaInfoContextKey string

@@ -5,7 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // QueryClient defines a gRPC Client used for:

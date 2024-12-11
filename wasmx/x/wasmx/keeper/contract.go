@@ -15,10 +15,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mcodec "mythos/v1/codec"
-	cw8types "mythos/v1/x/wasmx/cw8/types"
-	"mythos/v1/x/wasmx/ioutils"
-	"mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
+	"wasmx/v1/x/wasmx/ioutils"
+	"wasmx/v1/x/wasmx/types"
 )
 
 func (k *Keeper) Create(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {

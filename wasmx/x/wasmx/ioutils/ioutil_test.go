@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 )
 
 func TestUncompress(t *testing.T) {

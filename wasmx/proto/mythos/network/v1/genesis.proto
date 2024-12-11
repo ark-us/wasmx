@@ -3,7 +3,7 @@ package mythos.network.v1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "mythos/v1/x/network/types";
+option go_package = "wasmx/v1/x/network/types";
 
 // GenesisState defines the network module's genesis state.
 message GenesisState {}

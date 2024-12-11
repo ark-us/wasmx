@@ -1,12 +1,12 @@
 package vm
 
 import (
-	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/interpreters"
-	memas "mythos/v1/x/wasmx/vm/memory/assemblyscript"
-	membase "mythos/v1/x/wasmx/vm/memory/base"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
-	memtay "mythos/v1/x/wasmx/vm/memory/taylor"
+	"wasmx/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/vm/interpreters"
+	memas "wasmx/v1/x/wasmx/vm/memory/assemblyscript"
+	membase "wasmx/v1/x/wasmx/vm/memory/base"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	memtay "wasmx/v1/x/wasmx/vm/memory/taylor"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

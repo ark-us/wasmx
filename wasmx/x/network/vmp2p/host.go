@@ -33,10 +33,10 @@ import (
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
 
-	vmtypes "mythos/v1/x/wasmx/vm"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	vmtypes "wasmx/v1/x/wasmx/vm"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 
-	mcfg "mythos/v1/config"
+	mcfg "wasmx/v1/config"
 )
 
 func returnResult(ctx *Context, rnh memc.RuntimeHandler, responsebz []byte) ([]interface{}, error) {

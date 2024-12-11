@@ -16,10 +16,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	mcodec "mythos/v1/codec"
-	testdata "mythos/v1/x/wasmx/keeper/testdata/taylor"
-	"mythos/v1/x/wasmx/types"
-	vmtypes "mythos/v1/x/wasmx/vm/types"
+	mcodec "wasmx/v1/codec"
+	testdata "wasmx/v1/x/wasmx/keeper/testdata/taylor"
+	"wasmx/v1/x/wasmx/types"
+	vmtypes "wasmx/v1/x/wasmx/vm/types"
 )
 
 func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {

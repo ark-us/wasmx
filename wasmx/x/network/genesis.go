@@ -3,8 +3,8 @@ package network
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"mythos/v1/x/network/keeper"
-	"mythos/v1/x/network/types"
+	"wasmx/v1/x/network/keeper"
+	"wasmx/v1/x/network/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.

@@ -16,11 +16,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	mcfg "mythos/v1/config"
-	multichain "mythos/v1/multichain"
-	"mythos/v1/x/network/client/cli"
-	"mythos/v1/x/network/keeper"
-	"mythos/v1/x/network/types"
+	mcfg "wasmx/v1/config"
+	multichain "wasmx/v1/multichain"
+	"wasmx/v1/x/network/client/cli"
+	"wasmx/v1/x/network/keeper"
+	"wasmx/v1/x/network/types"
 )
 
 var (

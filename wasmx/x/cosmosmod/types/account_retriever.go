@@ -15,8 +15,8 @@ import (
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	mcodec "mythos/v1/codec"
-	networktypes "mythos/v1/x/network/types"
+	mcodec "wasmx/v1/codec"
+	networktypes "wasmx/v1/x/network/types"
 )
 
 var (

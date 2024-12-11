@@ -24,12 +24,12 @@ import (
 
 	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
-	mcodec "mythos/v1/codec"
-	menc "mythos/v1/encoding"
-	"mythos/v1/server/config"
-	rpctypes "mythos/v1/x/wasmx/rpc/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
-	// "mythos/v1/x/wasmx/server/config"
+	mcodec "wasmx/v1/codec"
+	menc "wasmx/v1/encoding"
+	"wasmx/v1/server/config"
+	rpctypes "wasmx/v1/x/wasmx/rpc/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	// "wasmx/v1/x/wasmx/server/config"
 )
 
 // BackendI implements the Cosmos and EVM backend.

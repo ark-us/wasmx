@@ -13,9 +13,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 
-	app "mythos/v1/app"
-	mcfg "mythos/v1/config"
-	multichain "mythos/v1/multichain"
+	app "wasmx/v1/app"
+	mcfg "wasmx/v1/config"
+	multichain "wasmx/v1/multichain"
 )
 
 func init() {

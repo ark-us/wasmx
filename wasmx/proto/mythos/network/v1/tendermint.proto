@@ -1,7 +1,7 @@
 syntax = "proto3";
 package mythos.network.v1;
 
-option go_package = "mythos/v1/x/network/types";
+option go_package = "wasmx/v1/x/network/types";
 
 import "gogoproto/gogo.proto";
 import "google/protobuf/any.proto";

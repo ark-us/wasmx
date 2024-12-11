@@ -1,8 +1,8 @@
 package websrv
 
 import (
-	"mythos/v1/x/websrv/keeper"
-	"mythos/v1/x/websrv/types"
+	"wasmx/v1/x/websrv/keeper"
+	"wasmx/v1/x/websrv/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

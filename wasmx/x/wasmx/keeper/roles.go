@@ -7,8 +7,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/x/wasmx/types"
 )
 
 // Note!! the set functions must only be used at chain initialization

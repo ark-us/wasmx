@@ -20,8 +20,8 @@ import (
 	// ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	// channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
 
-	"mythos/v1/x/wasmx/cw8/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/cw8/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 type (

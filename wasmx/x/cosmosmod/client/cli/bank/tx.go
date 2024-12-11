@@ -17,7 +17,7 @@ import (
 	cli "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	multichain "mythos/v1/multichain"
+	multichain "wasmx/v1/multichain"
 )
 
 // NewTxCmd returns a root CLI command handler for all x/bank transaction commands.

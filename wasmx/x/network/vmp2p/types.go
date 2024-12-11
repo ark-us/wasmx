@@ -14,7 +14,7 @@ import (
 
 	"cosmossdk.io/log"
 
-	vmtypes "mythos/v1/x/wasmx/vm"
+	vmtypes "wasmx/v1/x/wasmx/vm"
 )
 
 const HOST_WASMX_ENV_P2P_VER1 = "wasmx_p2p_1"

@@ -1,10 +1,10 @@
 package vmcrosschain
 
 import (
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 
-	"mythos/v1/x/wasmx/types"
-	vmtypes "mythos/v1/x/wasmx/vm"
+	"wasmx/v1/x/wasmx/types"
+	vmtypes "wasmx/v1/x/wasmx/vm"
 )
 
 // !!!!This is an internal API only to be used by trusted system contracts

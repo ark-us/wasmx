@@ -20,12 +20,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	app "mythos/v1/app"
-	mcodec "mythos/v1/codec"
-	config "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
-	"mythos/v1/multichain"
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	app "wasmx/v1/app"
+	mcodec "wasmx/v1/codec"
+	config "wasmx/v1/config"
+	appencoding "wasmx/v1/encoding"
+	"wasmx/v1/multichain"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
 )
 
 type (

@@ -3,10 +3,10 @@ package wasmx_test
 import (
 	"testing"
 
-	keepertest "mythos/v1/testutil/keeper"
-	"mythos/v1/testutil/nullify"
-	"mythos/v1/x/wasmx"
-	"mythos/v1/x/wasmx/types"
+	keepertest "wasmx/v1/testutil/keeper"
+	"wasmx/v1/testutil/nullify"
+	"wasmx/v1/x/wasmx"
+	"wasmx/v1/x/wasmx/types"
 
 	"github.com/stretchr/testify/require"
 )

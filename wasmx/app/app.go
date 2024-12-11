@@ -162,48 +162,48 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtcfg "github.com/cometbft/cometbft/config"
 
-	ante "mythos/v1/app/ante"
+	ante "wasmx/v1/app/ante"
 
-	menc "mythos/v1/encoding"
+	menc "wasmx/v1/encoding"
 
-	docs "mythos/v1/docs"
+	docs "wasmx/v1/docs"
 
-	networkmodule "mythos/v1/x/network"
+	networkmodule "wasmx/v1/x/network"
 
-	networkmodulekeeper "mythos/v1/x/network/keeper"
+	networkmodulekeeper "wasmx/v1/x/network/keeper"
 
-	networkmoduletypes "mythos/v1/x/network/types"
+	networkmoduletypes "wasmx/v1/x/network/types"
 
-	// wasmedgeVm "mythos/v1/x/wasmx/vm/wasmedge"
-	wazeroVm "mythos/v1/x/wasmx/vm/wazero"
+	// wasmedgeVm "wasmx/v1/x/wasmx/vm/wasmedge"
+	wazeroVm "wasmx/v1/x/wasmx/vm/wazero"
 
-	wasmxmodule "mythos/v1/x/wasmx"
+	wasmxmodule "wasmx/v1/x/wasmx"
 
-	wasmxmodulekeeper "mythos/v1/x/wasmx/keeper"
+	wasmxmodulekeeper "wasmx/v1/x/wasmx/keeper"
 
-	wasmxmoduletypes "mythos/v1/x/wasmx/types"
+	wasmxmoduletypes "wasmx/v1/x/wasmx/types"
 
-	networktypes "mythos/v1/x/network/types"
+	networktypes "wasmx/v1/x/network/types"
 
-	websrvmodule "mythos/v1/x/websrv"
+	websrvmodule "wasmx/v1/x/websrv"
 
-	websrvmodulekeeper "mythos/v1/x/websrv/keeper"
+	websrvmodulekeeper "wasmx/v1/x/websrv/keeper"
 
-	websrvmoduletypes "mythos/v1/x/websrv/types"
+	websrvmoduletypes "wasmx/v1/x/websrv/types"
 
-	cosmosmodkeeper "mythos/v1/x/cosmosmod/keeper"
+	cosmosmodkeeper "wasmx/v1/x/cosmosmod/keeper"
 
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
 
-	cosmosmod "mythos/v1/x/cosmosmod"
+	cosmosmod "wasmx/v1/x/cosmosmod"
 
-	cfg "mythos/v1/config"
+	cfg "wasmx/v1/config"
 
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 
-	mctx "mythos/v1/context"
+	mctx "wasmx/v1/context"
 
-	srvconfig "mythos/v1/server/config"
+	srvconfig "wasmx/v1/server/config"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport

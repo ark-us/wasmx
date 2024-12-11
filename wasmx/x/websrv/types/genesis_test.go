@@ -3,7 +3,7 @@ package types_test
 import (
 	"testing"
 
-	"mythos/v1/x/websrv/types"
+	"wasmx/v1/x/websrv/types"
 
 	"github.com/stretchr/testify/require"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	menc "mythos/v1/encoding"
+	menc "wasmx/v1/encoding"
 )
 
 type ContextKey string

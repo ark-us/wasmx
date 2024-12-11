@@ -3,8 +3,8 @@ package keeper_test
 import (
 	"testing"
 
-	testkeeper "mythos/v1/testutil/keeper"
-	"mythos/v1/x/wasmx/types"
+	testkeeper "wasmx/v1/testutil/keeper"
+	"wasmx/v1/x/wasmx/types"
 
 	"github.com/stretchr/testify/require"
 )

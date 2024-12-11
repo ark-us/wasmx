@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"mythos/v1/x/wasmx/types"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (

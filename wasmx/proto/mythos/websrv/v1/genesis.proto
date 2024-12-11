@@ -4,7 +4,7 @@ package mythos.websrv.v1;
 import "gogoproto/gogo.proto";
 import "mythos/websrv/v1/params.proto";
 
-option go_package = "mythos/v1/x/websrv/types";
+option go_package = "wasmx/v1/x/websrv/types";
 
 // GenesisState defines the websrv module's genesis state.
 message GenesisState {

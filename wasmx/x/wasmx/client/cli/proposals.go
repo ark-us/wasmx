@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	gov1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
-	"mythos/v1/multichain"
-	"mythos/v1/x/wasmx/types"
+	"wasmx/v1/multichain"
+	"wasmx/v1/x/wasmx/types"
 )
 
 // NewProposalExecuteContractCmd returns a CLI command handler for executing any contract (public or internal)

@@ -20,13 +20,13 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	mcodec "mythos/v1/codec"
-	cw8 "mythos/v1/x/wasmx/cw8"
-	cw8types "mythos/v1/x/wasmx/cw8/types"
-	"mythos/v1/x/wasmx/types"
-	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
-	"mythos/v1/x/wasmx/types/contract_handler/alias"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	mcodec "wasmx/v1/codec"
+	cw8 "wasmx/v1/x/wasmx/cw8"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
+	"wasmx/v1/x/wasmx/types"
+	cchtypes "wasmx/v1/x/wasmx/types/contract_handler"
+	"wasmx/v1/x/wasmx/types/contract_handler/alias"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // contractMemoryLimit is the memory limit of each contract execution (in MiB)

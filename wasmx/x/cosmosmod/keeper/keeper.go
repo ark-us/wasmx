@@ -9,9 +9,9 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	networkkeeper "mythos/v1/x/network/keeper"
+	networkkeeper "wasmx/v1/x/network/keeper"
 
-	"mythos/v1/x/cosmosmod/types"
+	"wasmx/v1/x/cosmosmod/types"
 )
 
 // TODO remove, we do not use this keeper

@@ -13,9 +13,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mcfg "mythos/v1/config"
-	"mythos/v1/x/wasmx/types"
-	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
+	mcfg "wasmx/v1/config"
+	"wasmx/v1/x/wasmx/types"
+	cchtypes "wasmx/v1/x/wasmx/types/contract_handler"
 )
 
 var _ types.QueryServer = &Keeper{}

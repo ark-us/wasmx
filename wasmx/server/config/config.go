@@ -10,10 +10,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
-	networkconfig "mythos/v1/x/network/server/config"
-	networkflags "mythos/v1/x/network/server/flags"
-	jsonrpcconfig "mythos/v1/x/wasmx/server/config"
-	websrvconfig "mythos/v1/x/websrv/server/config"
+	networkconfig "wasmx/v1/x/network/server/config"
+	networkflags "wasmx/v1/x/network/server/flags"
+	jsonrpcconfig "wasmx/v1/x/wasmx/server/config"
+	websrvconfig "wasmx/v1/x/websrv/server/config"
 )
 
 const (

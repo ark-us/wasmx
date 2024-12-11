@@ -9,9 +9,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
-	mcfg "mythos/v1/config"
-	networktypes "mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcfg "wasmx/v1/config"
+	networktypes "wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // TODO Hooks()

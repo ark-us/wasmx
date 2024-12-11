@@ -29,15 +29,15 @@ import (
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
-	"mythos/v1/app"
-	mcodec "mythos/v1/codec"
-	config "mythos/v1/config"
-	appencoding "mythos/v1/encoding"
-	"mythos/v1/multichain"
+	"wasmx/v1/app"
+	mcodec "wasmx/v1/codec"
+	config "wasmx/v1/config"
+	appencoding "wasmx/v1/encoding"
+	"wasmx/v1/multichain"
 
-	"mythos/v1/x/wasmx/keeper"
-	"mythos/v1/x/wasmx/types"
-	wasmedgeVm "mythos/v1/x/wasmx/vm/wasmedge"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
+	wasmedgeVm "wasmx/v1/x/wasmx/vm/wasmedge"
 )
 
 func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {

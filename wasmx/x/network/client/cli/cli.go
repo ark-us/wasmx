@@ -36,13 +36,13 @@ import (
 
 	// "github.com/cosmos/cosmos-sdk/client/flags"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
-	"mythos/v1/multichain"
-	"mythos/v1/x/network/types"
-	wasmxcli "mythos/v1/x/wasmx/client/cli"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	menc "wasmx/v1/encoding"
+	"wasmx/v1/multichain"
+	"wasmx/v1/x/network/types"
+	wasmxcli "wasmx/v1/x/wasmx/client/cli"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 const (

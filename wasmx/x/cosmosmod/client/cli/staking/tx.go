@@ -24,8 +24,8 @@ import (
 
 	cli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/multichain"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/multichain"
 )
 
 // default values

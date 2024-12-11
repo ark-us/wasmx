@@ -1,7 +1,7 @@
 package ante
 
 import (
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"

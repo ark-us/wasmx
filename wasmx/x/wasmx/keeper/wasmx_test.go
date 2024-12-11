@@ -12,10 +12,10 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "mythos/v1/x/wasmx/keeper/testdata/classic"
-	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm/precompiles"
-	vmtypes "mythos/v1/x/wasmx/vm/types"
+	testdata "wasmx/v1/x/wasmx/keeper/testdata/classic"
+	"wasmx/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/vm/precompiles"
+	vmtypes "wasmx/v1/x/wasmx/vm/types"
 )
 
 var (

@@ -21,11 +21,11 @@ import (
 	"github.com/cometbft/cometbft/libs/bytes"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	"wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 func InitChainAndCommitBlock(

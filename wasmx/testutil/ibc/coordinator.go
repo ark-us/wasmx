@@ -6,7 +6,7 @@ import (
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
-	mcfg "mythos/v1/config"
+	mcfg "wasmx/v1/config"
 )
 
 var (

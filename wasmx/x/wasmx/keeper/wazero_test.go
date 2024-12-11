@@ -16,9 +16,9 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
-	"mythos/v1/x/wasmx/types"
-	wasmxvm "mythos/v1/x/wasmx/vm"
-	utils "mythos/v1/x/wasmx/vm/utils"
+	"wasmx/v1/x/wasmx/types"
+	wasmxvm "wasmx/v1/x/wasmx/vm"
+	utils "wasmx/v1/x/wasmx/vm/utils"
 )
 
 const AS_PTR_LENGHT_OFFSET = int32(4)

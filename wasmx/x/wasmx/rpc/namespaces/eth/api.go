@@ -9,9 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
-	"mythos/v1/x/wasmx/rpc/backend"
-	rpctypes "mythos/v1/x/wasmx/rpc/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/rpc/backend"
+	rpctypes "wasmx/v1/x/wasmx/rpc/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // The Ethereum JSON-RPC API

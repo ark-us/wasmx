@@ -10,11 +10,11 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcfg "mythos/v1/config"
-	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
-	vmtypes "mythos/v1/x/wasmx/vm"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	mcfg "wasmx/v1/config"
+	"wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	vmtypes "wasmx/v1/x/wasmx/vm"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // TODO!! this API should only be used by core contracts

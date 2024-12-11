@@ -17,13 +17,13 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	menc "mythos/v1/encoding"
-	multichain "mythos/v1/multichain"
-	networktypes "mythos/v1/x/network/types"
-	"mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	menc "wasmx/v1/encoding"
+	multichain "wasmx/v1/multichain"
+	networktypes "wasmx/v1/x/network/types"
+	"wasmx/v1/x/network/vmp2p"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // newApp creates a new Cosmos SDK app

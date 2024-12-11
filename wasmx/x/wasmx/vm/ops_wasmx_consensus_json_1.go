@@ -15,10 +15,10 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
-	mctx "mythos/v1/context"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	mctx "wasmx/v1/context"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 
-	networktypes "mythos/v1/x/network/types"
+	networktypes "wasmx/v1/x/network/types"
 )
 
 type ResponseOptimisticExecution struct {

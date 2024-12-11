@@ -11,8 +11,8 @@ import (
 
 	network "github.com/libp2p/go-libp2p/core/network"
 
-	mcodec "mythos/v1/codec"
-	networktypes "mythos/v1/x/network/types"
+	mcodec "wasmx/v1/codec"
+	networktypes "wasmx/v1/x/network/types"
 )
 
 // main stream

@@ -18,9 +18,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 
-	"mythos/v1/multichain"
-	"mythos/v1/x/wasmx/keeper"
-	"mythos/v1/x/wasmx/types"
+	"wasmx/v1/multichain"
+	"wasmx/v1/x/wasmx/keeper"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var (

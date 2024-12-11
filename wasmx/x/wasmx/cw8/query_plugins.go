@@ -19,9 +19,9 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	mcodec "mythos/v1/codec"
-	cw8types "mythos/v1/x/wasmx/cw8/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // WasmVMQueryHandler is an extension point for custom query handler implementations

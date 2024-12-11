@@ -7,8 +7,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 type msgServer struct {

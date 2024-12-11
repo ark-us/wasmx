@@ -1,9 +1,9 @@
 package wasmx
 
 import (
-	"mythos/v1/testutil/sample"
-	wasmxsimulation "mythos/v1/x/wasmx/simulation"
-	"mythos/v1/x/wasmx/types"
+	"wasmx/v1/testutil/sample"
+	wasmxsimulation "wasmx/v1/x/wasmx/simulation"
+	"wasmx/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"

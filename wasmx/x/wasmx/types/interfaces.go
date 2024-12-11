@@ -14,7 +14,7 @@ import (
 
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 )
 
 // AccountKeeper defines a subset of methods implemented by the cosmos-sdk account keeper

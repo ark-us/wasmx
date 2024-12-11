@@ -12,10 +12,10 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	// ibctesting "mythos/v1/testutil/ibc"
+	// ibctesting "wasmx/v1/testutil/ibc"
 
-	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 type NetworkNode struct {

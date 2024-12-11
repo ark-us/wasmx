@@ -15,7 +15,7 @@ import (
 	gcutils "github.com/cosmos/cosmos-sdk/x/gov/client/utils"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	"mythos/v1/multichain"
+	"wasmx/v1/multichain"
 )
 
 // GetCustomQueryCmd returns the cli query commands for this module

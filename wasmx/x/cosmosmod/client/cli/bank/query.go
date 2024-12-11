@@ -12,9 +12,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/multichain"
-	networktypes "mythos/v1/x/network/types"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/multichain"
+	networktypes "wasmx/v1/x/network/types"
 )
 
 func GetQueryCmd(ac address.Codec) *cobra.Command {

@@ -25,13 +25,13 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 
-	config "mythos/v1/config"
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	appencoding "mythos/v1/encoding"
-	menc "mythos/v1/encoding"
-	"mythos/v1/multichain"
-	srvconfig "mythos/v1/server/config"
+	config "wasmx/v1/config"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	appencoding "wasmx/v1/encoding"
+	menc "wasmx/v1/encoding"
+	"wasmx/v1/multichain"
+	srvconfig "wasmx/v1/server/config"
 )
 
 // DefaultTestingAppInit defines the IBC application used for testing

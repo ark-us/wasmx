@@ -13,8 +13,8 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	mcfg "mythos/v1/config"
-	networkserver "mythos/v1/x/network/server"
+	mcfg "wasmx/v1/config"
+	networkserver "wasmx/v1/x/network/server"
 )
 
 type GenutilGenesisState struct {

@@ -16,8 +16,8 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	mcodec "mythos/v1/codec"
-	vmtypes "mythos/v1/x/wasmx/vm/types"
+	mcodec "wasmx/v1/codec"
+	vmtypes "wasmx/v1/x/wasmx/vm/types"
 )
 
 // type UnpackedArgs = map[string]interface{}

@@ -3,10 +3,10 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/x/wasmx/types"
-	cchtypes "mythos/v1/x/wasmx/types/contract_handler"
-	"mythos/v1/x/wasmx/types/contract_handler/alias"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/x/wasmx/types"
+	cchtypes "wasmx/v1/x/wasmx/types/contract_handler"
+	"wasmx/v1/x/wasmx/types/contract_handler/alias"
 )
 
 func (k *Keeper) GetAlias(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (mcodec.AccAddressPrefixed, bool) {

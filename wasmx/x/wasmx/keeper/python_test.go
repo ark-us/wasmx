@@ -9,8 +9,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"mythos/v1/x/wasmx/types"
-	vmtypes "mythos/v1/x/wasmx/vm/types"
+	"wasmx/v1/x/wasmx/types"
+	vmtypes "wasmx/v1/x/wasmx/vm/types"
 )
 
 var (

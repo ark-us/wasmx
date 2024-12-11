@@ -1,9 +1,9 @@
 package vmp2p
 
 import (
-	"mythos/v1/x/wasmx/types"
-	vmtypes "mythos/v1/x/wasmx/vm"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	"wasmx/v1/x/wasmx/types"
+	vmtypes "wasmx/v1/x/wasmx/vm"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func InstantiateWasmxP2PJson(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {

@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/types"
 
 	"github.com/stretchr/testify/require"
 )

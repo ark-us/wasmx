@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 	"math/big"
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 
 	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"

@@ -6,9 +6,9 @@ import (
 	address "cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	verifysig "mythos/v1/crypto/verifysig"
-	"mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	verifysig "wasmx/v1/crypto/verifysig"
+	"wasmx/v1/x/wasmx/types"
 )
 
 type AccountKeeperVerifySig struct {

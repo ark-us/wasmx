@@ -16,8 +16,8 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	mcodec "mythos/v1/codec"
-	cw8types "mythos/v1/x/wasmx/cw8/types"
+	mcodec "wasmx/v1/codec"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
 )
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries

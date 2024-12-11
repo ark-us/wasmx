@@ -9,8 +9,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "mythos/v1/x/wasmx/keeper/testdata/fsm"
-	"mythos/v1/x/wasmx/types"
+	testdata "wasmx/v1/x/wasmx/keeper/testdata/fsm"
+	"wasmx/v1/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestFSM_Semaphore() {

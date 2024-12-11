@@ -14,9 +14,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	mapp "mythos/v1/app"
-	mcfg "mythos/v1/config"
-	"mythos/v1/multichain"
+	mapp "wasmx/v1/app"
+	mcfg "wasmx/v1/config"
+	"wasmx/v1/multichain"
 )
 
 func NewResetChainData(appCreator types.AppCreator, defaultNodeHome string) *cobra.Command {

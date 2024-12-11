@@ -13,7 +13,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	cosmosmodkeeper "mythos/v1/x/cosmosmod/keeper"
+	cosmosmodkeeper "wasmx/v1/x/cosmosmod/keeper"
 )
 
 // ExportAppStateAndValidators exports the state of the application for a genesis

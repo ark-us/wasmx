@@ -9,8 +9,8 @@ import (
 	"cosmossdk.io/log"
 	dbm "github.com/cosmos/cosmos-db"
 
-	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
+	mcfg "wasmx/v1/config"
+	menc "wasmx/v1/encoding"
 )
 
 type AppOptions interface {

@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
-	interfacesTestdata "mythos/v1/x/wasmx/keeper/testdata/interfaces"
+	interfacesTestdata "wasmx/v1/x/wasmx/keeper/testdata/interfaces"
 )
 
 func TestInterfaces_JsonToAbi(t *testing.T) {

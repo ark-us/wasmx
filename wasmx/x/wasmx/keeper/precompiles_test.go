@@ -16,9 +16,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/x/wasmx/types"
-	"mythos/v1/x/wasmx/vm"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/vm"
 )
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {

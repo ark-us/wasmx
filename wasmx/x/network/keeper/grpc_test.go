@@ -12,12 +12,12 @@ import (
 	simulation "github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	// ibctesting "mythos/v1/testutil/ibc"
+	// ibctesting "wasmx/v1/testutil/ibc"
 
-	"mythos/v1/x/network/types"
-	wasmxkeeper "mythos/v1/x/wasmx/keeper"
-	wasmxtypes "mythos/v1/x/wasmx/types"
-	precompiles "mythos/v1/x/wasmx/vm/precompiles"
+	"wasmx/v1/x/network/types"
+	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	precompiles "wasmx/v1/x/wasmx/vm/precompiles"
 )
 
 var tstoreprefix = []byte{3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40}

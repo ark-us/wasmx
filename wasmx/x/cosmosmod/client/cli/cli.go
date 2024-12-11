@@ -6,12 +6,12 @@ import (
 	"cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/client"
 
-	bank "mythos/v1/x/cosmosmod/client/cli/bank"
-	gov "mythos/v1/x/cosmosmod/client/cli/gov"
-	staking "mythos/v1/x/cosmosmod/client/cli/staking"
-	"mythos/v1/x/cosmosmod/types"
+	bank "wasmx/v1/x/cosmosmod/client/cli/bank"
+	gov "wasmx/v1/x/cosmosmod/client/cli/gov"
+	staking "wasmx/v1/x/cosmosmod/client/cli/staking"
+	"wasmx/v1/x/cosmosmod/types"
 
-	"mythos/v1/multichain"
+	"wasmx/v1/multichain"
 )
 
 func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {

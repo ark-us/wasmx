@@ -1,7 +1,7 @@
 package types
 
 import (
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // GetLeaderChain determines the chain with the highest level from a list of chain IDs

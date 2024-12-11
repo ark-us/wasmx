@@ -11,11 +11,11 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
-	menc "mythos/v1/encoding"
+	menc "wasmx/v1/encoding"
 
-	"mythos/v1/x/wasmx/rpc/backend"
-	"mythos/v1/x/wasmx/rpc/namespaces/eth"
-	"mythos/v1/x/wasmx/rpc/namespaces/net"
+	"wasmx/v1/x/wasmx/rpc/backend"
+	"wasmx/v1/x/wasmx/rpc/namespaces/eth"
+	"wasmx/v1/x/wasmx/rpc/namespaces/net"
 )
 
 // RPC namespaces and API version

@@ -10,10 +10,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	networkkeeper "mythos/v1/x/network/keeper"
+	networkkeeper "wasmx/v1/x/network/keeper"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/x/cosmosmod/types"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/x/cosmosmod/types"
 )
 
 type (

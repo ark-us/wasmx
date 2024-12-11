@@ -25,19 +25,19 @@ import (
 
 	tmtypes "github.com/cometbft/cometbft/types"
 
-	"mythos/v1/app"
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
-	ibctesting "mythos/v1/testutil/ibc"
-	wasmxtesting "mythos/v1/testutil/wasmx"
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
+	"wasmx/v1/app"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	menc "wasmx/v1/encoding"
+	ibctesting "wasmx/v1/testutil/ibc"
+	wasmxtesting "wasmx/v1/testutil/wasmx"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
 
-	// networkserver "mythos/v1/x/network/server"
-	testdata "mythos/v1/x/network/keeper/testdata/wasmx"
-	"mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
-	precompiles "mythos/v1/x/wasmx/vm/precompiles"
+	// networkserver "wasmx/v1/x/network/server"
+	testdata "wasmx/v1/x/network/keeper/testdata/wasmx"
+	"wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
+	precompiles "wasmx/v1/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestMultiChainExecMythos() {

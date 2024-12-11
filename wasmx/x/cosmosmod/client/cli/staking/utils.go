@@ -16,9 +16,9 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
-	"mythos/v1/multichain"
+	mcfg "wasmx/v1/config"
+	menc "wasmx/v1/encoding"
+	"wasmx/v1/multichain"
 )
 
 // validator struct to define the fields of the validator

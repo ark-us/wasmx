@@ -20,10 +20,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/multichain"
-	"mythos/v1/x/wasmx/ioutils"
-	"mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/multichain"
+	"wasmx/v1/x/wasmx/ioutils"
+	"wasmx/v1/x/wasmx/types"
 )
 
 const (

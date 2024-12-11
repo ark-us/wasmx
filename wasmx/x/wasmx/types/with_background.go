@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 type ContextKey string

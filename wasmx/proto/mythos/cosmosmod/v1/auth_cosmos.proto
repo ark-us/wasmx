@@ -8,7 +8,7 @@ import "cosmos/msg/v1/msg.proto";
 import "amino/amino.proto";
 import "cosmos/auth/v1beta1/auth.proto";
 
-option go_package = "mythos/v1/x/cosmosmod/types";
+option go_package = "wasmx/v1/x/cosmosmod/types";
 option (gogoproto.goproto_getters_all) = false;
 
 // BaseAccount defines a base account type. It contains all the necessary fields

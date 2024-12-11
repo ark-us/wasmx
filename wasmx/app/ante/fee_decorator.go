@@ -3,7 +3,7 @@ package ante
 import (
 	"bytes"
 	"fmt"
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 
 	errorsmod "cosmossdk.io/errors"
 

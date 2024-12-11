@@ -12,7 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	"mythos/v1/x/websrv/types"
+	"wasmx/v1/x/websrv/types"
 )
 
 type (

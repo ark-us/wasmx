@@ -1,7 +1,7 @@
 package vmcrosschain
 
 import (
-	vmtypes "mythos/v1/x/wasmx/vm"
+	vmtypes "wasmx/v1/x/wasmx/vm"
 )
 
 const HOST_WASMX_ENV_CROSSCHAIN_VER1 = "wasmx_crosschain_1"

@@ -20,12 +20,12 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	networktypes "mythos/v1/x/network/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	menc "wasmx/v1/encoding"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
+	networktypes "wasmx/v1/x/network/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 var FlagRegistryChainId = "registry-chain-id"

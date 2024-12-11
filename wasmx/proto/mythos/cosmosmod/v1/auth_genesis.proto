@@ -9,7 +9,7 @@ import "cosmos/auth/v1beta1/auth.proto";
 import "cosmos/auth/v1beta1/genesis.proto";
 import "mythos/cosmosmod/v1/auth.proto";
 
-option go_package = "mythos/v1/x/cosmosmod/types";
+option go_package = "wasmx/v1/x/cosmosmod/types";
 
 // BankGenesisState defines the bank module's genesis state.
 message AuthGenesisState {

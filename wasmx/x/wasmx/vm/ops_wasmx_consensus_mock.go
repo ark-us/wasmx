@@ -1,7 +1,7 @@
 package vm
 
 import (
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func BuildWasmxConsensusJson1Mock(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {

@@ -54,18 +54,18 @@ import (
 
 	// this line is used by starport scaffolding # root/moduleImport
 
-	app "mythos/v1/app"
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	appencoding "mythos/v1/encoding"
-	"mythos/v1/multichain"
-	server "mythos/v1/server"
-	serverconfig "mythos/v1/server/config"
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	networktypes "mythos/v1/x/network/types"
-	"mythos/v1/x/network/vmp2p"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	app "wasmx/v1/app"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	appencoding "wasmx/v1/encoding"
+	"wasmx/v1/multichain"
+	server "wasmx/v1/server"
+	serverconfig "wasmx/v1/server/config"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
+	networktypes "wasmx/v1/x/network/types"
+	"wasmx/v1/x/network/vmp2p"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

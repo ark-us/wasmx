@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // ChainID is the EIP-155 replay-protection chain id for the current ethereum chain config.

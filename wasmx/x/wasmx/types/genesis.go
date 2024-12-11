@@ -1,7 +1,7 @@
 package types
 
 import (
-	mcodec "mythos/v1/codec"
+	mcodec "wasmx/v1/codec"
 )
 
 // NewGenesisState creates a new genesis state.

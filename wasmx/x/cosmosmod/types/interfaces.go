@@ -6,8 +6,8 @@ import (
 	"cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	mcodec "wasmx/v1/codec"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 // AccountKeeper defines a subset of methods implemented by the cosmos-sdk account keeper

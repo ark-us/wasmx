@@ -51,11 +51,11 @@ import (
 	cometjsonserver "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mcfg "mythos/v1/config"
-	mctx "mythos/v1/context"
-	"mythos/v1/server/config"
-	networkserver "mythos/v1/x/network/server"
-	"mythos/v1/x/network/types"
+	mcfg "wasmx/v1/config"
+	mctx "wasmx/v1/context"
+	"wasmx/v1/server/config"
+	networkserver "wasmx/v1/x/network/server"
+	"wasmx/v1/x/network/types"
 )
 
 var NETWORK_GAS_LIMIT = uint64(1000000000)

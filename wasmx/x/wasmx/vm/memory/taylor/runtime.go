@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 const AS_PTR_LENGHT_OFFSET = int32(4)

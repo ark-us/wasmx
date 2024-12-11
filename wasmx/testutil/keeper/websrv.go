@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mcodec "mythos/v1/codec"
-	"mythos/v1/x/websrv/keeper"
-	"mythos/v1/x/websrv/types"
+	mcodec "wasmx/v1/codec"
+	"wasmx/v1/x/websrv/keeper"
+	"wasmx/v1/x/websrv/types"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -23,7 +23,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	config "mythos/v1/config"
+	config "wasmx/v1/config"
 )
 
 func WebsrvKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {

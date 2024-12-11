@@ -17,7 +17,7 @@ import (
 	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
 
-	multichain "mythos/v1/multichain"
+	multichain "wasmx/v1/multichain"
 )
 
 // AddCommands adds server commands

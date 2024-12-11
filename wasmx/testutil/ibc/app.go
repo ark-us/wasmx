@@ -23,12 +23,12 @@ import (
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
-	wasmxapp "mythos/v1/app"
-	mcodec "mythos/v1/codec"
-	mcfg "mythos/v1/config"
-	menc "mythos/v1/encoding"
-	cosmosmodtypes "mythos/v1/x/cosmosmod/types"
-	wasmxtypes "mythos/v1/x/wasmx/types"
+	wasmxapp "wasmx/v1/app"
+	mcodec "wasmx/v1/codec"
+	mcfg "wasmx/v1/config"
+	menc "wasmx/v1/encoding"
+	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
+	wasmxtypes "wasmx/v1/x/wasmx/types"
 )
 
 var DefaultTestingAppInit func(chainId string, chainCfg *menc.ChainConfig, index int32) (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp

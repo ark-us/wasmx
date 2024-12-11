@@ -14,8 +14,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"mythos/v1/x/wasmx/ioutils"
-	"mythos/v1/x/wasmx/types"
+	"wasmx/v1/x/wasmx/ioutils"
+	"wasmx/v1/x/wasmx/types"
 )
 
 var _ snapshot.ExtensionSnapshotter = &Utf8Snapshotter{}

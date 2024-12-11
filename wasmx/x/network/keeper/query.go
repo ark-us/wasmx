@@ -10,9 +10,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "mythos/v1/codec"
-	cfg "mythos/v1/config"
-	"mythos/v1/x/network/types"
+	mcodec "wasmx/v1/codec"
+	cfg "wasmx/v1/config"
+	"wasmx/v1/x/network/types"
 )
 
 var _ types.QueryServer = &Keeper{}

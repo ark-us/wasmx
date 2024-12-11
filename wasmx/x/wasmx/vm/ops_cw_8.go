@@ -13,10 +13,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	crypto "mythos/v1/crypto"
-	cw8types "mythos/v1/x/wasmx/cw8/types"
-	"mythos/v1/x/wasmx/types"
-	memc "mythos/v1/x/wasmx/vm/memory/common"
+	crypto "wasmx/v1/crypto"
+	cw8types "wasmx/v1/x/wasmx/cw8/types"
+	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // A kibi (kilo binary)
