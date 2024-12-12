@@ -2038,8 +2038,6 @@ github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20241019150937-7ce744ab103e
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20241019150937-7ce744ab103e/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
 github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19 h1:qQOX+FXfEuUcXL2cOfbJVfKkhCaneKeOU4I+skRpHOQ=
 github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19/go.mod h1:NRrph2TSHKFlgLGN9OTUOxyKfMyPFOjozqvTO5gaA4Q=
-github.com/loredanacirstea/wazero v0.0.0-20241211204703-95d56baa2c4c h1:NtaAWQdyXz/nbBkrzXE4eQq1sgnw0r7Ik1RU9JO+810=
-github.com/loredanacirstea/wazero v0.0.0-20241211204703-95d56baa2c4c/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
 github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
 github.com/lyft/protoc-gen-star v0.6.0/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuzJYeZuUPFPNwA=
 github.com/lyft/protoc-gen-star v0.6.1/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuzJYeZuUPFPNwA=
@@ -2336,8 +2334,6 @@ github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71e
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
 github.com/sclevine/agouti v3.0.0+incompatible/go.mod h1:b4WX9W9L1sfQKXeJf1mUTLZKJ48R1S7H23Ji7oFO5Bw=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
-github.com/second-state/WasmEdge-go v0.13.4 h1:NHfJC+aayUW93ydAzlcX7Jx1WDRpI24KvY5SAbeTyvY=
-github.com/second-state/WasmEdge-go v0.13.4/go.mod h1:HyBf9hVj1sRAjklsjc1Yvs9b5RcmthPG9z99dY78TKg=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/sergi/go-diff v1.2.0 h1:XU+rvMAioB0UC3q1MFrIQy4Vo5/4VsRDQQXHsEya6xQ=

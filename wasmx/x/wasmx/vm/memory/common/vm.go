@@ -13,6 +13,7 @@ const VM_TERMINATE_ERROR = "terminate"
 type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}) ([]interface{}, error)
 
 type IWasmVmMeta interface {
+	LibVersion() string
 	NewWasmVm(ctx sdk.Context) IVm
 	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
 	AotCompile(ctx sdk.Context, inPath string, outPath string) error

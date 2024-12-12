@@ -1,4 +1,4 @@
-module wasmx/v1
+module mythos-wasmedge/v1
 
 go 1.21
 
@@ -34,12 +34,16 @@ require (
 
 require (
 	cosmossdk.io/api v0.7.4
+	cosmossdk.io/client/v2 v2.0.0-beta.1
 	cosmossdk.io/core v0.11.0
 	cosmossdk.io/log v1.3.1
 	cosmossdk.io/store v1.1.0
 	cosmossdk.io/tools/confix v0.1.0
 	cosmossdk.io/x/circuit v0.1.1
+	cosmossdk.io/x/evidence v0.1.1
+	cosmossdk.io/x/feegrant v0.1.1
 	cosmossdk.io/x/tx v0.13.2
+	cosmossdk.io/x/upgrade v0.1.1
 	github.com/btcsuite/btcd v0.23.4
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.3
@@ -71,12 +75,8 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/storage v1.36.0 // indirect
-	cosmossdk.io/client/v2 v2.0.0-beta.1 // indirect
 	cosmossdk.io/collections v0.4.0 // indirect
 	cosmossdk.io/depinject v1.0.0-alpha.4 // indirect
-	cosmossdk.io/x/evidence v0.1.1 // indirect
-	cosmossdk.io/x/feegrant v0.1.1 // indirect
-	cosmossdk.io/x/upgrade v0.1.1 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -335,4 +335,6 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// https://github.com/cosmos/cosmos-sdk/blob/e0bda6d7bc73fc4d6664c77c71d46cdc99ee0e6a/UPGRADING.md#replaces
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+
+    github.com/loredanacirstea/wasmx-wasmedge => ../wasmx-wasmedge
 )

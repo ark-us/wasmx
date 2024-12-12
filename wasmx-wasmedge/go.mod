@@ -1,4 +1,4 @@
-module wasmx-wasmedge
+module github.com/loredanacirstea/wasmx-wasmedge
 
 go 1.21
 

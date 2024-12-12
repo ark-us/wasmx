@@ -1,4 +1,4 @@
-package keeper_test
+package runtime_test
 
 import (
 	"bytes"
@@ -19,6 +19,11 @@ import (
 	"wasmx/v1/x/wasmx/types"
 	wasmxvm "wasmx/v1/x/wasmx/vm"
 	utils "wasmx/v1/x/wasmx/vm/utils"
+)
+
+var (
+	//go:embed testdata/simple_storage.wasm
+	wasmxSimpleStorage []byte
 )
 
 const AS_PTR_LENGHT_OFFSET = int32(4)
@@ -55,7 +60,7 @@ func AllocWriteMem(ctx context.Context, m api.Module, data []byte) (uint32, erro
 	return uint32(ptr), nil
 }
 
-func buildWasmxEnv(ctx sdk.Context, r wazero.Runtime) {
+func buildWasmxEnv(ctx sdk.Context, r wazero.Runtime) error {
 	storageMap := map[string][]byte{}
 	wasmxEnv := r.NewHostModuleBuilder("wasmx")
 
@@ -155,17 +160,17 @@ func buildWasmxEnv(ctx sdk.Context, r wazero.Runtime) {
 	}), []api.ValueType{api.ValueTypeI32}, []api.ValueType{}).Export("log")
 
 	_, err := wasmxEnv.Instantiate(ctx)
-	s.Require().NoError(err)
+	return err
 }
 
-func buildEnvEnv(ctx sdk.Context, r wazero.Runtime) {
+func buildEnvEnv(ctx sdk.Context, r wazero.Runtime) error {
 	envEnv := r.NewHostModuleBuilder("env")
 	envEnv = envEnv.NewFunctionBuilder().WithGoModuleFunction(api.GoModuleFunc(func(ctx context.Context, m api.Module, stack []uint64) {
 		panic("abort")
 	}), []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{}).Export("abort")
 
 	_, err := envEnv.Instantiate(ctx)
-	s.Require().NoError(err)
+	return err
 }
 
 func TestWazeroWasmxSimpleStorage(t *testing.T) {
@@ -176,7 +181,7 @@ func TestWazeroWasmxSimpleStorage(t *testing.T) {
 	ctx = ctx.WithContext(context.Background())
 
 	cache := wazero.NewCompilationCache()
-	s.Require().NoError(err)
+	require.NoError(t, err)
 	defer cache.Close(ctx)
 	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache)
 	r := wazero.NewRuntimeWithConfig(ctx, config)
@@ -192,24 +197,26 @@ func TestWazeroWasmxSimpleStorage(t *testing.T) {
 	}
 	ctx = ctx.WithValue("vmctx", vmCtx)
 
-	buildWasmxEnv(ctx, r)
-	buildEnvEnv(ctx, r)
+	err = buildWasmxEnv(ctx, r)
+	require.NoError(t, err)
+	err = buildEnvEnv(ctx, r)
+	require.NoError(t, err)
 
 	mod, err := r.Instantiate(ctx, wasmbin)
-	s.Require().NoError(err)
+	require.NoError(t, err)
 
 	_, err = mod.ExportedFunction("instantiate").Call(ctx)
-	s.Require().NoError(err)
+	require.NoError(t, err)
 	start := time.Now()
 
 	calldata := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
 	_, err = mod.ExportedFunction("main").Call(ctx)
-	s.Require().NoError(err)
+	require.NoError(t, err)
 
 	calldata = []byte(`{"get":{"key":"hello"}}`)
 	vmCtx.Env.CurrentCall.CallData = calldata
 	_, err = mod.ExportedFunction("main").Call(ctx)
-	s.Require().NoError(err)
+	require.NoError(t, err)
 
 	elapsed := time.Since(start)
 	fmt.Printf("Elapsed time: %s\n", elapsed)
@@ -237,8 +244,10 @@ func TestWazeroWasmxSimpleStorage2(t *testing.T) {
 		},
 	}
 	ctx = ctx.WithValue("vmctx", vmCtx)
-	buildWasmxEnv(ctx, r)
-	buildEnvEnv(ctx, r)
+	err = buildWasmxEnv(ctx, r)
+	require.NoError(t, err)
+	err = buildEnvEnv(ctx, r)
+	require.NoError(t, err)
 
 	mod, err := r.Instantiate(ctx, wasmbin)
 	require.NoError(t, err)
@@ -305,8 +314,10 @@ func TestWazeroWasmxSimpleStorage4(t *testing.T) {
 		},
 	}
 	ctx = ctx.WithValue("vmctx", vmCtx)
-	buildWasmxEnv(ctx, r)
-	buildEnvEnv(ctx, r)
+	err = buildWasmxEnv(ctx, r)
+	require.NoError(t, err)
+	err = buildEnvEnv(ctx, r)
+	require.NoError(t, err)
 
 	content, err := os.Open(wcompiledPath)
 	require.NoError(t, err)

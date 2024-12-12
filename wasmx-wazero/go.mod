@@ -1,10 +1,11 @@
-module wasmx-wazero
+module github.com/loredanacirstea/wasmx-wazero
 
 go 1.21
 
 require (
 	cosmossdk.io/errors v1.0.1
 	github.com/cosmos/cosmos-sdk v0.50.10
+	github.com/stretchr/testify v1.9.0
 	github.com/tetratelabs/wazero v1.8.2
 )
 
@@ -78,7 +79,6 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect
@@ -94,3 +94,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+// github.com/loredanacirstea/wazero@1501e85d8dd1948fc06746d280745a3b1681d091
+replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1

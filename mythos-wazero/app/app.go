@@ -174,8 +174,8 @@ import (
 
 	networkmoduletypes "wasmx/v1/x/network/types"
 
-	// wasmedgeVm "wasmx/v1/x/wasmx/vm/wasmedge"
-	wazeroVm "wasmx/v1/x/wasmx/vm/wazero"
+	// wasmedgeVm "wasmx-wasmedge/runtime"
+	wazeroVm "github.com/loredanacirstea/wasmx-wazero/runtime"
 
 	wasmxmodule "wasmx/v1/x/wasmx"
 

@@ -4,4 +4,7 @@ use (
 	./wasmx
 	./wasmx-wasmedge
 	./wasmx-wazero
+	./mythos-wazero
+	./mythos-wasmedge
+	./tests
 )

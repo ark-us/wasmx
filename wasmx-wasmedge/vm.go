@@ -301,6 +301,11 @@ func (wm *WasmEdgeVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, 
 
 type WasmEdgeVmMeta struct{}
 
+// When cgo is disabled at build time, this returns an error at runtime.
+func (WasmEdgeVmMeta) LibVersion() string {
+	return wasmedge.GetVersion()
+}
+
 func (WasmEdgeVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
 	return NewWasmEdgeVm(ctx)
 }

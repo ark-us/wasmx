@@ -399,6 +399,11 @@ func (wm *WazeroVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, _c
 
 type WazeroVmMeta struct{}
 
+// When cgo is disabled at build time, this returns an error at runtime.
+func (WazeroVmMeta) LibVersion() string {
+	return wazero.Version()
+}
+
 func (WazeroVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
 	return NewWazeroVm(ctx)
 }
@@ -406,10 +411,16 @@ func (WazeroVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
 func (WazeroVmMeta) AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (memc.WasmMeta, error) {
 	config := wazero.NewRuntimeConfigInterpreter()
 	r := wazero.NewRuntimeWithConfig(ctx, config)
+	defer func() {
+		r.Close(ctx)
+	}()
 	cmod, err := r.CompileModule(ctx, wasmbuffer)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		cmod.Close(ctx)
+	}()
 
 	imports := cmod.ImportedFunctions()
 	exports := cmod.ExportedFunctions()

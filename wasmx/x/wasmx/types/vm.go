@@ -14,8 +14,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/second-state/WasmEdge-go/wasmedge"
-
 	mcodec "wasmx/v1/codec"
 	cw8types "wasmx/v1/x/wasmx/cw8/types"
 )
@@ -125,15 +123,6 @@ type WasmxCosmosHandler interface {
 	ConsensusAddressCodec() address.Codec
 	AccBech32Codec() mcodec.AccBech32Codec
 	TxConfig() client.TxConfig
-}
-
-// LibWasmEdgeVersion returns the version of the loaded wasmedge library
-// at runtime. This can be used for debugging to verify the loaded version
-// matches the expected version.
-//
-// When cgo is disabled at build time, this returns an error at runtime.
-func LibWasmEdgeVersion() string {
-	return wasmedge.GetVersion()
 }
 
 var EWASM_VM_EXPORT = "ewasm_env_"
