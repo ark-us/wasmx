@@ -1,4 +1,4 @@
-package wasmedge
+package runtime
 
 import (
 	"github.com/second-state/WasmEdge-go/wasmedge"

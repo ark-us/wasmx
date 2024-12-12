@@ -1,4 +1,4 @@
-package wazero
+package runtime
 
 import (
 	"fmt"

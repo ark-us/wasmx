@@ -1,3 +1,7 @@
 go 1.23.2
 
-use ./wasmx
+use (
+	./wasmx
+	./wasmx-wasmedge
+	./wasmx-wazero
+)

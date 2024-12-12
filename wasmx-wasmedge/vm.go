@@ -1,4 +1,4 @@
-package wasmedge
+package runtime
 
 import (
 	"fmt"
