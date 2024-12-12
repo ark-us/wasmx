@@ -1,7 +1,7 @@
 package types
 
 import (
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 const (

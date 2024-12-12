@@ -3,10 +3,10 @@ package websrv_test
 import (
 	"testing"
 
-	keepertest "github.com/loredanacirstea/wasmx/v1/testutil/keeper"
-	"github.com/loredanacirstea/wasmx/v1/testutil/nullify"
-	"github.com/loredanacirstea/wasmx/v1/x/websrv"
-	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
+	keepertest "github.com/loredanacirstea/wasmx/testutil/keeper"
+	"github.com/loredanacirstea/wasmx/testutil/nullify"
+	"github.com/loredanacirstea/wasmx/x/websrv"
+	"github.com/loredanacirstea/wasmx/x/websrv/types"
 
 	"github.com/stretchr/testify/require"
 )

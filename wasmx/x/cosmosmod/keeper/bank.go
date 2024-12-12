@@ -10,11 +10,11 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // TransferCoins transfers coins from source to destination account when coin send was enabled for them and the recipient

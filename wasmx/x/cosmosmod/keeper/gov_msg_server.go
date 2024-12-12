@@ -10,9 +10,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
-	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 type msgGovServer struct {

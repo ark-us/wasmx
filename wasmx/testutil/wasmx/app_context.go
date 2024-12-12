@@ -37,15 +37,15 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	cryptoeth "github.com/ethereum/go-ethereum/crypto"
 
-	app "github.com/loredanacirstea/wasmx/v1/app"
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	"github.com/loredanacirstea/wasmx/v1/crypto/ethsecp256k1"
-	msrvcfg "github.com/loredanacirstea/wasmx/v1/server/config"
-	network "github.com/loredanacirstea/wasmx/v1/x/network/keeper"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxkeeper "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper"
-	wasmxutils "github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/backend"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	app "github.com/loredanacirstea/wasmx/app"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
+	msrvcfg "github.com/loredanacirstea/wasmx/server/config"
+	network "github.com/loredanacirstea/wasmx/x/network/keeper"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
+	wasmxutils "github.com/loredanacirstea/wasmx/x/wasmx/rpc/backend"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 var (

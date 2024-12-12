@@ -16,10 +16,10 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	"github.com/loredanacirstea/wasmx/v1/multichain"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/multichain"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // validator struct to define the fields of the validator

@@ -6,9 +6,9 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	"github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo {

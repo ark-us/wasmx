@@ -14,8 +14,8 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	cw8types "github.com/loredanacirstea/wasmx/v1/x/wasmx/cw8/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	cw8types "github.com/loredanacirstea/wasmx/x/wasmx/cw8/types"
 )
 
 // DefaultMaxQueryStackSize maximum size of the stack of contract instances doing queries

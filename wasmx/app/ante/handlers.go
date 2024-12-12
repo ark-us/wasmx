@@ -1,7 +1,7 @@
 package ante
 
 import (
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"

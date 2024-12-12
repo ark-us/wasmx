@@ -3,9 +3,9 @@ package vmmc
 import (
 	"encoding/json"
 
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // InitSubChain(*InitSubChainMsg) (*abci.ResponseInitChain, error)

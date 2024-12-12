@@ -13,9 +13,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 
-	app "github.com/loredanacirstea/wasmx/v1/app"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	multichain "github.com/loredanacirstea/wasmx/v1/multichain"
+	app "github.com/loredanacirstea/wasmx/app"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	multichain "github.com/loredanacirstea/wasmx/multichain"
 
 	runtime "github.com/loredanacirstea/wasmx-wazero"
 )

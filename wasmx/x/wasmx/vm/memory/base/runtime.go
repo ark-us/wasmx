@@ -1,7 +1,7 @@
 package base
 
 import (
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 type RuntimeHandlerBase struct {

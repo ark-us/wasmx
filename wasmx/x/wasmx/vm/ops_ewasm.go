@@ -11,9 +11,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
-	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
 
 var (

@@ -24,10 +24,10 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	"github.com/loredanacirstea/wasmx/v1/server/config"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc"
-	jsonrpcconfig "github.com/loredanacirstea/wasmx/v1/x/wasmx/server/config"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/server/config"
+	"github.com/loredanacirstea/wasmx/x/wasmx/rpc"
+	jsonrpcconfig "github.com/loredanacirstea/wasmx/x/wasmx/server/config"
 )
 
 // StartJsonRpc starts the web server

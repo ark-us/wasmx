@@ -11,10 +11,10 @@ import (
 
 	//nolint
 
-	wt "github.com/loredanacirstea/wasmx/v1/testutil/wasmx"
-	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions

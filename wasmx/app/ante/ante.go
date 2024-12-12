@@ -17,8 +17,8 @@ import (
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	"github.com/loredanacirstea/wasmx/v1/crypto/ethsecp256k1"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 )
 
 const (

@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "cosmos_proto/cosmos.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/loredanacirstea/wasmx/v1/x/network/types";
+option go_package = "github.com/loredanacirstea/wasmx/x/network/types";
 option (gogoproto.goproto_getters_all) = false;
 
 message MsgExecuteAtomicTxRequest {

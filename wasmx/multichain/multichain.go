@@ -20,13 +20,13 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 var FlagRegistryChainId = "registry-chain-id"

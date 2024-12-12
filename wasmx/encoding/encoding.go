@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 	"github.com/cosmos/gogoproto/proto"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
 type ChainConfig struct {

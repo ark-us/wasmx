@@ -17,8 +17,8 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/cw8/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/wasmx/x/wasmx/cw8/types"
 )
 
 // replyer is a subset of keeper that can handle replies to submessages

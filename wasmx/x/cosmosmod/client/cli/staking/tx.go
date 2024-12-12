@@ -24,9 +24,9 @@ import (
 
 	cli "github.com/cosmos/cosmos-sdk/x/staking/client/cli"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	"github.com/loredanacirstea/wasmx/v1/multichain"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/wasmx/multichain"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // default values

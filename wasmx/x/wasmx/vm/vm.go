@@ -15,8 +15,8 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 func InitiateWasm(context *Context, rnh memc.RuntimeHandler, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {

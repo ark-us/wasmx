@@ -16,8 +16,8 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // NewGenesisState creates a new genesis state.

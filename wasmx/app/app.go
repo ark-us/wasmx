@@ -162,47 +162,47 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmtcfg "github.com/cometbft/cometbft/config"
 
-	ante "github.com/loredanacirstea/wasmx/v1/app/ante"
+	ante "github.com/loredanacirstea/wasmx/app/ante"
 
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	menc "github.com/loredanacirstea/wasmx/encoding"
 
-	docs "github.com/loredanacirstea/wasmx/v1/docs"
+	docs "github.com/loredanacirstea/wasmx/docs"
 
-	networkmodule "github.com/loredanacirstea/wasmx/v1/x/network"
+	networkmodule "github.com/loredanacirstea/wasmx/x/network"
 
-	networkmodulekeeper "github.com/loredanacirstea/wasmx/v1/x/network/keeper"
+	networkmodulekeeper "github.com/loredanacirstea/wasmx/x/network/keeper"
 
-	networkmoduletypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	networkmoduletypes "github.com/loredanacirstea/wasmx/x/network/types"
 
-	wasmxmodule "github.com/loredanacirstea/wasmx/v1/x/wasmx"
+	wasmxmodule "github.com/loredanacirstea/wasmx/x/wasmx"
 
-	wasmxmodulekeeper "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper"
+	wasmxmodulekeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
 
-	wasmxmoduletypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	wasmxmoduletypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 
-	websrvmodule "github.com/loredanacirstea/wasmx/v1/x/websrv"
+	websrvmodule "github.com/loredanacirstea/wasmx/x/websrv"
 
-	websrvmodulekeeper "github.com/loredanacirstea/wasmx/v1/x/websrv/keeper"
+	websrvmodulekeeper "github.com/loredanacirstea/wasmx/x/websrv/keeper"
 
-	websrvmoduletypes "github.com/loredanacirstea/wasmx/v1/x/websrv/types"
+	websrvmoduletypes "github.com/loredanacirstea/wasmx/x/websrv/types"
 
-	cosmosmodkeeper "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/keeper"
+	cosmosmodkeeper "github.com/loredanacirstea/wasmx/x/cosmosmod/keeper"
 
-	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 
-	cosmosmod "github.com/loredanacirstea/wasmx/v1/x/cosmosmod"
+	cosmosmod "github.com/loredanacirstea/wasmx/x/cosmosmod"
 
-	cfg "github.com/loredanacirstea/wasmx/v1/config"
+	cfg "github.com/loredanacirstea/wasmx/config"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 
-	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	mctx "github.com/loredanacirstea/wasmx/context"
 
-	srvconfig "github.com/loredanacirstea/wasmx/v1/server/config"
+	srvconfig "github.com/loredanacirstea/wasmx/server/config"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport

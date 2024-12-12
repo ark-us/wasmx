@@ -17,7 +17,7 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/spf13/cobra"
 
-	"github.com/loredanacirstea/wasmx/v1/server"
+	"github.com/loredanacirstea/wasmx/server"
 )
 
 const (

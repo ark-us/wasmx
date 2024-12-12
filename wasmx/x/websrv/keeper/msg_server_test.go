@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	keepertest "github.com/loredanacirstea/wasmx/v1/testutil/keeper"
-	"github.com/loredanacirstea/wasmx/v1/x/websrv/keeper"
-	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
+	keepertest "github.com/loredanacirstea/wasmx/testutil/keeper"
+	"github.com/loredanacirstea/wasmx/x/websrv/keeper"
+	"github.com/loredanacirstea/wasmx/x/websrv/types"
 )
 
 func setupMsgServer(t testing.TB) (types.MsgServer, context.Context) {

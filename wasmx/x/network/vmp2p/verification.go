@@ -9,10 +9,10 @@ import (
 
 	"cosmossdk.io/log"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	networkserver "github.com/loredanacirstea/wasmx/v1/x/network/server"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	networkserver "github.com/loredanacirstea/wasmx/x/network/server"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 type ClientVerification struct {

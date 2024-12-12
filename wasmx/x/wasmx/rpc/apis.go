@@ -11,11 +11,11 @@ import (
 
 	rpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	menc "github.com/loredanacirstea/wasmx/encoding"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/backend"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/namespaces/eth"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/namespaces/net"
+	"github.com/loredanacirstea/wasmx/x/wasmx/rpc/backend"
+	"github.com/loredanacirstea/wasmx/x/wasmx/rpc/namespaces/eth"
+	"github.com/loredanacirstea/wasmx/x/wasmx/rpc/namespaces/net"
 )
 
 // RPC namespaces and API version

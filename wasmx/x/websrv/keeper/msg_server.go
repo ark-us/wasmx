@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
+	"github.com/loredanacirstea/wasmx/x/websrv/types"
 )
 
 type msgServer struct {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 
-	"github.com/loredanacirstea/wasmx/v1/crypto"
+	"github.com/loredanacirstea/wasmx/crypto"
 )
 
 var EMPTY_ADDRESS = bytes.Repeat([]byte{0}, 20)

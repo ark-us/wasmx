@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	menc "github.com/loredanacirstea/wasmx/encoding"
 )
 
 type InitSubChainDeterministicRequest struct {

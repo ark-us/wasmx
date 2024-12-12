@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	testkeeper "github.com/loredanacirstea/wasmx/v1/testutil/keeper"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	testkeeper "github.com/loredanacirstea/wasmx/testutil/keeper"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 func TestGetParams(t *testing.T) {

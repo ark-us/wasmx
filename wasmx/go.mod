@@ -1,4 +1,4 @@
-module github.com/loredanacirstea/wasmx/v1
+module github.com/loredanacirstea/wasmx
 
 go 1.21
 

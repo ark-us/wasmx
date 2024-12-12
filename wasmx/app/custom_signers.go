@@ -3,7 +3,7 @@ package app
 import (
 	"cosmossdk.io/x/tx/signing"
 
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 )
 
 func GetCustomSigners() []signing.CustomGetSigner {

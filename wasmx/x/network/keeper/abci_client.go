@@ -34,10 +34,10 @@ import (
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	cfg "github.com/loredanacirstea/wasmx/v1/config"
-	"github.com/loredanacirstea/wasmx/v1/server/config"
-	"github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	cfg "github.com/loredanacirstea/wasmx/config"
+	"github.com/loredanacirstea/wasmx/server/config"
+	"github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 type ABCIClient struct {

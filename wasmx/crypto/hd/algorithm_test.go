@@ -13,8 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 
-	cryptocodec "github.com/loredanacirstea/wasmx/v1/crypto/codec"
-	enccodec "github.com/loredanacirstea/wasmx/v1/crypto/codec"
+	cryptocodec "github.com/loredanacirstea/wasmx/crypto/codec"
+	enccodec "github.com/loredanacirstea/wasmx/crypto/codec"
 )
 
 var TestCodec amino.Codec

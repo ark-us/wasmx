@@ -20,13 +20,13 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	cw8 "github.com/loredanacirstea/wasmx/v1/x/wasmx/cw8"
-	cw8types "github.com/loredanacirstea/wasmx/v1/x/wasmx/cw8/types"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	cchtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types/contract_handler"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types/contract_handler/alias"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	cw8 "github.com/loredanacirstea/wasmx/x/wasmx/cw8"
+	cw8types "github.com/loredanacirstea/wasmx/x/wasmx/cw8/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	cchtypes "github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler/alias"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // contractMemoryLimit is the memory limit of each contract execution (in MiB)

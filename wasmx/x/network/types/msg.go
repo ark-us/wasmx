@@ -13,7 +13,7 @@ import (
 
 	"cosmossdk.io/x/tx/signing"
 
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 var (

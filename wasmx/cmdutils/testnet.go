@@ -57,24 +57,24 @@ import (
 
 	pvm "github.com/cometbft/cometbft/privval"
 
-	app "github.com/loredanacirstea/wasmx/v1/app"
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	mctx "github.com/loredanacirstea/wasmx/v1/context"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	"github.com/loredanacirstea/wasmx/v1/multichain"
-	"github.com/loredanacirstea/wasmx/v1/server"
-	config "github.com/loredanacirstea/wasmx/v1/server/config"
-	websrvconfig "github.com/loredanacirstea/wasmx/v1/x/websrv/server/config"
-	websrvflags "github.com/loredanacirstea/wasmx/v1/x/websrv/server/flags"
+	app "github.com/loredanacirstea/wasmx/app"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	mctx "github.com/loredanacirstea/wasmx/context"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/multichain"
+	"github.com/loredanacirstea/wasmx/server"
+	config "github.com/loredanacirstea/wasmx/server/config"
+	websrvconfig "github.com/loredanacirstea/wasmx/x/websrv/server/config"
+	websrvflags "github.com/loredanacirstea/wasmx/x/websrv/server/flags"
 
-	jsonrpcconfig "github.com/loredanacirstea/wasmx/v1/x/wasmx/server/config"
-	jsonrpcflags "github.com/loredanacirstea/wasmx/v1/x/wasmx/server/flags"
+	jsonrpcconfig "github.com/loredanacirstea/wasmx/x/wasmx/server/config"
+	jsonrpcflags "github.com/loredanacirstea/wasmx/x/wasmx/server/flags"
 
-	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	networksrvflags "github.com/loredanacirstea/wasmx/v1/x/network/server/flags"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	networksrvflags "github.com/loredanacirstea/wasmx/x/network/server/flags"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 var (

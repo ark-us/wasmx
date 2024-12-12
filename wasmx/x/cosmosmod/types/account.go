@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
 var (

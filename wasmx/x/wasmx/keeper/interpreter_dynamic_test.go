@@ -14,9 +14,9 @@ import (
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	testdata "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper/testdata/classic"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/precompiles"
+	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestDynamicInterpreter() {

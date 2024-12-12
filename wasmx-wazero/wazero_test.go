@@ -16,9 +16,9 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	wasmxvm "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm"
-	utils "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/utils"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	wasmxvm "github.com/loredanacirstea/wasmx/x/wasmx/vm"
+	utils "github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
 var (

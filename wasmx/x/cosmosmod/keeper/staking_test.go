@@ -4,7 +4,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	// keeper "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/keeper"
+	// keeper "github.com/loredanacirstea/wasmx/x/cosmosmod/keeper"
 )
 
 func (suite *KeeperTestSuite) TestStakingCreateValidator() {

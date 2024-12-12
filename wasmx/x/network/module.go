@@ -16,12 +16,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	multichain "github.com/loredanacirstea/wasmx/v1/multichain"
-	"github.com/loredanacirstea/wasmx/v1/x/network/client/cli"
-	"github.com/loredanacirstea/wasmx/v1/x/network/keeper"
-	"github.com/loredanacirstea/wasmx/v1/x/network/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	multichain "github.com/loredanacirstea/wasmx/multichain"
+	"github.com/loredanacirstea/wasmx/x/network/client/cli"
+	"github.com/loredanacirstea/wasmx/x/network/keeper"
+	"github.com/loredanacirstea/wasmx/x/network/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 var (

@@ -3,7 +3,7 @@ package ante
 import (
 	"fmt"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 
 	"google.golang.org/protobuf/types/known/anypb"
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 
 	errorsmod "cosmossdk.io/errors"
 

@@ -25,19 +25,19 @@ import (
 
 	tmtypes "github.com/cometbft/cometbft/types"
 
-	"github.com/loredanacirstea/wasmx/v1/app"
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	ibctesting "github.com/loredanacirstea/wasmx/v1/testutil/ibc"
-	wasmxtesting "github.com/loredanacirstea/wasmx/v1/testutil/wasmx"
-	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	"github.com/loredanacirstea/wasmx/app"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	ibctesting "github.com/loredanacirstea/wasmx/testutil/ibc"
+	wasmxtesting "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 
-	// networkserver "github.com/loredanacirstea/wasmx/v1/x/network/server"
-	testdata "github.com/loredanacirstea/wasmx/v1/x/network/keeper/testdata/wasmx"
-	"github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	precompiles "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/precompiles"
+	// networkserver "github.com/loredanacirstea/wasmx/x/network/server"
+	testdata "github.com/loredanacirstea/wasmx/x/network/keeper/testdata/wasmx"
+	"github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
+	precompiles "github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestMultiChainExecMythos() {

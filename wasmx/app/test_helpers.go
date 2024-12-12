@@ -25,14 +25,14 @@ import (
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtypes "github.com/cometbft/cometbft/types"
 
-	config "github.com/loredanacirstea/wasmx/v1/config"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	mctx "github.com/loredanacirstea/wasmx/v1/context"
-	appencoding "github.com/loredanacirstea/wasmx/v1/encoding"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	"github.com/loredanacirstea/wasmx/v1/multichain"
-	srvconfig "github.com/loredanacirstea/wasmx/v1/server/config"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	config "github.com/loredanacirstea/wasmx/config"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	mctx "github.com/loredanacirstea/wasmx/context"
+	appencoding "github.com/loredanacirstea/wasmx/encoding"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/multichain"
+	srvconfig "github.com/loredanacirstea/wasmx/server/config"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // DefaultTestingAppInit defines the IBC application used for testing

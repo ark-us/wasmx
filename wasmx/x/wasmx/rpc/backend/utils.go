@@ -19,8 +19,8 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
-	rpctypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	rpctypes "github.com/loredanacirstea/wasmx/x/wasmx/rpc/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // GetLogsFromBlockResults returns the list of event logs from the tendermint block result response

@@ -6,7 +6,7 @@ import (
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 
-	"github.com/loredanacirstea/wasmx/v1/crypto/ethsecp256k1"
+	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
 )
 
 // RegisterCrypto registers all crypto dependency types with the provided Amino

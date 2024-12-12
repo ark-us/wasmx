@@ -1,10 +1,10 @@
 package vmcrosschain
 
 import (
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
 
 // !!!!This is an internal API only to be used by trusted system contracts

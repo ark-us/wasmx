@@ -24,12 +24,12 @@ import (
 
 	// tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	"github.com/loredanacirstea/wasmx/v1/server/config"
-	rpctypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	// "github.com/loredanacirstea/wasmx/v1/x/wasmx/server/config"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/server/config"
+	rpctypes "github.com/loredanacirstea/wasmx/x/wasmx/rpc/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
+	// "github.com/loredanacirstea/wasmx/x/wasmx/server/config"
 )
 
 // BackendI implements the Cosmos and EVM backend.

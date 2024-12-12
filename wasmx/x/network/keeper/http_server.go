@@ -17,7 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
-	"github.com/loredanacirstea/wasmx/v1/server/config"
+	"github.com/loredanacirstea/wasmx/server/config"
 )
 
 type Environment struct {

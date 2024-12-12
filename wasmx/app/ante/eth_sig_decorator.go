@@ -6,8 +6,8 @@ import (
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // EthSigVerificationDecorator validates an ethereum signatures

@@ -15,11 +15,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	verifysig "github.com/loredanacirstea/wasmx/v1/crypto/verifysig"
-	cw8types "github.com/loredanacirstea/wasmx/v1/x/wasmx/cw8/types"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	verifysig "github.com/loredanacirstea/wasmx/crypto/verifysig"
+	cw8types "github.com/loredanacirstea/wasmx/x/wasmx/cw8/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 type WasmxCosmosHandler struct {

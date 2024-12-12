@@ -8,9 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/types"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
 
 // Returns nil if there is no contract

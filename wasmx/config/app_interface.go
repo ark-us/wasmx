@@ -29,13 +29,13 @@ import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
-	mctx "github.com/loredanacirstea/wasmx/v1/context"
-	srvconfig "github.com/loredanacirstea/wasmx/v1/server/config"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mctx "github.com/loredanacirstea/wasmx/context"
+	srvconfig "github.com/loredanacirstea/wasmx/server/config"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	menc "github.com/loredanacirstea/wasmx/encoding"
 )
 
 type ActionExecutor interface {

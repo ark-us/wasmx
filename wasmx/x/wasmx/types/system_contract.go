@@ -10,7 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
 type SystemContracts = []SystemContract

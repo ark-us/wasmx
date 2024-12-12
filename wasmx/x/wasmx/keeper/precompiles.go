@@ -7,9 +7,9 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/precompiles"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
 func (k *Keeper) BootstrapSystemContracts(

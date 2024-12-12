@@ -54,19 +54,19 @@ import (
 
 	// this line is used by starport scaffolding # root/moduleImport
 
-	app "github.com/loredanacirstea/wasmx/v1/app"
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	mctx "github.com/loredanacirstea/wasmx/v1/context"
-	appencoding "github.com/loredanacirstea/wasmx/v1/encoding"
-	"github.com/loredanacirstea/wasmx/v1/multichain"
-	server "github.com/loredanacirstea/wasmx/v1/server"
-	serverconfig "github.com/loredanacirstea/wasmx/v1/server/config"
-	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
-	"github.com/loredanacirstea/wasmx/v1/x/network/vmp2p"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	app "github.com/loredanacirstea/wasmx/app"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	mctx "github.com/loredanacirstea/wasmx/context"
+	appencoding "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/multichain"
+	server "github.com/loredanacirstea/wasmx/server"
+	serverconfig "github.com/loredanacirstea/wasmx/server/config"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

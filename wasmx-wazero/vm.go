@@ -14,9 +14,9 @@ import (
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/utils"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
 var CONTEXT_CACHE_KEY = "wazero_cache"

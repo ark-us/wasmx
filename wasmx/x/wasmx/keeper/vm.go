@@ -15,10 +15,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/vm"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
-	utils "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/utils"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/vm"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+	utils "github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
 type WasmxEngine struct {

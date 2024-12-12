@@ -7,7 +7,7 @@ import (
 	rpcclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // PublicAPI is the eth_ prefixed set of APIs in the Web3 JSON-RPC spec.

@@ -3,7 +3,7 @@ package mythos.wasmx.v1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/loredanacirstea/wasmx/v1/x/wasmx/types";
+option go_package = "github.com/loredanacirstea/wasmx/x/wasmx/types";
 
 // RegisterRouteProposal is a gov Content type to register a web server route
 message Role {

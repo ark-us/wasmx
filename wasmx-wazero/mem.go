@@ -5,7 +5,7 @@ import (
 
 	"github.com/tetratelabs/wazero/api"
 
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 var _ memc.IMemory = (*WazeroMemory)(nil)

@@ -11,11 +11,11 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
-	wasimem "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/wasi"
-	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/types"
-	utils "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/utils"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+	wasimem "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/wasi"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
+	utils "github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
 // getEnv(): ArrayBuffer

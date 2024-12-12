@@ -25,13 +25,13 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
-	"github.com/loredanacirstea/wasmx/v1/multichain"
-	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/client/cli"
-	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/keeper"
-	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
+	"github.com/loredanacirstea/wasmx/multichain"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/client/cli"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/keeper"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 var (

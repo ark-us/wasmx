@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"io"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // Uncompress expects a valid gzip source to unpack or fails. See IsGzip

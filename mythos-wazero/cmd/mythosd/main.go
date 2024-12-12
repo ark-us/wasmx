@@ -8,8 +8,8 @@ import (
 
 	runtime "github.com/loredanacirstea/wasmx-wazero"
 
-	"github.com/loredanacirstea/wasmx/v1/app"
-	cmd "github.com/loredanacirstea/wasmx/v1/cmdutils"
+	"github.com/loredanacirstea/wasmx/app"
+	cmd "github.com/loredanacirstea/wasmx/cmdutils"
 )
 
 func main() {

@@ -7,8 +7,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	menc "github.com/loredanacirstea/wasmx/v1/encoding"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	menc "github.com/loredanacirstea/wasmx/encoding"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 const FEE_COLLECTOR = "fee_collector"

@@ -17,8 +17,8 @@ import (
 	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
 
-	multichain "github.com/loredanacirstea/wasmx/v1/multichain"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	multichain "github.com/loredanacirstea/wasmx/multichain"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // AddCommands adds server commands

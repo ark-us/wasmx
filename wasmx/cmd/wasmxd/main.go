@@ -6,10 +6,10 @@ import (
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
-	"github.com/loredanacirstea/wasmx/v1/app"
-	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/app"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 
-	cmd "github.com/loredanacirstea/wasmx/v1/cmdutils"
+	cmd "github.com/loredanacirstea/wasmx/cmdutils"
 )
 
 func main() {

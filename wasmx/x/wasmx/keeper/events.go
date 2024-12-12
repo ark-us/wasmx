@@ -7,7 +7,7 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 // newWasmModuleEvent creates with wasm module event for interacting with the given contract. Adds custom attributes

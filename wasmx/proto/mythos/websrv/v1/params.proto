@@ -3,7 +3,7 @@ package mythos.websrv.v1;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/loredanacirstea/wasmx/v1/x/websrv/types";
+option go_package = "github.com/loredanacirstea/wasmx/x/websrv/types";
 
 // Params defines the parameters for the module.
 message Params {

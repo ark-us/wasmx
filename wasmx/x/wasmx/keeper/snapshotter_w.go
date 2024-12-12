@@ -14,8 +14,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/ioutils"
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/ioutils"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 var _ snapshot.ExtensionSnapshotter = &WasmSnapshotter{}

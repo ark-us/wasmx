@@ -8,7 +8,7 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 func (k *Keeper) autoIncrementID(ctx sdk.Context) uint64 {

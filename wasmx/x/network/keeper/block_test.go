@@ -12,11 +12,11 @@ import (
 
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	mcfg "github.com/loredanacirstea/wasmx/config"
 
-	testdata "github.com/loredanacirstea/wasmx/v1/x/network/keeper/testdata/wasmx"
-	networkserver "github.com/loredanacirstea/wasmx/v1/x/network/server"
-	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	testdata "github.com/loredanacirstea/wasmx/x/network/keeper/testdata/wasmx"
+	networkserver "github.com/loredanacirstea/wasmx/x/network/server"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestBlockHeader() {

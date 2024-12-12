@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 
 	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"

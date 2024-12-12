@@ -6,8 +6,8 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
-	cch "github.com/loredanacirstea/wasmx/v1/x/wasmx/types/contract_handler"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	cch "github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler"
 )
 
 type RegisterRequest struct {

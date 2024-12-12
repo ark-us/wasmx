@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
 // Coin is a string representation of the sdk.Coin type (more portable than sdk.Int)

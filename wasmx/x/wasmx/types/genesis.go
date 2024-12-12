@@ -1,7 +1,7 @@
 package types
 
 import (
-	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
 // NewGenesisState creates a new genesis state.
