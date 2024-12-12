@@ -7,8 +7,8 @@ import (
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "wasmx/v1/codec"
-	"wasmx/v1/x/network/types"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	"github.com/loredanacirstea/wasmx/v1/x/network/types"
 )
 
 // internal method

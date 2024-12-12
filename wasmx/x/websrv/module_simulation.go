@@ -1,9 +1,9 @@
 package websrv
 
 import (
-	"wasmx/v1/testutil/sample"
-	websrvsimulation "wasmx/v1/x/websrv/simulation"
-	"wasmx/v1/x/websrv/types"
+	"github.com/loredanacirstea/wasmx/v1/testutil/sample"
+	websrvsimulation "github.com/loredanacirstea/wasmx/v1/x/websrv/simulation"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"

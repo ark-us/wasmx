@@ -3,7 +3,8 @@ package types
 import (
 	"fmt"
 	"math/big"
-	mcodec "wasmx/v1/codec"
+
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
 
 	address "cosmossdk.io/core/address"
 	sdkerr "cosmossdk.io/errors"

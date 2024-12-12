@@ -3,7 +3,7 @@ package types
 import (
 	"context"
 
-	mctx "wasmx/v1/context"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
 )
 
 // these structures are used when building the meta info

@@ -8,8 +8,8 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	"wasmx/v1/x/websrv/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 )
 
 func (k *Keeper) GetAddressToClients(ctx sdk.Context, owner sdk.AccAddress) ([]uint64, error) {

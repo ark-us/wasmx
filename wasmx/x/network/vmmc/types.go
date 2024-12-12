@@ -4,9 +4,9 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/bytes"
 
-	mctx "wasmx/v1/context"
-	menc "wasmx/v1/encoding"
-	vmtypes "wasmx/v1/x/wasmx/vm"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm"
 )
 
 const HOST_WASMX_ENV_MULTICHAIN_VER1 = "wasmx_multichain_1"

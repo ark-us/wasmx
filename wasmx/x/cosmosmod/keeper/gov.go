@@ -8,9 +8,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/query"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 
-	types "wasmx/v1/x/cosmosmod/types"
-	networktypes "wasmx/v1/x/network/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	types "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 func (k KeeperGov) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest) (*govtypes.QueryProposalResponse, error) {

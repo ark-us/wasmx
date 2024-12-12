@@ -54,19 +54,19 @@ import (
 
 	// this line is used by starport scaffolding # root/moduleImport
 
-	app "wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	mctx "wasmx/v1/context"
-	appencoding "wasmx/v1/encoding"
-	"wasmx/v1/multichain"
-	server "wasmx/v1/server"
-	serverconfig "wasmx/v1/server/config"
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	networktypes "wasmx/v1/x/network/types"
-	"wasmx/v1/x/network/vmp2p"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	app "github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	appencoding "github.com/loredanacirstea/wasmx/v1/encoding"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
+	server "github.com/loredanacirstea/wasmx/v1/server"
+	serverconfig "github.com/loredanacirstea/wasmx/v1/server/config"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	"github.com/loredanacirstea/wasmx/v1/x/network/vmp2p"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application

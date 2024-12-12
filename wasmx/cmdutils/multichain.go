@@ -18,8 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	// "wasmx/v1/testutil/network"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	// "github.com/loredanacirstea/wasmx/v1/testutil/network"
 )
 
 type internalVal struct {

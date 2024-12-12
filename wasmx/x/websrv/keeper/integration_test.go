@@ -9,9 +9,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	testutil "wasmx/v1/testutil/wasmx"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	"wasmx/v1/x/websrv/types"
+	testutil "github.com/loredanacirstea/wasmx/v1/testutil/wasmx"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 )
 
 var (

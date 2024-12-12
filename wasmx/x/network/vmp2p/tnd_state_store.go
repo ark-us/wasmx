@@ -22,11 +22,11 @@ import (
 
 	pvm "github.com/cometbft/cometbft/privval"
 
-	networkserver "wasmx/v1/x/network/server"
-	networktypes "wasmx/v1/x/network/types"
+	networkserver "github.com/loredanacirstea/wasmx/v1/x/network/server"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
 
-	mcfg "wasmx/v1/config"
-	menc "wasmx/v1/encoding"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
 )
 
 type StateStore struct {

@@ -12,9 +12,9 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	"wasmx/v1/x/websrv/client/cli"
-	"wasmx/v1/x/websrv/keeper"
-	"wasmx/v1/x/websrv/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/client/cli"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"

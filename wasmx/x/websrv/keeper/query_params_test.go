@@ -3,8 +3,8 @@ package keeper_test
 import (
 	"testing"
 
-	testkeeper "wasmx/v1/testutil/keeper"
-	"wasmx/v1/x/websrv/types"
+	testkeeper "github.com/loredanacirstea/wasmx/v1/testutil/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 
 	"github.com/stretchr/testify/require"
 )

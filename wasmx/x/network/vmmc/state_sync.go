@@ -13,10 +13,10 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/client"
 
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	menc "wasmx/v1/encoding"
-	vmp2p "wasmx/v1/x/network/vmp2p"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	vmp2p "github.com/loredanacirstea/wasmx/v1/x/network/vmp2p"
 )
 
 func StartStateSyncWithChainId(ctx *Context, req StateSyncRequestMsg) error {

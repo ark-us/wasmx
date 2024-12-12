@@ -19,9 +19,9 @@ import (
 	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mcfg "wasmx/v1/config"
-	"wasmx/v1/x/network/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	"github.com/loredanacirstea/wasmx/v1/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 func checkNegativeHeight(height int64) error {

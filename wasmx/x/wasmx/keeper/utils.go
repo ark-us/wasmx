@@ -6,7 +6,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "wasmx/v1/codec"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
 )
 
 // MsgFromBz

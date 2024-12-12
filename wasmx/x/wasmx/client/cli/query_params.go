@@ -3,8 +3,8 @@ package cli
 import (
 	"context"
 
-	"wasmx/v1/multichain"
-	"wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"

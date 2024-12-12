@@ -18,7 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
-	"wasmx/v1/server/config"
+	"github.com/loredanacirstea/wasmx/v1/server/config"
 )
 
 func StartGRPCServer(

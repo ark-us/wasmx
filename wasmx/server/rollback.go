@@ -9,8 +9,8 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
 
-	mapp "wasmx/v1/app"
-	"wasmx/v1/multichain"
+	mapp "github.com/loredanacirstea/wasmx/v1/app"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
 )
 
 // NewRollbackCmd creates a command to rollback CometBFT and multistore state by one height.

@@ -6,7 +6,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 const (

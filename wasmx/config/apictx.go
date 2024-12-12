@@ -3,13 +3,13 @@ package config
 import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 
-	srvconfig "wasmx/v1/server/config"
+	srvconfig "github.com/loredanacirstea/wasmx/v1/server/config"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 
-	mctx "wasmx/v1/context"
-	menc "wasmx/v1/encoding"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
 )
 
 type APICtxI interface {

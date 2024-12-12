@@ -9,9 +9,9 @@ import (
 
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 
-	"wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
-	"wasmx/v1/x/wasmx/vm/precompiles"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/precompiles"
 )
 
 const LENGTH_SIZE = 4

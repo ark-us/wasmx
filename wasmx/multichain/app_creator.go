@@ -9,9 +9,9 @@ import (
 	"cosmossdk.io/log"
 	dbm "github.com/cosmos/cosmos-db"
 
-	mcfg "wasmx/v1/config"
-	menc "wasmx/v1/encoding"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 type AppOptions interface {

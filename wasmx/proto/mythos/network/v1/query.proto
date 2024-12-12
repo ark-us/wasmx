@@ -8,7 +8,7 @@ import "cosmos/base/v1beta1/coin.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "mythos/network/v1/custom.proto";
 
-option go_package = "wasmx/v1/x/network/types";
+option go_package = "github.com/loredanacirstea/wasmx/v1/x/network/types";
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.equal_all) = false;
 

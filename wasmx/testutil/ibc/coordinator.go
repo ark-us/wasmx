@@ -6,8 +6,8 @@ import (
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
-	mcfg "wasmx/v1/config"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (

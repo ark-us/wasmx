@@ -7,8 +7,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "wasmx/v1/x/wasmx/keeper/testdata/classic"
-	"wasmx/v1/x/wasmx/types"
+	testdata "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper/testdata/classic"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {

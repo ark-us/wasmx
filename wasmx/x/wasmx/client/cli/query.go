@@ -18,10 +18,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 
-	"wasmx/v1/multichain"
-	"wasmx/v1/x/wasmx/keeper"
-	"wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (

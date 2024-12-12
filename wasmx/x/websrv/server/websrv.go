@@ -14,9 +14,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/server"
 
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	"wasmx/v1/x/websrv/server/config"
-	"wasmx/v1/x/websrv/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/server/config"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 )
 
 type WebsrvServer struct {

@@ -8,8 +8,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "wasmx/v1/codec"
-	"wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 type ContextI interface {

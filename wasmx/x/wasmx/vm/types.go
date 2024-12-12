@@ -9,10 +9,10 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "wasmx/v1/codec"
-	cw8types "wasmx/v1/x/wasmx/cw8/types"
-	"wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	cw8types "github.com/loredanacirstea/wasmx/v1/x/wasmx/cw8/types"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (

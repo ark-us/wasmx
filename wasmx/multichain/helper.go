@@ -18,11 +18,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 
-	mcfg "wasmx/v1/config"
-	mctx "wasmx/v1/context"
-	menc "wasmx/v1/encoding"
-	srvconfig "wasmx/v1/server/config"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	srvconfig "github.com/loredanacirstea/wasmx/v1/server/config"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // DefaultAppOptions is a stub implementing AppOptions

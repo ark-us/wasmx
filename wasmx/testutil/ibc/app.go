@@ -23,13 +23,13 @@ import (
 
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
-	wasmxapp "wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	menc "wasmx/v1/encoding"
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	wasmxapp "github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chainCfg *menc.ChainConfig, index int32) (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp

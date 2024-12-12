@@ -14,10 +14,10 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	"wasmx/v1/x/cosmosmod/keeper"
-	"wasmx/v1/x/cosmosmod/types"
-	networktypes "wasmx/v1/x/network/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 // InitGenesis initializes the module's state from a provided genesis state.

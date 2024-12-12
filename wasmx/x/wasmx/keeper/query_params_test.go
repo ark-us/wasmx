@@ -5,10 +5,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	testkeeper "wasmx/v1/testutil/keeper"
-	"wasmx/v1/x/wasmx/types"
+	testkeeper "github.com/loredanacirstea/wasmx/v1/testutil/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func TestParamsQuery(t *testing.T) {

@@ -10,7 +10,7 @@ import "cosmos/gov/v1beta1/gov.proto";
 import "cosmos/gov/v1beta1/genesis.proto";
 import "mythos/cosmosmod/v1/gov.proto";
 
-option go_package = "wasmx/v1/x/cosmosmod/types";
+option go_package = "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types";
 
 // GovGenesisState defines the gov module's genesis state.
 message GovGenesisState {

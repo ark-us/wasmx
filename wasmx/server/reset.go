@@ -14,11 +14,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
-	mapp "wasmx/v1/app"
-	mcfg "wasmx/v1/config"
-	"wasmx/v1/multichain"
+	mapp "github.com/loredanacirstea/wasmx/v1/app"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
 
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func NewResetChainData(appCreator types.AppCreator, defaultNodeHome string, wasmVmMeta memc.IWasmVmMeta) *cobra.Command {

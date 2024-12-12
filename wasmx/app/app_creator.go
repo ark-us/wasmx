@@ -17,14 +17,14 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcfg "wasmx/v1/config"
-	mctx "wasmx/v1/context"
-	menc "wasmx/v1/encoding"
-	multichain "wasmx/v1/multichain"
-	networktypes "wasmx/v1/x/network/types"
-	"wasmx/v1/x/network/vmp2p"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	multichain "github.com/loredanacirstea/wasmx/v1/multichain"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	"github.com/loredanacirstea/wasmx/v1/x/network/vmp2p"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // newApp creates a new Cosmos SDK app

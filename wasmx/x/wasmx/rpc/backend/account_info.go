@@ -13,9 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	config "wasmx/v1/config"
-	rpctypes "wasmx/v1/x/wasmx/rpc/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	config "github.com/loredanacirstea/wasmx/v1/config"
+	rpctypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 // GetCode returns the contract code at the given address and block number.

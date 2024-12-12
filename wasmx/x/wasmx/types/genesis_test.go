@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mcodec "wasmx/v1/codec"
-	"wasmx/v1/x/wasmx/types"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 func TestGenesisState_Validate(t *testing.T) {

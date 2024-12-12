@@ -5,11 +5,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	keepertest "wasmx/v1/testutil/keeper"
-	"wasmx/v1/testutil/nullify"
-	"wasmx/v1/x/wasmx"
-	"wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	keepertest "github.com/loredanacirstea/wasmx/v1/testutil/keeper"
+	"github.com/loredanacirstea/wasmx/v1/testutil/nullify"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func TestGenesis(t *testing.T) {

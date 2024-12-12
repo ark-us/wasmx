@@ -10,8 +10,8 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	testutil "wasmx/v1/testutil/wasmx"
-	"wasmx/v1/x/wasmx/types"
+	testutil "github.com/loredanacirstea/wasmx/v1/testutil/wasmx"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 var (

@@ -9,8 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"wasmx/v1/x/wasmx/types"
-	cchtypes "wasmx/v1/x/wasmx/types/contract_handler"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	cchtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types/contract_handler"
 )
 
 type msgServer struct {

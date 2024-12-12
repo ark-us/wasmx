@@ -37,10 +37,10 @@ import (
 
 	// "github.com/cosmos/gogoproto/proto"
 
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	menc "wasmx/v1/encoding"
-	networktypes "wasmx/v1/x/network/types"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
 )
 
 type StateSyncContext struct {

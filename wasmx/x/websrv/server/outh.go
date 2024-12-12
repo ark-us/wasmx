@@ -29,7 +29,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"wasmx/v1/x/websrv/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 )
 
 type SignMessage struct {

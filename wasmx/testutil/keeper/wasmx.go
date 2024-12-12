@@ -29,15 +29,15 @@ import (
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
-	"wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	config "wasmx/v1/config"
-	appencoding "wasmx/v1/encoding"
-	"wasmx/v1/multichain"
+	"github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	config "github.com/loredanacirstea/wasmx/v1/config"
+	appencoding "github.com/loredanacirstea/wasmx/v1/encoding"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
 
-	"wasmx/v1/x/wasmx/keeper"
-	"wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta) (*keeper.Keeper, sdk.Context) {

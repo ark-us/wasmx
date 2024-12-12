@@ -20,13 +20,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	app "wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	config "wasmx/v1/config"
-	appencoding "wasmx/v1/encoding"
-	"wasmx/v1/multichain"
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	app "github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	config "github.com/loredanacirstea/wasmx/v1/config"
+	appencoding "github.com/loredanacirstea/wasmx/v1/encoding"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 type (

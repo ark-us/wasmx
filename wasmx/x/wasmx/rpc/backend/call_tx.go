@@ -15,9 +15,9 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	config "wasmx/v1/config"
-	rpctypes "wasmx/v1/x/wasmx/rpc/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	config "github.com/loredanacirstea/wasmx/v1/config"
+	rpctypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 // GasPrice returns the current gas price

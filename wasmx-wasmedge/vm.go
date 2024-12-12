@@ -9,7 +9,7 @@ import (
 
 	"github.com/second-state/WasmEdge-go/wasmedge"
 
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var _ memc.IVm = (*WasmEdgeVm)(nil)

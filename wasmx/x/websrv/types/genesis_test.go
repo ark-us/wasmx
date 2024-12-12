@@ -3,7 +3,7 @@ package types_test
 import (
 	"testing"
 
-	"wasmx/v1/x/websrv/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 
 	"github.com/stretchr/testify/require"
 )

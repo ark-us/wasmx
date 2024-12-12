@@ -9,10 +9,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"golang.org/x/sync/errgroup"
 
-	"wasmx/v1/x/network/types"
-	"wasmx/v1/x/network/vmcrosschain"
-	"wasmx/v1/x/network/vmmc"
-	"wasmx/v1/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/v1/x/network/types"
+	"github.com/loredanacirstea/wasmx/v1/x/network/vmcrosschain"
+	"github.com/loredanacirstea/wasmx/v1/x/network/vmmc"
+	"github.com/loredanacirstea/wasmx/v1/x/network/vmp2p"
 )
 
 type (

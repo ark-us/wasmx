@@ -8,7 +8,7 @@ import (
 	cmtlibs "github.com/cometbft/cometbft/libs/bytes"
 	cmttypes "github.com/cometbft/cometbft/types"
 
-	mctx "wasmx/v1/context"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
 )
 
 var BLOCK_LAST_INDEX = "block_last_index"

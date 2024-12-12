@@ -57,24 +57,24 @@ import (
 
 	pvm "github.com/cometbft/cometbft/privval"
 
-	app "wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	mctx "wasmx/v1/context"
-	menc "wasmx/v1/encoding"
-	"wasmx/v1/multichain"
-	"wasmx/v1/server"
-	config "wasmx/v1/server/config"
-	websrvconfig "wasmx/v1/x/websrv/server/config"
-	websrvflags "wasmx/v1/x/websrv/server/flags"
+	app "github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
+	"github.com/loredanacirstea/wasmx/v1/server"
+	config "github.com/loredanacirstea/wasmx/v1/server/config"
+	websrvconfig "github.com/loredanacirstea/wasmx/v1/x/websrv/server/config"
+	websrvflags "github.com/loredanacirstea/wasmx/v1/x/websrv/server/flags"
 
-	jsonrpcconfig "wasmx/v1/x/wasmx/server/config"
-	jsonrpcflags "wasmx/v1/x/wasmx/server/flags"
+	jsonrpcconfig "github.com/loredanacirstea/wasmx/v1/x/wasmx/server/config"
+	jsonrpcflags "github.com/loredanacirstea/wasmx/v1/x/wasmx/server/flags"
 
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	networksrvflags "wasmx/v1/x/network/server/flags"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	networksrvflags "github.com/loredanacirstea/wasmx/v1/x/network/server/flags"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (

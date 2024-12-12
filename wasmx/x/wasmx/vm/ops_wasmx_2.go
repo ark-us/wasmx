@@ -14,12 +14,12 @@ import (
 	merkle "github.com/cometbft/cometbft/crypto/merkle"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 
-	mcodec "wasmx/v1/codec"
-	networktypes "wasmx/v1/x/network/types"
-	"wasmx/v1/x/wasmx/types"
-	mem "wasmx/v1/x/wasmx/vm/memory/common"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
-	vmtypes "wasmx/v1/x/wasmx/vm/types"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	networktypes "github.com/loredanacirstea/wasmx/v1/x/network/types"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	mem "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
+	vmtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/types"
 )
 
 func sha256(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {

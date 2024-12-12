@@ -11,9 +11,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mcfg "wasmx/v1/config"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	"wasmx/v1/x/websrv/types"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/websrv/types"
 )
 
 var _ types.QueryServer = &Keeper{}

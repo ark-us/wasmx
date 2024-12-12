@@ -23,11 +23,11 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
-	"wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	menc "wasmx/v1/encoding"
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	"github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // ChainIDPrefix defines the default chain ID prefix for Mythos test chains

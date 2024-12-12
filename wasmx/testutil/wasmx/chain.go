@@ -52,23 +52,23 @@ import (
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 	"github.com/cosmos/ibc-go/v8/testing/mock"
 
-	app "wasmx/v1/app"
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	mctx "wasmx/v1/context"
-	menc "wasmx/v1/encoding"
-	"wasmx/v1/server/config"
-	ibctesting "wasmx/v1/testutil/ibc"
-	"wasmx/v1/x/network/keeper"
-	"wasmx/v1/x/network/types"
-	wasmxkeeper "wasmx/v1/x/wasmx/keeper"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	app "github.com/loredanacirstea/wasmx/v1/app"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	mctx "github.com/loredanacirstea/wasmx/v1/context"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	"github.com/loredanacirstea/wasmx/v1/server/config"
+	ibctesting "github.com/loredanacirstea/wasmx/v1/testutil/ibc"
+	"github.com/loredanacirstea/wasmx/v1/x/network/keeper"
+	"github.com/loredanacirstea/wasmx/v1/x/network/types"
+	wasmxkeeper "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 
-	networkserver "wasmx/v1/x/network/server"
-	networkconfig "wasmx/v1/x/network/server/config"
+	networkserver "github.com/loredanacirstea/wasmx/v1/x/network/server"
+	networkconfig "github.com/loredanacirstea/wasmx/v1/x/network/server/config"
 
-	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions

@@ -1,7 +1,7 @@
 package types
 
 import (
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 var (

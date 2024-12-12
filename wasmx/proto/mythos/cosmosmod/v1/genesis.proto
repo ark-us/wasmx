@@ -13,7 +13,7 @@ import "mythos/cosmosmod/v1/gov_genesis.proto";
 import "mythos/cosmosmod/v1/auth_genesis.proto";
 import "mythos/cosmosmod/v1/distribution_genesis.proto";
 
-option go_package = "wasmx/v1/x/cosmosmod/types";
+option go_package = "github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types";
 
 // GenesisState defines the cosmosmod module's genesis state.
 message GenesisState {

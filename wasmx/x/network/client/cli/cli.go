@@ -36,14 +36,14 @@ import (
 
 	// "github.com/cosmos/cosmos-sdk/client/flags"
 
-	mcodec "wasmx/v1/codec"
-	mcfg "wasmx/v1/config"
-	menc "wasmx/v1/encoding"
-	"wasmx/v1/multichain"
-	"wasmx/v1/x/network/types"
-	wasmxcli "wasmx/v1/x/wasmx/client/cli"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	mcfg "github.com/loredanacirstea/wasmx/v1/config"
+	menc "github.com/loredanacirstea/wasmx/v1/encoding"
+	"github.com/loredanacirstea/wasmx/v1/multichain"
+	"github.com/loredanacirstea/wasmx/v1/x/network/types"
+	wasmxcli "github.com/loredanacirstea/wasmx/v1/x/wasmx/client/cli"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 const (

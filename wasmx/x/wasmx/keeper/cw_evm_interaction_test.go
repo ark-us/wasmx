@@ -14,10 +14,10 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	testdata "wasmx/v1/x/wasmx/keeper/testdata/classic"
-	interfacesTestdata "wasmx/v1/x/wasmx/keeper/testdata/interfaces"
-	"wasmx/v1/x/wasmx/types"
-	"wasmx/v1/x/wasmx/vm"
+	testdata "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper/testdata/classic"
+	interfacesTestdata "github.com/loredanacirstea/wasmx/v1/x/wasmx/keeper/testdata/interfaces"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/v1/x/wasmx/vm"
 )
 
 type AtomicSwapBalance struct {

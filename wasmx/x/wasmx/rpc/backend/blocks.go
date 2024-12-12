@@ -19,8 +19,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	rpctypes "wasmx/v1/x/wasmx/rpc/types"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	rpctypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/rpc/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 // BlockNumber returns the current block number in abci app state. Because abci

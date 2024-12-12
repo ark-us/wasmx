@@ -16,10 +16,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
 
-	cfg "wasmx/v1/config"
-	"wasmx/v1/x/network/types"
-	"wasmx/v1/x/network/vmcrosschain"
-	wasmxtypes "wasmx/v1/x/wasmx/types"
+	cfg "github.com/loredanacirstea/wasmx/v1/config"
+	"github.com/loredanacirstea/wasmx/v1/x/network/types"
+	"github.com/loredanacirstea/wasmx/v1/x/network/vmcrosschain"
+	wasmxtypes "github.com/loredanacirstea/wasmx/v1/x/wasmx/types"
 )
 
 // Any execution message can be wrapped with MsgMultiChainWrap to be executed on one

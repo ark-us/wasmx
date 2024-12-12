@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	memc "wasmx/v1/x/wasmx/vm/memory/common"
+	memc "github.com/loredanacirstea/wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 type SysContext struct {

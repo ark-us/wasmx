@@ -8,8 +8,8 @@ import (
 
 	runtime "github.com/loredanacirstea/wasmx-wasmedge"
 
-	"wasmx/v1/app"
-	cmd "wasmx/v1/cmdutils"
+	"github.com/loredanacirstea/wasmx/v1/app"
+	cmd "github.com/loredanacirstea/wasmx/v1/cmdutils"
 )
 
 func main() {

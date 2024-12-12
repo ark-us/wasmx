@@ -9,10 +9,10 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "wasmx/v1/codec"
-	networkkeeper "wasmx/v1/x/network/keeper"
+	mcodec "github.com/loredanacirstea/wasmx/v1/codec"
+	networkkeeper "github.com/loredanacirstea/wasmx/v1/x/network/keeper"
 
-	"wasmx/v1/x/cosmosmod/types"
+	"github.com/loredanacirstea/wasmx/v1/x/cosmosmod/types"
 )
 
 type (

@@ -10,7 +10,7 @@ import (
 
 	//nolint
 
-	wt "wasmx/v1/testutil/wasmx"
+	wt "github.com/loredanacirstea/wasmx/v1/testutil/wasmx"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions
