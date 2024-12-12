@@ -213,3 +213,24 @@ func FromInt32Slice(input []int32) []interface{} {
 	}
 	return result
 }
+
+var _ IWasmVmMeta = (*WasmRuntimeMockVmMeta)(nil)
+
+type WasmRuntimeMockVmMeta struct{}
+
+// When cgo is disabled at build time, this returns an error at runtime.
+func (WasmRuntimeMockVmMeta) LibVersion() string {
+	return "0"
+}
+
+func (WasmRuntimeMockVmMeta) NewWasmVm(ctx sdk.Context) IVm {
+	return nil
+}
+
+func (WasmRuntimeMockVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (WasmMeta, error) {
+	return nil, fmt.Errorf("runtime mock: AnalyzeWasm not implemented")
+}
+
+func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string) error {
+	return fmt.Errorf("runtime mock: AotCompile not implemented")
+}

@@ -17,9 +17,11 @@ import (
 	mapp "wasmx/v1/app"
 	mcfg "wasmx/v1/config"
 	"wasmx/v1/multichain"
+
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
-func NewResetChainData(appCreator types.AppCreator, defaultNodeHome string) *cobra.Command {
+func NewResetChainData(appCreator types.AppCreator, defaultNodeHome string, wasmVmMeta memc.IWasmVmMeta) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset-chain",
 		Short: "Reset subchain data",
@@ -57,7 +59,7 @@ $ %s reset-chain --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1
 				SvrCtx:          &sdkserver.Context{},
 				ClientCtx:       clientCtx,
 			}
-			_, appCreator := mapp.NewAppCreator(ctx.Logger, db, nil, ctx.Viper, g, goctx, apictx)
+			_, appCreator := mapp.NewAppCreator(wasmVmMeta, ctx.Logger, db, nil, ctx.Viper, g, goctx, apictx)
 
 			chainCfg, _ := mcfg.GetChainConfig(mcfg.MYTHOS_CHAIN_ID_TESTNET)
 			iapp := appCreator(subChainId, chainCfg)

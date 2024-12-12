@@ -24,10 +24,12 @@ import (
 	networktypes "wasmx/v1/x/network/types"
 	"wasmx/v1/x/network/vmp2p"
 	wasmxtypes "wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // newApp creates a new Cosmos SDK app
 func NewAppCreator(
+	wasmVmMeta memc.IWasmVmMeta,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -82,6 +84,7 @@ func NewAppCreator(
 			encodingConfig,
 			minGasPrices,
 			appOpts,
+			wasmVmMeta,
 			baseappOptions...,
 		)
 		bapps.SetApp(chainId, app)

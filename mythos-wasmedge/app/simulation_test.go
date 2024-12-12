@@ -16,6 +16,8 @@ import (
 	app "wasmx/v1/app"
 	mcfg "wasmx/v1/config"
 	multichain "wasmx/v1/multichain"
+
+	runtime "github.com/loredanacirstea/wasmx-wasmedge"
 )
 
 func init() {
@@ -52,7 +54,7 @@ func BenchmarkSimulation(b *testing.B) {
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	chainId := config.ChainID
-	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+	_, appCreator := app.NewAppCreator(runtime.WasmEdgeVmMeta{}, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, cfg)
 	app := iapp.(*app.App)
 

@@ -18,10 +18,11 @@ import (
 
 	"wasmx/v1/multichain"
 	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // NewProposalExecuteContractCmd returns a CLI command handler for executing any contract (public or internal)
-func NewProposalExecuteContractCmd(ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func NewProposalExecuteContractCmd(wasmVmMeta memc.IWasmVmMeta, ac sdkaddress.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "propose-execution [contract_address] [json_args]",
 		Args:    cobra.ExactArgs(2),
@@ -34,7 +35,7 @@ func NewProposalExecuteContractCmd(ac sdkaddress.Codec, appCreator multichain.Ne
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(wasmVmMeta, clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}

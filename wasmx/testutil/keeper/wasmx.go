@@ -37,10 +37,10 @@ import (
 
 	"wasmx/v1/x/wasmx/keeper"
 	"wasmx/v1/x/wasmx/types"
-	wasmedgeVm "wasmx/v1/x/wasmx/vm/wasmedge"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
-func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
+func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta) (*keeper.Keeper, sdk.Context) {
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
 	tStoreKey := storetypes.NewTransientStoreKey(types.TStoreKey)
@@ -72,7 +72,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
-	_, appCreator := app.NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+	_, appCreator := app.NewAppCreator(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, chainCfg)
 	mapp := iapp.(*app.App)
 
@@ -157,7 +157,7 @@ func WasmxKeeper(t testing.TB) (*keeper.Keeper, sdk.Context) {
 		consCodec,
 		addrCodec,
 		mapp,
-		wasmedgeVm.WasmEdgeVmMeta{},
+		wasmVmMeta,
 	)
 
 	ctx := sdk.NewContext(stateStore, tmproto.Header{}, false, log.NewNopLogger())

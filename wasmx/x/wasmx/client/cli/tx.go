@@ -24,6 +24,7 @@ import (
 	"wasmx/v1/multichain"
 	"wasmx/v1/x/wasmx/ioutils"
 	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 const (
@@ -51,7 +52,7 @@ const (
 )
 
 // GetTxCmd returns the transaction commands for this module
-func GetTxCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func GetTxCmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      fmt.Sprintf("%s transactions subcommands", types.ModuleName),
@@ -61,18 +62,18 @@ func GetTxCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Comm
 		SilenceUsage:               true,
 	}
 	txCmd.AddCommand(
-		StoreCodeCmd(ac, appCreator),
+		StoreCodeCmd(wasmVmMeta, ac, appCreator),
 		// DeployCmd(appCreator),
-		InstantiateContractCmd(ac, appCreator),
-		InstantiateContract2Cmd(ac, appCreator),
-		ExecuteContractCmd(ac, appCreator),
-		NewProposalExecuteContractCmd(ac, appCreator),
+		InstantiateContractCmd(wasmVmMeta, ac, appCreator),
+		InstantiateContract2Cmd(wasmVmMeta, ac, appCreator),
+		ExecuteContractCmd(wasmVmMeta, ac, appCreator),
+		NewProposalExecuteContractCmd(wasmVmMeta, ac, appCreator),
 	)
 	return txCmd
 }
 
 // StoreCodeCmd will upload code to be reused.
-func StoreCodeCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func StoreCodeCmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "store [wasm file]",
 		Short:   "Upload a wasm binary",
@@ -84,7 +85,7 @@ func StoreCodeCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.
 				return err
 			}
 
-			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(wasmVmMeta, clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
@@ -175,7 +176,7 @@ func ParseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddr
 // }
 
 // InstantiateContractCmd will instantiate a contract from previously uploaded code.
-func InstantiateContractCmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func InstantiateContractCmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "instantiate [code_id_int64] [json_encoded_init_args] --label [text] --admin [address,optional] --amount [coins,optional] ",
 		Short: "Instantiate a wasm contract",
@@ -192,7 +193,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(wasmVmMeta, clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
@@ -222,7 +223,7 @@ $ %s tx wasmx instantiate 1 '{"foo":"bar"}' --admin="$(%s keys show mykey -a)" \
 }
 
 // InstantiateContract2Cmd will instantiate a contract from previously uploaded code with predicable address generated
-func InstantiateContract2Cmd(ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func InstantiateContract2Cmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	decoder := NewArgDecoder(hex.DecodeString)
 	cmd := &cobra.Command{
 		Use: "instantiate2 [code_id_int64] [json_encoded_init_args] [salt] --label [text] --admin [address,optional] --amount [coins,optional] " +
@@ -244,7 +245,7 @@ $ %s tx wasmx instantiate2 1 '{"foo":"bar"}' $(echo -n "testing" | xxd -ps) --ad
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(wasmVmMeta, clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}
@@ -333,7 +334,7 @@ func parseInstantiateArgs(addrCodec address.Codec, rawCodeID, initMsg string, kr
 }
 
 // ExecuteContractCmd will instantiate a contract from previously uploaded code.
-func ExecuteContractCmd(_ address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func ExecuteContractCmd(wasmVmMeta memc.IWasmVmMeta, _ address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "execute [contract_addr_bech32] [json_encoded_send_args] --amount [coins,optional]",
 		Short:   "Execute a command on a wasm contract",
@@ -344,7 +345,7 @@ func ExecuteContractCmd(_ address.Codec, appCreator multichain.NewAppCreator) *c
 			if err != nil {
 				return err
 			}
-			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(wasmVmMeta, clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
 			if err != nil {
 				return err
 			}

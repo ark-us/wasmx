@@ -68,14 +68,16 @@ import (
 	networkconfig "wasmx/v1/x/network/server/config"
 
 	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	suite.Suite
-	chain    TestChain
-	chains   map[string]*TestChain
-	ChainIds []string
+	wasmVmMeta memc.IWasmVmMeta
+	chain      TestChain
+	chains     map[string]*TestChain
+	ChainIds   []string
 }
 
 type TestChain struct {
@@ -214,7 +216,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	}
 	// testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
 
-	testApp, genesisState, err := ibctesting.BuildGenesisData(valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance})
+	testApp, genesisState, err := ibctesting.BuildGenesisData(suite.wasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance})
 	require.NoError(t, err)
 	if strings.Contains(chainId, "level") {
 		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))

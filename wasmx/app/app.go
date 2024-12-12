@@ -174,14 +174,13 @@ import (
 
 	networkmoduletypes "wasmx/v1/x/network/types"
 
-	// wasmedgeVm "wasmx-wasmedge/runtime"
-	wazeroVm "github.com/loredanacirstea/wasmx-wazero/runtime"
-
 	wasmxmodule "wasmx/v1/x/wasmx"
 
 	wasmxmodulekeeper "wasmx/v1/x/wasmx/keeper"
 
 	wasmxmoduletypes "wasmx/v1/x/wasmx/types"
+
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 
 	networktypes "wasmx/v1/x/network/types"
 
@@ -344,6 +343,7 @@ func NewApp(
 	encodingConfig menc.EncodingConfig,
 	minGasPrices sdk.DecCoins,
 	appOpts servertypes.AppOptions,
+	wasmVmMeta memc.IWasmVmMeta,
 	baseAppOptions ...func(*baseapp.BaseApp),
 ) *App {
 	appCodec := encodingConfig.Marshaler
@@ -535,8 +535,7 @@ func NewApp(
 		consCodec,
 		addrCodec,
 		app,
-		// wasmedgeVm.WasmEdgeVmMeta{},
-		wazeroVm.WazeroVmMeta{},
+		wasmVmMeta,
 	)
 
 	app.NetworkKeeper = *networkmodulekeeper.NewKeeper(
@@ -548,7 +547,7 @@ func NewApp(
 		// TODO remove authority?
 		govAuthorityAddr,
 	)
-	networkModule := networkmodule.NewAppModule(appCodec, app.NetworkKeeper, app, NewAppCreator)
+	networkModule := networkmodule.NewAppModule(wasmVmMeta, appCodec, app.NetworkKeeper, app, NewAppCreator)
 
 	app.AccountKeeper = cosmosmodkeeper.NewKeeperAuth(
 		appCodec,
@@ -588,7 +587,7 @@ func NewApp(
 	app.WasmxKeeper.SetAccountKeeper(app.AccountKeeper)
 	app.WasmxKeeper.SetBankKeeper(app.BankKeeper)
 	app.WasmxKeeper.SetContractHandlerMap()
-	wasmxModule := wasmxmodule.NewAppModule(appCodec, appCodec, app.WasmxKeeper, NewAppCreator)
+	wasmxModule := wasmxmodule.NewAppModule(wasmVmMeta, appCodec, appCodec, app.WasmxKeeper, NewAppCreator)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(
 		runtime.NewKVStoreService(keys[authzStoreKey]),
@@ -653,7 +652,7 @@ func NewApp(
 		govAuthorityAddr,
 		addrCodec,
 	)
-	cosmosmodModule := cosmosmod.NewAppModule(appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, *app.SlashingKeeper, *app.DistrKeeper, app, addrCodec, NewAppCreator)
+	cosmosmodModule := cosmosmod.NewAppModule(wasmVmMeta, appCodec, appCodec, *app.BankKeeper, *app.StakingKeeper, *app.GovKeeper, *app.AccountKeeper, *app.SlashingKeeper, *app.DistrKeeper, app, addrCodec, NewAppCreator)
 
 	// TODO remove
 	app.MintKeeper = mintkeeper.NewKeeper(

@@ -28,6 +28,7 @@ import (
 	"wasmx/v1/x/wasmx/client/cli"
 	"wasmx/v1/x/wasmx/keeper"
 	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (
@@ -41,14 +42,15 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
+	wasmVmMeta memc.IWasmVmMeta
 	cdc        codec.BinaryCodec
 	ccdc       codec.Codec
 	addrCodec  cdcaddress.Codec
 	appCreator multichain.NewAppCreator
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc, ccdc: ccdc, addrCodec: addrCodec, appCreator: appCreator}
+func NewAppModuleBasic(wasmVmMeta memc.IWasmVmMeta, cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
+	return AppModuleBasic{wasmVmMeta: wasmVmMeta, cdc: cdc, ccdc: ccdc, addrCodec: addrCodec, appCreator: appCreator}
 }
 
 // Name returns the name of the module as a string
@@ -91,12 +93,12 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
 func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd(a.ccdc.InterfaceRegistry().SigningContext().AddressCodec(), a.appCreator)
+	return cli.GetTxCmd(a.wasmVmMeta, a.ccdc.InterfaceRegistry().SigningContext().AddressCodec(), a.appCreator)
 }
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this root command are used by end-users to generate new queries to the subset of the state defined by the module
 func (a AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd(types.StoreKey, a.ccdc.InterfaceRegistry().SigningContext().AddressCodec())
+	return cli.GetQueryCmd(a.wasmVmMeta, types.StoreKey, a.ccdc.InterfaceRegistry().SigningContext().AddressCodec())
 }
 
 // ----------------------------------------------------------------------------
@@ -111,13 +113,14 @@ type AppModule struct {
 }
 
 func NewAppModule(
+	wasmVmMeta memc.IWasmVmMeta,
 	cdc codec.Codec,
 	ccdc codec.Codec,
 	keeper keeper.Keeper,
 	appCreator multichain.NewAppCreator,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc, ccdc, keeper.AddressCodec(), appCreator),
+		AppModuleBasic: NewAppModuleBasic(wasmVmMeta, cdc, ccdc, keeper.AddressCodec(), appCreator),
 		keeper:         keeper,
 	}
 }

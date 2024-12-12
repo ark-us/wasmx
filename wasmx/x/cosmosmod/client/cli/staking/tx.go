@@ -26,6 +26,7 @@ import (
 
 	mcodec "wasmx/v1/codec"
 	"wasmx/v1/multichain"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // default values
@@ -35,7 +36,7 @@ var (
 )
 
 // NewTxCmd returns a root CLI command handler for all x/staking transaction commands.
-func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func NewTxCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	stakingTxCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Staking transaction subcommands",
@@ -45,7 +46,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreato
 	}
 
 	stakingTxCmd.AddCommand(
-		NewCreateValidatorCmd(valAddrCodec, ac, appCreator),
+		NewCreateValidatorCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
 		NewEditValidatorCmd(valAddrCodec, ac),
 		NewDelegateCmd(valAddrCodec, ac),
 		NewRedelegateCmd(valAddrCodec, ac),
@@ -57,7 +58,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreato
 }
 
 // NewCreateValidatorCmd returns a CLI command handler for creating a MsgCreateValidator transaction.
-func NewCreateValidatorCmd(valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
+func NewCreateValidatorCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-validator [path/to/validator.json]",
 		Short: "create new validator initialized with a self-delegation to it",
@@ -99,7 +100,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 			customValCdc := mcodec.NewValBech32Codec(mcctx.Config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
-			_, appCreator := createMockAppCreator(appFactory, 0)
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 
 			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())

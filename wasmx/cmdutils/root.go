@@ -1,4 +1,4 @@
-package main
+package cmdutils
 
 import (
 	"context"
@@ -66,10 +66,11 @@ import (
 	networktypes "wasmx/v1/x/network/types"
 	"wasmx/v1/x/network/vmp2p"
 	wasmxtypes "wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
-func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
+func NewRootCmd(wasmVmMeta memc.IWasmVmMeta) (*cobra.Command, appencoding.EncodingConfig) {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
 	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
@@ -111,6 +112,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		nil, true, make(map[int64]bool, 0),
 		cast.ToString(tempOpts.Get(flags.FlagHome)),
 		cast.ToUint(tempOpts.Get(sdkserver.FlagInvCheckPeriod)), chainCfg, encodingConfig, nil, appOpts,
+		wasmVmMeta,
 		// tempBaseappOptions...,
 		// baseapp.SetChainID(mcfg.MYTHOS_CHAIN_ID_TESTNET),
 		baseappOptions...,
@@ -170,7 +172,7 @@ func NewRootCmd() (*cobra.Command, appencoding.EncodingConfig) {
 		ClientCtx:       initClientCtx,
 	}
 
-	initRootCmd(rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx)
+	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx)
 
 	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
@@ -200,6 +202,7 @@ func initTendermintConfig() *tmcfg.Config {
 var MigrationMap = genutiltypes.MigrationMap{}
 
 func initRootCmd(
+	wasmVmMeta memc.IWasmVmMeta,
 	rootCmd *cobra.Command,
 	encodingConfig appencoding.EncodingConfig,
 	basicManager module.BasicManager,
@@ -211,6 +214,7 @@ func initRootCmd(
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
 	a := appCreator{
+		wasmVmMeta,
 		encodingConfig,
 		g,
 		ctx,
@@ -233,7 +237,7 @@ func initRootCmd(
 		genutilcli.ValidateGenesisCmd(basicManager),
 		AddGenesisAccountCmd(app.DefaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
-		NewTestnetCmd(basicManager, cosmosmodtypes.GenesisBalancesIterator{}),
+		NewTestnetCmd(wasmVmMeta, basicManager, cosmosmodtypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
 		confixcmd.ConfigCommand(),
 		pruning.Cmd(a.newApp, app.DefaultNodeHome),
@@ -247,6 +251,7 @@ func initRootCmd(
 		a.newApp,
 		a.appExport,
 		addModuleInitFlags,
+		wasmVmMeta,
 	)
 	extendUnsafeResetAllCmd(rootCmd)
 
@@ -344,6 +349,7 @@ func overwriteFlagDefaults(c *cobra.Command, defaults map[string]string) {
 }
 
 type appCreator struct {
+	wasmVmMeta     memc.IWasmVmMeta
 	encodingConfig appencoding.EncodingConfig
 	g              *errgroup.Group
 	ctx            context.Context
@@ -359,7 +365,7 @@ func (a appCreator) newApp(
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
-	_, appCreator := app.NewAppCreator(logger, db, traceStore, appOpts.(multichain.AppOptions), a.g, a.ctx, a.apictx)
+	_, appCreator := app.NewAppCreator(a.wasmVmMeta, logger, db, traceStore, appOpts.(multichain.AppOptions), a.g, a.ctx, a.apictx)
 
 	chainId := mcfg.GetChainId(appOpts)
 	registryId := cast.ToString(appOpts.Get(multichain.FlagRegistryChainId))
@@ -426,6 +432,7 @@ func (a appCreator) appExport(
 		a.encodingConfig,
 		minGasPrices,
 		appOpts,
+		a.wasmVmMeta,
 	)
 
 	if height != -1 {

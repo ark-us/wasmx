@@ -22,6 +22,7 @@ import (
 	mctx "wasmx/v1/context"
 	menc "wasmx/v1/encoding"
 	srvconfig "wasmx/v1/server/config"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // DefaultAppOptions is a stub implementing AppOptions
@@ -59,7 +60,7 @@ func (*MockApiCtx) StartChainApis(
 	return nil, nil, client.Context{}, nil, nil, nil, fmt.Errorf("ApiCtx.StartChainApis not implemented")
 }
 
-func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func CreateMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	// level := "x/wasmx:debug,*:info"
 	level := "error"
 	filter, _ := ParseLogLevel(level)
@@ -80,10 +81,10 @@ func CreateMockAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcf
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
+	return appCreatorFactory(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
 }
 
-func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func CreateNoLoggerAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	logger := log.NewNopLogger()
 	db := dbm.NewMemDB()
 	appOpts := DefaultAppOptions{}
@@ -95,16 +96,16 @@ func CreateNoLoggerAppCreator(appCreatorFactory NewAppCreator, homeDir string) (
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
+	return appCreatorFactory(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
 }
 
-func CreateNoLoggerAppCreatorTemp(appCreatorFactory NewAppCreator, index int64) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func CreateNoLoggerAppCreatorTemp(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, index int64) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
 	tempNodeHome := filepath.Join(userHomeDir, fmt.Sprintf(".mythostmp_%d", index))
-	return CreateNoLoggerAppCreator(appCreatorFactory, tempNodeHome)
+	return CreateNoLoggerAppCreator(wasmVmMeta, appCreatorFactory, tempNodeHome)
 }
 
 func GetTestCtx(logger log.Logger, block bool) (*errgroup.Group, context.Context, context.CancelFunc) {

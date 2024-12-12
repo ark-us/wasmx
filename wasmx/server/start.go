@@ -66,13 +66,14 @@ import (
 	mcfg "wasmx/v1/config"
 	mctx "wasmx/v1/context"
 	menc "wasmx/v1/encoding"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var flagSameMachineNodeIndex = "same-machine-node-index"
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
 // Tendermint.
-func StartCmd(appCreator servertypes.AppCreator, defaultNodeHome string) *cobra.Command {
+func StartCmd(wasmVmMeta memc.IWasmVmMeta, appCreator servertypes.AppCreator, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Run the full node",
@@ -145,7 +146,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			serverCtx.Logger.Info("starting ABCI with WasmX Tendermint")
 
 			// amino is needed here for backwards compatibility of REST routes
-			return startInProcess(serverCtx, clientCtx, appCreator)
+			return startInProcess(wasmVmMeta, serverCtx, clientCtx, appCreator)
 		},
 	}
 
@@ -214,7 +215,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	return cmd
 }
 
-func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
+func startStandAlone(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, _ servertypes.AppCreator) error {
 	addr := svrCtx.Viper.GetString(srvflags.Address)
 	transport := svrCtx.Viper.GetString(srvflags.Transport)
 	home := svrCtx.Viper.GetString(flags.FlagHome)
@@ -245,6 +246,7 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 	}
 
 	bapps, appCreator := mapp.NewAppCreator(
+		wasmVmMeta,
 		svrCtx.Logger,
 		db,
 		traceWriter,
@@ -309,7 +311,7 @@ func startStandAlone(svrCtx *server.Context, _ servertypes.AppCreator) error {
 }
 
 // legacyAminoCdc is used for the legacy REST API
-func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ servertypes.AppCreator) (err error) {
+func startInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientCtx client.Context, _ servertypes.AppCreator) (err error) {
 	tndcfg := svrCtx.Config
 	home := tndcfg.RootDir
 	logger := svrCtx.Logger
@@ -454,6 +456,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, _ serverty
 	}
 
 	multiapp, appCreator := mapp.NewAppCreator(
+		wasmVmMeta,
 		logger,
 		db,
 		traceWriter,

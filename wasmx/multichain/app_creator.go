@@ -11,6 +11,7 @@ import (
 
 	mcfg "wasmx/v1/config"
 	menc "wasmx/v1/encoding"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 type AppOptions interface {
@@ -19,6 +20,7 @@ type AppOptions interface {
 }
 
 type NewAppCreator = func(
+	wasmVmMeta memc.IWasmVmMeta,
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,

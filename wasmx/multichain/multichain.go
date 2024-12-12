@@ -26,6 +26,7 @@ import (
 	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
 	networktypes "wasmx/v1/x/network/types"
 	wasmxtypes "wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var FlagRegistryChainId = "registry-chain-id"
@@ -49,6 +50,7 @@ type CliMultiChainCtx struct {
 }
 
 func MultiChainCtxByChainIdWithAppMsgs(
+	wasmVmMeta memc.IWasmVmMeta,
 	clientCtx client.Context,
 	flags *flag.FlagSet,
 	customSigners []signing.CustomGetSigner,
@@ -63,7 +65,7 @@ func MultiChainCtxByChainIdWithAppMsgs(
 		return &CliMultiChainCtx{}, fmt.Errorf("registry chainId: %s", err)
 	}
 	clientCtx, customAddrCodec, config, err := MultiChainCtx(clientCtx, customSigners, subchainId, registryId)
-	_, appCreator := CreateNoLoggerAppCreatorTemp(appCreatorFactory, 0)
+	_, appCreator := CreateNoLoggerAppCreatorTemp(wasmVmMeta, appCreatorFactory, 0)
 	isubchainapp := appCreator(subchainId, config)
 	subchainapp := isubchainapp.(AppwithTxConfig)
 

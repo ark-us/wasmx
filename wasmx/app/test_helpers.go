@@ -32,10 +32,11 @@ import (
 	menc "wasmx/v1/encoding"
 	"wasmx/v1/multichain"
 	srvconfig "wasmx/v1/server/config"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // DefaultTestingAppInit defines the IBC application used for testing
-var DefaultTestingAppInit func(chainId string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
+var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 
 // DefaultTestingConsensusParams defines the default Tendermint consensus params used in
 // Mythos testing.
@@ -61,6 +62,7 @@ var DefaultTestingConsensusParams = &tmproto.ConsensusParams{
 
 // Setup initializes a new Mythos. A Nop logger is set in Mythos.
 func SetupApp(
+	wasmVmMeta memc.IWasmVmMeta,
 	isCheckTx bool,
 ) *App {
 	chainId := config.MYTHOS_CHAIN_ID_TEST
@@ -68,7 +70,7 @@ func SetupApp(
 	if err != nil {
 		panic(err)
 	}
-	_, appCreator := multichain.CreateMockAppCreator(NewAppCreator, DefaultNodeHome)
+	_, appCreator := multichain.CreateMockAppCreator(wasmVmMeta, NewAppCreator, DefaultNodeHome)
 	iapp := appCreator(chainId, chainCfg)
 	app := iapp.(*App)
 
@@ -97,71 +99,73 @@ func SetupApp(
 }
 
 // SetupTestingApp initializes the IBC-go testing application
-func SetupTestingApp(chainID string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) {
-	_, appCreator := multichain.CreateMockAppCreator(NewAppCreator, DefaultNodeHome+strconv.Itoa(int(index)))
+func SetupTestingApp(wasmVmMeta memc.IWasmVmMeta, chainID string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) {
+	_, appCreator := multichain.CreateMockAppCreator(wasmVmMeta, NewAppCreator, DefaultNodeHome+strconv.Itoa(int(index)))
 	iapp := appCreator(chainID, chainCfg)
 	app := iapp.(*App)
 	return app, app.DefaultGenesis()
 }
 
 // NewTestNetworkFixture returns a new simapp AppConstructor for network simulation tests
-func NewTestNetworkFixture() network.TestFixture {
-	dir, err := os.MkdirTemp("", "mythos")
-	if err != nil {
-		panic(fmt.Sprintf("failed creating temporary directory: %v", err))
-	}
-	defer os.RemoveAll(dir)
+func NewTestNetworkFixture(wasmVmMeta memc.IWasmVmMeta) func() network.TestFixture {
+	return func() network.TestFixture {
+		dir, err := os.MkdirTemp("", "mythos")
+		if err != nil {
+			panic(fmt.Sprintf("failed creating temporary directory: %v", err))
+		}
+		defer os.RemoveAll(dir)
 
-	db := dbm.NewMemDB()
-	logger := log.NewNopLogger()
-	chainId := config.MYTHOS_CHAIN_ID_TEST
-	appOpts := multichain.DefaultAppOptions{}
-	appOpts.Set(flags.FlagHome, DefaultNodeHome)
-	appOpts.Set(flags.FlagChainID, chainId)
-	appOpts.Set(sdkserver.FlagInvCheckPeriod, 5)
-	appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
-	appOpts.Set(sdkserver.FlagMinGasPrices, "")
-	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
-	g, goctx, _ := multichain.GetTestCtx(logger, true)
+		db := dbm.NewMemDB()
+		logger := log.NewNopLogger()
+		chainId := config.MYTHOS_CHAIN_ID_TEST
+		appOpts := multichain.DefaultAppOptions{}
+		appOpts.Set(flags.FlagHome, DefaultNodeHome)
+		appOpts.Set(flags.FlagChainID, chainId)
+		appOpts.Set(sdkserver.FlagInvCheckPeriod, 5)
+		appOpts.Set(sdkserver.FlagUnsafeSkipUpgrades, 0)
+		appOpts.Set(sdkserver.FlagMinGasPrices, "")
+		appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
+		g, goctx, _ := multichain.GetTestCtx(logger, true)
 
-	chainCfg, err := config.GetChainConfig(chainId)
-	if err != nil {
-		panic(err)
-	}
-	_, appCreator := NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
-	iapp := appCreator(chainId, chainCfg)
-	app := iapp.(*App)
-
-	appCtr := func(val network.ValidatorI) servertypes.Application {
-		chainId := val.GetCtx().Viper.GetString(flags.FlagChainID)
 		chainCfg, err := config.GetChainConfig(chainId)
 		if err != nil {
 			panic(err)
 		}
-		gasPricesStr := val.GetAppConfig().MinGasPrices
-		// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
-		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
-		appOpts.Set(flags.FlagChainID, chainId)
-		appOpts.Set(sdkserver.FlagMinGasPrices, gasPricesStr)
-		appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
-		appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
-		// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
-
-		_, appCreator := NewAppCreator(val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+		_, appCreator := NewAppCreator(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 		iapp := appCreator(chainId, chainCfg)
 		app := iapp.(*App)
-		return app
-	}
 
-	return network.TestFixture{
-		AppConstructor: appCtr,
-		GenesisState:   app.DefaultGenesis(),
-		EncodingConfig: testutil.TestEncodingConfig{
-			InterfaceRegistry: app.InterfaceRegistry(),
-			Codec:             app.AppCodec(),
-			TxConfig:          app.TxConfig(),
-			Amino:             app.LegacyAmino(),
-		},
+		appCtr := func(val network.ValidatorI) servertypes.Application {
+			chainId := val.GetCtx().Viper.GetString(flags.FlagChainID)
+			chainCfg, err := config.GetChainConfig(chainId)
+			if err != nil {
+				panic(err)
+			}
+			gasPricesStr := val.GetAppConfig().MinGasPrices
+			// appOpts := simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir)
+			appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
+			appOpts.Set(flags.FlagChainID, chainId)
+			appOpts.Set(sdkserver.FlagMinGasPrices, gasPricesStr)
+			appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
+			appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
+			// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
+
+			_, appCreator := NewAppCreator(wasmVmMeta, val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+			iapp := appCreator(chainId, chainCfg)
+			app := iapp.(*App)
+			return app
+		}
+
+		return network.TestFixture{
+			AppConstructor: appCtr,
+			GenesisState:   app.DefaultGenesis(),
+			EncodingConfig: testutil.TestEncodingConfig{
+				InterfaceRegistry: app.InterfaceRegistry(),
+				Codec:             app.AppCodec(),
+				TxConfig:          app.TxConfig(),
+				Amino:             app.LegacyAmino(),
+			},
+		}
 	}
 }
 

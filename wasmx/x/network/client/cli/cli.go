@@ -43,6 +43,7 @@ import (
 	"wasmx/v1/x/network/types"
 	wasmxcli "wasmx/v1/x/wasmx/client/cli"
 	wasmxtypes "wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 const (
@@ -57,7 +58,7 @@ type appwithTxConfig interface {
 	InterfaceRegistry() codectypes.InterfaceRegistry
 }
 
-func GetTxCmd(appCreator multichain.NewAppCreator) *cobra.Command {
+func GetTxCmd(wasmVmMeta memc.IWasmVmMeta, appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        "multichain",
 		Short:                      "multichain transaction subcommands",
@@ -67,11 +68,11 @@ func GetTxCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 	}
 
 	txCmd.AddCommand(
-		AtomicTxExecuteCmd(appCreator),
+		AtomicTxExecuteCmd(wasmVmMeta, appCreator),
 		RegisterNewSubChain(),
-		RegisterSubChainValidator(appCreator),
+		RegisterSubChainValidator(wasmVmMeta, appCreator),
 		InitializeSubChain(),
-		RegisterLobbyGenTx(appCreator),
+		RegisterLobbyGenTx(wasmVmMeta, appCreator),
 	)
 
 	return txCmd
@@ -98,7 +99,7 @@ func GetQueryCmd(appCreator multichain.NewAppCreator) *cobra.Command {
 	return txCmd
 }
 
-func AtomicTxExecuteCmd(appFactory multichain.NewAppCreator) *cobra.Command {
+func AtomicTxExecuteCmd(wasmVmMeta memc.IWasmVmMeta, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "atomic [path/to/atomictx.json] [comma_separated_chainIds]",
 		Short:   "Execute an atomic transaction between chains",
@@ -134,7 +135,7 @@ Where atomictx.json contains:
 			if err != nil {
 				return fmt.Errorf("subchainId: %s", err)
 			}
-			_, appCreator := createMockAppCreator(appFactory, 0)
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
 			isubchainapp := appCreator(subchainId, mcctx.Config)
 			subchainapp := isubchainapp.(appwithTxConfig)
 			subtxconfig := subchainapp.TxConfig()
@@ -172,7 +173,7 @@ Where atomictx.json contains:
 				}
 				chainConfigs[i] = *chainConfig
 
-				_, subappCreator := createMockAppCreator(appFactory, i+1)
+				_, subappCreator := createMockAppCreator(wasmVmMeta, appFactory, i+1)
 				isubchainapp_ := subappCreator(chainId, chainConfig)
 				subchainapp_ := isubchainapp_.(appwithTxConfig)
 				subtxconfig_ := subchainapp_.TxConfig()
@@ -353,7 +354,7 @@ $ %s tx multichain register-subchain mythos myt 18 1 "10000000000" --chain-id="l
 	return cmd
 }
 
-func RegisterSubChainValidator(appCreator multichain.NewAppCreator) *cobra.Command {
+func RegisterSubChainValidator(wasmVmMeta memc.IWasmVmMeta, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "register-subchain-validator [subchain_id] [path/to/validator.json]",
 		Short: "Register subchain validator",
@@ -407,7 +408,7 @@ Where validator.json contains:
 			if err != nil {
 				return err
 			}
-			signedGenTxData, err := signGenTxData(appCreator, mcctx.ClientCtx, flags, mcctx.CustomAddrCodec, chainId, subChainId, genTxData, sender)
+			signedGenTxData, err := signGenTxData(wasmVmMeta, appCreator, mcctx.ClientCtx, flags, mcctx.CustomAddrCodec, chainId, subChainId, genTxData, sender)
 			if err != nil {
 				return err
 			}
@@ -444,7 +445,7 @@ Where validator.json contains:
 	return cmd
 }
 
-func RegisterLobbyGenTx(appCreator multichain.NewAppCreator) *cobra.Command {
+func RegisterLobbyGenTx(wasmVmMeta memc.IWasmVmMeta, appCreator multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "register-subchain-gentx [path/to/validator.json]",
 		Short: "Register subchain gentx for lobby contract deployed on the provided subchain",
@@ -497,7 +498,7 @@ Where validator.json contains:
 				return err
 			}
 
-			signedGenTxData, err := signGenTxDataLobby(appCreator, mcctx.ClientCtx, flags, mcctx.CustomAddrCodec, chainId, genTxData, sender)
+			signedGenTxData, err := signGenTxDataLobby(wasmVmMeta, appCreator, mcctx.ClientCtx, flags, mcctx.CustomAddrCodec, chainId, genTxData, sender)
 			if err != nil {
 				return err
 			}
@@ -1275,6 +1276,7 @@ func decodeQueryResponse(resp []byte) ([]byte, error) {
 }
 
 func signGenTxData(
+	wasmVmMeta memc.IWasmVmMeta,
 	appCreatorFactory multichain.NewAppCreator,
 	clientCtx client.Context,
 	flags *flag.FlagSet,
@@ -1319,7 +1321,7 @@ func signGenTxData(
 	if err != nil {
 		return nil, err
 	}
-	return signGenTxDataInternal(appCreatorFactory, clientCtx, flags, subChainId, genTxData, sender, subchainConfig)
+	return signGenTxDataInternal(wasmVmMeta, appCreatorFactory, clientCtx, flags, subChainId, genTxData, sender, subchainConfig)
 }
 
 type ChainConfigData struct {
@@ -1328,6 +1330,7 @@ type ChainConfigData struct {
 }
 
 func signGenTxDataLobby(
+	wasmVmMeta memc.IWasmVmMeta,
 	appCreatorFactory multichain.NewAppCreator,
 	clientCtx client.Context,
 	flags *flag.FlagSet,
@@ -1366,10 +1369,11 @@ func signGenTxDataLobby(
 	if err != nil {
 		return nil, err
 	}
-	return signGenTxDataInternal(appCreatorFactory, clientCtx, flags, subchainConfig.ChainId, genTxData, sender, subchainConfig.ChainConfig)
+	return signGenTxDataInternal(wasmVmMeta, appCreatorFactory, clientCtx, flags, subchainConfig.ChainId, genTxData, sender, subchainConfig.ChainConfig)
 }
 
 func signGenTxDataInternal(
+	wasmVmMeta memc.IWasmVmMeta,
 	appCreatorFactory multichain.NewAppCreator,
 	clientCtx client.Context,
 	flags *flag.FlagSet,
@@ -1379,7 +1383,7 @@ func signGenTxDataInternal(
 	subchainConfig menc.ChainConfig,
 ) ([]byte, error) {
 
-	_, appCreator := createMockAppCreator(appCreatorFactory, 0)
+	_, appCreator := createMockAppCreator(wasmVmMeta, appCreatorFactory, 0)
 	isubchainapp := appCreator(subChainId, &subchainConfig)
 	subchainapp := isubchainapp.(appwithTxConfig)
 
@@ -1510,11 +1514,11 @@ func signTxWithSignerData(
 	return txbuilder, nil
 }
 
-func createMockAppCreator(appCreatorFactory multichain.NewAppCreator, index int) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func createMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory multichain.NewAppCreator, index int) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
 	tempNodeHome := filepath.Join(userHomeDir, fmt.Sprintf(".mythostmp_%d", index))
-	return multichain.CreateNoLoggerAppCreator(appCreatorFactory, tempNodeHome)
+	return multichain.CreateNoLoggerAppCreator(wasmVmMeta, appCreatorFactory, tempNodeHome)
 }

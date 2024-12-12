@@ -27,6 +27,7 @@ import (
 	mcodec "wasmx/v1/codec"
 	menc "wasmx/v1/encoding"
 	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // ChainIDPrefix defines the default chain ID prefix for Mythos test chains
@@ -44,7 +45,7 @@ func init() {
 //
 // Time management is handled by the Coordinator in order to ensure synchrony between chains.
 // Each update of any chain increments the block header time for all chains by 5 seconds.
-func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string, chaincfg menc.ChainConfig, index int32) *ibcgotesting.TestChain {
+func NewTestChain(t *testing.T, wasmVmMeta memc.IWasmVmMeta, coord *ibcgotesting.Coordinator, chainID string, chaincfg menc.ChainConfig, index int32) *ibcgotesting.TestChain {
 	// generate validator private/public key
 	privVal := mock.NewPV()
 	pubKey, err := privVal.GetPubKey()
@@ -72,7 +73,7 @@ func NewTestChain(t *testing.T, coord *ibcgotesting.Coordinator, chainID string,
 		Coins:   sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, amount)),
 	}
 
-	app, _ := SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainID, chaincfg, index, balance)
+	app, _ := SetupWithGenesisValSet(t, wasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainID, chaincfg, index, balance)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
 

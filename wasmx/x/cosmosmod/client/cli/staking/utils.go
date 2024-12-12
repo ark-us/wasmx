@@ -19,6 +19,7 @@ import (
 	mcfg "wasmx/v1/config"
 	menc "wasmx/v1/encoding"
 	"wasmx/v1/multichain"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // validator struct to define the fields of the validator
@@ -131,11 +132,11 @@ func buildCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (commiss
 	return commission, nil
 }
 
-func createMockAppCreator(appCreatorFactory multichain.NewAppCreator, index int) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func createMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory multichain.NewAppCreator, index int) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
 	tempNodeHome := filepath.Join(userHomeDir, fmt.Sprintf(".mythostmp_%d", index))
-	return multichain.CreateNoLoggerAppCreator(appCreatorFactory, tempNodeHome)
+	return multichain.CreateNoLoggerAppCreator(wasmVmMeta, appCreatorFactory, tempNodeHome)
 }

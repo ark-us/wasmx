@@ -1,4 +1,4 @@
-package main
+package cmdutils
 
 // DONTCOVER
 
@@ -74,7 +74,7 @@ import (
 	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
 	networksrvflags "wasmx/v1/x/network/server/flags"
 	wasmxtypes "wasmx/v1/x/wasmx/types"
-	// "wasmx/v1/testutil/network"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (
@@ -147,7 +147,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
 // validator configuration files for running a multi-validator testnet in a separate process
-func NewTestnetCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
+func NewTestnetCmd(wasmVmMeta memc.IWasmVmMeta, mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
 	testnetCmd := &cobra.Command{
 		Use:                        "testnet",
 		Short:                      "subcommands for starting or configuring local testnets",
@@ -156,16 +156,16 @@ func NewTestnetCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.Genesi
 		RunE:                       client.ValidateCmd,
 	}
 
-	testnetCmd.AddCommand(testnetStartCmd())
-	testnetCmd.AddCommand(testnetInitFilesCmd(mbm, genBalIterator))
-	testnetCmd.AddCommand(testnetAddNodeCmd(mbm, genBalIterator))
+	testnetCmd.AddCommand(testnetStartCmd(wasmVmMeta))
+	testnetCmd.AddCommand(testnetInitFilesCmd(wasmVmMeta, mbm, genBalIterator))
+	testnetCmd.AddCommand(testnetAddNodeCmd(wasmVmMeta, mbm, genBalIterator))
 	testnetCmd.AddCommand(testnetCreateHierarchyCmd(mbm, genBalIterator))
 
 	return testnetCmd
 }
 
 // get cmd to initialize all files for tendermint testnet and application
-func testnetInitFilesCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
+func testnetInitFilesCmd(wasmVmMeta memc.IWasmVmMeta, mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init-files",
 		Short: "Initialize config directories & files for a multi-validator testnet running locally via separate processes (e.g. Docker Compose or similar)",
@@ -204,7 +204,7 @@ Example:
 			args.minLevelValidators, _ = cmd.Flags().GetInt(flagMinLevelValidators)
 			args.enableEIDCheck, _ = cmd.Flags().GetBool(flagEnableEIDCheck)
 			args.initialChains, _ = cmd.Flags().GetStringSlice(networksrvflags.NetworkInitialChains)
-			return initTestnetFiles(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
+			return initTestnetFiles(wasmVmMeta, clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
 		},
 	}
 
@@ -219,7 +219,7 @@ Example:
 	return cmd
 }
 
-func testnetAddNodeCmd(mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
+func testnetAddNodeCmd(wasmVmMeta memc.IWasmVmMeta, mbm module.BasicManager, genBalIterator cosmosmodtypes.GenesisBalancesIterator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add-node [node_index] [leader_uri]",
 		Args:  cobra.ExactArgs(2),
@@ -259,7 +259,7 @@ Example:
 			}
 			leaderURI := args_[1]
 
-			return testnetAddNode(clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args, nodeIndex, leaderURI)
+			return testnetAddNode(wasmVmMeta, clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args, nodeIndex, leaderURI)
 		},
 	}
 
@@ -276,7 +276,7 @@ Example:
 }
 
 // get cmd to start multi validator in-process testnet
-func testnetStartCmd() *cobra.Command {
+func testnetStartCmd(wasmVmMeta memc.IWasmVmMeta) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Launch an in-process multi-validator testnet",
@@ -306,7 +306,7 @@ Example:
 			args.jsonRpcWsAddress, _ = cmd.Flags().GetString(jsonrpcflags.JsonRpcWsAddress)
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 
-			return startTestnet(cmd, args)
+			return startTestnet(cmd, args, wasmVmMeta)
 		},
 	}
 
@@ -397,6 +397,7 @@ const p2pListenAddressMulti = 8090
 
 // initTestnetFiles initializes testnet files for a testnet to be run in a separate process
 func initTestnetFiles(
+	wasmVmMeta memc.IWasmVmMeta,
 	clientCtx client.Context,
 	cmd *cobra.Command,
 	nodeConfig *tmconfig.Config,
@@ -406,10 +407,11 @@ func initTestnetFiles(
 ) error {
 	os.RemoveAll(args.outputDir)
 	os.MkdirAll(args.outputDir, nodeDirPerm)
-	return initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, 0, "")
+	return initTestnetFilesInternal(wasmVmMeta, clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, 0, "")
 }
 
 func testnetAddNode(
+	wasmVmMeta memc.IWasmVmMeta,
 	clientCtx client.Context,
 	cmd *cobra.Command,
 	nodeConfig *tmconfig.Config,
@@ -423,7 +425,7 @@ func testnetAddNode(
 
 	args.numValidators = nodeIndex + 1
 	args.sameMachine = true
-	err := initTestnetFilesInternal(clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, nodeIndex, leaderURI)
+	err := initTestnetFilesInternal(wasmVmMeta, clientCtx, cmd, nodeConfig, mbm, genBalIterator, args, nodeIndex, leaderURI)
 	if err != nil {
 		return err
 	}
@@ -468,6 +470,7 @@ func testnetAddNode(
 
 // initTestnetFiles initializes testnet files for a testnet to be run in a separate process
 func initTestnetFilesInternal(
+	wasmVmMeta memc.IWasmVmMeta,
 	clientCtx client.Context,
 	cmd *cobra.Command,
 	nodeConfig *tmconfig.Config,
@@ -492,7 +495,7 @@ func initTestnetFilesInternal(
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
-	_, appCreator := createMockAppCreator()
+	_, appCreator := createMockAppCreator(wasmVmMeta)
 
 	chaincfgmyt, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
@@ -1168,8 +1171,8 @@ func writeFile(name string, dir string, contents []byte) error {
 }
 
 // startTestnet starts an in-process testnet
-func startTestnet(cmd *cobra.Command, args startArgs) error {
-	networkConfig := network.DefaultConfig(app.NewTestNetworkFixture)
+func startTestnet(cmd *cobra.Command, args startArgs, wasmVmMeta memc.IWasmVmMeta) error {
+	networkConfig := network.DefaultConfig(app.NewTestNetworkFixture(wasmVmMeta))
 
 	// Default networkConfig.ChainID is random, and we should only override it if chainID provided
 	// is non-empty
@@ -1278,7 +1281,7 @@ func GenAppStateFromConfig(cdc codec.JSONCodec, txEncodingConfig client.TxEncodi
 	return appState, err
 }
 
-func createMockAppCreator() (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func createMockAppCreator(wasmVmMeta memc.IWasmVmMeta) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	appOpts := multichain.DefaultAppOptions{}
@@ -1290,5 +1293,5 @@ func createMockAppCreator() (*mcfg.MultiChainApp, func(chainId string, chainCfg 
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
-	return app.NewAppCreator(logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+	return app.NewAppCreator(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 }

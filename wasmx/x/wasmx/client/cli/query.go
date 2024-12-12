@@ -21,13 +21,14 @@ import (
 	"wasmx/v1/multichain"
 	"wasmx/v1/x/wasmx/keeper"
 	"wasmx/v1/x/wasmx/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (
 	FlagFrom = "from"
 )
 
-func GetQueryCmd(queryRoute string, ac address.Codec) *cobra.Command {
+func GetQueryCmd(wasmVmMeta memc.IWasmVmMeta, queryRoute string, ac address.Codec) *cobra.Command {
 	queryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      fmt.Sprintf("Querying commands for the %s module", types.ModuleName),
@@ -44,7 +45,7 @@ func GetQueryCmd(queryRoute string, ac address.Codec) *cobra.Command {
 		GetCmdQueryCodeInfo(ac),
 		GetCmdGetContractInfo(ac),
 		GetCmdGetContractState(ac),
-		GetCmdLibVersion(),
+		GetCmdLibVersion(wasmVmMeta),
 		GetCmdQueryParams(ac),
 		GetCmdBuildAddress(ac),
 	)
@@ -52,15 +53,15 @@ func GetQueryCmd(queryRoute string, ac address.Codec) *cobra.Command {
 }
 
 // GetCmdLibVersion gets current wasmedge version.
-func GetCmdLibVersion() *cobra.Command {
+func GetCmdLibVersion(wasmVmMeta memc.IWasmVmMeta) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "wasmedge-version",
-		Short:   "Get wasmedge version",
-		Long:    "Get wasmedge version",
+		Use:     "wasm-runtime-version",
+		Short:   "Get wasm runtime version",
+		Long:    "Get wasm runtime version",
 		Aliases: []string{"lib-version"},
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			version := types.LibWasmEdgeVersion()
+			version := wasmVmMeta.LibVersion()
 			fmt.Println(version)
 			return nil
 		},

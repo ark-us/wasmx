@@ -26,6 +26,7 @@ import (
 	appencoding "wasmx/v1/encoding"
 	"wasmx/v1/multichain"
 	cosmosmodtypes "wasmx/v1/x/cosmosmod/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 type (
@@ -35,13 +36,13 @@ type (
 
 // New creates instance with fully configured cosmos network.
 // Accepts optional config, that will be used in place of the DefaultConfig() if provided.
-func New(t *testing.T, configs ...network.Config) *network.Network {
+func New(t *testing.T, wasmVmMeta memc.IWasmVmMeta, configs ...network.Config) *network.Network {
 	if len(configs) > 1 {
 		panic("at most one config should be provided")
 	}
 	var cfg network.Config
 	if len(configs) == 0 {
-		cfg = DefaultConfig()
+		cfg = DefaultConfig(wasmVmMeta)
 	} else {
 		cfg = configs[0]
 	}
@@ -53,7 +54,7 @@ func New(t *testing.T, configs ...network.Config) *network.Network {
 
 // DefaultConfig will initialize config for the network with custom application,
 // genesis and single validator. All other parameters are inherited from cosmos-sdk/testutil/network.DefaultConfig
-func DefaultConfig() network.Config {
+func DefaultConfig(wasmVmMeta memc.IWasmVmMeta) network.Config {
 	chainId := config.MYTHOS_CHAIN_ID_TEST
 	chainCfg, err := config.GetChainConfig(chainId)
 	if err != nil {
@@ -67,7 +68,7 @@ func DefaultConfig() network.Config {
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
-	_, appCreator := app.NewAppCreator(logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+	_, appCreator := app.NewAppCreator(wasmVmMeta, logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, chainCfg)
 	tempApp := iapp.(*app.App)
 
@@ -88,6 +89,7 @@ func DefaultConfig() network.Config {
 			g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 			_, appCreator := app.NewAppCreator(
+				wasmVmMeta,
 				val.GetCtx().Logger,
 				dbm.NewMemDB(),
 				nil, appOpts, g, goctx,

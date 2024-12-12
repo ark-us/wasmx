@@ -12,9 +12,10 @@ import (
 	"wasmx/v1/x/cosmosmod/types"
 
 	"wasmx/v1/multichain"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
-func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+func NewTxCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	txCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Cosmos transaction subcommands",
@@ -25,7 +26,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec, appCreator multichain.NewAppCreato
 
 	txCmd.AddCommand(
 		bank.NewTxCmd(ac),
-		staking.NewTxCmd(valAddrCodec, ac, appCreator),
+		staking.NewTxCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
 		gov.NewTxCmd(ac),
 	)
 

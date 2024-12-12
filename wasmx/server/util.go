@@ -18,6 +18,7 @@ import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 
 	multichain "wasmx/v1/multichain"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 // AddCommands adds server commands
@@ -27,6 +28,7 @@ func AddCommands(
 	appCreator types.AppCreator,
 	appExport types.AppExporter,
 	addStartFlags types.ModuleInitFlags,
+	wasmVmMeta memc.IWasmVmMeta,
 ) {
 	tendermintCmd := &cobra.Command{
 		Use:   "tendermint",
@@ -42,7 +44,7 @@ func AddCommands(
 		tmcmd.ResetStateCmd,
 	)
 
-	startCmd := StartCmd(appCreator, defaultNodeHome)
+	startCmd := StartCmd(wasmVmMeta, appCreator, defaultNodeHome)
 	addStartFlags(startCmd)
 
 	rootCmd.AddCommand(
@@ -51,7 +53,7 @@ func AddCommands(
 		sdkserver.ExportCmd(appExport, defaultNodeHome),
 		version.NewVersionCommand(),
 		NewRollbackCmd(appCreator, defaultNodeHome),
-		NewResetChainData(appCreator, defaultNodeHome),
+		NewResetChainData(appCreator, defaultNodeHome, wasmVmMeta),
 	)
 }
 

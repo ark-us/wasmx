@@ -3,14 +3,16 @@ package keeper_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	testkeeper "wasmx/v1/testutil/keeper"
 	"wasmx/v1/x/wasmx/types"
 
-	"github.com/stretchr/testify/require"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 func TestParamsQuery(t *testing.T) {
-	keeper, ctx := testkeeper.WasmxKeeper(t)
+	keeper, ctx := testkeeper.WasmxKeeper(t, memc.WasmRuntimeMockVmMeta{})
 	params := types.DefaultParams()
 	keeper.SetParams(ctx, params)
 

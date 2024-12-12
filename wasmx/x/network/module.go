@@ -21,6 +21,7 @@ import (
 	"wasmx/v1/x/network/client/cli"
 	"wasmx/v1/x/network/keeper"
 	"wasmx/v1/x/network/types"
+	memc "wasmx/v1/x/wasmx/vm/memory/common"
 )
 
 var (
@@ -34,12 +35,13 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
+	wasmVmMeta memc.IWasmVmMeta
 	cdc        codec.BinaryCodec
 	appCreator multichain.NewAppCreator
 }
 
-func NewAppModuleBasic(cdc codec.BinaryCodec, appCreator multichain.NewAppCreator) AppModuleBasic {
-	return AppModuleBasic{cdc: cdc, appCreator: appCreator}
+func NewAppModuleBasic(wasmVmMeta memc.IWasmVmMeta, cdc codec.BinaryCodec, appCreator multichain.NewAppCreator) AppModuleBasic {
+	return AppModuleBasic{wasmVmMeta: wasmVmMeta, cdc: cdc, appCreator: appCreator}
 }
 
 // Name returns the name of the module as a string
@@ -78,7 +80,7 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetTxCmd returns the root Tx command for the module. The subcommands of this root command are used by end-users to generate new transactions containing messages defined in the module
 func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd(a.appCreator)
+	return cli.GetTxCmd(a.wasmVmMeta, a.appCreator)
 }
 
 // GetQueryCmd returns the root query command for the module. The subcommands of this root command are used by end-users to generate new queries to the subset of the state defined by the module
@@ -98,13 +100,14 @@ type AppModule struct {
 }
 
 func NewAppModule(
+	wasmVmMeta memc.IWasmVmMeta,
 	cdc codec.Codec,
 	keeper keeper.Keeper,
 	app mcfg.BaseApp,
 	appCreator multichain.NewAppCreator,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(cdc, appCreator),
+		AppModuleBasic: NewAppModuleBasic(wasmVmMeta, cdc, appCreator),
 		keeper:         keeper,
 		app:            app,
 	}
