@@ -61,7 +61,6 @@ import (
 	ibctesting "github.com/loredanacirstea/wasmx/testutil/ibc"
 	"github.com/loredanacirstea/wasmx/x/network/keeper"
 	"github.com/loredanacirstea/wasmx/x/network/types"
-	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	networkserver "github.com/loredanacirstea/wasmx/x/network/server"
@@ -92,7 +91,7 @@ type TestChain struct {
 	consAddress sdk.ConsAddress
 	// validator   stakingtypes.Validator
 	Denom           string
-	Faucet          *wasmxkeeper.TestFaucet
+	Faucet          *TestFaucet
 	ProposerAddress []byte
 
 	LastHeader    *ibctm.Header  // header for last block height committed
@@ -147,7 +146,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	t := suite.T()
 	addrCodec, ok := encodingConfig.TxConfig.SigningContext().AddressCodec().(mcodec.AccBech32Codec)
 	suite.Require().True(ok)
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }
@@ -165,7 +164,7 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 	denom := appContext.Chain.Config.BaseDenom
 	addrCodec := encodingConfig.TxConfig.SigningContext().AddressCodec()
 	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addrCodec)
-	appContext.Faucet = wasmxkeeper.NewTestFaucet(t, accBech32Codec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(denom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = NewTestFaucet(t, accBech32Codec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(denom, sdkmath.NewInt(100_000_000_000)))
 
 	return appContext
 }

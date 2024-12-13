@@ -144,7 +144,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 
 	genesisAccs := []cosmosmodtypes.GenesisAccount{}
 	balances := []banktypes.Balance{}
-	_, genesisState, err := ibctesting.BuildGenesisData(&tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances)
+	_, genesisState, err := ibctesting.BuildGenesisData(suite.App().WasmxKeeper.WasmRuntime, &tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances)
 	s.Require().NoError(err)
 
 	genesisStateWasmx := map[string][]byte{}

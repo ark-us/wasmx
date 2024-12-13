@@ -43,7 +43,6 @@ import (
 	msrvcfg "github.com/loredanacirstea/wasmx/server/config"
 	network "github.com/loredanacirstea/wasmx/x/network/keeper"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
-	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
 	wasmxutils "github.com/loredanacirstea/wasmx/x/wasmx/rpc/backend"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
@@ -78,7 +77,7 @@ type AppContext struct {
 
 	// for generate test tx
 	ClientCtx client.Context
-	Faucet    *wasmxkeeper.TestFaucet
+	Faucet    *TestFaucet
 
 	FinalizeBlock func(txs [][]byte) (*abci.ResponseFinalizeBlock, error)
 }
