@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -481,6 +482,7 @@ func initTestnetFilesInternal(
 	leaderURI string,
 ) error {
 	var err error
+	mockNodeHome := path.Join(args.outputDir, "tmp")
 	generateMythos := slices.Contains(args.initialChains, "mythos")
 	generateLevel0 := slices.Contains(args.initialChains, "level0")
 	if args.chainID == "" {
@@ -495,7 +497,7 @@ func initTestnetFilesInternal(
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 	valAddrCodec := mcodec.NewValBech32Codec(chaincfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
-	_, appCreator := createMockAppCreator(wasmVmMeta)
+	_, appCreator := createMockAppCreator(wasmVmMeta, mockNodeHome)
 
 	chaincfgmyt, err := mcfg.GetChainConfig(chainId)
 	if err != nil {
@@ -712,7 +714,7 @@ func initTestnetFilesInternal(
 		customAppTemplate, customAppConfig := config.AppConfig()
 		srvconfig.SetConfigTemplate(customAppTemplate)
 
-		serverCtx, err := sdkserver.InterceptConfigsAndCreateContext(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig())
+		serverCtx, err := InterceptConfigsAndCreateContext(cmd, customAppTemplate, customAppConfig, tmconfig.DefaultConfig())
 		if err != nil {
 			return err
 		}
@@ -825,6 +827,12 @@ func initTestnetFilesInternal(
 				return err
 			}
 		}
+	}
+
+	// cleanup mocks
+	err = os.RemoveAll(mockNodeHome)
+	if err != nil {
+		cmd.PrintErrf("could not remove temporary folders: %s", err.Error())
 	}
 
 	cmd.PrintErrf("Successfully initialized %d node directories\n", args.numValidators)
@@ -1281,11 +1289,11 @@ func GenAppStateFromConfig(cdc codec.JSONCodec, txEncodingConfig client.TxEncodi
 	return appState, err
 }
 
-func createMockAppCreator(wasmVmMeta memc.IWasmVmMeta) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func createMockAppCreator(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	db := dbm.NewMemDB()
 	logger := log.NewNopLogger()
 	appOpts := multichain.DefaultAppOptions{}
-	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
+	appOpts.Set(flags.FlagHome, defaultNodeHome)
 	// we set this so it does not try to read a genesis file
 	appOpts.Set(flags.FlagChainID, mcfg.MYTHOS_CHAIN_ID_TESTNET)
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)

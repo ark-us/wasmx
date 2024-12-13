@@ -36,13 +36,13 @@ type (
 
 // New creates instance with fully configured cosmos network.
 // Accepts optional config, that will be used in place of the DefaultConfig() if provided.
-func New(t *testing.T, wasmVmMeta memc.IWasmVmMeta, configs ...network.Config) *network.Network {
+func New(t *testing.T, wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, configs ...network.Config) *network.Network {
 	if len(configs) > 1 {
 		panic("at most one config should be provided")
 	}
 	var cfg network.Config
 	if len(configs) == 0 {
-		cfg = DefaultConfig(wasmVmMeta)
+		cfg = DefaultConfig(wasmVmMeta, defaultNodeHome)
 	} else {
 		cfg = configs[0]
 	}
@@ -54,7 +54,7 @@ func New(t *testing.T, wasmVmMeta memc.IWasmVmMeta, configs ...network.Config) *
 
 // DefaultConfig will initialize config for the network with custom application,
 // genesis and single validator. All other parameters are inherited from cosmos-sdk/testutil/network.DefaultConfig
-func DefaultConfig(wasmVmMeta memc.IWasmVmMeta) network.Config {
+func DefaultConfig(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) network.Config {
 	chainId := config.MYTHOS_CHAIN_ID_TEST
 	chainCfg, err := config.GetChainConfig(chainId)
 	if err != nil {
@@ -64,7 +64,7 @@ func DefaultConfig(wasmVmMeta memc.IWasmVmMeta) network.Config {
 	logger := log.NewNopLogger()
 
 	appOpts := multichain.DefaultAppOptions{}
-	appOpts.Set(flags.FlagHome, tempDir())
+	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
@@ -142,10 +142,10 @@ func NewCLILogger(cmd *cobra.Command) CLILogger {
 	return CLILogger{cmd}
 }
 
-var tempDir = func() string {
+var tempDir = func(defaultNodeHome string) string {
 	dir, err := os.MkdirTemp("", "mythos")
 	if err != nil {
-		dir = app.DefaultNodeHome
+		dir = defaultNodeHome
 	}
 	defer os.RemoveAll(dir)
 

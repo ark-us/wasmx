@@ -70,7 +70,7 @@ import (
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
-func NewRootCmd(wasmVmMeta memc.IWasmVmMeta) (*cobra.Command, appencoding.EncodingConfig) {
+func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Command, appencoding.EncodingConfig) {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
 	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
@@ -87,7 +87,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta) (*cobra.Command, appencoding.Encodi
 		WithLegacyAmino(encodingConfig.Amino).
 		WithInput(os.Stdin).
 		WithAccountRetriever(cosmosmodtypes.AccountRetriever{AddressCodec: addrcodec}).
-		WithHomeDir(app.DefaultNodeHome).
+		WithHomeDir(defaultNodeHome).
 		WithViper("")
 	logger := log.NewNopLogger()
 	appOpts := multichain.DefaultAppOptions{}
@@ -100,11 +100,11 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta) (*cobra.Command, appencoding.Encodi
 	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
-	appOpts.Set(flags.FlagHome, tempDir())
+	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))
 	appOpts.Set(flags.FlagChainID, chainId)
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
-	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir())
+	tempOpts := simtestutil.NewAppOptionsWithFlagHome(tempDir(defaultNodeHome))
 	tempApp := app.NewApp(
 		chainId,
 		logger,
@@ -155,7 +155,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta) (*cobra.Command, appencoding.Encodi
 			customAppTemplate, customAppConfig := serverconfig.AppConfig()
 			customTMConfig := initTendermintConfig()
 
-			serverCtx, err := sdkserver.InterceptConfigsAndCreateContext(cmd, customAppTemplate, customAppConfig, customTMConfig)
+			serverCtx, err := InterceptConfigsAndCreateContext(cmd, customAppTemplate, customAppConfig, customTMConfig)
 			if err != nil {
 				return err
 			}
@@ -172,7 +172,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta) (*cobra.Command, appencoding.Encodi
 		ClientCtx:       initClientCtx,
 	}
 
-	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx)
+	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx, defaultNodeHome)
 
 	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
@@ -210,6 +210,7 @@ func initRootCmd(
 	ctx context.Context,
 	apictx mcfg.APICtxI,
 	clientCtx client.Context,
+	defaultNodeHome string,
 ) {
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
@@ -224,30 +225,30 @@ func initRootCmd(
 	}
 
 	rootCmd.AddCommand(
-		genutilcli.InitCmd(basicManager, app.DefaultNodeHome),
-		genutilcli.CollectGenTxsCmd(cosmosmodtypes.GenesisBalancesIterator{}, app.DefaultNodeHome, gentxModule.GenTxValidator, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
+		genutilcli.InitCmd(basicManager, defaultNodeHome),
+		genutilcli.CollectGenTxsCmd(cosmosmodtypes.GenesisBalancesIterator{}, defaultNodeHome, gentxModule.GenTxValidator, encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec()),
 		genutilcli.MigrateGenesisCmd(MigrationMap),
 		genutilcli.GenTxCmd(
 			basicManager,
 			encodingConfig.TxConfig,
 			cosmosmodtypes.GenesisBalancesIterator{},
-			app.DefaultNodeHome,
+			defaultNodeHome,
 			encodingConfig.TxConfig.SigningContext().ValidatorAddressCodec(),
 		),
 		genutilcli.ValidateGenesisCmd(basicManager),
-		AddGenesisAccountCmd(app.DefaultNodeHome),
+		AddGenesisAccountCmd(defaultNodeHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
 		NewTestnetCmd(wasmVmMeta, basicManager, cosmosmodtypes.GenesisBalancesIterator{}),
 		debug.Cmd(),
 		confixcmd.ConfigCommand(),
-		pruning.Cmd(a.newApp, app.DefaultNodeHome),
+		pruning.Cmd(a.newApp, defaultNodeHome),
 		snapshot.Cmd(a.newApp),
 	)
 
 	// add server commands
 	server.AddCommands(
 		rootCmd,
-		app.DefaultNodeHome,
+		defaultNodeHome,
 		a.newApp,
 		a.appExport,
 		addModuleInitFlags,
@@ -258,7 +259,7 @@ func initRootCmd(
 	// add keybase, auxiliary RPC, query, genesis, and tx child commands
 	rootCmd.AddCommand(
 		sdkserver.StatusCommand(),
-		genesisCommand(encodingConfig.TxConfig, basicManager),
+		genesisCommand(encodingConfig.TxConfig, basicManager, defaultNodeHome),
 		queryCommand(),
 		txCommand(),
 		keys.Commands(),
@@ -266,8 +267,8 @@ func initRootCmd(
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
-func genesisCommand(txConfig client.TxConfig, basicManager module.BasicManager, cmds ...*cobra.Command) *cobra.Command {
-	cmd := genutilcli.Commands(txConfig, basicManager, app.DefaultNodeHome)
+func genesisCommand(txConfig client.TxConfig, basicManager module.BasicManager, defaultNodeHome string, cmds ...*cobra.Command) *cobra.Command {
+	cmd := genutilcli.Commands(txConfig, basicManager, defaultNodeHome)
 
 	for _, subCmd := range cmds {
 		cmd.AddCommand(subCmd)
@@ -467,10 +468,10 @@ func extendUnsafeResetAllCmd(rootCmd *cobra.Command) {
 	}
 }
 
-var tempDir = func() string {
+var tempDir = func(defaultNodeHome string) string {
 	dir, err := os.MkdirTemp("", "mythos")
 	if err != nil {
-		dir = app.DefaultNodeHome
+		dir = defaultNodeHome
 	}
 	defer os.RemoveAll(dir)
 
