@@ -9,13 +9,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-)
-
-var (
-	//go:embed testdata/classic/Curve384Test.wasm
-	curve384testbin []byte
 )
 
 var (
@@ -160,7 +155,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, curve384testbin, nil)
+	codeId := appA.StoreCode(sender, testdata.Curve384TestWasm, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 	deps := []string{types.ADDR_MODEXP}
 
@@ -249,7 +244,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, curve384testbin, nil)
+	codeId := appA.StoreCode(sender, testdata.Curve384TestWasm, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
 	// test_cmul
@@ -286,7 +281,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, curve384testbin, nil)
+	codeId := appA.StoreCode(sender, testdata.Curve384TestWasm, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
 	fmt.Println("--precomputeGenHex--")

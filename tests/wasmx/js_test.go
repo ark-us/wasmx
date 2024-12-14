@@ -9,30 +9,16 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
-)
 
-var (
-	//go:embed testdata/js/javy/simple_storage.wasm
-	jsSimpleStorage []byte
-
-	//go:embed testdata/js/simple_storage.js
-	simpleStorageJsInterpret []byte
-
-	//go:embed testdata/js/call.js
-	callSimpleStorageJsInterpret []byte
-
-	//go:embed testdata/js/call_evm.js
-	callEvmSimpleStorageJsInterpret []byte
-
-	//go:embed testdata/js/blockchain.js
-	blockchainJsInterpret []byte
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	js "github.com/loredanacirstea/mythos-tests/testdata/js"
+	py "github.com/loredanacirstea/mythos-tests/testdata/python"
 )
 
 func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
-	wasmbin := jsSimpleStorage
+	wasmbin := js.JsJavySimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
@@ -56,7 +42,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
-	codeId := appA.StoreCode(sender, simpleStorageJsInterpret, deps)
+	codeId := appA.StoreCode(sender, js.JsSimpleStorage, deps)
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"hello"`)}, "simpleStorageJsInterpret", nil)
 
@@ -94,10 +80,10 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
-	codeId := appA.StoreCode(sender, simpleStorageJsInterpret, deps)
+	codeId := appA.StoreCode(sender, js.JsSimpleStorage, deps)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "simpleContractJs", nil)
 
-	codeId2 := appA.StoreCode(sender, callSimpleStorageJsInterpret, deps)
+	codeId2 := appA.StoreCode(sender, js.JscallSimpleStorage, deps)
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "CallSimpleContractJs", nil)
 
 	key := []byte("jsstore")
@@ -122,10 +108,10 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 
 	depsJs := []string{types.INTERPRETER_JS}
 	depsPy := []string{types.INTERPRETER_PYTHON}
-	codeId := appA.StoreCode(sender, simpleStoragePy, depsPy)
+	codeId := appA.StoreCode(sender, py.PySimpleStorage, depsPy)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "simpleContractPy", nil)
 
-	codeId2 := appA.StoreCode(sender, callSimpleStorageJsInterpret, depsJs)
+	codeId2 := appA.StoreCode(sender, js.JscallSimpleStorage, depsJs)
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "CallSimpleContractJs", nil)
 
 	key := []byte("pystore")
@@ -160,7 +146,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
 
-	codeId2 := appA.StoreCode(sender, callEvmSimpleStorageJsInterpret, depsJs)
+	codeId2 := appA.StoreCode(sender, js.JsCallEvmSimpleStorage, depsJs)
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "CallSimpleContractJs", nil)
 
 	data := []byte(fmt.Sprintf(`{"store":["%s", "str12"]}`, contractAddress.String()))
@@ -183,7 +169,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
-	codeId := appA.StoreCode(sender, blockchainJsInterpret, deps)
+	codeId := appA.StoreCode(sender, js.JsBlockchain, deps)
 
 	data := []byte(`["jsstore","hello"]`)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "blockchainJsInterpret", nil)

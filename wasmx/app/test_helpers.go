@@ -150,7 +150,7 @@ func NewTestNetworkFixture(wasmVmMeta memc.IWasmVmMeta) func() network.TestFixtu
 			appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
 			// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 
-			_, appCreator := NewAppCreator(wasmVmMeta, val.GetCtx().Logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+			_, appCreator := NewAppCreator(wasmVmMeta, val.GetCtx().Logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 			iapp := appCreator(chainId, chainCfg)
 			app := iapp.(*App)
 			return app

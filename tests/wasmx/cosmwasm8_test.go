@@ -16,25 +16,8 @@ import (
 
 	cw8types "github.com/loredanacirstea/wasmx/x/wasmx/cw8/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-)
 
-var (
-	//go:embed testdata/cw8/simple_contract.wasm
-	cwSimpleContract []byte
-
-	//go:embed testdata/cw8/cw20_atomic_swap.wasm
-	cw20_atomic_swap []byte
-
-	// taken from cosmwasm/contracts/reflect
-	//go:embed testdata/cw8/reflect-aarch64.wasm
-	wasm_reflect []byte
-
-	// taken from cosmwasm/contracts/crypto_verify
-	//go:embed testdata/cw8/crypto_verify-aarch64.wasm
-	crypto_verify []byte
-
-	//go:embed testdata/cw8/cw20_base-aarch64.wasm
-	cw20_base []byte
+	cw8 "github.com/loredanacirstea/mythos-tests/testdata/cw8"
 )
 
 type ReflectMsg struct {
@@ -171,7 +154,7 @@ const ED25519_SIGNATURE2_HEX = "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8f
 const ED25519_PUBLIC_KEY2_HEX = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c"
 
 func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
-	wasmbin := cwSimpleContract
+	wasmbin := cw8.SimpleContractWasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
@@ -231,7 +214,7 @@ type CW20InstantiateMsg struct {
 }
 
 func (suite *KeeperTestSuite) TestWasmxCW20() {
-	wasmbin := cw20_base
+	wasmbin := cw8.Cw20BaseAarch64Wasm
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
@@ -274,7 +257,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
-	wasmbin := cw20_base
+	wasmbin := cw8.Cw20BaseAarch64Wasm
 	deployer := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
 	priv, err := ethsecp256k1.GenerateKey()
@@ -318,7 +301,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
-	wasmbin := cw20_atomic_swap
+	wasmbin := cw8.Cw20AtomicSwapWasm
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000_000)
@@ -380,7 +363,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxCwReflect() {
-	wasmbin := wasm_reflect
+	wasmbin := cw8.ReflectAarch64Wasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000_000)
 
@@ -395,7 +378,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "wasm_reflect", nil)
 
-	codeIdCounter := appA.StoreCode(sender, cwSimpleContract, nil)
+	codeIdCounter := appA.StoreCode(sender, cw8.SimpleContractWasm, nil)
 	contractAddressCounter := appA.InstantiateCode(sender, codeIdCounter, types.WasmxExecutionMessage{Data: []byte(`{}`)}, "cwSimpleContract", nil)
 
 	msgCounter := types.WasmxExecutionMessage{
@@ -530,7 +513,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
-	wasmbin := crypto_verify
+	wasmbin := cw8.CryptoVerifyAarch64Wasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 

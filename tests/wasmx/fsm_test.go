@@ -9,7 +9,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/fsm"
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/fsm"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 

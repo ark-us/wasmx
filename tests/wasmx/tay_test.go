@@ -16,8 +16,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/taylor"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/taylor"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )

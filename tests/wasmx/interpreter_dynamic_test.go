@@ -14,7 +14,7 @@ import (
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )

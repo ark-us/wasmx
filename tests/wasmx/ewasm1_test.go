@@ -8,21 +8,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-)
 
-var (
-	//go:embed testdata/classic/simple_storage.wasm
-	simpleStorage []byte
-
-	//go:embed testdata/classic/simple_storage_wc.wasm
-	simpleStorageWC []byte
-
-	//go:embed testdata/classic/constructor_test.wasm
-	constructortestbin []byte
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 )
 
 func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
-	wasmbin := simpleStorage
+	wasmbin := testdata.SimpleStorageWasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	getHex := `6d4ce63c`
@@ -64,7 +55,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
-	wasmbin := simpleStorageWC
+	wasmbin := testdata.SimpleStorageWcWasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	getHex := `6d4ce63c`
@@ -86,7 +77,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 }
 
 func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
-	wasmbin := simpleStorage
+	wasmbin := testdata.SimpleStorageWasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	setHex := `60fe47b1`
@@ -114,7 +105,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 }
 
 func (suite *KeeperTestSuite) TestConstructorTestBin() {
-	wasmbin := constructortestbin
+	wasmbin := testdata.ConstructorTestWasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	fsig := "c1b4625e"

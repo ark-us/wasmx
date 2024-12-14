@@ -38,8 +38,8 @@ var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chai
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
-	app, genesisState, err := BuildGenesisData(wasmVmMeta, valSet, genAccs, chainID, chaincfg, index, balances)
+func SetupWithGenesisValSet(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir string, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
+	app, genesisState, err := BuildGenesisData(wasmVmMeta, valSet, genAccs, chainID, chaincfg, index, balances, compiledCacheDir)
 	require.NoError(t, err)
 
 	return InitAppChain(t, app, genesisState, chainID)
@@ -73,7 +73,7 @@ func InitAppChain(t *testing.T, app ibcgotesting.TestingApp, genesisState map[st
 	return app, resInit
 }
 
-func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances []banktypes.Balance) (ibcgotesting.TestingApp, map[string]json.RawMessage, error) {
+func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances []banktypes.Balance, compiledCacheDir string) (ibcgotesting.TestingApp, map[string]json.RawMessage, error) {
 	app, genesisState := DefaultTestingAppInit(wasmVmMeta, chainID, &chaincfg, index)
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
@@ -166,11 +166,7 @@ func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet,
 	}
 
 	wasmxGenesis := wasmxtypes.DefaultGenesisState(addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 1, false, "{}")
-	// mydir, err := os.Getwd()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// wasmxGenesis.CompiledFolderPath = path.Join(mydir, "../../../", "testutil", "codes_compiled")
+	wasmxGenesis.CompiledFolderPath = compiledCacheDir
 	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 
 	return app, genesisState, nil

@@ -10,19 +10,12 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	testutil "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-)
 
-var (
-	//go:embed testdata/python/forward.py
-	forwardPy []byte
-
-	//go:embed testdata/js/forward.js
-	forwardJs []byte
-
-	//go:embed testdata/tinygo/forward.wasm
-	forwardGo []byte
+	js "github.com/loredanacirstea/mythos-tests/testdata/js"
+	py "github.com/loredanacirstea/mythos-tests/testdata/python"
+	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
+	testutil "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 // Python -> JavaScript -> Tinygo wasm -> AssemblyScript -> EVM -> CosmWasm
@@ -37,13 +30,13 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	depsPy := []string{types.INTERPRETER_PYTHON}
 	depsJs := []string{types.INTERPRETER_JS}
 
-	codeIdPy := appA.StoreCode(sender, forwardPy, depsPy)
+	codeIdPy := appA.StoreCode(sender, py.PyForward, depsPy)
 	contractAddressPy := appA.InstantiateCode(sender, codeIdPy, types.WasmxExecutionMessage{Data: []byte(``)}, "forwardPy", nil)
 
-	codeIdJs := appA.StoreCode(sender, forwardJs, depsJs)
+	codeIdJs := appA.StoreCode(sender, js.JsForward, depsJs)
 	contractAddressJs := appA.InstantiateCode(sender, codeIdJs, types.WasmxExecutionMessage{Data: []byte(``)}, "forwardJs", nil)
 
-	codeIdGo := appA.StoreCode(sender, forwardGo, nil)
+	codeIdGo := appA.StoreCode(sender, tinygo.TinyGoForward, nil)
 	contractAddressGo := appA.InstantiateCode(sender, codeIdGo, types.WasmxExecutionMessage{Data: []byte{}}, "forwardGo", nil)
 
 	// TODO

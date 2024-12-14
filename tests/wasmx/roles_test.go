@@ -7,8 +7,10 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
 )
 
 func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
@@ -23,7 +25,7 @@ func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
 
 	_, contractAddress1 := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callgeneralwasm1", nil)
 
-	storagebin := wasmxSimpleStorage
+	storagebin := wasmxtest.WasmxSimpleStorage
 	codeId := appA.StoreCode(sender, storagebin, nil)
 	contractAddress2 := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
 

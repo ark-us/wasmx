@@ -10,8 +10,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	cch "github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler/alias"

@@ -1,4 +1,4 @@
-module mythos-tests
+module github.com/loredanacirstea/mythos-tests
 
 go 1.23.1
 

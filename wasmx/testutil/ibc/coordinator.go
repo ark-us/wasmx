@@ -15,7 +15,7 @@ var (
 )
 
 // NewCoordinator initializes Coordinator with N TestChain's
-func NewCoordinator(t *testing.T, wasmVmMeta memc.IWasmVmMeta, chainIds []string, index int32) *ibcgotesting.Coordinator {
+func NewCoordinator(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir string, chainIds []string, index int32) *ibcgotesting.Coordinator {
 	chains := make(map[string]*ibcgotesting.TestChain)
 	coord := &ibcgotesting.Coordinator{
 		T:           t,
@@ -30,7 +30,7 @@ func NewCoordinator(t *testing.T, wasmVmMeta memc.IWasmVmMeta, chainIds []string
 		if err != nil {
 			panic(err)
 		}
-		chains[chainID] = NewTestChain(t, wasmVmMeta, coord, chainID, *config, index)
+		chains[chainID] = NewTestChain(t, wasmVmMeta, compiledCacheDir, coord, chainID, *config, index)
 	}
 
 	coord.Chains = chains

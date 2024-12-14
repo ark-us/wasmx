@@ -14,10 +14,12 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
 	interfacesTestdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/interfaces"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm"
+
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	cw8 "github.com/loredanacirstea/mythos-tests/testdata/cw8"
 )
 
 type AtomicSwapBalance struct {
@@ -26,7 +28,7 @@ type AtomicSwapBalance struct {
 }
 
 func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
-	wasmbin := cw20_base
+	wasmbin := cw8.Cw20BaseAarch64Wasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	proxyAddressBz, err := hex.DecodeString("0000000000000000000000000000000000000025")
@@ -87,7 +89,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 }
 
 func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
-	wasmbin := cw20_base
+	wasmbin := cw8.Cw20BaseAarch64Wasm
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	sender2AddressEvm := types.EvmAddressFromAcc(sender2.Address)

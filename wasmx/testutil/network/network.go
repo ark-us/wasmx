@@ -62,13 +62,14 @@ func DefaultConfig(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) network.
 	}
 	encoding := appencoding.MakeEncodingConfig(chainCfg, app.GetCustomSigners())
 	logger := log.NewNopLogger()
+	db := dbm.NewMemDB()
 
 	appOpts := multichain.DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
-	_, appCreator := app.NewAppCreator(wasmVmMeta, logger, dbm.NewMemDB(), nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+	_, appCreator := app.NewAppCreator(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, chainCfg)
 	tempApp := iapp.(*app.App)
 
@@ -91,7 +92,7 @@ func DefaultConfig(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) network.
 			_, appCreator := app.NewAppCreator(
 				wasmVmMeta,
 				val.GetCtx().Logger,
-				dbm.NewMemDB(),
+				db,
 				nil, appOpts, g, goctx,
 				&multichain.MockApiCtx{},
 			)

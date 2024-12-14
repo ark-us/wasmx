@@ -12,9 +12,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/common"
 
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 

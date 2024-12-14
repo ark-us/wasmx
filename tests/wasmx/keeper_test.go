@@ -1,6 +1,8 @@
 package keeper_test
 
 import (
+	"os"
+	"path"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,6 +13,9 @@ import (
 	//nolint
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
+
+	wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
+	wazero "github.com/loredanacirstea/wasmx-wazero"
 )
 
 // KeeperTestSuite is a testing suite to test keeper functions
@@ -19,6 +24,18 @@ type KeeperTestSuite struct {
 }
 
 var s *KeeperTestSuite
+
+func (suite *KeeperTestSuite) SetupSuite() {
+	mydir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	suite.WasmVmMeta = wazero.WazeroVmMeta{}
+	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+
+	suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
+	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
+}
 
 // TestKeeperTestSuite runs all the tests within this package.
 func TestKeeperTestSuite(t *testing.T) {

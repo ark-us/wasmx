@@ -8,18 +8,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-)
 
-var (
-	//go:embed testdata/tinygo/add.wasm
-	tinygoAdd []byte
-
-	//go:embed testdata/tinygo/simple_storage.wasm
-	tinygoSimpleStorage []byte
+	py "github.com/loredanacirstea/mythos-tests/testdata/python"
+	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
 )
 
 func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
-	wasmbin := tinygoAdd
+	wasmbin := tinygo.TinyGoAdd
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
@@ -35,7 +30,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 }
 
 func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
-	wasmbin := tinygoSimpleStorage
+	wasmbin := tinygo.TinyGoSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
@@ -65,7 +60,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
-	wasmbin := tinygoSimpleStorage
+	wasmbin := tinygo.TinyGoSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	depsPy := []string{types.INTERPRETER_PYTHON}
@@ -74,7 +69,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	codeId := appA.StoreCode(sender, simpleStoragePy, depsPy)
+	codeId := appA.StoreCode(sender, py.PySimpleStorage, depsPy)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "simpleContractPy", nil)
 
 	codeId2 := appA.StoreCode(sender, wasmbin, nil)

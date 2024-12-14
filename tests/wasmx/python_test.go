@@ -11,20 +11,8 @@ import (
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
-)
 
-var (
-	//go:embed testdata/python/simple_storage.py
-	simpleStoragePy []byte
-
-	//go:embed testdata/python/call.py
-	callSimpleStoragePy []byte
-
-	//go:embed testdata/python/blockchain.py
-	blockchainPyInterpret []byte
-
-	//go:embed testdata/python/demo1.py
-	demoPyInterpret []byte
+	py "github.com/loredanacirstea/mythos-tests/testdata/python"
 )
 
 // func (suite *KeeperTestSuite) TestWasiInterpreterPython() {
@@ -57,7 +45,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
-	codeId := appA.StoreCode(sender, simpleStoragePy, deps)
+	codeId := appA.StoreCode(sender, py.PySimpleStorage, deps)
 
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "SimpleContractPy", nil)
 
@@ -85,10 +73,10 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
-	codeId := appA.StoreCode(sender, simpleStoragePy, deps)
+	codeId := appA.StoreCode(sender, py.PySimpleStorage, deps)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`"123"`)}, "SimpleContractPy", nil)
 
-	codeId2 := appA.StoreCode(sender, callSimpleStoragePy, deps)
+	codeId2 := appA.StoreCode(sender, py.PyCallSimpleStorage, deps)
 	contractAddressCall := appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "callSimpleStoragePy", nil)
 
 	key := []byte("pystore")
@@ -112,7 +100,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
-	codeId := appA.StoreCode(sender, blockchainPyInterpret, deps)
+	codeId := appA.StoreCode(sender, py.PyBlockchain, deps)
 
 	data := []byte(`["pystore","hello"]`)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "blockchainPyInterpret", nil)
@@ -202,7 +190,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
-	codeId := appA.StoreCode(sender, demoPyInterpret, deps)
+	codeId := appA.StoreCode(sender, py.PyDemo, deps)
 
 	data := []byte(``)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "demoPyInterpret", nil)
@@ -230,7 +218,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 
 	data = []byte(fmt.Sprintf(`{"getCode":["%s"]}`, contractAddress.String()))
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal(demoPyInterpret, resp)
+	s.Require().Equal(py.PyDemo, resp)
 
 	initMsg := types.WasmxExecutionMessage{Data: []byte(``)}
 	initMsgBz, err := json.Marshal(initMsg)

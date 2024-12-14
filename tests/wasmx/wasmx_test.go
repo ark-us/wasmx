@@ -12,15 +12,12 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	testdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/classic"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
-)
 
-var (
-	//go:embed testdata/wasmx/simple_storage.wasm
-	wasmxSimpleStorage []byte
+	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
 )
 
 type SysContract struct {
@@ -112,7 +109,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
-	wasmbin := wasmxSimpleStorage
+	wasmbin := wasmxtest.WasmxSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 
