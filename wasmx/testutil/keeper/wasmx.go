@@ -1,9 +1,11 @@
 package keeper
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -21,7 +23,6 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	typesparams "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	// ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
@@ -40,7 +41,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta) (*keeper.Keeper, sdk.Context) {
+func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta, g *errgroup.Group, goctx context.Context) (*keeper.Keeper, sdk.Context, func()) {
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 	memStoreKey := storetypes.NewMemoryStoreKey(types.MemStoreKey)
 	tStoreKey := storetypes.NewTransientStoreKey(types.TStoreKey)
@@ -57,6 +58,11 @@ func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta) (*keeper.Keeper, sdk
 	stateStore.MountStoreWithDB(sStoreKey, storetypes.StoreTypeConsensusless, db)
 	require.NoError(t, stateStore.LoadLatestVersion())
 
+	cleanup := func() {
+		err := db.Close()
+		require.NoError(t, err)
+	}
+
 	registry := codectypes.NewInterfaceRegistry()
 	cdc := codec.NewProtoCodec(registry)
 	chainId := config.MYTHOS_CHAIN_ID_TEST
@@ -70,13 +76,12 @@ func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta) (*keeper.Keeper, sdk
 	appOpts := multichain.DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, app.DefaultNodeHome)
 	appOpts.Set(sdkserver.FlagInvCheckPeriod, 0)
-	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	_, appCreator := app.NewAppCreator(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, chainCfg)
 	mapp := iapp.(*app.App)
 
-	paramsSubspace := typesparams.NewSubspace(cdc,
+	paramsSubspace := paramstypes.NewSubspace(cdc,
 		codec.NewLegacyAmino(),
 		storeKey,
 		memStoreKey,
@@ -164,6 +169,5 @@ func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta) (*keeper.Keeper, sdk
 
 	// Initialize params
 	k.SetParams(ctx, types.DefaultParams())
-
-	return k, ctx
+	return k, ctx, cleanup
 }

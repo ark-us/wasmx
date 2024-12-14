@@ -148,8 +148,8 @@ func NewWazeroVm(ctx sdk.Context) memc.IVm {
 	// .WithDebugInfoEnabled(true)
 	// TODO check if compiler is suppported
 	config := wazero.NewRuntimeConfigCompiler().
-		WithCloseOnContextDone(false). // for now, we let the execution finish in case we need to save block data in our core contracts
-		WithCompilationCache(cache)    // .WithDebugInfoEnabled(true)
+		WithCloseOnContextDone(true). // for now, we let the execution finish in case we need to save block data in our core contracts
+		WithCompilationCache(cache)   // .WithDebugInfoEnabled(true)
 
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 	cleanups = append(cleanups, func() {

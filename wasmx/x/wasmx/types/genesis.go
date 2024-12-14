@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
@@ -26,6 +28,9 @@ func DefaultGenesisState(accBech32Codec mcodec.AccBech32Codec, bootstrapAccountB
 // Validate performs basic genesis state validation returning an error upon any
 // failure.
 func (gs GenesisState) Validate() error {
+	if len(gs.BootstrapAccountAddress) == 0 {
+		return fmt.Errorf("empty bootstrap account address")
+	}
 	if err := gs.Params.Validate(); err != nil {
 		return err
 	}

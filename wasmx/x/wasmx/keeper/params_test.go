@@ -1,20 +1,16 @@
 package keeper_test
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
 
-	testkeeper "github.com/loredanacirstea/wasmx/testutil/keeper"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func TestGetParams(t *testing.T) {
-	k, ctx := testkeeper.WasmxKeeper(t, memc.WasmRuntimeMockVmMeta{})
+func (suite *KeeperTestSuite) TestGetParams() {
+	t := suite.T()
+	keeper := suite.WasmxKeeper
+	ctx := suite.Ctx
 	params := types.DefaultParams()
-
-	k.SetParams(ctx, params)
-
-	require.EqualValues(t, params, k.GetParams(ctx))
+	keeper.SetParams(ctx, params)
+	require.EqualValues(t, params, keeper.GetParams(ctx))
 }

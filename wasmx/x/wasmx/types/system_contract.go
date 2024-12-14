@@ -872,7 +872,10 @@ func (p SystemContract) Validate() error {
 	if p.InitMessage == nil {
 		return fmt.Errorf("initialization message cannot be nil")
 	}
-	return ValidateNonZeroAddress(p.Address)
+	if p.Address != "" {
+		return ValidateNonZeroAddress(p.Address)
+	}
+	return nil
 }
 
 func validateString(i interface{}) error {
