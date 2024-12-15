@@ -14,7 +14,7 @@ var (
 	//go:embed Curve384Test.wasm
 	Curve384TestWasm []byte
 
-	//go:embed Erc20.wasm
+	//go:embed erc20.wasm
 	Erc20Wasm []byte
 
 	//go:embed simple_storage_wc.wasm
