@@ -224,12 +224,13 @@ func TestWazeroWasmxSimpleStorage(t *testing.T) {
 }
 
 func TestWazeroWasmxSimpleStorage2(t *testing.T) {
+	t.Skip("Skipping local test TestWazeroWasmxSimpleStorage2")
 	var err error
 	wasmbin := wasmxSimpleStorage
 
 	ctx := sdk.Context{}
 	ctx = ctx.WithContext(context.Background())
-	cache, err := wazero.NewCompilationCacheWithDir("/Users/user/dev/blockchain/wasmx/build/simplestorage")
+	cache, err := wazero.NewCompilationCacheWithDir("./build/simplestorage")
 	require.NoError(t, err)
 	defer cache.Close(ctx)
 	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache)
@@ -267,15 +268,16 @@ func TestWazeroWasmxSimpleStorage2(t *testing.T) {
 }
 
 func TestWazeroWasmxSimpleStorage3(t *testing.T) {
+	t.Skip("Skipping local test TestWazeroWasmxSimpleStorage3")
 	var err error
 	wasmbin := wasmxSimpleStorage
 
 	ctx := sdk.Context{}
 	ctx = ctx.WithContext(context.Background())
 
-	wcompiledPath := "/Users/user/dev/blockchain/wasmx/build/simplestorage/wazero-dev-arm64-darwin/69d4662ff5521acb600c42336368dc50cc5366a2c113061086358dfebf321688"
+	wcompiledPath := "./build/simplestorage/wazero-dev-arm64-darwin/69d4662ff5521acb600c42336368dc50cc5366a2c113061086358dfebf321688"
 
-	wcompiledPathMe := "/Users/user/dev/blockchain/wasmx/build/simplestorage/aaa"
+	wcompiledPathMe := "./build/simplestorage/aaa"
 
 	config := wazero.NewRuntimeConfigCompiler()
 	r := wazero.NewRuntimeWithConfig(ctx, config)
@@ -293,15 +295,16 @@ func TestWazeroWasmxSimpleStorage3(t *testing.T) {
 }
 
 func TestWazeroWasmxSimpleStorage4(t *testing.T) {
+	t.Skip("Skipping local test TestWazeroWasmxSimpleStorage4")
 	var err error
 	wasmbin := wasmxSimpleStorage
 
 	ctx := sdk.Context{}
 	ctx = ctx.WithContext(context.Background())
 
-	wcompiledPath := "/Users/user/dev/blockchain/wasmx/build/simplestorage/wazero-dev-arm64-darwin/69d4662ff5521acb600c42336368dc50cc5366a2c113061086358dfebf321688"
+	wcompiledPath := "./build/simplestorage/wazero-dev-arm64-darwin/69d4662ff5521acb600c42336368dc50cc5366a2c113061086358dfebf321688"
 
-	// wcompiledPathMe := "/Users/user/dev/blockchain/wasmx/build/simplestorage/aaa"
+	// wcompiledPathMe := "./build/simplestorage/aaa"
 	config := wazero.NewRuntimeConfigCompiler() //.WithCompilationCache(cache)
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 	defer r.Close(ctx)
