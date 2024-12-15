@@ -14,7 +14,7 @@ import (
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
 
-	wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
+	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
 )
 
@@ -33,11 +33,8 @@ func (suite *KeeperTestSuite) SetupSuite() {
 	suite.WasmVmMeta = wazero.WazeroVmMeta{}
 	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
 
-	suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
-	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
-
-	suite.WasmVmMeta = wazero.WazeroVmMeta{}
-	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+	// suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
+	// suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
 
 	suite.SetupChains()
 }

@@ -246,7 +246,6 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
-	github.com/second-state/WasmEdge-go v0.13.4 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -334,9 +333,9 @@ require github.com/loredanacirstea/wasmx v0.0.0
 
 replace github.com/loredanacirstea/wasmx => ../wasmx
 
-require github.com/loredanacirstea/wasmx-wasmedge v0.0.0-00010101000000-000000000000
+// require github.com/loredanacirstea/wasmx-wasmedge v0.0.0-00010101000000-000000000000
 
-replace github.com/loredanacirstea/wasmx-wasmedge => ../wasmx-wasmedge
+// replace github.com/loredanacirstea/wasmx-wasmedge => ../wasmx-wasmedge
 
 require github.com/loredanacirstea/wasmx-wazero v0.0.0-00010101000000-000000000000
 
