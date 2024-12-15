@@ -14,44 +14,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout the code
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # Set up Go environment
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.23
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
 
-    # Install WasmEdge
-    - name: Install WasmEdge
-      run: |
-        curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.13.4 --dir /home/runner/wasmedge
-        echo "/home/runner/wasmedge/lib" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=/home/runner/wasmedge/lib:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PATH=/home/runner/wasmedge/bin:\$PATH" >> $GITHUB_ENV
-    - name: Use Installed WasmEdge
+      - name: Install WasmEdge
+        run: |
+          curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.13.4 --dir /home/runner/wasmedge
+          echo "/home/runner/wasmedge/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/home/runner/wasmedge/lib:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "PATH=/home/runner/wasmedge/bin:\$PATH" >> $GITHUB_ENV
+      - name: Use Installed WasmEdge
         run: |
           source $GITHUB_ENV
           wasmedge --version
-    # Install dependencies (optional)
-    - name: Install dependencies
-      run: |
-        go mod tidy
 
-    # Set up environment variables for CGO
-    - name: Set up CGO environment variables
-      run: |
-        echo "CGO_LDFLAGS='-Wl,-rpath,/usr/local/lib'" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          go mod tidy
 
-    # Run tests in each subpackage
-    - name: Run tests
-      run: |
-        go test -v ./tests/wasmx
-        go test -v ./wasmx/...
-        go test -v ./wasmx-wasmedge/...
-        go test -v ./wasmx-wazero/...
-        go test -v ./mythos-wasmedge/...
-        go test -v ./mythos-wazero/...
+      - name: Set up CGO environment variables
+        run: |
+          echo "CGO_LDFLAGS='-Wl,-rpath,/usr/local/lib'" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: |
+          go test -v ./tests/wasmx
+          go test -v ./wasmx/...
+          go test -v ./wasmx-wasmedge/...
+          go test -v ./wasmx-wazero/...
+          go test -v ./mythos-wasmedge/...
+          go test -v ./mythos-wazero/...
 
