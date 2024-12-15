@@ -142,7 +142,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 
 	data := []byte(`{"getChainId":{}}`)
 	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	s.Require().Equal("level0_1000-1", string(resp))
+	s.Require().Equal(suite.Chain().ChainId, string(resp))
 
 	data = []byte(`{"base64dec":{"value":"aGVsbG9vYQ=="}}`)
 	resp = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
