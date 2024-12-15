@@ -22,10 +22,6 @@ jobs:
         with:
           go-version: 1.23
 
-      - name: Install dependencies
-        run: |
-          go mod tidy
-
       - name: Set up CGO environment variables
         run: |
           echo "CGO_LDFLAGS='-Wl,-rpath,/usr/local/lib'" >> $GITHUB_ENV
