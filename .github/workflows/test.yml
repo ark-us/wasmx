@@ -1,4 +1,4 @@
-name: Run Go Tests
+name: Run Go WasmX Tests
 
 on:
   push:
@@ -14,34 +14,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the code
+    # Checkout the code
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Step 2: Set up Go environment
+    # Set up Go environment
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23 # Adjust to match your Go version
+        go-version: 1.23
 
-    # Step 3: Install WasmEdge
+    # Install WasmEdge
     - name: Install WasmEdge
       run: |
-        curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.13.4
-        echo "/usr/local/lib" >> /etc/ld.so.conf.d/wasmedge.conf
-        ldconfig
-
-    # Step 4: Install dependencies (optional)
+        curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.13.4 --dir /home/runner/wasmedge
+        echo "/home/runner/wasmedge/lib" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/home/runner/wasmedge/lib:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PATH=/home/runner/wasmedge/bin:\$PATH" >> $GITHUB_ENV
+    - name: Use Installed WasmEdge
+        run: |
+          source $GITHUB_ENV
+          wasmedge --version
+    # Install dependencies (optional)
     - name: Install dependencies
       run: |
         go mod tidy
 
-    # Step 5: Set up environment variables for CGO
+    # Set up environment variables for CGO
     - name: Set up CGO environment variables
       run: |
         echo "CGO_LDFLAGS='-Wl,-rpath,/usr/local/lib'" >> $GITHUB_ENV
 
-    # Step 6: Run tests in each subpackage
+    # Run tests in each subpackage
     - name: Run tests
       run: |
         go test -v ./tests/wasmx
@@ -51,10 +55,3 @@ jobs:
         go test -v ./mythos-wasmedge/...
         go test -v ./mythos-wazero/...
 
-    # Optional: Save test results for analysis
-    - name: Archive test results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-results
-        path: '**/test-results/*.txt'
