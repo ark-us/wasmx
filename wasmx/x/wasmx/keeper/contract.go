@@ -650,7 +650,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute")
+	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: execute")
 
 	// add more funds
 	if !coins.IsZero() {
@@ -725,7 +725,7 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading WasmX module: execute eventual")
+	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: execute entry point")
 
 	info := types.NewInfo(caller, caller, nil)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
@@ -846,7 +846,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	}
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: executeWithOrigin")
+	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: executeWithOrigin")
 
 	// add more funds
 	if !coins.IsZero() {
@@ -906,7 +906,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: query")
+	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: query")
 
 	// add known dependencies for that codeId
 	// TODO system deps in the form of smart contracts
