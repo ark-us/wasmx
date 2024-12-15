@@ -108,10 +108,11 @@ func ReadMemUntilNull(mem IMemory, pointer interface{}) ([]byte, error) {
 }
 
 func WriteMemBoundBySize(mem IMemory, data []byte, ptr interface{}, size interface{}) error {
-	if len(data) < size.(int) {
-		size = int32(len(data))
+	_size := size.(int32)
+	if len(data) < int(_size) {
+		_size = int32(len(data))
 	}
-	return mem.WriteRaw(ptr, data[0:size.(int)])
+	return mem.WriteRaw(ptr, data[0:int(_size)])
 }
 
 func WriteBigInt(mem IMemory, value *big.Int, pointer interface{}) error {

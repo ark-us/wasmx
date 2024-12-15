@@ -114,15 +114,24 @@ func (chain *TestChain) GetContext() sdk.Context {
 	return chain.App.GetBaseApp().NewUncachedContext(false, chain.CurrentHeader)
 }
 
+// Called once before any test in the suite
+func (suite *KeeperTestSuite) SetupSuite() {
+	suite.SetupChains()
+}
+
+// Called before each test
+func (suite *KeeperTestSuite) SetupTest() {
+	// suite.SetupChains()
+}
+
+// Called once after all tests in the suite
+func (suite *KeeperTestSuite) TearDownSuite() {
+	suite.TearDownChains()
+}
+
+// Called after each test
 func (suite *KeeperTestSuite) TearDownTest() {
-	for _, chain := range suite.Chains {
-		err := chain.App.BaseApp.Close()
-		suite.Require().NoError(err)
-	}
-	if suite.TestChain.App != nil {
-		err := suite.TestChain.App.Db().Close()
-		suite.Require().NoError(err)
-	}
+	// suite.TearDownChains()
 }
 
 func (suite *KeeperTestSuite) GetChain(chainId string) *TestChain {
@@ -181,7 +190,18 @@ func (suite *KeeperTestSuite) AppContext() AppContext {
 	return appContext
 }
 
-func (suite *KeeperTestSuite) SetupTest() {
+func (suite *KeeperTestSuite) TearDownChains() {
+	for _, chain := range suite.Chains {
+		err := chain.App.BaseApp.Close()
+		suite.Require().NoError(err)
+	}
+	if suite.TestChain.App != nil {
+		err := suite.TestChain.App.Db().Close()
+		suite.Require().NoError(err)
+	}
+}
+
+func (suite *KeeperTestSuite) SetupChains() {
 	t := suite.T()
 	suite.Chains = map[string]*TestChain{}
 	mcfg.ChainIdsInit = []string{

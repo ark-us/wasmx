@@ -846,7 +846,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	}
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: executeWithOrigin")
 
 	// add more funds
 	if !coins.IsZero() {
@@ -906,7 +906,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	// add denom param for wasmx
 
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
-	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: execute")
+	ctx.GasMeter().ConsumeGas(executeCosts, "Loading CosmWasm module: query")
 
 	// add known dependencies for that codeId
 	// TODO system deps in the form of smart contracts

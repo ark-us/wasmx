@@ -35,6 +35,26 @@ func (suite *KeeperTestSuite) SetupSuite() {
 
 	suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
 	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
+
+	suite.WasmVmMeta = wazero.WazeroVmMeta{}
+	suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+
+	suite.SetupChains()
+}
+
+// Called before each test
+func (suite *KeeperTestSuite) SetupTest() {
+	// suite.SetupChains()
+}
+
+// Called once after all tests in the suite
+func (suite *KeeperTestSuite) TearDownSuite() {
+	suite.TearDownChains()
+}
+
+// Called after each test
+func (suite *KeeperTestSuite) TearDownTest() {
+	// suite.TearDownChains()
 }
 
 // TestKeeperTestSuite runs all the tests within this package.

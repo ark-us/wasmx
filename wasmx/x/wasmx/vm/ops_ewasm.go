@@ -202,7 +202,7 @@ func callDataCopy(_context interface{}, rnh memc.RuntimeHandler, params []interf
 func getReturnDataSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = len(ctx.ReturnData)
+	returns[0] = int32(len(ctx.ReturnData))
 	return returns, nil
 }
 
@@ -228,7 +228,7 @@ func returnDataCopy(_context interface{}, rnh memc.RuntimeHandler, params []inte
 func getCodeSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = len(ctx.Env.Contract.Bytecode)
+	returns[0] = int32(len(ctx.Env.Contract.Bytecode))
 	return returns, nil
 }
 
