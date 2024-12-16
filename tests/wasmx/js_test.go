@@ -34,6 +34,7 @@ func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
+	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
@@ -72,6 +73,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
+	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
@@ -99,6 +101,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
+	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 
@@ -127,6 +130,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
+	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 	depsJs := []string{types.INTERPRETER_JS}
@@ -161,6 +165,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
+	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 

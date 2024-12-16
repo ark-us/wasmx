@@ -212,11 +212,12 @@ func InterpreterPrecompiles() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
+		// TODO reenable, fix WASI, unskip tests
 		// {
 		// 	Address:     ADDR_INTERPRETER_PYTHON,
 		// 	Label:       INTERPRETER_PYTHON,
 		// 	InitMessage: initMsg,
-		// 	Pinned:      false,
+		// 	Pinned:      true,
 		// 	Role:        ROLE_INTERPRETER,
 		// 	StorageType: ContractStorageType_CoreConsensus,
 		// 	Deps:        []string{},
@@ -225,7 +226,7 @@ func InterpreterPrecompiles() SystemContracts {
 		// 	Address:     ADDR_INTERPRETER_JS,
 		// 	Label:       INTERPRETER_JS,
 		// 	InitMessage: initMsg,
-		// 	Pinned:      false,
+		// 	Pinned:      true,
 		// 	Role:        ROLE_INTERPRETER,
 		// 	StorageType: ContractStorageType_CoreConsensus,
 		// 	Deps:        []string{},

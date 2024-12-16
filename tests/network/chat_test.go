@@ -60,7 +60,8 @@ func (suite *KeeperTestSuite) TestChat() {
 	initBalance := sdkmath.NewInt(10_000_000_000)
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
-	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
 	chatAddress, err := appA.App.WasmxKeeper.GetAddressOrRole(appA.Context(), wasmxtypes.ROLE_CHAT)
 	s.Require().NoError(err)
@@ -76,7 +77,7 @@ func (suite *KeeperTestSuite) TestChat() {
 
 	msg = []byte(`{"GetRooms":{}}`)
 	qresp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   appA.MustAccAddressToString(sender.Address),
+		Sender:   senderPrefixed.String(),
 		Contract: chatAddress.String(),
 		Msg:      msg,
 	})
@@ -141,7 +142,7 @@ func (suite *KeeperTestSuite) TestChat() {
 	verifierAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CHAT_VERIFIER)
 	msg = []byte(fmt.Sprintf(`{"VerifyConversation":{"blocks":%s}}`, string(blocksbz)))
 	qresp, err = suite.App().NetworkKeeper.QueryContract(appA.Context(), &types.MsgQueryContract{
-		Sender:   appA.MustAccAddressToString(sender.Address),
+		Sender:   senderPrefixed.String(),
 		Contract: appA.MustAccAddressToString(verifierAddress),
 		Msg:      msg,
 	})

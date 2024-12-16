@@ -135,6 +135,82 @@ type ContractDependency struct {
 	StorageType   ContractStorageType
 }
 
+func (v ContractDependency) Clone() *ContractDependency {
+	deps := make([]SystemDep, len(v.SystemDeps))
+	for i, dep := range v.SystemDeps {
+		deps[i] = dep.Clone()
+	}
+	return &ContractDependency{
+		Address:       mcodec.NewAccAddressPrefixed(cloneBytes(v.Address.Bytes()), v.Address.Prefix()),
+		Role:          v.Role,
+		Label:         v.Label,
+		StoreKey:      cloneBytes(v.StoreKey),
+		FilePath:      v.FilePath,
+		SystemDeps:    deps,
+		Bytecode:      cloneBytes(v.Bytecode),
+		CodeHash:      cloneBytes(v.CodeHash),
+		CodeId:        v.CodeId,
+		SystemDepsRaw: cloneStrings(v.SystemDepsRaw),
+		StorageType:   v.StorageType,
+	}
+}
+
+func (v *Env) Clone() *Env {
+	return &Env{
+		Chain:       v.Chain.Clone(),
+		Block:       v.Block.Clone(),
+		Transaction: v.Transaction.Clone(),
+		Contract:    v.Contract.Clone(),
+		CurrentCall: v.CurrentCall.Clone(),
+	}
+}
+
+func (v MessageInfo) Clone() MessageInfo {
+	return MessageInfo{
+		Origin:   v.Origin,
+		Sender:   v.Sender,
+		Funds:    cloneBigInt(v.Funds),
+		GasLimit: cloneBigInt(v.GasLimit),
+		CallData: cloneBytes(v.CallData),
+	}
+}
+
+func (v EnvContractInfo) Clone() EnvContractInfo {
+	return EnvContractInfo{
+		Address:    v.Address,
+		CodeHash:   cloneBytes(v.CodeHash),
+		CodeId:     v.CodeId,
+		SystemDeps: cloneStrings(v.SystemDeps),
+		Bytecode:   cloneBytes(v.Bytecode),
+		FilePath:   v.FilePath,
+	}
+}
+
+func (v *TransactionInfo) Clone() *TransactionInfo {
+	return &TransactionInfo{
+		Index:    v.Index,
+		GasPrice: cloneBigInt(v.GasPrice),
+	}
+}
+
+func (v BlockInfo) Clone() BlockInfo {
+	return BlockInfo{
+		Height:    v.Height,
+		Timestamp: v.Timestamp,
+		GasLimit:  v.GasLimit,
+		Hash:      cloneBytes(v.Hash),
+		Proposer:  v.Proposer,
+	}
+}
+
+func (v ChainInfo) Clone() ChainInfo {
+	return ChainInfo{
+		Denom:       v.Denom,
+		ChainId:     cloneBigInt(v.ChainId),
+		ChainIdFull: v.ChainIdFull,
+	}
+}
+
 // func (u RawBytes) MarshalJSON() ([]byte, error) {
 // 	var result string
 // 	if u == nil {
@@ -222,4 +298,20 @@ func PaddLeftTo32(data []byte) []byte {
 	}
 	data = append(bytes.Repeat([]byte{0}, 32-length), data...)
 	return data
+}
+
+func cloneBytes(src []byte) []byte {
+	dst := make([]byte, len(src))
+	copy(dst, src)
+	return dst
+}
+
+func cloneStrings(src []string) []string {
+	dst := make([]string, len(src))
+	copy(dst, src)
+	return dst
+}
+
+func cloneBigInt(src *big.Int) *big.Int {
+	return new(big.Int).Set(src)
 }

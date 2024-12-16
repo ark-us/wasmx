@@ -255,10 +255,11 @@ func ExecuteWasmInterpreted(
 		newIVmFn:        newIVmFn,
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
-	for _, dep := range dependencies {
-		addrstr := dep.Address.String()
-		context.ContractRouter[addrstr] = &Context{ContractInfo: &dep}
+	for i := range dependencies {
+		dep := dependencies[i]
+		context.ContractRouter[dep.Address.String()] = &Context{ContractInfo: &dep}
 	}
+
 	// add itself
 	contractstr := env.Contract.Address.String()
 	err = InitiateWasm(context, rnh, "", nil, contractInfo.SystemDeps)
@@ -375,9 +376,9 @@ func ExecuteWasm(
 		return types.ContractResponse{Data: data}, nil
 	}
 
-	for _, dep := range dependencies {
-		addrstr := dep.Address.String()
-		context.ContractRouter[addrstr] = &Context{ContractInfo: &dep}
+	for i := range dependencies {
+		dep := dependencies[i]
+		context.ContractRouter[dep.Address.String()] = &Context{ContractInfo: &dep}
 	}
 	// add itself
 	contractstr := env.Contract.Address.String()

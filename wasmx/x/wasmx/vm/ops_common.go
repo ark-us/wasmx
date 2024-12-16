@@ -272,10 +272,17 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	return success, newctx.ReturnData
 }
 
+// we only need to forward ContractInfo for nested calls
 func cloneContractRouter(router map[string]*Context) map[string]*Context {
 	newrouter := make(map[string]*Context, 0)
 	for k := range router {
-		newrouter[k] = router[k].CloneShallow()
+		if router[k].ContractInfo == nil {
+			newrouter[k] = &Context{}
+		} else {
+			newrouter[k] = &Context{
+				ContractInfo: router[k].ContractInfo.Clone(),
+			}
+		}
 	}
 	return newrouter
 }

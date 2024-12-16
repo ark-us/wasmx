@@ -295,6 +295,19 @@ type SystemDep struct {
 	Deps     []SystemDep
 }
 
+func (v SystemDep) Clone() SystemDep {
+	deps := make([]SystemDep, len(v.Deps))
+	for i, dep := range v.Deps {
+		deps[i] = dep.Clone()
+	}
+	return SystemDep{
+		Role:     v.Role,
+		Label:    v.Label,
+		FilePath: v.FilePath,
+		Deps:     deps,
+	}
+}
+
 func GetMaxCodeSize(sdeps []string) int {
 	for _, dep := range sdeps {
 		// _, found := SUPPORTED_INTERPRETERS[dep]

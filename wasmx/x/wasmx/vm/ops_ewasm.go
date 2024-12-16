@@ -824,8 +824,7 @@ func finish(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 	if err != nil {
 		return nil, err
 	}
-	returns := make([]interface{}, 1)
-	returns[0] = result
+	returns := make([]interface{}, 0)
 	ctx.FinishData = result
 	ctx.ReturnData = result
 	// terminate the WASM execution
@@ -849,8 +848,7 @@ func revert(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 	if err != nil {
 		return nil, err
 	}
-	returns := make([]interface{}, 1)
-	returns[0] = result
+	returns := make([]interface{}, 0)
 	ctx.FinishData = result
 	ctx.ReturnData = result
 	return returns, fmt.Errorf("revert")

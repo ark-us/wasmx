@@ -339,18 +339,14 @@ func cw_8_ed25519_verify(_context interface{}, rnh memc.RuntimeHandler, params [
 		return nil, err
 	}
 	if len(msg) > MAX_LENGTH_ED25519_MESSAGE {
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("cw_8_ed25519_verify: message length exceeds %d bytes", MAX_LENGTH_ED25519_MESSAGE)
 	}
 	signature, err := readMemCw(rnh.GetVm(), params[1])
 	if err != nil {
 		return nil, err
 	}
 	if len(signature) != MAX_LENGTH_ED25519_SIGNATURE {
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("cw_8_ed25519_verify: signature length exceeds %d bytes", MAX_LENGTH_ED25519_SIGNATURE)
 	}
 	publicKeyBz, err := readMemCw(rnh.GetVm(), params[2])
 	if err != nil {
@@ -613,6 +609,7 @@ func ExecuteCw8Execute(context *Context, vm memc.IVm, funcName string) ([]int32,
 	if result.Ok != nil {
 		context.Messages = result.Ok.Messages
 		context.ReturnData = result.Ok.Data
+		context.FinishData = result.Ok.Data
 		// TODO make these wasmx logs, of type cosmwasm
 		// result.Ok.Attributes
 		// result.Ok.Events
@@ -665,6 +662,7 @@ func ExecuteCw8Reply(context *Context, vm memc.IVm, funcName string) ([]int32, e
 	if result.Ok != nil {
 		context.Messages = result.Ok.Messages
 		context.ReturnData = result.Ok.Data
+		context.FinishData = result.Ok.Data
 		// TODO make these wasmx logs, of type cosmwasm
 		// result.Ok.Attributes
 		// result.Ok.Events
@@ -714,6 +712,7 @@ func ExecuteCw8Query(context *Context, vm memc.IVm, funcName string) ([]int32, e
 
 	if result.Ok != nil {
 		context.ReturnData = result.Ok
+		context.FinishData = result.Ok
 		return nil, nil
 	}
 	err = sdkerr.Wrapf(sdkerr.Error{}, "%s %s", cw8types.ERROR_FLAG_QUERY, result.Err)

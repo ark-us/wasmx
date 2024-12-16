@@ -1,14 +1,15 @@
 package vm
 
 import (
+	sdkerr "cosmossdk.io/errors"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/interpreters"
 	memas "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/assemblyscript"
 	membase "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/base"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	memtay "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/taylor"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (
@@ -113,18 +114,22 @@ func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.S
 }
 
 func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	// TODO better
 	env1, err := BuildWasiWasmxEnv(context, rnh)
 	if err != nil {
-		return err
+		return sdkerr.Wrapf(err, "could not build wasmx wasi module")
 	}
-	err = rnh.GetVm().RegisterModule(env1)
+	vm := rnh.GetVm()
+	err = vm.RegisterModule(env1)
 	if err != nil {
-		return err
+		return sdkerr.Wrapf(err, "could not register env module")
 	}
-	keccakRnh, err := InitiateKeccak256(context.Ctx, rnh.GetVm().New)
+	err = vm.InitWasi([]string{``}, []string{}, []string{})
 	if err != nil {
-		return err
+		return sdkerr.Wrapf(err, "could not register WASI module")
+	}
+	keccakRnh, err := InitiateKeccak256(context.Ctx, vm.New)
+	if err != nil {
+		return sdkerr.Wrapf(err, "initiate keccak256")
 	}
 	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
 
