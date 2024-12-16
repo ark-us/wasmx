@@ -261,6 +261,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 	input = append(fabi.ID, input...)
 
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: input}, nil, nil)
+	s.Require().True(len(qres) > 0, "empty shamirRecover response")
 
 	unpacked, err = fabi.Outputs.Unpack(qres)
 	s.Require().NoError(err)

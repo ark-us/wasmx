@@ -535,7 +535,8 @@ func (s *AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps [
 
 	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
 	s.S.Require().NoError(err)
-	s.S.Require().Equal(bytecode, wasmbin)
+	s.S.Require().Equal(len(wasmbin), len(bytecode), "stored code length mismatch")
+	s.S.Require().Equal(wasmbin, bytecode)
 	return codeId
 }
 

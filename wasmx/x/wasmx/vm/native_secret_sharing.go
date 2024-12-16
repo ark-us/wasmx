@@ -47,12 +47,15 @@ func init() {
 func SecretSharing(context *Context, input []byte) ([]byte, error) {
 	wasmbin := precompiles.GetPrecompileByLabel(context.CosmosHandler.AddressCodec(), "secret_sharing")
 
-	// needs WASI
 	vm := context.newIVmFn(context.Ctx)
 	defer func() {
 		vm.Cleanup()
 	}()
-	err := vm.InstantiateWasm("", wasmbin)
+	err := vm.InitWasi([]string{}, []string{}, []string{})
+	if err != nil {
+		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot initialize WASI")
+	}
+	err = vm.InstantiateWasm("", wasmbin)
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: invalid wasm")
 	}

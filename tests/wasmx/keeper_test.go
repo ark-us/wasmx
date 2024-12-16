@@ -35,7 +35,6 @@ func (suite *KeeperTestSuite) SetupSuite() {
 
 	// suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
 	// suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
-
 	suite.SetupChains()
 }
 

@@ -18,6 +18,7 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/taylor"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
@@ -128,6 +129,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayJson() {
 }
 
 func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
+	suite.SetCurrentChain(mcfg.LEVEL0_CHAIN_ID)
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
 

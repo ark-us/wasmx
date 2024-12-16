@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	sdkerrors "cosmossdk.io/errors"
@@ -176,6 +177,9 @@ func (wm *WazeroVm) Cleanup() {
 }
 
 func (wm *WazeroVm) Call(funcname string, args []interface{}) ([]int32, error) {
+	if wm.vm == nil {
+		panic("WazeroVm not instantiated")
+	}
 	_args := make([]uint64, len(args))
 	for i, arg := range args {
 		_args[i] = uint64(arg.(int32))
@@ -195,6 +199,9 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}) ([]int32, error) {
 }
 
 func (wm *WazeroVm) GetMemory() (memc.IMemory, error) {
+	if wm.vm == nil {
+		panic("WazeroVm not instantiated")
+	}
 	mem := wm.vm.Memory()
 	if mem == nil {
 		return nil, fmt.Errorf("could not find memory")
@@ -203,6 +210,9 @@ func (wm *WazeroVm) GetMemory() (memc.IMemory, error) {
 }
 
 func (wm *WazeroVm) GetFunctionList() []string {
+	if wm.vm == nil {
+		panic("WazeroVm not instantiated")
+	}
 	fnlist := []string{}
 	for fnname := range wm.vm.ExportedFunctionDefinitions() {
 		fnlist = append(fnlist, fnname)
@@ -215,22 +225,57 @@ func (wm *WazeroVm) ListRegisteredModule() []string {
 }
 
 func (wm *WazeroVm) FindGlobal(name string) interface{} {
+	if wm.vm == nil {
+		panic("WazeroVm not instantiated")
+	}
 	glob := wm.vm.ExportedGlobal(name)
 	val := glob.Get()
 	return ValueFromUint64(val, glob.Type())
 }
 
 func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) error {
-	// modcfg := wazero.NewModuleConfig().WithArgs(args).WithEnv(envs).WithFSConfig()
-	// wm.r.InstantiateWithConfig(ctx, wasmbuffer, modcfg)
+	if slices.Contains(wm.moduleNames, wasi_snapshot_preview1.ModuleName) {
+		return fmt.Errorf("WASI already initialized")
+	}
+	wasiConfig := wazero.NewModuleConfig()
+	// Add arguments
+	for _, arg := range args {
+		wasiConfig = wasiConfig.WithArgs(arg)
+	}
 
-	// WithWorkDirFS
+	// Add environment variables
+	for _, env := range envs {
+		keyValue := splitEnv(env)
+		if keyValue != nil {
+			wasiConfig = wasiConfig.WithEnv(keyValue[0], keyValue[1])
+		}
+	}
 
-	// mod := wm.vm.GetImportModule(WASI)
-	// if mod == nil {
-	// 	return fmt.Errorf("WASI module not found")
+	// Add preopened directories
+	for _, dir := range preopens {
+		wasiConfig = wasiConfig.WithFSConfig(wazero.NewFSConfig().WithDirMount(dir, "/"))
+	}
+
+	// Instantiate the WASI module
+	_, err := wasi_snapshot_preview1.Instantiate(wm.ctx, wm.r)
+	if err != nil {
+		return err
+	}
+	wm.moduleNames = append(wm.moduleNames, wasi_snapshot_preview1.ModuleName)
+
+	// TODO WASI
+	// // InstantiateModule runs the "_start" function, WASI's "main".
+	// // * Set the program name (arg[0]) to "wasi"; arg[1] should be "/test.txt".
+	// if _, err = r.InstantiateWithConfig(ctx, catWasm, config.WithArgs("wasi", os.Args[1])); err != nil {
+	// 	// Note: Most compilers do not exit the module after running "_start",
+	// 	// unless there was an error. This allows you to call exported functions.
+	// 	if exitErr, ok := err.(*sys.ExitError); ok && exitErr.ExitCode() != 0 {
+	// 		fmt.Fprintf(os.Stderr, "exit_code: %d\n", exitErr.ExitCode())
+	// 	} else if !ok {
+	// 		log.Panicln(err)
+	// 	}
 	// }
-	// mod.InitWasi(args, envs, preopens)
+
 	return nil
 }
 
@@ -287,49 +332,6 @@ func (wm *WazeroVm) RegisterModuleInner(mod wazero.HostModuleBuilder) error {
 		return err
 	}
 	wm.moduleNames = append(wm.moduleNames, _mod.Name())
-	return nil
-}
-
-func (wm *WazeroVm) InitWASI(args []string, envs []string, preopens []string) error {
-	wasiConfig := wazero.NewModuleConfig()
-	// Add arguments
-	for _, arg := range args {
-		wasiConfig = wasiConfig.WithArgs(arg)
-	}
-
-	// Add environment variables
-	for _, env := range envs {
-		keyValue := splitEnv(env)
-		if keyValue != nil {
-			wasiConfig = wasiConfig.WithEnv(keyValue[0], keyValue[1])
-		}
-	}
-
-	// Add preopened directories
-	for _, dir := range preopens {
-		wasiConfig = wasiConfig.WithFSConfig(wazero.NewFSConfig().WithDirMount(dir, "/"))
-	}
-
-	// Instantiate the WASI module
-	_, err := wasi_snapshot_preview1.Instantiate(wm.ctx, wm.r)
-	if err != nil {
-		return err
-	}
-	wm.moduleNames = append(wm.moduleNames, wasi_snapshot_preview1.ModuleName)
-
-	// TODO WASI
-	// // InstantiateModule runs the "_start" function, WASI's "main".
-	// // * Set the program name (arg[0]) to "wasi"; arg[1] should be "/test.txt".
-	// if _, err = r.InstantiateWithConfig(ctx, catWasm, config.WithArgs("wasi", os.Args[1])); err != nil {
-	// 	// Note: Most compilers do not exit the module after running "_start",
-	// 	// unless there was an error. This allows you to call exported functions.
-	// 	if exitErr, ok := err.(*sys.ExitError); ok && exitErr.ExitCode() != 0 {
-	// 		fmt.Fprintf(os.Stderr, "exit_code: %d\n", exitErr.ExitCode())
-	// 	} else if !ok {
-	// 		log.Panicln(err)
-	// 	}
-	// }
-
 	return nil
 }
 

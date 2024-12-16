@@ -14,6 +14,7 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
+	mcfg "github.com/loredanacirstea/wasmx/config"
 	interfacesTestdata "github.com/loredanacirstea/wasmx/x/wasmx/keeper/testdata/interfaces"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm"
@@ -28,6 +29,7 @@ type AtomicSwapBalance struct {
 }
 
 func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
+	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 	wasmbin := cw8.Cw20BaseAarch64Wasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)

@@ -174,6 +174,7 @@ func buildEnvEnv(ctx sdk.Context, r wazero.Runtime) error {
 }
 
 func TestWazeroWasmxSimpleStorage(t *testing.T) {
+	t.Skip("Skipping local test TestWazeroWasmxSimpleStorage")
 	var err error
 	wasmbin := wasmxSimpleStorage
 

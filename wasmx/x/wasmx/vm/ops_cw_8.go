@@ -65,16 +65,16 @@ var MAX_LENGTH_ABORT = 2 * MI
 var Secp256k1VerifyCost = uint64(21000)
 
 // Return code (error code) for a valid signature
-var SECP256K1_VERIFY_CODE_VALID = uint32(0)
+var SECP256K1_VERIFY_CODE_VALID = int32(0)
 
 // Return code (error code) for an invalid signature
-var SECP256K1_VERIFY_CODE_INVALID = uint32(1)
+var SECP256K1_VERIFY_CODE_INVALID = int32(1)
 
 // Return code (error code) for a valid signature
-const ED25519_VERIFY_CODE_VALID = uint32(0)
+const ED25519_VERIFY_CODE_VALID = int32(0)
 
 // Return code (error code) for an invalid signature
-const ED25519_VERIFY_CODE_INVALID = uint32(1)
+const ED25519_VERIFY_CODE_INVALID = int32(1)
 
 // CosmWasm imports.
 // A complete documentation those functions is available in the VM that provides them:

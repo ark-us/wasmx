@@ -700,8 +700,7 @@ func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName st
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
-	// TODO
-	// wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	inputFile := path.Join(dir, "main.py")
 	content, err := os.ReadFile(context.Env.Contract.FilePath)
@@ -733,25 +732,24 @@ set_finishdata(res or b'')
 		return nil, err
 	}
 
-	// TODO
-	// wasimodule.InitWasi(
-	// 	[]string{
-	// 		``,
-	// 		"main.py",
-	// 		string(context.Env.CurrentCall.CallData),
-	// 		// --quiet
-	// 	},
-	// 	// os.Environ(), // The envs
-	// 	[]string{},
-	// 	// The mapping preopens
-	// 	[]string{
-	// 		// ".:.",
-	// 		// fmt.Sprintf(`%s:.`, dir),
-	// 		// fmt.Sprintf(`%s:%s`, dir, dir),
-	// 		fmt.Sprintf(`.:%s`, dir),
-	// 		// fmt.Sprintf(`/:%s`, dir),
-	// 	},
-	// )
+	contractVm.InitWasi(
+		[]string{
+			``,
+			"main.py",
+			string(context.Env.CurrentCall.CallData),
+			// --quiet
+		},
+		// os.Environ(), // The envs
+		[]string{},
+		// The mapping preopens
+		[]string{
+			// ".:.",
+			// fmt.Sprintf(`%s:.`, dir),
+			// fmt.Sprintf(`%s:%s`, dir, dir),
+			fmt.Sprintf(`.:%s`, dir),
+			// fmt.Sprintf(`/:%s`, dir),
+		},
+	)
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 }
 
@@ -759,8 +757,7 @@ func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
-	// TODO
-	// wasimodule := contractVm.GetImportModule(wasmedge.WASI)
+
 	dir := filepath.Dir(context.Env.Contract.FilePath)
 	fileName := filepath.Base(context.Env.Contract.FilePath)
 	inputFileName := "main.js"
@@ -786,18 +783,17 @@ wasmx.setFinishData(res || new ArrayBuffer(0));
 		return nil, err
 	}
 
-	// TODO
-	// wasimodule.InitWasi(
-	// 	[]string{
-	// 		``,
-	// 		inputFileName,
-	// 		string(context.Env.CurrentCall.CallData),
-	// 	},
-	// 	[]string{},
-	// 	[]string{
-	// 		fmt.Sprintf(`.:%s`, dir),
-	// 	},
-	// )
+	contractVm.InitWasi(
+		[]string{
+			``,
+			inputFileName,
+			string(context.Env.CurrentCall.CallData),
+		},
+		[]string{},
+		[]string{
+			fmt.Sprintf(`.:%s`, dir),
+		},
+	)
 	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
 }
 
@@ -806,18 +802,16 @@ func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, arg
 	// 	funcName = "main"
 	// }
 
-	// TODO
-	// wasimodule := contractVm.GetImportModule(wasmedge.WASI)
-	// wasimodule.InitWasi(
-	// 	[]string{
-	// 		``,
-	// 	},
-	// 	// os.Environ(), // The envs
-	// 	[]string{},
-	// 	// The mapping preopens
-	// 	[]string{
-	// 		// fmt.Sprintf(`.:%s`, dir),
-	// 	},
-	// )
+	contractVm.InitWasi(
+		[]string{
+			``,
+		},
+		// os.Environ(), // The envs
+		[]string{},
+		// The mapping preopens
+		[]string{
+			// fmt.Sprintf(`.:%s`, dir),
+		},
+	)
 	return ExecuteWasi(context, contractVm, funcName, args)
 }

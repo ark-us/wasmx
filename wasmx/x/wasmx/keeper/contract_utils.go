@@ -213,8 +213,13 @@ func (k *Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {
 	if codeInfoBz == nil {
 		return nil, nil
 	}
-	k.cdc.MustUnmarshal(codeInfoBz, &codeInfo)
-	if types.HasInterpreterDep(codeInfo.Deps) {
+	err := k.cdc.Unmarshal(codeInfoBz, &codeInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	// it can be a utf8 interpreter, handled in wasmvm.GetCode
+	if len(codeInfo.InterpretedBytecodeRuntime) > 0 && types.HasInterpreterDep(codeInfo.Deps) {
 		return codeInfo.InterpretedBytecodeRuntime, nil
 	}
 	return k.wasmvm.GetCode(codeInfo.CodeHash, codeInfo.Deps)

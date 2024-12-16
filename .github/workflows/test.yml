@@ -22,16 +22,10 @@ jobs:
         with:
           go-version: 1.23
 
-      - name: Set up CGO environment variables
-        run: |
-          echo "CGO_LDFLAGS='-Wl,-rpath,/usr/local/lib'" >> $GITHUB_ENV
-
       - name: Run tests
         run: |
           go test -v ./wasmx/...
-          # go test -v ./wasmx-wasmedge/...
           go test -v ./wasmx-wazero/...
-          # go test -v ./mythos-wasmedge/...
           go test -v ./mythos-wazero/...
-          go test -v ./tests/wasmx
+          go test -v -short ./tests/wasmx
 

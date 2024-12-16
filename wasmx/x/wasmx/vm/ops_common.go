@@ -13,20 +13,6 @@ import (
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
 
-// Returns nil if there is no contract
-func GetContractContext(ctx *Context, addr sdk.AccAddress) *Context {
-	addrCodec := ctx.GetCosmosHandler().AddressCodec()
-	addrstr, err := addrCodec.BytesToString(addr)
-	if err != nil {
-		return nil
-	}
-	depContext, ok := ctx.ContractRouter[addrstr]
-	if !ok {
-		return nil
-	}
-	return depContext
-}
-
 func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.ContractDependency {
 	depContext, ok := ctx.ContractRouter[addr.String()]
 	if ok {
@@ -117,31 +103,31 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 // Returns 0 on success, 1 on failure and 2 on revert
 func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	if types.IsSystemAddress(req.To.Bytes()) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From.Bytes()) {
-		return int32(1), []byte(`cannot call system contract`)
+		return int32(1), []byte(`wasmxcall: cannot call system contract`)
 	}
-	depContext := GetContractContext(ctx, req.To.Bytes())
+	depContractInfo := GetContractDependency(ctx, req.To)
 	// ! we return success here in case the contract does not exist
 	// an empty transaction to any account should succeed (evm way)
 	// even with value 0 & no calldata
-	if depContext == nil {
-		return int32(0), []byte(`cannot get contract context`)
+	if depContractInfo == nil {
+		return int32(0), []byte(`wasmxcall: cannot get contract context`)
 	}
 
 	fromstr := req.From.String()
 	tostr := req.To.String()
 
 	// deterministic contracts cannot transact with or query non-deterministic contracts
-	sourceContract := GetContractContext(ctx, req.From.Bytes())
-	if sourceContract != nil {
-		if depContext.ContractInfo.Role != "" && sourceContract.ContractInfo.Role == "" {
+	sourceContractInfo := GetContractDependency(ctx, req.From)
+	if sourceContractInfo != nil {
+		if depContractInfo.Role != "" && sourceContractInfo.Role == "" {
 			errmsg := "no-role contract tried to execute role contract"
-			ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "from_role", sourceContract.ContractInfo.Role, "to", tostr, "to_role", depContext.ContractInfo.Role)
-			errmsg += fmt.Sprintf(": from %s, to %s - %s", fromstr, tostr, depContext.ContractInfo.Role)
+			ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "from_role", sourceContractInfo.Role, "to", tostr, "to_role", depContractInfo.Role)
+			errmsg += fmt.Sprintf(": from %s, to %s - %s", fromstr, tostr, depContractInfo.Role)
 			return int32(1), []byte(errmsg)
 		}
 
-		fromStorageType := sourceContract.ContractInfo.StorageType
-		toStorageType := depContext.ContractInfo.StorageType
+		fromStorageType := sourceContractInfo.StorageType
+		toStorageType := depContractInfo.StorageType
 		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
 			// deterministic contracts can read & write from/to metaconsensus contracts
 			if toStorageType != types.ContractStorageType_MetaConsensus {
@@ -178,7 +164,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	// TODO req.To or to?
 	routerAddress := tostr
 
-	if depContext.ContractInfo.Role == types.ROLE_LIBRARY {
+	if depContractInfo.Role == types.ROLE_LIBRARY {
 		// use the sender contract if the call is to a library
 		to = req.From
 		tostr2 = fromstr
@@ -186,7 +172,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		// newrouter[tostr2].ContractInfo.
 		// TODO inherit execution depepndencies comming from roles
 		sysdeps := newrouter[tostr].ContractInfo.SystemDeps
-		for _, dep := range sourceContract.ContractInfo.SystemDeps {
+		for _, dep := range sourceContractInfo.SystemDeps {
 			if strings.Contains(dep.Role, "consensus") {
 				if !slices.Contains(systemDeps, dep.Role) {
 					systemDeps = append(systemDeps, dep.Role)
