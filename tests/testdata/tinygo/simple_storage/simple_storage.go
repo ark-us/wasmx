@@ -5,7 +5,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	wasmx "github.com/wasmx/wasmx-go"
+	wasmx "github.com/loredanacirstea/wasmx-tinygo"
 )
 
 //go:wasm-module simplestorage
@@ -13,6 +13,7 @@ import (
 func instantiate() {
 	data := wasmx.GetCallData()
 	key := []byte("storagekey")
+	wasmx.Log([]byte("storagestore"), [][32]byte{})
 	wasmx.StorageStore(key, data)
 }
 

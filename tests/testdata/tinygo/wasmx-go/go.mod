@@ -1,5 +1,6 @@
-module github.com/wasmx/wasmx-go
-go 1.19
+module github.com/loredanacirstea/wasmx-tinygo
+
+go 1.23
 
 require (
     github.com/tidwall/gjson v1.16.0 // indirect

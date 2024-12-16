@@ -7,9 +7,9 @@
 
 tinygo build -o add.wasm -target=wasi ./add
 
-cd simple_storage && tinygo build -o ../simple_storage.wasm -target=wasi . && cd ..
+cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -target=wasi . && cd ..
 
-cd forward && tinygo build -o ../forward.wasm -target=wasi . && cd ..
+cd forward && GOWORK=off tinygo build -o ../forward.wasm -target=wasi . && cd ..
 
 ```
 

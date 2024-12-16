@@ -11,64 +11,64 @@ import (
 )
 
 //go:wasmimport wasmx storageStore
-func StorageStore_(keyPtr, keyLen, valuePtr, valueLen uint32)
+func StorageStore_(keyPtr, keyLen, valuePtr, valueLen int32)
 
 //go:wasmimport wasmx storageLoad
-func StorageLoad_(keyPtr, keyLen uint32) uint64
+func StorageLoad_(keyPtr, keyLen int32) int64
 
 //go:wasmimport wasmx getCallData
-func GetCallData_() uint64
+func GetCallData_() int64
 
 //go:wasmimport wasmx setFinishData
-func SetFinishData_(dataPtr, dataLen uint32)
+func SetFinishData_(dataPtr, dataLen int32)
 
 //go:wasmimport wasmx getEnv
-func GetEnv_() uint64
+func GetEnv_() int64
 
 //go:wasmimport wasmx callClassic
-func CallClassic_(gasLimit uint64, addressPtr, valuePtr, calldPtr, calldLen uint32) uint64
+func CallClassic_(gasLimit int64, addressPtr, valuePtr, calldPtr, calldLen int32) int64
 
 //go:wasmimport wasmx callStatic
-func CallStatic_(gasLimit uint64, addressPtr, calldPtr, calldLen uint32) uint64
+func CallStatic_(gasLimit int64, addressPtr, calldPtr, calldLen int32) int64
 
 //go:wasmimport wasmx getBlockHash
-func GetBlockHash_(blockNumber uint64) uint64
+func GetBlockHash_(blockNumber int64) int64
 
 //go:wasmimport wasmx getAccount
-func GetAccount_(addrPtr uint32) uint64
+func GetAccount_(addrPtr int32) int64
 
 //go:wasmimport wasmx getCodeHash
-func GetCodeHash_(addrPtr uint32) uint64
+func GetCodeHash_(addrPtr int32) int64
 
 //go:wasmimport wasmx getBalance
-func GetBalance_(addrPtr uint32) uint64
+func GetBalance_(addrPtr int32) int64
 
 //go:wasmimport wasmx keccak256
-func Keccak256_(dataPtr, dataLen uint32) uint64
+func Keccak256_(dataPtr, dataLen int32) int64
 
 //go:wasmimport wasmx createAccount
-func CreateAccount_(dataPtr, dataLen uint32) uint64
+func CreateAccount_(dataPtr, dataLen int32) int64
 
 //go:wasmimport wasmx createAccount2
-func CreateAccount2_(dataPtr, dataLen uint32) uint64
+func CreateAccount2_(dataPtr, dataLen int32) int64
 
 //go:wasmimport wasmx sendCosmosMsg
-func SendCosmosMsg_(dataPtr, dataLen uint32) uint64
+func SendCosmosMsg_(dataPtr, dataLen int32) int64
 
 //go:wasmimport wasmx sendCosmosQuery
-func SendCosmosQuery_(dataPtr, dataLen uint32) uint64
+func SendCosmosQuery_(dataPtr, dataLen int32) int64
 
 //go:wasmimport wasmx getGasLeft
-func GetGasLeft_() uint64
+func GetGasLeft_() int64
 
 //go:wasmimport wasmx bech32StringToBytes
-func Bech32StringToBytes_(dataPtr, dataLen uint32) uint32
+func Bech32StringToBytes_(dataPtr, dataLen int32) int32
 
 //go:wasmimport wasmx bech32BytesToString
-func Bech32BytesToString_(dataPtr uint32) uint64
+func Bech32BytesToString_(dataPtr int32) int64
 
 //go:wasmimport wasmx log
-func Log_(ptr, size uint32)
+func Log_(ptr, size int32)
 
 type CallResult struct {
 	Success int    `json:"success"`
@@ -76,6 +76,7 @@ type CallResult struct {
 }
 
 func StorageStore(key, value []byte) {
+	Log([]byte("wasmx.StorageStore"), [][32]byte{})
 	keyPtr, keyLength := BytesToLeakedPtr(key)
 	valuePtr, valueLength := BytesToLeakedPtr(value)
 	StorageStore_(keyPtr, keyLength, valuePtr, valueLength)
@@ -89,7 +90,8 @@ func StorageLoad(key []byte) []byte {
 
 func GetCallData() []byte {
 	ptr := GetCallData_()
-	return bytesFromDynPtr(ptr)
+	v := bytesFromDynPtr(ptr)
+	return v
 }
 
 func SetFinishData(data []byte) {
@@ -110,7 +112,7 @@ func Bech32BytesToString(addr []byte) string {
 	return string(data)
 }
 
-func Call(gasLimit uint64, addrBech32 string, value []byte, calldata []byte) (bool, []byte) {
+func Call(gasLimit int64, addrBech32 string, value []byte, calldata []byte) (bool, []byte) {
 	addrStrPtr, addrStrLen := StringToLeakedPtr(addrBech32)
 	addrPtr := Bech32StringToBytes_(addrStrPtr, addrStrLen)
 
@@ -128,7 +130,7 @@ func Call(gasLimit uint64, addrBech32 string, value []byte, calldata []byte) (bo
 	return calld.Success == 0, calld.Data
 }
 
-func CallStatic(gasLimit uint64, addrBech32 string, calldata []byte) (bool, []byte) {
+func CallStatic(gasLimit int64, addrBech32 string, calldata []byte) (bool, []byte) {
 	addrStrPtr, addrStrLen := StringToLeakedPtr(addrBech32)
 	addrPtr := Bech32StringToBytes_(addrStrPtr, addrStrLen)
 
@@ -157,13 +159,13 @@ func Log(data []byte, topics [][32]byte) {
 	Log_(ptr, size)
 }
 
-func splitPtr(ptr uint64) (uint32, uint32) {
-	dataPtr := uint32(ptr >> 32)
-	dataSize := uint32(ptr)
+func splitPtr(ptr int64) (int32, int32) {
+	dataPtr := int32(ptr >> 32)
+	dataSize := int32(ptr)
 	return dataPtr, dataSize
 }
 
-func bytesFromDynPtr(ptr uint64) []byte {
+func bytesFromDynPtr(ptr int64) []byte {
 	dataPtr, dataLen := splitPtr(ptr)
 	return PtrToBytes(dataPtr, dataLen)
 }
@@ -179,7 +181,7 @@ func PaddLeftTo32(data []byte) []byte {
 
 // PtrToString returns a string from WebAssembly compatible numeric types
 // representing its pointer and length.
-func PtrToString(ptr uint32, size uint32) string {
+func PtrToString(ptr int32, size int32) string {
 	return unsafe.String((*byte)(unsafe.Pointer(uintptr(ptr))), size)
 }
 
@@ -187,32 +189,36 @@ func PtrToString(ptr uint32, size uint32) string {
 // compatible with WebAssembly numeric types.
 // The returned pointer aliases the string hence the string must be kept alive
 // until ptr is no longer needed.
-func StringToPtr(s string) (uint32, uint32) {
+func StringToPtr(s string) (int32, int32) {
 	ptr := unsafe.Pointer(unsafe.StringData(s))
-	return uint32(uintptr(ptr)), uint32(len(s))
+	return int32(uintptr(ptr)), int32(len(s))
 }
 
 // StringToLeakedPtr returns a pointer and size pair for the given string in a way
 // compatible with WebAssembly numeric types.
 // The pointer is not automatically managed by TinyGo hence it must be freed by the host (TODO)
-func StringToLeakedPtr(s string) (uint32, uint32) {
+func StringToLeakedPtr(s string) (int32, int32) {
 	size := C.ulong(len(s))
 	ptr := unsafe.Pointer(C.malloc(size))
 	copy(unsafe.Slice((*byte)(ptr), size), s)
-	return uint32(uintptr(ptr)), uint32(size)
+	return int32(uintptr(ptr)), int32(size)
 }
 
-func BytesToLeakedPtr(data []byte) (uint32, uint32) {
+func BytesToLeakedPtr(data []byte) (int32, int32) {
 	size := C.ulong(len(data))
 	ptr := unsafe.Pointer(C.malloc(size))
 	copy(unsafe.Slice((*byte)(ptr), size), data)
-	return uint32(uintptr(ptr)), uint32(size)
+	return int32(uintptr(ptr)), int32(size)
 }
 
-func PtrToBytes(ptr uint32, size uint32) []byte {
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+func PtrToBytes(ptr int32, size int32) []byte {
+	bz := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: uintptr(ptr),
-		Len:  uintptr(size),
-		Cap:  uintptr(size),
+		Len:  int(size),
+		Cap:  int(size),
 	}))
+	out := make([]byte, size)
+	copy(out, bz)
+	Log(out, [][32]byte{})
+	return out
 }

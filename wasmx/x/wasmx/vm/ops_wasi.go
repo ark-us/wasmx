@@ -30,7 +30,7 @@ func wasi_getEnv(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return returns, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(data)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
 	return returns, nil
 }
 
@@ -44,10 +44,12 @@ func wasiStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []in
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--wasiStorageStore key--", string(keybz), keybz)
 	valuebz, err := mem.ReadRaw(params[2], params[3])
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--wasiStorageStore value--", string(valuebz), valuebz)
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasiStorageStore")
 	ctx.ContractStore.Set(keybz, valuebz)
 
@@ -66,15 +68,17 @@ func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--wasiStorageLoad key--", string(keybz), keybz)
 	data := ctx.ContractStore.Get(keybz)
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
+	fmt.Println("--wasiStorageLoad data--", string(data), data)
 	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return returns, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(data)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
 	return returns, nil
 }
 
@@ -82,11 +86,13 @@ func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []int
 func wasiGetCallData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	ctx := _context.(*Context)
+	fmt.Println("--wasiGetCallData", string(ctx.Env.CurrentCall.CallData), ctx.Env.CurrentCall.CallData)
 	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), ctx.Env.CurrentCall.CallData)
 	if err != nil {
 		return returns, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(ctx.Env.CurrentCall.CallData)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(ctx.Env.CurrentCall.CallData)))
+	fmt.Println("--wasiGetCallData", returns[0])
 	return returns, nil
 }
 
@@ -198,7 +204,7 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return returns, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(responsebz)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(responsebz)))
 	return returns, nil
 }
 
@@ -259,7 +265,7 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	if err != nil {
 		return returns, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(responsebz)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(responsebz)))
 	return returns, nil
 }
 
@@ -300,7 +306,7 @@ func wasi_getAccount(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(codebz)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(codebz)))
 	return returns, nil
 }
 
@@ -349,7 +355,7 @@ func wasi_keccak256(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(result)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(result)))
 	return returns, nil
 }
 
@@ -375,7 +381,7 @@ func wasi_getBalance(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(balancebz)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(balancebz)))
 	return returns, nil
 }
 
@@ -389,7 +395,7 @@ func wasi_getBlockHash(_context interface{}, rnh memc.RuntimeHandler, params []i
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(data)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
 	return returns, nil
 }
 
@@ -421,7 +427,7 @@ func wasi_instantiateAccount(_context interface{}, rnh memc.RuntimeHandler, para
 	if err != nil {
 		return nil, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(contractbz)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(contractbz)))
 	return returns, nil
 }
 
@@ -457,7 +463,7 @@ func wasi_instantiateAccount2(_context interface{}, rnh memc.RuntimeHandler, par
 	if err != nil {
 		return nil, err
 	}
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(contractbz)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(contractbz)))
 	return returns, nil
 }
 
@@ -479,7 +485,7 @@ func wasi_getCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []in
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(checksum)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(checksum)))
 	return returns, nil
 }
 
@@ -501,7 +507,7 @@ func wasi_getCode(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(code)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(code)))
 	return returns, nil
 }
 
@@ -576,7 +582,7 @@ func wasi_bech32BytesToString(_context interface{}, rnh memc.RuntimeHandler, par
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtr64(ptr, int32(len(data)))
+	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
 	return returns, nil
 }
 
@@ -590,8 +596,8 @@ func wasiLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return nil, err
 	}
-	// // TODO show in debug mode
-	// fmt.Println("LOG: ", string(data))
+	// TODO show in debug mode
+	fmt.Println("LOG: ", string(data))
 	var wlog WasmxJsonLog
 	err = json.Unmarshal(data, &wlog)
 	if err != nil {

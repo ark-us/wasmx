@@ -22,12 +22,12 @@ func WriteMemDefaultMalloc(vm memc.IVm, data []byte) (int32, error) {
 	return ptr, nil
 }
 
-func WriteDynMemDefaultMalloc(vm memc.IVm, data []byte) (uint64, error) {
+func WriteDynMemDefaultMalloc(vm memc.IVm, data []byte) (int64, error) {
 	ptr, err := WriteMemDefaultMalloc(vm, data)
 	if err != nil {
 		return 0, err
 	}
-	return BuildPtr64(ptr, int32(len(data))), nil
+	return BuildPtrI64(ptr, int32(len(data))), nil
 }
 
 func AllocateMemDefaultMalloc(vm memc.IVm, size int32) (int32, error) {
@@ -38,6 +38,6 @@ func AllocateMemDefaultMalloc(vm memc.IVm, size int32) (int32, error) {
 	return result[0], nil
 }
 
-func BuildPtr64(ptr int32, datalen int32) uint64 {
-	return (uint64(ptr) << uint64(32)) | uint64(datalen)
+func BuildPtrI64(ptr int32, datalen int32) int64 {
+	return (int64(ptr) << int64(32)) | int64(datalen)
 }
