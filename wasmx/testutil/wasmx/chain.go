@@ -73,11 +73,13 @@ import (
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	suite.Suite
-	WasmVmMeta       memc.IWasmVmMeta
-	TestChain        TestChain
-	Chains           map[string]*TestChain
-	ChainIds         []string
-	CompiledCacheDir string
+	WasmVmMeta            memc.IWasmVmMeta
+	TestChain             TestChain
+	Chains                map[string]*TestChain
+	ChainIds              []string
+	CompiledCacheDir      string
+	MaxBlockGas           int64
+	SystemContractsModify func([]wasmxtypes.SystemContract) []wasmxtypes.SystemContract
 }
 
 type TestChain struct {
@@ -156,10 +158,10 @@ func (suite *KeeperTestSuite) App() *app.App {
 
 func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	appContext := AppContext{
-		S:             suite,
-		App:           suite.App(),
-		Chain:         chain,
-		FinalizeBlock: suite.FinalizeBlock,
+		S:                   suite,
+		App:                 suite.App(),
+		Chain:               chain,
+		FinalizeBlockHandle: suite.FinalizeBlockFSM,
 	}
 	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg(), app.GetCustomSigners())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
@@ -174,10 +176,10 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 
 func (suite *KeeperTestSuite) AppContext() AppContext {
 	appContext := AppContext{
-		S:             suite,
-		App:           suite.App(),
-		Chain:         suite.TestChain,
-		FinalizeBlock: suite.FinalizeBlock,
+		S:                   suite,
+		App:                 suite.App(),
+		Chain:               suite.TestChain,
+		FinalizeBlockHandle: suite.FinalizeBlockFSM,
 	}
 	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg(), app.GetCustomSigners())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.TestChain.ChainId)
@@ -203,6 +205,11 @@ func (suite *KeeperTestSuite) TearDownChains() {
 
 func (suite *KeeperTestSuite) SetupChains() {
 	t := suite.T()
+
+	if suite.MaxBlockGas > 0 {
+		app.DefaultTestingConsensusParams.Block.MaxGas = suite.MaxBlockGas
+	}
+
 	suite.Chains = map[string]*TestChain{}
 	mcfg.ChainIdsInit = []string{
 		mcfg.MYTHOS_CHAIN_ID_TEST,
@@ -249,17 +256,24 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 
 	testApp, genesisState, err := ibctesting.BuildGenesisData(suite.WasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance}, suite.CompiledCacheDir)
 	require.NoError(t, err)
+
+	var wasmxGenState wasmxtypes.GenesisState
+	testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
+
 	if strings.Contains(chainId, "level") {
 		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
 		require.NoError(t, err)
 		mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
 		require.NoError(t, err)
-
-		var wasmxGenState wasmxtypes.GenesisState
-		testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
 		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec, feeCollectorBech32, mintAddressBech32, 1, false, "{}")
-		genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
 	}
+
+	if suite.SystemContractsModify != nil {
+		wasmxGenState.SystemContracts = suite.SystemContractsModify(wasmxGenState.SystemContracts)
+	}
+
+	genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
+
 	testApp, resInit := ibctesting.InitAppChain(t, testApp, genesisState, chainId)
 
 	consAddress := sdk.ConsAddress(senderPrivKey.PubKey().Address())
@@ -408,6 +422,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 	// 	return err
 	// }
 	// valOperatorAddress := sdk.AccAddress(vals[0].PubKey.Bytes())
+
 	consensusParams := cmttypes.ConsensusParamsFromProto(*app.DefaultTestingConsensusParams)
 	if resInit.ConsensusParams != nil {
 		consensusParams = consensusParams.Update(resInit.ConsensusParams)
@@ -563,7 +578,7 @@ func NewGRPCServer(
 	return grpcSrv, nil
 }
 
-func (suite *KeeperTestSuite) FinalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
+func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
 	app := suite.TestChain.App
 	cb := func(goctx context.Context) (any, error) {
 		for _, tx := range txs {

@@ -79,7 +79,7 @@ type AppContext struct {
 	ClientCtx client.Context
 	Faucet    *TestFaucet
 
-	FinalizeBlock func(txs [][]byte) (*abci.ResponseFinalizeBlock, error)
+	FinalizeBlockHandle func(txs [][]byte) (*abci.ResponseFinalizeBlock, error)
 }
 
 func (s *AppContext) ABCIClient() *network.ABCIClient {
@@ -201,6 +201,7 @@ func (s *AppContext) SignCosmosSdkTx(txBuilder client.TxBuilder, account simulat
 	txConfig := s.App.TxConfig()
 	accP, err := s.App.AccountKeeper.GetAccountPrefixed(s.Context(), s.BytesToAccAddressPrefixed(account.Address))
 	s.S.Require().NoError(err)
+	s.S.Require().NotNil(accP, "account must exist")
 	seq := accP.GetSequence()
 
 	// First round: we gather all the signer infos. We use the "set empty
@@ -418,9 +419,9 @@ func (s *AppContext) defaultFinalizeBlock(txs [][]byte) (*abci.ResponseFinalizeB
 	return res, nil
 }
 
-func (s *AppContext) finalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
-	if s.FinalizeBlock != nil {
-		return s.FinalizeBlock(txs)
+func (s *AppContext) FinalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
+	if s.FinalizeBlockHandle != nil {
+		return s.FinalizeBlockHandle(txs)
 	}
 	return s.defaultFinalizeBlock(txs)
 }
@@ -430,7 +431,7 @@ func (s *AppContext) DeliverEthTx(priv cryptotypes.PrivKey, msg sdk.Msg, txFee s
 	s.S.Require().NoError(err)
 	txs := [][]byte{}
 	txs = append(txs, bz)
-	res, err := s.finalizeBlock(txs)
+	res, err := s.FinalizeBlock(txs)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +453,7 @@ func (s *AppContext) SendEthTx(
 	s.S.Require().NoError(err)
 	txs := [][]byte{}
 	txs = append(txs, bz)
-	resFin, err := s.finalizeBlock(txs)
+	resFin, err := s.FinalizeBlock(txs)
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(len(resFin.TxResults), 1)
 	res := resFin.TxResults[0]
@@ -465,7 +466,7 @@ func (s *AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*ab
 	bz := s.PrepareCosmosTx(account, msgs, nil, nil, "")
 	txs := [][]byte{}
 	txs = append(txs, bz)
-	res, err := s.finalizeBlock(txs)
+	res, err := s.FinalizeBlock(txs)
 	if err != nil {
 		return nil, err
 	}
@@ -475,7 +476,7 @@ func (s *AppContext) DeliverTx(account simulation.Account, msgs ...sdk.Msg) (*ab
 }
 
 func (s *AppContext) DeliverTxRaw(txbz []byte) (*abci.ExecTxResult, error) {
-	res, err := s.finalizeBlock([][]byte{txbz})
+	res, err := s.FinalizeBlock([][]byte{txbz})
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +489,7 @@ func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, 
 	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice, "")
 	txs := [][]byte{}
 	txs = append(txs, bz)
-	res, err := s.finalizeBlock(txs)
+	res, err := s.FinalizeBlock(txs)
 	if err != nil {
 		return nil, err
 	}

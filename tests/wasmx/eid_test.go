@@ -235,12 +235,14 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong")
+	maxgas := uint64(1_000_000_000)
 
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
+
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
@@ -248,11 +250,11 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
 
 	// test_cmul
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("e5582b4d")}, nil, deps, 1_000_000_000_000, nil)
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("e5582b4d")}, nil, deps, maxgas, nil)
 
 	fmt.Println("--test_cmul--")
 	start := time.Now()
-	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("e5582b4d")}, nil, deps, 1_000_000_000_000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("e5582b4d")}, nil, deps, maxgas, nil)
 	duration := time.Since(start)
 	fmt.Println("Elapsed: ", duration)
 	s.Require().NoError(err)
@@ -262,7 +264,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 
 	fmt.Println("--test_verify--")
 	start = time.Now()
-	res, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("ba33b770")}, nil, deps, 1_000_000_000_000, nil)
+	res, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("ba33b770")}, nil, deps, maxgas, nil)
 	duration = time.Since(start)
 	fmt.Println("Elapsed: ", duration)
 	s.Require().NoError(err)
@@ -273,6 +275,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2")
+	maxgas := uint64(1_000_000_000)
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	deps := []string{types.ADDR_MODEXP}
@@ -286,12 +289,12 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 
 	fmt.Println("--precomputeGenHex--")
 	start := time.Now()
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, 100_000_000_000, nil) // 52_810_317
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, maxgas, nil) // 52_810_317
 	fmt.Println("Elapsed precomputeGenHex: ", time.Since(start))
 
 	fmt.Println("--precomputePubHex--")
 	start = time.Now()
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 100_000_000_000, nil) // 52_810_448
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, maxgas, nil) // 52_810_448
 	fmt.Println("Elapsed precomputePubHex: ", time.Since(start))
 
 	fmt.Println("--test_verify_fast--")
@@ -391,6 +394,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2Interpreted")
+	maxgas := uint64(1_000_000_000)
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
 	deps := []string{types.ADDR_MODEXP}
@@ -412,12 +416,12 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() 
 
 	fmt.Println("--precomputeGenHex--")
 	start := time.Now()
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, 100_000_000_000, nil) // 52_810_317
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(precomputeGenHex)}, nil, deps, maxgas, nil) // 52_810_317
 	fmt.Println("Elapsed precomputeGenHex: ", time.Since(start))
 
 	fmt.Println("--precomputePubHex--")
 	start = time.Now()
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 100_000_000_000, nil) // 52_810_448
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", precomputePubHex, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, maxgas, nil) // 52_810_448
 	fmt.Println("Elapsed precomputePubHex: ", time.Since(start))
 
 	fmt.Println("--test_verify_fast--")

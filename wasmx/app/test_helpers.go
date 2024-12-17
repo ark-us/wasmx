@@ -43,7 +43,7 @@ var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chai
 var DefaultTestingConsensusParams = &tmproto.ConsensusParams{
 	Block: &tmproto.BlockParams{
 		MaxBytes: 2_000_000,
-		MaxGas:   30_000_000, // -1 no limit
+		MaxGas:   50_000_000, // -1 no limit
 	},
 	Evidence: &tmproto.EvidenceParams{
 		MaxAgeNumBlocks: 302400,
