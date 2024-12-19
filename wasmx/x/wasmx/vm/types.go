@@ -92,7 +92,7 @@ func (c *Context) Execute() ([]byte, error) {
 	if types.HasUtf8SystemDep(c.ContractInfo.SystemDeps) {
 		filepath = ""
 	}
-	rnh := getRuntimeHandler(c.newIVmFn, c.Ctx, c.ContractInfo.SystemDeps)
+	rnh := getRuntimeHandler(c.newIVmFn, c.Ctx, c.ContractInfo.SystemDeps, c.ContractInfo.Pinned)
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()

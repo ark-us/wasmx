@@ -119,7 +119,7 @@ func keccak256Util(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return nil, err
 	}
 
-	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset})
+	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset}, ctx.GasMeter)
 	if err != nil {
 		return nil, err
 	}

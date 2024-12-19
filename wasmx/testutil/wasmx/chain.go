@@ -589,6 +589,7 @@ func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFina
 				Msg:      msg,
 			})
 			if err != nil {
+				suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
 				return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 			}
 		}
@@ -596,6 +597,7 @@ func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFina
 	}
 	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
 	if err != nil {
+		suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
 		return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 	}
 	return suite.CommitBlock()

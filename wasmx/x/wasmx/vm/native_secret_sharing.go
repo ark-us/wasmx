@@ -47,7 +47,7 @@ func init() {
 func SecretSharing(context *Context, input []byte) ([]byte, error) {
 	wasmbin := precompiles.GetPrecompileByLabel(context.CosmosHandler.AddressCodec(), "secret_sharing")
 
-	vm := context.newIVmFn(context.Ctx)
+	vm := context.newIVmFn(context.Ctx, true)
 	defer func() {
 		vm.Cleanup()
 	}()
@@ -129,7 +129,7 @@ func ShamirSplit(vm memc.IVm, mem memc.IMemory, secret []byte, count uint32, thr
 	}
 
 	// Run the function. Given the pointer to the subject.
-	result, err := vm.Call("ShamirSplit", []interface{}{inputPointer, int32(inputLen), int32(count), int32(threshold)})
+	result, err := vm.Call("ShamirSplit", []interface{}{inputPointer, int32(inputLen), int32(count), int32(threshold)}, nil) // TODO gasMeter
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func ShamirSplit(vm memc.IVm, mem memc.IMemory, secret []byte, count uint32, thr
 	}
 
 	// Deallocate the subject, and the output.
-	vm.Call("free", []interface{}{inputPointer})
+	vm.Call("free", []interface{}{inputPointer}, nil) // TODO gasMeter
 	return shares, nil
 }
 
@@ -158,7 +158,7 @@ func ShamirRecover(vm memc.IVm, mem memc.IMemory, input []byte) (*ResultSecret, 
 	}
 
 	// Run the function. Given the pointer to the subject.
-	result, err := vm.Call("ShamirRecover", []interface{}{inputPointer, int32(inputLen)})
+	result, err := vm.Call("ShamirRecover", []interface{}{inputPointer, int32(inputLen)}, nil) // TODO gasMeter
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func ShamirRecover(vm memc.IVm, mem memc.IMemory, input []byte) (*ResultSecret, 
 	}
 
 	// Deallocate the subject, and the output.
-	vm.Call("free", []interface{}{inputPointer})
+	vm.Call("free", []interface{}{inputPointer}, nil)
 	return data, nil
 }
 
@@ -201,7 +201,7 @@ func allocateInput(vm memc.IVm, mem memc.IMemory, input []byte) (int32, error) {
 
 	// Allocate memory for the input, and get a pointer to it.
 	// Include a byte for the NULL terminator we add below.
-	allocateResult, err := vm.Call(types.MEMORY_EXPORT_MALLOC, []interface{}{int32(inputLen + 1)})
+	allocateResult, err := vm.Call(types.MEMORY_EXPORT_MALLOC, []interface{}{int32(inputLen + 1)}, nil)
 	if err != nil {
 		return 0, err
 	}

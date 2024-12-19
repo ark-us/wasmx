@@ -334,7 +334,7 @@ func wasi_keccak256(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		return nil, err
 	}
 
-	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset})
+	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset}, ctx.GasMeter)
 	if err != nil {
 		return nil, err
 	}
@@ -663,22 +663,22 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 			// WASI reactor
 			if name == "_initialize" {
 				found = true
-				res, err = contractVm.Call("_initialize", []interface{}{})
+				res, err = contractVm.Call("_initialize", []interface{}{}, context.GasMeter)
 			}
 			// note that custom entries do not have access to WASI endpoints at this time
 			if name == "main.instantiate" {
 				found = true
-				res, err = contractVm.Call("main.instantiate", []interface{}{})
+				res, err = contractVm.Call("main.instantiate", []interface{}{}, context.GasMeter)
 			}
 		}
 		if !found {
 			return nil, nil
 		}
 	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
-		res, err = contractVm.Call(funcName, []interface{}{})
+		res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 	} else {
 		// WASI command - no args, no return
-		res, err = contractVm.Call("_start", []interface{}{})
+		res, err = contractVm.Call("_start", []interface{}{}, context.GasMeter)
 		// fmt.Println("--ExecuteWasi-_start, err", res, err)
 
 		// res, err = contractVm.Execute("_initialize")

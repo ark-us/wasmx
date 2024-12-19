@@ -89,7 +89,7 @@ func AllocateMemVm(vm memc.IVm, mem memc.IMemory, size int32) (int32, error) {
 		return 0, fmt.Errorf("memory allocation failed, no VM instance found")
 	}
 	args := []interface{}{size, AS_ARRAY_BUFFER_TYPE}
-	result, err := vm.Call(types.MEMORY_EXPORT_AS, args)
+	result, err := vm.Call(types.MEMORY_EXPORT_AS, args, nil)
 	if err != nil {
 		return 0, err
 	}

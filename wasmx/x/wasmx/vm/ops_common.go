@@ -209,6 +209,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			CodeHash:      ci.CodeHash,
 			CodeId:        ci.CodeId,
 			StorageType:   ci.StorageType,
+			Pinned:        ci.Pinned,
 			SystemDepsRaw: systemDeps,
 			SystemDeps:    sysdeps,
 		}
@@ -222,7 +223,8 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	// so we initialize the cosmos handler with the target contract
 	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(to)
 	sysDeps := newrouter[routerAddress].ContractInfo.SystemDeps
-	rnh := getRuntimeHandler(ctx.newIVmFn, tempCtx, sysDeps)
+	pinned := newrouter[routerAddress].ContractInfo.Pinned
+	rnh := getRuntimeHandler(ctx.newIVmFn, tempCtx, sysDeps, pinned)
 	newctx := &Context{
 		GoRoutineGroup:  ctx.GoRoutineGroup,
 		GoContextParent: ctx.GoContextParent,

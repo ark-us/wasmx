@@ -139,6 +139,7 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 		CodeId:        contractInfo.CodeId,
 		SystemDepsRaw: codeInfo.Deps,
 		StorageType:   contractInfo.StorageType,
+		Pinned:        codeInfo.Pinned,
 	}
 
 	// shortcut for roles contract, to avoid cycle
@@ -1018,7 +1019,7 @@ func (k *Keeper) consumeRuntimeGas(ctx sdk.Context, gas uint64) {
 	ctx.GasMeter().ConsumeGas(consumed, "wasm contract")
 	// throw OutOfGas error if we ran out (got exactly to zero due to better limit enforcing)
 	if ctx.GasMeter().IsOutOfGas() {
-		panic(storetypes.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
+		panic(storetypes.ErrorOutOfGas{Descriptor: "WasmX function execution"})
 	}
 }
 
@@ -1079,6 +1080,7 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 		Role:     role.Role,
 		Label:    label,
 		FilePath: filepath,
+		Pinned:   codeInfo.Pinned,
 		Deps:     k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps),
 	}
 	return dep, nil
@@ -1096,16 +1098,27 @@ func NewMultipliedGasMeter(originalMeter storetypes.GasMeter, gr GasRegister) Mu
 
 var _ types.GasMeter = MultipliedGasMeter{}
 
+// gas consumed in wasm VM units
 func (m MultipliedGasMeter) GasConsumed() storetypes.Gas {
 	return m.GasRegister.ToWasmVMGas(m.originalMeter.GasConsumed())
 }
 
+// consume gas in wasm VM units
 func (m MultipliedGasMeter) ConsumeGas(gas storetypes.Gas, descriptor string) {
 	sdkgas := m.GasRegister.FromWasmVMGas(gas)
 	m.originalMeter.ConsumeGas(sdkgas, descriptor)
 	if m.originalMeter.IsOutOfGas() {
-		panic(storetypes.ErrorOutOfGas{Descriptor: "Wasmer function execution"})
+		panic(storetypes.ErrorOutOfGas{Descriptor: "WasmX function execution: " + descriptor})
 	}
+}
+
+// gas limit in wasm VM units
+func (m MultipliedGasMeter) GasLimit() storetypes.Gas {
+	return m.GasRegister.ToWasmVMGas(m.originalMeter.Limit())
+}
+
+func (m MultipliedGasMeter) GasRemaining() storetypes.Gas {
+	return m.GasRegister.ToWasmVMGas(m.originalMeter.GasRemaining())
 }
 
 func (k *Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {

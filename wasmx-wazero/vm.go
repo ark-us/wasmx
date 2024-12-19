@@ -133,22 +133,26 @@ type WazeroVm struct {
 	r           wazero.Runtime
 	cleanups    []func()
 	moduleNames []string
+	aot         bool
 }
 
 // TODO clean cache!
-func NewWazeroVm(ctx sdk.Context) memc.IVm {
+func NewWazeroVm(ctx sdk.Context, aot bool) memc.IVm {
 	cache, ok := ctx.Value(CONTEXT_CACHE_KEY).(wazero.CompilationCache)
 	if !ok {
 		cache = wazero.NewCompilationCache()
 		ctx = ctx.WithValue(CONTEXT_CACHE_KEY, cache)
 	}
 	var cleanups []func()
-	// TODO WASI
-	// NewRuntimeConfigCompiler
-	// NewRuntimeConfig
-	// .WithDebugInfoEnabled(true)
-	// TODO check if compiler is suppported
-	config := wazero.NewRuntimeConfigCompiler().
+	var config wazero.RuntimeConfig
+	if !aot {
+		config = wazero.NewRuntimeConfigInterpreter()
+	} else {
+		// compiler if supported, runtime otherwise
+		config = wazero.NewRuntimeConfigCompiler()
+	}
+
+	config = config.
 		WithCloseOnContextDone(true). // for now, we let the execution finish in case we need to save block data in our core contracts
 		WithCompilationCache(cache)   // .WithDebugInfoEnabled(true)
 
@@ -162,11 +166,12 @@ func NewWazeroVm(ctx sdk.Context) memc.IVm {
 		cache:    cache,
 		r:        r,
 		cleanups: cleanups,
+		aot:      aot,
 	}
 }
 
-func (wm *WazeroVm) New(ctx sdk.Context) memc.IVm {
-	return NewWazeroVm(ctx)
+func (wm *WazeroVm) New(ctx sdk.Context, aot bool) memc.IVm {
+	return NewWazeroVm(ctx, aot)
 }
 
 func (wm *WazeroVm) Cleanup() {
@@ -176,7 +181,7 @@ func (wm *WazeroVm) Cleanup() {
 	}
 }
 
-func (wm *WazeroVm) Call(funcname string, args []interface{}) ([]int32, error) {
+func (wm *WazeroVm) Call(funcname string, args []interface{}, gasMeter memc.GasMeter) ([]int32, error) {
 	if wm.vm == nil {
 		panic("WazeroVm not instantiated")
 	}
@@ -184,7 +189,16 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}) ([]int32, error) {
 	for i, arg := range args {
 		_args[i] = uint64(arg.(int32))
 	}
-	result, err := wm.vm.ExportedFunction(funcname).Call(wm.ctx, _args...)
+	fn := wm.vm.ExportedFunction(funcname)
+	var wrappedMeter *GasMeter
+	if gasMeter != nil {
+		wrappedMeter = NewGasMeter(gasMeter.GasRemaining(), uint64(0), gasMeter)
+		fn = fn.WithGasMeter(wrappedMeter)
+	}
+	result, err := fn.Call(wm.ctx, _args...)
+	if gasMeter != nil {
+		gasMeter.ConsumeGas(wrappedMeter.GasConsumed(), "wasm execution")
+	}
 	if err != nil {
 		expected := memc.VM_TERMINATE_ERROR + " (recovered by wazero)"
 		if !strings.Contains(err.Error(), expected) {
@@ -406,8 +420,8 @@ func (WazeroVmMeta) LibVersion() string {
 	return wazero.Version()
 }
 
-func (WazeroVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
-	return NewWazeroVm(ctx)
+func (WazeroVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {
+	return NewWazeroVm(ctx, aot)
 }
 
 func (WazeroVmMeta) AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (memc.WasmMeta, error) {

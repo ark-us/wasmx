@@ -13,9 +13,9 @@ import (
 
 const (
 	defaultMemoryCacheSize    uint32 = 100 // in MiB
-	defaultSmartQueryGasLimit uint64 = 20_000_000
+	defaultSmartQueryGasLimit uint64 = 1_000_000_000
 	defaultContractDebugMode         = false
-	DefaultBlockGasLimit      uint64 = 20_000_000
+	DefaultBlockGasLimit      uint64 = 100_000_000
 )
 
 // WasmConfig is the extra config required for wasm

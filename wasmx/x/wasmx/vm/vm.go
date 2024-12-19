@@ -69,8 +69,17 @@ func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []ty
 	return nil
 }
 
-func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []types.SystemDep) memc.RuntimeHandler {
-	vm := newIVmFn(ctx)
+func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []types.SystemDep, pinned bool) memc.RuntimeHandler {
+	if !pinned {
+		// also check system deps
+		for _, dep := range systemDeps {
+			if dep.Pinned {
+				pinned = true
+				break
+			}
+		}
+	}
+	vm := newIVmFn(ctx, pinned)
 	handler := getRuntimeHandlerFromDeps(vm, systemDeps)
 	if handler != nil {
 		return handler
@@ -233,7 +242,7 @@ func ExecuteWasmInterpreted(
 	}
 
 	var contractRouter ContractRouter = make(map[string]*Context)
-	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps)
+	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps, contractInfo.Pinned)
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()
@@ -343,7 +352,7 @@ func ExecuteWasm(
 	}
 
 	var contractRouter ContractRouter = make(map[string]*Context)
-	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps)
+	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps, contractInfo.Pinned)
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()
@@ -466,7 +475,7 @@ func setExecutionBytecode(context *Context, rnh memc.RuntimeHandler, funcName st
 		if err != nil {
 			return
 		}
-		retvalues, err := vm.Call("evm_bytecode", []interface{}{})
+		retvalues, err := vm.Call("evm_bytecode", []interface{}{}, context.GasMeter)
 		if err != nil {
 			return
 		}

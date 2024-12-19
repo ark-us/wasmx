@@ -138,8 +138,8 @@ type WasmEdgeVm struct {
 	cleanups  []func()
 }
 
-func (wm *WasmEdgeVm) New(ctx sdk.Context) memc.IVm {
-	return NewWasmEdgeVm(ctx)
+func (wm *WasmEdgeVm) New(ctx sdk.Context, aot bool) memc.IVm {
+	return NewWasmEdgeVm(ctx, aot)
 }
 
 func (wm *WasmEdgeVm) Cleanup() {
@@ -149,7 +149,7 @@ func (wm *WasmEdgeVm) Cleanup() {
 	}
 }
 
-func (wm *WasmEdgeVm) Call(funcname string, args []interface{}) ([]int32, error) {
+func (wm *WasmEdgeVm) Call(funcname string, args []interface{}, gasMeter memc.GasMeter) ([]int32, error) {
 	result, err := wm.vm.Execute(funcname, args...)
 	if err != nil {
 		return nil, err
@@ -306,8 +306,8 @@ func (WasmEdgeVmMeta) LibVersion() string {
 	return wasmedge.GetVersion()
 }
 
-func (WasmEdgeVmMeta) NewWasmVm(ctx sdk.Context) memc.IVm {
-	return NewWasmEdgeVm(ctx)
+func (WasmEdgeVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {
+	return NewWasmEdgeVm(ctx, aot)
 }
 
 func (WasmEdgeVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (memc.WasmMeta, error) {
@@ -366,7 +366,7 @@ func (WasmEdgeVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string) e
 	return nil
 }
 
-func NewWasmEdgeVm(_ sdk.Context) memc.IVm {
+func NewWasmEdgeVm(_ sdk.Context, _ bool) memc.IVm {
 	var cleanups []func()
 
 	// wasmedge.SetLogOff()

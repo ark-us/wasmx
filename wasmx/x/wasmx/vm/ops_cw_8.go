@@ -585,7 +585,7 @@ func ExecuteCw8Execute(context *Context, vm memc.IVm, funcName string) ([]int32,
 	if err != nil {
 		return nil, err
 	}
-	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, infoRegion.Pointer, msgRegion.Pointer})
+	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, infoRegion.Pointer, msgRegion.Pointer}, context.GasMeter)
 	if len(res) == 0 {
 		return nil, execErr
 	}
@@ -638,7 +638,7 @@ func ExecuteCw8Reply(context *Context, vm memc.IVm, funcName string) ([]int32, e
 	if err != nil {
 		return nil, err
 	}
-	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, msgRegion.Pointer})
+	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, msgRegion.Pointer}, context.GasMeter)
 	if len(res) == 0 {
 		return nil, execErr
 	}
@@ -689,7 +689,7 @@ func ExecuteCw8Query(context *Context, vm memc.IVm, funcName string) ([]int32, e
 	if err != nil {
 		return nil, err
 	}
-	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, msgRegion.Pointer})
+	res, execErr := vm.Call(funcName, []interface{}{envRegion.Pointer, msgRegion.Pointer}, context.GasMeter)
 	if len(res) == 0 {
 		return nil, execErr
 	}
@@ -755,7 +755,7 @@ func writeMemCw(vm memc.IVm, data []byte) (*Region, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := vm.Call(types.MEMORY_EXPORT_ALLOCATE, []interface{}{int32(len(data))})
+	res, err := vm.Call(types.MEMORY_EXPORT_ALLOCATE, []interface{}{int32(len(data))}, nil) // TODO gas meter allocate
 	if err != nil {
 		return nil, err
 	}

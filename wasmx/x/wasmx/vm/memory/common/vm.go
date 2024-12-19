@@ -10,11 +10,20 @@ import (
 
 const VM_TERMINATE_ERROR = "terminate"
 
+// GasMeter is a read-only version of the sdk gas meter
+type Gas = uint64
+type GasMeter interface {
+	GasConsumed() Gas
+	GasLimit() Gas
+	GasRemaining() Gas
+	ConsumeGas(gas uint64, descriptor string)
+}
+
 type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}) ([]interface{}, error)
 
 type IWasmVmMeta interface {
 	LibVersion() string
-	NewWasmVm(ctx sdk.Context) IVm
+	NewWasmVm(ctx sdk.Context, aot bool) IVm
 	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
 	AotCompile(ctx sdk.Context, inPath string, outPath string) error
 }
@@ -55,12 +64,12 @@ type IMemory interface {
 	Write(ptr int32, data []byte) error
 }
 
-type NewIVmFn = func(ctx sdk.Context) IVm
+type NewIVmFn = func(ctx sdk.Context, aot bool) IVm
 
 type IVm interface {
-	Call(name string, args []interface{}) ([]int32, error)
+	Call(name string, args []interface{}, gasMeter GasMeter) ([]int32, error)
 	GetMemory() (IMemory, error)
-	New(ctx sdk.Context) IVm
+	New(ctx sdk.Context, aot bool) IVm
 	Cleanup()
 	InstantiateWasm(filePath string, wasmbuffer []byte) error
 	RegisterModule(mod interface{}) error
@@ -225,7 +234,7 @@ func (WasmRuntimeMockVmMeta) LibVersion() string {
 	return "0"
 }
 
-func (WasmRuntimeMockVmMeta) NewWasmVm(ctx sdk.Context) IVm {
+func (WasmRuntimeMockVmMeta) NewWasmVm(ctx sdk.Context, aot bool) IVm {
 	return nil
 }
 

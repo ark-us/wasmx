@@ -133,6 +133,7 @@ type ContractDependency struct {
 	CodeId        uint64
 	SystemDepsRaw []string
 	StorageType   ContractStorageType
+	Pinned        bool
 }
 
 func (v ContractDependency) Clone() *ContractDependency {
@@ -152,6 +153,7 @@ func (v ContractDependency) Clone() *ContractDependency {
 		CodeId:        v.CodeId,
 		SystemDepsRaw: cloneStrings(v.SystemDepsRaw),
 		StorageType:   v.StorageType,
+		Pinned:        v.Pinned,
 	}
 }
 

@@ -87,6 +87,8 @@ type QueryRequest struct{}
 type Gas = uint64
 type GasMeter interface {
 	GasConsumed() Gas
+	GasLimit() Gas
+	GasRemaining() Gas
 	ConsumeGas(gas uint64, descriptor string)
 }
 
@@ -292,6 +294,7 @@ type SystemDep struct {
 	Role     string
 	Label    string
 	FilePath string
+	Pinned   bool
 	Deps     []SystemDep
 }
 
@@ -304,6 +307,7 @@ func (v SystemDep) Clone() SystemDep {
 		Role:     v.Role,
 		Label:    v.Label,
 		FilePath: v.FilePath,
+		Pinned:   v.Pinned,
 		Deps:     deps,
 	}
 }

@@ -48,7 +48,7 @@ type KeeperTestSuite struct {
 var s *KeeperTestSuite
 
 func (suite *KeeperTestSuite) SetupSuite() {
-	suite.MaxBlockGas = 1_000_000_000
+	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = systemContractsModify
 	mydir, err := os.Getwd()
 	if err != nil {
