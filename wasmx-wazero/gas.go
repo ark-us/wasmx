@@ -29,7 +29,11 @@ func (g *GasMeter) ConsumeGas(amount uint64, descriptor string) {
 	g.gasUsed += amount
 	if g.gasUsed > g.gasLimit {
 		// we expect this to error with out of gas
-		g.gasMeter.ConsumeGas(g.gasUsed, descriptor)
+		if g.gasMeter != nil {
+			g.gasMeter.ConsumeGas(g.gasUsed, descriptor)
+		} else {
+			panic(ErrOutOfGas)
+		}
 	}
 }
 

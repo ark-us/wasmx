@@ -16,8 +16,10 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
+	runtime "github.com/loredanacirstea/wasmx-wazero"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	wasmxvm "github.com/loredanacirstea/wasmx/x/wasmx/vm"
+	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 	utils "github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
@@ -174,7 +176,6 @@ func buildEnvEnv(ctx sdk.Context, r wazero.Runtime) error {
 }
 
 func TestWazeroWasmxSimpleStorage(t *testing.T) {
-	t.Skip("Skipping local test TestWazeroWasmxSimpleStorage")
 	var err error
 	wasmbin := wasmxSimpleStorage
 
@@ -211,6 +212,7 @@ func TestWazeroWasmxSimpleStorage(t *testing.T) {
 	start := time.Now()
 
 	calldata := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
+	vmCtx.Env.CurrentCall.CallData = calldata
 	_, err = mod.ExportedFunction("main").Call(ctx)
 	require.NoError(t, err)
 
@@ -254,10 +256,11 @@ func TestWazeroWasmxSimpleStorage2(t *testing.T) {
 	mod, err := r.Instantiate(ctx, wasmbin)
 	require.NoError(t, err)
 
-	calldata := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
 	_, err = mod.ExportedFunction("instantiate").Call(ctx)
 	require.NoError(t, err)
 
+	calldata := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
+	vmCtx.Env.CurrentCall.CallData = calldata
 	_, err = mod.ExportedFunction("main").Call(ctx)
 	require.NoError(t, err)
 
@@ -282,7 +285,7 @@ func TestWazeroWasmxSimpleStorage3(t *testing.T) {
 
 	config := wazero.NewRuntimeConfigCompiler()
 	r := wazero.NewRuntimeWithConfig(ctx, config)
-	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbin)
+	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbin, false)
 	require.NoError(t, err)
 	err = utils.SafeWriteReader(wcompiledPathMe, reader)
 	require.NoError(t, err)
@@ -334,7 +337,7 @@ func TestWazeroWasmxSimpleStorage4(t *testing.T) {
 	require.NoError(t, err)
 
 	calldata := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
-
+	vmCtx.Env.CurrentCall.CallData = calldata
 	_, err = mod.ExportedFunction("main").Call(ctx)
 	require.NoError(t, err)
 
@@ -343,4 +346,101 @@ func TestWazeroWasmxSimpleStorage4(t *testing.T) {
 	_, err = mod.ExportedFunction("main").Call(ctx)
 	require.NoError(t, err)
 	require.True(t, bytes.Equal(vmCtx.FinishData, []byte("sammy")))
+}
+
+func TestWazeroCompiledWithMetering(t *testing.T) {
+	var err error
+	wasmbin := wasmxSimpleStorage
+
+	ctx := sdk.Context{}
+	ctx = ctx.WithContext(context.Background())
+
+	config := wazero.NewRuntimeConfigCompiler()
+	r := wazero.NewRuntimeWithConfig(ctx, config)
+	defer r.Close(ctx)
+
+	vmCtx := &wasmxvm.Context{
+		Env: &types.Env{
+			CurrentCall: types.MessageInfo{
+				CallData: []byte{},
+			},
+		},
+	}
+	ctx = ctx.WithValue("vmctx", vmCtx)
+	err = buildWasmxEnv(ctx, r)
+	require.NoError(t, err)
+	err = buildEnvEnv(ctx, r)
+	require.NoError(t, err)
+
+	compiled, err := r.CompileModuleWithMetering(ctx, wasmbin)
+	require.NoError(t, err, "CompileModule failed")
+
+	mod, err := r.InstantiateModule(ctx, compiled, wazero.NewModuleConfig())
+	require.NoError(t, err, "InstantiateModule failed")
+
+	wrappedMeter := runtime.NewGasMeter(100_000_000_000, uint64(0), nil)
+	fn := mod.ExportedFunction("instantiate")
+	fn = fn.WithGasMeter(wrappedMeter)
+	_, err = fn.Call(ctx)
+	require.NoError(t, err, "instantiate call failed")
+
+	consumed := wrappedMeter.GasConsumed()
+	require.Greater(t, consumed, uint64(0))
+	require.LessOrEqual(t, consumed, uint64(100))
+	fmt.Println("* gas instantiate:", consumed)
+
+	calldata := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
+	wrappedMeter = runtime.NewGasMeter(100000000, uint64(0), nil)
+	vmCtx.Env.CurrentCall.CallData = calldata
+	fn = mod.ExportedFunction("main")
+	fn = fn.WithGasMeter(wrappedMeter)
+
+	_, err = fn.Call(ctx)
+
+	consumed = wrappedMeter.GasConsumed()
+	require.Greater(t, consumed, uint64(50000))
+	require.LessOrEqual(t, consumed, uint64(100000))
+	fmt.Println("* gas instantiate:", consumed)
+	require.NoError(t, err, "main.set failed")
+
+	calldata = []byte(`{"get":{"key":"hello"}}`)
+	wrappedMeter = runtime.NewGasMeter(100000000, uint64(0), nil)
+	vmCtx.Env.CurrentCall.CallData = calldata
+	fn = mod.ExportedFunction("main")
+	fn = fn.WithGasMeter(wrappedMeter)
+	_, err = fn.Call(ctx)
+	consumed = wrappedMeter.GasConsumed()
+	require.Greater(t, consumed, uint64(10000))
+	require.LessOrEqual(t, consumed, uint64(50000))
+	fmt.Println("* gas instantiate:", consumed)
+	require.NoError(t, err, "main.get failed")
+	require.True(t, bytes.Equal(vmCtx.FinishData, []byte("sammy")))
+}
+
+func TestWazeroCompiledTendermintWithMetering(t *testing.T) {
+	var err error
+	wasmbin := precompiles.GetPrecompileByLabel(nil, "tendermintp2p_library")
+
+	ctx := sdk.Context{}
+	ctx = ctx.WithContext(context.Background())
+
+	config := wazero.NewRuntimeConfigCompiler()
+	r := wazero.NewRuntimeWithConfig(ctx, config)
+	defer r.Close(ctx)
+
+	vmCtx := &wasmxvm.Context{
+		Env: &types.Env{
+			CurrentCall: types.MessageInfo{
+				CallData: []byte{},
+			},
+		},
+	}
+	ctx = ctx.WithValue("vmctx", vmCtx)
+	err = buildWasmxEnv(ctx, r)
+	require.NoError(t, err)
+	err = buildEnvEnv(ctx, r)
+	require.NoError(t, err)
+
+	_, err = r.CompileModuleWithMetering(ctx, wasmbin)
+	require.NoError(t, err, "CompileModule failed")
 }

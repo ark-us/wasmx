@@ -197,7 +197,10 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}, gasMeter memc.GasM
 	}
 	result, err := fn.Call(wm.ctx, _args...)
 	if gasMeter != nil {
-		gasMeter.ConsumeGas(wrappedMeter.GasConsumed(), "wasm execution")
+		consumed := wrappedMeter.GasConsumed()
+		if consumed > 0 {
+			gasMeter.ConsumeGas(consumed, "wasm execution")
+		}
 	}
 	if err != nil {
 		expected := memc.VM_TERMINATE_ERROR + " (recovered by wazero)"
@@ -487,7 +490,7 @@ func (WazeroVmMeta) AotCompile(ctx sdk.Context, inPath string, outPath string) e
 		return err
 	}
 
-	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbuffer)
+	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbuffer, false)
 	if err != nil {
 		return err
 	}
