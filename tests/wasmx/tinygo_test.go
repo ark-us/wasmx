@@ -11,12 +11,13 @@ import (
 
 	py "github.com/loredanacirstea/mythos-tests/testdata/python"
 	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 	wasmbin := tinygo.TinyGoAdd
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -32,7 +33,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoAdd() {
 func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	wasmbin := tinygo.TinyGoSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -62,7 +63,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
 	wasmbin := tinygo.TinyGoSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	depsPy := []string{types.INTERPRETER_PYTHON}
 
 	appA := s.AppContext()

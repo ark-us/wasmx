@@ -21,6 +21,8 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	cw8 "github.com/loredanacirstea/mythos-tests/testdata/cw8"
+
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 type AtomicSwapBalance struct {
@@ -32,7 +34,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 	wasmbin := cw8.Cw20BaseAarch64Wasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	proxyAddressBz, err := hex.DecodeString("0000000000000000000000000000000000000025")
 	s.Require().NoError(err)
 
@@ -95,7 +97,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	sender2AddressEvm := types.EvmAddressFromAcc(sender2.Address)
-	initBalance := sdkmath.NewInt(1000_000_000).MulRaw(1000000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(10000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))

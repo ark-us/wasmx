@@ -38,12 +38,12 @@ func (k *Keeper) Deploy(
 	return k.CreateInterpreted(ctx, &creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{})
 }
 
-func (k *Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) (*types.CodeInfo, error) {
-	return k.pinCode(ctx, codeId, compiledFolderPath)
+func (k *Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) (*types.CodeInfo, error) {
+	return k.pinCode(ctx, codeId, compiledFolderPath, meteringOff)
 }
 
-func (k *Keeper) PinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
-	return k.pinCodeAndStore(ctx, codeId, compiledFolderPath)
+func (k *Keeper) PinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) error {
+	return k.pinCodeAndStore(ctx, codeId, compiledFolderPath, meteringOff)
 }
 
 func (k *Keeper) UnpinCode(ctx sdk.Context, codeId uint64) error {
@@ -127,12 +127,17 @@ func (k *Keeper) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPr
 
 func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddressPrefixed, contractInfo types.ContractInfo, codeInfo types.CodeInfo, prefixStoreKey []byte) (types.ContractDependency, error) {
 	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
-	filepath := k.wasmvm.GetFilePath(codeInfo)
+	aotFilePath := ""
+	if codeInfo.Pinned {
+		aotFilePath = k.wasmvm.BuildPathPinned(codeInfo.CodeHash)
+	}
+	filepath := k.wasmvm.GetCodeFilePath(codeInfo)
 
 	cdep := types.ContractDependency{
 		Address:       addr,
 		StoreKey:      prefixStoreKey,
-		FilePath:      filepath,
+		CodeFilePath:  filepath,
+		AotFilePath:   aotFilePath,
 		SystemDeps:    sdeps,
 		Bytecode:      codeInfo.InterpretedBytecodeRuntime,
 		CodeHash:      codeInfo.CodeHash,
@@ -140,6 +145,7 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 		SystemDepsRaw: codeInfo.Deps,
 		StorageType:   contractInfo.StorageType,
 		Pinned:        codeInfo.Pinned,
+		MeteringOff:   codeInfo.MeteringOff,
 	}
 
 	// shortcut for roles contract, to avoid cycle
@@ -548,7 +554,6 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	if err != nil {
 		return types.ContractResponse{}, 0, err
 	}
-	env.Contract.FilePath = k.wasmvm.GetFilePath(*codeInfo)
 
 	// create prefixed data store
 	// 0x03 | BuildContractAddressClassic (sdk.AccAddress)
@@ -568,13 +573,13 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 }
 
 // PinCode pins the wasm contract in wasmvm cache
-func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string) (*types.CodeInfo, error) {
+func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) (*types.CodeInfo, error) {
 	codeInfo := k.GetCodeInfo(ctx, codeId)
 	if codeInfo == nil {
 		return nil, sdkerr.Wrap(types.ErrNotFound, "code info")
 	}
 
-	if err := k.wasmvm.Pin(ctx, codeInfo.CodeHash, compiledFolderPath); err != nil {
+	if err := k.wasmvm.Pin(ctx, codeInfo.CodeHash, compiledFolderPath, meteringOff); err != nil {
 		return nil, sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
 	}
 	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
@@ -582,8 +587,8 @@ func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath stri
 }
 
 // PinCode pins the wasm contract in wasmvm cache
-func (k *Keeper) pinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string) error {
-	codeInfo, err := k.pinCode(ctx, codeId, compiledFolderPath)
+func (k *Keeper) pinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) error {
+	codeInfo, err := k.pinCode(ctx, codeId, compiledFolderPath, meteringOff)
 	if err != nil {
 		return sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
 	}
@@ -665,7 +670,6 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	if err != nil {
 		return nil, err
 	}
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
 	if err != nil {
@@ -733,7 +737,6 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	if err != nil {
 		return nil, err
 	}
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
 	if err != nil {
@@ -786,7 +789,6 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	if err != nil {
 		return nil, err
 	}
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -861,7 +863,6 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	if err != nil {
 		return nil, err
 	}
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
@@ -931,7 +932,6 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	if err != nil {
 		return nil, err
 	}
-	env.Contract.FilePath = k.wasmvm.GetFilePath(codeInfo)
 
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
 	if err != nil {
@@ -1075,13 +1075,18 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 	if err != nil {
 		return types.SystemDep{}, err
 	}
-	filepath := k.wasmvm.GetFilePath(codeInfo)
+	aotFilePath := ""
+	if codeInfo.Pinned {
+		aotFilePath = k.wasmvm.BuildPathPinned(codeInfo.CodeHash)
+	}
+	filepath := k.wasmvm.GetCodeFilePath(codeInfo)
 	dep := types.SystemDep{
-		Role:     role.Role,
-		Label:    label,
-		FilePath: filepath,
-		Pinned:   codeInfo.Pinned,
-		Deps:     k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps),
+		Role:         role.Role,
+		Label:        label,
+		CodeFilePath: filepath,
+		AotFilePath:  aotFilePath,
+		Pinned:       codeInfo.Pinned,
+		Deps:         k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps),
 	}
 	return dep, nil
 }
@@ -1105,11 +1110,9 @@ func (m MultipliedGasMeter) GasConsumed() storetypes.Gas {
 
 // consume gas in wasm VM units
 func (m MultipliedGasMeter) ConsumeGas(gas storetypes.Gas, descriptor string) {
+	descriptor = fmt.Sprintf("wasmx: %s", descriptor)
 	sdkgas := m.GasRegister.FromWasmVMGas(gas)
 	m.originalMeter.ConsumeGas(sdkgas, descriptor)
-	if m.originalMeter.IsOutOfGas() {
-		panic(storetypes.ErrorOutOfGas{Descriptor: "WasmX function execution: " + descriptor})
-	}
 }
 
 // gas limit in wasm VM units

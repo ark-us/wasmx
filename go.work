@@ -8,3 +8,9 @@ use (
 	./mythos-wasmedge
 	./tests
 )
+
+replace (
+	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
+	// cosmossdk.io/store => ../cosmos-sdk/store
+	// github.com/tetratelabs/wazero => ../wazero
+)

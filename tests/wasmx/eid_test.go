@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
@@ -45,7 +46,7 @@ var (
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -147,7 +148,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	var calldata string
 	var qres string
 

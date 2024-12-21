@@ -33,7 +33,7 @@ const (
 	// DefaultInstanceCost is how much SDK gas we charge each time we load a WASM instance.
 	// Creating a new instance is costly, and this helps put a recursion limit to contracts calling contracts.
 	// Benchmarks and numbers were discussed in: https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803
-	DefaultInstanceCost uint64 = 60_000
+	DefaultInstanceCost uint64 = 1_000
 	// DefaultCompileCost is how much SDK gas is charged *per byte* for compiling WASM code.
 	// Benchmarks and numbers were discussed in: https://github.com/CosmWasm/wasmd/pull/634#issuecomment-938056803
 	DefaultCompileCost uint64 = 3

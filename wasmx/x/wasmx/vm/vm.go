@@ -19,7 +19,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InitiateWasm(context *Context, rnh memc.RuntimeHandler, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {
+func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string, aotFilePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {
 	// set default
 	if len(systemDeps) == 0 {
 		label := types.DEFAULT_SYS_DEP
@@ -42,8 +42,8 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, filePath string, wa
 			return err
 		}
 	}
-	if filePath != "" || len(wasmbuffer) > 0 {
-		err = contractVm.InstantiateWasm(filePath, wasmbuffer)
+	if wasmFilePath != "" || aotFilePath != "" || len(wasmbuffer) > 0 {
+		err = contractVm.InstantiateWasm(wasmFilePath, aotFilePath, wasmbuffer)
 	}
 	return err
 }
@@ -271,7 +271,7 @@ func ExecuteWasmInterpreted(
 
 	// add itself
 	contractstr := env.Contract.Address.String()
-	err = InitiateWasm(context, rnh, "", nil, contractInfo.SystemDeps)
+	err = InitiateWasm(context, rnh, "", "", nil, contractInfo.SystemDeps)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
@@ -391,7 +391,7 @@ func ExecuteWasm(
 	}
 	// add itself
 	contractstr := env.Contract.Address.String()
-	err = InitiateWasm(context, rnh, env.Contract.FilePath, nil, contractInfo.SystemDeps)
+	err = InitiateWasm(context, rnh, contractInfo.CodeFilePath, contractInfo.AotFilePath, nil, contractInfo.SystemDeps)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}

@@ -225,14 +225,16 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 				// TODO: gas remaining!!
 			}
 			req := vmtypes.CallRequestCommon{
-				To:       to,
-				From:     ctx.Env.Contract.Address,
-				Value:    req.Value.BigInt(),
-				GasLimit: gasLimit,
-				Calldata: req.Calldata,
-				Bytecode: contractInfo.Bytecode,
-				CodeHash: contractInfo.CodeHash,
-				IsQuery:  req.IsQuery,
+				To:           to,
+				From:         ctx.Env.Contract.Address,
+				Value:        req.Value.BigInt(),
+				GasLimit:     gasLimit,
+				Calldata:     req.Calldata,
+				Bytecode:     contractInfo.Bytecode,
+				CodeHash:     contractInfo.CodeHash,
+				CodeFilePath: contractInfo.CodeFilePath,
+				AotFilePath:  contractInfo.AotFilePath,
+				IsQuery:      req.IsQuery,
 			}
 			success, returnData = WasmxCall(ctx, req)
 			ctx.ReturnData = returnData

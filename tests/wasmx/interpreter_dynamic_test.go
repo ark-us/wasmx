@@ -15,13 +15,14 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
 func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
@@ -91,7 +92,7 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 
 func (suite *KeeperTestSuite) TestWasmxDebug() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -115,7 +116,7 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 
 func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))

@@ -18,6 +18,7 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 type SysContract struct {
@@ -31,7 +32,7 @@ type BenchmarkRequest struct {
 
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -111,7 +112,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	wasmbin := wasmxtest.WasmxSimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -144,7 +145,7 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 	SkipCIExpensiveTests(suite.T(), "TestWasmxTime")
 
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -172,7 +173,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	SkipCIExpensiveTests(suite.T(), "TestWasmxLevel0")
 
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))

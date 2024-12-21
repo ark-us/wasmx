@@ -15,7 +15,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
-	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
@@ -149,7 +148,8 @@ func NewWazeroVm(ctx sdk.Context, aot bool) memc.IVm {
 		config = wazero.NewRuntimeConfigInterpreter()
 	} else {
 		// compiler if supported, runtime otherwise
-		config = wazero.NewRuntimeConfigCompiler()
+		config = wazero.NewRuntimeConfig()
+		// config = wazero.NewRuntimeConfigCompiler()
 	}
 
 	config = config.
@@ -199,7 +199,7 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}, gasMeter memc.GasM
 	if gasMeter != nil {
 		consumed := wrappedMeter.GasConsumed()
 		if consumed > 0 {
-			gasMeter.ConsumeGas(consumed, "wasm execution")
+			gasMeter.ConsumeGas(consumed, "wasm execution: "+funcname)
 		}
 	}
 	if err != nil {
@@ -296,19 +296,17 @@ func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) er
 	return nil
 }
 
-func (wm *WazeroVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
+func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, wasmbuffer []byte) error {
 	var err error
-	if strings.Contains(filePath, types.PINNED_FOLDER) {
-		content, err := os.Open(filePath)
+	compilerSupported := wazero.CompilerSupported()
+	if compilerSupported && aotFilePath != "" {
+		content, err := os.Open(aotFilePath)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "load original wasm file failed %s", filePath)
+			return sdkerrors.Wrapf(err, "load original wasm file failed %s", aotFilePath)
 		}
-
-		// TODO better - just provide the original wasm & the pinned file
-		originalWasmPath := strings.Replace(filePath, fmt.Sprintf("/%s/", types.PINNED_FOLDER), "/", 1)
-		origwasmbuffer, err := os.ReadFile(originalWasmPath)
+		origwasmbuffer, err := os.ReadFile(wasmFilePath)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "load wasm file failed %s", originalWasmPath)
+			return sdkerrors.Wrapf(err, "load wasm file failed %s", wasmFilePath)
 		}
 		compiledmod, err := wm.r.DeserializeCompiledModule(wm.ctx, origwasmbuffer, content)
 		if err != nil {
@@ -321,9 +319,9 @@ func (wm *WazeroVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
 		wm.vm = vm
 	} else {
 		if wasmbuffer == nil {
-			wasmbuffer, err = os.ReadFile(filePath)
+			wasmbuffer, err = os.ReadFile(wasmFilePath)
 			if err != nil {
-				return sdkerrors.Wrapf(err, "load wasm file failed %s", filePath)
+				return sdkerrors.Wrapf(err, "load wasm file failed %s", wasmFilePath)
 			}
 		}
 		vm, err := wm.r.Instantiate(wm.ctx, wasmbuffer)
@@ -481,7 +479,10 @@ func (WazeroVmMeta) AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (memc.WasmMe
 	return meta, nil
 }
 
-func (WazeroVmMeta) AotCompile(ctx sdk.Context, inPath string, outPath string) error {
+func (WazeroVmMeta) AotCompile(ctx sdk.Context, inPath string, outPath string, meteringOff bool) error {
+	if !wazero.CompilerSupported() {
+		return nil
+	}
 	config := wazero.NewRuntimeConfigCompiler()
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 
@@ -489,8 +490,7 @@ func (WazeroVmMeta) AotCompile(ctx sdk.Context, inPath string, outPath string) e
 	if err != nil {
 		return err
 	}
-
-	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbuffer, false)
+	_, reader, err := r.CompileModuleAndSerialize(ctx, wasmbuffer, !meteringOff)
 	if err != nil {
 		return err
 	}

@@ -10,12 +10,13 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 	wasmbin := testdata.SimpleStorageWasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 	getHex1 := `054c1a75`
@@ -57,7 +58,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 	wasmbin := testdata.SimpleStorageWcWasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	getHex := `6d4ce63c`
 
 	appA := s.AppContext()
@@ -79,7 +80,7 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	wasmbin := testdata.SimpleStorageWasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	setHex := `60fe47b1`
 
 	appA := s.AppContext()
@@ -107,7 +108,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 func (suite *KeeperTestSuite) TestConstructorTestBin() {
 	wasmbin := testdata.ConstructorTestWasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	fsig := "c1b4625e"
 	fsig2 := "4a53d41e"
 	strmap := "e71a136a"

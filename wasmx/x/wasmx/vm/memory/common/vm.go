@@ -25,7 +25,7 @@ type IWasmVmMeta interface {
 	LibVersion() string
 	NewWasmVm(ctx sdk.Context, aot bool) IVm
 	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
-	AotCompile(ctx sdk.Context, inPath string, outPath string) error
+	AotCompile(ctx sdk.Context, inPath string, outPath string, meteringOff bool) error
 }
 
 type IFn interface {
@@ -71,7 +71,7 @@ type IVm interface {
 	GetMemory() (IMemory, error)
 	New(ctx sdk.Context, aot bool) IVm
 	Cleanup()
-	InstantiateWasm(filePath string, wasmbuffer []byte) error
+	InstantiateWasm(wasmFilePath string, aotFilePath string, wasmbuffer []byte) error
 	RegisterModule(mod interface{}) error
 	BuildModule(rnh RuntimeHandler, modname string, context interface{}, fndefs []IFn) (interface{}, error)
 	BuildFn(fnname string, fnval IFnVal, inputTypes []interface{}, outputTypes []interface{}, cost int32) IFn
@@ -242,6 +242,6 @@ func (WasmRuntimeMockVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (Wasm
 	return nil, fmt.Errorf("runtime mock: AnalyzeWasm not implemented")
 }
 
-func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string) error {
+func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string, meteringOff bool) error {
 	return fmt.Errorf("runtime mock: AotCompile not implemented")
 }

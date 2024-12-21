@@ -114,7 +114,7 @@ func cw_8_db_write(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return nil, err
 	}
 	ctx := _context.(*Context)
-	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmx")
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "cw_8_db_write")
 	ctx.ContractStore.Set(key, data)
 	returns := make([]interface{}, 0)
 	return returns, nil
@@ -280,7 +280,7 @@ func cw_8_secp256k1_verify(_context interface{}, rnh memc.RuntimeHandler, params
 	if err != nil {
 		return nil, err
 	}
-	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
+	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cw_8_secp256k1_verify")
 
 	publicKey := secp256k1.PubKey{Key: publicKeyBz}
 	valid := crypto.VerifySignature(&publicKey, msgHash, signature)
@@ -313,7 +313,7 @@ func cw_8_secp256k1_recover_pubkey(_context interface{}, rnh memc.RuntimeHandler
 	recoveryParam := params[2].(int32)
 
 	signature = append(signature, byte(recoveryParam))
-	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
+	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cw_8_secp256k1_recover_pubkey")
 	recoveredPublicKey, err := crypto.Secp256k1Recover(msgHash, signature)
 	if err != nil {
 		return cwError(rnh, err.Error())
@@ -352,7 +352,7 @@ func cw_8_ed25519_verify(_context interface{}, rnh memc.RuntimeHandler, params [
 	if err != nil {
 		return nil, err
 	}
-	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
+	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cw_8_ed25519_verify")
 
 	publicKey := ed25519.PubKey{Key: publicKeyBz}
 	valid := publicKey.VerifySignature(msg, signature)
@@ -415,7 +415,7 @@ func cw_8_ed25519_batch_verify(_context interface{}, rnh memc.RuntimeHandler, pa
 	}
 	// countPublicKeys := len(publicKeysBz) / EDDSA_PUBKEY_LEN
 
-	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cosmwasm8")
+	ctx.GasMeter.ConsumeGas(uint64(Secp256k1VerifyCost), "cw_8_ed25519_batch_verify")
 
 	publicKey := ed25519.PubKey{Key: publicKeysBz}
 	valid := publicKey.VerifySignature(msgs, signatures)

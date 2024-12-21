@@ -88,7 +88,7 @@ func (c *Context) Execute() ([]byte, error) {
 		c.ReturnData = data
 		return data, nil
 	}
-	filepath := c.ContractInfo.FilePath
+	filepath := c.ContractInfo.CodeFilePath
 	if types.HasUtf8SystemDep(c.ContractInfo.SystemDeps) {
 		filepath = ""
 	}
@@ -96,7 +96,7 @@ func (c *Context) Execute() ([]byte, error) {
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()
-	err := InitiateWasm(c, rnh, filepath, nil, c.ContractInfo.SystemDeps)
+	err := InitiateWasm(c, rnh, filepath, c.ContractInfo.AotFilePath, nil, c.ContractInfo.SystemDeps)
 	if err != nil {
 		return nil, err
 	}

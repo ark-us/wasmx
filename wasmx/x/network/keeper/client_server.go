@@ -58,7 +58,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/types"
 )
 
-var NETWORK_GAS_LIMIT = uint64(1000000000)
+var NETWORK_GAS_LIMIT = uint64(100_000_000_000)
 
 // Config is an gRPC server configuration.
 type Config struct {

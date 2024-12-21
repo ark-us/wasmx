@@ -3,6 +3,7 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	mcfg "github.com/loredanacirstea/wasmx/config"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
@@ -21,7 +23,7 @@ import (
 func (suite *KeeperTestSuite) TestSendingCoinsToNewAccount() {
 	sender := suite.GetRandomAccount()
 	newacc := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
@@ -36,7 +38,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.OpcodesAll)
 	s.Require().NoError(err)
 
@@ -316,7 +318,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gaslimithex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000001312d00", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000005f5e100", qres)
 
 	calld = callvalue
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, sdk.Coins{sdk.NewCoin(appA.Chain.Config.BaseDenom, sdkmath.NewInt(99999999))}, nil)
@@ -387,7 +389,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 
@@ -424,7 +426,7 @@ func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
 
 func (suite *KeeperTestSuite) TestCallFibonacci() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	fibhex := "c6c2ea17"
 	fibstorehex := "cf837088"
 	fibInternal := "b1960274"
@@ -439,15 +441,15 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 
 	_, contractAddressFibo := appA.DeployEvm(sender, fiboevm, types.WasmxExecutionMessage{Data: []byte{}}, nil, "fibonacci", nil)
 
-	value := "0000000000000000000000000000000000000000000000000000000000000005"
-	result := "0000000000000000000000000000000000000000000000000000000000000005"
+	value := "000000000000000000000000000000000000000000000000000000000000000f"
+	result := "0000000000000000000000000000000000000000000000000000000000000262"
 
 	start := time.Now()
 	// call fibonaci contract directly
 	res := appA.ExecuteContractWithGas(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
 		appA.Hex2bz(fibInternal),
 		appA.Hex2bz(value)...,
-	)}, nil, nil, 10000000, nil)
+	)}, nil, nil, 300_000_000, nil)
 
 	fmt.Println("-fibo-elapsed", time.Since(start))
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
@@ -475,7 +477,7 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	qres := appA.WasmxQuery(sender, contractAddress, msgFibInternal, nil, deps)
 	s.Require().Equal(result, qres)
 
-	res = appA.ExecuteContract(sender, contractAddress, msgFib, nil, deps)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, msgFib, nil, deps, uint64(1_000_000_000), nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
 
 	// query fibonacci through the callwasm contract
@@ -501,7 +503,7 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 
 func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	receiver := common.HexToAddress("0x0000000000000000000000000000000000001111")
 	receiverAcc := types.AccAddressFromEvm(receiver)
 	evmcode, err := hex.DecodeString(testdata.CallRevert)
@@ -540,7 +542,7 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 
 func (suite *KeeperTestSuite) TestEwasmNestedGeneralCall() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.CallGeneral)
 	s.Require().NoError(err)
 
@@ -574,7 +576,7 @@ func (suite *KeeperTestSuite) TestEwasmNestedGeneralCall() {
 
 func (suite *KeeperTestSuite) TestEwasmCallNested() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evm_inner, err := hex.DecodeString(testdata.CallNestedSimple)
 	s.Require().NoError(err)
 	evmbin, err := hex.DecodeString(testdata.CallNested)
@@ -604,7 +606,7 @@ func (suite *KeeperTestSuite) TestEwasmCallNested() {
 
 func (suite *KeeperTestSuite) TestEwasmStaticCall() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.CallStatic)
 	s.Require().NoError(err)
 	evmcode_inner, err := hex.DecodeString(testdata.CallStaticInner)
@@ -636,7 +638,7 @@ func (suite *KeeperTestSuite) TestEwasmStaticCall() {
 
 func (suite *KeeperTestSuite) TestEwasmDelegateCall() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	// lib reads from storage key 0 and returns the value
 	evmcodelib, err := hex.DecodeString(testdata.CallDelegateLib)
 	s.Require().NoError(err)
@@ -662,7 +664,7 @@ func (suite *KeeperTestSuite) TestEwasmDelegateCall() {
 
 func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	fibstorehex := "cf837088"
 	evmcode, err := hex.DecodeString(testdata.Fibonacci)
 	s.Require().NoError(err)
@@ -675,8 +677,7 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
-
-	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 100_000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 4_000_000, nil)
 	s.Require().NoError(err)
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().True(res.IsErr(), res.GetLog())
@@ -685,7 +686,7 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 
 func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	fibhex := "c6c2ea17"
 	fibstorehex := "cf837088"
 	evmcode, err := hex.DecodeString(testdata.Fibonacci)
@@ -729,7 +730,7 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 
 func (suite *KeeperTestSuite) TestEwasmSwitchJump() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.Switch)
 	s.Require().NoError(err)
 
@@ -748,7 +749,7 @@ func (suite *KeeperTestSuite) TestEwasmSwitchJump() {
 
 func (suite *KeeperTestSuite) TestEwasmLogs() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.Logs)
 	s.Require().NoError(err)
 
@@ -771,7 +772,7 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 
 func (suite *KeeperTestSuite) TestEwasmCreate1() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.Create)
 	s.Require().NoError(err)
 
@@ -829,7 +830,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate1() {
 
 func (suite *KeeperTestSuite) TestEwasmCreate2() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.Create)
 	s.Require().NoError(err)
 
@@ -889,7 +890,7 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 func (suite *KeeperTestSuite) TestEwasmOrigin() {
 	sender := suite.GetRandomAccount()
 	senderAddressHex := hex.EncodeToString(sender.Address.Bytes())
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	originbz, err := hex.DecodeString(testdata.Origin)
 	s.Require().NoError(err)
 	evmcode, err := hex.DecodeString(testdata.CallStatic)
@@ -912,7 +913,7 @@ func (suite *KeeperTestSuite) TestEwasmOrigin() {
 
 func (suite *KeeperTestSuite) TestEwasmErc20() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(10000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	getDecimalsHex := `313ce567`
 	getNameHex := `06fdde03`
 	getSymbolHex := `95d89b41`
@@ -977,7 +978,7 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 
 func (suite *KeeperTestSuite) TestContractTransfer() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	sendETH := "c664c714"
 
 	receiver := common.HexToAddress("0x89ec06bFA519Ca6182b3ADaFDe0f05Eeb15394A9")
@@ -1006,7 +1007,7 @@ func (suite *KeeperTestSuite) TestKeccak256() {
 	var res string
 	var inputbz []byte
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.Keccak256Test)
 	s.Require().NoError(err)
 

@@ -169,7 +169,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	t := suite.T()
 	addrCodec, ok := encodingConfig.TxConfig.SigningContext().AddressCodec().(mcodec.AccBech32Codec)
 	suite.Require().True(ok)
-	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(1000_000_000_000)))
 
 	return appContext
 }

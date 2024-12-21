@@ -55,7 +55,7 @@ func SecretSharing(context *Context, input []byte) ([]byte, error) {
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot initialize WASI")
 	}
-	err = vm.InstantiateWasm("", wasmbin)
+	err = vm.InstantiateWasm("", "", wasmbin)
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: invalid wasm")
 	}

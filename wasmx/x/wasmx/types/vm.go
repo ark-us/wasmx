@@ -291,11 +291,12 @@ var FILE_EXTENSIONS = map[string]string{
 // }
 
 type SystemDep struct {
-	Role     string
-	Label    string
-	FilePath string
-	Pinned   bool
-	Deps     []SystemDep
+	Role         string
+	Label        string
+	CodeFilePath string
+	AotFilePath  string
+	Pinned       bool
+	Deps         []SystemDep
 }
 
 func (v SystemDep) Clone() SystemDep {
@@ -304,11 +305,12 @@ func (v SystemDep) Clone() SystemDep {
 		deps[i] = dep.Clone()
 	}
 	return SystemDep{
-		Role:     v.Role,
-		Label:    v.Label,
-		FilePath: v.FilePath,
-		Pinned:   v.Pinned,
-		Deps:     deps,
+		Role:         v.Role,
+		Label:        v.Label,
+		CodeFilePath: v.CodeFilePath,
+		AotFilePath:  v.AotFilePath,
+		Pinned:       v.Pinned,
+		Deps:         deps,
 	}
 }
 

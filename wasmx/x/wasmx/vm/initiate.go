@@ -58,7 +58,7 @@ func InitiateKeccak256(ctx sdk.Context, newvm memc.NewIVmFn) (memc.RuntimeHandle
 	var err error
 	keccakVm := newvm(ctx, true)
 	// TODO cache aot keccak
-	err = keccakVm.InstantiateWasm("", interpreters.Keccak256Util)
+	err = keccakVm.InstantiateWasm("", "", interpreters.Keccak256Util)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func InstantiateWasmxConsensusJson(context *Context, rnh memc.RuntimeHandler, de
 }
 
 func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	err := rnh.GetVm().InstantiateWasm(dep.FilePath, nil)
+	err := rnh.GetVm().InstantiateWasm(dep.CodeFilePath, dep.AotFilePath, nil)
 	if err != nil {
 		return err
 	}

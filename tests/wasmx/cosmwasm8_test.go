@@ -18,6 +18,8 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	cw8 "github.com/loredanacirstea/mythos-tests/testdata/cw8"
+
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 type ReflectMsg struct {
@@ -156,7 +158,7 @@ const ED25519_PUBLIC_KEY2_HEX = "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968
 func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 	wasmbin := cw8.SimpleContractWasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -217,7 +219,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 	wasmbin := cw8.Cw20BaseAarch64Wasm
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -268,7 +270,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	sender := simulation.Account{
 		Address: senderAddress,
 	}
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -310,7 +312,7 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	wasmbin := cw8.Cw20AtomicSwapWasm
 	sender := suite.GetRandomAccount()
 	recipient := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -374,7 +376,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	suite.T().Skip("TODO: skipping until wasmVMResponseHandler is reenabled")
 	wasmbin := cw8.ReflectAarch64Wasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -525,7 +527,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	wasmbin := cw8.CryptoVerifyAarch64Wasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)

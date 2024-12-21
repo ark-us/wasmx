@@ -203,8 +203,12 @@ func (wm *WasmEdgeVm) InitWasi(args []string, envs []string, preopens []string) 
 	return nil
 }
 
-func (wm *WasmEdgeVm) InstantiateWasm(filePath string, wasmbuffer []byte) error {
+func (wm *WasmEdgeVm) InstantiateWasm(wasmFilePath string, aotFilePath string, wasmbuffer []byte) error {
 	var err error
+	filePath := wasmFilePath
+	if wasmFilePath == "" {
+		filePath = aotFilePath
+	}
 	if wasmbuffer == nil {
 		err = wm.vm.LoadWasmFile(filePath)
 		if err != nil {
@@ -345,7 +349,7 @@ func (WasmEdgeVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (memc.WasmMe
 	return meta, nil
 }
 
-func (WasmEdgeVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string) error {
+func (WasmEdgeVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string, meteringOff bool) error {
 	// Create Configure
 	// conf := wasmedge.NewConfigure(wasmedge.THREADS, wasmedge.EXTENDED_CONST, wasmedge.TAIL_CALL, wasmedge.MULTI_MEMORIES)
 

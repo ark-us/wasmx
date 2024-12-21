@@ -242,7 +242,7 @@ func (k *WasmxEngine) Cleanup() {
 
 }
 
-func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFolderPath string) error {
+func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFolderPath string, meteringOff bool) error {
 	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
 	if compiledFolderPath != "" {
 		compiledPath := k.build_path(compiledFolderPath, checksum)
@@ -251,7 +251,7 @@ func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFold
 			return nil
 		}
 	}
-	return k.pin_code(ctx, k.build_path(k.DataDir, checksum), pinnedPath)
+	return k.pin_code(ctx, k.build_path(k.DataDir, checksum), pinnedPath, meteringOff)
 }
 
 func (k *WasmxEngine) Unpin(checksum types.Checksum) error {
@@ -260,8 +260,8 @@ func (k *WasmxEngine) Unpin(checksum types.Checksum) error {
 	return nil
 }
 
-func (k *WasmxEngine) pin_code(ctx sdk.Context, inPath string, outPath string) error {
-	return k.WasmRuntime.AotCompile(ctx, inPath, outPath)
+func (k *WasmxEngine) pin_code(ctx sdk.Context, inPath string, outPath string, meteringOff bool) error {
+	return k.WasmRuntime.AotCompile(ctx, inPath, outPath, meteringOff)
 }
 
 func (k *WasmxEngine) checksum(wasmBytecode types.WasmCode) types.Checksum {
@@ -293,19 +293,48 @@ func (k *WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, e
 	return path.Join(dataDir, extension, filename)
 }
 
+func (k *WasmxEngine) BuildPathPinned(codeHash []byte) string {
+	return k.build_path_pinned(k.DataDir, codeHash)
+}
+
+func (k *WasmxEngine) BuildPath(codeHash []byte) string {
+	return k.build_path(k.DataDir, codeHash)
+}
+
+func (k *WasmxEngine) BuildPathUtf8(codeHash []byte, extension string) string {
+	return k.build_path_utf8(k.SourcesDir, codeHash, extension)
+}
+
+func (k *WasmxEngine) GetPathUtf8(codeInfo types.CodeInfo) string {
+	return k.BuildPathUtf8(codeInfo.CodeHash, GetExtensionFromDeps(codeInfo.Deps))
+}
+
+func (k *WasmxEngine) GetCodeFilePath(codeInfo types.CodeInfo) string {
+	filepath := ""
+	if types.HasUtf8Dep(codeInfo.Deps) {
+		filepath = k.GetPathUtf8(codeInfo)
+	} else {
+		if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+			filepath = ""
+		} else {
+			filepath = k.BuildPath(codeInfo.CodeHash)
+		}
+	}
+	return filepath
+}
+
 func (k *WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
 	filepath := ""
 	if codeInfo.Pinned {
-		filepath = k.build_path_pinned(k.DataDir, codeInfo.CodeHash)
+		filepath = k.BuildPathPinned(codeInfo.CodeHash)
 	} else {
 		if types.HasUtf8Dep(codeInfo.Deps) {
-			extension := GetExtensionFromDeps(codeInfo.Deps)
-			filepath = k.build_path_utf8(k.SourcesDir, codeInfo.CodeHash, extension)
+			filepath = k.GetPathUtf8(codeInfo)
 		} else {
 			if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
 				filepath = ""
 			} else {
-				filepath = k.build_path(k.DataDir, codeInfo.CodeHash)
+				filepath = k.BuildPath(codeInfo.CodeHash)
 			}
 		}
 	}

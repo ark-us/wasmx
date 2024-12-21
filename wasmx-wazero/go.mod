@@ -193,8 +193,8 @@ replace (
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
 
-// github.com/loredanacirstea/wazero@1501e85d8dd1948fc06746d280745a3b1681d091
-replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1
+// github.com/loredanacirstea/wazero-wasmx@2eea3efd733f33f425c47843e2e2e818c837b8c9
+replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero-wasmx v0.0.0-20241221180426-2eea3efd733f
 
 require github.com/loredanacirstea/wasmx v0.0.0
 

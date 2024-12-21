@@ -86,8 +86,6 @@ type EnvContractInfo struct {
 	// instantiate -> this is the constructor + runtime + constructor args
 	// execute -> this is the runtime bytecode
 	Bytecode []byte `json:"bytecode"`
-	// used for source code interpreters (e.g. python)
-	FilePath string `json:"filepath"`
 }
 
 type BlockInfo struct {
@@ -126,7 +124,8 @@ type ContractDependency struct {
 	Role          string
 	Label         string
 	StoreKey      []byte
-	FilePath      string
+	CodeFilePath  string
+	AotFilePath   string
 	SystemDeps    []SystemDep
 	Bytecode      []byte
 	CodeHash      []byte
@@ -134,6 +133,7 @@ type ContractDependency struct {
 	SystemDepsRaw []string
 	StorageType   ContractStorageType
 	Pinned        bool
+	MeteringOff   bool
 }
 
 func (v ContractDependency) Clone() *ContractDependency {
@@ -146,7 +146,8 @@ func (v ContractDependency) Clone() *ContractDependency {
 		Role:          v.Role,
 		Label:         v.Label,
 		StoreKey:      cloneBytes(v.StoreKey),
-		FilePath:      v.FilePath,
+		CodeFilePath:  v.CodeFilePath,
+		AotFilePath:   v.AotFilePath,
 		SystemDeps:    deps,
 		Bytecode:      cloneBytes(v.Bytecode),
 		CodeHash:      cloneBytes(v.CodeHash),
@@ -184,7 +185,6 @@ func (v EnvContractInfo) Clone() EnvContractInfo {
 		CodeId:     v.CodeId,
 		SystemDeps: cloneStrings(v.SystemDeps),
 		Bytecode:   cloneBytes(v.Bytecode),
-		FilePath:   v.FilePath,
 	}
 }
 

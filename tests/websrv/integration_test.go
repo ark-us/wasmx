@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
 	testutil "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/websrv/types"
 )
@@ -25,7 +26,7 @@ var (
 func (suite *KeeperTestSuite) TestSimpleWebServer() {
 	wasmbin := testserverwasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
@@ -80,7 +81,7 @@ func (suite *KeeperTestSuite) TestSimpleWebServer() {
 func (suite *KeeperTestSuite) TestWebServer() {
 	wasmbin := testserverwasm
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(2_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
