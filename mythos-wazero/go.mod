@@ -340,4 +340,4 @@ require github.com/loredanacirstea/wasmx-wazero v0.0.0-00010101000000-0000000000
 // github.com/loredanacirstea/wazero-wasmx@2eea3efd733f33f425c47843e2e2e818c837b8c9
 replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero-wasmx v0.0.0-20241221180426-2eea3efd733f
 
-replace github.com/loredanacirstea/wasmx-wazero => /Users/user/dev/blockchain/wasmx/wasmx-wazero
+replace github.com/loredanacirstea/wasmx-wazero => ../wasmx-wazero
