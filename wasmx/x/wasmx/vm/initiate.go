@@ -56,8 +56,9 @@ func InitiateWasmxEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.Sys
 
 func InitiateKeccak256(ctx sdk.Context, newvm memc.NewIVmFn) (memc.RuntimeHandler, error) {
 	var err error
-	keccakVm := newvm(ctx)
-	err = keccakVm.InstantiateWasm("", interpreters.Keccak256Util)
+	keccakVm := newvm(ctx, true)
+	// TODO cache aot keccak
+	err = keccakVm.InstantiateWasm("", "", interpreters.Keccak256Util)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func InstantiateWasmxConsensusJson(context *Context, rnh memc.RuntimeHandler, de
 }
 
 func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	err := rnh.GetVm().InstantiateWasm(dep.FilePath, nil)
+	err := rnh.GetVm().InstantiateWasm(dep.CodeFilePath, dep.AotFilePath, nil)
 	if err != nil {
 		return err
 	}
@@ -229,23 +230,23 @@ func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInte
 }
 
 func ExecuteDefault(context *Context, contractVm memc.IVm, funcName string) ([]int32, error) {
-	return contractVm.Call(funcName, []interface{}{})
+	return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 }
 
 func ExecuteDefaultContract(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == types.ENTRY_POINT_EXECUTE || funcName == types.ENTRY_POINT_QUERY {
 		funcName = "main"
 	}
-	return contractVm.Call(funcName, []interface{}{})
+	return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 }
 
 func ExecuteDefaultMain(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	return contractVm.Call("main", []interface{}{})
+	return contractVm.Call("main", []interface{}{}, context.GasMeter)
 }
 
 func ExecuteFSM(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == types.ENTRY_POINT_EXECUTE || funcName == types.ENTRY_POINT_QUERY || funcName == types.ENTRY_POINT_INSTANTIATE {
 		funcName = "main"
 	}
-	return contractVm.Call(funcName, []interface{}{})
+	return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 }

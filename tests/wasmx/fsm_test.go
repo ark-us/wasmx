@@ -10,12 +10,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/fsm"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestFSM_Semaphore() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -43,7 +44,7 @@ func (suite *KeeperTestSuite) TestFSM_ERC20() {
 	owner := suite.GetRandomAccount()
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(100_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(owner.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -113,7 +114,7 @@ func (suite *KeeperTestSuite) TestFSM_Timer() {
 	owner := suite.GetRandomAccount()
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(100_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(owner.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))

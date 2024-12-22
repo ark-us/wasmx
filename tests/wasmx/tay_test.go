@@ -19,13 +19,14 @@ import (
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/taylor"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	mcfg "github.com/loredanacirstea/wasmx/config"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
 
 func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -49,7 +50,7 @@ func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {
 
 func (suite *KeeperTestSuite) TestInterpreterTayERC20() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -93,7 +94,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayERC20() {
 
 func (suite *KeeperTestSuite) TestInterpreterTayJson() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -131,7 +132,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayJson() {
 func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 	suite.SetCurrentChain(mcfg.LEVEL0_CHAIN_ID)
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderP := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -246,7 +247,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 
 func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderP := appA.BytesToAccAddressPrefixed(sender.Address)
@@ -410,7 +411,7 @@ func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
 
 func (suite *KeeperTestSuite) TestInterpreterTayU256() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	senderP := appA.BytesToAccAddressPrefixed(sender.Address)

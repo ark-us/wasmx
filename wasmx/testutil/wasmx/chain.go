@@ -169,7 +169,7 @@ func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
 	t := suite.T()
 	addrCodec, ok := encodingConfig.TxConfig.SigningContext().AddressCodec().(mcodec.AccBech32Codec)
 	suite.Require().True(ok)
-	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(1000_000_000_000)))
 
 	return appContext
 }
@@ -589,6 +589,7 @@ func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFina
 				Msg:      msg,
 			})
 			if err != nil {
+				suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
 				return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 			}
 		}
@@ -596,6 +597,7 @@ func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFina
 	}
 	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
 	if err != nil {
+		suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
 		return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
 	}
 	return suite.CommitBlock()

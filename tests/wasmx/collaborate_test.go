@@ -22,7 +22,7 @@ import (
 func (suite *KeeperTestSuite) TestVMCollaboration() {
 	suite.T().Skip("TODO: WASI fix and py&js interpreters reenabled")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(testutil.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))

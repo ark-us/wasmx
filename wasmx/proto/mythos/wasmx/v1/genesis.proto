@@ -38,12 +38,13 @@ message SystemContract {
   bytes init_message = 4 [ (gogoproto.casttype) = "RawContractMessage" ];
   bool pinned = 5;
   bool native = 6;
-  string role = 7;
+  bool metering_off = 7; // some system contracts may be aot compiled with metering off
+  string role = 8;
   // deps can be hex-formatted contract addresses (32 bytes)
   // or versioned interface labels
-  repeated string deps = 8;
-  CodeMetadata metadata = 9 [(gogoproto.nullable) = false];
-  repeated ContractStorage contract_state = 10 [ (gogoproto.nullable) = false ];
+  repeated string deps = 9;
+  CodeMetadata metadata = 10 [(gogoproto.nullable) = false];
+  repeated ContractStorage contract_state = 11 [ (gogoproto.nullable) = false ];
 }
 
 // Code - for importing and exporting code data

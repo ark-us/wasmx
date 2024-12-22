@@ -10,13 +10,22 @@ import (
 
 const VM_TERMINATE_ERROR = "terminate"
 
+// GasMeter is a read-only version of the sdk gas meter
+type Gas = uint64
+type GasMeter interface {
+	GasConsumed() Gas
+	GasLimit() Gas
+	GasRemaining() Gas
+	ConsumeGas(gas uint64, descriptor string)
+}
+
 type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}) ([]interface{}, error)
 
 type IWasmVmMeta interface {
 	LibVersion() string
-	NewWasmVm(ctx sdk.Context) IVm
+	NewWasmVm(ctx sdk.Context, aot bool) IVm
 	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
-	AotCompile(ctx sdk.Context, inPath string, outPath string) error
+	AotCompile(ctx sdk.Context, inPath string, outPath string, meteringOff bool) error
 }
 
 type IFn interface {
@@ -55,14 +64,14 @@ type IMemory interface {
 	Write(ptr int32, data []byte) error
 }
 
-type NewIVmFn = func(ctx sdk.Context) IVm
+type NewIVmFn = func(ctx sdk.Context, aot bool) IVm
 
 type IVm interface {
-	Call(name string, args []interface{}) ([]int32, error)
+	Call(name string, args []interface{}, gasMeter GasMeter) ([]int32, error)
 	GetMemory() (IMemory, error)
-	New(ctx sdk.Context) IVm
+	New(ctx sdk.Context, aot bool) IVm
 	Cleanup()
-	InstantiateWasm(filePath string, wasmbuffer []byte) error
+	InstantiateWasm(wasmFilePath string, aotFilePath string, wasmbuffer []byte) error
 	RegisterModule(mod interface{}) error
 	BuildModule(rnh RuntimeHandler, modname string, context interface{}, fndefs []IFn) (interface{}, error)
 	BuildFn(fnname string, fnval IFnVal, inputTypes []interface{}, outputTypes []interface{}, cost int32) IFn
@@ -225,7 +234,7 @@ func (WasmRuntimeMockVmMeta) LibVersion() string {
 	return "0"
 }
 
-func (WasmRuntimeMockVmMeta) NewWasmVm(ctx sdk.Context) IVm {
+func (WasmRuntimeMockVmMeta) NewWasmVm(ctx sdk.Context, aot bool) IVm {
 	return nil
 }
 
@@ -233,6 +242,6 @@ func (WasmRuntimeMockVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (Wasm
 	return nil, fmt.Errorf("runtime mock: AnalyzeWasm not implemented")
 }
 
-func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string) error {
+func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string, meteringOff bool) error {
 	return fmt.Errorf("runtime mock: AotCompile not implemented")
 }

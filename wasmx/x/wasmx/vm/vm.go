@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -19,7 +20,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InitiateWasm(context *Context, rnh memc.RuntimeHandler, filePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {
+func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string, aotFilePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {
 	// set default
 	if len(systemDeps) == 0 {
 		label := types.DEFAULT_SYS_DEP
@@ -42,8 +43,8 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, filePath string, wa
 			return err
 		}
 	}
-	if filePath != "" || len(wasmbuffer) > 0 {
-		err = contractVm.InstantiateWasm(filePath, wasmbuffer)
+	if wasmFilePath != "" || aotFilePath != "" || len(wasmbuffer) > 0 {
+		err = contractVm.InstantiateWasm(wasmFilePath, aotFilePath, wasmbuffer)
 	}
 	return err
 }
@@ -69,8 +70,17 @@ func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []ty
 	return nil
 }
 
-func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []types.SystemDep) memc.RuntimeHandler {
-	vm := newIVmFn(ctx)
+func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []types.SystemDep, pinned bool) memc.RuntimeHandler {
+	if !pinned {
+		// also check system deps
+		for _, dep := range systemDeps {
+			if dep.Pinned {
+				pinned = true
+				break
+			}
+		}
+	}
+	vm := newIVmFn(ctx, pinned)
 	handler := getRuntimeHandlerFromDeps(vm, systemDeps)
 	if handler != nil {
 		return handler
@@ -159,6 +169,9 @@ func AnalyzeWasm(ctx sdk.Context, vmMeta memc.IWasmVmMeta, wasmbuffer []byte) (m
 		}
 	}
 
+	// make deterministic: order alphabetically
+	sort.Strings(report.Dependencies)
+
 	return report, nil
 }
 
@@ -233,7 +246,7 @@ func ExecuteWasmInterpreted(
 	}
 
 	var contractRouter ContractRouter = make(map[string]*Context)
-	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps)
+	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps, contractInfo.Pinned)
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()
@@ -262,7 +275,7 @@ func ExecuteWasmInterpreted(
 
 	// add itself
 	contractstr := env.Contract.Address.String()
-	err = InitiateWasm(context, rnh, "", nil, contractInfo.SystemDeps)
+	err = InitiateWasm(context, rnh, "", "", nil, contractInfo.SystemDeps)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
@@ -343,7 +356,7 @@ func ExecuteWasm(
 	}
 
 	var contractRouter ContractRouter = make(map[string]*Context)
-	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps)
+	rnh := getRuntimeHandler(newIVmFn, ctx, contractInfo.SystemDeps, contractInfo.Pinned)
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()
@@ -382,7 +395,7 @@ func ExecuteWasm(
 	}
 	// add itself
 	contractstr := env.Contract.Address.String()
-	err = InitiateWasm(context, rnh, env.Contract.FilePath, nil, contractInfo.SystemDeps)
+	err = InitiateWasm(context, rnh, contractInfo.CodeFilePath, contractInfo.AotFilePath, nil, contractInfo.SystemDeps)
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
@@ -466,7 +479,7 @@ func setExecutionBytecode(context *Context, rnh memc.RuntimeHandler, funcName st
 		if err != nil {
 			return
 		}
-		retvalues, err := vm.Call("evm_bytecode", []interface{}{})
+		retvalues, err := vm.Call("evm_bytecode", []interface{}{}, context.GasMeter)
 		if err != nil {
 			return
 		}

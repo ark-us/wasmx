@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
@@ -45,7 +46,7 @@ var (
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -147,7 +148,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	var calldata string
 	var qres string
 
@@ -233,12 +234,13 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz("b3baeed1")}, nil, deps)
 }
 
+var maxgas = uint64(5_000_000_000)
+
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong")
-	maxgas := uint64(1_000_000_000)
 
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
@@ -275,9 +277,8 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2")
-	maxgas := uint64(1_000_000_000)
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
@@ -394,9 +395,8 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileCurve384TestLong2Interpreted")
-	maxgas := uint64(1_000_000_000)
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 
 	appA := s.AppContext()
@@ -434,7 +434,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() 
 func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileWalletRegistry")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 	senderHex := types.EvmAddressFromAcc(sender.Address).Hex()
 
@@ -485,12 +485,12 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 
 	fmt.Println("--register--")
 	start := time.Now()
-	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 20_000_000_000_000, nil) // 52_810_317
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, maxgas, nil) // 52_810_317
 	fmt.Println("Elapsed register: ", time.Since(start))
 
 	fmt.Println("--finishRegistration--")
 	start = time.Now()
-	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(finishRegistration)}, nil, deps, 20_000_000, nil) // 52_810_448
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(finishRegistration)}, nil, deps, maxgas, nil) // 52_810_448
 	fmt.Println("Elapsed finishRegistration: ", time.Since(start))
 
 	registered := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isRegistered, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)
@@ -534,7 +534,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 	SkipCIExpensiveTests(suite.T(), "TestEwasmPrecompileWalletRegistryInterpreted")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(1000_000_000_000)
 	deps := []string{types.ADDR_MODEXP}
 	senderHex := types.EvmAddressFromAcc(sender.Address).Hex()
 
@@ -588,12 +588,12 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 
 	fmt.Println("--register--")
 	start := time.Now()
-	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, 20_000_000_000_000, nil) // 52_810_317
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s%s%s", register, PkxHi_2, PkxLo_2, PkyHi_2, PkyLo_2))}, nil, deps, maxgas, nil) // 52_810_317
 	fmt.Println("Elapsed register: ", time.Since(start))
 
 	fmt.Println("--finishRegistration--")
 	start = time.Now()
-	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(finishRegistration)}, nil, deps, 20_000_000, nil) // 52_810_448
+	appA.ExecuteContractWithGas(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(finishRegistration)}, nil, deps, maxgas, nil) // 52_810_448
 	fmt.Println("Elapsed finishRegistration: ", time.Since(start))
 
 	registered := appA.WasmxQuery(sender, registryAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s", isRegistered, "0000000000000000000000000000000000000000000000000000000000000001"))}, nil, nil)

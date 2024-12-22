@@ -15,12 +15,13 @@ import (
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	js "github.com/loredanacirstea/mythos-tests/testdata/js"
 	py "github.com/loredanacirstea/mythos-tests/testdata/python"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 	wasmbin := js.JsJavySimpleStorage
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -36,7 +37,7 @@ func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -75,7 +76,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -103,7 +104,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -132,7 +133,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	depsJs := []string{types.INTERPRETER_JS}
 
 	appA := s.AppContext()
@@ -167,7 +168,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))

@@ -48,7 +48,7 @@ func wasiStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []in
 	if err != nil {
 		return nil, err
 	}
-	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasmx")
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasiStorageStore")
 	ctx.ContractStore.Set(keybz, valuebz)
 
 	returns := make([]interface{}, 0)
@@ -168,17 +168,18 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 			success = int32(0)
 		} else {
 			req := vmtypes.CallRequestCommon{
-				To:         addr,
-				From:       ctx.Env.Contract.Address,
-				Value:      value,
-				GasLimit:   big.NewInt(gasLimit),
-				Calldata:   calldata,
-				Bytecode:   contractInfo.Bytecode,
-				CodeHash:   contractInfo.CodeHash,
-				FilePath:   contractInfo.FilePath,
-				CodeId:     contractInfo.CodeId,
-				SystemDeps: contractInfo.SystemDepsRaw,
-				IsQuery:    false,
+				To:           addr,
+				From:         ctx.Env.Contract.Address,
+				Value:        value,
+				GasLimit:     big.NewInt(gasLimit),
+				Calldata:     calldata,
+				Bytecode:     contractInfo.Bytecode,
+				CodeHash:     contractInfo.CodeHash,
+				CodeFilePath: contractInfo.CodeFilePath,
+				AotFilePath:  contractInfo.AotFilePath,
+				CodeId:       contractInfo.CodeId,
+				SystemDeps:   contractInfo.SystemDepsRaw,
+				IsQuery:      false,
 			}
 			success, returnData = WasmxCall(ctx, req)
 		}
@@ -230,17 +231,18 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		success = int32(0)
 	} else {
 		req := vmtypes.CallRequestCommon{
-			To:         addr,
-			From:       ctx.Env.Contract.Address,
-			Value:      big.NewInt(0),
-			GasLimit:   big.NewInt(gasLimit),
-			Calldata:   calldata,
-			Bytecode:   contractInfo.Bytecode,
-			CodeHash:   contractInfo.CodeHash,
-			FilePath:   contractInfo.FilePath,
-			CodeId:     contractInfo.CodeId,
-			SystemDeps: contractInfo.SystemDepsRaw,
-			IsQuery:    true,
+			To:           addr,
+			From:         ctx.Env.Contract.Address,
+			Value:        big.NewInt(0),
+			GasLimit:     big.NewInt(gasLimit),
+			Calldata:     calldata,
+			Bytecode:     contractInfo.Bytecode,
+			CodeHash:     contractInfo.CodeHash,
+			CodeFilePath: contractInfo.CodeFilePath,
+			AotFilePath:  contractInfo.AotFilePath,
+			CodeId:       contractInfo.CodeId,
+			SystemDeps:   contractInfo.SystemDepsRaw,
+			IsQuery:      true,
 		}
 		success, returnData = WasmxCall(ctx, req)
 	}
@@ -334,7 +336,7 @@ func wasi_keccak256(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		return nil, err
 	}
 
-	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset})
+	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset}, ctx.GasMeter)
 	if err != nil {
 		return nil, err
 	}
@@ -663,22 +665,22 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 			// WASI reactor
 			if name == "_initialize" {
 				found = true
-				res, err = contractVm.Call("_initialize", []interface{}{})
+				res, err = contractVm.Call("_initialize", []interface{}{}, context.GasMeter)
 			}
 			// note that custom entries do not have access to WASI endpoints at this time
 			if name == "main.instantiate" {
 				found = true
-				res, err = contractVm.Call("main.instantiate", []interface{}{})
+				res, err = contractVm.Call("main.instantiate", []interface{}{}, context.GasMeter)
 			}
 		}
 		if !found {
 			return nil, nil
 		}
 	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
-		res, err = contractVm.Call(funcName, []interface{}{})
+		res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 	} else {
 		// WASI command - no args, no return
-		res, err = contractVm.Call("_start", []interface{}{})
+		res, err = contractVm.Call("_start", []interface{}{}, context.GasMeter)
 		// fmt.Println("--ExecuteWasi-_start, err", res, err)
 
 		// res, err = contractVm.Execute("_initialize")
@@ -700,10 +702,9 @@ func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName st
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
-
-	dir := filepath.Dir(context.Env.Contract.FilePath)
+	dir := filepath.Dir(context.ContractInfo.CodeFilePath)
 	inputFile := path.Join(dir, "main.py")
-	content, err := os.ReadFile(context.Env.Contract.FilePath)
+	content, err := os.ReadFile(context.ContractInfo.CodeFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -758,8 +759,8 @@ func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string
 		funcName = "main"
 	}
 
-	dir := filepath.Dir(context.Env.Contract.FilePath)
-	fileName := filepath.Base(context.Env.Contract.FilePath)
+	dir := filepath.Dir(context.ContractInfo.CodeFilePath)
+	fileName := filepath.Base(context.ContractInfo.CodeFilePath)
 	inputFileName := "main.js"
 	inputFile := path.Join(dir, inputFileName)
 	strcontent := fmt.Sprintf(`

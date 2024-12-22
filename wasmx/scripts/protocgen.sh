@@ -26,8 +26,8 @@ buf generate --template buf.gen.doc.yml
 cd ..
 
 # move proto files to the right places
-cp -r mythos/v*/x/* x/
-cp -r mythos/v*/crypto/* crypto/
-rm -rf mythos
+cp -r github.com/loredanacirstea/wasmx/x/* x/
+cp -r github.com/loredanacirstea/wasmx/crypto/* crypto/
+rm -rf github.com/loredanacirstea/wasmx
 
 ./scripts/protocgen-pulsar.sh

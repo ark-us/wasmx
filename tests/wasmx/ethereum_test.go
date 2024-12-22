@@ -12,6 +12,7 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	cch "github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler/alias"
@@ -22,7 +23,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 	priv, err := ethsecp256k1.GenerateKey()
 	s.Require().NoError(err)
 	sender := sdk.AccAddress(priv.PubKey().Address().Bytes())
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	// getHex := `6d4ce63c`
 	setHex := `60fe47b1`
 
@@ -61,7 +62,7 @@ func (suite *KeeperTestSuite) TestAliasContract() {
 	appA := s.AppContext()
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "alias_eth")
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	priv, err := ethsecp256k1.GenerateKey()
 	s.Require().NoError(err)
@@ -158,7 +159,7 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	// receiverEth := sdk.AccAddress(priv2.PubKey().Address().Bytes())
 	// receiverEthHex := types.EvmAddressFromAcc(receiverEth)
 
-	initBalance := sdkmath.NewInt(1000_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	aliasEthAddr := appA.BytesToAccAddressPrefixed(appA.Hex2bz(types.ADDR_ALIAS_ETH))

@@ -44,11 +44,12 @@ message CodeInfo {
     repeated string deps = 3;
     // Pinned contract
     bool pinned = 4;
-    CodeMetadata metadata = 5 [(gogoproto.nullable) = false];
+    bool metering_off = 5; // default is on, but some system contracts may have metering off
+    CodeMetadata metadata = 6 [(gogoproto.nullable) = false];
     // for code that has a different runtime, like EVM
-    bytes interpreted_bytecode_deployment = 6;
-    bytes interpreted_bytecode_runtime = 7;
-    bytes runtime_hash = 8;
+    bytes interpreted_bytecode_deployment = 7;
+    bytes interpreted_bytecode_runtime = 8;
+    bytes runtime_hash = 9;
 }
 
 message CodeOrigin {

@@ -48,7 +48,7 @@ type KeeperTestSuite struct {
 var s *KeeperTestSuite
 
 func (suite *KeeperTestSuite) SetupSuite() {
-	suite.MaxBlockGas = 1_000_000_000
+	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = systemContractsModify
 	mydir, err := os.Getwd()
 	if err != nil {
@@ -140,15 +140,15 @@ var wazeroCompiled = map[string]bool{}
 var wasmedgeCompiled = map[string]bool{
 	// wasmxtypes.AUTH_v001:                true,
 	// wasmxtypes.ROLES_v001:               true,
-	// "ecrecovereth":                      true,
-	// "sha2-256":                          true,
-	// "ripmd160":                          true,
-	// "modexp":                            true,
-	// "ecadd":                             true,
-	// "ecmul":                             true,
-	// "ecpairings":                        true,
-	// "blake2f":                           true,
-	// wasmxtypes.INTERPRETER_EVM_SHANGHAI: true,
+	"ecrecovereth":                      true,
+	"sha2-256":                          true,
+	"ripmd160":                          true,
+	"modexp":                            true,
+	"ecadd":                             true,
+	"ecmul":                             true,
+	"ecpairings":                        true,
+	"blake2f":                           true,
+	wasmxtypes.INTERPRETER_EVM_SHANGHAI: true,
 	// // wasmxtypes.INTERPRETER_PYTHON: true,
 	// // wasmxtypes.INTERPRETER_JS: true,
 	// // wasmxtypes.INTERPRETER_FSM: true,

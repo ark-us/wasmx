@@ -11,11 +11,12 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.CallGeneral)
 	s.Require().NoError(err)
 
@@ -64,7 +65,7 @@ func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
 
 // func (suite *KeeperTestSuite) TestRolesCallCore() {
 // 	sender := suite.GetRandomAccount()
-// 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+// 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 // 	valAccount := simulation.Account{
 // 		PrivKey: s.Chain().SenderPrivKey,
 // 		PubKey:  s.Chain().SenderPrivKey.PubKey(),

@@ -74,7 +74,7 @@ func wasmxStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []i
 	if err != nil {
 		return nil, err
 	}
-	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmx")
+	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_WASMX), "wasmxStorageStore")
 	ctx.ContractStore.Set(key, data)
 	returns := make([]interface{}, 0)
 	return returns, nil

@@ -131,7 +131,7 @@ func finalizeUtf8V1(ctx sdk.Context, k *Keeper) error {
 		if !info.Pinned {
 			return false
 		}
-		k.PinCode(ctx, id, "")
+		k.PinCode(ctx, id, "", info.MeteringOff)
 		return false
 	})
 	return nil
