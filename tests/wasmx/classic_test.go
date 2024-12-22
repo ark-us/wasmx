@@ -684,6 +684,84 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	s.Require().Contains(res.GetLog(), "out of gas", res.GetLog())
 }
 
+func (suite *KeeperTestSuite) TestInvalidTransaction() {
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	fibstorehex := "cf837088"
+	evmcode, err := hex.DecodeString(testdata.Fibonacci)
+	s.Require().NoError(err)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "fibonacci", nil)
+
+	value := "0000000000000000000000000000000000000000000000000000000000000005"
+	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
+
+	// create an invalid transaction, make sure it gets rejected from the mempool
+	msgbz, err := json.Marshal(msgFibStore)
+	s.Require().NoError(err)
+	senderstr, err := appA.AddressCodec().BytesToString(sender.Address)
+	s.Require().NoError(err)
+	executeContractMsg := &types.MsgExecuteContract{
+		Sender:       senderstr,
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+
+	bz := appA.PrepareCosmosTx(sender, []sdk.Msg{executeContractMsg}, nil, nil, "")
+	// change a byte, so encoding is off
+	// this will make the consensus contract revert the "newTransaction" transaction
+	bz[0] = 8
+	res, err := appA.FinalizeBlock([][]byte{bz})
+	s.Require().NoError(err)
+	s.Require().Equal(len(res.TxResults), 0, "tx should not have been included in the mempool")
+	// TODO also check mempool directly
+}
+
+func (suite *KeeperTestSuite) TestInvalidMessageTransaction() {
+	sender := suite.GetRandomAccount()
+	sender2 := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	fibstorehex := "cf837088"
+	evmcode, err := hex.DecodeString(testdata.Fibonacci)
+	s.Require().NoError(err)
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	sender2Prefixed := appA.BytesToAccAddressPrefixed(sender2.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	// fund with minimal balance, just to create the account
+	appA.Faucet.Fund(appA.Context(), sender2Prefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, sdkmath.NewInt(1)))
+	suite.Commit()
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "fibonacci", nil)
+
+	value := "0000000000000000000000000000000000000000000000000000000000000005"
+	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
+
+	// create an invalid transaction, make sure it gets rejected in baseapp.CheckTx
+	msgbz, err := json.Marshal(msgFibStore)
+	s.Require().NoError(err)
+	executeContractMsg := &types.MsgExecuteContract{
+		Sender:       senderPrefixed.String(),
+		Contract:     contractAddress.String(),
+		Msg:          msgbz,
+		Funds:        nil,
+		Dependencies: nil,
+	}
+
+	bz := appA.PrepareCosmosTx(sender2, []sdk.Msg{executeContractMsg}, nil, nil, "")
+	res, err := appA.FinalizeBlock([][]byte{bz})
+	s.Require().NoError(err)
+	s.Require().Equal(len(res.TxResults), 0, "tx should not have been included in the mempool")
+	// TODO also check mempool directly
+}
+
 func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
