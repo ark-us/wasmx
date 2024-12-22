@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -167,6 +168,9 @@ func AnalyzeWasm(ctx sdk.Context, vmMeta memc.IWasmVmMeta, wasmbuffer []byte) (m
 			}
 		}
 	}
+
+	// make deterministic: order alphabetically
+	sort.Strings(report.Dependencies)
 
 	return report, nil
 }
