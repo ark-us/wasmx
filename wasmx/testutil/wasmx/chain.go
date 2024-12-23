@@ -578,24 +578,36 @@ func NewGRPCServer(
 	return grpcSrv, nil
 }
 
-func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
+func (suite *KeeperTestSuite) AddToMempoolFSM(txs [][]byte) ([]*types.MsgExecuteContractResponse, error) {
 	app := suite.TestChain.App
 	cb := func(goctx context.Context) (any, error) {
+		resps := make([]*types.MsgExecuteContractResponse, 0)
 		for _, tx := range txs {
 			msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"newTransaction","params":[{"key":"transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-			_, err := suite.TestChain.App.NetworkKeeper.ExecuteContract(suite.TestChain.GetContext(), &types.MsgExecuteContract{
+			resp, err := suite.TestChain.App.NetworkKeeper.ExecuteContract(suite.TestChain.GetContext(), &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg,
 			})
 			if err != nil {
-				suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
-				return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
+				return nil, err
 			}
+			resps = append(resps, resp)
 		}
+		return resps, nil
+	}
+	resp, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
 		return nil, nil
 	}
-	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
+	return resp.([]*types.MsgExecuteContractResponse), nil
+}
+
+func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
+	_, err := suite.AddToMempoolFSM(txs)
 	if err != nil {
 		suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
 		return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil

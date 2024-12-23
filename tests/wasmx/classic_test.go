@@ -720,10 +720,8 @@ func (suite *KeeperTestSuite) TestInvalidTransaction() {
 	// change a byte, so encoding is off
 	// this will make the consensus contract revert the "newTransaction" transaction
 	bz[0] = 8
-	res, err := appA.FinalizeBlock([][]byte{bz})
-	s.Require().NoError(err)
-	s.Require().Equal(len(res.TxResults), 0, "tx should not have been included in the mempool")
-	// TODO also check mempool directly
+	_, err = suite.AddToMempoolFSM([][]byte{bz})
+	s.Require().Error(err, "tx should not have been included in the mempool")
 }
 
 func (suite *KeeperTestSuite) TestInvalidMessageTransaction() {
@@ -759,10 +757,8 @@ func (suite *KeeperTestSuite) TestInvalidMessageTransaction() {
 	}
 
 	bz := appA.PrepareCosmosTx(sender2, []sdk.Msg{executeContractMsg}, nil, nil, "")
-	res, err := appA.FinalizeBlock([][]byte{bz})
-	s.Require().NoError(err)
-	s.Require().Equal(len(res.TxResults), 0, "tx should not have been included in the mempool")
-	// TODO also check mempool directly
+	_, err = suite.AddToMempoolFSM([][]byte{bz})
+	s.Require().Error(err, "tx should not have been included in the mempool")
 }
 
 func (suite *KeeperTestSuite) TestEwasmFibonacci() {
