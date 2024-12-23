@@ -369,7 +369,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000037ec5b165600", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000024fd6", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -492,10 +492,10 @@ func (suite *KeeperTestSuite) TestCallFibonacci() {
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddressFibo, keybz)
 	suite.Require().Equal("", hex.EncodeToString(queryres))
 
-	res = appA.ExecuteContract(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
+	res = appA.ExecuteContractWithGas(sender, contractAddressFibo, types.WasmxExecutionMessage{Data: append(
 		appA.Hex2bz(fibstorehex),
 		appA.Hex2bz(value)...,
-	)}, nil, nil)
+	)}, nil, nil, 1_000_000_000, nil)
 	s.Require().Contains(hex.EncodeToString(res.Data), result)
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddressFibo, keybz)
 	suite.Require().Equal(result, hex.EncodeToString(queryres))
@@ -531,7 +531,7 @@ func (suite *KeeperTestSuite) TestEwasmCallRevert() {
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	res, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil, 500_000, nil)
+	res, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte{}}, nil, nil, 10_000_000, nil)
 	s.Require().NoError(err)
 	s.Require().True(res.IsErr(), res.GetLog())
 	s.Require().Contains(res.GetLog(), "failed to execute message", res.GetLog())
@@ -677,7 +677,10 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
-	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 4_000_000, nil)
+	// gas limit is chosen to be > than needed to run the antehandler but < than needed to execute the actual transaction
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 2_000_000, nil)
+	// 1093970 - is executed just for the antehandler
+	// 2235235 successful execution
 	s.Require().NoError(err)
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().True(res.IsErr(), res.GetLog())

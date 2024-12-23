@@ -22,7 +22,7 @@ import (
 
 func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 	valAccount := simulation.Account{
 		PrivKey: s.Chain().SenderPrivKey,
 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
