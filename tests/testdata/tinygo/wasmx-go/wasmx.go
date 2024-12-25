@@ -76,7 +76,7 @@ type CallResult struct {
 }
 
 func StorageStore(key, value []byte) {
-	Log([]byte("wasmx.StorageStore"), [][32]byte{})
+	Log([]byte("storagestore"), [][32]byte{})
 	keyPtr, keyLength := BytesToLeakedPtr(key)
 	valuePtr, valueLength := BytesToLeakedPtr(value)
 	StorageStore_(keyPtr, keyLength, valuePtr, valueLength)
@@ -90,8 +90,7 @@ func StorageLoad(key []byte) []byte {
 
 func GetCallData() []byte {
 	ptr := GetCallData_()
-	v := bytesFromDynPtr(ptr)
-	return v
+	return bytesFromDynPtr(ptr)
 }
 
 func SetFinishData(data []byte) {
@@ -219,6 +218,5 @@ func PtrToBytes(ptr int32, size int32) []byte {
 	}))
 	out := make([]byte, size)
 	copy(out, bz)
-	Log(out, [][32]byte{})
 	return out
 }

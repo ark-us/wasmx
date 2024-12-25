@@ -1,43 +1,33 @@
 package wasi
 
 import (
-	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	"encoding/binary"
+
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func WriteMemDefaultMalloc(vm memc.IVm, data []byte) (int32, error) {
-	mem, err := vm.GetMemory()
-	if err != nil {
-		return 0, err
-	}
-	datalen := int32(len(data))
-	ptr, err := AllocateMemDefaultMalloc(vm, datalen)
-	if err != nil {
-		return 0, err
-	}
-	err = mem.Write(ptr, data)
-	if err != nil {
-		return 0, err
-	}
-	return ptr, nil
+func WriteUint16Le(mem memc.IMemory, offset int32, v uint16) error {
+	bz := make([]byte, 2)
+	binary.LittleEndian.PutUint16(bz, v)
+	return mem.WriteRaw(int32(offset), bz)
 }
 
-func WriteDynMemDefaultMalloc(vm memc.IVm, data []byte) (int64, error) {
-	ptr, err := WriteMemDefaultMalloc(vm, data)
+func WriteUint32Le(mem memc.IMemory, offset int32, v uint32) error {
+	bz := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bz, v)
+	return mem.WriteRaw(int32(offset), bz)
+}
+
+func WriteUint64Le(mem memc.IMemory, offset int32, v uint64) error {
+	bz := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bz, v)
+	return mem.WriteRaw(int32(offset), bz)
+}
+
+func ReadUint32Le(mem memc.IMemory, offset int32) (uint32, error) {
+	data, err := mem.Read(offset, 4)
 	if err != nil {
 		return 0, err
 	}
-	return BuildPtrI64(ptr, int32(len(data))), nil
-}
-
-func AllocateMemDefaultMalloc(vm memc.IVm, size int32) (int32, error) {
-	result, err := vm.Call(types.MEMORY_EXPORT_MALLOC, []interface{}{size}, nil)
-	if err != nil {
-		return 0, err
-	}
-	return result[0], nil
-}
-
-func BuildPtrI64(ptr int32, datalen int32) int64 {
-	return (int64(ptr) << int64(32)) | int64(datalen)
+	return binary.LittleEndian.Uint32(data), nil
 }

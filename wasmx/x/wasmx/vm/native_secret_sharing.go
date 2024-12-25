@@ -10,6 +10,7 @@ import (
 	aabi "github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	membase "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/base"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
@@ -51,9 +52,14 @@ func SecretSharing(context *Context, input []byte) ([]byte, error) {
 	defer func() {
 		vm.Cleanup()
 	}()
-	err := vm.InitWasi([]string{}, []string{}, []string{})
+	rnh := membase.NewRuntimeHandlerBase(vm)
+	wasi, err := BuildWasiEnv(context, rnh)
 	if err != nil {
-		return nil, sdkerr.Wrapf(sdkerr.Error{}, "secret sharing: cannot initialize WASI")
+		return nil, sdkerr.Wrapf(err, "could not build wasi module")
+	}
+	err = vm.RegisterModule(wasi)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "could not register wasi module")
 	}
 	err = vm.InstantiateWasm("", "", wasmbin)
 	if err != nil {

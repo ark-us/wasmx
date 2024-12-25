@@ -136,6 +136,10 @@ type WasmEdgeVm struct {
 	vm        *wasmedge.VM
 	callframe *wasmedge.CallingFrame
 	cleanups  []func()
+	args      []string
+	envs      []string
+	preopens  []string
+	fileMap   map[string][]byte
 }
 
 func (wm *WasmEdgeVm) New(ctx sdk.Context, aot bool) memc.IVm {
@@ -194,13 +198,24 @@ func (wm *WasmEdgeVm) ListRegisteredModule() []string {
 	return wm.vm.ListRegisteredModule()
 }
 
-func (wm *WasmEdgeVm) InitWasi(args []string, envs []string, preopens []string) error {
-	mod := wm.vm.GetImportModule(wasmedge.WASI)
-	if mod == nil {
-		return fmt.Errorf("WASI module not found")
-	}
-	mod.InitWasi(args, envs, preopens)
-	return nil
+func (wm *WasmEdgeVm) InstantiateWasi(args []string, envs []string, preopens []string, fileMap map[string][]byte) {
+	wm.args = args
+	wm.envs = envs
+	wm.preopens = preopens
+	wm.fileMap = fileMap
+}
+
+func (wm *WasmEdgeVm) WasiArgs() []string {
+	return wm.args
+}
+func (wm *WasmEdgeVm) WasiEnvs() []string {
+	return wm.envs
+}
+func (wm *WasmEdgeVm) WasiPreopens() []string {
+	return wm.preopens
+}
+func (wm *WasmEdgeVm) WasiFileMap() map[string][]byte {
+	return wm.fileMap
 }
 
 func (wm *WasmEdgeVm) InstantiateWasm(wasmFilePath string, aotFilePath string, wasmbuffer []byte) error {
@@ -383,7 +398,7 @@ func NewWasmEdgeVm(_ sdk.Context, _ bool) memc.IVm {
 	// conf.SetStatisticsInstructionCounting(true)
 	// conf.SetStatisticsTimeMeasuring(true)
 	// TODO allow wasi only for core contracts
-	conf.AddConfig(wasmedge.WASI)
+	// conf.AddConfig(wasmedge.WASI)
 	contractVm := wasmedge.NewVMWithConfig(conf)
 	// contractVm := wasmedge.NewVM()
 

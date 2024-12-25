@@ -38,7 +38,6 @@ import (
 // }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
-	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
@@ -67,7 +66,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
-	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
@@ -95,7 +93,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
-	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
@@ -186,7 +183,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 }
 
 func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
-	suite.T().Skip("TODO: skip until WASI is fixed and interpreters reenabled")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 

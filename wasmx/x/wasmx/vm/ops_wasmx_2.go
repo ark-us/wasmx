@@ -17,7 +17,6 @@ import (
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-	mem "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
@@ -467,7 +466,7 @@ func wasmxCreateAccountInterpreted(_context interface{}, rnh memc.RuntimeHandler
 		return returns, err
 	}
 
-	contractbz := mem.PaddLeftTo32(contractAddress.Bytes())
+	contractbz := memc.PaddLeftTo32(contractAddress.Bytes())
 	ptr, err := rnh.AllocateWriteMem(contractbz)
 	if err != nil {
 		return nil, err
@@ -519,7 +518,7 @@ func wasmxCreate2AccountInterpreted(_context interface{}, rnh memc.RuntimeHandle
 		return returns, err
 	}
 
-	contractbz := mem.PaddLeftTo32(contractAddress.Bytes())
+	contractbz := memc.PaddLeftTo32(contractAddress.Bytes())
 	ptr, err := rnh.AllocateWriteMem(contractbz)
 	if err != nil {
 		return nil, err

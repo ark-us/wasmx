@@ -115,18 +115,23 @@ func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.S
 }
 
 func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	vm := rnh.GetVm()
+	wasi, err := BuildWasiEnv(context, rnh)
+	if err != nil {
+		return sdkerr.Wrapf(err, "could not build wasi module")
+	}
+	err = vm.RegisterModule(wasi)
+	if err != nil {
+		return sdkerr.Wrapf(err, "could not register wasi module")
+	}
+	// TODO BuildWasiWasmxEnv should be a runtime handler for Rust, so we can enable WASI for any language/encoding
 	env1, err := BuildWasiWasmxEnv(context, rnh)
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not build wasmx wasi module")
 	}
-	vm := rnh.GetVm()
 	err = vm.RegisterModule(env1)
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not register env module")
-	}
-	err = vm.InitWasi([]string{``}, []string{}, []string{})
-	if err != nil {
-		return sdkerr.Wrapf(err, "could not register WASI module")
 	}
 	keccakRnh, err := InitiateKeccak256(context.Ctx, vm.New)
 	if err != nil {

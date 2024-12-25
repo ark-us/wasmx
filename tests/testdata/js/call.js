@@ -14,13 +14,13 @@ export function main(dataObj) {
 function wrapStore(addressbech32, value) {
     let calldata = JSON.stringify({"store":[value]})
     let address = wasmx.bech32StringToBytes(addressbech32)
-    return wasmx.call(1000000, address, new ArrayBuffer(32), stringToArrayBuffer(calldata))
+    return wasmx.call(50000000, address, new ArrayBuffer(32), stringToArrayBuffer(calldata))
 }
 
 function wrapLoad(addressbech32) {
     let calldata = JSON.stringify({"load":[]})
     let address = wasmx.bech32StringToBytes(addressbech32)
-    let res = wasmx.callStatic(1000000, address, stringToArrayBuffer(calldata))
+    let res = wasmx.callStatic(50000000, address, stringToArrayBuffer(calldata))
     let response = JSON.parse(arrayBufferToString(res))
     let data = new Uint8Array(Object.values(response.data));
     return data.buffer;

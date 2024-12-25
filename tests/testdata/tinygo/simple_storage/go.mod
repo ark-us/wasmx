@@ -1,6 +1,6 @@
 module simple_storage
 
-go 1.23
+go 1.21
 
 require (
     github.com/loredanacirstea/wasmx-tinygo v0.0.0

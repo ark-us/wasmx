@@ -60,7 +60,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	s.Require().Equal([]byte("goodbye"), value)
 }
 
-func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorageCall() {
+func (suite *KeeperTestSuite) TestWasiTinygoCallSimpleStorage() {
 	wasmbin := tinygo.TinyGoSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)

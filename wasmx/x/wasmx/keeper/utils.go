@@ -57,3 +57,15 @@ func (k *Keeper) ConvertProtoToJSONMarshal(protoResponse codec.ProtoMarshaler, b
 	}
 	return msg, nil
 }
+
+func uniqueStrings(input []string) []string {
+	encountered := make(map[string]bool)
+	var result []string
+	for _, s := range input {
+		if !encountered[s] {
+			encountered[s] = true
+			result = append(result, s)
+		}
+	}
+	return result
+}

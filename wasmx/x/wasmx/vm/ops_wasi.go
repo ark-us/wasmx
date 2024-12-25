@@ -1,824 +1,1924 @@
 package vm
 
 import (
-	"encoding/json"
 	"fmt"
-	"math/big"
-	"os"
-	"path"
-	"path/filepath"
+	"sort"
+	"strings"
 
-	sdkmath "cosmossdk.io/math"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	wasimem "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/wasi"
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
-	utils "github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
-// getEnv(): ArrayBuffer
-func wasi_getEnv(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
+// wasi_snapshot_preview1
+// See https://github.com/WebAssembly/WASI/blob/snapshot-01/phases/snapshot/docs.md#functions
+// args_get(argv: Pointer<Pointer<u8>>, argv_buf: Pointer<u8>) -> errno
+// args_sizes_get() -> (errno, size, size)
+// environ_get(environ: Pointer<Pointer<u8>>, environ_buf: Pointer<u8>) -> errno
+// environ_sizes_get() -> (errno, size, size)
+// clock_res_get(id: clockid) -> (errno, timestamp)
+// clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
+// fd_advise(fd: fd, offset: filesize, len: filesize, advice: advice) -> errno
+// fd_allocate(fd: fd, offset: filesize, len: filesize) -> errno
+// fd_close(fd: fd) -> errno
+// fd_datasync(fd: fd) -> errno
+// fd_fdstat_get(fd: fd) -> (errno, fdstat)
+// fd_fdstat_set_flags(fd: fd, flags: fdflags) -> errno
+// fd_fdstat_set_rights(fd: fd, fs_rights_base: rights, fs_rights_inheriting: rights) -> errno
+// fd_filestat_get(fd: fd) -> (errno, filestat)
+// fd_filestat_set_size(fd: fd, size: filesize) -> errno
+// fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
+// fd_pread(fd: fd, iovs: iovec_array, offset: filesize) -> (errno, size)
+// fd_prestat_get(fd: fd) -> (errno, prestat)
+// fd_prestat_dir_name(fd: fd, path: Pointer<u8>, path_len: size) -> errno
+// fd_pwrite(fd: fd, iovs: ciovec_array, offset: filesize) -> (errno, size)
+// fd_read(fd: fd, iovs: iovec_array) -> (errno, size)
+// fd_readdir(fd: fd, buf: Pointer<u8>, buf_len: size, cookie: dircookie) -> (errno, size)
+// fd_renumber(fd: fd, to: fd) -> errno
+// fd_seek(fd: fd, offset: filedelta, whence: whence) -> (errno, filesize)
+// fd_sync(fd: fd) -> errno
+// fd_tell(fd: fd) -> (errno, filesize)
+// fd_write(fd: fd, iovs: ciovec_array) -> (errno, size)
+// path_create_directory(fd: fd, path: string) -> errno
+// path_filestat_get(fd: fd, flags: lookupflags, path: string) -> (errno, filestat)
+// path_filestat_set_times(fd: fd, flags: lookupflags, path: string, atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
+// path_link(old_fd: fd, old_flags: lookupflags, old_path: string, new_fd: fd, new_path: string) -> errno
+// path_open(fd: fd, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags) -> (errno, fd)
+// path_readlink(fd: fd, path: string, buf: Pointer<u8>, buf_len: size) -> (errno, size)
+// path_remove_directory(fd: fd, path: string) -> errno
+// path_rename(fd: fd, old_path: string, new_fd: fd, new_path: string) -> errno
+// path_symlink(old_path: string, fd: fd, new_path: string) -> errno
+// path_unlink_file(fd: fd, path: string) -> errno
+// poll_oneoff(in: ConstPointer<subscription>, out: Pointer<event>, nsubscriptions: size) -> (errno, size)
+// proc_exit(rval: exitcode)
+// proc_raise(sig: signal) -> errno
+// sched_yield() -> errno
+// random_get(buf: Pointer<u8>, buf_len: size) -> errno
+// sock_recv(fd: fd, ri_data: iovec_array, ri_flags: riflags) -> (errno, size, roflags)
+// sock_send(fd: fd, si_data: ciovec_array, si_flags: siflags) -> (errno, size)
+// sock_shutdown(fd: fd, how: sdflags) -> errno
+
+var __WASI_O_CREAT = int32(1)
+var __WASI_O_DIRECTORY = int32(2)
+var __WASI_O_EXCL = int32(4)
+var __WASI_O_TRUNC = int32(8)
+
+func wasi_stubUnimplemented(_ interface{}, _ memc.RuntimeHandler, _ []interface{}) ([]interface{}, error) {
+	// Return ENOSYS = 52
+	// Function not implemented
 	returns := make([]interface{}, 1)
-	data, err := json.Marshal(ctx.Env)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
-	if err != nil {
-		return returns, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
+	returns[0] = int32(52)
 	return returns, nil
 }
 
-func wasiStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	keybz, err := mem.ReadRaw(params[0], params[1])
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--wasiStorageStore key--", string(keybz), keybz)
-	valuebz, err := mem.ReadRaw(params[2], params[3])
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--wasiStorageStore value--", string(valuebz), valuebz)
-	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasiStorageStore")
-	ctx.ContractStore.Set(keybz, valuebz)
-
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
-func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
+// 1) args_get(argv: Pointer<Pointer<u8>>, argv_buf: Pointer<u8>) -> errno
+func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_argsGet", params)
 	returns := make([]interface{}, 1)
+	args := rnh.GetVm().WasiArgs()
 	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	keybz, err := mem.ReadRaw(params[0], params[1])
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("--wasiStorageLoad key--", string(keybz), keybz)
-	data := ctx.ContractStore.Get(keybz)
-	if len(data) == 0 {
-		data = types.EMPTY_BYTES32
-	}
-	fmt.Println("--wasiStorageLoad data--", string(data), data)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
-	if err != nil {
-		return returns, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
-	return returns, nil
-}
 
-// getCallData(ptr): ArrayBuffer
-func wasiGetCallData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ctx := _context.(*Context)
-	fmt.Println("--wasiGetCallData", string(ctx.Env.CurrentCall.CallData), ctx.Env.CurrentCall.CallData)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), ctx.Env.CurrentCall.CallData)
-	if err != nil {
-		return returns, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(ctx.Env.CurrentCall.CallData)))
-	fmt.Println("--wasiGetCallData", returns[0])
-	return returns, nil
-}
+	argvPtr := params[0].(int32)
+	argvBufPtr := params[1].(int32)
 
-func wasiSetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	data, err := mem.ReadRaw(params[0], params[1])
-	if err != nil {
-		return nil, err
-	}
-	ctx.FinishData = data
-	ctx.ReturnData = data
-	return returns, nil
-}
-
-func wasiSetExitCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	ctx := _context.(*Context)
-	code := params[0].(int32)
-	if code == 0 {
-		return returns, nil
-	}
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	errorMsg, err := mem.ReadRaw(params[1], params[2])
-	if err != nil {
-		return nil, err
-	}
-	ctx.FinishData = errorMsg
-	ctx.ReturnData = errorMsg
-	return returns, fmt.Errorf(string(errorMsg))
-}
-
-func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-
-	gasLimit := params[0].(int64)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	addrbz, err := mem.ReadRaw(params[1], int32(32))
-	if err != nil {
-		returns[0] = int32(1)
-		return returns, nil
-	}
-	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
-	value, err := memc.ReadBigInt(mem, params[2], int32(32))
-	if err != nil {
-		returns[0] = int32(1)
-		return returns, nil
-	}
-	calldata, err := mem.ReadRaw(params[3], params[4])
-	if err != nil {
-		returns[0] = int32(1)
-		return returns, nil
-	}
-
-	var success int32
-	var returnData []byte
-
-	// Send funds
-	if value.BitLen() > 0 {
-		err = BankSendCoin(ctx, ctx.Env.Contract.Address, addr, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(value))))
-	}
-	if err != nil {
-		success = int32(2)
-	} else {
-		contractInfo := GetContractDependency(ctx, addr)
-		if contractInfo == nil {
-			// ! we return success here in case the contract does not exist
-			success = int32(0)
-		} else {
-			req := vmtypes.CallRequestCommon{
-				To:           addr,
-				From:         ctx.Env.Contract.Address,
-				Value:        value,
-				GasLimit:     big.NewInt(gasLimit),
-				Calldata:     calldata,
-				Bytecode:     contractInfo.Bytecode,
-				CodeHash:     contractInfo.CodeHash,
-				CodeFilePath: contractInfo.CodeFilePath,
-				AotFilePath:  contractInfo.AotFilePath,
-				CodeId:       contractInfo.CodeId,
-				SystemDeps:   contractInfo.SystemDepsRaw,
-				IsQuery:      false,
-			}
-			success, returnData = WasmxCall(ctx, req)
+	if len(args) == 0 {
+		// Write a single NULL pointer to mark end of the argv array
+		if err := wasimem.WriteUint32Le(mem, argvPtr, 0); err != nil {
+			return nil, err
 		}
-	}
-
-	response := vmtypes.CallResponse{
-		Success: uint8(success),
-		Data:    returnData,
-	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), responsebz)
-	if err != nil {
-		return returns, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(responsebz)))
-	return returns, nil
-}
-
-func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	gasLimit := params[0].(int64)
-	addrbz, err := mem.ReadRaw(params[1], int32(32))
-	if err != nil {
-		returns[0] = int32(1)
-		return returns, nil
-	}
-	addr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addrbz))
-	calldata, err := mem.ReadRaw(params[2], params[3])
-	if err != nil {
-		returns[0] = int32(1)
+		returns[0] = int32(0) // errno=0 (success)
 		return returns, nil
 	}
 
-	var success int32
-	var returnData []byte
+	currentArgvPtr := argvPtr
+	currentArgvBufPtr := argvBufPtr
 
-	contractInfo := GetContractDependency(ctx, addr)
-	if contractInfo == nil {
-		// ! we return success here in case the contract does not exist
-		success = int32(0)
-	} else {
-		req := vmtypes.CallRequestCommon{
-			To:           addr,
-			From:         ctx.Env.Contract.Address,
-			Value:        big.NewInt(0),
-			GasLimit:     big.NewInt(gasLimit),
-			Calldata:     calldata,
-			Bytecode:     contractInfo.Bytecode,
-			CodeHash:     contractInfo.CodeHash,
-			CodeFilePath: contractInfo.CodeFilePath,
-			AotFilePath:  contractInfo.AotFilePath,
-			CodeId:       contractInfo.CodeId,
-			SystemDeps:   contractInfo.SystemDepsRaw,
-			IsQuery:      true,
+	for _, a := range args {
+		fmt.Println("--wasi_argsGet--", currentArgvPtr, currentArgvBufPtr)
+		// write pointer (currentArgvBufPtr) into memory at currentArgvPtr
+		err = wasimem.WriteUint32Le(mem, currentArgvPtr, uint32(currentArgvBufPtr))
+		if err != nil {
+			return nil, err
 		}
-		success, returnData = WasmxCall(ctx, req)
-	}
 
-	response := vmtypes.CallResponse{
-		Success: uint8(success),
-		Data:    returnData,
-	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), responsebz)
-	if err != nil {
-		return returns, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(responsebz)))
-	return returns, nil
-}
-
-// address -> account
-func wasi_getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	addr, err := mem.ReadRaw(params[0], int32(32))
-	if err != nil {
-		return nil, err
-	}
-	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	code := types.EnvContractInfo{
-		Address:    address,
-		CodeHash:   types.EMPTY_BYTES32,
-		CodeId:     0,
-		SystemDeps: []string{},
-	}
-	contractInfo, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address.Bytes())
-	if err == nil {
-		code = types.EnvContractInfo{
-			Address:    address,
-			CodeHash:   codeInfo.CodeHash,
-			CodeId:     contractInfo.CodeId,
-			SystemDeps: codeInfo.Deps,
+		// write the actual string into memory + a null terminator
+		data := append([]byte(a), []byte{0}...)
+		fmt.Println("--wasi_argsGet data--", len(data), a)
+		err = mem.Write(currentArgvBufPtr, data)
+		if err != nil {
+			return nil, err
 		}
+
+		currentArgvPtr += 4 // 32-bit pointers
+		currentArgvBufPtr += int32(len(a) + 1)
 	}
 
-	codebz, err := json.Marshal(code)
+	// write a NULL pointer after the last arg in the argv list
+	err = wasimem.WriteUint32Le(mem, currentArgvPtr, uint32(0))
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), codebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(codebz)))
-	return returns, nil
-}
-
-func wasi_keccak256(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	data, err := mem.ReadRaw(params[0], params[1])
-	if err != nil {
-		return nil, err
-	}
-	if ctx.ContractRouter["keccak256"] == nil {
-		return nil, fmt.Errorf("missing keccak256 wasm module")
-	}
-	keccakRnh := ctx.ContractRouter["keccak256"].RuntimeHandler
-	input_offset := int32(0)
-	input_length := int32(len(data))
-	output_offset := input_length
-	context_offset := output_offset + int32(32)
-
-	keccakVm := keccakRnh.GetVm()
-	keccakMem, err := keccakVm.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	if keccakMem == nil {
-		return nil, fmt.Errorf("missing keccak256 wasm memory")
-	}
-	err = keccakMem.Write(input_offset, data)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = keccakVm.Call("keccak", []interface{}{context_offset, input_offset, input_length, output_offset}, ctx.GasMeter)
-	if err != nil {
-		return nil, err
-	}
-	result, err := keccakMem.Read(output_offset, 32)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), result)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(result)))
-	return returns, nil
-}
-
-// getBalance(address): i256
-func wasi_getBalance(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	addr, err := mem.ReadRaw(params[0], int32(32))
-	if err != nil {
-		return nil, err
-	}
-	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	balance, err := BankGetBalance(ctx, address, ctx.Env.Chain.Denom)
-	if err != nil {
-		return nil, err
-	}
-	balancebz := balance.Amount.BigInt().FillBytes(make([]byte, 32))
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), balancebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(balancebz)))
-	return returns, nil
-}
-
-// getBlockHash(i64): bytes32
-func wasi_getBlockHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	blockNumber := params[0].(int64)
-	data := ctx.CosmosHandler.GetBlockHash(uint64(blockNumber))
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
-	return returns, nil
-}
-
-// create(bytecode, balance): address
-// instantiateAccount(codeId, msgInit, balance): address
-func wasi_instantiateAccount(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	codeId := params[0].(int64)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	initMsg, err := mem.ReadRaw(params[1], params[2])
-	if err != nil {
-		return nil, err
-	}
-	balance, err := memc.ReadBigInt(mem, params[3], params[4])
-	if err != nil {
-		return nil, err
-	}
-	// TODO label?
-	contractAddress, err := ctx.CosmosHandler.Create(uint64(codeId), ctx.Env.Contract.Address, initMsg, "", balance, nil)
-	if err != nil {
-		return nil, err
-	}
-	contractbz := memc.PaddLeftTo32(contractAddress.Bytes())
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), contractbz)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(contractbz)))
-	return returns, nil
-}
-
-// create2(address, salt, bytes): address
-// instantiateAccount(codeId, salt, msgInit, balance): address
-func wasi_instantiateAccount2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	codeId := params[0].(int64)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	salt, err := mem.ReadRaw(params[1], int32(32))
-	if err != nil {
-		return nil, err
-	}
-	initMsg, err := mem.ReadRaw(params[2], params[3])
-	if err != nil {
-		return nil, err
-	}
-	balance, err := memc.ReadBigInt(mem, params[4], params[5])
-	if err != nil {
-		return nil, err
-	}
-	// TODO label?
-	contractAddress, err := ctx.CosmosHandler.Create2(uint64(codeId), ctx.Env.Contract.Address, initMsg, salt, "", balance, nil)
-	if err != nil {
-		return nil, err
-	}
-	contractbz := memc.PaddLeftTo32(contractAddress.Bytes())
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), contractbz)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(contractbz)))
-	return returns, nil
-}
-
-// getCodeHash(address): bytes32
-func wasi_getCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	addr, err := mem.ReadRaw(params[0], int32(32))
-	if err != nil {
-		return nil, err
-	}
-	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	checksum := ctx.CosmosHandler.GetCodeHash(address)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), checksum)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(checksum)))
-	return returns, nil
-}
-
-// getCode(address): []byte
-func wasi_getCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	mem, err := rnh.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	addr, err := mem.ReadRaw(params[0], int32(32))
-	if err != nil {
-		return nil, err
-	}
-	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	code := ctx.CosmosHandler.GetCode(address)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), code)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(code)))
-	return returns, nil
-}
-
-// sendCosmosMsg(req): bytes
-func wasi_sendCosmosMsg(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	// TODO
-	return returns, fmt.Errorf("wasi_sendCosmosMsg not implemented")
-}
-
-// sendCosmosQuery(req): bytes
-func wasi_sendCosmosQuery(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	// TODO
-	return returns, fmt.Errorf("wasi_sendCosmosQuery not implemented")
-}
-
-// getGasLeft(): i64
-func wasi_getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
 	returns[0] = int32(0)
 	return returns, nil
 }
 
-// bech32StringToBytes(ptr, len): i64
-func wasi_bech32StringToBytes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
+// 2) args_sizes_get() -> (errno, size, size)
+func wasi_argsSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_argsSizesGet", params)
+	args := rnh.GetVm().WasiArgs()
+	// We need total size of all args plus a null terminator per arg
+	totalSize := 0
+	for _, a := range args {
+		totalSize += len(a) + 1
+	}
 	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	addrbz, err := mem.ReadRaw(params[0], params[1])
+	fmt.Println("wasi_argsSizesGet len(args)", len(args))
+	err = wasimem.WriteUint32Le(mem, params[0].(int32), uint32(len(args)))
 	if err != nil {
 		return nil, err
 	}
-	addr, err := ctx.CosmosHandler.AddressCodec().StringToBytes(string(addrbz))
-	if err != nil {
-		return nil, err
-	}
-	data := types.PaddLeftTo32(addr)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
+	err = wasimem.WriteUint32Le(mem, params[1].(int32), uint32(totalSize))
 	if err != nil {
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	// all addresses are 32 bytes
-	returns[0] = ptr
+	returns[0] = int32(0) // errno=0
 	return returns, nil
 }
 
-// bech32BytesToString(ptr): i64
-func wasi_bech32BytesToString(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
+// 3) environ_get(environ: Pointer<Pointer<u8>>, environ_buf: Pointer<u8>) -> errno
+func wasi_environGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_environGet", params)
+	returns := make([]interface{}, 1)
+	envs := rnh.GetVm().WasiEnvs()
 	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	addrbz, err := mem.ReadRaw(params[0], int32(32))
+
+	argvPtr := params[0].(int32)
+	argvBufPtr := params[1].(int32)
+
+	if len(envs) == 0 {
+		// Write a single NULL pointer to mark end of the argv array
+		if err := wasimem.WriteUint32Le(mem, argvPtr, 0); err != nil {
+			return nil, err
+		}
+		returns[0] = int32(0) // errno=0 (success)
+		return returns, nil
+	}
+
+	currentArgvPtr := argvPtr
+	currentArgvBufPtr := argvBufPtr
+
+	for _, a := range envs {
+		// write pointer (currentArgvBufPtr) into memory at currentArgvPtr
+		err = wasimem.WriteUint32Le(mem, currentArgvPtr, uint32(currentArgvBufPtr))
+		if err != nil {
+			return nil, err
+		}
+
+		// write the actual string into memory + a null terminator
+		err = mem.Write(currentArgvBufPtr, append([]byte(a), []byte{0}...))
+		if err != nil {
+			return nil, err
+		}
+
+		currentArgvPtr += 4 // 32-bit pointers
+		currentArgvBufPtr += int32(len(a) + 1)
+	}
+
+	// write a NULL pointer after the last arg in the argv list
+	err = wasimem.WriteUint32Le(mem, currentArgvPtr, uint32(0))
 	if err != nil {
 		return nil, err
 	}
-	addr := sdk.AccAddress(vmtypes.CleanupAddress(addrbz))
+	returns[0] = int32(0)
+	return returns, nil
+}
 
-	addrstr, err := ctx.CosmosHandler.AddressCodec().BytesToString(addr)
+// 4) environ_sizes_get() -> (errno, size, size)
+func wasi_environSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_environSizesGet", params)
+	envs := rnh.GetVm().WasiEnvs()
+	// We need total size of all args plus a null terminator per arg
+	totalSize := 0
+	for _, a := range envs {
+		totalSize += len(a) + 1
+	}
+	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-
-	data := []byte(addrstr)
-	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
+	err = wasimem.WriteUint32Le(mem, params[0].(int32), uint32(len(envs)))
+	if err != nil {
+		return nil, err
+	}
+	err = wasimem.WriteUint32Le(mem, params[1].(int32), uint32(totalSize))
 	if err != nil {
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = wasimem.BuildPtrI64(ptr, int32(len(data)))
+	returns[0] = int32(0)
 	return returns, nil
 }
 
-func wasiLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
+// 5) clock_res_get(id: clockid) -> (errno, timestamp)
+func wasi_clockResGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_clockResGet", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 6) clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
+func wasi_clockTimeGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_clockTimeGet", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 7) fd_advise(fd: fd, offset: filesize, len: filesize, advice: advice) -> errno
+func wasi_fdAdvise(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdAdvise", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 8) fd_allocate(fd: fd, offset: filesize, len: filesize) -> errno
+func wasi_fdAllocate(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdAllocate", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 9) fd_close(fd: fd) -> errno
+func wasi_fdClose(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdClose", params)
+	fd := params[0].(int32)
+	returns := make([]interface{}, 1)
+
+	// Cast our context
+	ctx := _context.(*WasiContext)
+
+	// Check if this FD exists in our openFiles
+	if _, ok := ctx.openFiles[fd]; !ok {
+		// EBADF => 8 (Bad file descriptor)
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	// Remove it from our map of open files
+	delete(ctx.openFiles, fd)
+
+	// Return success (errno=0)
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 10) fd_datasync(fd: fd) -> errno
+func wasi_fdDatasync(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdDatasync", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 11) fd_fdstat_get(fd: fd) -> (errno, fdstat)
+func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdFdstatGet", params)
+	fd := params[0].(int32)
+	fdstatPtr := params[1].(int32)
+
 	mem, err := rnh.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	data, err := mem.ReadRaw(params[0], params[1])
-	if err != nil {
-		return nil, err
-	}
-	// TODO show in debug mode
-	fmt.Println("LOG: ", string(data))
-	var wlog WasmxJsonLog
-	err = json.Unmarshal(data, &wlog)
-	if err != nil {
-		return nil, err
-	}
-	// fmt.Println("LOG data: ", string(wlog.Data))
-	dependency := types.DEFAULT_SYS_DEP
-	if len(ctx.Env.Contract.SystemDeps) > 0 {
-		dependency = ctx.Env.Contract.SystemDeps[0]
-	}
-	log := WasmxLog{
-		Type:             LOG_TYPE_WASMX,
-		ContractAddress:  ctx.Env.Contract.Address,
-		SystemDependency: dependency,
-		Data:             wlog.Data,
-		Topics:           wlog.Topics,
-	}
-	ctx.Logs = append(ctx.Logs, log)
 
-	returns := make([]interface{}, 0)
+	ctx := _context.(*WasiContext)
+	openFiles := ctx.GetOpenFiles(rnh.GetVm())
+	fileMap := ctx.GetFileMap(rnh.GetVm())
+	openF, ok := openFiles[fd]
+	returns := make([]interface{}, 1) // [errno]
+
+	fmt.Println("wasi_fdFdstatGet found", fd, ok)
+
+	if !ok {
+		// EBADF => 8
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	// Let's assume everything is a "regular file" if found in FileMapping
+	// If you had directories, you'd set a different filetype
+	_, ok = fileMap[openF.path]
+	fmt.Println("--wasi_fdFdstatGet--", openF.path, ok)
+	if !ok {
+		// Not found => ENOENT => 44 or EIO => 29
+		returns[0] = int32(44)
+		return returns, nil
+	}
+
+	// Prepare fields for __wasi_fdstat_t
+	// We'll do a minimal approach:
+	// fs_filetype = 4 => __WASI_FILETYPE_REGULAR_FILE
+	// fs_flags = 0
+	// pad = 0
+	// fs_rights_base = 0 for minimal (or ~0 for "all rights")
+	// fs_rights_inheriting = 0 // or 0xffffffff
+	fsFiletype := uint8(4) // regular file
+	fsFlags := uint16(0)
+	pad := uint8(0)
+	fsRightsBase := uint64(0)
+	fsRightsInheriting := uint64(0)
+
+	// We'll write them out to memory in order:
+	//  offset 0: fs_filetype (1 byte)
+	//  offset 1: fs_flags (2 bytes)
+	//  offset 3: pad (1 byte)
+	//  offset 4: fs_rights_base (8 bytes)
+	//  offset 12: fs_rights_inheriting (8 bytes)
+	//  total => 20 bytes, but alignment might push it to 24.
+
+	err = mem.Write(fdstatPtr, []byte{fsFiletype})
+	if err != nil {
+		return nil, err
+	}
+	err = wasimem.WriteUint16Le(mem, fdstatPtr+1, fsFlags)
+	if err != nil {
+		return nil, err
+	}
+	err = mem.Write(fdstatPtr+3, []byte{pad})
+	if err != nil {
+		return nil, err
+	}
+	err = wasimem.WriteUint64Le(mem, fdstatPtr+4, fsRightsBase)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5) fs_rights_inheriting
+	err = wasimem.WriteUint64Le(mem, fdstatPtr+12, fsRightsInheriting)
+	if err != nil {
+		return nil, err
+	}
+
+	returns[0] = int32(0)
 	return returns, nil
 }
 
-func BuildWasiWasmxEnv(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+// 12) fd_fdstat_set_flags(fd: fd, flags: fdflags) -> errno
+func wasi_fdFdstatSetFlags(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdFdstatSetFlags", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 13) fd_fdstat_set_rights(fd: fd, fs_rights_base: rights, fs_rights_inheriting: rights) -> errno
+func wasi_fdFdstatSetRights(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdFdstatSetRights", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 14) fd_filestat_get(fd: fd) -> (errno, filestat)
+func wasi_fdFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdFilestatGet", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 15) fd_filestat_set_size(fd: fd, size: filesize) -> errno
+func wasi_fdFilestatSetSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdFilestatSetSize", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 16) fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
+func wasi_fdFilestatSetTimes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdFilestatSetTimes", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 17) fd_pread(fd: fd, iovs: iovec_array, offset: filesize) -> (errno, size)
+func wasi_fdPread(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdPread", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 18) fd_prestat_get(fd: fd) -> (errno, prestat)
+func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdPrestatGet", params)
+	returns := make([]interface{}, 1)
+	ctx := _context.(*WasiContext)
+	vm := rnh.GetVm()
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	fd := params[0].(int32)
+	resptr := params[1].(int32)
+	preopens := ctx.GetOpenFiles(vm)
+
+	// // By convention, FDs 0, 1, 2 = stdin, stdout, stderr
+	// if fd < 3 || fd > int32(len(preopens)+2) {
+	// 	returns[0] = int32(8) // EBADF = 8 in WASI
+	// 	return returns, nil
+	// }
+	// preopen := preopens[fd-3]
+	preopen, ok := preopens[fd]
+	fmt.Println("--wasi_fdPrestatGet--", fd, ok)
+	if !ok {
+		returns[0] = int32(8) // EBADF = 8 in WASI
+		return returns, nil
+	}
+
+	// Write a __wasi_prestat for a directory:
+	//   pr_type = 0 (directory)
+	//   3 bytes of zero padding
+	//   pr_name_len = nameLen
+
+	// pr_type (1 byte) + 3 bytes of 0 padding
+	// 0 => __WASI_PREOPENTYPE_DIR
+	err = mem.Write(resptr, []byte{0, 0, 0, 0})
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("wasi_fdPrestatGet", len(preopen.path), preopen.path)
+
+	// pr_name_len (4 bytes)
+	err = wasimem.WriteUint32Le(mem, resptr+4, uint32(len(preopen.path)))
+	if err != nil {
+		return nil, err
+	}
+
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 19) fd_prestat_dir_name(fd: fd, path: Pointer<u8>, path_len: size) -> errno
+func wasi_fdPrestatDirName(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdPrestatDirName", params)
+	returns := make([]interface{}, 1)
+	ctx := _context.(*WasiContext)
+	vm := rnh.GetVm()
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	fd := params[0].(int32)
+	pathPtr := params[1].(int32)
+	pathLen := params[2].(int32)
+
+	preopens := ctx.GetOpenFiles(vm)
+	// if fd < 3 || fd > int32(len(preopens)+2) {
+	// 	returns[0] = int32(8) // EBADF
+	// 	return returns, nil
+	// }
+	// preopen := preopens[fd-3]
+
+	preopen, ok := preopens[fd]
+	fmt.Println("--wasi_fdPrestatDirName--", fd, ok)
+	if !ok {
+		returns[0] = int32(8) // EBADF = 8 in WASI
+		return returns, nil
+	}
+	fmt.Println("--wasi_fdPrestatDirName path--", len(preopen.path), pathLen, preopen.path)
+
+	if int32(len(preopen.path)) > pathLen {
+		// EOVERFLOW if there's not enough space to write the full path
+		returns[0] = int32(75) // EOVERFLOW = 75
+		return returns, nil
+	}
+
+	// Write the directory path into [pathPtr, pathPtr+len(preopen)]
+	err = mem.Write(pathPtr, []byte(preopen.path))
+	if err != nil {
+		return nil, err
+	}
+
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 20) fd_pwrite(fd: fd, iovs: ciovec_array, offset: filesize) -> (errno, size)
+func wasi_fdPwrite(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdPwrite", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 21) fd_read(fd: fd, iovs: iovec_array) -> (errno, size)
+func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdRead", params)
+	fd := params[0].(int32)       // file descriptor
+	iovsPtr := params[1].(int32)  // pointer to array of iovec structs
+	iovsLen := params[2].(int32)  // number of iovecs
+	outNread := params[3].(int32) // pointer in memory where we store bytes-read
+
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := _context.(*WasiContext)
+	fileMap := ctx.GetFileMap(rnh.GetVm())
+	openFiles := ctx.GetOpenFiles(rnh.GetVm())
+
+	// 4) Check if fd is valid
+	openF, ok := openFiles[fd]
+	fmt.Println("wasi_fdRead", fd, ok)
+	returns := make([]interface{}, 1) // We'll return just errno: i32
+	if !ok {
+		// EBADF => 8
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	// 5) Get the file content
+	content, ok := fileMap[openF.path]
+	fmt.Println("wasi_fdRead content", openF.path, ok)
+	if !ok {
+		// ENOENT => 44
+		returns[0] = int32(44)
+		return returns, nil
+	}
+
+	contentBytes := []byte(content)
+	var totalRead int64
+
+	// 6) Iterate over each iovec
+	iovOffset := iovsPtr
+	for i := int32(0); i < iovsLen; i++ {
+		// Each iovec is (bufPtr: u32, bufLen: u32), 8 bytes total in 32-bit
+		bufPtr, err1 := wasimem.ReadUint32Le(mem, iovOffset)
+		if err1 != nil {
+			return nil, err1
+		}
+		bufLen, err2 := wasimem.ReadUint32Le(mem, iovOffset+4)
+		if err2 != nil {
+			return nil, err2
+		}
+		iovOffset += 8
+
+		// If we've already reached or passed EOF, read 0 bytes into this iovec
+		if openF.offset >= int64(len(contentBytes)) {
+			// Nothing more to read
+			break
+		}
+
+		// Calculate how many bytes we can read
+		bytesAvailable := int64(len(contentBytes)) - openF.offset
+		toRead := int64(bufLen)
+		if toRead > bytesAvailable {
+			toRead = bytesAvailable
+		}
+
+		// Slice out [offset : offset+toRead]
+		chunk := contentBytes[openF.offset : openF.offset+toRead]
+
+		// Write that chunk into wasm memory at bufPtr
+		if err3 := mem.Write(int32(bufPtr), chunk); err3 != nil {
+			return nil, err3
+		}
+
+		// Update offset and totalRead
+		openF.offset += toRead
+		totalRead += toRead
+	}
+
+	// 7) Write the total number of bytes read into out_nread
+	//    Make sure to clamp it to a 32-bit if needed
+	if totalRead > (1<<32 - 1) {
+		// If you want, handle an overflow scenario, but usually very large reads won't happen in practice
+		totalRead = (1<<32 - 1)
+	}
+	if err := wasimem.WriteUint32Le(mem, outNread, uint32(totalRead)); err != nil {
+		return nil, err
+	}
+
+	// 8) Return errno=0 (success)
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 22) fd_readdir(fd: fd, buf: Pointer<u8>, buf_len: size, cookie: dircookie) -> (errno, size)
+func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdReaddir", params)
+	fd := params[0].(int32)
+	bufPtr := params[1].(int32)
+	bufLen := params[2].(int32)
+	cookie := params[3].(int64)
+	outNread := params[4].(int32)
+
+	// We'll return just one i32 (errno)
+	returns := make([]interface{}, 1)
+
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		// EFAULT => 21 if we can't access memory
+		returns[0] = int32(21)
+		return returns, nil
+	}
+
+	ctx := _context.(*WasiContext)
+	of, ok := ctx.openFiles[fd]
+	fmt.Println("wasi_fdReaddir openFiles", fd, ok, of)
+	if !ok {
+		// EBADF => 8
+		returns[0] = int32(8)
+		return returns, nil
+	}
+	if !of.isdir {
+		// ENOTDIR => 54
+		returns[0] = int32(54)
+		return returns, nil
+	}
+
+	// We'll gather the "entries" in this directory. For a simple approach,
+	// treat everything in DirMapping or FileMapping that starts with of.path + "/" as a child.
+	// Then we skip the part equal to of.path + "/", and keep the remainder as the name.
+
+	fmt.Println("wasi_fdReaddir of.path", of.path)
+
+	entries := listDirectoryEntries(ctx, of.path)
+	fmt.Println("wasi_fdReaddir entries", entries)
+
+	// Sort entries by name if you want stable ordering:
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name < entries[j].Name
+	})
+
+	// The 'cookie' effectively is the index in `entries`. If cookie=2, skip first 2 entries, etc.
+	startIndex := int(cookie)
+	if startIndex < 0 {
+		startIndex = 0
+	}
+	if startIndex > len(entries) {
+		// If the cookie is beyond the end, we write nothing.
+		// It's valid to just return 0 bytes read, errno=0
+		_ = wasimem.WriteUint32Le(mem, outNread, 0)
+		returns[0] = int32(0)
+		return returns, nil
+	}
+
+	fmt.Println("wasi_fdReaddir startIndex", startIndex)
+
+	var totalWritten int32
+	currentOffset := bufPtr
+
+	// We'll define a 24-byte struct for each dirent, then append the file name bytes
+	const direntSize = 24 // 8(d_next) + 8(d_ino) + 4(d_namlen) + 1(d_type) + 3(padding)
+
+	for i := startIndex; i < len(entries); i++ {
+		e := entries[i]
+
+		nameLen := len(e.Name)
+		recordSize := direntSize + int32(nameLen) // total bytes for this entry
+
+		fmt.Println("wasi_fdReaddir i", i, e.Name, nameLen, recordSize)
+
+		// Check if we have enough space in the buffer
+		if totalWritten+recordSize > bufLen {
+			// Not enough room => stop listing
+			break
+		}
+
+		// 1) Write d_next (8 bytes, i+1 => next cookie)
+		dNext := uint64(i + 1)
+		if err := wasimem.WriteUint64Le(mem, currentOffset, dNext); err != nil {
+			returns[0] = int32(21) // EFAULT
+			return returns, nil
+		}
+
+		// 2) Write d_ino (8 bytes). We'll just use 0 or a placeholder
+		dIno := uint64(0)
+		if err := wasimem.WriteUint64Le(mem, currentOffset+8, dIno); err != nil {
+			returns[0] = int32(21)
+			return returns, nil
+		}
+
+		// 3) Write d_namlen (4 bytes)
+		if err := wasimem.WriteUint32Le(mem, currentOffset+16, uint32(nameLen)); err != nil {
+			returns[0] = int32(21)
+			return returns, nil
+		}
+
+		// 4) Write d_type (1 byte). 3=dir, 4=file
+		filetype := uint8(4)
+		if e.IsDir {
+			filetype = 3
+		}
+		if err := mem.Write(currentOffset+20, []byte{filetype}); err != nil {
+			returns[0] = int32(21)
+			return returns, nil
+		}
+		// The 3 padding bytes [21..23] remain zero by default if your mem.Write(...) starts from zero memory.
+		// Or we can explicitly write them as zero if you want.
+
+		// 5) Write the name bytes right after the 24-byte struct
+		nameOffset := currentOffset + direntSize
+		if err := mem.Write(nameOffset, []byte(e.Name)); err != nil {
+			returns[0] = int32(21)
+			return returns, nil
+		}
+
+		// Advance
+		currentOffset += recordSize
+		totalWritten += recordSize
+	}
+
+	fmt.Println("wasi_fdReaddir totalWritten", outNread, totalWritten)
+
+	// Write how many bytes we wrote in total to outNread
+	if err := wasimem.WriteUint32Le(mem, outNread, uint32(totalWritten)); err != nil {
+		returns[0] = int32(21)
+		return returns, nil
+	}
+
+	fmt.Println("wasi_fdReaddir END")
+
+	// Return success
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 23) fd_renumber(fd: fd, to: fd) -> errno
+func wasi_fdRenumber(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdRenumber", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 24) fd_seek(fd: fd, offset: filedelta, whence: whence) -> (errno, filesize)
+func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdSeek", params)
+
+	fd := params[0].(int32)
+	offset := params[1].(int64)
+	whence := params[2].(int32)
+	resultPtr := params[3].(int32) // where to store the new offset in WASM memory
+
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := _context.(*WasiContext)
+	fileMap := ctx.GetFileMap(rnh.GetVm())
+	openFiles := ctx.GetOpenFiles(rnh.GetVm())
+
+	openF, ok := openFiles[fd]
+	returns := make([]interface{}, 1)
+	fmt.Println("wasi_fdSeek find", fd, ok)
+
+	if !ok {
+		// EBADF => 8
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	// 4) Compute new offset
+	var base int64
+	switch whence {
+	case 0: // SEEK_SET
+		base = 0
+	case 1: // SEEK_CUR
+		base = openF.offset
+	case 2: // SEEK_END
+		// If file is in ctx.FileMapping, get its length
+		fileContent, ok := fileMap[openF.path]
+		fmt.Println("--wasi_fdSeek--", openF.path, ok)
+		if !ok {
+			// EIO => 29, or maybe ENOENT => 44
+			returns[0] = int32(44)
+			return returns, nil
+		}
+		base = int64(len(fileContent))
+	default:
+		// EINVAL => 28
+		returns[0] = int32(28)
+		return returns, nil
+	}
+
+	newOffset := base + offset
+	if newOffset < 0 {
+		// ESPIPE => 70 or EINVAL => 28, depending on how you want to handle negative seeks
+		returns[0] = int32(28)
+		return returns, nil
+	}
+
+	// 5) Update offset in openFile
+	openF.offset = newOffset
+
+	fmt.Println("wasi_fdSeek offset", offset)
+
+	// 6) Write new offset to memory at resultPtr (uint64)
+	// Using your “wasimem” helper or similar:
+	err = wasimem.WriteUint64Le(mem, resultPtr, uint64(newOffset))
+	if err != nil {
+		return nil, err
+	}
+
+	// success => errno=0
+	returns[0] = int32(0)
+	return returns, nil
+
+}
+
+// 25) fd_sync(fd: fd) -> errno
+func wasi_fdSync(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdSync", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 26) fd_tell(fd: fd) -> (errno, filesize)
+func wasi_fdTell(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdTell", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 27) fd_write(fd: fd, iovs: ciovec_array) -> (errno, size)
+func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_fdWrite", params)
+	fd := params[0].(int32)
+	iovsPtr := params[1].(int32) // pointer to the iovec array
+	iovsLen := params[2].(int32) // number of iovecs
+	nwrittenPtr := params[3].(int32)
+
+	returns := make([]interface{}, 1)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := _context.(*WasiContext)
+	vm := rnh.GetVm()
+	fileMap := ctx.GetFileMap(vm)
+	openFiles := ctx.GetOpenFiles(vm)
+
+	openF, ok := openFiles[fd]
+
+	fmt.Println("wasi_fdWrite", fd, ok, openF)
+	if !ok {
+		// EBADF => 8 (Bad file descriptor)
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	// 4) Find the file’s content in our in-memory mapping
+	content, ok := fileMap[openF.path]
+	fmt.Println("wasi_fdWrite content", openF.path, ok, string(content))
+	if !ok {
+		// ENOENT => 44 (No such file or directory)
+		returns[0] = int32(44)
+		return returns, nil
+	}
+
+	var totalWritten int64 = 0
+
+	// 5) Each WASI `__wasi_ciovec_t` is (buf_ptr: u32, buf_len: u32) in a 32-bit environment
+	//    so each element is 8 bytes. We'll iterate iovsLen times, reading from memory.
+	iovOffset := iovsPtr
+
+	for i := int32(0); i < iovsLen; i++ {
+		// read buf_ptr
+		bufPtr, err1 := wasimem.ReadUint32Le(mem, iovOffset)
+		if err1 != nil {
+			return nil, err1
+		}
+		// read buf_len
+		bufLen, err2 := wasimem.ReadUint32Le(mem, iovOffset+4)
+		if err2 != nil {
+			return nil, err2
+		}
+		iovOffset += 8
+
+		// 6) Read the actual data from the Wasm memory
+		data, err3 := mem.Read(int32(bufPtr), int32(bufLen))
+		fmt.Println("wasi_fdWrite read", err, string(data), data)
+		if err3 != nil {
+			return nil, err3
+		}
+
+		// 7) Write into our in-memory file at the current offset
+		start := openF.offset
+		end := start + int64(bufLen)
+
+		// If end extends beyond the current content, expand it
+		if end > int64(len(content)) {
+			extra := int(end) - len(content)
+			content = append(content, make([]byte, extra)...) // Extend with zero bytes
+		}
+
+		// Replace that segment
+		contentBytes := []byte(content)
+		copy(contentBytes[start:end], data)
+		content = contentBytes
+
+		// Advance file offset
+		openF.offset = end
+		fmt.Println("wasi_fdWrite offset", end)
+
+		// Tally how many bytes we wrote this iteration
+		totalWritten += int64(bufLen)
+	}
+
+	// 8) Update the in-memory file content
+	ctx.SetFileMap(vm, openF.path, content)
+	fmt.Println("--wasi_fdWrite after SetFileMap--", openF.path, string(content))
+
+	// 9) Write totalWritten into `nwrittenPtr`
+	if err := wasimem.WriteUint32Le(mem, nwrittenPtr, uint32(totalWritten)); err != nil {
+		return nil, err
+	}
+
+	fmt.Println("--wasi_fdWrite END--")
+
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 28) path_create_directory(fd: fd, path: string) -> errno
+func wasi_pathCreateDirectory(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathCreateDirectory", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 29) path_filestat_get(fd: fd, flags: lookupflags, path: string) -> (errno, filestat)
+func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathFilestatGet", params)
+	fd := params[0].(int32)        // directory FD
+	_ = params[1].(int32)          // WASI lookup flags (we might ignore here)
+	pathPtr := params[2].(int32)   // pointer to the path string in guest memory
+	pathLen := params[3].(int32)   // length of that path
+	resultPtr := params[4].(int32) // where to write the filestat
+
+	returns := make([]interface{}, 1)
+	ctx := _context.(*WasiContext)
+	vm := rnh.GetVm()
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	// 4) Read the actual path string from the guest memory
+	pathBytes, err := mem.Read(pathPtr, pathLen)
+	if err != nil {
+		// EFAULT => invalid memory => 21 in WASI, or something appropriate
+		returns[0] = int32(21)
+		return returns, nil
+	}
+	guestPath := string(pathBytes)
+	fmt.Println("--wasi_pathFilestatGet guestPath--", guestPath)
+
+	// 5) Look up the directory FD to confirm it's valid
+	//    Usually you'd have a map like: fd => preopenDirPath
+	preopens := ctx.GetOpenFiles(vm)
+	fileMap := ctx.GetFileMap(vm)
+	preopen, ok := preopens[fd]
+	fmt.Println("--wasi_pathFilestatGet--", fd, ok, preopen)
+	// preopenDir, ok := ctx.PreopenDirs[fd]
+	if !ok {
+		// EBADF => 8
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	fmt.Println("--wasi_pathFilestatGet preopen.path--", fd, preopen.path)
+
+	// 6) Combine preopenDir + guestPath to find the real host path or
+	//    your in-memory representation. For a simple example, just do:
+	fullPath := preopen.path
+	if guestPath != "." {
+		fullPath = preopen.path + "/" + guestPath
+	}
+
+	fmt.Println("--wasi_pathFilestatGet fullPath--", fullPath)
+	// fullPath = filepath.Clean(fullPath)
+	// fmt.Println("--wasi_pathFilestatGet fullPath2--", fullPath)
+
+	// 7) If the file doesn't exist, return ENOENT => 44
+	fileContent, ok := fileMap[fullPath]
+	fmt.Println("--wasi_pathFilestatGet fileContent--", ok, fileContent)
+	if !ok {
+		// Possibly also check if it's a directory if you store them separately
+		returns[0] = int32(44)
+		return returns, nil
+	}
+
+	isDir := false
+	if ctx.dirMapping[fullPath] {
+		isDir = true
+	} else if _, fileOk := fileMap[fullPath]; fileOk {
+		isDir = false
+	} else {
+		// Doesn't exist
+		returns[0] = int32(44) // ENOENT
+		return returns, nil
+	}
+
+	// 8) Prepare filestat fields
+	// We'll do a minimal approach:
+	//   dev=0, ino=0, filetype=__WASI_FILETYPE_REGULAR_FILE=4, size=len(fileContent)
+	//   times=0, nlink=1, etc.
+
+	var dev uint64 = 0
+	var ino uint64 = 0
+	var nlink uint64 = 1
+	size := uint64(len(fileContent))
+	var atim uint64 = 0
+	var mtim uint64 = 0
+	var ctim uint64 = 0
+
+	// __WASI_FILETYPE_REGULAR_FILE=4, directory=3, etc.
+	var filetype uint8 = 4
+	if isDir {
+		filetype = uint8(3)
+	}
+
+	// 9) Write the struct into memory.
+	//    The layout (in bytes) typically is:
+	//    0..7   dev (u64)
+	//    8..15  ino (u64)
+	//    16     filetype (u8)
+	//    17..23 padding
+	//    24..31 nlink (u64)
+	//    32..39 size (u64)
+	//    40..47 atim (u64)
+	//    48..55 mtim (u64)
+	//    56..63 ctim (u64) - total 64 bytes (some WASI docs say 56, but alignment might push it to 64).
+	//    Check your specific environment if it’s 56 or 64 total.
+
+	// Let's define offsets as constants for clarity:
+	const (
+		offsetDev      = 0
+		offsetIno      = 8
+		offsetFiletype = 16
+		offsetNlink    = 24
+		offsetSize     = 32
+		offsetAtim     = 40
+		offsetMtim     = 48
+		offsetCtim     = 56
+	)
+
+	// Write dev (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetDev, dev); err != nil {
+		return nil, err
+	}
+
+	// Write ino (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetIno, ino); err != nil {
+		return nil, err
+	}
+
+	// Write filetype (u8)
+	if err := mem.Write(resultPtr+offsetFiletype, []byte{filetype}); err != nil {
+		return nil, err
+	}
+
+	// nlink (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetNlink, nlink); err != nil {
+		return nil, err
+	}
+
+	// size (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetSize, size); err != nil {
+		return nil, err
+	}
+
+	// atim (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetAtim, atim); err != nil {
+		return nil, err
+	}
+
+	// mtim (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetMtim, mtim); err != nil {
+		return nil, err
+	}
+
+	// ctim (u64)
+	if err := wasimem.WriteUint64Le(mem, resultPtr+offsetCtim, ctim); err != nil {
+		return nil, err
+	}
+
+	// 10) Return errno=0 for success
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+//  30. path_filestat_set_times(fd: fd, flags: lookupflags, path: string,
+//     atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
+func wasi_pathFilestatSetTimes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathFilestatSetTimes", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+//  31. path_link(old_fd: fd, old_flags: lookupflags, old_path: string,
+//     new_fd: fd, new_path: string) -> errno
+func wasi_pathLink(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathLink", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+//  32. path_open(fd: fd, dirflags: lookupflags, path: string,
+//     oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights,
+//     fdflags: fdflags) -> (errno, fd)
+func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathOpen", params)
+	// The declared parameters are:
+	//  1) dirFd (i32)
+	//  2) dirFlags (i32)
+	//  3) pathPtr (i32)
+	//  4) pathLen (i32)
+	//  5) oflags (i32)
+	//  6) fsRightsBase (i64)
+	//  7) fsRightsInheriting (i64)
+	//  8) fdflags (i32)
+	//  9) newFdPtr (i32) - pointer in guest memory to store the newly opened FD
+
+	dirFd := params[0].(int32)
+	// dirFlags := params[1].(int32)
+	pathPtr := params[2].(int32)
+	pathLen := params[3].(int32)
+	oflags := params[4].(int32)
+	// fsRightsBase := params[5].(int64)
+	// fsRightsInheriting := params[6].(int64)
+	// fdflags := params[7].(int32)
+	newFdPtr := params[8].(int32)
+
+	returns := make([]interface{}, 1)
+
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		returns[0] = int32(21)
+		return returns, nil
+	}
+
+	ctx := _context.(*WasiContext)
+	vm := rnh.GetVm()
+	preopens := ctx.GetOpenFiles(vm)
+	fileMap := ctx.GetFileMap(vm)
+
+	// 3) Read the path string from the guest memory
+	pathBytes, err := mem.Read(pathPtr, pathLen)
+	if err != nil {
+		// Return EFAULT => 21
+		returns[0] = int32(21)
+		return returns, nil
+	}
+	guestPath := string(pathBytes)
+	fmt.Println("wasi_pathOpen guestPath", guestPath)
+
+	// 4) Look up the directory FD in PreopenDirs (or a map of open directories).
+	baseDirPath, ok := preopens[dirFd]
+	fmt.Println("wasi_pathOpen dirFd", dirFd, ok, baseDirPath)
+	if !ok || !baseDirPath.isdir {
+		// EBADF => 8
+		returns[0] = int32(8)
+		return returns, nil
+	}
+
+	// 5) Combine baseDirPath + guestPath to find the real path
+	//    or the key used in your in-memory FS.
+	fullPath := baseDirPath.path
+	if guestPath != "" && guestPath != "." {
+		if fullPath != "" && !endsWithSlash(fullPath) {
+			fullPath += "/"
+		}
+		fullPath += guestPath
+	}
+
+	fmt.Println("wasi_pathOpen fullPath", fullPath)
+
+	// 6) Check if the guest wants to open a directory (__WASI_O_DIRECTORY)
+	wantsDir := (oflags & __WASI_O_DIRECTORY) != 0
+	fmt.Println("wasi_pathOpen wantsDir", wantsDir, oflags)
+
+	// 7) Check if the path exists in your in-memory representation.
+	//    If it doesn't exist and O_CREAT is set, you might create it.
+	//    Or if it's a directory, check DirMapping, etc.
+	isDir := false
+	if ctx.dirMapping[fullPath] {
+		isDir = true
+	} else if _, fileOk := fileMap[fullPath]; fileOk {
+		isDir = false
+	} else {
+		// Doesn't exist
+		fmt.Println("wasi_pathOpen __WASI_O_CREAT", oflags&__WASI_O_CREAT)
+		if (oflags&__WASI_O_CREAT) != 0 && !wantsDir {
+			// create an empty file
+			ctx.fileMapping[fullPath] = []byte{}
+		} else {
+			// ENOENT => 44
+			returns[0] = int32(44)
+			return returns, nil
+		}
+	}
+	fmt.Println("wasi_pathOpen wantsDir, isDir", wantsDir, isDir)
+
+	// If the path is a directory but the guest wanted a file, or vice versa, handle that:
+	if isDir && !wantsDir {
+		// EISDIR => 31
+		returns[0] = int32(31)
+		return returns, nil
+	}
+	if !isDir && wantsDir {
+		// ENOTDIR => 54
+		returns[0] = int32(54)
+		return returns, nil
+	}
+	fmt.Println("wasi_pathOpen create new fd")
+	fmt.Println("wasi_pathOpen create new fd: ", ctx.nextfd)
+
+	// 8) Create a new FD for the opened file/dir
+	newFd := ctx.nextfd
+	fmt.Println("wasi_pathOpen newFd", newFd)
+	ctx.nextfd++
+
+	// Insert into OpenFiles map
+	ctx.SetOpenFile(vm, newFd, &openFile{
+		path:   fullPath,
+		offset: 0,
+		isdir:  isDir,
+		// store other flags if needed
+	})
+
+	// If you want to handle read/write perms, you’d store fsRightsBase or fdflags, etc.
+
+	fmt.Println("wasi_pathOpen write new fd", newFdPtr, newFd)
+
+	// 9) Write the new FD into guest memory at newFdPtr
+	if err := wasimem.WriteUint32Le(mem, newFdPtr, uint32(newFd)); err != nil {
+		// EFAULT => 21 or some other code
+		returns[0] = int32(21)
+		return returns, nil
+	}
+
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 33) path_readlink(fd: fd, path: string, buf: Pointer<u8>, buf_len: size) -> (errno, size)
+func wasi_pathReadlink(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathReadlink", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 34) path_remove_directory(fd: fd, path: string) -> errno
+func wasi_pathRemoveDirectory(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathRemoveDirectory", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 35) path_rename(fd: fd, old_path: string, new_fd: fd, new_path: string) -> errno
+func wasi_pathRename(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathRename", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 36) path_symlink(old_path: string, fd: fd, new_path: string) -> errno
+func wasi_pathSymlink(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathSymlink", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 37) path_unlink_file(fd: fd, path: string) -> errno
+func wasi_pathUnlinkFile(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pathUnlinkFile", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 38) poll_oneoff(in: ConstPointer<subscription>, out: Pointer<event>, nsubscriptions: size) -> (errno, size)
+func wasi_pollOneoff(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_pollOneoff", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 39) proc_exit(rval: exitcode)
+func wasi_procExit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_procExit", params)
+	// Typically triggers a runtime exit, but here we just log and return.
+	return nil, nil
+}
+
+// 40) proc_raise(sig: signal) -> errno
+func wasi_procRaise(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_procRaise", params)
+	returns := make([]interface{}, 1)
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 41) sched_yield() -> errno
+func wasi_schedYield(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_schedYield", params)
+	returns := make([]interface{}, 1)
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+// 42) random_get(buf: Pointer<u8>, buf_len: size) -> errno
+func wasi_randomGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_randomGet", params)
+	returns := make([]interface{}, 1)
+	returns[0] = int32(0)
+	return returns, nil
+}
+
+func wasi_sockAccept(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_sockAccept", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 43) sock_recv(fd: fd, ri_data: iovec_array, ri_flags: riflags) -> (errno, size, roflags)
+func wasi_sockRecv(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_sockRecv", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 44) sock_send(fd: fd, si_data: ciovec_array, si_flags: siflags) -> (errno, size)
+func wasi_sockSend(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_sockSend", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+// 45) sock_shutdown(fd: fd, how: sdflags) -> errno
+func wasi_sockShutdown(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	fmt.Println("wasi_sockShutdown", params)
+	return wasi_stubUnimplemented(_context, rnh, params)
+}
+
+type DirEntry struct {
+	Name  string
+	IsDir bool
+}
+
+type openFile struct {
+	isdir  bool
+	path   string
+	offset int64
+	// add other fields if needed (read/write permissions, etc.)
+}
+
+type WasiContext struct {
+	c      *Context
+	inited bool
+	nextfd int32
+	// fd => openFile
+	// used for preopened folders and files
+	openFiles map[int32]*openFile
+	// these are temporary execution changes
+	// filepath => content
+	fileMapping map[string][]byte // contains dir paths with empty content
+	dirMapping  map[string]bool
+}
+
+func (wc *WasiContext) InitContext(vm memc.IVm) {
+	// init stdin, stdout, stderr
+	wc.fileMapping["stdin"] = []byte{}
+	wc.fileMapping["stdout"] = []byte{}
+	wc.fileMapping["stderr"] = []byte{}
+	wc.openFiles[int32(0)] = &openFile{path: "stdin"}
+	wc.openFiles[int32(1)] = &openFile{path: "stdout"}
+	wc.openFiles[int32(2)] = &openFile{path: "stderr"}
+
+	// initialize filedescriptor map with wasi config preopened folders
+	preopens := vm.WasiPreopens()
+	externalToInner := map[string]string{}
+	for i, pair := range preopens {
+		// e.g. some/wasi/path:some/absolute/dir/path
+		parts := strings.Split(pair, ":")
+		externalToInner[parts[1]] = parts[0]
+		wc.openFiles[int32(3+i)] = &openFile{path: parts[0], isdir: true}
+		wc.fileMapping[parts[0]] = []byte{}
+		wc.dirMapping[parts[0]] = true
+	}
+
+	// initialize filemap with wasi config filemap
+	fileMap := vm.WasiFileMap()
+	for externalPath := range fileMap {
+		path := externalPath
+		for externalDir, innerDir := range externalToInner {
+			if strings.Contains(path, externalDir) {
+				path = strings.Replace(path, externalDir, innerDir, int(1))
+				break
+			}
+		}
+		if _, ok := wc.fileMapping[path]; !ok {
+			fmt.Println("--fileMapping-", path)
+			wc.fileMapping[path] = fileMap[externalPath]
+		}
+	}
+
+	wc.nextfd = int32(3 + len(preopens))
+	wc.inited = true
+	fmt.Println("--InitContext fileMap--", fileMap)
+	fmt.Println("--InitContext wc.fileMapping--", wc.fileMapping)
+	fmt.Println("--InitContext wc.dirMapping--", wc.dirMapping)
+	fmt.Println("--InitContext preopens--", preopens)
+	fmt.Println("--InitContext wc.openFiles--", wc.openFiles)
+}
+
+func (wc *WasiContext) GetFileMap(vm memc.IVm) map[string][]byte {
+	if !wc.inited {
+		wc.InitContext(vm)
+	}
+	return wc.fileMapping
+}
+
+func (wc *WasiContext) SetFileMap(vm memc.IVm, path string, content []byte) {
+	if !wc.inited {
+		wc.InitContext(vm)
+	}
+	wc.fileMapping[path] = content
+}
+
+func (wc *WasiContext) GetOpenFiles(vm memc.IVm) map[int32]*openFile {
+	if !wc.inited {
+		wc.InitContext(vm)
+	}
+	return wc.openFiles
+}
+
+func (wc *WasiContext) SetOpenFile(vm memc.IVm, fd int32, f *openFile) {
+	if !wc.inited {
+		wc.InitContext(vm)
+	}
+	wc.openFiles[fd] = f
+}
+
+func BuildWasiEnv(_context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	fmt.Println("--BuildWasiEnv--", _context.ContractInfo.Label, _context.ContractInfo.Address.String())
+	context := &WasiContext{
+		c:           _context,
+		openFiles:   map[int32]*openFile{},
+		fileMapping: map[string][]byte{},
+		dirMapping:  map[string]bool{},
+	}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("getEnv", wasi_getEnv, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("storageStore", wasiStorageStore, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("storageLoad", wasiStorageLoad, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getCallData", wasiGetCallData, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("setFinishData", wasiSetFinishData, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
-		// TODO some precompiles use setReturnData instead of setFinishData
-		vm.BuildFn("setReturnData", wasmxSetFinishData, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("setExitCode", wasiSetExitCode, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("callClassic", wasiCallClassic, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("callStatic", wasiCallStatic, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getBlockHash", wasi_getBlockHash, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getAccount", wasi_getAccount, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getBalance", wasi_getBalance, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getCodeHash", wasi_getCodeHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getCode", wasi_getCode, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("keccak256", wasi_keccak256, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
+		// 1) args_get(argv: Pointer<Pointer<u8>>, argv_buf: Pointer<u8>) -> errno
+		vm.BuildFn(
+			"args_get",
+			wasi_argsGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // argv, argv_buf
+			[]interface{}{vm.ValType_I32()},                   // errno
+			0,
+		),
 
-		// env.AddFunction("createAccount", NewFunction(functype_i32i32i32i32_i64, wasi_createAccount, context, 0))
-		// env.AddFunction("createAccount2", NewFunction(functype_i32i32i32i32i32_i64, wasi_createAccount2, context, 0))
+		// 2) args_sizes_get() -> (errno, size, size)
+		vm.BuildFn(
+			"args_sizes_get",
+			wasi_argsSizesGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // no inputs
+			[]interface{}{vm.ValType_I32()},                   // errno, size, size
+			0,
+		),
 
-		vm.BuildFn("instantiateAccount", wasi_instantiateAccount, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("instantiateAccount2", wasi_instantiateAccount2, []interface{}{vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("sendCosmosMsg", wasi_sendCosmosMsg, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("sendCosmosQuery", wasi_sendCosmosQuery, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getGasLeft", wasi_getGasLeft, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("bech32StringToBytes", wasi_bech32StringToBytes, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("bech32BytesToString", wasi_bech32BytesToString, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("log", wasiLog, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		// 3) environ_get(environ: Pointer<Pointer<u8>>, environ_buf: Pointer<u8>) -> errno
+		vm.BuildFn(
+			"environ_get",
+			wasi_environGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // environ, environ_buf
+			[]interface{}{vm.ValType_I32()},                   // errno
+			0,
+		),
+
+		// 4) environ_sizes_get() -> (errno, size, size)
+		vm.BuildFn(
+			"environ_sizes_get",
+			wasi_environSizesGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 5) clock_res_get(id: clockid) -> (errno, timestamp)
+		vm.BuildFn(
+			"clock_res_get",
+			wasi_clockResGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // clockid
+			[]interface{}{vm.ValType_I32()},                   // errno, timestamp
+			0,
+		),
+
+		// 6) clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
+		vm.BuildFn(
+			"clock_time_get",
+			wasi_clockTimeGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 7) fd_advise(fd: fd, offset: filesize, len: filesize, advice: advice) -> errno
+		vm.BuildFn(
+			"fd_advise",
+			wasi_fdAdvise,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 8) fd_allocate(fd: fd, offset: filesize, len: filesize) -> errno
+		vm.BuildFn(
+			"fd_allocate",
+			wasi_fdAllocate,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 9) fd_close(fd: fd) -> errno
+		vm.BuildFn(
+			"fd_close",
+			wasi_fdClose,
+			[]interface{}{vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 10) fd_datasync(fd: fd) -> errno
+		vm.BuildFn(
+			"fd_datasync",
+			wasi_fdDatasync,
+			[]interface{}{vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 11) fd_fdstat_get(fd: fd) -> (errno, fdstat)
+		// fdstat is typically written back to memory rather than returned.
+		// But if you’re returning it directly, you need to decide how to represent fdstat as ValTypes.
+		vm.BuildFn(
+			"fd_fdstat_get",
+			wasi_fdFdstatGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()}, // For example: (errno, fdstatPlaceholder)
+			0,
+		),
+
+		// 12) fd_fdstat_set_flags(fd: fd, flags: fdflags) -> errno
+		vm.BuildFn(
+			"fd_fdstat_set_flags",
+			wasi_fdFdstatSetFlags,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 13) fd_fdstat_set_rights(fd: fd, fs_rights_base: rights, fs_rights_inheriting: rights) -> errno
+		vm.BuildFn(
+			"fd_fdstat_set_rights",
+			wasi_fdFdstatSetRights,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 14) fd_filestat_get(fd: fd) -> (errno, filestat)
+		// Same note as fdstat: filestat often is written to memory, but here we show a direct return placeholder.
+		vm.BuildFn(
+			"fd_filestat_get",
+			wasi_fdFilestatGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()}, // placeholder
+			0,
+		),
+
+		// 15) fd_filestat_set_size(fd: fd, size: filesize) -> errno
+		vm.BuildFn(
+			"fd_filestat_set_size",
+			wasi_fdFilestatSetSize,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 16) fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
+		vm.BuildFn(
+			"fd_filestat_set_times",
+			wasi_fdFilestatSetTimes,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 17) fd_pread(fd: fd, iovs: iovec_array, offset: filesize) -> (errno, size)
+		vm.BuildFn(
+			"fd_pread",
+			wasi_fdPread,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 18) fd_prestat_get(fd: fd) -> (errno, prestat)
+		// Typically returns a structure in memory, but you can placeholder it similarly as above.
+		vm.BuildFn(
+			"fd_prestat_get",
+			wasi_fdPrestatGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()}, // placeholder
+			0,
+		),
+
+		// 19) fd_prestat_dir_name(fd: fd, path: Pointer<u8>, path_len: size) -> errno
+		vm.BuildFn(
+			"fd_prestat_dir_name",
+			wasi_fdPrestatDirName,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 20) fd_pwrite(fd: fd, iovs: ciovec_array, offset: filesize) -> (errno, size)
+		vm.BuildFn(
+			"fd_pwrite",
+			wasi_fdPwrite,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 21) fd_read(fd: fd, iovs: iovec_array) -> (errno, size)
+		vm.BuildFn(
+			"fd_read",
+			wasi_fdRead,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 22) fd_readdir(fd: fd, buf: Pointer<u8>, buf_len: size, cookie: dircookie) -> (errno, size)
+		vm.BuildFn(
+			"fd_readdir",
+			wasi_fdReaddir,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 23) fd_renumber(fd: fd, to: fd) -> errno
+		vm.BuildFn(
+			"fd_renumber",
+			wasi_fdRenumber,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 24) fd_seek(fd: fd, offset: filedelta, whence: whence) -> (errno, filesize)
+		vm.BuildFn(
+			"fd_seek",
+			wasi_fdSeek,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 25) fd_sync(fd: fd) -> errno
+		vm.BuildFn(
+			"fd_sync",
+			wasi_fdSync,
+			[]interface{}{vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 26) fd_tell(fd: fd) -> (errno, filesize)
+		vm.BuildFn(
+			"fd_tell",
+			wasi_fdTell,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 27) fd_write(fd: fd, iovs: ciovec_array) -> (errno, size)
+		vm.BuildFn(
+			"fd_write",
+			wasi_fdWrite,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 28) path_create_directory(fd: fd, path: string) -> errno
+		// Typically "path" is a pointer+length, but we simplify to one pointer here.
+		vm.BuildFn(
+			"path_create_directory",
+			wasi_pathCreateDirectory,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 29) path_filestat_get(fd: fd, flags: lookupflags, path: string) -> (errno, filestat)
+		vm.BuildFn(
+			"path_filestat_get",
+			wasi_pathFilestatGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()}, // placeholder
+			0,
+		),
+
+		// 30) path_filestat_set_times(fd: fd, flags: lookupflags, path: string,
+		//     atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
+		vm.BuildFn(
+			"path_filestat_set_times",
+			wasi_pathFilestatSetTimes,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 31) path_link(old_fd: fd, old_flags: lookupflags, old_path: string,
+		//     new_fd: fd, new_path: string) -> errno
+		vm.BuildFn(
+			"path_link",
+			wasi_pathLink,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 32) path_open(fd: fd, dirflags: lookupflags, path: string,
+		//     oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights,
+		//     fdflags: fdflags) -> (errno, fd)
+		vm.BuildFn(
+			"path_open",
+			wasi_pathOpen,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()}, // errno, fd
+			0,
+		),
+
+		// 33) path_readlink(fd: fd, path: string, buf: Pointer<u8>, buf_len: size) -> (errno, size)
+		vm.BuildFn(
+			"path_readlink",
+			wasi_pathReadlink,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 34) path_remove_directory(fd: fd, path: string) -> errno
+		vm.BuildFn(
+			"path_remove_directory",
+			wasi_pathRemoveDirectory,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 35) path_rename(fd: fd, old_path: string, new_fd: fd, new_path: string) -> errno
+		vm.BuildFn(
+			"path_rename",
+			wasi_pathRename,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 36) path_symlink(old_path: string, fd: fd, new_path: string) -> errno
+		vm.BuildFn(
+			"path_symlink",
+			wasi_pathSymlink,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 37) path_unlink_file(fd: fd, path: string) -> errno
+		vm.BuildFn(
+			"path_unlink_file",
+			wasi_pathUnlinkFile,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 38) poll_oneoff(in: ConstPointer<subscription>, out: Pointer<event>, nsubscriptions: size) -> (errno, size)
+		vm.BuildFn(
+			"poll_oneoff",
+			wasi_pollOneoff,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 39) proc_exit(rval: exitcode)
+		// Typically does not return; might raise a trap or shut down the instance.
+		// But as a placeholder, you can define a return type of none (empty).
+		vm.BuildFn(
+			"proc_exit",
+			wasi_procExit,
+			[]interface{}{vm.ValType_I32()},
+			[]interface{}{},
+			0,
+		),
+
+		// 40) proc_raise(sig: signal) -> errno
+		vm.BuildFn(
+			"proc_raise",
+			wasi_procRaise,
+			[]interface{}{vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 41) sched_yield() -> errno
+		vm.BuildFn(
+			"sched_yield",
+			wasi_schedYield,
+			[]interface{}{},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 42) random_get(buf: Pointer<u8>, buf_len: size) -> errno
+		vm.BuildFn(
+			"random_get",
+			wasi_randomGet,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		vm.BuildFn(
+			"sock_accept",
+			wasi_sockAccept,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 43) sock_recv(fd: fd, ri_data: iovec_array, ri_flags: riflags) -> (errno, size, roflags)
+		vm.BuildFn(
+			"sock_recv",
+			wasi_sockRecv,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 44) sock_send(fd: fd, si_data: ciovec_array, si_flags: siflags) -> (errno, size)
+		vm.BuildFn(
+			"sock_send",
+			wasi_sockSend,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
+
+		// 45) sock_shutdown(fd: fd, how: sdflags) -> errno
+		vm.BuildFn(
+			"sock_shutdown",
+			wasi_sockShutdown,
+			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
+			[]interface{}{vm.ValType_I32()},
+			0,
+		),
 	}
-
-	return vm.BuildModule(rnh, "wasmx", context, fndefs)
+	// wasi_unstable
+	return vm.BuildModule(rnh, "wasi_snapshot_preview1", context, fndefs)
 }
 
-func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	var res []int32
-	var err error
+func endsWithSlash(s string) bool {
+	return len(s) > 0 && s[len(s)-1] == '/'
+}
 
-	// WASI standard does not have instantiate
-	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
-	// TODO consider extracting this in a dependency
-	if funcName == types.ENTRY_POINT_INSTANTIATE {
-		fnNames := contractVm.GetFunctionList()
-		found := false
-		for _, name := range fnNames {
-			// WASI reactor
-			if name == "_initialize" {
-				found = true
-				res, err = contractVm.Call("_initialize", []interface{}{}, context.GasMeter)
-			}
-			// note that custom entries do not have access to WASI endpoints at this time
-			if name == "main.instantiate" {
-				found = true
-				res, err = contractVm.Call("main.instantiate", []interface{}{}, context.GasMeter)
+func listDirectoryEntries(ctx *WasiContext, basePath string) []DirEntry {
+	var result []DirEntry
+
+	prefix := basePath
+	if !endsWithSlash(prefix) {
+		prefix += "/"
+	}
+
+	// Add '.' and '..' entries
+	result = append(result, DirEntry{Name: ".", IsDir: true})
+	result = append(result, DirEntry{Name: "..", IsDir: true})
+
+	// We'll gather every path in DirMapping/FileMapping that starts with prefix.
+	// Then the part after prefix is the name. If that name has further slashes, it’s in a subdir.
+
+	// For directories
+	for dir := range ctx.dirMapping {
+		if strings.HasPrefix(dir, prefix) {
+			remainder := dir[len(prefix):]
+			// If remainder has slashes, it's in a subdirectory, so skip if you only want immediate children
+			if !strings.ContainsRune(remainder, '/') && remainder != "" {
+				result = append(result, DirEntry{Name: remainder, IsDir: true})
 			}
 		}
-		if !found {
-			return nil, nil
+	}
+	// For files
+	for file := range ctx.fileMapping {
+		_, isDir := ctx.dirMapping[file]
+		if strings.HasPrefix(file, prefix) && !isDir {
+			remainder := file[len(prefix):]
+			if !strings.ContainsRune(remainder, '/') && remainder != "" {
+				result = append(result, DirEntry{Name: remainder, IsDir: false})
+			}
 		}
-	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
-		res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
-	} else {
-		// WASI command - no args, no return
-		res, err = contractVm.Call("_start", []interface{}{}, context.GasMeter)
-		// fmt.Println("--ExecuteWasi-_start, err", res, err)
-
-		// res, err = contractVm.Execute("_initialize")
-		// fmt.Println("--testtime-main, err", res, err)
-
-		// res, err = contractVm.Execute("main")
-		// fmt.Println("--testtime-main, err", res, err)
-
-		// res, err = contractVm.Execute("testtime")
-		// fmt.Println("--testtime-res, err", res, err)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	if funcName == "execute" || funcName == "query" {
-		funcName = "main"
-	}
-	dir := filepath.Dir(context.ContractInfo.CodeFilePath)
-	inputFile := path.Join(dir, "main.py")
-	content, err := os.ReadFile(context.ContractInfo.CodeFilePath)
-	if err != nil {
-		return nil, err
-	}
-	// TODO import the module or make sure json & sys are not imported one more time
-	strcontent := fmt.Sprintf(`
-import sys
-import json
-from wasmx import set_finishdata
-
-%s
-
-res = b''
-entrypoint = %s
-if len(sys.argv) > 1 and sys.argv[1] != "":
-	inputObject = sys.argv[1]
-	input = json.loads(inputObject)
-	res = entrypoint(input)
-else:
-	res = entrypoint()
-
-set_finishdata(res or b'')
-`, string(content), funcName)
-
-	err = utils.SafeWriteFile(inputFile, []byte(strcontent))
-	if err != nil {
-		return nil, err
-	}
-
-	contractVm.InitWasi(
-		[]string{
-			``,
-			"main.py",
-			string(context.Env.CurrentCall.CallData),
-			// --quiet
-		},
-		// os.Environ(), // The envs
-		[]string{},
-		// The mapping preopens
-		[]string{
-			// ".:.",
-			// fmt.Sprintf(`%s:.`, dir),
-			// fmt.Sprintf(`%s:%s`, dir, dir),
-			fmt.Sprintf(`.:%s`, dir),
-			// fmt.Sprintf(`/:%s`, dir),
-		},
-	)
-	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
-}
-
-func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	if funcName == "execute" || funcName == "query" {
-		funcName = "main"
-	}
-
-	dir := filepath.Dir(context.ContractInfo.CodeFilePath)
-	fileName := filepath.Base(context.ContractInfo.CodeFilePath)
-	inputFileName := "main.js"
-	inputFile := path.Join(dir, inputFileName)
-	strcontent := fmt.Sprintf(`
-import * as std from "std";
-import * as os from "os";
-import * as wasmx from "wasmx";
-import * as contract from "./%s";
-
-let inputData;
-
-if (scriptArgs.length > 1 && scriptArgs[1] != "") {
-	inputData = std.parseExtJSON(scriptArgs[1]);
-}
-const res = contract.%s(inputData);
-wasmx.setFinishData(res || new ArrayBuffer(0));
-
-	`, fileName, funcName)
-
-	err := utils.SafeWriteFile(inputFile, []byte(strcontent))
-	if err != nil {
-		return nil, err
-	}
-
-	contractVm.InitWasi(
-		[]string{
-			``,
-			inputFileName,
-			string(context.Env.CurrentCall.CallData),
-		},
-		[]string{},
-		[]string{
-			fmt.Sprintf(`.:%s`, dir),
-		},
-	)
-	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
-}
-
-func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	// if funcName == "execute" || funcName == "query" {
-	// 	funcName = "main"
-	// }
-
-	contractVm.InitWasi(
-		[]string{
-			``,
-		},
-		// os.Environ(), // The envs
-		[]string{},
-		// The mapping preopens
-		[]string{
-			// fmt.Sprintf(`.:%s`, dir),
-		},
-	)
-	return ExecuteWasi(context, contractVm, funcName, args)
+	return result
 }

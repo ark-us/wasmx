@@ -81,7 +81,11 @@ type IVm interface {
 	GetFunctionList() []string
 	FindGlobal(name string) interface{}
 	ListRegisteredModule() []string
-	InitWasi(args []string, envs []string, preopens []string) error
+	InstantiateWasi(args []string, envs []string, preopens []string, fileMap map[string][]byte)
+	WasiArgs() []string
+	WasiEnvs() []string
+	WasiPreopens() []string
+	WasiFileMap() map[string][]byte
 }
 
 type RuntimeHandler interface {
