@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -59,8 +58,9 @@ import (
 
 var __WASI_O_CREAT = int32(1)
 var __WASI_O_DIRECTORY = int32(2)
-var __WASI_O_EXCL = int32(4)
-var __WASI_O_TRUNC = int32(8)
+
+// var __WASI_O_EXCL = int32(4)
+// var __WASI_O_TRUNC = int32(8)
 
 func wasi_stubUnimplemented(_ interface{}, _ memc.RuntimeHandler, _ []interface{}) ([]interface{}, error) {
 	// Return ENOSYS = 52
@@ -72,7 +72,8 @@ func wasi_stubUnimplemented(_ interface{}, _ memc.RuntimeHandler, _ []interface{
 
 // 1) args_get(argv: Pointer<Pointer<u8>>, argv_buf: Pointer<u8>) -> errno
 func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_argsGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_argsGet", "params", params)
 	returns := make([]interface{}, 1)
 	args := rnh.GetVm().WasiArgs()
 	mem, err := rnh.GetMemory()
@@ -96,7 +97,6 @@ func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	currentArgvBufPtr := argvBufPtr
 
 	for _, a := range args {
-		fmt.Println("--wasi_argsGet--", currentArgvPtr, currentArgvBufPtr)
 		// write pointer (currentArgvBufPtr) into memory at currentArgvPtr
 		err = wasimem.WriteUint32Le(mem, currentArgvPtr, uint32(currentArgvBufPtr))
 		if err != nil {
@@ -105,7 +105,6 @@ func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 		// write the actual string into memory + a null terminator
 		data := append([]byte(a), []byte{0}...)
-		fmt.Println("--wasi_argsGet data--", len(data), a)
 		err = mem.Write(currentArgvBufPtr, data)
 		if err != nil {
 			return nil, err
@@ -126,7 +125,8 @@ func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 // 2) args_sizes_get() -> (errno, size, size)
 func wasi_argsSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_argsSizesGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_argsSizesGet", "params", params)
 	args := rnh.GetVm().WasiArgs()
 	// We need total size of all args plus a null terminator per arg
 	totalSize := 0
@@ -137,7 +137,7 @@ func wasi_argsSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("wasi_argsSizesGet len(args)", len(args))
+	LoggerExtended(ctx.c).Debug("wasi_argsGet", "count", len(args))
 	err = wasimem.WriteUint32Le(mem, params[0].(int32), uint32(len(args)))
 	if err != nil {
 		return nil, err
@@ -153,7 +153,8 @@ func wasi_argsSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 
 // 3) environ_get(environ: Pointer<Pointer<u8>>, environ_buf: Pointer<u8>) -> errno
 func wasi_environGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_environGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_environGet", "params", params)
 	returns := make([]interface{}, 1)
 	envs := rnh.GetVm().WasiEnvs()
 	mem, err := rnh.GetMemory()
@@ -204,7 +205,8 @@ func wasi_environGet(_context interface{}, rnh memc.RuntimeHandler, params []int
 
 // 4) environ_sizes_get() -> (errno, size, size)
 func wasi_environSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_environSizesGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_environSizesGet", "params", params)
 	envs := rnh.GetVm().WasiEnvs()
 	// We need total size of all args plus a null terminator per arg
 	totalSize := 0
@@ -230,36 +232,38 @@ func wasi_environSizesGet(_context interface{}, rnh memc.RuntimeHandler, params 
 
 // 5) clock_res_get(id: clockid) -> (errno, timestamp)
 func wasi_clockResGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_clockResGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_clockResGet", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 6) clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
 func wasi_clockTimeGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_clockTimeGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_clockTimeGet", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 7) fd_advise(fd: fd, offset: filesize, len: filesize, advice: advice) -> errno
 func wasi_fdAdvise(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdAdvise", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdAdvise", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 8) fd_allocate(fd: fd, offset: filesize, len: filesize) -> errno
 func wasi_fdAllocate(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdAllocate", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdAllocate", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 9) fd_close(fd: fd) -> errno
 func wasi_fdClose(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdClose", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdClose", "params", params)
 	fd := params[0].(int32)
 	returns := make([]interface{}, 1)
-
-	// Cast our context
-	ctx := _context.(*WasiContext)
 
 	// Check if this FD exists in our openFiles
 	if _, ok := ctx.openFiles[fd]; !ok {
@@ -278,13 +282,15 @@ func wasi_fdClose(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 // 10) fd_datasync(fd: fd) -> errno
 func wasi_fdDatasync(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdDatasync", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdDatasync", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 11) fd_fdstat_get(fd: fd) -> (errno, fdstat)
 func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdFdstatGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdFdstatGet", "params", params)
 	fd := params[0].(int32)
 	fdstatPtr := params[1].(int32)
 
@@ -293,13 +299,10 @@ func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 		return nil, err
 	}
 
-	ctx := _context.(*WasiContext)
 	openFiles := ctx.GetOpenFiles(rnh.GetVm())
 	fileMap := ctx.GetFileMap(rnh.GetVm())
 	openF, ok := openFiles[fd]
 	returns := make([]interface{}, 1) // [errno]
-
-	fmt.Println("wasi_fdFdstatGet found", fd, ok)
 
 	if !ok {
 		// EBADF => 8
@@ -310,7 +313,6 @@ func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 	// Let's assume everything is a "regular file" if found in FileMapping
 	// If you had directories, you'd set a different filetype
 	_, ok = fileMap[openF.path]
-	fmt.Println("--wasi_fdFdstatGet--", openF.path, ok)
 	if !ok {
 		// Not found => ENOENT => 44 or EIO => 29
 		returns[0] = int32(44)
@@ -367,45 +369,51 @@ func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 
 // 12) fd_fdstat_set_flags(fd: fd, flags: fdflags) -> errno
 func wasi_fdFdstatSetFlags(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdFdstatSetFlags", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdFdstatSetFlags", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 13) fd_fdstat_set_rights(fd: fd, fs_rights_base: rights, fs_rights_inheriting: rights) -> errno
 func wasi_fdFdstatSetRights(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdFdstatSetRights", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdFdstatSetRights", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 14) fd_filestat_get(fd: fd) -> (errno, filestat)
 func wasi_fdFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdFilestatGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdFilestatGet", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 15) fd_filestat_set_size(fd: fd, size: filesize) -> errno
 func wasi_fdFilestatSetSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdFilestatSetSize", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdFilestatSetSize", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 16) fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
 func wasi_fdFilestatSetTimes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdFilestatSetTimes", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdFilestatSetTimes", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 17) fd_pread(fd: fd, iovs: iovec_array, offset: filesize) -> (errno, size)
 func wasi_fdPread(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdPread", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdPread", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 18) fd_prestat_get(fd: fd) -> (errno, prestat)
 func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdPrestatGet", params)
-	returns := make([]interface{}, 1)
 	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdPrestatGet", "params", params)
+	returns := make([]interface{}, 1)
 	vm := rnh.GetVm()
 	mem, err := rnh.GetMemory()
 	if err != nil {
@@ -422,7 +430,6 @@ func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 	// }
 	// preopen := preopens[fd-3]
 	preopen, ok := preopens[fd]
-	fmt.Println("--wasi_fdPrestatGet--", fd, ok)
 	if !ok {
 		returns[0] = int32(8) // EBADF = 8 in WASI
 		return returns, nil
@@ -440,8 +447,6 @@ func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 		return nil, err
 	}
 
-	fmt.Println("wasi_fdPrestatGet", len(preopen.path), preopen.path)
-
 	// pr_name_len (4 bytes)
 	err = wasimem.WriteUint32Le(mem, resptr+4, uint32(len(preopen.path)))
 	if err != nil {
@@ -454,9 +459,9 @@ func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 
 // 19) fd_prestat_dir_name(fd: fd, path: Pointer<u8>, path_len: size) -> errno
 func wasi_fdPrestatDirName(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdPrestatDirName", params)
-	returns := make([]interface{}, 1)
 	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdPrestatDirName", "params", params)
+	returns := make([]interface{}, 1)
 	vm := rnh.GetVm()
 	mem, err := rnh.GetMemory()
 	if err != nil {
@@ -475,12 +480,10 @@ func wasi_fdPrestatDirName(_context interface{}, rnh memc.RuntimeHandler, params
 	// preopen := preopens[fd-3]
 
 	preopen, ok := preopens[fd]
-	fmt.Println("--wasi_fdPrestatDirName--", fd, ok)
 	if !ok {
 		returns[0] = int32(8) // EBADF = 8 in WASI
 		return returns, nil
 	}
-	fmt.Println("--wasi_fdPrestatDirName path--", len(preopen.path), pathLen, preopen.path)
 
 	if int32(len(preopen.path)) > pathLen {
 		// EOVERFLOW if there's not enough space to write the full path
@@ -500,13 +503,15 @@ func wasi_fdPrestatDirName(_context interface{}, rnh memc.RuntimeHandler, params
 
 // 20) fd_pwrite(fd: fd, iovs: ciovec_array, offset: filesize) -> (errno, size)
 func wasi_fdPwrite(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdPwrite", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdPwrite", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 21) fd_read(fd: fd, iovs: iovec_array) -> (errno, size)
 func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdRead", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdRead", "params", params)
 	fd := params[0].(int32)       // file descriptor
 	iovsPtr := params[1].(int32)  // pointer to array of iovec structs
 	iovsLen := params[2].(int32)  // number of iovecs
@@ -517,13 +522,11 @@ func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		return nil, err
 	}
 
-	ctx := _context.(*WasiContext)
 	fileMap := ctx.GetFileMap(rnh.GetVm())
 	openFiles := ctx.GetOpenFiles(rnh.GetVm())
 
 	// 4) Check if fd is valid
 	openF, ok := openFiles[fd]
-	fmt.Println("wasi_fdRead", fd, ok)
 	returns := make([]interface{}, 1) // We'll return just errno: i32
 	if !ok {
 		// EBADF => 8
@@ -533,7 +536,6 @@ func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 	// 5) Get the file content
 	content, ok := fileMap[openF.path]
-	fmt.Println("wasi_fdRead content", openF.path, ok)
 	if !ok {
 		// ENOENT => 44
 		returns[0] = int32(44)
@@ -600,7 +602,8 @@ func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 // 22) fd_readdir(fd: fd, buf: Pointer<u8>, buf_len: size, cookie: dircookie) -> (errno, size)
 func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdReaddir", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdReaddir", "params", params)
 	fd := params[0].(int32)
 	bufPtr := params[1].(int32)
 	bufLen := params[2].(int32)
@@ -617,9 +620,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		return returns, nil
 	}
 
-	ctx := _context.(*WasiContext)
 	of, ok := ctx.openFiles[fd]
-	fmt.Println("wasi_fdReaddir openFiles", fd, ok, of)
 	if !ok {
 		// EBADF => 8
 		returns[0] = int32(8)
@@ -635,10 +636,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	// treat everything in DirMapping or FileMapping that starts with of.path + "/" as a child.
 	// Then we skip the part equal to of.path + "/", and keep the remainder as the name.
 
-	fmt.Println("wasi_fdReaddir of.path", of.path)
-
 	entries := listDirectoryEntries(ctx, of.path)
-	fmt.Println("wasi_fdReaddir entries", entries)
 
 	// Sort entries by name if you want stable ordering:
 	sort.Slice(entries, func(i, j int) bool {
@@ -658,8 +656,6 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		return returns, nil
 	}
 
-	fmt.Println("wasi_fdReaddir startIndex", startIndex)
-
 	var totalWritten int32
 	currentOffset := bufPtr
 
@@ -671,8 +667,6 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 
 		nameLen := len(e.Name)
 		recordSize := direntSize + int32(nameLen) // total bytes for this entry
-
-		fmt.Println("wasi_fdReaddir i", i, e.Name, nameLen, recordSize)
 
 		// Check if we have enough space in the buffer
 		if totalWritten+recordSize > bufLen {
@@ -724,15 +718,11 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		totalWritten += recordSize
 	}
 
-	fmt.Println("wasi_fdReaddir totalWritten", outNread, totalWritten)
-
 	// Write how many bytes we wrote in total to outNread
 	if err := wasimem.WriteUint32Le(mem, outNread, uint32(totalWritten)); err != nil {
 		returns[0] = int32(21)
 		return returns, nil
 	}
-
-	fmt.Println("wasi_fdReaddir END")
 
 	// Return success
 	returns[0] = int32(0)
@@ -741,13 +731,15 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 
 // 23) fd_renumber(fd: fd, to: fd) -> errno
 func wasi_fdRenumber(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdRenumber", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdRenumber", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 24) fd_seek(fd: fd, offset: filedelta, whence: whence) -> (errno, filesize)
 func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdSeek", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdSeek", "params", params)
 
 	fd := params[0].(int32)
 	offset := params[1].(int64)
@@ -759,13 +751,11 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		return nil, err
 	}
 
-	ctx := _context.(*WasiContext)
 	fileMap := ctx.GetFileMap(rnh.GetVm())
 	openFiles := ctx.GetOpenFiles(rnh.GetVm())
 
 	openF, ok := openFiles[fd]
 	returns := make([]interface{}, 1)
-	fmt.Println("wasi_fdSeek find", fd, ok)
 
 	if !ok {
 		// EBADF => 8
@@ -783,7 +773,6 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	case 2: // SEEK_END
 		// If file is in ctx.FileMapping, get its length
 		fileContent, ok := fileMap[openF.path]
-		fmt.Println("--wasi_fdSeek--", openF.path, ok)
 		if !ok {
 			// EIO => 29, or maybe ENOENT => 44
 			returns[0] = int32(44)
@@ -806,8 +795,6 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	// 5) Update offset in openFile
 	openF.offset = newOffset
 
-	fmt.Println("wasi_fdSeek offset", offset)
-
 	// 6) Write new offset to memory at resultPtr (uint64)
 	// Using your “wasimem” helper or similar:
 	err = wasimem.WriteUint64Le(mem, resultPtr, uint64(newOffset))
@@ -823,19 +810,22 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 // 25) fd_sync(fd: fd) -> errno
 func wasi_fdSync(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdSync", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdSync", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 26) fd_tell(fd: fd) -> (errno, filesize)
 func wasi_fdTell(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdTell", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdTell", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 27) fd_write(fd: fd, iovs: ciovec_array) -> (errno, size)
 func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_fdWrite", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_fdWrite", "params", params)
 	fd := params[0].(int32)
 	iovsPtr := params[1].(int32) // pointer to the iovec array
 	iovsLen := params[2].(int32) // number of iovecs
@@ -847,14 +837,11 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		return nil, err
 	}
 
-	ctx := _context.(*WasiContext)
 	vm := rnh.GetVm()
 	fileMap := ctx.GetFileMap(vm)
 	openFiles := ctx.GetOpenFiles(vm)
 
 	openF, ok := openFiles[fd]
-
-	fmt.Println("wasi_fdWrite", fd, ok, openF)
 	if !ok {
 		// EBADF => 8 (Bad file descriptor)
 		returns[0] = int32(8)
@@ -863,7 +850,6 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 	// 4) Find the file’s content in our in-memory mapping
 	content, ok := fileMap[openF.path]
-	fmt.Println("wasi_fdWrite content", openF.path, ok, string(content))
 	if !ok {
 		// ENOENT => 44 (No such file or directory)
 		returns[0] = int32(44)
@@ -891,7 +877,6 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 		// 6) Read the actual data from the Wasm memory
 		data, err3 := mem.Read(int32(bufPtr), int32(bufLen))
-		fmt.Println("wasi_fdWrite read", err, string(data), data)
 		if err3 != nil {
 			return nil, err3
 		}
@@ -913,7 +898,6 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 		// Advance file offset
 		openF.offset = end
-		fmt.Println("wasi_fdWrite offset", end)
 
 		// Tally how many bytes we wrote this iteration
 		totalWritten += int64(bufLen)
@@ -921,14 +905,18 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 	// 8) Update the in-memory file content
 	ctx.SetFileMap(vm, openF.path, content)
-	fmt.Println("--wasi_fdWrite after SetFileMap--", openF.path, string(content))
 
 	// 9) Write totalWritten into `nwrittenPtr`
 	if err := wasimem.WriteUint32Le(mem, nwrittenPtr, uint32(totalWritten)); err != nil {
 		return nil, err
 	}
 
-	fmt.Println("--wasi_fdWrite END--")
+	if openF.path == "stderr" {
+		ctx.c.Logger(ctx.c.Ctx).Error(string(content))
+	}
+	if openF.path == "stdout" {
+		LoggerExtended(ctx.c).Debug(string(content))
+	}
 
 	returns[0] = int32(0)
 	return returns, nil
@@ -936,13 +924,15 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 // 28) path_create_directory(fd: fd, path: string) -> errno
 func wasi_pathCreateDirectory(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathCreateDirectory", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathCreateDirectory", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 29) path_filestat_get(fd: fd, flags: lookupflags, path: string) -> (errno, filestat)
 func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathFilestatGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathFilestatGet", "params", params)
 	fd := params[0].(int32)        // directory FD
 	_ = params[1].(int32)          // WASI lookup flags (we might ignore here)
 	pathPtr := params[2].(int32)   // pointer to the path string in guest memory
@@ -950,7 +940,6 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 	resultPtr := params[4].(int32) // where to write the filestat
 
 	returns := make([]interface{}, 1)
-	ctx := _context.(*WasiContext)
 	vm := rnh.GetVm()
 	mem, err := rnh.GetMemory()
 	if err != nil {
@@ -965,22 +954,18 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 		return returns, nil
 	}
 	guestPath := string(pathBytes)
-	fmt.Println("--wasi_pathFilestatGet guestPath--", guestPath)
 
 	// 5) Look up the directory FD to confirm it's valid
 	//    Usually you'd have a map like: fd => preopenDirPath
 	preopens := ctx.GetOpenFiles(vm)
 	fileMap := ctx.GetFileMap(vm)
 	preopen, ok := preopens[fd]
-	fmt.Println("--wasi_pathFilestatGet--", fd, ok, preopen)
 	// preopenDir, ok := ctx.PreopenDirs[fd]
 	if !ok {
 		// EBADF => 8
 		returns[0] = int32(8)
 		return returns, nil
 	}
-
-	fmt.Println("--wasi_pathFilestatGet preopen.path--", fd, preopen.path)
 
 	// 6) Combine preopenDir + guestPath to find the real host path or
 	//    your in-memory representation. For a simple example, just do:
@@ -989,13 +974,10 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 		fullPath = preopen.path + "/" + guestPath
 	}
 
-	fmt.Println("--wasi_pathFilestatGet fullPath--", fullPath)
-	// fullPath = filepath.Clean(fullPath)
-	// fmt.Println("--wasi_pathFilestatGet fullPath2--", fullPath)
+	// fullPath = filepath.Clean(fullPath) ?
 
 	// 7) If the file doesn't exist, return ENOENT => 44
 	fileContent, ok := fileMap[fullPath]
-	fmt.Println("--wasi_pathFilestatGet fileContent--", ok, fileContent)
 	if !ok {
 		// Possibly also check if it's a directory if you store them separately
 		returns[0] = int32(44)
@@ -1105,14 +1087,16 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 //  30. path_filestat_set_times(fd: fd, flags: lookupflags, path: string,
 //     atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
 func wasi_pathFilestatSetTimes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathFilestatSetTimes", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathFilestatSetTimes", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 //  31. path_link(old_fd: fd, old_flags: lookupflags, old_path: string,
 //     new_fd: fd, new_path: string) -> errno
 func wasi_pathLink(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathLink", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathLink", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
@@ -1120,7 +1104,8 @@ func wasi_pathLink(_context interface{}, rnh memc.RuntimeHandler, params []inter
 //     oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights,
 //     fdflags: fdflags) -> (errno, fd)
 func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathOpen", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathOpen", "params", params)
 	// The declared parameters are:
 	//  1) dirFd (i32)
 	//  2) dirFlags (i32)
@@ -1150,7 +1135,6 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return returns, nil
 	}
 
-	ctx := _context.(*WasiContext)
 	vm := rnh.GetVm()
 	preopens := ctx.GetOpenFiles(vm)
 	fileMap := ctx.GetFileMap(vm)
@@ -1163,11 +1147,9 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return returns, nil
 	}
 	guestPath := string(pathBytes)
-	fmt.Println("wasi_pathOpen guestPath", guestPath)
 
 	// 4) Look up the directory FD in PreopenDirs (or a map of open directories).
 	baseDirPath, ok := preopens[dirFd]
-	fmt.Println("wasi_pathOpen dirFd", dirFd, ok, baseDirPath)
 	if !ok || !baseDirPath.isdir {
 		// EBADF => 8
 		returns[0] = int32(8)
@@ -1184,11 +1166,8 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		fullPath += guestPath
 	}
 
-	fmt.Println("wasi_pathOpen fullPath", fullPath)
-
 	// 6) Check if the guest wants to open a directory (__WASI_O_DIRECTORY)
 	wantsDir := (oflags & __WASI_O_DIRECTORY) != 0
-	fmt.Println("wasi_pathOpen wantsDir", wantsDir, oflags)
 
 	// 7) Check if the path exists in your in-memory representation.
 	//    If it doesn't exist and O_CREAT is set, you might create it.
@@ -1200,7 +1179,6 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		isDir = false
 	} else {
 		// Doesn't exist
-		fmt.Println("wasi_pathOpen __WASI_O_CREAT", oflags&__WASI_O_CREAT)
 		if (oflags&__WASI_O_CREAT) != 0 && !wantsDir {
 			// create an empty file
 			ctx.fileMapping[fullPath] = []byte{}
@@ -1210,7 +1188,6 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 			return returns, nil
 		}
 	}
-	fmt.Println("wasi_pathOpen wantsDir, isDir", wantsDir, isDir)
 
 	// If the path is a directory but the guest wanted a file, or vice versa, handle that:
 	if isDir && !wantsDir {
@@ -1223,12 +1200,9 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		returns[0] = int32(54)
 		return returns, nil
 	}
-	fmt.Println("wasi_pathOpen create new fd")
-	fmt.Println("wasi_pathOpen create new fd: ", ctx.nextfd)
 
 	// 8) Create a new FD for the opened file/dir
 	newFd := ctx.nextfd
-	fmt.Println("wasi_pathOpen newFd", newFd)
 	ctx.nextfd++
 
 	// Insert into OpenFiles map
@@ -1240,8 +1214,6 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	})
 
 	// If you want to handle read/write perms, you’d store fsRightsBase or fdflags, etc.
-
-	fmt.Println("wasi_pathOpen write new fd", newFdPtr, newFd)
 
 	// 9) Write the new FD into guest memory at newFdPtr
 	if err := wasimem.WriteUint32Le(mem, newFdPtr, uint32(newFd)); err != nil {
@@ -1256,50 +1228,58 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 
 // 33) path_readlink(fd: fd, path: string, buf: Pointer<u8>, buf_len: size) -> (errno, size)
 func wasi_pathReadlink(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathReadlink", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathReadlink", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 34) path_remove_directory(fd: fd, path: string) -> errno
 func wasi_pathRemoveDirectory(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathRemoveDirectory", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathRemoveDirectory", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 35) path_rename(fd: fd, old_path: string, new_fd: fd, new_path: string) -> errno
 func wasi_pathRename(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathRename", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathRename", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 36) path_symlink(old_path: string, fd: fd, new_path: string) -> errno
 func wasi_pathSymlink(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathSymlink", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathSymlink", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 37) path_unlink_file(fd: fd, path: string) -> errno
 func wasi_pathUnlinkFile(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pathUnlinkFile", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pathUnlinkFile", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 38) poll_oneoff(in: ConstPointer<subscription>, out: Pointer<event>, nsubscriptions: size) -> (errno, size)
 func wasi_pollOneoff(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_pollOneoff", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_pollOneoff", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 39) proc_exit(rval: exitcode)
 func wasi_procExit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_procExit", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_procExit", "params", params)
 	// Typically triggers a runtime exit, but here we just log and return.
 	return nil, nil
 }
 
 // 40) proc_raise(sig: signal) -> errno
 func wasi_procRaise(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_procRaise", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_procRaise", "params", params)
 	returns := make([]interface{}, 1)
 	returns[0] = int32(0)
 	return returns, nil
@@ -1307,7 +1287,8 @@ func wasi_procRaise(_context interface{}, rnh memc.RuntimeHandler, params []inte
 
 // 41) sched_yield() -> errno
 func wasi_schedYield(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_schedYield", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_schedYield", "params", params)
 	returns := make([]interface{}, 1)
 	returns[0] = int32(0)
 	return returns, nil
@@ -1315,32 +1296,37 @@ func wasi_schedYield(_context interface{}, rnh memc.RuntimeHandler, params []int
 
 // 42) random_get(buf: Pointer<u8>, buf_len: size) -> errno
 func wasi_randomGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_randomGet", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_randomGet", "params", params)
 	returns := make([]interface{}, 1)
 	returns[0] = int32(0)
 	return returns, nil
 }
 
 func wasi_sockAccept(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_sockAccept", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_sockAccept", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 43) sock_recv(fd: fd, ri_data: iovec_array, ri_flags: riflags) -> (errno, size, roflags)
 func wasi_sockRecv(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_sockRecv", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_sockRecv", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 44) sock_send(fd: fd, si_data: ciovec_array, si_flags: siflags) -> (errno, size)
 func wasi_sockSend(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_sockSend", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_sockSend", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
 // 45) sock_shutdown(fd: fd, how: sdflags) -> errno
 func wasi_sockShutdown(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	fmt.Println("wasi_sockShutdown", params)
+	ctx := _context.(*WasiContext)
+	LoggerExtended(ctx.c).Debug("wasi_sockShutdown", "params", params)
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
@@ -1401,18 +1387,12 @@ func (wc *WasiContext) InitContext(vm memc.IVm) {
 			}
 		}
 		if _, ok := wc.fileMapping[path]; !ok {
-			fmt.Println("--fileMapping-", path)
 			wc.fileMapping[path] = fileMap[externalPath]
 		}
 	}
 
 	wc.nextfd = int32(3 + len(preopens))
 	wc.inited = true
-	fmt.Println("--InitContext fileMap--", fileMap)
-	fmt.Println("--InitContext wc.fileMapping--", wc.fileMapping)
-	fmt.Println("--InitContext wc.dirMapping--", wc.dirMapping)
-	fmt.Println("--InitContext preopens--", preopens)
-	fmt.Println("--InitContext wc.openFiles--", wc.openFiles)
 }
 
 func (wc *WasiContext) GetFileMap(vm memc.IVm) map[string][]byte {
@@ -1444,7 +1424,6 @@ func (wc *WasiContext) SetOpenFile(vm memc.IVm, fd int32, f *openFile) {
 }
 
 func BuildWasiEnv(_context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	fmt.Println("--BuildWasiEnv--", _context.ContractInfo.Label, _context.ContractInfo.Address.String())
 	context := &WasiContext{
 		c:           _context,
 		openFiles:   map[int32]*openFile{},

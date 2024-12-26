@@ -30,8 +30,6 @@ func NewClientVerification(mythosapp mcfg.MythosApp, logger log.Logger, addr *mc
 }
 
 func (v ClientVerification) VerifyCommitLight(chainID string, blockID cmttypes.BlockID, height int64, commit *cmttypes.Commit, valset *cmttypes.ValidatorSet) error {
-	fmt.Println("-ChainVerification.VerifyCommit-", v.Address.String(), chainID, height, blockID.Hash, commit.Round, len(commit.Signatures))
-
 	if v.Address == nil {
 		return valset.VerifyCommitLight(chainID, blockID, height, commit)
 	}

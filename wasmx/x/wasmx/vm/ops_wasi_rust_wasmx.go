@@ -47,12 +47,10 @@ func wasiStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []in
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--wasiStorageStore key--", string(keybz), keybz)
 	valuebz, err := mem.ReadRaw(params[2], params[3])
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--wasiStorageStore value--", string(valuebz), valuebz)
 	ctx.GasMeter.ConsumeGas(uint64(SSTORE_GAS_EWASM), "wasiStorageStore")
 	ctx.ContractStore.Set(keybz, valuebz)
 
@@ -71,12 +69,10 @@ func wasiStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--wasiStorageLoad key--", string(keybz), keybz)
 	data := ctx.ContractStore.Get(keybz)
 	if len(data) == 0 {
 		data = types.EMPTY_BYTES32
 	}
-	fmt.Println("--wasiStorageLoad data--", string(data), data)
 	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), data)
 	if err != nil {
 		return returns, err
@@ -661,33 +657,27 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 	var res []int32
 	var err error
 
-	fmt.Println("---ExecuteWasi---", funcName, args)
-
 	// WASI standard does not have instantiate
 	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
 	// TODO consider extracting this in a dependency
 	if funcName == types.ENTRY_POINT_INSTANTIATE {
 		fnNames := contractVm.GetFunctionList()
-		fmt.Println("---ExecuteWasi fnNames---", fnNames)
 		found := false
 		for _, name := range fnNames {
 			// WASI reactor
 			if name == "_initialize" {
 				found = true
-				fmt.Println("---ExecuteWasi _initialize---")
 				res, err = contractVm.Call("_initialize", []interface{}{}, context.GasMeter)
 				break
 			}
 			// note that custom entries do not have access to WASI endpoints at this time
 			if name == "main.instantiate" {
 				found = true
-				fmt.Println("---ExecuteWasi main.instantiate---")
 				res, err = contractVm.Call("main.instantiate", []interface{}{}, context.GasMeter)
 				break
 			}
 			if name == funcName {
 				found = true
-				fmt.Println("---ExecuteWasi main.instantiate---")
 				res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 				break
 			}
@@ -696,10 +686,8 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 			return nil, nil
 		}
 	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
-		fmt.Println("---ExecuteWasi---", funcName)
 		res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 	} else {
-		fmt.Println("---ExecuteWasi _start---")
 		// WASI command - no args, no return
 		res, err = contractVm.Call("_start", []interface{}{}, context.GasMeter)
 
@@ -715,7 +703,6 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("---ExecuteWasi END---", funcName, args)
 
 	return res, nil
 }
