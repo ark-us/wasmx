@@ -30,7 +30,7 @@ func (h RuntimeHandlerBase) ReadMemFromPtr(pointer interface{}) ([]byte, error) 
 	panic("RuntimeHandlerBase.ReadMemFromPtr not implemented")
 }
 
-func (h RuntimeHandlerBase) AllocateWriteMem(data []byte) (int32, error) {
+func (h RuntimeHandlerBase) AllocateWriteMem(data []byte) (interface{}, error) {
 	panic("RuntimeHandlerBase.AllocateWriteMem not implemented")
 }
 

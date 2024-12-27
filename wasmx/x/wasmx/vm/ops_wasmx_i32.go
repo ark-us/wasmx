@@ -869,7 +869,7 @@ func wasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler
 	if err != nil {
 		return nil, err
 	}
-	err = activeMemory.Write(ptrGlobal.(int32), req.Data)
+	err = activeMemory.WriteRaw(ptrGlobal, req.Data)
 	if err != nil {
 		resp.Error = err.Error()
 	}
@@ -932,7 +932,7 @@ func wasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHandle
 	if err != nil {
 		return nil, err
 	}
-	byteArray, err := activeMemory.Read(ptrGlobal.(int32), lengthGlobal.(int32))
+	byteArray, err := activeMemory.ReadRaw(ptrGlobal, lengthGlobal)
 	if err != nil {
 		resp.Error = err.Error()
 	} else {
@@ -946,7 +946,7 @@ func wasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHandle
 	return returns, nil
 }
 
-func prepareResponse(ctx *Context, rnh memc.RuntimeHandler, resp interface{}) (int32, error) {
+func prepareResponse(ctx *Context, rnh memc.RuntimeHandler, resp interface{}) (interface{}, error) {
 	respbz, err := json.Marshal(&resp)
 	if err != nil {
 		return 0, nil
@@ -1275,7 +1275,7 @@ func wasmxEmitCosmosEvents(_context interface{}, rnh memc.RuntimeHandler, params
 	return returns, nil
 }
 
-func BuildWasmxEnv2(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
 		vm.BuildFn("sha256", sha256, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),

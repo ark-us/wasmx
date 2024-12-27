@@ -92,7 +92,7 @@ type RuntimeHandler interface {
 	GetVm() IVm
 	GetMemory() (IMemory, error)
 	ReadMemFromPtr(pointer interface{}) ([]byte, error)
-	AllocateWriteMem(data []byte) (int32, error)
+	AllocateWriteMem(data []byte) (interface{}, error)
 	ReadStringFromPtr(pointer interface{}) (string, error)
 	ReadJsString(arr []byte) string
 }
