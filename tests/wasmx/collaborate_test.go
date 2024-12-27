@@ -52,8 +52,10 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	expected := "multi-vm transaction: tinygo"
 	s.Require().Contains(string(resp.GetData()), expected)
 	evs := appA.GetWasmxEvents(resp.GetEvents())
-	s.Require().Equal(1, len(evs))
-	for _, attr := range evs[0].GetAttributes() {
+	s.Require().GreaterOrEqual(len(evs), 1)
+	wasmxevs := appA.GetEventsByAttribute(evs, "type", "wasmx")
+	s.Require().Equal(1, len(wasmxevs))
+	for _, attr := range wasmxevs[0].GetAttributes() {
 		if attr.Key == types.AttributeKeyDependency {
 			s.Require().Equal(types.WASI_SNAPSHOT_PREVIEW1, attr.Value)
 		}

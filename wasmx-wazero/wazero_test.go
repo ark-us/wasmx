@@ -482,22 +482,8 @@ func TestWazeroWasi(t *testing.T) {
 	err = wasmxvm.InitiateWasi(vmCtx, rnh, nil)
 	require.NoError(t, err)
 
-	cfg := vm.ConfigWASI(wazero.NewModuleConfig(), []string{``}, []string{}, []string{})
+	vm.InstantiateWasi([]string{``}, []string{}, []string{}, map[string][]byte{})
 
-	_, err = r.InstantiateWithConfig(ctx, wasmbin, cfg)
+	err = vm.InstantiateWasm("", "", wasmbin)
 	require.NoError(t, err)
-
-	// _, err = mod.ExportedFunction("instantiate").Call(ctx)
-	// require.NoError(t, err)
-
-	// calldata := []byte(`{"store":["goodbye"]}`)
-	// vmCtx.Env.CurrentCall.CallData = calldata
-	// _, err = mod.ExportedFunction("main").Call(ctx)
-	// require.NoError(t, err)
-
-	// calldata = []byte(`{"load":[]}`)
-	// vmCtx.Env.CurrentCall.CallData = calldata
-	// _, err = mod.ExportedFunction("main").Call(ctx)
-	// require.NoError(t, err)
-	// require.True(t, bytes.Equal(vmCtx.FinishData, []byte("goodbye")))
 }

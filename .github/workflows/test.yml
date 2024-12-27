@@ -12,27 +12,43 @@ jobs:
   test:
     name: Run Go Tests
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/loredanacirstea*
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          # This option enables checking out private dependencies
-          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.23
 
-      - name: Set env variables
-        run: |
-          echo "GOPRIVATE=github.com/loredanacirstea*" >> $GITHUB_ENV
+      - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
 
-      - name: Run tests
-        run: |
-          go test -v ./wasmx/...
-          go test -v ./wasmx-wazero/...
-          go test -v ./mythos-wazero/...
-          go test -v -short ./tests/wasmx
+      #- name: Install WasmEdge
+      #  run: curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.13.4
 
+      #- name: Verify WasmEdge Installation
+      #  run: |
+      #    echo "WasmEdge directory: $HOME/.wasmedge"
+
+      - name: Run tests 1
+        run: |
+          go test -failfast=false -v ./wasmx/...
+          go test -failfast=false -v ./wasmx-wazero/...
+          go test -failfast=false -v ./mythos-wazero/...
+
+      - name: Run wasmx/tests with wazero
+        #env:
+        #  WASMEDGE_DIR: /home/runner/.wasmedge
+        #  DYLD_LIBRARY_PATH: /home/runner/.wasmedge/lib
+        #  LD_LIBRARY_PATH: /home/runner/.wasmedge/lib
+        #  LIBRARY_PATH: /home/runner/.wasmedge/lib
+        #  WASMEDGE_LIB_DIR: /home/runner/.wasmedge/lib
+        #  C_INCLUDE_PATH: /home/runner/.wasmedge/include
+        #  CPLUS_INCLUDE_PATH: /home/runner/.wasmedge/include
+        #  CGO_LDFLAGS: -Wl,-rpath,/home/runner/.wasmedge/lib
+        run: |
+          go test -failfast=false -timeout 2000s -v ./tests/wasmx -wasm-runtime=wazero

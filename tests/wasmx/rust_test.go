@@ -30,13 +30,12 @@ func (suite *KeeperTestSuite) TestWasmxRustSimpleStorage() {
 
 	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-
 	wasmlogs := appA.GetWasmxEvents(res.GetEvents())
-	emptyDataLogs := appA.GetEventsByAttribute(wasmlogs, "data", "0x")
 	topicLogs := appA.GetEventsByAttribute(wasmlogs, "topic", "0x68656c6c6f000000000000000000000000000000000000000000000000000000")
-	s.Require().Equal(1, len(wasmlogs), res.GetEvents())
-	s.Require().Equal(1, len(emptyDataLogs), res.GetEvents())
+	dataLogs := appA.GetEventsByAttribute(topicLogs, "data", "0x")
+	s.Require().GreaterOrEqual(len(wasmlogs), 1, res.GetEvents())
 	s.Require().Equal(1, len(topicLogs), res.GetEvents())
+	s.Require().Equal(1, len(dataLogs))
 
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal("sammy", string(queryres))

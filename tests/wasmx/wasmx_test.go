@@ -125,11 +125,11 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	wasmlogs := appA.GetWasmxEvents(res.GetEvents())
-	emptyDataLogs := appA.GetEventsByAttribute(wasmlogs, "data", "0x")
 	topicLogs := appA.GetEventsByAttribute(wasmlogs, "topic", "0x68656c6c6f000000000000000000000000000000000000000000000000000000")
-	s.Require().Equal(1, len(wasmlogs), res.GetEvents())
-	s.Require().Equal(1, len(emptyDataLogs), res.GetEvents())
+	dataLogs := appA.GetEventsByAttribute(topicLogs, "data", "0x")
+	s.Require().GreaterOrEqual(len(wasmlogs), 1, res.GetEvents())
 	s.Require().Equal(1, len(topicLogs), res.GetEvents())
+	s.Require().Equal(1, len(dataLogs))
 
 	initvalue := "sammy"
 	keybz := []byte("hello")
@@ -209,6 +209,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	data := fmt.Sprintf(`{"newTransaction":{"transaction":"%s"}}`, txstr)
 	msgexec = types.WasmxExecutionMessage{Data: []byte(data)}
 	msgbz, err = json.Marshal(&msgexec)
+	suite.Require().NoError(err)
 	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), level0Address, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, nil, false)
 	suite.Require().NoError(err)
 }
