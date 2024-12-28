@@ -133,12 +133,15 @@ var WASMX_CONS_VM_EXPORT = "wasmx_consensus_json_"
 var SYS_VM_EXPORT = "sys_env_"
 var CW_VM_EXPORT = "interface_version_"
 var WASI_VM_EXPORT = "wasi_"
+var MEMORY_EXPORT = "memory_"
 
 // simplest wasmx version 1 interface
 var WASMX_ENV_1 = "wasmx_env_1"
 
 // wasmx version 2 with env information
 var WASMX_ENV_2 = "wasmx_env_2"
+var WASMX_ENVi32_2 = "wasmx_env_i32_2"
+var WASMX_ENVi64_2 = "wasmx_env_i64_2"
 
 // only for core consensus
 var WASMX_CONSENSUS_JSON_1 = "wasmx_consensus_json_1"
@@ -165,6 +168,8 @@ var DEFAULT_SYS_DEP = EWASM_ENV_1
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_ENV_1:            true,
 	WASMX_ENV_2:            true,
+	WASMX_ENVi32_2:         true,
+	WASMX_ENVi64_2:         true,
 	EWASM_ENV_0:            true,
 	EWASM_ENV_1:            true,
 	CW_ENV_8:               true,
@@ -270,11 +275,15 @@ var METAREGISTRY_v001 = "metaregistry_json_0.0.1"
 // var ALLOC_DEFAULT = "alloc_default"
 var MEMORY_EXPORT_MALLOC = "malloc"
 var MEMORY_EXPORT_ALLOCATE = "allocate"
+var MEMORY_EXPORT_ALLOC = "alloc"
 var MEMORY_EXPORT_AS = "__new"
+
+var MEMORY_EXPORT_FREE = "free"
 
 var WASMX_MEMORY_DEFAULT = "memory_default_1"
 var WASMX_MEMORY_ASSEMBLYSCRIPT = "memory_assemblyscript_1"
 var WASMX_MEMORY_TAYLOR = "memory_taylor"
+var WASMX_MEMORY_RUSTi64 = "memory_rust_i64_1"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 

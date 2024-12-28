@@ -17,7 +17,7 @@ import (
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 
-	wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
+	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
 )
 
@@ -55,15 +55,20 @@ func (suite *KeeperTestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	if wasmRuntime == "wasmedge" {
-		suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
-		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
-		// panic("wasmedge not supported")
-	} else {
+	switch wasmRuntime {
+	case "wasmedge":
+		// suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
+		// suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
+		panic("wasmedge not activated")
+	case "wazero":
+		suite.WasmVmMeta = wazero.WazeroVmMeta{}
+		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+	default:
 		// default runtime
 		suite.WasmVmMeta = wazero.WazeroVmMeta{}
 		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
 	}
+
 	suite.SetupChains()
 	if benchmarkMode {
 		s.suiteStart = time.Now()

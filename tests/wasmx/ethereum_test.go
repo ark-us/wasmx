@@ -39,7 +39,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 	s.Require().NoError(err)
 
 	databz := append(evmcode, initvaluebz...)
-	res := appA.SendEthTx(priv, nil, databz, nil, uint64(1000000), big.NewInt(10000), nil)
+	res := appA.SendEthTx(priv, nil, databz, nil, ut.DEFAULT_GAS_LIMIT, big.NewInt(10000), nil)
 
 	contractAddressStr := appA.GetContractAddressFromEvents(res.GetEvents())
 	contractAddress, err := appA.AddressStringToAccAddressPrefixed(contractAddressStr)
@@ -52,7 +52,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 	initvalue = "0000000000000000000000000000000000000000000000000000000000000006"
 	databz = appA.Hex2bz(setHex + initvalue)
 	to := types.EvmAddressFromAcc(contractAddress.Bytes())
-	res = appA.SendEthTx(priv, &to, databz, nil, uint64(1000000), big.NewInt(10000), nil)
+	res = appA.SendEthTx(priv, &to, databz, nil, ut.DEFAULT_GAS_LIMIT, big.NewInt(10000), nil)
 
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))

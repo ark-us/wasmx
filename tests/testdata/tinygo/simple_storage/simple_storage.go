@@ -5,7 +5,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	wasmx "github.com/wasmx/wasmx-go"
+	wasmx "github.com/loredanacirstea/wasmx-tinygo"
 )
 
 //go:wasm-module simplestorage
@@ -53,7 +53,7 @@ func storageLoad() []byte {
 
 func wrapStore(address string, value string) {
 	calldata := fmt.Sprintf(`{"store":["%s"]}`, value)
-	success, _ := wasmx.Call(1000000, address, make([]byte, 32), []byte(calldata))
+	success, _ := wasmx.Call(50000000, address, make([]byte, 32), []byte(calldata))
 	if !success {
 		panic("call failed")
 	}
@@ -61,7 +61,7 @@ func wrapStore(address string, value string) {
 
 func wrapLoad(address string) []byte {
 	calldata := []byte(`{"load":[]}`)
-	success, data := wasmx.CallStatic(1000000, address, calldata)
+	success, data := wasmx.CallStatic(50000000, address, calldata)
 	if !success {
 		panic("call failed")
 	}

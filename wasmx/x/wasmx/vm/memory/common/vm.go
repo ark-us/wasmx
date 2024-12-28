@@ -81,14 +81,18 @@ type IVm interface {
 	GetFunctionList() []string
 	FindGlobal(name string) interface{}
 	ListRegisteredModule() []string
-	InitWasi(args []string, envs []string, preopens []string) error
+	InstantiateWasi(args []string, envs []string, preopens []string, fileMap map[string][]byte)
+	WasiArgs() []string
+	WasiEnvs() []string
+	WasiPreopens() []string
+	WasiFileMap() map[string][]byte
 }
 
 type RuntimeHandler interface {
 	GetVm() IVm
 	GetMemory() (IMemory, error)
 	ReadMemFromPtr(pointer interface{}) ([]byte, error)
-	AllocateWriteMem(data []byte) (int32, error)
+	AllocateWriteMem(data []byte) (interface{}, error)
 	ReadStringFromPtr(pointer interface{}) (string, error)
 	ReadJsString(arr []byte) string
 }

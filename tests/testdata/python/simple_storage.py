@@ -3,12 +3,13 @@ from wasmx import storage_store, storage_load
 def instantiate(initvalue: str):
     store(initvalue)
 
-def main(input):
-    if "store" in input:
+def main(input=None):
+    if input and "store" in input:
         return store(*input["store"])
-    if "load" in input:
+    if input and "load" in input:
         return load()
-    raise ValueError('Invalid function')
+    else:
+        raise ValueError('Invalid function')
 
 def store(a: str):
     value = a.encode()

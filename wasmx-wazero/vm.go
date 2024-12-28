@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 
 	sdkerrors "cosmossdk.io/errors"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
@@ -133,6 +131,12 @@ type WazeroVm struct {
 	cleanups    []func()
 	moduleNames []string
 	aot         bool
+	wasi        bool
+	cfg         wazero.ModuleConfig
+	args        []string
+	envs        []string
+	preopens    []string
+	fileMap     map[string][]byte
 }
 
 // TODO clean cache!
@@ -161,6 +165,16 @@ func NewWazeroVm(ctx sdk.Context, aot bool) memc.IVm {
 		r.Close(ctx)
 	})
 
+	return &WazeroVm{
+		ctx:      ctx,
+		cache:    cache,
+		r:        r,
+		cleanups: cleanups,
+		aot:      aot,
+	}
+}
+
+func NewWazeroVmRaw(ctx sdk.Context, cache wazero.CompilationCache, r wazero.Runtime, cleanups []func(), aot bool) *WazeroVm {
 	return &WazeroVm{
 		ctx:      ctx,
 		cache:    cache,
@@ -250,54 +264,56 @@ func (wm *WazeroVm) FindGlobal(name string) interface{} {
 	return ValueFromUint64(val, glob.Type())
 }
 
-func (wm *WazeroVm) InitWasi(args []string, envs []string, preopens []string) error {
-	if slices.Contains(wm.moduleNames, wasi_snapshot_preview1.ModuleName) {
-		return fmt.Errorf("WASI already initialized")
-	}
-	wasiConfig := wazero.NewModuleConfig()
+func (wm *WazeroVm) ConfigWASI(config wazero.ModuleConfig, args []string, envs []string, preopens []string) wazero.ModuleConfig {
 	// Add arguments
 	for _, arg := range args {
-		wasiConfig = wasiConfig.WithArgs(arg)
+		config = config.WithArgs(arg)
 	}
 
 	// Add environment variables
 	for _, env := range envs {
 		keyValue := splitEnv(env)
 		if keyValue != nil {
-			wasiConfig = wasiConfig.WithEnv(keyValue[0], keyValue[1])
+			config = config.WithEnv(keyValue[0], keyValue[1])
 		}
 	}
 
 	// Add preopened directories
 	for _, dir := range preopens {
-		wasiConfig = wasiConfig.WithFSConfig(wazero.NewFSConfig().WithDirMount(dir, "/"))
+		config = config.WithFSConfig(wazero.NewFSConfig().WithDirMount(dir, "/"))
 	}
+	return config
+}
 
-	// Instantiate the WASI module
-	_, err := wasi_snapshot_preview1.Instantiate(wm.ctx, wm.r)
-	if err != nil {
-		return err
-	}
-	wm.moduleNames = append(wm.moduleNames, wasi_snapshot_preview1.ModuleName)
+func (wm *WazeroVm) InstantiateWasi(args []string, envs []string, preopens []string, fileMap map[string][]byte) {
+	wm.args = args
+	wm.envs = envs
+	wm.preopens = preopens
+	wm.fileMap = fileMap
+}
 
-	// TODO WASI
-	// // InstantiateModule runs the "_start" function, WASI's "main".
-	// // * Set the program name (arg[0]) to "wasi"; arg[1] should be "/test.txt".
-	// if _, err = r.InstantiateWithConfig(ctx, catWasm, config.WithArgs("wasi", os.Args[1])); err != nil {
-	// 	// Note: Most compilers do not exit the module after running "_start",
-	// 	// unless there was an error. This allows you to call exported functions.
-	// 	if exitErr, ok := err.(*sys.ExitError); ok && exitErr.ExitCode() != 0 {
-	// 		fmt.Fprintf(os.Stderr, "exit_code: %d\n", exitErr.ExitCode())
-	// 	} else if !ok {
-	// 		log.Panicln(err)
-	// 	}
-	// }
-
-	return nil
+func (wm *WazeroVm) WasiArgs() []string {
+	return wm.args
+}
+func (wm *WazeroVm) WasiEnvs() []string {
+	return wm.envs
+}
+func (wm *WazeroVm) WasiPreopens() []string {
+	return wm.preopens
+}
+func (wm *WazeroVm) WasiFileMap() map[string][]byte {
+	return wm.fileMap
 }
 
 func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, wasmbuffer []byte) error {
 	var err error
+	cfg := wm.cfg
+	if cfg == nil {
+		cfg = wazero.NewModuleConfig()
+	}
+	// make sure wazero does not call any functions automatically
+	cfg = cfg.WithStartFunctions([]string{}...)
+
 	compilerSupported := wazero.CompilerSupported()
 	if compilerSupported && aotFilePath != "" {
 		content, err := os.Open(aotFilePath)
@@ -312,7 +328,7 @@ func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, was
 		if err != nil {
 			return sdkerrors.Wrapf(err, "module deserialization failed from buffer")
 		}
-		vm, err := wm.r.InstantiateModule(wm.ctx, compiledmod, wazero.NewModuleConfig())
+		vm, err := wm.r.InstantiateModule(wm.ctx, compiledmod, cfg)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "load wasm file failed from buffer")
 		}
@@ -324,7 +340,7 @@ func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, was
 				return sdkerrors.Wrapf(err, "load wasm file failed %s", wasmFilePath)
 			}
 		}
-		vm, err := wm.r.Instantiate(wm.ctx, wasmbuffer)
+		vm, err := wm.r.InstantiateWithConfig(wm.ctx, wasmbuffer, cfg)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "load wasm file failed from buffer")
 		}

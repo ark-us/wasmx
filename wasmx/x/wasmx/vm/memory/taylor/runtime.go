@@ -43,7 +43,7 @@ func (h RuntimeHandlerTay) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
 	}
 	return ReadMemFromPtr(mem, pointer)
 }
-func (h RuntimeHandlerTay) AllocateWriteMem(data []byte) (int32, error) {
+func (h RuntimeHandlerTay) AllocateWriteMem(data []byte) (interface{}, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return 0, err

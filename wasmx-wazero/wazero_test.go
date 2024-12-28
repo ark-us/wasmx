@@ -16,16 +16,20 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 
-	runtime "github.com/loredanacirstea/wasmx-wazero"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	wasmxvm "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 	utils "github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
+
+	runtime "github.com/loredanacirstea/wasmx-wazero"
 )
 
 var (
 	//go:embed testdata/simple_storage.wasm
 	wasmxSimpleStorage []byte
+
+	//go:embed testdata/tinygo_simple_storage.wasm
+	tinygoSimpleStorage []byte
 )
 
 const AS_PTR_LENGHT_OFFSET = int32(4)
@@ -443,4 +447,43 @@ func TestWazeroCompiledTendermintWithMetering(t *testing.T) {
 
 	_, err = r.CompileModuleWithMetering(ctx, wasmbin)
 	require.NoError(t, err, "CompileModule failed")
+}
+
+func TestWazeroWasi(t *testing.T) {
+	var err error
+	wasmbin := tinygoSimpleStorage
+
+	ctx := sdk.Context{}
+	ctx = ctx.WithContext(context.Background())
+
+	cache := wazero.NewCompilationCache()
+	require.NoError(t, err)
+	defer cache.Close(ctx)
+	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache)
+	r := wazero.NewRuntimeWithConfig(ctx, config)
+
+	defer r.Close(ctx)
+
+	vmCtx := &wasmxvm.Context{
+		Env: &types.Env{
+			CurrentCall: types.MessageInfo{
+				CallData: []byte{},
+			},
+		},
+		GasMeter: runtime.NewGasMeter(uint64(1000000000), uint64(0), nil),
+	}
+	ctx = ctx.WithValue("vmctx", vmCtx)
+	vmCtx.Ctx = ctx
+	vmCtx.ContractRouter = make(map[string]*wasmxvm.Context, 0)
+
+	vm := runtime.NewWazeroVmRaw(ctx, cache, r, nil, false)
+	rnh := wasmxvm.RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT](vm)
+
+	err = wasmxvm.InitiateWasi(vmCtx, rnh, nil)
+	require.NoError(t, err)
+
+	vm.InstantiateWasi([]string{``}, []string{}, []string{}, map[string][]byte{})
+
+	err = vm.InstantiateWasm("", "", wasmbin)
+	require.NoError(t, err)
 }

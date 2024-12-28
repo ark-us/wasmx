@@ -1,9 +1,9 @@
 module simple_storage
 
-go 1.19
+go 1.21
 
 require (
-    github.com/wasmx/wasmx-go v0.0.0
+    github.com/loredanacirstea/wasmx-tinygo v0.0.0
 )
 
 require (
@@ -12,4 +12,4 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 )
 
-replace github.com/wasmx/wasmx-go v0.0.0 => ../wasmx-go
+replace github.com/loredanacirstea/wasmx-tinygo v0.0.0 => ../wasmx-go

@@ -9,6 +9,7 @@ import (
 	memas "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/assemblyscript"
 	membase "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/base"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+	memrust "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/rust"
 	memtay "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/taylor"
 )
 
@@ -74,7 +75,7 @@ func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.Sys
 	}
 	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
 
-	wasmx, err := BuildWasmxEnv2(context, rnh)
+	wasmx, err := BuildWasmxEnvi32(context, rnh)
 	if err != nil {
 		return err
 	}
@@ -87,6 +88,51 @@ func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.Sys
 		return err
 	}
 	err = vm.RegisterModule(env)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitiateAssemblyScript(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	vm := rnh.GetVm()
+	env, err := BuildAssemblyScriptEnv(context, rnh)
+	if err != nil {
+		return err
+	}
+	err = vm.RegisterModule(env)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitiateWasmxEnvi64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	return InitiateWasmxEnv(context, rnh, dep, BuildWasmxEnvi64)
+}
+
+func InitiateWasmxEnvi32(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	return InitiateWasmxEnv(context, rnh, dep, BuildWasmxEnvi32)
+}
+
+func InitiateWasmxEnv(
+	context *Context,
+	rnh memc.RuntimeHandler,
+	dep *types.SystemDep,
+	buildWasmxEnv func(context *Context, rnh memc.RuntimeHandler) (interface{}, error),
+) error {
+	vm := rnh.GetVm()
+	keccakRnh, err := InitiateKeccak256(context.Ctx, vm.New)
+	if err != nil {
+		return err
+	}
+	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
+
+	wasmx, err := buildWasmxEnv(context, rnh)
+	if err != nil {
+		return err
+	}
+	err = vm.RegisterModule(wasmx)
 	if err != nil {
 		return err
 	}
@@ -115,18 +161,23 @@ func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.S
 }
 
 func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	vm := rnh.GetVm()
+	wasi, err := BuildWasiEnv(context, rnh)
+	if err != nil {
+		return sdkerr.Wrapf(err, "could not build wasi module")
+	}
+	err = vm.RegisterModule(wasi)
+	if err != nil {
+		return sdkerr.Wrapf(err, "could not register wasi module")
+	}
+	// TODO BuildWasiWasmxEnv should be a runtime handler for Rust, so we can enable WASI for any language/encoding
 	env1, err := BuildWasiWasmxEnv(context, rnh)
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not build wasmx wasi module")
 	}
-	vm := rnh.GetVm()
 	err = vm.RegisterModule(env1)
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not register env module")
-	}
-	err = vm.InitWasi([]string{``}, []string{}, []string{})
-	if err != nil {
-		return sdkerr.Wrapf(err, "could not register WASI module")
 	}
 	keccakRnh, err := InitiateKeccak256(context.Ctx, vm.New)
 	if err != nil {
@@ -175,6 +226,8 @@ func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
 	SystemDepHandler[types.WASMX_ENV_1] = InitiateWasmxEnv1
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
+	SystemDepHandler[types.WASMX_ENVi32_2] = InitiateWasmxEnvi32
+	SystemDepHandler[types.WASMX_ENVi64_2] = InitiateWasmxEnvi64
 	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasi
 	SystemDepHandler[types.WASI_UNSTABLE] = InitiateWasi
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
@@ -182,9 +235,14 @@ func init() {
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
 	SystemDepHandler[types.WASMX_CONSENSUS_JSON_1] = InstantiateWasmxConsensusJson
 
+	// language-specific imports
+	SystemDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = InitiateAssemblyScript
+
 	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASMX_ENVi32_2] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASMX_ENVi64_2] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasiWrap
 	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasiWrap
 	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultContract
@@ -200,9 +258,11 @@ func init() {
 	DependenciesMap[types.WASMX_VM_EXPORT] = true
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
+	DependenciesMap[types.MEMORY_EXPORT] = true
 
 	RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
 	RuntimeDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
+	RuntimeDepHandler[types.WASMX_MEMORY_RUSTi64] = memrust.NewRuntimeHandlerRust
 }
 
 func SetSystemDepHandler(

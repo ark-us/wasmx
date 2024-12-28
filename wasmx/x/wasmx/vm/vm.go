@@ -220,6 +220,11 @@ func GetVmLoggerExtended(
 	return newlogger
 }
 
+func LoggerExtended(ctx *Context) log.Logger {
+	newmodule := GetVmLoggerExtended(ctx.Logger, ctx.Env.Chain.ChainIdFull, ctx.Env.Contract.Address.String())
+	return newmodule(ctx.Ctx)
+}
+
 func ExecuteWasmInterpreted(
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,

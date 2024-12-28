@@ -194,8 +194,7 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 	if err != nil {
 		return 0, checksum, err
 	}
-	// TODO filter deps?
-	reportDeps = append(reportDeps, deps...)
+	reportDeps = uniqueStrings(append(reportDeps, deps...))
 
 	if len(checksum) == 0 {
 		return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")

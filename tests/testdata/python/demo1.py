@@ -35,8 +35,7 @@ def getCaller():
 
 def getCaller_():
     env = getEnv_()
-    caller = env["currentCall"]["sender"]
-    return wasmx.bech32_bytes_to_string(bytes(caller))
+    return env["currentCall"]["sender"]
 
 def getChainId():
     env = getEnv_()

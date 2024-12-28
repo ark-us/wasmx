@@ -47,7 +47,7 @@ func (h RuntimeHandlerAS) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
 	return ReadMemFromPtr(mem, pointer)
 }
 
-func (h RuntimeHandlerAS) AllocateWriteMem(data []byte) (int32, error) {
+func (h RuntimeHandlerAS) AllocateWriteMem(data []byte) (interface{}, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return 0, err
@@ -96,7 +96,7 @@ func AllocateMemVm(vm memc.IVm, mem memc.IMemory, size int32) (int32, error) {
 	return result[0], nil
 }
 
-func AllocateWriteMem(vm memc.IVm, mem memc.IMemory, data []byte) (int32, error) {
+func AllocateWriteMem(vm memc.IVm, mem memc.IMemory, data []byte) (interface{}, error) {
 	ptr, err := AllocateMemVm(vm, mem, int32(len(data)))
 	if err != nil {
 		return ptr, err

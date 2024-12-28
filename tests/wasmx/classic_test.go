@@ -369,7 +369,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000024fd6", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000026056", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
@@ -1064,7 +1064,8 @@ func (suite *KeeperTestSuite) TestContractTransfer() {
 	s.Require().NoError(err)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callwasm", nil)
@@ -1072,8 +1073,10 @@ func (suite *KeeperTestSuite) TestContractTransfer() {
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s", sendETH, value, receiver.Hex()[2:]))}, nil, nil)
+	cbalance := appA.App.BankKeeper.GetBalancePrefixed(appA.Context(), contractAddress, appA.Chain.Config.BaseDenom)
+	s.Require().Equal(initBalance, cbalance.Amount)
 
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fmt.Sprintf("%s%s%s", sendETH, value, receiver.Hex()[2:]))}, sdk.NewCoins(sdk.NewCoin(appA.Chain.Config.BaseDenom, sdkmath.NewInt(1))), nil)
 	realBalance := appA.App.BankKeeper.GetBalance(appA.Context(), types.AccAddressFromEvm(receiver), appA.Chain.Config.BaseDenom)
 	s.Require().Equal(realBalance.Amount, sdkmath.NewInt(1))
 }
