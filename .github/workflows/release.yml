@@ -146,3 +146,53 @@ jobs:
           fi
         done
 
+  release-public:
+    name: Upload Release Assets to Public Repo
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Clone Target Repository
+      env:
+        PUBLIC_RELEASE_REPO_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
+      run: |
+        git clone https://$PUBLIC_RELEASE_REPO_TOKEN@github.com/loredanacirstea/tempreleases.git target-repo
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Create Release in Target Repository
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: mythos ${{ github.ref_name }}
+        prerelease: false
+        draft: true
+        owner: loredanacirstea
+        repo: tempreleases
+
+    - name: Upload Release Assets to Public Repo
+      env:
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
+      run: |
+        pwd
+        ls
+        for dir in ./mythos-wz-*.tar.gz; do
+          echo "Processing directory: $dir"
+          file "$dir"
+          if [ -d "$dir" ]; then
+            inner_file="$dir/$(basename $dir)"
+            echo "Uploading inner file: $inner_file"
+            file "$inner_file"
+            gh release upload ${{ github.ref_name }} "$inner_file" --clobber
+          else
+            echo "Uploading file: $dir"
+            gh release upload ${{ github.ref_name }} "$dir" --clobber
+          fi
+        done
+
+
+
