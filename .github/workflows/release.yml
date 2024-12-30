@@ -107,16 +107,19 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
+        release_name: ${{ github.ref_name }}
         prerelease: false
         draft: true
 
+    - name: Install GitHub CLI
+      run: sudo apt-get install -y gh
+
     - name: Upload Release Assets
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: |
-          ./mythos-wz-*.tar.gz
-        tag: ${{ github.ref_name }}
-        overwrite: true
-        file_glob: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        for file in ./mythos-wz-*.tar.gz; do
+          echo "Uploading $file..."
+          gh release upload ${{ github.ref_name }} "$file" --clobber
+        done
+
