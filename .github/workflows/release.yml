@@ -77,18 +77,41 @@ jobs:
           ./mythos-wazero/build/mythos-wz-${{ env.GOOS }}-${{ env.GOARCH }}
 
   release:
-    name: Create GitHub Release
+    name: Release Binaries
     needs: build
     runs-on: ubuntu-latest
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v3
 
+    - name: Display structure of downloaded files
+      run: ls -R
+
+    - name: Compress artifacts
+      run: |
+        cd ./mythos-wazero/build
+        for artifact in mythos-wz-*; do
+          tar -czvf "${artifact}.tar.gz" "$artifact"
+        done
+        cd ../..
+
     - name: Create Release
+      id: create_release
       uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name }}
         release_name: Release ${{ github.ref_name }}
-        prerelease: true
-        files: |
-          ./mythos-wazero/build/*
+        prerelease: false
+        draft: true
+
+    - name: Upload Release Assets
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: |
+          ./mythos-wazero/build/mythos-wz-*.tar.gz
+        tag: ${{ github.ref_name }}
+        overwrite: true
+        file_glob: true
