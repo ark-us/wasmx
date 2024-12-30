@@ -54,8 +54,9 @@ jobs:
         echo "TAG_VERSION=$TAG_VERSION"
         cd mythos-wazero
         echo "cd mythos-wazero"
-        pwd && ls
+        pwd && ls -a
         make build
+        echo "ls mythos-wazero/build"
         ls ./mythos-wazero/build
 
     - name: Upload artifact
