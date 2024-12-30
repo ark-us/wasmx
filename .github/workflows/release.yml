@@ -173,6 +173,7 @@ jobs:
         draft: true
         owner: loredanacirstea
         repo: tempreleases
+        target_commitish: main
 
     - name: Upload Release Assets to Public Repo
       env:
