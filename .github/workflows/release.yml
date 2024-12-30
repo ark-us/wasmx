@@ -28,6 +28,8 @@ jobs:
         exclude:
           - os: windows-latest
             arch: arm64
+          - os: ubuntu-latest
+            arch: arm64
 
     steps:
     - name: Checkout repository
@@ -42,9 +44,15 @@ jobs:
 
     - name: Set up environment variables
       run: |
-        echo "GOOS=$(echo ${{ matrix.os }} | cut -d'-' -f1)" >> $GITHUB_ENV
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          echo "GOOS=linux" >> $GITHUB_ENV
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          echo "GOOS=darwin" >> $GITHUB_ENV
+        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          echo "GOOS=windows" >> $GITHUB_ENV
+        fi
         echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
-        echo "TAG_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV # Extract the tag version
+        echo "TAG_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
       shell: bash
 
     - name: Build binary
