@@ -9,9 +9,8 @@
 # The workflow will run only if a tag with a "v" prefix is pushed.
 on:
   push:
-    # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - 'v*'
 
 jobs:
   build:
@@ -60,21 +59,33 @@ jobs:
         echo "GOOS=$GOOS"
         echo "GOARCH=$GOARCH"
         echo "TAG_VERSION=$TAG_VERSION"
+
+        BINARY_PATH="mythos-wz-${{ env.TAG_VERSION }}-${{ env.GOOS }}-${{ env.GOARCH }}"
+        echo "BINARY_PATH=$BINARY_PATH" >> $GITHUB_ENV
+        echo "BINARY_PATH=$BINARY_PATH"
+        echo "BINARY_PATH=${{ env.BINARY_PATH }}"
+
         cd mythos-wazero
         echo "cd mythos-wazero"
         pwd && ls -a
-        make build
+        make build-path
         echo "ls mythos-wazero/build"
-        ls ./build
+        ls -R ./build
         cd .. && pwd
+
+    - name: Compress binary folder
+      run: |
+        cd mythos-wazero/build
+        echo "Compressing folder: ${{ env.BINARY_PATH }}"
+        tar -czvf "../${{ env.BINARY_PATH }}.tar.gz" "${{ env.BINARY_PATH }}"
+        cd ../..
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        # Include tag version in the file name
-        name: mythos-wz-${{ env.TAG_VERSION }}-${{ env.GOOS }}-${{ env.GOARCH }}
+        name: ${{ env.BINARY_PATH }}.tar.gz
         path: |
-          ./mythos-wazero/build/mythos-wz-${{ env.GOOS }}-${{ env.GOARCH }}
+          ./mythos-wazero/build/${{ env.BINARY_PATH }}.tar.gz
 
   release:
     name: Release Binaries
@@ -86,14 +97,6 @@ jobs:
 
     - name: Display structure of downloaded files
       run: ls -R
-
-    - name: Compress artifacts
-      run: |
-        cd ./mythos-wazero/build
-        for artifact in mythos-wz-*; do
-          tar -czvf "${artifact}.tar.gz" "$artifact"
-        done
-        cd ../..
 
     - name: Create Release
       id: create_release

@@ -82,6 +82,10 @@ all: install lint test
 build: go.sum
 	GOARCH=$(GOARCH) GOOS=$(GOOS) go build -mod=readonly $(BUILD_FLAGS) -o build/mythosd ./cmd/mythosd
 
+build-path: go.sum
+	mkdir -p build/$(BINARY_PATH)
+	GOARCH=$(GOARCH) GOOS=$(GOOS) go build -mod=readonly $(BUILD_FLAGS) -o build/$(BINARY_PATH)/mythosd ./cmd/mythosd
+
 install: go.sum
 	go install -mod=readonly $(BUILD_FLAGS) ./cmd/mythosd
 
