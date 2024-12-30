@@ -98,7 +98,9 @@ jobs:
       uses: actions/download-artifact@v3
 
     - name: Display structure of downloaded files
-      run: ls -R
+      run: |
+        pwd
+        ls -R
 
     - name: Create Release
       id: create_release
@@ -114,13 +116,13 @@ jobs:
     - name: Install GitHub CLI
       run: sudo apt-get install -y gh
 
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
     - name: Upload Release Assets
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        pwd
+        ls -a
+        ls /home/runner/work/wasmx/wasmx
         for file in ./mythos-wz-*.tar.gz; do
           echo "Uploading $file..."
           gh release upload ${{ github.ref_name }} "$file" --clobber
