@@ -65,7 +65,8 @@ jobs:
         pwd && ls -a
         make build
         echo "ls mythos-wazero/build"
-        ls ./mythos-wazero/build
+        ls ./build
+        cd .. && pwd
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
