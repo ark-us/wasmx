@@ -156,7 +156,7 @@ jobs:
       env:
         PUBLIC_RELEASE_REPO_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
       run: |
-        git clone https://$PUBLIC_RELEASE_REPO_TOKEN@github.com/loredanacirstea/tempreleases.git target-repo
+        git clone https://$PUBLIC_RELEASE_REPO_TOKEN@github.com/loredanacirstea/tempreleases.git tempreleases
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -181,6 +181,7 @@ jobs:
       run: |
         pwd
         ls
+        cd tempreleases
         for dir in ./mythos-wz-*.tar.gz; do
           echo "Processing directory: $dir"
           file "$dir"
