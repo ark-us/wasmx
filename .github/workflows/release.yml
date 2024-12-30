@@ -78,7 +78,8 @@ jobs:
       run: |
         cd mythos-wazero/build
         echo "Compressing folder: ${{ env.BINARY_PATH }}"
-        tar -czvf "../${{ env.BINARY_PATH }}.tar.gz" "${{ env.BINARY_PATH }}"
+        tar -czvf "${{ env.BINARY_PATH }}.tar.gz" "${{ env.BINARY_PATH }}"
+        ls -a
         cd ../..
 
     - name: Upload artifact
