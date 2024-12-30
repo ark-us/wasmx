@@ -54,16 +54,17 @@ jobs:
         echo "TAG_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
       shell: bash
 
+    - name: Set up binary path in environment
+      run: |
+        echo "BINARY_PATH=mythos-wz-${{ env.TAG_VERSION }}-${{ env.GOOS }}-${{ env.GOARCH }}" >> $GITHUB_ENV
+      shell: bash
+
     - name: Build binary
       run: |
         echo "GOOS=$GOOS"
         echo "GOARCH=$GOARCH"
         echo "TAG_VERSION=$TAG_VERSION"
-
-        BINARY_PATH="mythos-wz-${{ env.TAG_VERSION }}-${{ env.GOOS }}-${{ env.GOARCH }}"
-        echo "BINARY_PATH=$BINARY_PATH" >> $GITHUB_ENV
         echo "BINARY_PATH=$BINARY_PATH"
-        echo "BINARY_PATH=${{ env.BINARY_PATH }}"
 
         cd mythos-wazero
         echo "cd mythos-wazero"
