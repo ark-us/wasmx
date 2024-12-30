@@ -79,7 +79,11 @@ jobs:
         cd mythos-wazero/build
         echo "Compressing folder: ${{ env.BINARY_PATH }}"
         tar -czvf "${{ env.BINARY_PATH }}.tar.gz" "${{ env.BINARY_PATH }}"
+        pwd
         ls -a
+        ls -l mythos-wz-*.tar.gz
+        file mythos-wz-*.tar.gz
+        file ${{ env.BINARY_PATH }}.tar.gz
         cd ../..
 
     - name: Upload artifact
@@ -98,18 +102,15 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Display structure of downloaded files
-      run: |
-        mkdir build
-        cd build
-
     - name: Download all artifacts
       uses: actions/download-artifact@v3
 
     - name: Display structure of downloaded files
       run: |
         pwd
-        ls -R
+        ls
+        ls -l mythos-wz-*.tar.gz
+        file mythos-wz-*.tar.gz
 
     - name: Create Release
       id: create_release
@@ -130,8 +131,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         pwd
-        ls -a
-        ls /home/runner/work/wasmx/wasmx
+        ls
         for file in ./mythos-wz-*.tar.gz; do
           echo "Uploading $file..."
           gh release upload ${{ github.ref_name }} "$file" --clobber
