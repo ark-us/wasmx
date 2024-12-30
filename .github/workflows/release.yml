@@ -114,6 +114,9 @@ jobs:
     - name: Install GitHub CLI
       run: sudo apt-get install -y gh
 
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
     - name: Upload Release Assets
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
