@@ -132,7 +132,6 @@ jobs:
         pwd
         ls -a
         ls /home/runner/work/wasmx/wasmx
-        cd build
         for file in ./mythos-wz-*.tar.gz; do
           echo "Uploading $file..."
           gh release upload ${{ github.ref_name }} "$file" --clobber
