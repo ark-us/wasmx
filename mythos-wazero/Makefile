@@ -80,11 +80,7 @@ BUILD_FLAGS := -tags "$(build_tags_comma_sep)" -ldflags '$(ldflags)' -trimpath
 all: install lint test
 
 build: go.sum
-ifeq ($(OS),Windows_NT)
-	exit 1
-else
-	go build -mod=readonly $(BUILD_FLAGS) -o build/mythosd ./cmd/mythosd
-endif
+	GOARCH=$(GOARCH) GOOS=$(GOOS) go build -mod=readonly $(BUILD_FLAGS) -o build/mythosd ./cmd/mythosd
 
 install: go.sum
 	go install -mod=readonly $(BUILD_FLAGS) ./cmd/mythosd

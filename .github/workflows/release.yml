@@ -9,45 +9,76 @@
 # The workflow will run only if a tag with a "v" prefix is pushed.
 on:
   push:
+    # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Trigger only on tags that start with 'v'
-    types:
-      - created # Optional: Run only when a tag is created
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
-  might_release:
+  build:
+    name: Build Mythos-Wazero Binary for Multiple Platforms
+    runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/loredanacirstea*
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        arch: [amd64, arm64]
+        exclude:
+          - os: windows-latest
+            arch: arm64
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+
+    - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+
+    - name: Set up environment variables
+      run: |
+        echo "GOOS=$(echo ${{ matrix.os }} | cut -d'-' -f1)" >> $GITHUB_ENV
+        echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+        echo "TAG_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV # Extract the tag version
+      shell: bash
+
+    - name: Build binary
+      run: |
+        echo "GOOS=$GOOS"
+        echo "GOARCH=$GOARCH"
+        echo "TAG_VERSION=$TAG_VERSION"
+        cd mythos-wazero
+        echo "cd mythos-wazero"
+        pwd && ls
+        make build
+        ls ./mythos-wazero/build
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        # Include tag version in the file name
+        name: mythos-wz-${{ env.TAG_VERSION }}-${{ env.GOOS }}-${{ env.GOARCH }}
+        path: |
+          ./mythos-wazero/build/mythos-wz-${{ env.GOOS }}-${{ env.GOARCH }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
 
-      - name: Prepare Release Variables
-        id: vars
-        uses: ignite/cli/actions/release/vars@main
-
-      - name: Issue Release Assets
-        uses: ignite/cli/actions/cli@main
-        if: ${{ steps.vars.outputs.should_release == 'true' }}
-        with:
-          args: chain build --release --release.prefix ${{ steps.vars.outputs.tarball_prefix }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64
-
-      - name: Delete the "latest" Release
-        uses: dev-drprasad/delete-tag-and-release@v0.2.0
-        if: ${{ steps.vars.outputs.is_release_type_latest == 'true' }}
-        with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
-          delete_release: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish the Release
-        uses: softprops/action-gh-release@v1
-        if: ${{ steps.vars.outputs.should_release == 'true' }}
-        with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
-          files: release/*
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        prerelease: true
+        files: |
+          ./mythos-wazero/build/*

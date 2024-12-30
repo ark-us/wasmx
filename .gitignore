@@ -3,3 +3,6 @@ release/
 .DS_Store
 build/
 testnet/
+
+event.json
+.secrets
