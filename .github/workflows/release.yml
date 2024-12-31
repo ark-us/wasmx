@@ -10,44 +10,187 @@
 on:
   push:
     tags:
-      - 'v*' # Trigger only on tags that start with 'v'
-    types:
-      - created # Optional: Run only when a tag is created
+      - 'v*'
 
 jobs:
-  might_release:
+  build:
+    name: Build Mythos-Wazero Binary for Multiple Platforms
+    runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/loredanacirstea*
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        arch: [amd64, arm64]
+        exclude:
+          - os: windows-latest
+            arch: arm64
+          - os: ubuntu-latest
+            arch: arm64
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+
+    - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+
+    - name: Set up environment variables
+      run: |
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          echo "GOOS=linux" >> $GITHUB_ENV
+        elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+          echo "GOOS=darwin" >> $GITHUB_ENV
+        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          echo "GOOS=windows" >> $GITHUB_ENV
+        fi
+        echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+        echo "TAG_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Set up binary path in environment
+      run: |
+        echo "BINARY_PATH=mythos-wz-${{ env.TAG_VERSION }}-${{ env.GOOS }}-${{ env.GOARCH }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Build binary
+      run: |
+        echo "GOOS=$GOOS"
+        echo "GOARCH=$GOARCH"
+        echo "TAG_VERSION=$TAG_VERSION"
+        echo "BINARY_PATH=$BINARY_PATH"
+
+        cd mythos-wazero
+        echo "cd mythos-wazero"
+        pwd && ls -a
+        make build-path
+        echo "ls mythos-wazero/build"
+        ls -R ./build
+        cd .. && pwd
+
+    - name: Compress binary folder
+      run: |
+        cd mythos-wazero/build
+        echo "Compressing folder: ${{ env.BINARY_PATH }}"
+        tar -czvf "${{ env.BINARY_PATH }}.tar.gz" "${{ env.BINARY_PATH }}"
+        pwd
+        ls -a
+        ls -l mythos-wz-*.tar.gz
+        file mythos-wz-*.tar.gz
+        file ${{ env.BINARY_PATH }}.tar.gz
+        cd ../..
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.BINARY_PATH }}.tar.gz
+        path: ./mythos-wazero/build/${{ env.BINARY_PATH }}.tar.gz
+        compression-level: 0
+
+  release:
+    name: Release Binaries
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
-      - name: Prepare Release Variables
-        id: vars
-        uses: ignite/cli/actions/release/vars@main
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Issue Release Assets
-        uses: ignite/cli/actions/cli@main
-        if: ${{ steps.vars.outputs.should_release == 'true' }}
-        with:
-          args: chain build --release --release.prefix ${{ steps.vars.outputs.tarball_prefix }} -t linux:amd64 -t darwin:amd64 -t darwin:arm64
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
 
-      - name: Delete the "latest" Release
-        uses: dev-drprasad/delete-tag-and-release@v0.2.0
-        if: ${{ steps.vars.outputs.is_release_type_latest == 'true' }}
-        with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
-          delete_release: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Display structure of downloaded files
+      run: |
+        pwd
+        ls
+        ls -l mythos-wz-*.tar.gz
+        file mythos-wz-*.tar.gz
 
-      - name: Publish the Release
-        uses: softprops/action-gh-release@v1
-        if: ${{ steps.vars.outputs.should_release == 'true' }}
-        with:
-          tag_name: ${{ steps.vars.outputs.tag_name }}
-          files: release/*
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: ${{ github.ref_name }}
+        prerelease: false
+        draft: true
+
+    - name: Install GitHub CLI
+      run: sudo apt-get install -y gh
+
+    - name: Upload Release Assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        pwd
+        ls
+        for dir in ./mythos-wz-*.tar.gz; do
+          echo "Processing directory: $dir"
+          file "$dir"
+          if [ -d "$dir" ]; then
+            inner_file="$dir/$(basename $dir)"
+            echo "Uploading inner file: $inner_file"
+            file "$inner_file"
+            gh release upload ${{ github.ref_name }} "$inner_file" --clobber
+          else
+            echo "Uploading file: $dir"
+            gh release upload ${{ github.ref_name }} "$dir" --clobber
+          fi
+        done
+
+  release-public:
+    name: Upload Release Assets to Public Repo
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Clone Target Repository
+      env:
+        PUBLIC_RELEASE_REPO_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
+      run: |
+        git clone https://$PUBLIC_RELEASE_REPO_TOKEN@github.com/loredanacirstea/tempreleases.git tempreleases
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Create Release in Target Repository
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: mythos ${{ github.ref_name }}
+        prerelease: false
+        draft: true
+        owner: loredanacirstea
+        repo: tempreleases
+        commitish: main
+
+    - name: Upload Release Assets to Public Repo
+      env:
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_RELEASE_REPO_TOKEN }}
+      run: |
+        pwd
+        ls
+        cd tempreleases
+        for dir in ../mythos-wz-*.tar.gz; do
+          echo "Processing directory: $dir"
+          file "$dir"
+          inner_file="$dir/$(basename $dir)"
+          echo "Uploading inner file: $inner_file"
+          file "$inner_file"
+          gh release upload ${{ github.ref_name }} "$inner_file" --clobber
+
+        done
+
+
+
