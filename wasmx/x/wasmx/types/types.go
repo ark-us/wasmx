@@ -58,12 +58,14 @@ func (c CodeInfo) ValidateWithAddress(addressCodec address.Codec) error {
 }
 
 // NewCodeInfo fills a new CodeInfo struct
-func NewCodeInfo(codeHash []byte, creatorBech32 string, deps []string, metadata CodeMetadata) CodeInfo {
+func NewCodeInfo(codeHash []byte, creatorBech32 string, deps []string, metadata CodeMetadata, pinned bool, meteringOff bool) CodeInfo {
 	return CodeInfo{
-		CodeHash: codeHash,
-		Creator:  creatorBech32,
-		Deps:     deps,
-		Metadata: metadata,
+		CodeHash:    codeHash,
+		Creator:     creatorBech32,
+		Deps:        deps,
+		Metadata:    metadata,
+		Pinned:      pinned,
+		MeteringOff: meteringOff,
 	}
 }
 

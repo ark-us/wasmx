@@ -52,10 +52,10 @@ func (k *Keeper) ActivateSystemContract(
 
 	if contract.Native {
 		codeID = k.autoIncrementID(ctx)
-		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata)
+		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata, contract.Pinned, contract.MeteringOff)
 		k.storeCodeInfo(ctx, codeID, codeInfo)
 	} else {
-		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata)
+		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata, contract.Pinned, contract.MeteringOff)
 		if err != nil {
 			return sdkerr.Wrap(err, "store system contract: "+contract.Label)
 		}

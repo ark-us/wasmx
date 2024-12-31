@@ -21,8 +21,8 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-func (k *Keeper) Create(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmByteCode []byte, deps []string, metadata types.CodeMetadata) (uint64, []byte, error) {
-	return k.create(ctx, &creator, wasmByteCode, deps, metadata)
+func (k *Keeper) Create(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmByteCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool) (uint64, []byte, error) {
+	return k.create(ctx, &creator, wasmByteCode, deps, metadata, pinned, meteringOff)
 }
 
 func (k *Keeper) Deploy(
@@ -167,7 +167,7 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 	return cdep, nil
 }
 
-func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata) (codeID uint64, checksum []byte, err error) {
+func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerr.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
 	}
@@ -207,7 +207,7 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 
 	codeID = k.autoIncrementID(ctx)
 	k.Logger(ctx).Debug("storing new contract", "deps", reportDeps, "code_id", codeID, "checksum", hex.EncodeToString(checksum))
-	codeInfo := types.NewCodeInfo(checksum, creator.String(), reportDeps, metadata)
+	codeInfo := types.NewCodeInfo(checksum, creator.String(), reportDeps, metadata, pinned, meteringOff)
 	if types.HasInterpreterDep(deps) && !types.HasUtf8Dep(deps) {
 		// TODO only store one
 		codeInfo.InterpretedBytecodeDeployment = wasmCode
@@ -291,7 +291,7 @@ func (k *Keeper) CreateInterpreted(
 	checksum = k.wasmvm.checksum(wasmCode)
 	codeID = k.autoIncrementID(ctx)
 	k.Logger(ctx).Debug("storing new contract", "deps", deps, "code_id", codeID, "checksum", checksum)
-	codeInfo := types.NewCodeInfo(checksum, creator.String(), deps, metadata)
+	codeInfo := types.NewCodeInfo(checksum, creator.String(), deps, metadata, false, false)
 	codeInfo.InterpretedBytecodeDeployment = wasmCode
 
 	addressParent := provenance
@@ -328,7 +328,7 @@ func (k *Keeper) CreateInterpreted(
 
 	evt2 := sdk.NewEvent(
 		types.EventTypeDeploy,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddrCreated, contractAddress.String()),
 	)
 	ctx.EventManager().EmitEvent(evt2)
 
@@ -493,7 +493,7 @@ func (k *Keeper) instantiateInternal(
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeInstantiate,
-		sdk.NewAttribute(types.AttributeKeyContractAddr, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyContractAddrCreated, contractAddress.String()),
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)),
 	))
 

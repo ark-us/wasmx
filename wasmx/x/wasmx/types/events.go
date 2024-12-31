@@ -20,11 +20,12 @@ const (
 const (
 	AttributeReservedPrefix = "_"
 
-	AttributeKeyContractAddr       = "contract_address"
-	AttributeKeyCodeID             = "code_id"
-	AttributeKeyChecksum           = "code_checksum"
-	AttributeKeyResultDataHex      = "result"
-	AttributeKeyRequiredCapability = "required_capability"
+	AttributeKeyContractAddr        = "contract_address"
+	AttributeKeyContractAddrCreated = "contract_address_created"
+	AttributeKeyCodeID              = "code_id"
+	AttributeKeyChecksum            = "code_checksum"
+	AttributeKeyResultDataHex       = "result"
+	AttributeKeyRequiredCapability  = "required_capability"
 
 	AttributeKeyDependency = "dependency"
 

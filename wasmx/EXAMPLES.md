@@ -1,5 +1,26 @@
 # Examples
 
+## base
+
+```bash
+mythosd tx wasmx store ./tests/testdata/wasmx/simple_storage.wasm --chain-id=mythos_7000-14 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000amyt --gas=10000000 --node tcp://localhost:26657 --yes
+
+# mythosd query tx <hash>
+# search code_id
+
+mythosd tx wasmx instantiate 57 '{"crosschain_contract":"metaregistry"}' --label "simple_storage" --chain-id=mythos_7000-14 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000amyt --gas=10000000 --node tcp://localhost:26657 --yes
+
+# mythosd query tx <hash>
+# search contract_address
+
+mythosd tx wasmx execute mythos16sffa9lj7q9py99mqshjv03ycfs96yljfc9nwm '{"set":{"key":"hello","value":"sammy"}}' --chain-id=mythos_7000-14 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000amyt --gas=10000000 --node tcp://localhost:26657 --yes
+
+mythosd query wasmx call mythos16sffa9lj7q9py99mqshjv03ycfs96yljfc9nwm '{"get":{"key":"hello"}}' --from node0 --keyring-backend test --chain-id mythos_7000-14 --home=./testnet/node0/mythosd --node tcp://localhost:26657
+
+mythosd query wasmx call mythos16sffa9lj7q9py99mqshjv03ycfs96yljfc9nwm '{"get":{"key":"hello"}}' --from node0 --keyring-backend test --chain-id mythos_7000-14 --home=./testnet/node0/mythosd --node tcp://localhost:26659
+
+```
+
 ## levels subchains and cross-chain transactions
 
 ### decentralized subchains
@@ -23,9 +44,9 @@ mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-t
 
 mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl2.json --chain-id="level0_1000-1" --from node1 --keyring-backend test --home ./testnet/node1/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace --node tcp://localhost:26660
 
-mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl3.json --chain-id="level0_1000-1" --from node2 --keyring-backend test --home ./testnet/node2/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl3.json --chain-id="level0_1000-1" --from node2 --keyring-backend test --home ./testnet/node2/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace --node tcp://localhost:26662
 
-mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl4.json --chain-id="level0_1000-1" --from node3 --keyring-backend test --home ./testnet/node3/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace
+mythosd tx multichain register-subchain-gentx /Users/user/dev/blockchain/wasmx-tests/validator_lvl4.json --chain-id="level0_1000-1" --from node3 --keyring-backend test --home ./testnet/node3/mythosd --fees 200000000000alvl --gas 90000000 --yes --log_level trace --trace --node tcp://localhost:26664
 
 ```
 
@@ -187,7 +208,7 @@ mythosd testnet add-node 1 "mythos1p2n7jy4zzve7zca5za3c35tp4vl0255ctra7vg@/ip4/1
 
 mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 
-mythosd tx cosmosmod bank send node0 mythos1n4wmakssekdwqr5kkz8xrsl0jlu3t7vmq2vttf 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 900000 --chain-id=mythos_7000-14 --yes
+mythosd tx cosmosmod bank send node0 mythos1n4wmakssekdwqr5kkz8xrsl0jlu3t7vmq2vttf 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
 
 mythosd tendermint unsafe-reset-all --home=./testnet/node1/mythosd
 

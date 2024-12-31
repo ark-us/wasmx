@@ -85,7 +85,8 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 		return nil, sdkerr.Wrap(err, "sender")
 	}
 
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata)
+	// default is unpinned and metering on
+	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata, false, false)
 	if err != nil {
 		return nil, err
 	}

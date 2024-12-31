@@ -900,7 +900,12 @@ func startStateSyncProvider(
 	privateKey []byte,
 ) {
 	peers := networktypes.GetPeersFromConfigIps(chainId, cmsrvconfig.Network.Ips)
-	port := strings.Split(peers[0], "/")[4]
+	index, err := networktypes.GetCurrentNodeIdFromConfig(chainId, cmsrvconfig.Network.Id)
+	if err != nil {
+		csvrCtx.Logger.Error("could not get state sync port", "id", cmsrvconfig.Network.Id, "chain_id", chainId, "error", err.Error())
+		index = 0
+	}
+	port := strings.Split(peers[index], "/")[4]
 	go func() {
 		err := vmp2p.InitializeStateSyncProvider(goContextParent, goRoutineGroup, csvrCtx.Logger, ctndcfg, chainId, chainCfg, app, rpcClient, mcfg.GetStateSyncProtocolId(chainId), privateKey, port)
 		if err != nil {
