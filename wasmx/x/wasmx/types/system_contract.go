@@ -519,7 +519,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("ConsensusPrecompiles: cannot marshal tendermintInitMsg message")
 	}
 
-	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"2000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":15000},{"key":"timeoutPrevote","value":15000},{"key":"timeoutPrecommit","value":20000}],"initialState":"uninitialized"}}`)})
+	tendermintP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":"2000"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"60000000"},{"key":"timeoutPropose","value":15000},{"key":"timeoutPrevote","value":15000},{"key":"timeoutPrecommit","value":20000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal tendermintInitMsg message")
 	}
@@ -534,7 +534,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("ConsensusPrecompiles: cannot marshal timeInitMsg message")
 	}
 
-	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":3000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000}],"initialState":"uninitialized"}}`)})
+	level0InitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":3000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"60000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal level0InitMsg message")
 	}
@@ -554,7 +554,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("ConsensusPrecompiles: cannot marshal metaregistryInitMsg message")
 	}
 
-	level0OnDemandInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":2000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000},{"key":"batchTimeout","value":1000}],"initialState":"uninitialized"}}`)})
+	level0OnDemandInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"blockTimeout","value":"roundTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"roundTimeout","value":2000},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"60000000"},{"key":"timeoutPropose","value":20000},{"key":"timeoutPrecommit","value":20000},{"key":"batchTimeout","value":1000}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal level0OnDemandInitMsg message")
 	}

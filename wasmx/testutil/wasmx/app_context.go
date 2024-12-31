@@ -888,7 +888,7 @@ func (s *AppContext) GetContractAddressFromLog(logstr string) string {
 	attrs := s.GetFromLog(logstr, types.EventTypeInstantiate)
 	s.S.Require().NotNil(attrs)
 	for _, attr := range *attrs {
-		if attr.Key == "contract_address" {
+		if attr.Key == types.AttributeKeyContractAddrCreated {
 			return attr.Value
 		}
 	}
@@ -982,7 +982,7 @@ func (s *AppContext) GetContractAddressFromEvents(events []abci.Event) string {
 	evs := s.GetSdkEventsByType(events, types.EventTypeInstantiate)
 	s.S.Require().Equal(1, len(evs), "multiple instantiate events")
 	for _, attr := range evs[0].Attributes {
-		if attr.Key == "contract_address" {
+		if attr.Key == types.AttributeKeyContractAddrCreated {
 			return attr.Value
 		}
 	}
