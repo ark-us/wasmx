@@ -29,12 +29,13 @@ import (
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	menc "github.com/loredanacirstea/wasmx/encoding"
+	multichain "github.com/loredanacirstea/wasmx/multichain"
 	ibctesting "github.com/loredanacirstea/wasmx/testutil/ibc"
 	wasmxtesting "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 
 	// networkserver "github.com/loredanacirstea/wasmx/x/network/server"
-	testdata "github.com/loredanacirstea/wasmx/x/network/keeper/testdata/wasmx"
+	testdata "github.com/loredanacirstea/mythos-tests/network/testdata/wasmx"
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	precompiles "github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
@@ -144,7 +145,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 
 	genesisAccs := []cosmosmodtypes.GenesisAccount{}
 	balances := []banktypes.Balance{}
-	_, genesisState, err := ibctesting.BuildGenesisData(suite.App().WasmxKeeper.WasmRuntime, &tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances)
+	_, genesisState, err := ibctesting.BuildGenesisData(suite.App().WasmxKeeper.WasmRuntime, &tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances, suite.CompiledCacheDir)
 	s.Require().NoError(err)
 
 	genesisStateWasmx := map[string][]byte{}
@@ -1120,9 +1121,11 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	err = json.Unmarshal(chaincfgbz, &subchainConfig)
 	suite.Require().NoError(err)
 
-	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
-	suite.Require().NoError(err)
-	subchainapp := multichainapp.NewApp(subChainId, &subchainConfig)
+	// create a temporary app, to sign the transaction
+	// must be in a different directory than when the subchain is instantiated later
+	_, appCreator := multichain.CreateMockAppCreator(suite.WasmVmMeta, app.NewAppCreator, app.DefaultNodeHome+"temp")
+	iapp := appCreator(subChainId, &subchainConfig)
+	subchainapp := iapp.(*app.App)
 	subtxconfig := subchainapp.TxConfig()
 
 	sigV2 := signing.SignatureV2{

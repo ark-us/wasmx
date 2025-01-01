@@ -502,7 +502,7 @@ func HookPrecompiles() SystemContracts {
 	}
 }
 
-func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentLevel int32, initialPortValues string) SystemContracts {
+func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentLevel int32, initialPortValues string, erc20CodeId int32, derc20CodeId int32) SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
@@ -539,7 +539,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("ConsensusPrecompiles: cannot marshal level0InitMsg message")
 	}
 
-	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"current_level","value":0},{"key":"min_validators_count","value":%d},{"key":"enable_eid_check","value":%t},{"key":"erc20CodeId","value":28},{"key":"derc20CodeId","value":29},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`, minValidatorCount, enableEIDCheck))})
+	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":5000},{"key":"newchainTimeout","value":20000},{"key":"current_level","value":0},{"key":"min_validators_count","value":%d},{"key":"enable_eid_check","value":%t},{"key":"erc20CodeId","value":%d},{"key":"derc20CodeId","value":%d},{"key":"level_initial_balance","value":10000000000000000000}],"initialState":"uninitialized"}}`, minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId))})
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal lobbyInitMsg message")
 	}
@@ -745,8 +745,8 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 	}
 }
 
-func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool) SystemContracts {
-	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%t,"erc20CodeId":28,"derc20CodeId":29,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck))})
+func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool, erc20CodeId int32, derc20CodeId int32) SystemContracts {
+	mutichainInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"params":{"min_validators_count":%d,"enable_eid_check":%t,"erc20CodeId":%d,"derc20CodeId":%d,"level_initial_balance":"10000000000000000000"}}`, minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId))})
 	if err != nil {
 		panic("MultiChainPrecompiles: cannot marshal mutichainInitMsg message")
 	}
@@ -795,12 +795,6 @@ func ChatPrecompiles() SystemContracts {
 }
 
 func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
-	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues)
-	for i, val := range consensusPrecompiles {
-		if val.Label == CONSENSUS_TENDERMINTP2P {
-			consensusPrecompiles[i].Role = ROLE_CONSENSUS
-		}
-	}
 
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
@@ -809,8 +803,31 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, HookPrecompiles()...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
+
+	erc20CodeId := int32(0)
+	derc20CodeId := int32(0)
+	for i, p := range precompiles {
+		if p.Label == ERC20_v001 {
+			erc20CodeId = int32(i + 1)
+		}
+	}
+	for i, p := range precompiles {
+		if p.Label == DERC20_v001 {
+			derc20CodeId = int32(i + 1)
+		}
+	}
+	if erc20CodeId == int32(0) || derc20CodeId == int32(0) {
+		panic(fmt.Sprintf("erc20 or derc20 contracts not found: erc20CodeId %d, derc20CodeId %d", erc20CodeId, derc20CodeId))
+	}
+
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
+	for i, val := range consensusPrecompiles {
+		if val.Label == CONSENSUS_TENDERMINTP2P {
+			consensusPrecompiles[i].Role = ROLE_CONSENSUS
+		}
+	}
 	precompiles = append(precompiles, consensusPrecompiles...)
-	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck)...)
+	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec)
@@ -878,13 +895,6 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 			Deps:        []string{},
 		},
 	}
-	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues)
-	for i, val := range consensusPrecompiles {
-		if val.Label == LEVEL0_ONDEMAND_v001 {
-			consensusPrecompiles[i].Role = ROLE_CONSENSUS
-		}
-	}
-	// initialize roles
 
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
@@ -893,8 +903,31 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, hooksPrecompiles...)
 	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
+
+	erc20CodeId := int32(0)
+	derc20CodeId := int32(0)
+	for i, p := range precompiles {
+		if p.Label == ERC20_v001 {
+			erc20CodeId = int32(i + 1)
+		}
+	}
+	for i, p := range precompiles {
+		if p.Label == DERC20_v001 {
+			derc20CodeId = int32(i + 1)
+		}
+	}
+	if erc20CodeId == int32(0) || derc20CodeId == int32(0) {
+		panic(fmt.Sprintf("erc20 or derc20 contracts not found: erc20CodeId %d, derc20CodeId %d", erc20CodeId, derc20CodeId))
+	}
+
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
+	for i, val := range consensusPrecompiles {
+		if val.Label == LEVEL0_ONDEMAND_v001 {
+			consensusPrecompiles[i].Role = ROLE_CONSENSUS
+		}
+	}
 	precompiles = append(precompiles, consensusPrecompiles...)
-	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck)...)
+	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 
 	precompiles, err = FillRoles(precompiles, accBech32Codec)

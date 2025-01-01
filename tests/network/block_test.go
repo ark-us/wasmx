@@ -14,7 +14,7 @@ import (
 
 	mcfg "github.com/loredanacirstea/wasmx/config"
 
-	testdata "github.com/loredanacirstea/wasmx/x/network/keeper/testdata/wasmx"
+	testdata "github.com/loredanacirstea/mythos-tests/network/testdata/wasmx"
 	networkserver "github.com/loredanacirstea/wasmx/x/network/server"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )

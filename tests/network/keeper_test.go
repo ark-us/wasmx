@@ -1,6 +1,9 @@
 package keeper_test
 
 import (
+	"flag"
+	"os"
+	"path"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,7 +14,26 @@ import (
 	//nolint
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
+
+	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
+	wazero "github.com/loredanacirstea/wasmx-wazero"
+
+	ut "github.com/loredanacirstea/mythos-tests/utils"
 )
+
+var (
+	wasmRuntime string
+)
+
+// TestMain is the main entry point for the tests.
+func TestMain(m *testing.M) {
+	flag.StringVar(&wasmRuntime, "wasm-runtime", "default", "Set the wasm runtime (e.g. wasmedge, wazero)")
+
+	// Parse the flags. Only flags after `--` in `go test` command line will be passed here.
+	flag.Parse()
+
+	os.Exit(m.Run())
+}
 
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
@@ -19,6 +41,31 @@ type KeeperTestSuite struct {
 }
 
 var s *KeeperTestSuite
+
+func (suite *KeeperTestSuite) SetupSuite() {
+	suite.MaxBlockGas = 100_000_000_000
+	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
+	mydir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	switch wasmRuntime {
+	case "wasmedge":
+		// suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
+		// suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
+		panic("wasmedge not activated")
+	case "wazero":
+		suite.WasmVmMeta = wazero.WazeroVmMeta{}
+		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+	default:
+		// default runtime
+		suite.WasmVmMeta = wazero.WazeroVmMeta{}
+		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+	}
+
+	suite.SetupChains()
+}
 
 // TestKeeperTestSuite runs all the tests within this package.
 func TestKeeperTestSuite(t *testing.T) {
