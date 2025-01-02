@@ -15,7 +15,6 @@ import (
 	"github.com/cometbft/cometbft/crypto/tmhash"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
-	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
@@ -73,7 +72,10 @@ func getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 		return nil, err
 	}
 	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	codeInfo := ctx.CosmosHandler.GetCodeInfo(address.Bytes())
+	_, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address.Bytes())
+	if err != nil {
+		return nil, err
+	}
 	code := types.EnvContractInfo{
 		Address:  address,
 		CodeHash: codeInfo.CodeHash,
@@ -85,6 +87,53 @@ func getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 		return nil, err
 	}
 	ptr, err := rnh.AllocateWriteMem(codebz)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
+// address -> codeInfo
+func getCodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	codeId := uint64(params[0].(int64))
+	codeInfo := ctx.CosmosHandler.GetCodeInfo(codeId)
+	var err error
+	bz := []byte{}
+	if codeInfo != nil {
+		bz, err = ctx.CosmosHandler.Codec().MarshalJSON(codeInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ptr, err := rnh.AllocateWriteMem(bz)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
+// address -> contractInfo
+func getContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	addr, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
+	contractInfo := ctx.CosmosHandler.GetContractInfo(address.Bytes())
+	bz := []byte{}
+	if contractInfo != nil {
+		bz, err = ctx.CosmosHandler.Codec().MarshalJSON(contractInfo)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ptr, err := rnh.AllocateWriteMem(bz)
 	if err != nil {
 		return nil, err
 	}
@@ -131,55 +180,6 @@ func keccak256Util(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
-}
-
-// TODO move this to a restricted host
-// call request -> call response
-func externalCall(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var req vmtypes.CallRequest
-	err = json.Unmarshal(requestbz, &req)
-	if err != nil {
-		ctx.Ctx.Logger().Debug("unmarshalling CallRequest failed", "error", err)
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	var success int32
-	var returnData []byte
-
-	to := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.To)
-	from := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.From)
-	commonReq := req.ToCommon(from, to)
-
-	// Send funds
-	if req.Value.BitLen() > 0 {
-		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
-	}
-	if err != nil {
-		success = int32(2)
-	} else {
-		success, returnData = WasmxCall(ctx, commonReq)
-	}
-
-	response := vmtypes.CallResponse{
-		Success: uint8(success),
-		Data:    returnData,
-	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
 	returns[0] = ptr
 	return returns, nil
 }
@@ -616,336 +616,6 @@ func wasmxCreate2Account(_context interface{}, rnh memc.RuntimeHandler, params [
 	return returns, nil
 }
 
-type GrpcRequest struct {
-	IpAddress string `json:"ip_address"`
-	Contract  []byte `json:"contract"`
-	Data      []byte `json:"data"` // should be []byte (base64 encoded)
-}
-
-type GrpcResponse struct {
-	Data  []byte `json:"data"`
-	Error string `json:"error"`
-}
-
-func wasmxGrpcRequest(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	databz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var data GrpcRequest
-	err = json.Unmarshal(databz, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	contractAddress := sdk.AccAddress(vmtypes.CleanupAddress(data.Contract))
-	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	msg := &networktypes.MsgGrpcSendRequest{
-		IpAddress: data.IpAddress,
-		Contract:  contractAddressStr,
-		Data:      []byte(data.Data),
-		Sender:    ctx.Env.Contract.Address.String(),
-	}
-	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
-	errmsg := ""
-	if err != nil {
-		errmsg = err.Error()
-	} else {
-		ctx.Ctx.EventManager().EmitEvents(evs)
-	}
-	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
-	if res != nil {
-		err = rres.Unmarshal(res)
-		if err != nil {
-			return nil, err
-		}
-	}
-	resp := GrpcResponse{
-		Data:  rres.Data,
-		Error: errmsg,
-	}
-	respbz, err := json.Marshal(resp)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
-}
-
-type StartTimeoutRequest struct {
-	Id       string `json:"id"`
-	Contract string `json:"contract"`
-	Delay    int64  `json:"delay"`
-	Args     []byte `json:"args"`
-}
-
-type CancelTimeoutRequest struct {
-	Id string `json:"id"`
-}
-
-type StartBackgroundProcessRequest struct {
-	Contract string `json:"contract"`
-	Args     []byte `json:"args"`
-}
-
-type StartBackgroundProcessResponse struct {
-	Error string `json:"error"`
-	Data  []byte `json:"data"`
-}
-
-type WriteToBackgroundProcessRequest struct {
-	Contract string `json:"contract"`
-	Data     []byte `json:"data"`
-	PtrFunc  string `json:"ptrFunc"`
-}
-
-type WriteToBackgroundProcessResponse struct {
-	Error string `json:"error"`
-}
-
-type ReadFromBackgroundProcessRequest struct {
-	Contract string `json:"contract"`
-	PtrFunc  string `json:"ptrFunc"`
-	LenFunc  string `json:"lenFunc"`
-}
-
-type ReadFromBackgroundProcessResponse struct {
-	Error string `json:"error"`
-	Data  []byte `json:"data"`
-}
-
-// TODO move this to a restricted role
-// startTimeout(req: ArrayBuffer): i32
-func wasmxStartTimeout(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 0)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var req StartTimeoutRequest
-	err = json.Unmarshal(reqbz, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	msgtosend := &networktypes.MsgStartTimeoutRequest{
-		Id:       req.Id,
-		Sender:   ctx.Env.Contract.Address.String(),
-		Contract: req.Contract,
-		Delay:    req.Delay,
-		Args:     req.Args,
-	}
-	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
-	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error())
-		return nil, err
-	}
-	ctx.Ctx.EventManager().EmitEvents(evs)
-	var resp networktypes.MsgStartTimeoutResponse
-	err = resp.Unmarshal(res)
-	if err != nil {
-		return nil, err
-	}
-	return returns, nil
-}
-
-// TODO move this to a restricted role
-func wasmxCancelTimeout(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 0)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var req CancelTimeoutRequest
-	err = json.Unmarshal(reqbz, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	msgtosend := &networktypes.MsgCancelTimeoutRequest{
-		Id:     req.Id,
-		Sender: ctx.Env.Contract.Address.String(),
-	}
-	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
-	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error())
-		return nil, err
-	}
-	ctx.Ctx.EventManager().EmitEvents(evs)
-	return returns, nil
-}
-
-// startBackgroundProcess(ArrayBuffer): ArrayBuffer
-func wasmxStartBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 0)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var req StartBackgroundProcessRequest
-	err = json.Unmarshal(reqbz, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	msgtosend := &networktypes.MsgStartBackgroundProcessRequest{
-		Sender:   ctx.Env.Contract.Address.String(), // TODO wasmx?
-		Contract: req.Contract,
-		Args:     req.Args,
-	}
-	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
-	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error())
-		return nil, err
-	}
-	ctx.Ctx.EventManager().EmitEvents(evs)
-	var resp networktypes.MsgStartBackgroundProcessResponse
-	err = resp.Unmarshal(res)
-	if err != nil {
-		return nil, err
-	}
-	return returns, nil
-}
-
-// writeToBackgroundProcess(ArrayBuffer): ArrayBuffer
-func wasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var req WriteToBackgroundProcessRequest
-	err = json.Unmarshal(reqbz, &req)
-	if err != nil {
-		return nil, err
-	}
-	resp := WriteToBackgroundProcessResponse{
-		Error: "",
-	}
-
-	contractAddress, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.Contract)
-	if err != nil {
-		return nil, err
-	}
-
-	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
-	if err != nil {
-		resp.Error = err.Error()
-		ptr, err := prepareResponse(ctx, rnh, &resp)
-		if err != nil {
-			return nil, err
-		}
-		returns[0] = ptr
-		return returns, nil
-	}
-	proc, ok := procc.Processes[contractAddress.String()]
-	if !ok {
-		resp.Error = "process not existent"
-		ptr, err := prepareResponse(ctx, rnh, &resp)
-		if err != nil {
-			return nil, err
-		}
-		returns[0] = ptr
-		return returns, nil
-	}
-
-	vm := proc.RuntimeHandler.GetVm()
-	ptrGlobal := vm.FindGlobal(req.PtrFunc)
-	activeMemory, err := proc.RuntimeHandler.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	err = activeMemory.WriteRaw(ptrGlobal, req.Data)
-	if err != nil {
-		resp.Error = err.Error()
-	}
-
-	ptr, err := prepareResponse(ctx, rnh, &resp)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
-}
-
-// readFromBackgroundProcess(ArrayBuffer): ArrayBuffer
-func wasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	var req ReadFromBackgroundProcessRequest
-	err = json.Unmarshal(reqbz, &req)
-	if err != nil {
-		return nil, err
-	}
-	resp := ReadFromBackgroundProcessResponse{
-		Data:  []byte{},
-		Error: "",
-	}
-
-	contractAddress, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.Contract)
-	if err != nil {
-		return nil, err
-	}
-
-	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
-	if err != nil {
-		resp.Error = err.Error()
-		ptr, err := prepareResponse(ctx, rnh, &resp)
-		if err != nil {
-			return nil, err
-		}
-		returns[0] = ptr
-		return returns, nil
-	}
-	proc, ok := procc.Processes[contractAddress.String()]
-	if !ok {
-		resp.Error = "process not existent"
-		ptr, err := prepareResponse(ctx, rnh, &resp)
-		if err != nil {
-			return nil, err
-		}
-		returns[0] = ptr
-		return returns, nil
-	}
-	vm := proc.RuntimeHandler.GetVm()
-	lengthGlobal := vm.FindGlobal(req.LenFunc)
-	ptrGlobal := vm.FindGlobal(req.PtrFunc)
-	activeMemory, err := proc.RuntimeHandler.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	byteArray, err := activeMemory.ReadRaw(ptrGlobal, lengthGlobal)
-	if err != nil {
-		resp.Error = err.Error()
-	} else {
-		resp.Data = byteArray
-	}
-	ptr, err := prepareResponse(ctx, rnh, &resp)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
-}
-
 func prepareResponse(ctx *Context, rnh memc.RuntimeHandler, resp interface{}) (interface{}, error) {
 	respbz, err := json.Marshal(&resp)
 	if err != nil {
@@ -1300,6 +970,8 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getBlockHash", wasmxGetBlockHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getCurrentBlock", wasmxGetCurrentBlock, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getAccount", getAccount, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("getCodeInfo", getCodeInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("getContractInfo", getContractInfo, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getBalance", wasmxGetBalance, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("call", wasmxCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("keccak256", keccak256Util, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
@@ -1333,19 +1005,14 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		// env.AddFunction("ProtoMarshal", NewFunction(functype__i32, ProtoMarshal, context, 0))
 		// env.AddFunction("ProtoUnmarshal", NewFunction(functype__i32, ProtoUnmarshal, context, 0))
 
-		// TODO move externalCall, grpcRequest, startTimeout to only system API
-		// move them to the network module: vmnetwork
-
-		vm.BuildFn("externalCall", externalCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("grpcRequest", wasmxGrpcRequest, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("startTimeout", wasmxStartTimeout, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("cancelTimeout", wasmxCancelTimeout, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("startBackgroundProcess", wasmxStartBackgroundProcess, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("writeToBackgroundProcess", wasmxWriteToBackgroundProcess, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("readFromBackgroundProcess", wasmxReadFromBackgroundProcess, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-
-		// TODO
-		// env.AddFunction("endBackgroundProcess", NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
+		// for backwards compat
+		vm.BuildFn("externalCall", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("grpcRequest", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("startTimeout", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("cancelTimeout", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("startBackgroundProcess", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("writeToBackgroundProcess", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("readFromBackgroundProcess", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)

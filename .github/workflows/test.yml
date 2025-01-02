@@ -34,13 +34,7 @@ jobs:
       #  run: |
       #    echo "WasmEdge directory: $HOME/.wasmedge"
 
-      - name: Run tests 1
-        run: |
-          go test -failfast=false -v ./wasmx/...
-          go test -failfast=false -v ./wasmx-wazero/...
-          go test -failfast=false -v ./mythos-wazero/...
-
-      - name: Run wasmx/tests with wazero
+      - name: Run tests
         #env:
         #  WASMEDGE_DIR: /home/runner/.wasmedge
         #  DYLD_LIBRARY_PATH: /home/runner/.wasmedge/lib
@@ -51,4 +45,9 @@ jobs:
         #  CPLUS_INCLUDE_PATH: /home/runner/.wasmedge/include
         #  CGO_LDFLAGS: -Wl,-rpath,/home/runner/.wasmedge/lib
         run: |
+          go test -failfast=false -v ./wasmx/...
+          go test -failfast=false -v ./wasmx-wazero/...
+          go test -failfast=false -v ./mythos-wazero/...
           go test -failfast=false -timeout 2000s -v ./tests/wasmx -wasm-runtime=wazero
+          go test -failfast=false -timeout 2000s -v ./tests/cosmosmod -wasm-runtime=wazero
+          go test -failfast=false -timeout 2000s -v ./tests/network -wasm-runtime=wazero

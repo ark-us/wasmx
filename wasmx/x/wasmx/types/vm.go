@@ -106,8 +106,10 @@ type WasmxCosmosHandler interface {
 	GetCodeHash(contractAddress sdk.AccAddress) Checksum
 	GetCode(contractAddress sdk.AccAddress) []byte
 	GetBlockHash(blockNumber uint64) Checksum
-	GetCodeInfo(addr sdk.AccAddress) CodeInfo
+	GetCodeInfo(codeID uint64) *CodeInfo
+	GetContractInfo(addr sdk.AccAddress) *ContractInfo
 	GetContractInstance(contractAddress sdk.AccAddress) (ContractInfo, CodeInfo, []byte, error)
+	SetContractInfo(addr sdk.AccAddress, data *ContractInfo)
 	Create(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
 	Create2(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, salt Checksum, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
 	Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error)
@@ -129,6 +131,7 @@ type WasmxCosmosHandler interface {
 
 var EWASM_VM_EXPORT = "ewasm_env_"
 var WASMX_VM_EXPORT = "wasmx_env_"
+var WASMX_VM_CORE_EXPORT = "wasmx_env_core_"
 var WASMX_CONS_VM_EXPORT = "wasmx_consensus_json_"
 var SYS_VM_EXPORT = "sys_env_"
 var CW_VM_EXPORT = "interface_version_"
@@ -142,6 +145,9 @@ var WASMX_ENV_1 = "wasmx_env_1"
 var WASMX_ENV_2 = "wasmx_env_2"
 var WASMX_ENVi32_2 = "wasmx_env_i32_2"
 var WASMX_ENVi64_2 = "wasmx_env_i64_2"
+
+var WASMX_CORE_ENVi32_1 = "wasmx_env_core_i32_1"
+var WASMX_CORE_ENVi64_1 = "wasmx_env_core_i64_1"
 
 // only for core consensus
 var WASMX_CONSENSUS_JSON_1 = "wasmx_consensus_json_1"
@@ -170,6 +176,8 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_ENV_2:            true,
 	WASMX_ENVi32_2:         true,
 	WASMX_ENVi64_2:         true,
+	WASMX_CORE_ENVi32_1:    true,
+	WASMX_CORE_ENVi64_1:    true,
 	EWASM_ENV_0:            true,
 	EWASM_ENV_1:            true,
 	CW_ENV_8:               true,
@@ -177,6 +185,11 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	SYS_ENV_1:              true,
 	WASI_SNAPSHOT_PREVIEW1: true,
 	WASI_UNSTABLE:          true,
+
+	WASMX_MEMORY_ASSEMBLYSCRIPT: true,
+	WASMX_MEMORY_DEFAULT:        true,
+	WASMX_MEMORY_RUSTi64:        true,
+	WASMX_MEMORY_TAYLOR:         true,
 }
 
 var ROLE_EID_REGISTRY = "eid_registry"

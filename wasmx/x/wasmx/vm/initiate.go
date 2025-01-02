@@ -139,6 +139,32 @@ func InitiateWasmxEnv(
 	return nil
 }
 
+func InitiateWasmxCoreEnvi64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	return InitiateWasmxCoreEnv(context, rnh, dep, BuildWasmxCoreEnvi64)
+}
+
+func InitiateWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	return InitiateWasmxCoreEnv(context, rnh, dep, BuildWasmxCoreEnvi32)
+}
+
+func InitiateWasmxCoreEnv(
+	context *Context,
+	rnh memc.RuntimeHandler,
+	dep *types.SystemDep,
+	buildWasmxEnv func(context *Context, rnh memc.RuntimeHandler) (interface{}, error),
+) error {
+	vm := rnh.GetVm()
+	core, err := buildWasmxEnv(context, rnh)
+	if err != nil {
+		return err
+	}
+	err = vm.RegisterModule(core)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func InstantiateWasmxConsensusJson(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
 	var err error
 	wasmx, err := BuildWasmxConsensusJson1(context, rnh)
@@ -228,6 +254,8 @@ func init() {
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
 	SystemDepHandler[types.WASMX_ENVi32_2] = InitiateWasmxEnvi32
 	SystemDepHandler[types.WASMX_ENVi64_2] = InitiateWasmxEnvi64
+	SystemDepHandler[types.WASMX_CORE_ENVi32_1] = InitiateWasmxCoreEnvi32
+	SystemDepHandler[types.WASMX_CORE_ENVi64_1] = InitiateWasmxCoreEnvi64
 	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasi
 	SystemDepHandler[types.WASI_UNSTABLE] = InitiateWasi
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
@@ -243,6 +271,8 @@ func init() {
 	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENVi32_2] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENVi64_2] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASMX_CORE_ENVi32_1] = ExecuteDefaultContract
+	ExecuteFunctionHandler[types.WASMX_CORE_ENVi64_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasiWrap
 	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasiWrap
 	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultContract
@@ -256,6 +286,7 @@ func init() {
 
 	DependenciesMap[types.EWASM_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_VM_EXPORT] = true
+	DependenciesMap[types.WASMX_VM_CORE_EXPORT] = true
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
 	DependenciesMap[types.MEMORY_EXPORT] = true

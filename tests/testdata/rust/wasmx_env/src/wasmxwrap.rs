@@ -193,44 +193,6 @@ pub fn addr_equivalent(addr1: &str, addr2: &str) -> bool {
     unsafe { addr_equivalent_raw(addr1_encoded, addr2_encoded) == 1 }
 }
 
-pub fn start_timeout(req: StartTimeoutRequest) {
-    let req_bytes = serde_json::to_vec(&req).unwrap();
-    let req_encoded = encode_ptr_len(&req_bytes);
-    unsafe {
-        startTimeout(req_encoded);
-    }
-}
-
-pub fn cancel_timeout(id: &str) {
-    let req = serde_json::json!({ "id": id }).to_string();
-    let req_encoded = encode_ptr_len(req.as_bytes());
-    unsafe {
-        cancelTimeout(req_encoded);
-    }
-}
-
-pub fn grpc_request(ip: &str, contract: &[u8], data: &str) -> GrpcResponse {
-    let contract_address = BASE64_STANDARD.encode(contract);
-    let req = serde_json::json!({
-        "ip_address": ip,
-        "contract": contract_address,
-        "data": data,
-    })
-    .to_string();
-    let req_bytes = req.into_bytes();
-    let req_encoded = encode_ptr_len(&req_bytes);
-
-    let result = unsafe { grpcRequest(req_encoded) };
-    let (ptr, len) = decode_ptr_len(result);
-
-    if ptr.is_null() {
-        panic!("GRPC response is null");
-    }
-
-    let result_slice = unsafe { std::slice::from_raw_parts(ptr, len) };
-    serde_json::from_slice(result_slice).expect("Invalid GRPC response")
-}
-
 pub fn revert(message: &str) -> ! {
     let msg_bytes = message.as_bytes();
     let msg_encoded = encode_ptr_len(msg_bytes);

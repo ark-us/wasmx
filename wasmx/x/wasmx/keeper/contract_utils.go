@@ -161,20 +161,6 @@ func (k *Keeper) ImportContractState(ctx sdk.Context, contractAddress sdk.AccAdd
 	return nil
 }
 
-func (k *Keeper) MigrateContractStateByStorageType(ctx sdk.Context, contractAddress sdk.AccAddress, sourceStorage types.ContractStorageType, targetStorage types.ContractStorageType) error {
-	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
-	prefixStoreSource := k.ContractStore(ctx, sourceStorage, prefixStoreKey)
-	prefixStoreTarget := k.ContractStore(ctx, targetStorage, prefixStoreKey)
-	iter := prefixStoreSource.Iterator(nil, nil)
-	defer iter.Close()
-
-	for ; iter.Valid(); iter.Next() {
-		prefixStoreTarget.Set(iter.Key(), iter.Value())
-		prefixStoreSource.Delete(iter.Key())
-	}
-	return nil
-}
-
 func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeID uint64) *types.CodeInfo {
 	store := ctx.KVStore(k.storeKey)
 	var codeInfo types.CodeInfo

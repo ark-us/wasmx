@@ -43,6 +43,20 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string
 			return err
 		}
 	}
+	// if !slices.Contains(registered, types.WASMX_VM_CORE_EXPORT) {
+	// 	if slices.Contains(registered, types.WASMX_VM_CORE_EXPORT) {
+
+	// 	}
+	// 	mock, err := BuildWasmxCoreEnvMocki32(context, rnh)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	err = contractVm.RegisterModule(mock)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
 	if wasmFilePath != "" || aotFilePath != "" || len(wasmbuffer) > 0 {
 		err = contractVm.InstantiateWasm(wasmFilePath, aotFilePath, wasmbuffer)
 	}

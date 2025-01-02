@@ -29,6 +29,8 @@ func BuildWasmxEnvi64(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getBlockHash", wasmxGetBlockHash, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("getCurrentBlock", wasmxGetCurrentBlock, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("getAccount", getAccount, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("getCodeInfo", getCodeInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("getContractInfo", getContractInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("getBalance", wasmxGetBalance, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("call", wasmxCall, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("keccak256", keccak256Util, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
@@ -61,20 +63,6 @@ func BuildWasmxEnvi64(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		// TODO
 		// env.AddFunction("ProtoMarshal", NewFunction(functype__i32, ProtoMarshal, context, 0))
 		// env.AddFunction("ProtoUnmarshal", NewFunction(functype__i32, ProtoUnmarshal, context, 0))
-
-		// TODO move externalCall, grpcRequest, startTimeout to only system API
-		// move them to the network module: vmnetwork
-
-		vm.BuildFn("externalCall", externalCall, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("grpcRequest", wasmxGrpcRequest, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("startTimeout", wasmxStartTimeout, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
-		vm.BuildFn("cancelTimeout", wasmxCancelTimeout, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
-		vm.BuildFn("startBackgroundProcess", wasmxStartBackgroundProcess, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
-		vm.BuildFn("writeToBackgroundProcess", wasmxWriteToBackgroundProcess, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("readFromBackgroundProcess", wasmxReadFromBackgroundProcess, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-
-		// TODO
-		// env.AddFunction("endBackgroundProcess", NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
 	}
 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)

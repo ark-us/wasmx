@@ -115,16 +115,20 @@ func (h *WasmxCosmosHandler) GetCode(contractAddress sdk.AccAddress) []byte {
 	return code
 }
 
-func (h *WasmxCosmosHandler) GetCodeInfo(contractAddress sdk.AccAddress) types.CodeInfo {
-	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
-	if err != nil {
-		return types.CodeInfo{CodeHash: types.EMPTY_BYTES32}
-	}
-	return codeInfo
+func (h *WasmxCosmosHandler) GetCodeInfo(codeID uint64) *types.CodeInfo {
+	return h.Keeper.GetCodeInfo(h.Ctx, codeID)
+}
+
+func (h *WasmxCosmosHandler) GetContractInfo(contractAddress sdk.AccAddress) *types.ContractInfo {
+	return h.Keeper.GetContractInfo(h.Ctx, contractAddress)
 }
 
 func (h *WasmxCosmosHandler) GetContractInstance(contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
 	return h.Keeper.ContractInstance(h.Ctx, contractAddress)
+}
+
+func (h *WasmxCosmosHandler) SetContractInfo(contractAddress sdk.AccAddress, data *types.ContractInfo) {
+	h.Keeper.storeContractInfo(h.Ctx, contractAddress, data)
 }
 
 // TODO

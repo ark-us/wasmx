@@ -68,14 +68,4 @@ extern "C" {
 
     pub fn decodeCosmosTxToJson(value: i64) -> i64;
     pub fn verifyCosmosTx(value: i64) -> i64;
-
-    pub fn grpcRequest(data: i64) -> i64;
-
-    pub fn startTimeout(req: i64);
-    pub fn cancelTimeout(req: i64);
-    pub fn startBackgroundProcess(req: i64);
-    pub fn writeToBackgroundProcess(req: i64) -> i64;
-    pub fn readFromBackgroundProcess(req: i64) -> i64;
-
-    pub fn externalCall(data: i64) -> i64;
 }
