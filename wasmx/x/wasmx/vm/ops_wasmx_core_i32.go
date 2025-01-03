@@ -46,7 +46,6 @@ func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.Runtim
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--coreMigrateContractStateByStorageType--", string(data))
 	var req MigrateContractStateByStorageRequest
 	err = json.Unmarshal(data, &req)
 	if err != nil {
@@ -74,12 +73,13 @@ func setContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
-	var contractInfo *types.ContractInfo
-	err = ctx.CosmosHandler.Codec().UnmarshalJSON(data, contractInfo)
+
+	var contractInfo types.ContractInfo
+	err = ctx.CosmosHandler.Codec().UnmarshalJSON(data, &contractInfo)
 	if err != nil {
 		return nil, fmt.Errorf("ContractInfo cannot be unmarshalled")
 	}
-	ctx.CosmosHandler.SetContractInfo(address.Bytes(), contractInfo)
+	ctx.CosmosHandler.SetContractInfo(address.Bytes(), &contractInfo)
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
