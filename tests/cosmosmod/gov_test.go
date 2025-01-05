@@ -88,7 +88,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"0x200000","arbitrationAmount":"0x0","metadata":"metadata"}}`, senderAddrStr))
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"0x400000","arbitrationAmount":"0x0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
@@ -102,7 +102,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	tally, err = suite.App().GovKeeper.TallyResult(appA.Context(), &govtypes.QueryTallyResultRequest{ProposalId: 1})
 	suite.Require().NoError(err)
-	s.Require().Equal(strconv.Itoa(0x300000), tally.Tally.YesCount)
+	s.Require().Equal(strconv.Itoa(0x500000), tally.Tally.YesCount)
 	s.Require().Equal(strconv.Itoa(0x200000), tally.Tally.NoCount)
 	s.Require().Equal("0", tally.Tally.AbstainCount)
 	s.Require().Equal("0", tally.Tally.NoWithVetoCount)
