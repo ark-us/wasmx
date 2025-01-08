@@ -10,6 +10,7 @@ var (
 	HOOK_BEGIN_BLOCK      = "BeginBlock"
 	HOOK_END_BLOCK        = "EndBlock"
 	HOOK_CREATE_VALIDATOR = "CreatedValidator"
+	HOOK_ROLE_CHANGED     = "RoleChanged"
 
 	// staking
 	AfterValidatorCreated          = "AfterValidatorCreated"

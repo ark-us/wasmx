@@ -227,7 +227,11 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 				erreur = err
 				return true
 			}
-			codeInfo := mythosapp.GetWasmxKeeper().GetCodeInfo(ctx, cinfo.CodeId)
+			codeInfo, err := mythosapp.GetWasmxKeeper().GetCodeInfo(ctx, cinfo.CodeId)
+			if err != nil {
+				erreur = err
+				return true
+			}
 			if codeInfo == nil {
 				erreur = fmt.Errorf("no code info found for codeID %d", cinfo.CodeId)
 				return true

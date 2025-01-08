@@ -98,6 +98,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Com
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	goctx, _ = mctx.WithExecutionMetaInfoEmpty(goctx)
 	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
+	goctx, _ = wasmxtypes.WithSystemBootstrap(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))

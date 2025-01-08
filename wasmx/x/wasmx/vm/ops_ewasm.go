@@ -276,7 +276,8 @@ func getExternalCodeHash(_context interface{}, rnh memc.RuntimeHandler, params [
 	if err != nil {
 		return nil, err
 	}
-	data := ctx.CosmosHandler.GetCodeHash(vmtypes.CleanupAddress(addressbz))
+	addrPrefixed := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addressbz))
+	data := ctx.CosmosHandler.GetCodeHash(addrPrefixed)
 	err = mem.WriteRaw(params[1], data)
 	if err != nil {
 		return returns, err

@@ -49,8 +49,8 @@ func (b *Backend) GetCode(_address common.Address, blockNrOrHash rpctypes.BlockN
 		return nil, err
 	}
 
-	if len(resCode.CodeInfo.InterpretedBytecodeRuntime) > 0 {
-		return resCode.CodeInfo.InterpretedBytecodeRuntime, nil
+	if len(resCode.CodeInfoPB.InterpretedBytecodeRuntime) > 0 {
+		return resCode.CodeInfoPB.InterpretedBytecodeRuntime, nil
 	}
 
 	return nil, nil

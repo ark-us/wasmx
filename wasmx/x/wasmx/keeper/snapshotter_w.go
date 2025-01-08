@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"encoding/hex"
 	"io"
 	"math"
 
@@ -49,44 +48,44 @@ func (ws *WasmSnapshotter) SupportedFormats() []uint32 {
 }
 
 func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapshot.ExtensionPayloadWriter) error {
-	cacheMS, err := ws.cms.CacheMultiStoreWithVersion(int64(height))
-	if err != nil {
-		return err
-	}
+	// cacheMS, err := ws.cms.CacheMultiStoreWithVersion(int64(height))
+	// if err != nil {
+	// 	return err
+	// }
 
-	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
-	seenBefore := make(map[string]bool)
+	// ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
+	// seenBefore := make(map[string]bool)
 	var rerr error
 
-	ws.wasmx.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
-		// Many code ids may point to the same code hash... only sync it once
-		hexHash := hex.EncodeToString(info.CodeHash)
-		// if seenBefore, just skip this one and move to the next
-		if seenBefore[hexHash] {
-			return false
-		}
-		seenBefore[hexHash] = true
+	// ws.wasmx.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
+	// 	// Many code ids may point to the same code hash... only sync it once
+	// 	hexHash := hex.EncodeToString(info.CodeHash)
+	// 	// if seenBefore, just skip this one and move to the next
+	// 	if seenBefore[hexHash] {
+	// 		return false
+	// 	}
+	// 	seenBefore[hexHash] = true
 
-		// load code and skip on error; we may find native or interpreted contracts
-		wasmBytes, err := ws.wasmx.GetByteCode(ctx, id)
-		if err != nil {
-			return false
-		}
+	// 	// load code and skip on error; we may find native or interpreted contracts
+	// 	wasmBytes, err := ws.wasmx.GetByteCode(ctx, id)
+	// 	if err != nil {
+	// 		return false
+	// 	}
 
-		compressedWasm, err := ioutils.GzipIt(wasmBytes)
-		if err != nil {
-			rerr = err
-			return true
-		}
+	// 	compressedWasm, err := ioutils.GzipIt(wasmBytes)
+	// 	if err != nil {
+	// 		rerr = err
+	// 		return true
+	// 	}
 
-		err = payloadWriter(compressedWasm)
-		if err != nil {
-			rerr = err
-			return true
-		}
+	// 	err = payloadWriter(compressedWasm)
+	// 	if err != nil {
+	// 		rerr = err
+	// 		return true
+	// 	}
 
-		return false
-	})
+	// 	return false
+	// })
 
 	return rerr
 }
@@ -116,13 +115,13 @@ func restoreV1(_ sdk.Context, k *Keeper, compressedCode []byte) error {
 
 func finalizeV1(ctx sdk.Context, k *Keeper) error {
 	// FIXME: ensure all codes have been uploaded?
-	k.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
-		if !info.Pinned {
-			return false
-		}
-		k.PinCode(ctx, id, "", info.MeteringOff)
-		return false
-	})
+	// k.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
+	// 	if !info.Pinned {
+	// 		return false
+	// 	}
+	// 	k.PinCode(ctx, id, "", info.MeteringOff)
+	// 	return false
+	// })
 	return nil
 }
 

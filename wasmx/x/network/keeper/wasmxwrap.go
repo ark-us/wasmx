@@ -11,7 +11,7 @@ import (
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo {
+func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, error) {
 	return k.wasmxKeeper.GetContractInfo(ctx, contractAddress)
 }
 

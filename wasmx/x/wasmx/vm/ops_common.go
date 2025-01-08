@@ -18,7 +18,7 @@ func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.
 	if ok {
 		return depContext.ContractInfo
 	}
-	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr.Bytes())
+	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
 	if err != nil {
 		return nil
 	}
@@ -102,7 +102,7 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 // All WasmX, eWasm calls must go through here
 // Returns 0 on success, 1 on failure and 2 on revert
 func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
-	if types.IsSystemAddress(req.To.Bytes()) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From.Bytes()) {
+	if types.IsSystemAddress(req.To.Bytes()) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From) {
 		return int32(1), []byte(`wasmxcall: cannot call system contract`)
 	}
 	depContractInfo := GetContractDependency(ctx, req.To)

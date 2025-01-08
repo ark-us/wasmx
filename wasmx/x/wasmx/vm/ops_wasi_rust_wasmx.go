@@ -284,7 +284,7 @@ func wasi_getAccount(_context interface{}, rnh memc.RuntimeHandler, params []int
 		CodeId:     0,
 		SystemDeps: []string{},
 	}
-	contractInfo, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address.Bytes())
+	contractInfo, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address)
 	if err == nil {
 		code = types.EnvContractInfo{
 			Address:    address,
@@ -476,7 +476,8 @@ func wasi_getCodeHash(_context interface{}, rnh memc.RuntimeHandler, params []in
 		return nil, err
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	checksum := ctx.CosmosHandler.GetCodeHash(address)
+	addrPrefixed := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(address)
+	checksum := ctx.CosmosHandler.GetCodeHash(addrPrefixed)
 	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), checksum)
 	if err != nil {
 		return nil, err
@@ -498,7 +499,8 @@ func wasi_getCode(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		return nil, err
 	}
 	address := sdk.AccAddress(vmtypes.CleanupAddress(addr))
-	code := ctx.CosmosHandler.GetCode(address)
+	addrPrefixed := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(address)
+	code := ctx.CosmosHandler.GetCode(addrPrefixed)
 	ptr, err := wasimem.WriteMemDefaultMalloc(rnh.GetVm(), code)
 	if err != nil {
 		return nil, err

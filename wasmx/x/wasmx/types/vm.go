@@ -2,6 +2,8 @@ package types
 
 import (
 	bytes "bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -52,10 +54,27 @@ var (
 )
 
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
-type Checksum []byte
+type Checksum RawContractMessage
 
 // WasmCode is an alias for raw bytes of the wasm compiled code
-type WasmCode []byte
+type WasmCode RawContractMessage
+
+func (v Checksum) MarshalJSON() ([]byte, error) {
+	return json.Marshal(base64.StdEncoding.EncodeToString(v))
+}
+
+func (v *Checksum) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	val, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return err
+	}
+	*v = val
+	return nil
+}
 
 // KVStore is a reference to some sub-kvstore that is valid for one instance of a code
 type KVStore interface {
@@ -103,19 +122,19 @@ type WasmxCosmosHandler interface {
 	VerifyCosmosTx(bz []byte) (bool, error)
 	WasmVMQueryHandler(caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error)
 	GetAccount(addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
-	GetCodeHash(contractAddress sdk.AccAddress) Checksum
-	GetCode(contractAddress sdk.AccAddress) []byte
+	GetCodeHash(contractAddress mcodec.AccAddressPrefixed) Checksum
+	GetCode(contractAddress mcodec.AccAddressPrefixed) []byte
 	GetBlockHash(blockNumber uint64) Checksum
 	GetCodeInfo(codeID uint64) *CodeInfo
-	GetContractInfo(addr sdk.AccAddress) *ContractInfo
-	GetContractInstance(contractAddress sdk.AccAddress) (ContractInfo, CodeInfo, []byte, error)
-	SetContractInfo(addr sdk.AccAddress, data *ContractInfo)
+	GetContractInfo(addr mcodec.AccAddressPrefixed) (*ContractInfo, error)
+	GetContractInstance(contractAddress mcodec.AccAddressPrefixed) (ContractInfo, CodeInfo, []byte, error)
+	SetContractInfo(addr mcodec.AccAddressPrefixed, data ContractInfo)
 	Create(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
 	Create2(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, salt Checksum, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
 	Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error)
 	Execute(contractAddress mcodec.AccAddressPrefixed, sender mcodec.AccAddressPrefixed, execmsg []byte, value *big.Int, deps []string) (res []byte, err error)
-	GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (ContractDependency, error)
-	CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool
+	GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (ContractDependency, error)
+	CanCallSystemContract(ctx sdk.Context, addr mcodec.AccAddressPrefixed) bool
 	WithNewAddress(addr mcodec.AccAddressPrefixed) WasmxCosmosHandler
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
 	GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) string
@@ -204,6 +223,7 @@ var ROLE_AUTH = "auth"
 
 // Note! role contract should not have any other depedencies aside from the host import interface
 var ROLE_ROLES = "roles"
+var ROLE_STORAGE_CONTRACTS = "storage_contracts"
 var ROLE_SLASHING = "slashing"
 var ROLE_DISTRIBUTION = "distribution"
 var ROLE_INTERPRETER = "interpreter"
@@ -271,6 +291,7 @@ var GOV_v001 = "gov_0.0.1"
 var GOV_CONT_v001 = "gov_cont_0.0.1"
 var AUTH_v001 = "auth_0.0.1"
 var ROLES_v001 = "roles_0.0.1"
+var STORAGE_CONTRACTS_v001 = "storage_contracts_0.0.1"
 var SLASHING_v001 = "slashing_0.0.1"
 var DISTRIBUTION_v001 = "distribution_0.0.1"
 var CHAT_v001 = "chat_0.0.1"

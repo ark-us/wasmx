@@ -13,7 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mcfg "github.com/loredanacirstea/wasmx/config"
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	cchtypes "github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler"
 )
@@ -24,7 +24,7 @@ func (k *Keeper) ContractInfo(c context.Context, req *types.QueryContractInfoReq
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
-	contractAddr, err := k.AddressCodec().StringToBytes(req.Address)
+	contractAddr, err := k.accBech32Codec.StringToAccAddressPrefixed(req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (k *Keeper) RawContractState(c context.Context, req *types.QueryRawContract
 		return nil, err
 	}
 
-	if !k.HasContractInfo(ctx, contractAddr.Bytes()) {
+	if !k.HasContractInfo(ctx, contractAddr) {
 		return nil, types.ErrNotFound
 	}
 	rsp := k.QueryRaw(ctx, contractAddr, req.QueryData)
@@ -200,7 +200,7 @@ func (k *Keeper) SmartContractCall(c context.Context, req *types.QuerySmartContr
 		}
 	}()
 
-	if types.IsSystemAddress(contractAddr.Bytes()) && !k.CanCallSystemContract(ctx, sender.Bytes()) {
+	if types.IsSystemAddress(contractAddr.Bytes()) && !k.CanCallSystemContract(ctx, sender) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 
@@ -280,7 +280,7 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 	if err != nil {
 		return nil, err
 	}
-	if types.IsSystemAddress(contractAddr.Bytes()) && !k.CanCallSystemContract(ctx, sender.Bytes()) {
+	if types.IsSystemAddress(contractAddr.Bytes()) && !k.CanCallSystemContract(ctx, sender) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "cannot call system address")
 	}
 	bz, err := k.Query(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
@@ -332,7 +332,7 @@ func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContr
 		}
 	}()
 
-	if !k.CanCallSystemContract(ctx, sender.Bytes()) {
+	if !k.CanCallSystemContract(ctx, sender) {
 		return nil, sdkerr.Wrap(types.ErrUnauthorizedAddress, "debug is non-deterministic and cannot be called as part of a transaction")
 	}
 	bz, memsnapshot, errMsg := k.QueryDebug(ctx, contractAddr, sender, req.QueryData, req.Funds, req.Dependencies)
@@ -354,8 +354,8 @@ func (k *Keeper) Code(c context.Context, req *types.QueryCodeRequest) (*types.Qu
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryCodeResponse{
-		CodeInfo: rsp.CodeInfo,
-		Data:     rsp.Data,
+		CodeInfoPB: rsp.CodeInfoPB,
+		Data:       rsp.Data,
 	}, nil
 }
 
@@ -367,12 +367,15 @@ func (k *Keeper) CodeInfo(c context.Context, req *types.QueryCodeInfoRequest) (*
 		return nil, sdkerr.Wrap(types.ErrInvalid, "code id")
 	}
 	ctx := sdk.UnwrapSDKContext(c)
-	res := k.GetCodeInfo(ctx, req.CodeId)
+	res, err := k.GetCodeInfo(ctx, req.CodeId)
+	if err != nil {
+		return nil, err
+	}
 	if res == nil {
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryCodeInfoResponse{
-		CodeInfo: res,
+		CodeInfoPB: res.ToProto(),
 	}, nil
 }
 
@@ -405,18 +408,17 @@ func (k *Keeper) Codes(c context.Context, req *types.QueryCodesRequest) (*types.
 	return nil, nil
 }
 
-func queryContractInfo(ctx sdk.Context, addr sdk.AccAddress, keeper *Keeper) (*types.QueryContractInfoResponse, error) {
-	info := keeper.GetContractInfo(ctx, addr)
+func queryContractInfo(ctx sdk.Context, addr mcodec.AccAddressPrefixed, keeper *Keeper) (*types.QueryContractInfoResponse, error) {
+	info, err := keeper.GetContractInfo(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
 	if info == nil {
 		return nil, types.ErrNotFound
 	}
-	addrstr, err := keeper.AddressCodec().BytesToString(addr)
-	if err != nil {
-		return nil, sdkerr.Wrapf(err, "contract: %s", mcfg.ERRORMSG_ACC_TOSTRING)
-	}
 	return &types.QueryContractInfoResponse{
-		Address:      addrstr,
-		ContractInfo: *info,
+		Address:        addr.String(),
+		ContractInfoPB: *info.ToProto(),
 	}, nil
 }
 
@@ -424,7 +426,10 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper *Keeper) (*types.QueryCode
 	if codeID == 0 {
 		return nil, nil
 	}
-	res := keeper.GetCodeInfo(ctx, codeID)
+	res, err := keeper.GetCodeInfo(ctx, codeID)
+	if err != nil {
+		return nil, err
+	}
 	if res == nil {
 		// nil, nil leads to 404 in rest handler
 		return nil, nil
@@ -435,7 +440,7 @@ func queryCode(ctx sdk.Context, codeID uint64, keeper *Keeper) (*types.QueryCode
 		return nil, sdkerr.Wrap(err, "loading wasm code")
 	}
 
-	return &types.QueryCodeResponse{CodeInfo: res, Data: code}, nil
+	return &types.QueryCodeResponse{CodeInfoPB: res.ToProto(), Data: code}, nil
 }
 
 func (k *Keeper) ContractsByCreator(c context.Context, req *types.QueryContractsByCreatorRequest) (*types.QueryContractsByCreatorResponse, error) {

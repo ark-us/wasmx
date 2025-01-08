@@ -144,6 +144,9 @@ var (
 	//go:embed 60.roles_0.0.1.wasm
 	roles_contract []byte
 
+	//go:embed 61.wasmx_codes_registry_0.0.1.wasm
+	wasmx_codes_registry []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -299,6 +302,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = metaregistryjson
 	case types.INTERPRETER_TAY:
 		wasmbin = tay_interpreter
+	case types.STORAGE_CONTRACTS_v001:
+		wasmbin = wasmx_codes_registry
 	}
 	return wasmbin
 }

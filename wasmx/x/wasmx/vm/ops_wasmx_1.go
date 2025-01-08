@@ -224,18 +224,6 @@ func wasmxLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	return returns, nil
 }
 
-// SSTORE key_ptr: i32, value_ptr: i32,
-func storageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
-// SLOAD key_ptr: i32, result_ptr: i32
-func storageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
 func wasmxGetReturnData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	newptr, err := rnh.AllocateWriteMem(ctx.ReturnData)
@@ -384,8 +372,6 @@ func BuildWasmxEnv1(context *Context, rnh memc.RuntimeHandler) (interface{}, err
 		vm.BuildFn("setReturnData", wasmxSetFinishData, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("finish", wasmxFinish, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("revert", wasmxRevert, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("storageLoad_global", storageLoadGlobal, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("storageStore_global", storageStoreGlobal, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)

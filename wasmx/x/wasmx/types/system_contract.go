@@ -72,6 +72,7 @@ var ADDR_LEVEL0_ONDEMAND = "0x0000000000000000000000000000000000000051"
 var ADDR_LEVEL0_ONDEMAND_LIBRARY = "0x0000000000000000000000000000000000000052"
 
 var ADDR_ROLES = "0x0000000000000000000000000000000000000060"
+var ADDR_STORAGE_CONTRACTS = "0x0000000000000000000000000000000000000061"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -82,7 +83,17 @@ func StarterPrecompiles() SystemContracts {
 		panic("SimplePrecompiles: cannot marshal init message")
 	}
 	return []SystemContract{
-		// auth needs to be initialized first (account keeper)
+		// contract storage needs to be initialized first, auth second, roles third
+		{
+			Address:     ADDR_STORAGE_CONTRACTS,
+			Label:       STORAGE_CONTRACTS_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        ROLE_STORAGE_CONTRACTS,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
 		{
 			Address:     ADDR_AUTH,
 			Label:       AUTH_v001,

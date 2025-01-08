@@ -596,7 +596,7 @@ func WasmQuerier(k wasmQueryKeeper) func(ctx sdk.Context, request *cw8types.Wasm
 			res := cw8types.CodeInfoResponse{
 				CodeID:   request.CodeInfo.CodeID,
 				Creator:  info.Creator,
-				Checksum: info.CodeHash,
+				Checksum: cw8types.Checksum(info.CodeHash),
 			}
 			return json.Marshal(res)
 		}

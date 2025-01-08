@@ -157,7 +157,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	codeId, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "allopcodes", nil)
 	contractAddressHex := common.BytesToAddress(contractAddress.Bytes()).Hex()
 
-	_, codeInfo1, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), contractAddress.Bytes())
+	_, codeInfo1, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), contractAddress)
 	s.Require().NoError(err)
 	s.Require().Greater(len(codeInfo1.InterpretedBytecodeDeployment), 0)
 	s.Require().Greater(len(codeInfo1.InterpretedBytecodeRuntime), 0)
@@ -364,7 +364,8 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = extcodehashhex + "000000000000000000000000" + strings.ToLower(contractAddressHex[2:])
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo, err := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().NoError(err)
 	s.Require().Equal(qres, hex.EncodeToString(codeInfo.CodeHash))
 
 	calld = gashex
@@ -880,7 +881,8 @@ func (suite *KeeperTestSuite) TestEwasmCreate1() {
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), createdContractAddress, keybz)
 	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
 
-	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress.Bytes())
+	contractInfo, err := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
+	s.Require().NoError(err)
 	s.Require().NotNil(contractInfo)
 	s.Require().Equal(factoryAccount.String(), contractInfo.Provenance)
 
@@ -939,12 +941,14 @@ func (suite *KeeperTestSuite) TestEwasmCreate2() {
 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), createdContractAddress, keybz)
 	suite.Require().Equal(hex.EncodeToString(queryres), initvalue)
 
-	contractInfo := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress.Bytes())
+	contractInfo, err := appA.App.WasmxKeeper.GetContractInfo(appA.Context(), createdContractAddress)
+	s.Require().NoError(err)
 	s.Require().NotNil(contractInfo)
 	s.Require().Equal(factoryAccount.String(), contractInfo.Provenance)
 
 	saltb, _ := hex.DecodeString(salt)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), contractInfo.CodeId)
+	codeInfo, err := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), contractInfo.CodeId)
+	s.Require().NoError(err)
 	s.Require().NotNil(codeInfo)
 
 	_createdContractAddress := appA.App.WasmxKeeper.EwasmPredictableAddressGenerator(factoryAccount, saltb, []byte{}, false)(appA.Context(), contractInfo.CodeId, codeInfo.CodeHash)

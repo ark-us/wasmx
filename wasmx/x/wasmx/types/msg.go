@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,6 +46,23 @@ func (r RawContractMessage) Bytes() []byte {
 // Equal content is equal json. Byte equal but this can change in the future.
 func (r RawContractMessage) Equal(o RawContractMessage) bool {
 	return bytes.Equal(r.Bytes(), o.Bytes())
+}
+
+func (v RawContractMessage) MarshalJSON() ([]byte, error) {
+	return json.Marshal(base64.StdEncoding.EncodeToString(v))
+}
+
+func (v *RawContractMessage) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	val, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return err
+	}
+	*v = val
+	return nil
 }
 
 func (msg MsgStoreCode) Route() string {

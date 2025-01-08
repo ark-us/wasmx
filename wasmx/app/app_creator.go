@@ -44,6 +44,7 @@ func NewAppCreator(
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	ctx, _ = mctx.WithExecutionMetaInfoEmpty(ctx)
 	ctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(ctx)
+	ctx, _ = wasmxtypes.WithSystemBootstrap(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 

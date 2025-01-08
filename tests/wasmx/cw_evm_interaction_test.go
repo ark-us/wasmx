@@ -48,7 +48,8 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 		Abi: interfacesTestdata.Erc20Str,
 	}
 	codeId := appA.StoreCodeWithMetadata(sender, wasmbin, nil, metadata)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo, err := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().NoError(err)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	instantiateMsg := CW20InstantiateMsg{
@@ -111,7 +112,8 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 		Abi: interfacesTestdata.Erc20Str,
 	}
 	codeId := appA.StoreCodeWithMetadata(sender, wasmbin, nil, metadata)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	codeInfo, err := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	s.Require().NoError(err)
 	s.Require().ElementsMatch(expectedDeps, codeInfo.Deps, "wrong deps")
 
 	instantiateMsg := CW20InstantiateMsg{

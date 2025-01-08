@@ -87,28 +87,117 @@ func (m *Role) GetContractAddress() string {
 	return ""
 }
 
+type SystemBootstrapData struct {
+	// bech32 address of contract for roles
+	RoleAddress string `protobuf:"bytes,1,opt,name=role_address,json=roleAddress,proto3" json:"role_address,omitempty"`
+	// bech32 address of contract for contract data storage
+	CodeRegistryAddress      string          `protobuf:"bytes,2,opt,name=code_registry_address,json=codeRegistryAddress,proto3" json:"code_registry_address,omitempty"`
+	CodeRegistryId           uint64          `protobuf:"varint,3,opt,name=code_registry_id,json=codeRegistryId,proto3" json:"code_registry_id,omitempty"`
+	CodeRegistryCodeInfo     *CodeInfoPB     `protobuf:"bytes,4,opt,name=code_registry_code_info,json=codeRegistryCodeInfo,proto3" json:"code_registry_code_info,omitempty"`
+	CodeRegistryContractInfo *ContractInfoPB `protobuf:"bytes,5,opt,name=code_registry_contract_info,json=codeRegistryContractInfo,proto3" json:"code_registry_contract_info,omitempty"`
+}
+
+func (m *SystemBootstrapData) Reset()         { *m = SystemBootstrapData{} }
+func (m *SystemBootstrapData) String() string { return proto.CompactTextString(m) }
+func (*SystemBootstrapData) ProtoMessage()    {}
+func (*SystemBootstrapData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eb153cad38096551, []int{1}
+}
+func (m *SystemBootstrapData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SystemBootstrapData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SystemBootstrapData.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SystemBootstrapData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SystemBootstrapData.Merge(m, src)
+}
+func (m *SystemBootstrapData) XXX_Size() int {
+	return m.Size()
+}
+func (m *SystemBootstrapData) XXX_DiscardUnknown() {
+	xxx_messageInfo_SystemBootstrapData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SystemBootstrapData proto.InternalMessageInfo
+
+func (m *SystemBootstrapData) GetRoleAddress() string {
+	if m != nil {
+		return m.RoleAddress
+	}
+	return ""
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryAddress() string {
+	if m != nil {
+		return m.CodeRegistryAddress
+	}
+	return ""
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryId() uint64 {
+	if m != nil {
+		return m.CodeRegistryId
+	}
+	return 0
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryCodeInfo() *CodeInfoPB {
+	if m != nil {
+		return m.CodeRegistryCodeInfo
+	}
+	return nil
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryContractInfo() *ContractInfoPB {
+	if m != nil {
+		return m.CodeRegistryContractInfo
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*Role)(nil), "mythos.wasmx.v1.Role")
+	proto.RegisterType((*SystemBootstrapData)(nil), "mythos.wasmx.v1.SystemBootstrapData")
 }
 
 func init() { proto.RegisterFile("mythos/wasmx/v1/role.proto", fileDescriptor_eb153cad38096551) }
 
 var fileDescriptor_eb153cad38096551 = []byte{
-	// 218 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0xca, 0xad, 0x2c, 0xc9,
-	0xc8, 0x2f, 0xd6, 0x2f, 0x4f, 0x2c, 0xce, 0xad, 0xd0, 0x2f, 0x33, 0xd4, 0x2f, 0xca, 0xcf, 0x49,
-	0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x87, 0xc8, 0xe9, 0x81, 0xe5, 0xf4, 0xca, 0x0c,
-	0xa5, 0x44, 0xd2, 0xf3, 0xd3, 0xf3, 0xc1, 0x72, 0xfa, 0x20, 0x16, 0x44, 0x99, 0x52, 0x22, 0x17,
-	0x4b, 0x50, 0x7e, 0x4e, 0xaa, 0x90, 0x10, 0x17, 0x0b, 0x48, 0xb3, 0x04, 0xa3, 0x02, 0xa3, 0x06,
-	0x67, 0x10, 0x98, 0x2d, 0x24, 0xc2, 0xc5, 0x9a, 0x93, 0x98, 0x94, 0x9a, 0x23, 0xc1, 0x04, 0x16,
-	0x84, 0x70, 0x84, 0x34, 0xb9, 0x04, 0x92, 0xf3, 0xf3, 0x4a, 0x8a, 0x12, 0x93, 0x4b, 0xe2, 0x13,
-	0x53, 0x52, 0x8a, 0x52, 0x8b, 0x8b, 0x25, 0x98, 0xc1, 0x0a, 0xf8, 0x61, 0xe2, 0x8e, 0x10, 0x61,
-	0x2b, 0x96, 0x17, 0x0b, 0xe4, 0x19, 0x9c, 0x3c, 0x4e, 0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e,
-	0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x09, 0x8f, 0xe5, 0x18, 0x2e, 0x3c, 0x96, 0x63, 0xb8, 0xf1, 0x58,
-	0x8e, 0x21, 0x4a, 0x2f, 0x3d, 0xb3, 0x24, 0xa3, 0x34, 0x49, 0x2f, 0x39, 0x3f, 0x57, 0x3f, 0x27,
-	0xbf, 0x28, 0x35, 0x25, 0x31, 0x2f, 0x31, 0x39, 0xb3, 0xa8, 0xb8, 0x24, 0x35, 0x11, 0xea, 0xa7,
-	0x0a, 0x28, 0x5d, 0x52, 0x59, 0x90, 0x5a, 0x9c, 0xc4, 0x06, 0x76, 0xb3, 0x31, 0x20, 0x00, 0x00,
-	0xff, 0xff, 0xf3, 0xe8, 0xc7, 0x59, 0xf8, 0x00, 0x00, 0x00,
+	// 370 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x92, 0xb1, 0x6e, 0xea, 0x30,
+	0x14, 0x86, 0x13, 0x6e, 0xb8, 0xd2, 0x35, 0x57, 0x97, 0x2b, 0x43, 0xd5, 0x08, 0xa4, 0x40, 0x99,
+	0xe8, 0x92, 0x08, 0xba, 0x75, 0x2b, 0xed, 0x50, 0xb6, 0x2a, 0xdd, 0x3a, 0x14, 0x99, 0xd8, 0x84,
+	0x48, 0x49, 0x0e, 0xb2, 0x5d, 0x4a, 0xde, 0xa2, 0x8f, 0xd0, 0xc7, 0xe9, 0xc8, 0xd8, 0xb1, 0x82,
+	0xa5, 0x8f, 0x51, 0xc5, 0x4e, 0x28, 0xa0, 0x4e, 0xb6, 0xff, 0xff, 0xf7, 0x77, 0x8e, 0x8e, 0x0e,
+	0x6a, 0x25, 0x99, 0x9c, 0x83, 0xf0, 0x9e, 0x89, 0x48, 0x56, 0xde, 0x72, 0xe0, 0x71, 0x88, 0x99,
+	0xbb, 0xe0, 0x20, 0x01, 0xd7, 0xb5, 0xe7, 0x2a, 0xcf, 0x5d, 0x0e, 0x5a, 0xcd, 0x10, 0x42, 0x50,
+	0x9e, 0x97, 0xdf, 0x74, 0xac, 0xe5, 0x1c, 0x23, 0x02, 0x48, 0x25, 0x27, 0x81, 0xd4, 0x7e, 0x8f,
+	0x20, 0xcb, 0x87, 0x98, 0x61, 0x8c, 0xac, 0x1c, 0x6e, 0x9b, 0x5d, 0xb3, 0xff, 0xc7, 0x57, 0x77,
+	0xdc, 0x44, 0xd5, 0x98, 0x4c, 0x59, 0x6c, 0x57, 0x94, 0xa8, 0x1f, 0xf8, 0x1c, 0xfd, 0x2f, 0x19,
+	0x13, 0x42, 0x29, 0x67, 0x42, 0xd8, 0xbf, 0x54, 0xa0, 0x5e, 0xea, 0x57, 0x5a, 0xbe, 0xb4, 0x3e,
+	0x5f, 0x3b, 0x46, 0x6f, 0x5d, 0x41, 0x8d, 0xfb, 0x4c, 0x48, 0x96, 0x8c, 0x00, 0xa4, 0x90, 0x9c,
+	0x2c, 0x6e, 0x88, 0x24, 0xf8, 0x0c, 0xfd, 0xcd, 0xcb, 0xec, 0x20, 0xba, 0x74, 0x2d, 0xd7, 0x0a,
+	0x00, 0x1e, 0xa2, 0x93, 0x00, 0x28, 0x9b, 0x70, 0x16, 0x46, 0x42, 0xf2, 0x6c, 0x97, 0xd5, 0x1d,
+	0x35, 0x72, 0xd3, 0x2f, 0xbc, 0xf2, 0x4f, 0x3f, 0xef, 0x6f, 0xff, 0x4f, 0x44, 0x55, 0x7f, 0x96,
+	0xff, 0x6f, 0x3f, 0x3e, 0xa6, 0xd8, 0x47, 0xa7, 0x87, 0x49, 0xf5, 0x8a, 0xd2, 0x19, 0xd8, 0x56,
+	0xd7, 0xec, 0xd7, 0x86, 0x6d, 0xf7, 0x68, 0xc8, 0xee, 0x35, 0x50, 0x36, 0x4e, 0x67, 0x70, 0x37,
+	0xf2, 0x9b, 0xfb, 0xb4, 0x52, 0xc7, 0x8f, 0xa8, 0x7d, 0xcc, 0x2c, 0x66, 0xa5, 0xb8, 0x55, 0xc5,
+	0xed, 0xfc, 0xc0, 0xd5, 0xa9, 0x82, 0x6d, 0x1f, 0xb2, 0xbf, 0x3d, 0x3d, 0xd2, 0xd1, 0xed, 0xdb,
+	0xc6, 0x31, 0xd7, 0x1b, 0xc7, 0xfc, 0xd8, 0x38, 0xe6, 0xcb, 0xd6, 0x31, 0xd6, 0x5b, 0xc7, 0x78,
+	0xdf, 0x3a, 0xc6, 0x83, 0x1b, 0x46, 0x72, 0xfe, 0x34, 0x75, 0x03, 0x48, 0xbc, 0x18, 0x38, 0xa3,
+	0x24, 0x25, 0x41, 0xc4, 0x85, 0x64, 0xa4, 0xd8, 0x81, 0x55, 0x71, 0xca, 0x6c, 0xc1, 0xc4, 0xf4,
+	0xb7, 0x5a, 0x83, 0x8b, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2c, 0xc2, 0xe2, 0x06, 0x6b, 0x02,
+	0x00, 0x00,
 }
 
 func (m *Role) Marshal() (dAtA []byte, err error) {
@@ -155,6 +244,72 @@ func (m *Role) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *SystemBootstrapData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SystemBootstrapData) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SystemBootstrapData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.CodeRegistryContractInfo != nil {
+		{
+			size, err := m.CodeRegistryContractInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRole(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.CodeRegistryCodeInfo != nil {
+		{
+			size, err := m.CodeRegistryCodeInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRole(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.CodeRegistryId != 0 {
+		i = encodeVarintRole(dAtA, i, uint64(m.CodeRegistryId))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.CodeRegistryAddress) > 0 {
+		i -= len(m.CodeRegistryAddress)
+		copy(dAtA[i:], m.CodeRegistryAddress)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.CodeRegistryAddress)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.RoleAddress) > 0 {
+		i -= len(m.RoleAddress)
+		copy(dAtA[i:], m.RoleAddress)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.RoleAddress)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintRole(dAtA []byte, offset int, v uint64) int {
 	offset -= sovRole(v)
 	base := offset
@@ -182,6 +337,34 @@ func (m *Role) Size() (n int) {
 	}
 	l = len(m.ContractAddress)
 	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	return n
+}
+
+func (m *SystemBootstrapData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.RoleAddress)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	l = len(m.CodeRegistryAddress)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	if m.CodeRegistryId != 0 {
+		n += 1 + sovRole(uint64(m.CodeRegistryId))
+	}
+	if m.CodeRegistryCodeInfo != nil {
+		l = m.CodeRegistryCodeInfo.Size()
+		n += 1 + l + sovRole(uint64(l))
+	}
+	if m.CodeRegistryContractInfo != nil {
+		l = m.CodeRegistryContractInfo.Size()
 		n += 1 + l + sovRole(uint64(l))
 	}
 	return n
@@ -317,6 +500,211 @@ func (m *Role) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ContractAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRole(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRole
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SystemBootstrapData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRole
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SystemBootstrapData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SystemBootstrapData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RoleAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RoleAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CodeRegistryAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryId", wireType)
+			}
+			m.CodeRegistryId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CodeRegistryId |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryCodeInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CodeRegistryCodeInfo == nil {
+				m.CodeRegistryCodeInfo = &CodeInfoPB{}
+			}
+			if err := m.CodeRegistryCodeInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryContractInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CodeRegistryContractInfo == nil {
+				m.CodeRegistryContractInfo = &ContractInfoPB{}
+			}
+			if err := m.CodeRegistryContractInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

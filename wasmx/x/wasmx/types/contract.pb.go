@@ -63,25 +63,25 @@ func (ContractStorageType) EnumDescriptor() ([]byte, []int) {
 }
 
 // ContractStorage
-type ContractStorage struct {
+type ContractStoragePB struct {
 	// hex-encode key
 	Key github_com_cometbft_cometbft_libs_bytes.HexBytes `protobuf:"bytes,1,opt,name=key,proto3,casttype=github.com/cometbft/cometbft/libs/bytes.HexBytes" json:"key,omitempty"`
 	// raw value
 	Value []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 }
 
-func (m *ContractStorage) Reset()         { *m = ContractStorage{} }
-func (m *ContractStorage) String() string { return proto.CompactTextString(m) }
-func (*ContractStorage) ProtoMessage()    {}
-func (*ContractStorage) Descriptor() ([]byte, []int) {
+func (m *ContractStoragePB) Reset()         { *m = ContractStoragePB{} }
+func (m *ContractStoragePB) String() string { return proto.CompactTextString(m) }
+func (*ContractStoragePB) ProtoMessage()    {}
+func (*ContractStoragePB) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8858b63f7ddfb8d9, []int{0}
 }
-func (m *ContractStorage) XXX_Unmarshal(b []byte) error {
+func (m *ContractStoragePB) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ContractStorage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ContractStoragePB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ContractStorage.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ContractStoragePB.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -91,26 +91,26 @@ func (m *ContractStorage) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *ContractStorage) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ContractStorage.Merge(m, src)
+func (m *ContractStoragePB) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContractStoragePB.Merge(m, src)
 }
-func (m *ContractStorage) XXX_Size() int {
+func (m *ContractStoragePB) XXX_Size() int {
 	return m.Size()
 }
-func (m *ContractStorage) XXX_DiscardUnknown() {
-	xxx_messageInfo_ContractStorage.DiscardUnknown(m)
+func (m *ContractStoragePB) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContractStoragePB.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ContractStorage proto.InternalMessageInfo
+var xxx_messageInfo_ContractStoragePB proto.InternalMessageInfo
 
-func (m *ContractStorage) GetKey() github_com_cometbft_cometbft_libs_bytes.HexBytes {
+func (m *ContractStoragePB) GetKey() github_com_cometbft_cometbft_libs_bytes.HexBytes {
 	if m != nil {
 		return m.Key
 	}
 	return nil
 }
 
-func (m *ContractStorage) GetValue() []byte {
+func (m *ContractStoragePB) GetValue() []byte {
 	if m != nil {
 		return m.Value
 	}
@@ -118,31 +118,31 @@ func (m *ContractStorage) GetValue() []byte {
 }
 
 // Metadata for each codeId
-type CodeMetadata struct {
+type CodeMetadataPB struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// category paths e.g. "/dapps/history"
 	Categ []string `protobuf:"bytes,2,rep,name=categ,proto3" json:"categ,omitempty"`
 	Icon  string   `protobuf:"bytes,3,opt,name=icon,proto3" json:"icon,omitempty"`
 	// off-chain identifier
-	Author     string      `protobuf:"bytes,4,opt,name=author,proto3" json:"author,omitempty"`
-	Site       string      `protobuf:"bytes,5,opt,name=site,proto3" json:"site,omitempty"`
-	Abi        string      `protobuf:"bytes,6,opt,name=abi,proto3" json:"abi,omitempty"`
-	JsonSchema string      `protobuf:"bytes,7,opt,name=json_schema,json=jsonSchema,proto3" json:"json_schema,omitempty"`
-	Origin     *CodeOrigin `protobuf:"bytes,8,opt,name=origin,proto3" json:"origin,omitempty"`
+	Author     string        `protobuf:"bytes,4,opt,name=author,proto3" json:"author,omitempty"`
+	Site       string        `protobuf:"bytes,5,opt,name=site,proto3" json:"site,omitempty"`
+	Abi        string        `protobuf:"bytes,6,opt,name=abi,proto3" json:"abi,omitempty"`
+	JsonSchema string        `protobuf:"bytes,7,opt,name=json_schema,json=jsonSchema,proto3" json:"json_schema,omitempty"`
+	Origin     *CodeOriginPB `protobuf:"bytes,8,opt,name=origin,proto3" json:"origin,omitempty"`
 }
 
-func (m *CodeMetadata) Reset()         { *m = CodeMetadata{} }
-func (m *CodeMetadata) String() string { return proto.CompactTextString(m) }
-func (*CodeMetadata) ProtoMessage()    {}
-func (*CodeMetadata) Descriptor() ([]byte, []int) {
+func (m *CodeMetadataPB) Reset()         { *m = CodeMetadataPB{} }
+func (m *CodeMetadataPB) String() string { return proto.CompactTextString(m) }
+func (*CodeMetadataPB) ProtoMessage()    {}
+func (*CodeMetadataPB) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8858b63f7ddfb8d9, []int{1}
 }
-func (m *CodeMetadata) XXX_Unmarshal(b []byte) error {
+func (m *CodeMetadataPB) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CodeMetadata) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CodeMetadataPB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CodeMetadata.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CodeMetadataPB.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -152,68 +152,68 @@ func (m *CodeMetadata) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
-func (m *CodeMetadata) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CodeMetadata.Merge(m, src)
+func (m *CodeMetadataPB) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CodeMetadataPB.Merge(m, src)
 }
-func (m *CodeMetadata) XXX_Size() int {
+func (m *CodeMetadataPB) XXX_Size() int {
 	return m.Size()
 }
-func (m *CodeMetadata) XXX_DiscardUnknown() {
-	xxx_messageInfo_CodeMetadata.DiscardUnknown(m)
+func (m *CodeMetadataPB) XXX_DiscardUnknown() {
+	xxx_messageInfo_CodeMetadataPB.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CodeMetadata proto.InternalMessageInfo
+var xxx_messageInfo_CodeMetadataPB proto.InternalMessageInfo
 
-func (m *CodeMetadata) GetName() string {
+func (m *CodeMetadataPB) GetName() string {
 	if m != nil {
 		return m.Name
 	}
 	return ""
 }
 
-func (m *CodeMetadata) GetCateg() []string {
+func (m *CodeMetadataPB) GetCateg() []string {
 	if m != nil {
 		return m.Categ
 	}
 	return nil
 }
 
-func (m *CodeMetadata) GetIcon() string {
+func (m *CodeMetadataPB) GetIcon() string {
 	if m != nil {
 		return m.Icon
 	}
 	return ""
 }
 
-func (m *CodeMetadata) GetAuthor() string {
+func (m *CodeMetadataPB) GetAuthor() string {
 	if m != nil {
 		return m.Author
 	}
 	return ""
 }
 
-func (m *CodeMetadata) GetSite() string {
+func (m *CodeMetadataPB) GetSite() string {
 	if m != nil {
 		return m.Site
 	}
 	return ""
 }
 
-func (m *CodeMetadata) GetAbi() string {
+func (m *CodeMetadataPB) GetAbi() string {
 	if m != nil {
 		return m.Abi
 	}
 	return ""
 }
 
-func (m *CodeMetadata) GetJsonSchema() string {
+func (m *CodeMetadataPB) GetJsonSchema() string {
 	if m != nil {
 		return m.JsonSchema
 	}
 	return ""
 }
 
-func (m *CodeMetadata) GetOrigin() *CodeOrigin {
+func (m *CodeMetadataPB) GetOrigin() *CodeOriginPB {
 	if m != nil {
 		return m.Origin
 	}
@@ -221,7 +221,7 @@ func (m *CodeMetadata) GetOrigin() *CodeOrigin {
 }
 
 // CodeInfo is data for the uploaded contract WASM code
-type CodeInfo struct {
+type CodeInfoPB struct {
 	// CodeHash is the unique identifier created by hashing the
 	// wasm or interpreted code
 	CodeHash []byte `protobuf:"bytes,1,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
@@ -231,27 +231,27 @@ type CodeInfo struct {
 	// or versioned interface labels
 	Deps []string `protobuf:"bytes,3,rep,name=deps,proto3" json:"deps,omitempty"`
 	// Pinned contract
-	Pinned      bool         `protobuf:"varint,4,opt,name=pinned,proto3" json:"pinned,omitempty"`
-	MeteringOff bool         `protobuf:"varint,5,opt,name=metering_off,json=meteringOff,proto3" json:"metering_off,omitempty"`
-	Metadata    CodeMetadata `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata"`
+	Pinned      bool           `protobuf:"varint,4,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	MeteringOff bool           `protobuf:"varint,5,opt,name=metering_off,json=meteringOff,proto3" json:"metering_off,omitempty"`
+	Metadata    CodeMetadataPB `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata"`
 	// for code that has a different runtime, like EVM
 	InterpretedBytecodeDeployment []byte `protobuf:"bytes,7,opt,name=interpreted_bytecode_deployment,json=interpretedBytecodeDeployment,proto3" json:"interpreted_bytecode_deployment,omitempty"`
 	InterpretedBytecodeRuntime    []byte `protobuf:"bytes,8,opt,name=interpreted_bytecode_runtime,json=interpretedBytecodeRuntime,proto3" json:"interpreted_bytecode_runtime,omitempty"`
 	RuntimeHash                   []byte `protobuf:"bytes,9,opt,name=runtime_hash,json=runtimeHash,proto3" json:"runtime_hash,omitempty"`
 }
 
-func (m *CodeInfo) Reset()         { *m = CodeInfo{} }
-func (m *CodeInfo) String() string { return proto.CompactTextString(m) }
-func (*CodeInfo) ProtoMessage()    {}
-func (*CodeInfo) Descriptor() ([]byte, []int) {
+func (m *CodeInfoPB) Reset()         { *m = CodeInfoPB{} }
+func (m *CodeInfoPB) String() string { return proto.CompactTextString(m) }
+func (*CodeInfoPB) ProtoMessage()    {}
+func (*CodeInfoPB) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8858b63f7ddfb8d9, []int{2}
 }
-func (m *CodeInfo) XXX_Unmarshal(b []byte) error {
+func (m *CodeInfoPB) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CodeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CodeInfoPB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CodeInfo.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CodeInfoPB.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -261,100 +261,100 @@ func (m *CodeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *CodeInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CodeInfo.Merge(m, src)
+func (m *CodeInfoPB) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CodeInfoPB.Merge(m, src)
 }
-func (m *CodeInfo) XXX_Size() int {
+func (m *CodeInfoPB) XXX_Size() int {
 	return m.Size()
 }
-func (m *CodeInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_CodeInfo.DiscardUnknown(m)
+func (m *CodeInfoPB) XXX_DiscardUnknown() {
+	xxx_messageInfo_CodeInfoPB.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CodeInfo proto.InternalMessageInfo
+var xxx_messageInfo_CodeInfoPB proto.InternalMessageInfo
 
-func (m *CodeInfo) GetCodeHash() []byte {
+func (m *CodeInfoPB) GetCodeHash() []byte {
 	if m != nil {
 		return m.CodeHash
 	}
 	return nil
 }
 
-func (m *CodeInfo) GetCreator() string {
+func (m *CodeInfoPB) GetCreator() string {
 	if m != nil {
 		return m.Creator
 	}
 	return ""
 }
 
-func (m *CodeInfo) GetDeps() []string {
+func (m *CodeInfoPB) GetDeps() []string {
 	if m != nil {
 		return m.Deps
 	}
 	return nil
 }
 
-func (m *CodeInfo) GetPinned() bool {
+func (m *CodeInfoPB) GetPinned() bool {
 	if m != nil {
 		return m.Pinned
 	}
 	return false
 }
 
-func (m *CodeInfo) GetMeteringOff() bool {
+func (m *CodeInfoPB) GetMeteringOff() bool {
 	if m != nil {
 		return m.MeteringOff
 	}
 	return false
 }
 
-func (m *CodeInfo) GetMetadata() CodeMetadata {
+func (m *CodeInfoPB) GetMetadata() CodeMetadataPB {
 	if m != nil {
 		return m.Metadata
 	}
-	return CodeMetadata{}
+	return CodeMetadataPB{}
 }
 
-func (m *CodeInfo) GetInterpretedBytecodeDeployment() []byte {
+func (m *CodeInfoPB) GetInterpretedBytecodeDeployment() []byte {
 	if m != nil {
 		return m.InterpretedBytecodeDeployment
 	}
 	return nil
 }
 
-func (m *CodeInfo) GetInterpretedBytecodeRuntime() []byte {
+func (m *CodeInfoPB) GetInterpretedBytecodeRuntime() []byte {
 	if m != nil {
 		return m.InterpretedBytecodeRuntime
 	}
 	return nil
 }
 
-func (m *CodeInfo) GetRuntimeHash() []byte {
+func (m *CodeInfoPB) GetRuntimeHash() []byte {
 	if m != nil {
 		return m.RuntimeHash
 	}
 	return nil
 }
 
-type CodeOrigin struct {
+type CodeOriginPB struct {
 	// unique chain ID
 	ChainId string `protobuf:"bytes,1,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
 	// hex-encoded address
 	Address string `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
 }
 
-func (m *CodeOrigin) Reset()         { *m = CodeOrigin{} }
-func (m *CodeOrigin) String() string { return proto.CompactTextString(m) }
-func (*CodeOrigin) ProtoMessage()    {}
-func (*CodeOrigin) Descriptor() ([]byte, []int) {
+func (m *CodeOriginPB) Reset()         { *m = CodeOriginPB{} }
+func (m *CodeOriginPB) String() string { return proto.CompactTextString(m) }
+func (*CodeOriginPB) ProtoMessage()    {}
+func (*CodeOriginPB) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8858b63f7ddfb8d9, []int{3}
 }
-func (m *CodeOrigin) XXX_Unmarshal(b []byte) error {
+func (m *CodeOriginPB) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CodeOrigin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *CodeOriginPB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CodeOrigin.Marshal(b, m, deterministic)
+		return xxx_messageInfo_CodeOriginPB.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -364,26 +364,26 @@ func (m *CodeOrigin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *CodeOrigin) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CodeOrigin.Merge(m, src)
+func (m *CodeOriginPB) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CodeOriginPB.Merge(m, src)
 }
-func (m *CodeOrigin) XXX_Size() int {
+func (m *CodeOriginPB) XXX_Size() int {
 	return m.Size()
 }
-func (m *CodeOrigin) XXX_DiscardUnknown() {
-	xxx_messageInfo_CodeOrigin.DiscardUnknown(m)
+func (m *CodeOriginPB) XXX_DiscardUnknown() {
+	xxx_messageInfo_CodeOriginPB.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CodeOrigin proto.InternalMessageInfo
+var xxx_messageInfo_CodeOriginPB proto.InternalMessageInfo
 
-func (m *CodeOrigin) GetChainId() string {
+func (m *CodeOriginPB) GetChainId() string {
 	if m != nil {
 		return m.ChainId
 	}
 	return ""
 }
 
-func (m *CodeOrigin) GetAddress() string {
+func (m *CodeOriginPB) GetAddress() string {
 	if m != nil {
 		return m.Address
 	}
@@ -391,7 +391,7 @@ func (m *CodeOrigin) GetAddress() string {
 }
 
 // ContractInfo stores a WASM contract instance
-type ContractInfo struct {
+type ContractInfoPB struct {
 	// CodeID is the reference to the stored Wasm code
 	CodeId uint64 `protobuf:"varint,1,opt,name=code_id,json=codeId,proto3" json:"code_id,omitempty"`
 	// Creator address who initially instantiated the contract
@@ -407,18 +407,18 @@ type ContractInfo struct {
 	IbcPortId  string `protobuf:"bytes,7,opt,name=ibc_port_id,json=ibcPortId,proto3" json:"ibc_port_id,omitempty"`
 }
 
-func (m *ContractInfo) Reset()         { *m = ContractInfo{} }
-func (m *ContractInfo) String() string { return proto.CompactTextString(m) }
-func (*ContractInfo) ProtoMessage()    {}
-func (*ContractInfo) Descriptor() ([]byte, []int) {
+func (m *ContractInfoPB) Reset()         { *m = ContractInfoPB{} }
+func (m *ContractInfoPB) String() string { return proto.CompactTextString(m) }
+func (*ContractInfoPB) ProtoMessage()    {}
+func (*ContractInfoPB) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8858b63f7ddfb8d9, []int{4}
 }
-func (m *ContractInfo) XXX_Unmarshal(b []byte) error {
+func (m *ContractInfoPB) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ContractInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ContractInfoPB) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ContractInfo.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ContractInfoPB.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -428,61 +428,61 @@ func (m *ContractInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
-func (m *ContractInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ContractInfo.Merge(m, src)
+func (m *ContractInfoPB) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContractInfoPB.Merge(m, src)
 }
-func (m *ContractInfo) XXX_Size() int {
+func (m *ContractInfoPB) XXX_Size() int {
 	return m.Size()
 }
-func (m *ContractInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_ContractInfo.DiscardUnknown(m)
+func (m *ContractInfoPB) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContractInfoPB.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ContractInfo proto.InternalMessageInfo
+var xxx_messageInfo_ContractInfoPB proto.InternalMessageInfo
 
-func (m *ContractInfo) GetCodeId() uint64 {
+func (m *ContractInfoPB) GetCodeId() uint64 {
 	if m != nil {
 		return m.CodeId
 	}
 	return 0
 }
 
-func (m *ContractInfo) GetCreator() string {
+func (m *ContractInfoPB) GetCreator() string {
 	if m != nil {
 		return m.Creator
 	}
 	return ""
 }
 
-func (m *ContractInfo) GetLabel() string {
+func (m *ContractInfoPB) GetLabel() string {
 	if m != nil {
 		return m.Label
 	}
 	return ""
 }
 
-func (m *ContractInfo) GetStorageType() ContractStorageType {
+func (m *ContractInfoPB) GetStorageType() ContractStorageType {
 	if m != nil {
 		return m.StorageType
 	}
 	return ContractStorageType_CoreConsensus
 }
 
-func (m *ContractInfo) GetInitMessage() RawContractMessage {
+func (m *ContractInfoPB) GetInitMessage() RawContractMessage {
 	if m != nil {
 		return m.InitMessage
 	}
 	return nil
 }
 
-func (m *ContractInfo) GetProvenance() string {
+func (m *ContractInfoPB) GetProvenance() string {
 	if m != nil {
 		return m.Provenance
 	}
 	return ""
 }
 
-func (m *ContractInfo) GetIbcPortId() string {
+func (m *ContractInfoPB) GetIbcPortId() string {
 	if m != nil {
 		return m.IbcPortId
 	}
@@ -548,81 +548,81 @@ func (m *AbsoluteTxPosition) GetTxIndex() uint64 {
 
 func init() {
 	proto.RegisterEnum("mythos.wasmx.v1.ContractStorageType", ContractStorageType_name, ContractStorageType_value)
-	proto.RegisterType((*ContractStorage)(nil), "mythos.wasmx.v1.ContractStorage")
-	proto.RegisterType((*CodeMetadata)(nil), "mythos.wasmx.v1.CodeMetadata")
-	proto.RegisterType((*CodeInfo)(nil), "mythos.wasmx.v1.CodeInfo")
-	proto.RegisterType((*CodeOrigin)(nil), "mythos.wasmx.v1.CodeOrigin")
-	proto.RegisterType((*ContractInfo)(nil), "mythos.wasmx.v1.ContractInfo")
+	proto.RegisterType((*ContractStoragePB)(nil), "mythos.wasmx.v1.ContractStoragePB")
+	proto.RegisterType((*CodeMetadataPB)(nil), "mythos.wasmx.v1.CodeMetadataPB")
+	proto.RegisterType((*CodeInfoPB)(nil), "mythos.wasmx.v1.CodeInfoPB")
+	proto.RegisterType((*CodeOriginPB)(nil), "mythos.wasmx.v1.CodeOriginPB")
+	proto.RegisterType((*ContractInfoPB)(nil), "mythos.wasmx.v1.ContractInfoPB")
 	proto.RegisterType((*AbsoluteTxPosition)(nil), "mythos.wasmx.v1.AbsoluteTxPosition")
 }
 
 func init() { proto.RegisterFile("mythos/wasmx/v1/contract.proto", fileDescriptor_8858b63f7ddfb8d9) }
 
 var fileDescriptor_8858b63f7ddfb8d9 = []byte{
-	// 835 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x54, 0x4d, 0x73, 0xe3, 0x44,
-	0x10, 0xb5, 0x63, 0xc7, 0x1f, 0x2d, 0x2f, 0x09, 0xb3, 0xa9, 0x20, 0xf6, 0x43, 0x0e, 0x29, 0xa8,
-	0x4a, 0x71, 0xb0, 0xd9, 0x2c, 0x17, 0xb8, 0x00, 0x0e, 0xb5, 0x9b, 0x1c, 0x52, 0xbb, 0x35, 0xc9,
-	0x89, 0x8b, 0x6a, 0x24, 0xb5, 0xa5, 0x21, 0xd2, 0x8c, 0x6a, 0x66, 0x9c, 0xb5, 0xef, 0x9c, 0x38,
-	0xf1, 0x13, 0xe0, 0xdf, 0xec, 0x71, 0x8f, 0x9c, 0x52, 0x54, 0x72, 0xe1, 0x37, 0xec, 0x89, 0x9a,
-	0x91, 0xbc, 0x11, 0x94, 0x39, 0x79, 0xfa, 0xf5, 0xeb, 0xb6, 0xfa, 0xbd, 0xe9, 0x81, 0xa0, 0x58,
-	0x99, 0x4c, 0xea, 0xe9, 0x1b, 0xa6, 0x8b, 0xe5, 0xf4, 0xfa, 0xd9, 0x34, 0x96, 0xc2, 0x28, 0x16,
-	0x9b, 0x49, 0xa9, 0xa4, 0x91, 0x64, 0xa7, 0xca, 0x4f, 0x5c, 0x7e, 0x72, 0xfd, 0xec, 0xd1, 0x5e,
-	0x2a, 0x53, 0xe9, 0x72, 0x53, 0x7b, 0xaa, 0x68, 0x87, 0x12, 0x76, 0x4e, 0xea, 0xc2, 0x0b, 0x23,
-	0x15, 0x4b, 0x91, 0xbc, 0x80, 0xce, 0x15, 0xae, 0xfc, 0xf6, 0x41, 0xfb, 0x68, 0x34, 0xfb, 0xfa,
-	0xfd, 0xcd, 0xf8, 0xab, 0x94, 0x9b, 0x6c, 0x11, 0x4d, 0x62, 0x59, 0x4c, 0x63, 0x59, 0xa0, 0x89,
-	0xe6, 0xe6, 0xfe, 0x90, 0xf3, 0x48, 0x4f, 0xa3, 0x95, 0x41, 0x3d, 0x39, 0xc5, 0xe5, 0xcc, 0x1e,
-	0xa8, 0x6d, 0x40, 0xf6, 0x60, 0xfb, 0x9a, 0xe5, 0x0b, 0xf4, 0xb7, 0x6c, 0x27, 0x5a, 0x05, 0x87,
-	0xbf, 0x6e, 0xc1, 0xe8, 0x44, 0x26, 0x78, 0x8e, 0x86, 0x25, 0xcc, 0x30, 0xe2, 0x43, 0x57, 0xb0,
-	0x02, 0xdd, 0xff, 0x0d, 0x67, 0xdd, 0xb7, 0x37, 0xe3, 0x36, 0x75, 0x88, 0x6d, 0x10, 0x33, 0x83,
-	0xa9, 0xbf, 0x75, 0xd0, 0x39, 0x1a, 0xd2, 0x2a, 0xb0, 0x7c, 0x1e, 0x4b, 0xe1, 0x77, 0x9a, 0x7c,
-	0x8b, 0x90, 0x27, 0xd0, 0x63, 0x0b, 0x93, 0x49, 0xe5, 0x77, 0x1b, 0xb9, 0x1a, 0xb3, 0x75, 0x9a,
-	0x1b, 0xf4, 0xb7, 0x9b, 0x75, 0x16, 0x21, 0xfb, 0xd0, 0x61, 0x11, 0xf7, 0x7b, 0x8d, 0x84, 0x05,
-	0xc8, 0x17, 0xe0, 0xfd, 0xac, 0xa5, 0x08, 0x75, 0x9c, 0x61, 0xc1, 0xfc, 0x7e, 0x23, 0x0f, 0x36,
-	0x71, 0xe1, 0x70, 0xf2, 0x1c, 0x7a, 0x52, 0xf1, 0x94, 0x0b, 0x7f, 0x70, 0xd0, 0x3e, 0xf2, 0x8e,
-	0x1f, 0x4f, 0xfe, 0x23, 0xfd, 0xc4, 0xce, 0xfb, 0xca, 0x51, 0x68, 0x4d, 0xfd, 0xb6, 0xfb, 0xf7,
-	0xef, 0xe3, 0xf6, 0xe1, 0x2f, 0x1d, 0x18, 0xd8, 0xe4, 0x99, 0x98, 0x4b, 0xf2, 0x18, 0x86, 0xb1,
-	0x4c, 0x30, 0xcc, 0x98, 0xce, 0x2a, 0xf5, 0xe9, 0xc0, 0x02, 0xa7, 0x4c, 0x67, 0xc4, 0x87, 0x7e,
-	0xac, 0x90, 0x19, 0xa9, 0x9c, 0x9c, 0x43, 0xba, 0x0e, 0x09, 0x81, 0x6e, 0x82, 0xa5, 0xf6, 0x3b,
-	0x4e, 0x24, 0x77, 0x26, 0xfb, 0xd0, 0x2b, 0xb9, 0x10, 0x98, 0x38, 0x25, 0x06, 0xb4, 0x8e, 0xc8,
-	0x67, 0x30, 0x2a, 0xd0, 0xa0, 0xe2, 0x22, 0x0d, 0xe5, 0x7c, 0xee, 0xb4, 0x18, 0x50, 0x6f, 0x8d,
-	0xbd, 0x9a, 0xcf, 0xc9, 0x77, 0x30, 0x28, 0x6a, 0x6b, 0x9c, 0x22, 0xde, 0xf1, 0xd3, 0x8d, 0xf3,
-	0xac, 0xfd, 0x73, 0x82, 0xb4, 0xe8, 0x87, 0x22, 0xf2, 0x02, 0xc6, 0x5c, 0x18, 0x54, 0xa5, 0x42,
-	0x83, 0x49, 0x68, 0x6f, 0x86, 0x1b, 0x2b, 0xc1, 0x32, 0x97, 0xab, 0x02, 0x85, 0x71, 0x4a, 0x8e,
-	0xe8, 0xd3, 0x06, 0x6d, 0x56, 0xb3, 0x7e, 0xfc, 0x40, 0x22, 0xdf, 0xc3, 0x93, 0x8d, 0x7d, 0xd4,
-	0x42, 0x18, 0x5e, 0xa0, 0x13, 0x7b, 0x44, 0x1f, 0x6d, 0x68, 0x42, 0x2b, 0x86, 0x9d, 0xb6, 0x26,
-	0x57, 0x9a, 0x0e, 0x5d, 0x85, 0x57, 0x63, 0x56, 0xd6, 0xda, 0x86, 0x97, 0x00, 0xf7, 0x16, 0x91,
-	0x4f, 0x61, 0x10, 0x67, 0x8c, 0x8b, 0x90, 0x27, 0xd5, 0xa5, 0xa4, 0x7d, 0x17, 0x9f, 0x25, 0xd6,
-	0x05, 0x96, 0x24, 0x0a, 0xb5, 0x5e, 0xbb, 0x50, 0x87, 0x75, 0xa3, 0x3f, 0xdc, 0xe5, 0xae, 0xd6,
-	0xc9, 0x79, 0xfa, 0x09, 0xf4, 0xdd, 0x47, 0xd7, 0xad, 0xba, 0xb4, 0x67, 0xc3, 0xaa, 0xd3, 0xff,
-	0xf8, 0xb9, 0x07, 0xdb, 0x39, 0x8b, 0x30, 0xaf, 0x2e, 0x38, 0xad, 0x02, 0xf2, 0x12, 0x46, 0xba,
-	0xda, 0xcf, 0xd0, 0xac, 0x4a, 0x74, 0xbe, 0x7e, 0x74, 0xfc, 0xf9, 0x06, 0x6b, 0xfe, 0xb5, 0xcc,
-	0x97, 0xab, 0x12, 0xa9, 0xa7, 0xef, 0x03, 0xf2, 0x0d, 0x8c, 0xb8, 0xe0, 0x26, 0x2c, 0x50, 0x6b,
-	0x96, 0x56, 0xeb, 0x30, 0x9a, 0xed, 0xbf, 0xbf, 0x19, 0x13, 0xca, 0xde, 0xac, 0xcb, 0xcf, 0xab,
-	0x2c, 0xf5, 0x2c, 0xb7, 0x0e, 0x48, 0x00, 0x50, 0x2a, 0x79, 0x8d, 0x82, 0x89, 0x18, 0xab, 0x75,
-	0xa1, 0x0d, 0x84, 0x04, 0xe0, 0xf1, 0x28, 0x0e, 0x4b, 0xa9, 0x8c, 0x1d, 0xd8, 0xed, 0x0b, 0x1d,
-	0xf2, 0x28, 0x7e, 0x2d, 0x95, 0x39, 0x4b, 0x6a, 0x8d, 0x28, 0x90, 0x1f, 0x22, 0x2d, 0xf3, 0x85,
-	0xc1, 0xcb, 0xe5, 0x6b, 0xa9, 0xb9, 0xe1, 0x52, 0x58, 0xaf, 0xa2, 0x5c, 0xc6, 0x57, 0x61, 0x86,
-	0x3c, 0xcd, 0x4c, 0xad, 0x96, 0xe7, 0xb0, 0x53, 0x07, 0x59, 0x5f, 0xcc, 0x32, 0xe4, 0x22, 0xc1,
-	0xa5, 0xd3, 0xac, 0x4b, 0xfb, 0x66, 0x79, 0x66, 0xc3, 0x2f, 0xaf, 0xe0, 0xe1, 0x86, 0xc1, 0xc9,
-	0xc7, 0xf0, 0xe0, 0x44, 0x2a, 0x3c, 0x91, 0x42, 0xa3, 0xd0, 0x0b, 0xbd, 0xdb, 0xb2, 0x90, 0xbd,
-	0xb9, 0xf7, 0x50, 0x9b, 0x3c, 0x84, 0x9d, 0x0b, 0x2e, 0xd2, 0xbc, 0xc1, 0xdb, 0x22, 0x00, 0xbd,
-	0x73, 0x2c, 0xa4, 0x5a, 0xed, 0x76, 0xc8, 0x03, 0x18, 0x5e, 0x2a, 0x26, 0x34, 0x47, 0x61, 0x76,
-	0xbb, 0xb3, 0xd3, 0xb7, 0xb7, 0x41, 0xfb, 0xdd, 0x6d, 0xd0, 0xfe, 0xeb, 0x36, 0x68, 0xff, 0x76,
-	0x17, 0xb4, 0xde, 0xdd, 0x05, 0xad, 0x3f, 0xef, 0x82, 0xd6, 0x4f, 0x93, 0xc6, 0x43, 0x99, 0x4b,
-	0x85, 0x09, 0x13, 0x2c, 0xe6, 0x4a, 0x1b, 0x64, 0xf5, 0x3b, 0xbd, 0xac, 0x7f, 0xad, 0x87, 0x3a,
-	0xea, 0xb9, 0x37, 0xf8, 0xf9, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x90, 0x1e, 0x8e, 0xef, 0xcc,
-	0x05, 0x00, 0x00,
+	// 844 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x54, 0xcd, 0x6e, 0x1b, 0x37,
+	0x10, 0x96, 0x2c, 0x59, 0x3f, 0x23, 0x25, 0x71, 0x18, 0xc3, 0xdd, 0xa6, 0x89, 0xe4, 0x1a, 0x2d,
+	0x60, 0xf4, 0x20, 0x35, 0x6e, 0x7b, 0x68, 0x4f, 0xcd, 0xba, 0x48, 0xad, 0x83, 0x11, 0x81, 0xf6,
+	0xa9, 0x97, 0x05, 0x77, 0x77, 0xb4, 0xcb, 0x5a, 0x4b, 0xaa, 0x24, 0xe5, 0x48, 0x6f, 0xd0, 0x53,
+	0xd1, 0x47, 0x28, 0xd0, 0x97, 0xc9, 0x31, 0xc7, 0x9e, 0x8c, 0xc2, 0xbe, 0xf4, 0x19, 0x72, 0x2a,
+	0xc8, 0xa5, 0xed, 0x6d, 0xa1, 0x9c, 0xc4, 0xf9, 0xe6, 0x9b, 0xd1, 0xce, 0xf7, 0x71, 0x08, 0x83,
+	0x62, 0x6d, 0x72, 0xa9, 0xc7, 0x6f, 0x98, 0x2e, 0x56, 0xe3, 0xcb, 0x17, 0xe3, 0x44, 0x0a, 0xa3,
+	0x58, 0x62, 0x46, 0x0b, 0x25, 0x8d, 0x24, 0x8f, 0xca, 0xfc, 0xc8, 0xe5, 0x47, 0x97, 0x2f, 0x9e,
+	0xee, 0x66, 0x32, 0x93, 0x2e, 0x37, 0xb6, 0xa7, 0x92, 0x76, 0xf0, 0x0b, 0x3c, 0x3e, 0xf6, 0x85,
+	0x67, 0x46, 0x2a, 0x96, 0xe1, 0x34, 0x24, 0xaf, 0xa0, 0x71, 0x81, 0xeb, 0xa0, 0xbe, 0x5f, 0x3f,
+	0xec, 0x87, 0x5f, 0xbf, 0xbf, 0x1a, 0x7e, 0x99, 0x71, 0x93, 0x2f, 0xe3, 0x51, 0x22, 0x8b, 0x71,
+	0x22, 0x0b, 0x34, 0xf1, 0xcc, 0xdc, 0x1f, 0xe6, 0x3c, 0xd6, 0xe3, 0x78, 0x6d, 0x50, 0x8f, 0x4e,
+	0x70, 0x15, 0xda, 0x03, 0xb5, 0x0d, 0xc8, 0x2e, 0x6c, 0x5f, 0xb2, 0xf9, 0x12, 0x83, 0x2d, 0xdb,
+	0x89, 0x96, 0xc1, 0xc1, 0x6f, 0x5b, 0xf0, 0xf0, 0x58, 0xa6, 0x78, 0x8a, 0x86, 0xa5, 0xcc, 0xb0,
+	0x69, 0x48, 0x02, 0x68, 0x0a, 0x56, 0xa0, 0xfb, 0xc7, 0x6e, 0xd8, 0x7c, 0x7b, 0x35, 0xac, 0x53,
+	0x87, 0xd8, 0x16, 0x09, 0x33, 0x98, 0x05, 0x5b, 0xfb, 0x8d, 0xc3, 0x2e, 0x2d, 0x03, 0xcb, 0xe7,
+	0x89, 0x14, 0x41, 0xa3, 0xca, 0xb7, 0x08, 0x79, 0x06, 0x2d, 0xb6, 0x34, 0xb9, 0x54, 0x41, 0xb3,
+	0x92, 0xf3, 0x98, 0xad, 0xd3, 0xdc, 0x60, 0xb0, 0x5d, 0xad, 0xb3, 0x08, 0xd9, 0x83, 0x06, 0x8b,
+	0x79, 0xd0, 0xaa, 0x24, 0x2c, 0x40, 0x3e, 0x87, 0xde, 0xcf, 0x5a, 0x8a, 0x48, 0x27, 0x39, 0x16,
+	0x2c, 0x68, 0x57, 0xf2, 0x60, 0x13, 0x67, 0x0e, 0x27, 0xdf, 0x40, 0x4b, 0x2a, 0x9e, 0x71, 0x11,
+	0x74, 0xf6, 0xeb, 0x87, 0xbd, 0xa3, 0xe7, 0xa3, 0xff, 0xc9, 0x3f, 0xb2, 0x13, 0xbf, 0x76, 0x94,
+	0x69, 0x48, 0x3d, 0xf9, 0xbb, 0xe6, 0x3f, 0x7f, 0x0c, 0xeb, 0x07, 0xbf, 0x36, 0x00, 0x6c, 0x7a,
+	0x22, 0x66, 0x72, 0x1a, 0x92, 0x4f, 0xa0, 0x9b, 0xc8, 0x14, 0xa3, 0x9c, 0xe9, 0xbc, 0xf4, 0x80,
+	0x76, 0x2c, 0x70, 0xc2, 0x74, 0x4e, 0x02, 0x68, 0x27, 0x0a, 0x99, 0x91, 0xca, 0x89, 0xda, 0xa5,
+	0xb7, 0x21, 0x21, 0xd0, 0x4c, 0x71, 0xa1, 0x83, 0x86, 0x13, 0xca, 0x9d, 0xc9, 0x1e, 0xb4, 0x16,
+	0x5c, 0x08, 0x4c, 0x9d, 0x1a, 0x1d, 0xea, 0x23, 0xf2, 0x29, 0xf4, 0x0b, 0x34, 0xa8, 0xb8, 0xc8,
+	0x22, 0x39, 0x9b, 0x39, 0x3d, 0x3a, 0xb4, 0x77, 0x8b, 0xbd, 0x9e, 0xcd, 0xc8, 0x4b, 0xe8, 0x14,
+	0xde, 0x20, 0xa7, 0x4a, 0xef, 0x68, 0xb8, 0x71, 0xa6, 0x7b, 0x17, 0x9d, 0x2c, 0x35, 0x7a, 0x57,
+	0x46, 0x5e, 0xc1, 0x90, 0x0b, 0x83, 0x6a, 0xa1, 0xd0, 0x60, 0x1a, 0xd9, 0x1b, 0xe2, 0x06, 0x4b,
+	0x71, 0x31, 0x97, 0xeb, 0x02, 0x85, 0x71, 0x7a, 0xf6, 0xe9, 0xf3, 0x0a, 0x2d, 0xf4, 0xac, 0x1f,
+	0xee, 0x48, 0xe4, 0x7b, 0x78, 0xb6, 0xb1, 0x8f, 0x5a, 0x0a, 0xc3, 0x0b, 0x74, 0x92, 0xf7, 0xe9,
+	0xd3, 0x0d, 0x4d, 0x68, 0xc9, 0xb0, 0xf3, 0x7a, 0x72, 0xa9, 0x6a, 0xd7, 0x55, 0xf4, 0x3c, 0x66,
+	0x85, 0xf5, 0x56, 0x4c, 0xa0, 0x5f, 0x35, 0x8a, 0x7c, 0x0c, 0x9d, 0x24, 0x67, 0x5c, 0x44, 0x3c,
+	0x2d, 0x2f, 0x27, 0x6d, 0xbb, 0x78, 0x92, 0x5a, 0x27, 0x58, 0x9a, 0x2a, 0xd4, 0xfa, 0xd6, 0x09,
+	0x1f, 0xfa, 0x56, 0x7f, 0xba, 0x6b, 0x5e, 0xae, 0x96, 0x77, 0xf6, 0x23, 0x68, 0xbb, 0x0f, 0xf7,
+	0xcd, 0x9a, 0xb4, 0x65, 0xc3, 0xb2, 0xd7, 0x07, 0x5c, 0xdd, 0x85, 0xed, 0x39, 0x8b, 0x71, 0x5e,
+	0x5e, 0x75, 0x5a, 0x06, 0xe4, 0x47, 0xe8, 0xeb, 0x72, 0x5b, 0x23, 0xb3, 0x5e, 0xa0, 0x73, 0xf7,
+	0xe1, 0xd1, 0x67, 0x1b, 0x0c, 0xfa, 0xcf, 0x6a, 0x9f, 0xaf, 0x17, 0x48, 0x7b, 0xfa, 0x3e, 0x20,
+	0xdf, 0x42, 0x9f, 0x0b, 0x6e, 0xa2, 0x02, 0xb5, 0x66, 0x59, 0xb9, 0x18, 0xfd, 0x70, 0xef, 0xfd,
+	0xd5, 0x90, 0x50, 0xf6, 0xe6, 0xb6, 0xfc, 0xb4, 0xcc, 0xd2, 0x9e, 0xe5, 0xfa, 0x80, 0x0c, 0x00,
+	0x16, 0x4a, 0x5e, 0xa2, 0x60, 0x22, 0xc1, 0x72, 0x71, 0x68, 0x05, 0x21, 0x03, 0xe8, 0xf1, 0x38,
+	0x89, 0x16, 0x52, 0x19, 0x3b, 0xb0, 0xdb, 0x1c, 0xda, 0xe5, 0x71, 0x32, 0x95, 0xca, 0x4c, 0x52,
+	0xaf, 0x12, 0x05, 0xf2, 0x32, 0xd6, 0x72, 0xbe, 0x34, 0x78, 0xbe, 0x9a, 0x4a, 0xcd, 0x0d, 0x97,
+	0xc2, 0xfa, 0x15, 0xcf, 0x65, 0x72, 0x11, 0xe5, 0xc8, 0xb3, 0xdc, 0x78, 0xb5, 0x7a, 0x0e, 0x3b,
+	0x71, 0x90, 0x75, 0xc6, 0xac, 0x22, 0x2e, 0x52, 0x5c, 0x39, 0xcd, 0x9a, 0xb4, 0x6d, 0x56, 0x13,
+	0x1b, 0x7e, 0x71, 0x01, 0x4f, 0x36, 0x0c, 0x4e, 0x1e, 0xc3, 0x83, 0x63, 0xa9, 0xf0, 0x58, 0x0a,
+	0x8d, 0x42, 0x2f, 0xf5, 0x4e, 0xcd, 0x42, 0xf6, 0xfe, 0xde, 0x43, 0x75, 0xf2, 0x04, 0x1e, 0x9d,
+	0x71, 0x91, 0xcd, 0x2b, 0xbc, 0x2d, 0x02, 0xd0, 0x3a, 0xc5, 0x42, 0xaa, 0xf5, 0x4e, 0x83, 0x3c,
+	0x80, 0xee, 0xb9, 0x62, 0x42, 0x73, 0x14, 0x66, 0xa7, 0x19, 0x9e, 0xbc, 0xbd, 0x1e, 0xd4, 0xdf,
+	0x5d, 0x0f, 0xea, 0x7f, 0x5f, 0x0f, 0xea, 0xbf, 0xdf, 0x0c, 0x6a, 0xef, 0x6e, 0x06, 0xb5, 0xbf,
+	0x6e, 0x06, 0xb5, 0x9f, 0x46, 0x95, 0x47, 0x73, 0x2e, 0x15, 0xa6, 0x4c, 0xb0, 0x84, 0x2b, 0x6d,
+	0x90, 0xf9, 0x57, 0x7b, 0xe5, 0x7f, 0xad, 0x87, 0x3a, 0x6e, 0xb9, 0x17, 0xf9, 0xab, 0x7f, 0x03,
+	0x00, 0x00, 0xff, 0xff, 0x24, 0xdd, 0x38, 0xc4, 0xda, 0x05, 0x00, 0x00,
 }
 
-func (this *CodeMetadata) Equal(that interface{}) bool {
+func (this *CodeMetadataPB) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CodeMetadata)
+	that1, ok := that.(*CodeMetadataPB)
 	if !ok {
-		that2, ok := that.(CodeMetadata)
+		that2, ok := that.(CodeMetadataPB)
 		if ok {
 			that1 = &that2
 		} else {
@@ -665,14 +665,14 @@ func (this *CodeMetadata) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CodeInfo) Equal(that interface{}) bool {
+func (this *CodeInfoPB) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CodeInfo)
+	that1, ok := that.(*CodeInfoPB)
 	if !ok {
-		that2, ok := that.(CodeInfo)
+		that2, ok := that.(CodeInfoPB)
 		if ok {
 			that1 = &that2
 		} else {
@@ -718,14 +718,14 @@ func (this *CodeInfo) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CodeOrigin) Equal(that interface{}) bool {
+func (this *CodeOriginPB) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CodeOrigin)
+	that1, ok := that.(*CodeOriginPB)
 	if !ok {
-		that2, ok := that.(CodeOrigin)
+		that2, ok := that.(CodeOriginPB)
 		if ok {
 			that1 = &that2
 		} else {
@@ -745,14 +745,14 @@ func (this *CodeOrigin) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ContractInfo) Equal(that interface{}) bool {
+func (this *ContractInfoPB) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ContractInfo)
+	that1, ok := that.(*ContractInfoPB)
 	if !ok {
-		that2, ok := that.(ContractInfo)
+		that2, ok := that.(ContractInfoPB)
 		if ok {
 			that1 = &that2
 		} else {
@@ -787,7 +787,7 @@ func (this *ContractInfo) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (m *ContractStorage) Marshal() (dAtA []byte, err error) {
+func (m *ContractStoragePB) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -797,12 +797,12 @@ func (m *ContractStorage) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ContractStorage) MarshalTo(dAtA []byte) (int, error) {
+func (m *ContractStoragePB) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ContractStorage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ContractStoragePB) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -824,7 +824,7 @@ func (m *ContractStorage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *CodeMetadata) Marshal() (dAtA []byte, err error) {
+func (m *CodeMetadataPB) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -834,12 +834,12 @@ func (m *CodeMetadata) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CodeMetadata) MarshalTo(dAtA []byte) (int, error) {
+func (m *CodeMetadataPB) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *CodeMetadata) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CodeMetadataPB) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -910,7 +910,7 @@ func (m *CodeMetadata) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *CodeInfo) Marshal() (dAtA []byte, err error) {
+func (m *CodeInfoPB) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -920,12 +920,12 @@ func (m *CodeInfo) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CodeInfo) MarshalTo(dAtA []byte) (int, error) {
+func (m *CodeInfoPB) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *CodeInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CodeInfoPB) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1007,7 +1007,7 @@ func (m *CodeInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *CodeOrigin) Marshal() (dAtA []byte, err error) {
+func (m *CodeOriginPB) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1017,12 +1017,12 @@ func (m *CodeOrigin) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CodeOrigin) MarshalTo(dAtA []byte) (int, error) {
+func (m *CodeOriginPB) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *CodeOrigin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *CodeOriginPB) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1044,7 +1044,7 @@ func (m *CodeOrigin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ContractInfo) Marshal() (dAtA []byte, err error) {
+func (m *ContractInfoPB) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1054,12 +1054,12 @@ func (m *ContractInfo) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ContractInfo) MarshalTo(dAtA []byte) (int, error) {
+func (m *ContractInfoPB) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ContractInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ContractInfoPB) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1156,7 +1156,7 @@ func encodeVarintContract(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *ContractStorage) Size() (n int) {
+func (m *ContractStoragePB) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1173,7 +1173,7 @@ func (m *ContractStorage) Size() (n int) {
 	return n
 }
 
-func (m *CodeMetadata) Size() (n int) {
+func (m *CodeMetadataPB) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1216,7 +1216,7 @@ func (m *CodeMetadata) Size() (n int) {
 	return n
 }
 
-func (m *CodeInfo) Size() (n int) {
+func (m *CodeInfoPB) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1259,7 +1259,7 @@ func (m *CodeInfo) Size() (n int) {
 	return n
 }
 
-func (m *CodeOrigin) Size() (n int) {
+func (m *CodeOriginPB) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1276,7 +1276,7 @@ func (m *CodeOrigin) Size() (n int) {
 	return n
 }
 
-func (m *ContractInfo) Size() (n int) {
+func (m *ContractInfoPB) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1332,7 +1332,7 @@ func sovContract(x uint64) (n int) {
 func sozContract(x uint64) (n int) {
 	return sovContract(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *ContractStorage) Unmarshal(dAtA []byte) error {
+func (m *ContractStoragePB) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1355,10 +1355,10 @@ func (m *ContractStorage) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ContractStorage: wiretype end group for non-group")
+			return fmt.Errorf("proto: ContractStoragePB: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ContractStorage: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ContractStoragePB: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1450,7 +1450,7 @@ func (m *ContractStorage) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *CodeMetadata) Unmarshal(dAtA []byte) error {
+func (m *CodeMetadataPB) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1473,10 +1473,10 @@ func (m *CodeMetadata) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CodeMetadata: wiretype end group for non-group")
+			return fmt.Errorf("proto: CodeMetadataPB: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CodeMetadata: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CodeMetadataPB: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1733,7 +1733,7 @@ func (m *CodeMetadata) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Origin == nil {
-				m.Origin = &CodeOrigin{}
+				m.Origin = &CodeOriginPB{}
 			}
 			if err := m.Origin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1760,7 +1760,7 @@ func (m *CodeMetadata) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *CodeInfo) Unmarshal(dAtA []byte) error {
+func (m *CodeInfoPB) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1783,10 +1783,10 @@ func (m *CodeInfo) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CodeInfo: wiretype end group for non-group")
+			return fmt.Errorf("proto: CodeInfoPB: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CodeInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CodeInfoPB: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2083,7 +2083,7 @@ func (m *CodeInfo) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *CodeOrigin) Unmarshal(dAtA []byte) error {
+func (m *CodeOriginPB) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2106,10 +2106,10 @@ func (m *CodeOrigin) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CodeOrigin: wiretype end group for non-group")
+			return fmt.Errorf("proto: CodeOriginPB: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CodeOrigin: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: CodeOriginPB: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2197,7 +2197,7 @@ func (m *CodeOrigin) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ContractInfo) Unmarshal(dAtA []byte) error {
+func (m *ContractInfoPB) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2220,10 +2220,10 @@ func (m *ContractInfo) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ContractInfo: wiretype end group for non-group")
+			return fmt.Errorf("proto: ContractInfoPB: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ContractInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ContractInfoPB: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

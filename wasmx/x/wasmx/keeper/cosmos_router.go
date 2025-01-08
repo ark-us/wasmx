@@ -93,14 +93,14 @@ func (h *WasmxCosmosHandler) GetAccount(addr mcodec.AccAddressPrefixed) (mcodec.
 	}
 	return h.Keeper.ak.GetAccountPrefixed(h.Ctx, addr)
 }
-func (h *WasmxCosmosHandler) GetCodeHash(contractAddress sdk.AccAddress) types.Checksum {
+func (h *WasmxCosmosHandler) GetCodeHash(contractAddress mcodec.AccAddressPrefixed) types.Checksum {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
 	if err != nil {
 		return types.EMPTY_BYTES32
 	}
-	return codeInfo.CodeHash
+	return types.Checksum(codeInfo.CodeHash)
 }
-func (h *WasmxCosmosHandler) GetCode(contractAddress sdk.AccAddress) []byte {
+func (h *WasmxCosmosHandler) GetCode(contractAddress mcodec.AccAddressPrefixed) []byte {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
 	if err != nil {
 		return []byte{}
@@ -116,18 +116,26 @@ func (h *WasmxCosmosHandler) GetCode(contractAddress sdk.AccAddress) []byte {
 }
 
 func (h *WasmxCosmosHandler) GetCodeInfo(codeID uint64) *types.CodeInfo {
-	return h.Keeper.GetCodeInfo(h.Ctx, codeID)
+	data, err := h.Keeper.GetCodeInfo(h.Ctx, codeID)
+	if err != nil {
+		return nil
+	}
+	return data
 }
 
-func (h *WasmxCosmosHandler) GetContractInfo(contractAddress sdk.AccAddress) *types.ContractInfo {
-	return h.Keeper.GetContractInfo(h.Ctx, contractAddress)
+func (h *WasmxCosmosHandler) GetContractInfo(contractAddress mcodec.AccAddressPrefixed) (*types.ContractInfo, error) {
+	data, err := h.Keeper.GetContractInfo(h.Ctx, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
-func (h *WasmxCosmosHandler) GetContractInstance(contractAddress sdk.AccAddress) (types.ContractInfo, types.CodeInfo, []byte, error) {
+func (h *WasmxCosmosHandler) GetContractInstance(contractAddress mcodec.AccAddressPrefixed) (types.ContractInfo, types.CodeInfo, []byte, error) {
 	return h.Keeper.ContractInstance(h.Ctx, contractAddress)
 }
 
-func (h *WasmxCosmosHandler) SetContractInfo(contractAddress sdk.AccAddress, data *types.ContractInfo) {
+func (h *WasmxCosmosHandler) SetContractInfo(contractAddress mcodec.AccAddressPrefixed, data types.ContractInfo) {
 	h.Keeper.storeContractInfo(h.Ctx, contractAddress, data)
 }
 
@@ -169,10 +177,10 @@ func (h *WasmxCosmosHandler) Execute(contractAddress mcodec.AccAddressPrefixed, 
 	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps, false)
 }
 
-func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr sdk.AccAddress) (types.ContractDependency, error) {
-	return h.Keeper.GetContractDependency(ctx, h.Keeper.accBech32Codec.BytesToAccAddressPrefixed(addr))
+func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (types.ContractDependency, error) {
+	return h.Keeper.GetContractDependency(ctx, addr)
 }
-func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr sdk.AccAddress) bool {
+func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr mcodec.AccAddressPrefixed) bool {
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
 func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error) {

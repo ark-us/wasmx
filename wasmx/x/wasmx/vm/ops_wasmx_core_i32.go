@@ -6,6 +6,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
@@ -75,11 +76,11 @@ func setContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []int
 	}
 
 	var contractInfo types.ContractInfo
-	err = ctx.CosmosHandler.Codec().UnmarshalJSON(data, &contractInfo)
+	err = json.Unmarshal(data, &contractInfo)
 	if err != nil {
 		return nil, fmt.Errorf("ContractInfo cannot be unmarshalled")
 	}
-	ctx.CosmosHandler.SetContractInfo(address.Bytes(), &contractInfo)
+	ctx.CosmosHandler.SetContractInfo(address, contractInfo)
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
@@ -462,6 +463,149 @@ func coreWasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHa
 	return returns, nil
 }
 
+type GlobalStorageStoreRequest struct {
+	StoreKey string `json:"store_key"`
+	Key      []byte `json:"key"`
+	Value    []byte `json:"value"`
+}
+
+type GlobalStorageLoadRequest struct {
+	StoreKey string `json:"store_key"`
+	Key      []byte `json:"key"`
+}
+
+type GlobalStorageResetRequest struct {
+	StoreKey string `json:"store_key"`
+}
+
+type GlobalStorageResetResponse struct {
+	Error string `json:"error"`
+}
+
+func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageStoreRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	store.Set(req.Key, req.Value)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreWasmxStorageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	data := store.Get(req.Key)
+	ptr, err := rnh.AllocateWriteMem(data)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
+func coreWasmxStorageDeleteGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	store.Delete(req.Key)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreWasmxStorageHasGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	haskey := store.Has(req.Key)
+	returns := make([]interface{}, 1)
+	returns[0] = int32(0)
+	if haskey {
+		returns[0] = int32(1)
+	}
+	return returns, nil
+}
+
+func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageResetRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	err = store.Reset()
+	resp := GlobalStorageResetResponse{Error: ""}
+	if err != nil {
+		resp.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	ptr, err := rnh.AllocateWriteMem(responsebz)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
 func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
@@ -477,6 +621,12 @@ func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{
 
 		// TODO
 		// env.AddFunction("endBackgroundProcess", NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
+
+		vm.BuildFn("storageLoadGlobal", coreWasmxStorageLoadGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("storageStoreGlobal", coreWasmxStorageStoreGlobal, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageDeleteGlobal", coreWasmxStorageDeleteGlobal, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageHasGlobal", coreWasmxStorageHasGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("storageResetGlobal", coreWasmxStorageResetGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmxcore", context, fndefs)

@@ -58,7 +58,7 @@ message MsgStoreCode {
     // deps can be hex-formatted contract addresses (32 bytes) for interpreter contracts
     // and/or versioned interface labels
     repeated string deps = 3;
-    CodeMetadata metadata = 4 [(gogoproto.nullable) = false];
+    CodeMetadataPB metadata = 4 [(gogoproto.nullable) = false];
 }
 
 // MsgStoreCodeResponse returns store result data.
@@ -86,7 +86,7 @@ message MsgDeployCode {
     // deps can be hex-formatted contract addresses (32 bytes) for interpreter contracts
     // and/or versioned interface labels
     repeated string deps = 3;
-    CodeMetadata metadata = 4 [(gogoproto.nullable) = false];
+    CodeMetadataPB metadata = 4 [(gogoproto.nullable) = false];
     // instantiation:
     // Msg json encoded message to be passed to the contract on instantiation
     bytes msg = 5 [ (gogoproto.casttype) = "RawContractMessage" ];

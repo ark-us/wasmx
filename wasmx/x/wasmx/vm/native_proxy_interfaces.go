@@ -243,12 +243,13 @@ func getContractAbi(context *Context, contractAddress sdk.AccAddress) (*aabi.ABI
 	if handler == nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "invalid cosmos handler")
 	}
-	_, codeInfo, _, err := handler.GetContractInstance(contractAddress)
+	addrPrefixed := handler.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress)
+	_, codeInfo, _, err := handler.GetContractInstance(addrPrefixed)
 	if err != nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not find codeInfo")
 	}
 	// TODO check codeInfo.GetMetadata()
-	abiStr := codeInfo.GetMetadata().Abi
+	abiStr := codeInfo.Metadata.Abi
 	if abiStr == "" {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "empty abi")
 	}

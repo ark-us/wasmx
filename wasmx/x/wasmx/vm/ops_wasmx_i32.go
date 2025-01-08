@@ -72,7 +72,7 @@ func getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 		return nil, err
 	}
 	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	_, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address.Bytes())
+	_, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func getCodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	var err error
 	bz := []byte{}
 	if codeInfo != nil {
-		bz, err = ctx.CosmosHandler.Codec().MarshalJSON(codeInfo)
+		bz, err = json.Marshal(codeInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -125,10 +125,13 @@ func getContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	contractInfo := ctx.CosmosHandler.GetContractInfo(address.Bytes())
+	contractInfo, err := ctx.CosmosHandler.GetContractInfo(address)
+	if err != nil {
+		return nil, err
+	}
 	bz := []byte{}
 	if contractInfo != nil {
-		bz, err = ctx.CosmosHandler.Codec().MarshalJSON(contractInfo)
+		bz, err = json.Marshal(contractInfo)
 		if err != nil {
 			return nil, err
 		}

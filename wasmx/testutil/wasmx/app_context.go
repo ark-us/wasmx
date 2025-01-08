@@ -549,7 +549,7 @@ func (s *AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []
 		Sender:   senderstr,
 		ByteCode: wasmbin,
 		Deps:     deps,
-		Metadata: metadata,
+		Metadata: metadata.ToProto(),
 	}
 
 	res, err := s.DeliverTx(sender, storeCodeMsg)
@@ -577,7 +577,7 @@ func (s *AppContext) Deploy(sender simulation.Account, code []byte, deps []strin
 		Sender:   senderstr,
 		ByteCode: code,
 		Deps:     deps,
-		Metadata: *metadata,
+		Metadata: metadata.ToProto(),
 		Msg:      msgbz,
 		Funds:    funds,
 		Label:    label,
