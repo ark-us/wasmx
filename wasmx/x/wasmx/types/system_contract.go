@@ -83,7 +83,7 @@ func StarterPrecompiles() SystemContracts {
 		panic("SimplePrecompiles: cannot marshal init message")
 	}
 	return []SystemContract{
-		// contract storage needs to be initialized first, auth second, roles third
+		// contract storage needs to be initialized first, roles second, auth third
 		{
 			Address:     ADDR_STORAGE_CONTRACTS,
 			Label:       STORAGE_CONTRACTS_v001,
@@ -95,22 +95,22 @@ func StarterPrecompiles() SystemContracts {
 			Deps:        []string{},
 		},
 		{
-			Address:     ADDR_AUTH,
-			Label:       AUTH_v001,
-			InitMessage: initMsg,
-			Pinned:      true,
-			MeteringOff: true,
-			Role:        ROLE_AUTH,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
-		{
 			Address:     ADDR_ROLES,
 			Label:       ROLES_v001,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
 			Role:        ROLE_ROLES,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_AUTH,
+			Label:       AUTH_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        ROLE_AUTH,
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},

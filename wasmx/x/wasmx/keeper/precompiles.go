@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
@@ -27,11 +28,11 @@ func (k *Keeper) BootstrapSystemContracts(
 	if contracts[0].Role != types.ROLE_STORAGE_CONTRACTS {
 		return fmt.Errorf("genesis system contract 0 must be %s", types.ROLE_STORAGE_CONTRACTS)
 	}
-	if contracts[1].Role != types.ROLE_AUTH {
-		return fmt.Errorf("genesis system contract 1 must be %s", types.ROLE_AUTH)
+	if contracts[1].Role != types.ROLE_ROLES {
+		return fmt.Errorf("genesis system contract 1 must be %s", types.ROLE_ROLES)
 	}
-	if contracts[2].Role != types.ROLE_ROLES {
-		return fmt.Errorf("genesis system contract 2 must be %s", types.ROLE_ROLES)
+	if contracts[2].Role != types.ROLE_AUTH {
+		return fmt.Errorf("genesis system contract 2 must be %s", types.ROLE_AUTH)
 	}
 
 	var rolesAddress mcodec.AccAddressPrefixed
@@ -76,7 +77,7 @@ func (k *Keeper) BootstrapSystemContracts(
 			contractInfo.StorageType = contract.StorageType
 		}
 
-		k.Logger(ctx).Debug("core contract", "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(codeInfo.CodeHash))
+		k.Logger(ctx).Debug("core contract", "label", contractInfo.Label, "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(codeInfo.CodeHash), "address", contractAddress.String())
 
 		if contract.Role == types.ROLE_STORAGE_CONTRACTS {
 			registryAddress = contractAddress
@@ -108,7 +109,7 @@ func (k *Keeper) BootstrapSystemContracts(
 		if contract.Role == types.ROLE_STORAGE_CONTRACTS {
 			contract.InitMessage = registryGenesisWrap
 		}
-		err := k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath, uint64(i+1), genesisRegistry.CodeInfos[i], registryAddress)
+		err := k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath, uint64(i+1), genesisRegistry.CodeInfos[i], registryAddress, rolesAddress)
 		if err != nil {
 			return sdkerr.Wrap(err, "bootstrap")
 		}
@@ -126,6 +127,7 @@ func (k *Keeper) ActivateSystemContract(
 	codeInfo types.CodeInfo,
 	// contractInfo types.ContractInfo,
 	registryAddress mcodec.AccAddressPrefixed,
+	rolesAddress mcodec.AccAddressPrefixed,
 ) error {
 	var err error
 	k.SetSystemContract(ctx, contract)
@@ -169,7 +171,7 @@ func (k *Keeper) ActivateSystemContract(
 	// 	k.SetRoleContractAddress(ctx, contractAddress)
 	// }
 
-	if contract.Role != types.ROLE_STORAGE_CONTRACTS {
+	if !slices.Contains([]string{types.ROLE_STORAGE_CONTRACTS, types.ROLE_ROLES}, contract.Role) {
 		// register the auth account
 		err = k.instantiateNewContractAccount(ctx, contractAddress)
 		if err != nil {
@@ -178,10 +180,14 @@ func (k *Keeper) ActivateSystemContract(
 	}
 
 	if contract.Role == types.ROLE_AUTH {
-		// only now we create the account for the first precompile - contract storage
+		// only now we create the account for the first 2 precompile - contract storage, roles
 		err = k.instantiateNewContractAccount(ctx, registryAddress)
 		if err != nil {
 			return sdkerr.Wrap(err, "create auth account for contracts registry")
+		}
+		err = k.instantiateNewContractAccount(ctx, rolesAddress)
+		if err != nil {
+			return sdkerr.Wrap(err, "create auth account for roles contract")
 		}
 	}
 

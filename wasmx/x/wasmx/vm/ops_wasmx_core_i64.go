@@ -7,7 +7,6 @@ import (
 func BuildWasmxCoreEnvi64(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("setContractInfo", setContractInfo, []interface{}{vm.ValType_I64(), vm.ValType_I64()}, []interface{}{}, 0),
 		vm.BuildFn("migrateContractStateByStorageType", coreMigrateContractStateByStorageType, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
 		vm.BuildFn("externalCall", coreExternalCall, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("grpcRequest", coreWasmxGrpcRequest, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),

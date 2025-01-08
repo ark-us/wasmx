@@ -63,28 +63,6 @@ func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.Runtim
 	return returns, nil
 }
 
-func setContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	addr, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	data, err := rnh.ReadMemFromPtr(params[1])
-	if err != nil {
-		return nil, err
-	}
-
-	var contractInfo types.ContractInfo
-	err = json.Unmarshal(data, &contractInfo)
-	if err != nil {
-		return nil, fmt.Errorf("ContractInfo cannot be unmarshalled")
-	}
-	ctx.CosmosHandler.SetContractInfo(address, contractInfo)
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
 // call request -> call response
 func coreExternalCall(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
@@ -609,7 +587,6 @@ func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, 
 func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("setContractInfo", setContractInfo, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("migrateContractStateByStorageType", coreMigrateContractStateByStorageType, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("externalCall", coreExternalCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("grpcRequest", coreWasmxGrpcRequest, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),

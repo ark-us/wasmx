@@ -29,8 +29,6 @@ func BuildWasmxEnvi64(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getBlockHash", wasmxGetBlockHash, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("getCurrentBlock", wasmxGetCurrentBlock, []interface{}{}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("getAccount", getAccount, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getCodeInfo", getCodeInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("getContractInfo", getContractInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("getBalance", wasmxGetBalance, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("call", wasmxCall, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("keccak256", keccak256Util, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),

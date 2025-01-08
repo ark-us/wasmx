@@ -95,56 +95,6 @@ func getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	return returns, nil
 }
 
-// address -> codeInfo
-func getCodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	codeId := uint64(params[0].(int64))
-	codeInfo := ctx.CosmosHandler.GetCodeInfo(codeId)
-	var err error
-	bz := []byte{}
-	if codeInfo != nil {
-		bz, err = json.Marshal(codeInfo)
-		if err != nil {
-			return nil, err
-		}
-	}
-	ptr, err := rnh.AllocateWriteMem(bz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
-}
-
-// address -> contractInfo
-func getContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	addr, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	contractInfo, err := ctx.CosmosHandler.GetContractInfo(address)
-	if err != nil {
-		return nil, err
-	}
-	bz := []byte{}
-	if contractInfo != nil {
-		bz, err = json.Marshal(contractInfo)
-		if err != nil {
-			return nil, err
-		}
-	}
-	ptr, err := rnh.AllocateWriteMem(bz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
-}
-
 func keccak256Util(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
@@ -973,8 +923,6 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getBlockHash", wasmxGetBlockHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getCurrentBlock", wasmxGetCurrentBlock, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getAccount", getAccount, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("getCodeInfo", getCodeInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("getContractInfo", getContractInfo, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getBalance", wasmxGetBalance, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("call", wasmxCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("keccak256", keccak256Util, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
