@@ -17,7 +17,7 @@ type WasmxKeeper interface {
 	Execute(ctx sdk.Context, contractAddr mcodec.AccAddressPrefixed, senderAddr mcodec.AccAddressPrefixed, msg wasmxtypes.RawContractMessage, funds sdk.Coins, dependencies []string, inBackground bool) ([]byte, error)
 	ExecuteContract(goCtx context.Context, msg *wasmxtypes.MsgExecuteContract) (*wasmxtypes.MsgExecuteContractResponse, error)
 	ExecuteEntryPoint(ctx sdk.Context, entryPoint string, contractAddress mcodec.AccAddressPrefixed, caller mcodec.AccAddressPrefixed, msg []byte, dependencies []string, inBackground bool) ([]byte, error)
-	ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (wasmxtypes.ContractInfo, wasmxtypes.CodeInfo, []byte, error)
+	ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, *wasmxtypes.CodeInfo, []byte, error)
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
 	GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, error)
 

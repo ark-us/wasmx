@@ -127,13 +127,13 @@ type WasmxCosmosHandler interface {
 	GetBlockHash(blockNumber uint64) Checksum
 	GetCodeInfo(codeID uint64) *CodeInfo
 	GetContractInfo(addr mcodec.AccAddressPrefixed) (*ContractInfo, error)
-	GetContractInstance(contractAddress mcodec.AccAddressPrefixed) (ContractInfo, CodeInfo, []byte, error)
+	GetContractInstance(contractAddress mcodec.AccAddressPrefixed) (*ContractInfo, *CodeInfo, []byte, error)
 	SetContractInfo(addr mcodec.AccAddressPrefixed, data ContractInfo)
 	Create(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
 	Create2(codeId uint64, creator mcodec.AccAddressPrefixed, initMsg []byte, salt Checksum, label string, value *big.Int, funds sdk.Coins) (*mcodec.AccAddressPrefixed, error)
 	Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error)
 	Execute(contractAddress mcodec.AccAddressPrefixed, sender mcodec.AccAddressPrefixed, execmsg []byte, value *big.Int, deps []string) (res []byte, err error)
-	GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (ContractDependency, error)
+	GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (*ContractDependency, error)
 	CanCallSystemContract(ctx sdk.Context, addr mcodec.AccAddressPrefixed) bool
 	WithNewAddress(addr mcodec.AccAddressPrefixed) WasmxCosmosHandler
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)

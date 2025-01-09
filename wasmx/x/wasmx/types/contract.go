@@ -44,8 +44,8 @@ type ContractInfo struct {
 }
 
 type ContractInstance struct {
-	CodeInfo     CodeInfo     `json:"code_info"`
-	ContractInfo ContractInfo `json:"contract_info"`
+	CodeInfo     *CodeInfo     `json:"code_info"`
+	ContractInfo *ContractInfo `json:"contract_info"`
 }
 
 type QueryLastCodeIdResponse struct {

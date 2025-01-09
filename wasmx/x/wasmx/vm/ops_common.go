@@ -22,11 +22,14 @@ func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.
 	if err != nil {
 		return nil
 	}
+	if dep == nil {
+		return nil
+	}
 	// cache it
 	ctx.ContractRouter[addr.String()] = &Context{
-		ContractInfo: &dep,
+		ContractInfo: dep,
 	}
-	return &dep
+	return dep
 }
 
 func BankGetBalance(ctx *Context, addr mcodec.AccAddressPrefixed, denom string) (sdk.Coin, error) {

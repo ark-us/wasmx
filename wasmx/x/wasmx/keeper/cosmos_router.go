@@ -131,7 +131,7 @@ func (h *WasmxCosmosHandler) GetContractInfo(contractAddress mcodec.AccAddressPr
 	return data, nil
 }
 
-func (h *WasmxCosmosHandler) GetContractInstance(contractAddress mcodec.AccAddressPrefixed) (types.ContractInfo, types.CodeInfo, []byte, error) {
+func (h *WasmxCosmosHandler) GetContractInstance(contractAddress mcodec.AccAddressPrefixed) (*types.ContractInfo, *types.CodeInfo, []byte, error) {
 	return h.Keeper.ContractInstance(h.Ctx, contractAddress)
 }
 
@@ -177,7 +177,7 @@ func (h *WasmxCosmosHandler) Execute(contractAddress mcodec.AccAddressPrefixed, 
 	return h.Keeper.Execute(h.Ctx, contractAddress, sender, execmsg, funds, deps, false)
 }
 
-func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (types.ContractDependency, error) {
+func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (*types.ContractDependency, error) {
 	return h.Keeper.GetContractDependency(ctx, addr)
 }
 func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr mcodec.AccAddressPrefixed) bool {

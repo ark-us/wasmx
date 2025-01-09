@@ -157,28 +157,28 @@ func (k *Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode
 	return k.wasmvm.GetCode(checksum, deps)
 }
 
-func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (types.ContractInfo, types.CodeInfo, []byte, error) {
+func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*types.ContractInfo, *types.CodeInfo, []byte, error) {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
 
 	cache, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return nil, nil, nil, err
 	}
 	registryAddr := cache.CodeRegistryAddress
 	if registryAddr.String() == contractAddress.String() {
-		return *cache.CodeRegistryContractInfo, *cache.CodeRegistryCodeInfo, prefixStoreKey, nil
+		return cache.CodeRegistryContractInfo, cache.CodeRegistryCodeInfo, prefixStoreKey, nil
 	}
 
 	msg := fmt.Sprintf(`{"GetContractInstance":{"address":"%s"}}`, contractAddress)
 	// Note! role contract should not have any other depedencies aside from the host import interface
 	data, err := k.internalQuery(ctx, registryAddr, msg)
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return nil, nil, nil, err
 	}
 	var res types.ContractInstance
 	err = json.Unmarshal(data, &res)
 	if err != nil {
-		return types.ContractInfo{}, types.CodeInfo{}, nil, err
+		return nil, nil, nil, err
 	}
 	return res.ContractInfo, res.CodeInfo, prefixStoreKey, nil
 }

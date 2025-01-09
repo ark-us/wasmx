@@ -159,6 +159,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	_, codeInfo1, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), contractAddress)
 	s.Require().NoError(err)
+	s.Require().NotNil(codeInfo1)
 	s.Require().Greater(len(codeInfo1.InterpretedBytecodeDeployment), 0)
 	s.Require().Greater(len(codeInfo1.InterpretedBytecodeRuntime), 0)
 
@@ -370,7 +371,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("00000000000000000000000000000000000000000000000000000000000262d8", qres)
+	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000031075", qres)
 
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
