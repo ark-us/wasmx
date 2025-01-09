@@ -25,7 +25,7 @@ message CodeMetadataPB {
     // off-chain identifier
     string author = 4 [(gogoproto.nullable) = true];
     string site = 5 [(gogoproto.nullable) = true];
-    string abi = 6 [(gogoproto.nullable) = true];
+    bytes abi = 6 [(gogoproto.nullable) = true];
     string json_schema = 7 [(gogoproto.nullable) = true];
     CodeOriginPB origin = 8;
 }

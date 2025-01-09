@@ -9,13 +9,13 @@ import (
 
 var (
 	//go:embed erc20.json
-	erc20bz []byte
+	Erc20bz []byte
 
 	//go:embed cw20.json
-	cw20bz []byte
+	Cw20bz []byte
 
 	//go:embed forwardEvm.json
-	forwardEvmbz []byte
+	ForwardEvmbz []byte
 )
 
 var Erc20Str string
@@ -26,9 +26,9 @@ var ForwardEvmAbi aabi.ABI
 
 func init() {
 	var err error
-	Erc20Str = string(erc20bz)
-	Cw20Str = string(cw20bz)
-	ForwardEvmStr = string(forwardEvmbz)
+	Erc20Str = string(Erc20bz)
+	Cw20Str = string(Cw20bz)
+	ForwardEvmStr = string(ForwardEvmbz)
 
 	Erc20Abi, err = aabi.JSON(strings.NewReader(Erc20Str))
 	if err != nil {

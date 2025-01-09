@@ -246,17 +246,20 @@ func getContractAbi(context *Context, contractAddress sdk.AccAddress) (*aabi.ABI
 	addrPrefixed := handler.AccBech32Codec().BytesToAccAddressPrefixed(contractAddress)
 	_, codeInfo, _, err := handler.GetContractInstance(addrPrefixed)
 	if err != nil {
+		return nil, sdkerr.Wrapf(err, "could not find codeInfo")
+	}
+	if codeInfo == nil {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "could not find codeInfo")
 	}
 	// TODO check codeInfo.GetMetadata()
-	abiStr := codeInfo.Metadata.Abi
-	if abiStr == "" {
+	abiBz := codeInfo.Metadata.Abi
+	if len(abiBz) == 0 {
 		return nil, sdkerr.Wrapf(sdkerr.Error{}, "empty abi")
 	}
 
-	abi, err := aabi.JSON(strings.NewReader(abiStr))
+	abi, err := aabi.JSON(strings.NewReader(string(abiBz)))
 	if err != nil {
-		return nil, sdkerr.Wrapf(sdkerr.Error{}, "invalid abi")
+		return nil, sdkerr.Wrapf(err, "invalid abi")
 	}
 	return &abi, nil
 }

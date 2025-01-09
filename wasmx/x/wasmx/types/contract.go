@@ -35,14 +35,14 @@ type CodeOrigin struct {
 }
 
 type CodeMetadata struct {
-	Name       string           `json:"name"`
-	Categ      EmptyStringArray `json:"categ"`
-	Icon       string           `json:"icon"`
-	Author     string           `json:"author"`
-	Site       string           `json:"site"`
-	Abi        string           `json:"abi"`
-	JsonSchema string           `json:"json_schema"`
-	Origin     *CodeOrigin      `json:"origin"`
+	Name       string             `json:"name"`
+	Categ      EmptyStringArray   `json:"categ"`
+	Icon       string             `json:"icon"`
+	Author     string             `json:"author"`
+	Site       string             `json:"site"`
+	Abi        RawContractMessage `json:"abi"`
+	JsonSchema string             `json:"json_schema"`
+	Origin     *CodeOrigin        `json:"origin"`
 }
 
 type CodeInfo struct {
