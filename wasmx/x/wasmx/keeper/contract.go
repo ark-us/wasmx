@@ -344,7 +344,13 @@ func (k *Keeper) CreateInterpreted(
 	codeInfo.InterpretedBytecodeRuntime = runtimeCode
 	// TODO the hash algo will depend on deps
 	codeInfo.RuntimeHash = k.wasmvm.checksum(runtimeCode)
-	k.storeCodeInfo(ctx, codeID, codeInfo)
+	newCodeId, err := k.storeNewCodeInfo(ctx, codeInfo)
+	if err != nil {
+		return 0, checksum, contractAddress, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
+	}
+	if newCodeId != codeID {
+		return 0, checksum, contractAddress, sdkerr.Wrap(types.ErrCreateFailed, "unexpected code id")
+	}
 
 	evt := sdk.NewEvent(
 		types.EventTypeStoreCode,
@@ -692,7 +698,10 @@ func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 	}
 
 	codeInfo.Pinned = false
-	k.storeCodeInfo(ctx, codeId, *codeInfo)
+	err = k.storeCodeInfo(ctx, codeId, *codeInfo)
+	if err != nil {
+		return err
+	}
 	k.Logger(ctx).Info("contract AOT compiled module removed ", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
