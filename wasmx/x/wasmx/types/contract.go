@@ -5,26 +5,50 @@ import (
 	"errors"
 )
 
+type EmptyStringArray []string
+
+// MarshalJSON ensures that an empty array is marshaled as "[]" instead of "null"
+func (e EmptyStringArray) MarshalJSON() ([]byte, error) {
+	if len(e) == 0 {
+		return []byte("[]"), nil
+	}
+	return json.Marshal([]string(e))
+}
+
+// UnmarshalJSON handles JSON unmarshaling into the custom type
+func (e *EmptyStringArray) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*e = EmptyStringArray{}
+		return nil
+	}
+	var result []string
+	if err := json.Unmarshal(data, &result); err != nil {
+		return err
+	}
+	*e = EmptyStringArray(result)
+	return nil
+}
+
 type CodeOrigin struct {
 	ChainId string `json:"chain_id"`
 	Address string `json:"address"`
 }
 
 type CodeMetadata struct {
-	Name       string      `json:"name"`
-	Categ      []string    `json:"categ"`
-	Icon       string      `json:"icon"`
-	Author     string      `json:"author"`
-	Site       string      `json:"site"`
-	Abi        string      `json:"abi"`
-	JsonSchema string      `json:"json_schema"`
-	Origin     *CodeOrigin `json:"origin"`
+	Name       string           `json:"name"`
+	Categ      EmptyStringArray `json:"categ"`
+	Icon       string           `json:"icon"`
+	Author     string           `json:"author"`
+	Site       string           `json:"site"`
+	Abi        string           `json:"abi"`
+	JsonSchema string           `json:"json_schema"`
+	Origin     *CodeOrigin      `json:"origin"`
 }
 
 type CodeInfo struct {
 	CodeHash                      Checksum           `json:"code_hash"`
 	Creator                       string             `json:"creator"`
-	Deps                          []string           `json:"deps"`
+	Deps                          EmptyStringArray   `json:"deps"`
 	Pinned                        bool               `json:"pinned"`
 	MeteringOff                   bool               `json:"metering_off"`
 	Metadata                      CodeMetadata       `json:"metadata"`

@@ -354,7 +354,7 @@ func (k *Keeper) CreateInterpreted(
 	codeInfo.RuntimeHash = k.wasmvm.checksum(runtimeCode)
 	newCodeId, err := k.storeNewCodeInfo(ctx, codeInfo)
 	if err != nil {
-		return 0, checksum, contractAddress, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
+		return 0, checksum, contractAddress, sdkerr.Wrapf(types.ErrCreateFailed, "store code failure: %s", err.Error())
 	}
 	if newCodeId != codeID {
 		return 0, checksum, contractAddress, sdkerr.Wrap(types.ErrCreateFailed, "unexpected code id")
