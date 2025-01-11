@@ -1,17 +1,24 @@
 package keeper_test
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
 
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
-	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
 func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
@@ -63,60 +70,155 @@ func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
 
 }
 
-// func (suite *KeeperTestSuite) TestRolesCallCore() {
-// 	sender := suite.GetRandomAccount()
-// 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
-// 	valAccount := simulation.Account{
-// 		PrivKey: s.Chain().SenderPrivKey,
-// 		PubKey:  s.Chain().SenderPrivKey.PubKey(),
-// 		Address: s.Chain().SenderAccount.GetAddress(),
-// 	}
+func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
+	suite.T().Skip("TestRolesContractUpgradeCache")
+	// test upgrading roles contract
+	// test storage migration or instantiation with other values
+	// test upgrade cache
 
-// 	appA := s.AppContext()
-// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-// 	suite.Commit()
-// 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-// 	suite.Commit()
+	// upgrading roles contract: must be initialized only with existent roles
+	// because we do not emit events or hooks
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+	valAccount := simulation.Account{
+		PrivKey: s.Chain().SenderPrivKey,
+		PubKey:  s.Chain().SenderPrivKey.PubKey(),
+		Address: s.Chain().SenderAccount.GetAddress(),
+	}
 
-// 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.INTERPRETER_EVM_SHANGHAI)
-// 	codeId := appA.StoreCode(sender, wasmbin, nil)
-// 	interpreterAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "newinterpreter", nil)
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
 
-// 	newlabel := types.INTERPRETER_EVM_SHANGHAI + "2"
+	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.ROLES_v001)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
 
-// 	// Register contract role proposal
-// 	title := "Register interpreter"
-// 	description := "Register interpreter"
-// 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
-// 	interpreterAddressStr := interpreterAddress.String()
-// 	proposal := &types.MsgRegisterRole{Authority: authority, Title: title, Description: description, Role: "interpreter", Label: newlabel, ContractAddress: interpreterAddressStr}
-// 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
+	// setup roles in genesis
+	rolesbz := appA.QueryContract(sender, rolesAddr, []byte(`{"GetRoles":{}}`), nil, nil)
 
-// 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), interpreterAddress.Bytes())
-// 	s.Require().Equal(newlabel, resp)
+	var roles types.RolesGenesis
+	err := json.Unmarshal(rolesbz, &roles)
+	s.Require().NoError(err)
 
-// 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-// 	s.Require().Equal(interpreterAddressStr, role.ContractAddress)
-// 	s.Require().Equal(newlabel, role.Label)
-// 	s.Require().Equal("interpreter", role.Role)
+	newRoles := &types.RolesGenesis{PreviousContract: rolesAddr.String()}
+	newrolesinitbz, err := json.Marshal(&newRoles)
+	s.Require().NoError(err)
 
-// 	// use this interpreter to execute contract
-// 	setHex := `60fe47b1`
-// 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
-// 	s.Require().NoError(err)
+	newAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: newrolesinitbz}, "newroles", nil)
 
-// 	initvalue := "0000000000000000000000000000000000000000000000000000000000000009"
-// 	initvaluebz, err := hex.DecodeString(initvalue)
-// 	s.Require().NoError(err)
-// 	_, contractAddress := appA.Deploy(sender, evmcode, []string{newlabel}, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
+	newrolesbz := appA.QueryContract(sender, newAddress, []byte(`{"GetRoles":{}}`), nil, nil)
 
-// 	keybz := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-// 	queryres := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
-// 	suite.Require().Equal(initvalue, hex.EncodeToString(queryres))
+	var roles2 types.RolesGenesis
+	err = json.Unmarshal(newrolesbz, &roles2)
+	s.Require().NoError(err)
+	s.Require().Equal(len(roles.Roles), len(roles2.Roles))
 
-// 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(setHex + "0000000000000000000000000000000000000000000000000000000000000006")}, nil, nil)
+	newlabel := types.ROLES_v001 + "2"
 
-// 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
-// 	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", hex.EncodeToString(queryres))
+	// Register contract role proposal
+	title := "Register roles"
+	description := "Register roles"
+	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
+	newAddressStr := newAddress.String()
 
-// }
+	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"%s","contract_address":"%s"}}`, types.ROLE_ROLES, newlabel, newAddressStr))
+	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+
+	proposal := &types.MsgExecuteContract{
+		Sender:   authority,
+		Contract: rolesAddr.String(),
+		Msg:      msgbz,
+	}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
+
+	cached, err := appA.App.WasmxKeeper.GetSystemBootstrapData(appA.Context())
+	s.Require().NoError(err)
+	s.Require().NotNil(cached)
+	s.Require().Equal(newAddress.String(), cached.RoleAddress)
+
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newAddress)
+	s.Require().Equal(newlabel, resp)
+
+	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
+	s.Require().Equal(newAddressStr, role.ContractAddress)
+	s.Require().Equal(types.ROLE_ROLES, role.Role)
+	s.Require().Equal(newlabel, role.Label)
+
+	// make a generic transaction that uses roles contract
+	codeId2 := appA.StoreCode(sender, wasmxtest.WasmxSimpleStorage, nil)
+	appA.InstantiateCode(sender, codeId2, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
+}
+
+func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
+	suite.T().Skip("TestContractsRegistryUpgradeCache")
+	// test upgrade contracts registry
+	// test data migration
+	// test upgrade cache
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+	valAccount := simulation.Account{
+		PrivKey: s.Chain().SenderPrivKey,
+		PubKey:  s.Chain().SenderPrivKey.PubKey(),
+		Address: s.Chain().SenderAccount.GetAddress(),
+	}
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.STORAGE_CONTRACTS_v001)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	newAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "newregistry", nil)
+
+	newlabel := types.STORAGE_CONTRACTS_v001 + "2"
+
+	// Register contract registry
+	title := "Register registry"
+	description := "Register registry"
+	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
+	newAddressStr := newAddress.String()
+
+	contractInfo, codeInfo, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), newAddress)
+	s.Require().NoError(err)
+	s.Require().NotNil(codeInfo)
+	s.Require().NotNil(contractInfo)
+
+	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
+
+	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"%s","contract_address":"%s"}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
+	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+
+	proposal := &types.MsgExecuteContract{
+		Sender:   authority,
+		Contract: rolesAddr.String(),
+		Msg:      msgbz,
+	}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
+
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newAddress)
+	s.Require().Equal(newlabel, resp)
+
+	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
+	s.Require().Equal(newAddressStr, role.ContractAddress)
+	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(types.ROLE_STORAGE_CONTRACTS, role.Role)
+
+	cached, err := appA.App.WasmxKeeper.GetSystemBootstrapData(appA.Context())
+	s.Require().NoError(err)
+	s.Require().NotNil(cached)
+	s.Require().Equal(newAddress.String(), cached.CodeRegistryAddress)
+	s.Require().NotNil(cached.CodeRegistryCodeInfo)
+	s.Require().NotNil(cached.CodeRegistryContractInfo)
+	s.Require().True(bytes.Equal(codeInfo.CodeHash, cached.CodeRegistryCodeInfo.CodeHash))
+	s.Require().Equal(codeInfo, cached.CodeRegistryCodeInfo)
+	s.Require().Equal(contractInfo, cached.CodeRegistryContractInfo)
+}

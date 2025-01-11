@@ -16,9 +16,8 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
 	mctx "github.com/loredanacirstea/wasmx/context"
-	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
-
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 type ResponseOptimisticExecution struct {
@@ -192,6 +191,13 @@ func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	if oe.Initialized() {
 		oe.Reset()
 	}
+
+	// hooks for finalize block result, e.g. system cache hooks
+	err = ctx.CosmosHandler.FinalizeBlockResultHandler(ctx.Ctx, resp)
+	if err != nil {
+		return nil, err
+	}
+
 	respbz, err := json.Marshal(resp)
 	if err != nil {
 		return nil, err

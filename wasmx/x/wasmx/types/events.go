@@ -6,14 +6,15 @@ const (
 	// CustomContractEventPrefix contracts can create custom events. To not mix them with other system events they got the `wasmx-` prefix.
 	CustomContractEventPrefix = "wasmx"
 
-	EventTypeStoreCode   = "store_code"
-	EventTypeInstantiate = "instantiate"
-	EventTypeDeploy      = "deploy"
-	EventTypeExecute     = "execute"
-	EventTypeExecuteEth  = "execute-eth"
-	EventTypeMigrate     = "migrate"
-	EventTypePinCode     = "pin_code"
-	EventTypeUnpinCode   = "unpin_code"
+	EventTypeStoreCode    = "store_code"
+	EventTypeInstantiate  = "instantiate"
+	EventTypeDeploy       = "deploy"
+	EventTypeExecute      = "execute"
+	EventTypeExecuteEth   = "execute-eth"
+	EventTypeMigrate      = "migrate"
+	EventTypePinCode      = "pin_code"
+	EventTypeUnpinCode    = "unpin_code"
+	EventTypeRegisterRole = "register_role"
 )
 
 // event attributes returned from contract execution
@@ -29,8 +30,9 @@ const (
 
 	AttributeKeyDependency = "dependency"
 
-	AttributeKeyRole      = "role"
-	AttributeKeyRoleLabel = "role_label"
+	AttributeKeyRole            = "role"
+	AttributeKeyRoleLabel       = "role_label"
+	AttributeKeyContractAddress = "contract_address"
 )
 
 // wasmx

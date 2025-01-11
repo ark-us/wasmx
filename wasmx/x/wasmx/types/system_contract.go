@@ -1062,7 +1062,9 @@ func FillRoles(precompiles SystemContracts, accBech32Codec mcodec.AccBech32Codec
 				panic(fmt.Sprintf("label cannot be empty for role %s", precompile.Role))
 			}
 			prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
-			roles = append(roles, RoleJSON{Role: precompile.Role, Label: precompile.Label, ContractAddress: prefixedAddr.String()})
+			// roleLabel := precompile.Role + "_" + precompile.Label
+			roleLabel := precompile.Label
+			roles = append(roles, RoleJSON{Role: precompile.Role, Label: roleLabel, ContractAddress: prefixedAddr.String()})
 		}
 	}
 	msgInit := RolesGenesis{Roles: roles}

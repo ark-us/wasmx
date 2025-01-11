@@ -205,7 +205,7 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 		ctx := sdk.UnwrapSDKContext(goctx)
 		var erreur error
 
-		mythosapp.GetWasmxKeeper().IterateContractInfo(ctx, func(addr sdk.AccAddress, cinfo wasmxtypes.ContractInfo) bool {
+		mythosapp.GetWasmxKeeper().IterateContractInfos(ctx, func(addr sdk.AccAddress, cinfo wasmxtypes.ContractInfo) bool {
 			// TODO metaconsensus state sync as an extension and remove from here
 			if cinfo.StorageType != wasmxtypes.ContractStorageType_SingleConsensus && cinfo.StorageType != wasmxtypes.ContractStorageType_MetaConsensus {
 				return false

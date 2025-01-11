@@ -142,6 +142,30 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	suite.Require().Equal(string(qres), "sammy")
 }
 
+func (suite *KeeperTestSuite) TestWasmxSameCode() {
+	wasmbin := wasmxtest.WasmxSimpleStorage
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
+
+	contractInfo, codeInfo, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), contractAddress)
+	s.Require().NoError(err)
+	s.Require().NotNil(codeInfo)
+	s.Require().NotNil(contractInfo)
+
+	codeId2 := appA.StoreCode(sender, wasmbin, nil)
+	// TODO we may eventually force same codeid
+	// s.Require().Equal(codeId, codeId2)
+	s.Require().Equal(codeId+1, codeId2)
+}
+
 func (suite *KeeperTestSuite) TestWasmxTime() {
 	SkipCIExpensiveTests(suite.T(), "TestWasmxTime")
 
@@ -186,6 +210,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	// start time chain
 	msgexec := types.WasmxExecutionMessage{Data: []byte(`{"StartNode":{}}`)}
 	msgbz, err := json.Marshal(&msgexec)
+	suite.Require().NoError(err)
 	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, nil, false)
 	suite.Require().NoError(err)
 

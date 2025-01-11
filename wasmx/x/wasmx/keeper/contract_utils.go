@@ -1,6 +1,10 @@
 package keeper
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -67,7 +71,7 @@ func (k *Keeper) storeContractInfo(ctx sdk.Context, addr mcodec.AccAddressPrefix
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf(`{"SetContractInfo":{"address":"%s","contract_info":%s}}`, addr.String(), string(databz))
+	msg := fmt.Sprintf(`{"SetContractInfo":{"address":"%s","contract_info":%s}}`, base64.StdEncoding.EncodeToString(addr.Bytes()), string(databz))
 	_, err = k.internalExecute(ctx, contractAddr, msg)
 	if err != nil {
 		return err
@@ -136,7 +140,7 @@ func (k *Keeper) GetContractInfo(ctx sdk.Context, address mcodec.AccAddressPrefi
 		return cache.CodeRegistryContractInfo, nil
 	}
 
-	msg := fmt.Sprintf(`{"GetContractInfo":{"address":"%s"}}`, address.String())
+	msg := fmt.Sprintf(`{"GetContractInfo":{"address":"%s"}}`, base64.StdEncoding.EncodeToString(address.Bytes()))
 	// Note! registry contract should not have any other depedencies aside from the host import interface
 	data, err := k.internalQuery(ctx, registryAddr, msg)
 	if err != nil {
@@ -169,7 +173,7 @@ func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAdd
 		return cache.CodeRegistryContractInfo, cache.CodeRegistryCodeInfo, prefixStoreKey, nil
 	}
 
-	msg := fmt.Sprintf(`{"GetContractInstance":{"address":"%s"}}`, contractAddress)
+	msg := fmt.Sprintf(`{"GetContractInstance":{"address":"%s"}}`, base64.StdEncoding.EncodeToString(contractAddress.Bytes()))
 	// Note! role contract should not have any other depedencies aside from the host import interface
 	data, err := k.internalQuery(ctx, registryAddr, msg)
 	if err != nil {
@@ -194,19 +198,38 @@ func (k *Keeper) HasContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddr
 	return true
 }
 
-func (k *Keeper) IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
-	// 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.GetContractAddressRootKey())
-	// 	iter := prefixStore.Iterator(nil, nil)
-	// 	defer iter.Close()
+func (k *Keeper) IterateContractInfos(ctx sdk.Context, cb func(sdk.AccAddress, types.ContractInfo) bool) {
+	registryAddr := k.GetCodeRegistryAddress(ctx)
+	msg := `{"GetContractInfoPrefix":{}}`
+	infoPrefix, err := k.internalQuery(ctx, registryAddr, msg)
+	if err != nil {
+		panic(err)
+	}
 
-	//	for ; iter.Valid(); iter.Next() {
-	//		var contract types.ContractInfo
-	//		k.cdc.MustUnmarshal(iter.Value(), &contract)
-	//		// cb returns true to stop early
-	//		if cb(iter.Key(), contract) {
-	//			break
-	//		}
-	//	}
+	prefixStoreKey := types.GetContractStorePrefix(registryAddr.Bytes())
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	iter := prefixStore.Iterator(infoPrefix, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		key, found := bytes.CutPrefix(iter.Key(), infoPrefix)
+		if !found {
+			// when prefix is no longer found, stop early
+			return
+		}
+		if len(key) == 0 {
+			continue
+		}
+		var c types.ContractInfo
+		err := json.Unmarshal(iter.Value(), &c)
+		if err != nil {
+			panic(sdkerr.Wrapf(err, "code iteration: cannot unmarshal CodeInfo: %s", hex.EncodeToString(iter.Value())))
+		}
+		// cb returns true to stop early
+		if cb(key, c) {
+			return
+		}
+	}
 }
 
 // IterateContractState iterates through all elements of the key value store for the given contract address and passes
@@ -254,18 +277,38 @@ func (k *Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
 }
 
 func (k *Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo) bool) {
-	// 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), types.GetCodeRootKey())
-	// 	iter := prefixStore.Iterator(nil, nil)
-	// 	defer iter.Close()
+	registryAddr := k.GetCodeRegistryAddress(ctx)
+	msg := `{"GetCodeInfoPrefix":{}}`
+	codeInfoPrefix, err := k.internalQuery(ctx, registryAddr, msg)
+	if err != nil {
+		panic(err)
+	}
 
-	//	for ; iter.Valid(); iter.Next() {
-	//		var c types.CodeInfo
-	//		k.cdc.MustUnmarshal(iter.Value(), &c)
-	//		// cb returns true to stop early
-	//		if cb(binary.BigEndian.Uint64(iter.Key()), c) {
-	//			return
-	//		}
-	//	}
+	prefixStoreKey := types.GetContractStorePrefix(registryAddr.Bytes())
+	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)
+	iter := prefixStore.Iterator(codeInfoPrefix, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		key, found := bytes.CutPrefix(iter.Key(), codeInfoPrefix)
+		if !found {
+			// when prefix is no longer found, stop early
+			return
+		}
+		if len(key) == 0 {
+			continue
+		}
+		var c types.CodeInfo
+		err := json.Unmarshal(iter.Value(), &c)
+		if err != nil {
+			panic(sdkerr.Wrapf(err, "code iteration: cannot unmarshal CodeInfo: %s", hex.EncodeToString(iter.Value())))
+		}
+		codeId := binary.BigEndian.Uint64(key)
+		// cb returns true to stop early
+		if cb(codeId, c) {
+			return
+		}
+	}
 }
 
 func (k *Keeper) GetByteCode(ctx sdk.Context, codeID uint64) ([]byte, error) {

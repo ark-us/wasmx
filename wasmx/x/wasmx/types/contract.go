@@ -77,7 +77,7 @@ type QueryLastCodeIdResponse struct {
 }
 
 type MsgSetContractInfoRequest struct {
-	Address      string       `json:"address"`
+	Address      []byte       `json:"address"`
 	ContractInfo ContractInfo `json:"contract_info"`
 }
 

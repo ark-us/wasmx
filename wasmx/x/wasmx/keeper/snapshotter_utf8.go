@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"io"
 	"math"
 
@@ -48,55 +49,55 @@ func (ws *Utf8Snapshotter) SupportedFormats() []uint32 {
 }
 
 func (ws *Utf8Snapshotter) SnapshotExtension(height uint64, payloadWriter snapshot.ExtensionPayloadWriter) error {
-	// cacheMS, err := ws.cms.CacheMultiStoreWithVersion(int64(height))
-	// if err != nil {
-	// 	return err
-	// }
+	cacheMS, err := ws.cms.CacheMultiStoreWithVersion(int64(height))
+	if err != nil {
+		return err
+	}
 
-	// ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
-	// seenBefore := make(map[string]bool)
+	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
+	seenBefore := make(map[string]bool)
 	var rerr error
 
-	// ws.wasmx.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
-	// 	// Many code ids may point to the same code hash... only sync it once
-	// 	hexHash := hex.EncodeToString(info.CodeHash)
-	// 	// if seenBefore, just skip this one and move to the next
-	// 	if seenBefore[hexHash] {
-	// 		return false
-	// 	}
-	// 	seenBefore[hexHash] = true
+	ws.wasmx.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
+		// Many code ids may point to the same code hash... only sync it once
+		hexHash := hex.EncodeToString(info.CodeHash)
+		// if seenBefore, just skip this one and move to the next
+		if seenBefore[hexHash] {
+			return false
+		}
+		seenBefore[hexHash] = true
 
-	// 	if len(info.Deps) == 0 || !types.HasUtf8Dep(info.Deps) {
-	// 		return false
-	// 	}
+		if len(info.Deps) == 0 || !types.HasUtf8Dep(info.Deps) {
+			return false
+		}
 
-	// 	// load code and skip on error
-	// 	// TODO fixme if it has utf8 dep, it should not error
+		// load code and skip on error
+		// TODO fixme if it has utf8 dep, it should not error
 
-	// 	extension := GetExtensionFromDeps(info.Deps)
-	// 	fileBytes, err := ws.wasmx.wasmvm.load_utf8(extension, info.CodeHash)
-	// 	if err != nil {
-	// 		// TODO fixme now we just skip
-	// 		// rerr = err
-	// 		// return true
-	// 		return false
-	// 	}
+		extension := GetExtensionFromDeps(info.Deps)
+		fileBytes, err := ws.wasmx.wasmvm.load_utf8(extension, info.CodeHash)
+		if err != nil {
+			// TODO fixme now we just skip
+			// rerr = err
+			// return true
+			return false
+		}
 
-	// 	fileBytes = packFile(extension, fileBytes)
-	// 	compressedFile, err := ioutils.GzipIt(fileBytes)
-	// 	if err != nil {
-	// 		rerr = err
-	// 		return true
-	// 	}
+		fileBytes = packFile(extension, fileBytes)
+		compressedFile, err := ioutils.GzipIt(fileBytes)
+		if err != nil {
+			rerr = err
+			return true
+		}
 
-	// 	err = payloadWriter(compressedFile)
-	// 	if err != nil {
-	// 		rerr = err
-	// 		return true
-	// 	}
+		err = payloadWriter(compressedFile)
+		if err != nil {
+			rerr = err
+			return true
+		}
 
-	// 	return false
-	// })
+		return false
+	})
 
 	return rerr
 }
@@ -126,13 +127,13 @@ func restoreUtf8V1(_ sdk.Context, k *Keeper, compressedCode []byte) error {
 
 func finalizeUtf8V1(ctx sdk.Context, k *Keeper) error {
 	// FIXME: ensure all codes have been uploaded?
-	// k.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
-	// 	if !info.Pinned {
-	// 		return false
-	// 	}
-	// 	k.PinCode(ctx, id, "", info.MeteringOff)
-	// 	return false
-	// })
+	k.IterateCodeInfos(ctx, func(id uint64, info types.CodeInfo) bool {
+		if !info.Pinned {
+			return false
+		}
+		k.PinCode(ctx, info.CodeHash, "", info.MeteringOff)
+		return false
+	})
 	return nil
 }
 

@@ -18,7 +18,8 @@ type RoleJSON struct {
 }
 
 type RolesGenesis struct {
-	Roles []RoleJSON `json:"roles"`
+	Roles            []RoleJSON `json:"roles"`
+	PreviousContract string     `json:"previous_contract"`
 }
 
 // GetRoleLabelPrefix returns the store prefix for the system roles

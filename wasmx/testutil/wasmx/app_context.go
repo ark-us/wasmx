@@ -664,6 +664,11 @@ func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contract
 	return s.SimulateTx(sender, executeContractMsg)
 }
 
+func (s *AppContext) QueryContract(account simulation.Account, contract mcodec.AccAddressPrefixed, msg []byte, funds sdk.Coins, dependencies []string) []byte {
+	result := s.WasmxQueryRaw(account, contract, types.WasmxExecutionMessage{Data: msg}, funds, dependencies)
+	return result
+}
+
 func (s *AppContext) WasmxQuery(account simulation.Account, contract mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
 	result := s.WasmxQueryRaw(account, contract, executeMsg, funds, dependencies)
 	return hex.EncodeToString(result)
@@ -1003,7 +1008,7 @@ func (s *AppContext) GetProposalIdFromEvents(events []abci.Event) (uint64, error
 			}
 		}
 	}
-	return 0, errors.New("not found")
+	return 0, errors.New("proposal id not found")
 }
 
 func (s *AppContext) QueryDecode(respbz []byte) []byte {

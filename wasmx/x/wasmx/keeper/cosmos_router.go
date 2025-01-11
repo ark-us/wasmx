@@ -200,6 +200,10 @@ func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr mcod
 	return h.Keeper.GetRoleByContractAddress(ctx, addr)
 }
 
+func (h *WasmxCosmosHandler) FinalizeBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error {
+	return h.Keeper.FinalizeBlockResultHandler(ctx, resp)
+}
+
 func (h *WasmxCosmosHandler) WithNewAddress(addr mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
 	return h.Keeper.newCosmosHandler(h.Ctx, addr)
 }

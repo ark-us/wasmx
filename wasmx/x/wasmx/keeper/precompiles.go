@@ -50,7 +50,10 @@ func (k *Keeper) BootstrapSystemContracts(
 	for i, contract := range contracts {
 		contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
 		if contract.Role != "" {
-			k.RegisterRoleInitial(ctx, contract.Role, contract.Label, contractAddress)
+			// roleLabel must be unique
+			// roleLabel := contract.Role + "_" + contract.Label
+			roleLabel := contract.Label
+			k.RegisterRoleInitial(ctx, contract.Role, roleLabel, contractAddress)
 			if contract.Role == types.ROLE_ROLES {
 				rolesAddress = contractAddress
 			}
@@ -87,7 +90,7 @@ func (k *Keeper) BootstrapSystemContracts(
 		}
 
 		genesisRegistry.CodeInfos[i] = codeInfo
-		genesisRegistry.ContractInfos[i] = types.MsgSetContractInfoRequest{Address: contractAddress.String(), ContractInfo: contractInfo}
+		genesisRegistry.ContractInfos[i] = types.MsgSetContractInfoRequest{Address: contractAddress.Bytes(), ContractInfo: contractInfo}
 	}
 
 	// initialize SystemBootstrap

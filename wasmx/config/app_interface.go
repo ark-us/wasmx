@@ -61,7 +61,7 @@ type NetworkKeeper interface {
 
 type WasmxKeeper interface {
 	GetCodeInfo(ctx sdk.Context, codeID uint64) (*wasmxtypes.CodeInfo, error)
-	IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, wasmxtypes.ContractInfo) bool)
+	IterateContractInfos(ctx sdk.Context, cb func(sdk.AccAddress, wasmxtypes.ContractInfo) bool)
 	IterateCodeInfos(ctx sdk.Context, cb func(uint64, wasmxtypes.CodeInfo) bool)
 	ExecuteContractInstantiationInternal(
 		ctx sdk.Context,
