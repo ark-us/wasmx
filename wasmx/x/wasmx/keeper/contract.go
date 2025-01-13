@@ -145,12 +145,12 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 	// shortcut for roles contract, to avoid cycle
 	if k.GetRoleContractAddress(ctx).String() == addr.String() {
 		cdep.Role = types.ROLE_ROLES
-		cdep.Label = contractInfo.Label
+		cdep.RoleLabel = contractInfo.Label
 		return cdep, nil
 	}
 	if k.GetCodeRegistryAddress(ctx).String() == addr.String() {
 		cdep.Role = types.ROLE_STORAGE_CONTRACTS
-		cdep.Label = contractInfo.Label
+		cdep.RoleLabel = contractInfo.Label
 		return cdep, nil
 	}
 
@@ -162,7 +162,7 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 	}
 
 	cdep.Role = rolename
-	cdep.Label = label
+	cdep.RoleLabel = label
 	return cdep, nil
 }
 
@@ -176,6 +176,7 @@ func (k *Keeper) GetContractDependencyInnerWithoutRoles(ctx sdk.Context, addr mc
 
 	cdep := types.ContractDependency{
 		Address:       addr,
+		Label:         contractInfo.Label,
 		StoreKey:      prefixStoreKey,
 		CodeFilePath:  filepath,
 		AotFilePath:   aotFilePath,
@@ -416,6 +417,7 @@ func (k *Keeper) instantiateWithAddress(
 	deposit sdk.Coins,
 	label string,
 	role string,
+	roleLabel string,
 	codeInfo types.CodeInfo,
 ) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate_with_address")
@@ -439,7 +441,7 @@ func (k *Keeper) instantiateWithAddress(
 		return nil, err
 	}
 	contractInfo.Role = role
-	contractInfo.Label = label
+	contractInfo.RoleLabel = roleLabel
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
@@ -1170,12 +1172,28 @@ func (k *Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []t
 	return sdeps
 }
 
+func GetAddressFromRoleByLabel(role types.RoleJSON, label string) (string, error) {
+	for i, roleLabel := range role.Labels {
+		if roleLabel == label {
+			if len(role.Addresses) <= i {
+				return "", fmt.Errorf("mismatch length role labels and addresses")
+			}
+			return role.Addresses[i], nil
+		}
+	}
+	return "", fmt.Errorf("address not found for role %s and label %s", role.Role, label)
+}
+
 func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
 	role := k.GetRoleByLabel(ctx, label)
 	if role == nil {
 		return types.SystemDep{}, fmt.Errorf("no role from label")
 	}
-	contractAddress, err := k.accBech32Codec.StringToAccAddressPrefixed(role.ContractAddress)
+	addr, err := GetAddressFromRoleByLabel(*role, label)
+	if err != nil {
+		return types.SystemDep{}, err
+	}
+	contractAddress, err := k.accBech32Codec.StringToAccAddressPrefixed(addr)
 	if err != nil {
 		return types.SystemDep{}, err
 	}

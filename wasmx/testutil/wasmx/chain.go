@@ -261,7 +261,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
 
 	if strings.Contains(chainId, "level") {
-		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 		require.NoError(t, err)
 		mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
 		require.NoError(t, err)

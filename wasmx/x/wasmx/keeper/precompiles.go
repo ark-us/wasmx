@@ -25,13 +25,13 @@ func (k *Keeper) BootstrapSystemContracts(
 	if len(contracts) < 3 {
 		return fmt.Errorf("not enough system contracts")
 	}
-	if contracts[0].Role != types.ROLE_STORAGE_CONTRACTS {
+	if contracts[0].Role == nil || contracts[0].Role.Role != types.ROLE_STORAGE_CONTRACTS {
 		return fmt.Errorf("genesis system contract 0 must be %s", types.ROLE_STORAGE_CONTRACTS)
 	}
-	if contracts[1].Role != types.ROLE_ROLES {
+	if contracts[1].Role == nil || contracts[1].Role.Role != types.ROLE_ROLES {
 		return fmt.Errorf("genesis system contract 1 must be %s", types.ROLE_ROLES)
 	}
-	if contracts[2].Role != types.ROLE_AUTH {
+	if contracts[2].Role == nil || contracts[2].Role.Role != types.ROLE_AUTH {
 		return fmt.Errorf("genesis system contract 2 must be %s", types.ROLE_AUTH)
 	}
 
@@ -49,12 +49,12 @@ func (k *Keeper) BootstrapSystemContracts(
 	// and collect init msg data for the contract registry
 	for i, contract := range contracts {
 		contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
-		if contract.Role != "" {
+		if contract.Role != nil {
 			// roleLabel must be unique
 			// roleLabel := contract.Role + "_" + contract.Label
 			roleLabel := contract.Label
-			k.RegisterRoleInitial(ctx, contract.Role, roleLabel, contractAddress)
-			if contract.Role == types.ROLE_ROLES {
+			k.RegisterRoleInitial(ctx, contract.Role.Role, roleLabel, contractAddress)
+			if contract.Role.Role == types.ROLE_ROLES {
 				rolesAddress = contractAddress
 			}
 		}
@@ -82,7 +82,7 @@ func (k *Keeper) BootstrapSystemContracts(
 
 		k.Logger(ctx).Debug("core contract", "label", contractInfo.Label, "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(codeInfo.CodeHash), "address", contractAddress.String())
 
-		if contract.Role == types.ROLE_STORAGE_CONTRACTS {
+		if contract.Role != nil && contract.Role.Role == types.ROLE_STORAGE_CONTRACTS {
 			registryAddress = contractAddress
 			registryId = codeID
 			registryCodeInfo = codeInfo
@@ -109,7 +109,7 @@ func (k *Keeper) BootstrapSystemContracts(
 	}
 
 	for i, contract := range contracts {
-		if contract.Role == types.ROLE_STORAGE_CONTRACTS {
+		if contract.Role != nil && contract.Role.Role == types.ROLE_STORAGE_CONTRACTS {
 			contract.InitMessage = registryGenesisWrap
 		}
 		err := k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath, uint64(i+1), genesisRegistry.CodeInfos[i], registryAddress, rolesAddress)
@@ -147,6 +147,12 @@ func (k *Keeper) ActivateSystemContract(
 	}
 
 	contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
+	roleName := ""
+	roleLabel := ""
+	if contract.Role != nil {
+		roleName = contract.Role.Role
+		roleLabel = contract.Role.Label
+	}
 
 	if !contract.Native {
 		_, err = k.instantiateWithAddress(
@@ -158,7 +164,8 @@ func (k *Keeper) ActivateSystemContract(
 			contract.InitMessage,
 			nil,
 			contract.Label,
-			contract.Role,
+			roleName,
+			roleLabel,
 			codeInfo,
 		)
 		if err != nil {
@@ -174,7 +181,7 @@ func (k *Keeper) ActivateSystemContract(
 	// 	k.SetRoleContractAddress(ctx, contractAddress)
 	// }
 
-	if !slices.Contains([]string{types.ROLE_STORAGE_CONTRACTS, types.ROLE_ROLES}, contract.Role) {
+	if !slices.Contains([]string{types.ROLE_STORAGE_CONTRACTS, types.ROLE_ROLES}, roleName) {
 		// register the auth account
 		err = k.instantiateNewContractAccount(ctx, contractAddress)
 		if err != nil {
@@ -182,7 +189,7 @@ func (k *Keeper) ActivateSystemContract(
 		}
 	}
 
-	if contract.Role == types.ROLE_AUTH {
+	if roleName == types.ROLE_AUTH {
 		// only now we create the account for the first 2 precompile - contract storage, roles
 		err = k.instantiateNewContractAccount(ctx, registryAddress)
 		if err != nil {

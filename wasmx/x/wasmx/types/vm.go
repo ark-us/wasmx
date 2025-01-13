@@ -259,7 +259,7 @@ var ROLE_METAREGISTRY = "metaregistry"
 // wasm -> stored in the filesystem
 
 // TODO "interpreter_evm_hex_shanghai" ?
-var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai"
+var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai_bz_1.0.0"
 
 // https://github.com/RustPython/RustPython version
 var INTERPRETER_PYTHON = "interpreter_python_utf8_0.2.0"
@@ -270,15 +270,31 @@ var INTERPRETER_FSM = "interpreter_state_machine_bz_0.1.0"
 
 var INTERPRETER_TAY = "tay_interpreter_v0.0.1"
 
+var ALIAS_ETH = "alias_eth"
+
 var STORAGE_CHAIN = "storage_chain"
 
 var CONSENSUS_RAFT = "consensus_raft_0.0.1"
+var CONSENSUS_RAFT_LIBRARY = "raft_library"
 var CONSENSUS_RAFTP2P = "consensus_raftp2p_0.0.1"
+var CONSENSUS_RAFTP2P_LIBRARY = "raftp2p_library"
 
 var CONSENSUS_TENDERMINT = "consensus_tendermint_0.0.1"
+var CONSENSUS_TENDERMINT_LIBRARY = "tendermint_library"
 var CONSENSUS_TENDERMINTP2P = "consensus_tendermintp2p_0.0.1"
+var CONSENSUS_TENDERMINTP2P_LIBRARY = "tendermintp2p_library"
 
 var CONSENSUS_AVA_SNOWMAN = "consensus_ava_snowman_0.0.1"
+var CONSENSUS_AVA_SNOWMAN_LIBRARY = "ava_snowman_library"
+
+var CONSENSUS_LEVEL_LIBRARY = "level0_library"
+
+var LOBBY_LIBRARY = "lobby_library"
+
+var PROXY_INTERFACES = "proxy_interfaces"
+var SYS_PROXY = "sys_proxy"
+
+var SECP384r1_REGISTRY = "secp384r1_registry"
 
 var STAKING_v001 = "staking_0.0.1"
 
@@ -300,6 +316,7 @@ var CHAT_VERIFIER_v001 = "chat_verifier_0.0.1"
 var TIME_v001 = "time_0.0.1"
 var LEVEL0_v001 = "level0_0.0.1"
 var LEVEL0_ONDEMAND_v001 = "level0_ondemand_0.0.1"
+var LEVEL0_ONDEMAND_LIBRARY = "level0_ondemand_library"
 var MULTICHAIN_REGISTRY_v001 = "multichain_registry_0.0.1"
 var MULTICHAIN_REGISTRY_LOCAL_v001 = "multichain_registry_local_0.0.1"
 var ERC20_ROLLUP_v001 = "erc20rollupjson_0.0.1"

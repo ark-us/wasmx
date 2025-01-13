@@ -12,7 +12,6 @@ import (
 	"github.com/cometbft/cometbft/libs/rand"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
-	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
@@ -20,7 +19,7 @@ func TestGenesisState_Validate(t *testing.T) {
 	addrCodec := mcodec.NewAccBech32Codec("myth", mcodec.NewAddressPrefixedFromAcc).(mcodec.AccBech32Codec)
 	bootstrapAccount, err := addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
 	require.NoError(t, err)
-	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress(types.FEE_COLLECTOR))
 	require.NoError(t, err)
 	mintAddress, err := addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
 	require.NoError(t, err)

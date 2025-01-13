@@ -174,13 +174,13 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = blake2f
 	case "secp384r1":
 		wasmbin = secp384r1
-	case "secp384r1_registry":
+	case types.SECP384r1_REGISTRY:
 		wasmbin = secp384r1_registry
 	case "secret_sharing":
 		wasmbin = secret_sharing
 	case types.INTERPRETER_EVM_SHANGHAI:
 		wasmbin = interpreter_evm_shanghai
-	case "alias_eth":
+	case types.ALIAS_ETH:
 		wasmbin = alias_eth
 	case types.INTERPRETER_PYTHON:
 		wasmbin = rustpython
@@ -223,17 +223,17 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 			panic(err)
 		}
 		wasmbin = []byte(ConsensusAvaSnowmanv001(libaddrstr))
-	case "raft_library":
+	case types.CONSENSUS_RAFT_LIBRARY:
 		wasmbin = raft_library
-	case "raftp2p_library":
+	case types.CONSENSUS_RAFTP2P_LIBRARY:
 		wasmbin = raftp2p_library
-	case "tendermint_library":
+	case types.CONSENSUS_TENDERMINT_LIBRARY:
 		wasmbin = tendermint_library
-	case "tendermintp2p_library":
+	case types.CONSENSUS_TENDERMINTP2P_LIBRARY:
 		wasmbin = tendermintp2p_library
-	case "ava_snowman_library":
+	case types.CONSENSUS_AVA_SNOWMAN_LIBRARY:
 		wasmbin = ava_snowman_library
-	case "sys_proxy":
+	case types.SYS_PROXY:
 		wasmbin = sys_proxy
 	case types.STORAGE_CHAIN:
 		wasmbin = storage_chain
@@ -265,7 +265,7 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = chat_verifier_contract
 	case types.TIME_v001:
 		wasmbin = time_contract
-	case "level0_library":
+	case types.CONSENSUS_LEVEL_LIBRARY:
 		wasmbin = level0_contract
 	case types.LEVEL0_v001:
 		libaddr := types.AccAddressFromHex(types.ADDR_LEVEL0_LIBRARY)
@@ -274,7 +274,7 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 			panic(err)
 		}
 		wasmbin = []byte(Level0P2Pv001(libaddrstr))
-	case "level0_ondemand_library":
+	case types.LEVEL0_ONDEMAND_LIBRARY:
 		wasmbin = level0_ondemand_contract
 	case types.LEVEL0_ONDEMAND_v001:
 		libaddr := types.AccAddressFromHex(types.ADDR_LEVEL0_ONDEMAND_LIBRARY)
@@ -289,7 +289,7 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = multichain_registry_local
 	case types.ERC20_ROLLUP_v001:
 		wasmbin = erc20rollupjson
-	case "lobby_library":
+	case types.LOBBY_LIBRARY:
 		wasmbin = lobbyjson
 	case types.LOBBY_v001:
 		libaddr := types.AccAddressFromHex(types.ADDR_LOBBY_LIBRARY)

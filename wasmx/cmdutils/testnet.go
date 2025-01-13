@@ -955,7 +955,7 @@ func initGenFiles(
 	mintGenState.Params.MintDenom = mcfg.BaseDenom
 	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
-	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 	if err != nil {
 		panic(err)
 	}
@@ -1014,7 +1014,7 @@ func initGenFilesLevel0(
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
-	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 	if err != nil {
 		panic(err)
 	}

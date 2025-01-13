@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
@@ -27,7 +28,7 @@ func (k *Keeper) RegisterRoleInitial(
 	label string,
 	contractAddress mcodec.AccAddressPrefixed,
 ) error {
-	roleObj := &types.Role{
+	roleObj := &types.RoleChanged{
 		Role:            role,
 		Label:           label,
 		ContractAddress: contractAddress.String(),
@@ -79,27 +80,27 @@ func (k *Keeper) SetContractAddressByRole(ctx sdk.Context, role string, contract
 }
 
 // GetRoleByLabelInitial
-func (k *Keeper) GetRoleByLabelInitial(ctx sdk.Context, label string) *types.Role {
+func (k *Keeper) GetRoleByLabelInitial(ctx sdk.Context, label string) *types.RoleChanged {
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetRoleLabelPrefix(types.AccAddressFromHex(types.ADDR_ROLES), label))
 	if bz == nil {
 		return nil
 	}
-	rolej := &types.RoleJSON{}
-	err := json.Unmarshal(bz, &rolej)
+	rolej := &types.RoleChanged{}
+	err := k.cdc.Unmarshal(bz, rolej)
 	if err != nil {
 		return nil
 	}
-	return &types.Role{Role: rolej.Role, Label: rolej.Label, ContractAddress: rolej.ContractAddress}
+	return rolej
 }
 
 // SetRoleByLabel
-func (k *Keeper) SetRoleByLabel(ctx sdk.Context, role *types.Role) {
+func (k *Keeper) SetRoleByLabel(ctx sdk.Context, role *types.RoleChanged) {
 	if role == nil {
 		return
 	}
 	store := ctx.KVStore(k.storeKey)
-	value, err := json.Marshal(&types.RoleJSON{Role: role.Role, Label: role.Label, ContractAddress: role.ContractAddress})
+	value, err := k.cdc.Marshal(&types.RoleChanged{Role: role.Role, Label: role.Label, ContractAddress: role.ContractAddress})
 	if err != nil {
 		return
 	}
@@ -154,6 +155,21 @@ func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec
 	return resultAddr, nil
 }
 
+func (k *Keeper) GetRoleByRoleName(ctx sdk.Context, roleName string) (*types.RoleJSON, error) {
+	contractAddr := k.GetRoleContractAddress(ctx)
+	msg := fmt.Sprintf(`{"GetRoleByRoleName":{"role":"%s"}}`, roleName)
+	data, err := k.internalQuery(ctx, contractAddr, msg)
+	if err != nil {
+		return nil, err
+	}
+	var role types.RoleJSON
+	err = json.Unmarshal(data, &role)
+	if err != nil {
+		return nil, sdkerr.Wrapf(err, "could not decode role")
+	}
+	return &role, nil
+}
+
 // GetRoleLabelByContract
 func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) string {
 	contractAddr := k.GetRoleContractAddress(ctx)
@@ -170,7 +186,7 @@ func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress mcodec.
 }
 
 // GetRoleByLabel
-func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.Role {
+func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.RoleJSON {
 	contractAddr := k.GetRoleContractAddress(ctx)
 	msg := fmt.Sprintf(`{"GetRoleByLabel":{"label":"%s"}}`, label)
 	// Note! role contract should not have any other depedencies aside from the host import interface
@@ -178,11 +194,12 @@ func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.Role {
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
-			return k.GetRoleByLabelInitial(ctx, label)
+			role := k.GetRoleByLabelInitial(ctx, label)
+			return &types.RoleJSON{Role: role.Role, Primary: 0, Labels: []string{role.Label}, Addresses: []string{role.ContractAddress}}
 		}
 		return nil
 	}
-	var role types.Role
+	var role types.RoleJSON
 	err = json.Unmarshal(data, &role)
 	if err != nil {
 		return nil

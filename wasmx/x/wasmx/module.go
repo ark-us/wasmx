@@ -23,7 +23,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
-	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/multichain"
 	"github.com/loredanacirstea/wasmx/x/wasmx/client/cli"
 	"github.com/loredanacirstea/wasmx/x/wasmx/keeper"
@@ -70,7 +69,7 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
 func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	feeCollector, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollector, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress(types.FEE_COLLECTOR))
 	mintAddress, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
 	bootstrapAccount, _ := a.addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
 

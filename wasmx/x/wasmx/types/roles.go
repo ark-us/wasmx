@@ -2,43 +2,51 @@ package types
 
 import sdk "github.com/cosmos/cosmos-sdk/types"
 
-// role => contract address
-const KEY_CONTRACT_ADDRESS_BY_ROLE = "addrbyrole_"
+const (
+	contractAddressStorePrefix = iota + 1
+	prefixRoleContract
+	prefixLabelContract
+)
 
-// label => ROLE
-const KEY_ROLE_BY_LABEL = "rolebylabel_"
-
-// addr => label
-const KEY_LABEL_BY_ADDR = "labelbyaddr_"
+var (
+	// role => contract address
+	KeyContractAddressStorePrefix = []byte{contractAddressStorePrefix}
+	// label => ROLE
+	KeyPrefixRoleContract = []byte{prefixRoleContract}
+	// addr => label
+	KeyPrefixLabelContract = []byte{prefixLabelContract}
+)
 
 type RoleJSON struct {
-	Role            string `json:"role"`
-	Label           string `json:"label"`
-	ContractAddress string `json:"contract_address"`
+	Role        string              `json:"role"`
+	StorageType ContractStorageType `json:"storageType"`
+	Primary     int32               `json:"primary"`
+	Multiple    bool                `json:"multiple"`
+	Labels      []string            `json:"labels"`
+	Addresses   []string            `json:"addresses"`
 }
 
 type RolesGenesis struct {
-	Roles            []RoleJSON `json:"roles"`
-	PreviousContract string     `json:"previous_contract"`
+	Roles []RoleJSON `json:"roles"`
 }
 
 // GetRoleLabelPrefix returns the store prefix for the system roles
 func GetRolePrefix(roleaddr sdk.AccAddress, role string) []byte {
 	prefixStoreKey := GetContractStorePrefix(roleaddr.Bytes())
-	prefixStoreKey = append(prefixStoreKey, []byte(KEY_CONTRACT_ADDRESS_BY_ROLE)...)
+	prefixStoreKey = append(prefixStoreKey, KeyContractAddressStorePrefix...)
 	return append(prefixStoreKey, []byte(role)...)
 }
 
 // GetRoleLabelPrefix returns the store prefix for the system roles
 func GetRoleLabelPrefix(roleaddr sdk.AccAddress, label string) []byte {
 	prefixStoreKey := GetContractStorePrefix(roleaddr.Bytes())
-	prefixStoreKey = append(prefixStoreKey, []byte(KEY_ROLE_BY_LABEL)...)
+	prefixStoreKey = append(prefixStoreKey, KeyPrefixRoleContract...)
 	return append(prefixStoreKey, []byte(label)...)
 }
 
 // GetRoleContractPrefix returns the store prefix for the system roles
 func GetRoleContractPrefix(roleaddr sdk.AccAddress, addr sdk.AccAddress) []byte {
 	prefixStoreKey := GetContractStorePrefix(roleaddr.Bytes())
-	prefixStoreKey = append(prefixStoreKey, []byte(KEY_LABEL_BY_ADDR)...)
+	prefixStoreKey = append(prefixStoreKey, KeyPrefixLabelContract...)
 	return append(prefixStoreKey, addr...)
 }

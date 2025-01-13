@@ -25,7 +25,6 @@ import (
 
 	wasmxapp "github.com/loredanacirstea/wasmx/app"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
-	mcfg "github.com/loredanacirstea/wasmx/config"
 	menc "github.com/loredanacirstea/wasmx/encoding"
 	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -152,7 +151,7 @@ func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet,
 
 	// We are using precompiled contracts to avoid compiling at every chain instantiation
 
-	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollector, err := addrCodec.BytesToString(authtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 	if err != nil {
 		return app, nil, err
 	}

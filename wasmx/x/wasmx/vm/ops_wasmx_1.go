@@ -100,6 +100,19 @@ func wasmxStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []in
 	return returns, nil
 }
 
+// wasmxStorageDelete(key: ArrayBuffer)
+func wasmxStorageDelete(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	key, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	// refund some gas?
+	ctx.ContractStore.Delete(key)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
 func wasmxStorageLoadRange(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	reqbz, err := rnh.ReadMemFromPtr(params[0])

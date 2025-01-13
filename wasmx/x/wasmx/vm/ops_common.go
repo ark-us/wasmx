@@ -205,6 +205,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		newrouter[routerAddress].ContractInfo = &types.ContractDependency{
 			Address:       ci.Address,
 			Role:          ci.Role,
+			RoleLabel:     ci.RoleLabel,
 			Label:         ci.Label,
 			StoreKey:      ci.StoreKey,
 			CodeFilePath:  ci.CodeFilePath,

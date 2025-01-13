@@ -16,6 +16,7 @@ import (
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/classic"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
@@ -50,8 +51,11 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"interpreter","label":"%s","contract_address":"%s"}}`, newlabel, interpreterAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"interpreter","label":"%s","contract_address":"%s","action_type":1}}`, newlabel, interpreterAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+
+	rolePre, err := appA.App.WasmxKeeper.GetRoleByRoleName(appA.Context(), "interpreter")
 	s.Require().NoError(err)
 
 	proposal := &types.MsgExecuteContract{
@@ -65,9 +69,15 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(interpreterAddressStr, role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(rolePre.Role, role.Role)
 	s.Require().Equal("interpreter", role.Role)
+
+	addr, err := wasmxkeeper.GetAddressFromRoleByLabel(*role, newlabel)
+	s.Require().NoError(err)
+	s.Require().Equal(interpreterAddressStr, addr)
+	s.Require().Equal(len(rolePre.Labels)+1, len(role.Labels))
+	s.Require().Equal(len(rolePre.Addresses)+1, len(role.Addresses))
+	s.Require().Equal(newlabel, role.Labels[len(role.Labels)-1])
 
 	// use this interpreter to execute contract
 	setHex := `60fe47b1`

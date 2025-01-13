@@ -104,7 +104,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	err := json.Unmarshal(rolesbz, &roles)
 	s.Require().NoError(err)
 
-	newRoles := &types.RolesGenesis{PreviousContract: rolesAddr.String()}
+	newRoles := &types.RolesGenesis{}
 	newrolesinitbz, err := json.Marshal(&newRoles)
 	s.Require().NoError(err)
 
@@ -125,7 +125,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	newAddressStr := newAddress.String()
 
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"%s","contract_address":"%s"}}`, types.ROLE_ROLES, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_ROLES, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -145,9 +145,9 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newAddressStr, role.ContractAddress)
+	s.Require().Equal(newAddressStr, role.Addresses[0])
 	s.Require().Equal(types.ROLE_ROLES, role.Role)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newlabel, role.Labels[0])
 
 	// make a generic transaction that uses roles contract
 	codeId2 := appA.StoreCode(sender, wasmxtest.WasmxSimpleStorage, nil)
@@ -193,7 +193,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"%s","contract_address":"%s"}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -208,8 +208,8 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newAddressStr, role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newAddressStr, role.Addresses[0])
+	s.Require().Equal(newlabel, role.Labels[0])
 	s.Require().Equal(types.ROLE_STORAGE_CONTRACTS, role.Role)
 
 	cached, err := appA.App.WasmxKeeper.GetSystemBootstrapData(appA.Context())

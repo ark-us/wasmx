@@ -9,6 +9,7 @@ var (
 	// consenssus
 	HOOK_BEGIN_BLOCK      = "BeginBlock"
 	HOOK_END_BLOCK        = "EndBlock"
+	HOOK_FINALIZE_BLOCK   = "FinalizeBlock"
 	HOOK_CREATE_VALIDATOR = "CreatedValidator"
 	HOOK_ROLE_CHANGED     = "RoleChanged"
 
@@ -41,7 +42,8 @@ var DEFAULT_HOOKS = []Hook{
 	{
 		Name:          HOOK_END_BLOCK,
 		SourceModules: []string{ROLE_CONSENSUS},
-		TargetModules: []string{ROLE_GOVERNANCE, ROLE_DISTRIBUTION},
+		// roles must be the last contract called
+		TargetModules: []string{ROLE_GOVERNANCE, ROLE_DISTRIBUTION, ROLE_ROLES},
 	},
 	{
 		Name:          HOOK_CREATE_VALIDATOR,

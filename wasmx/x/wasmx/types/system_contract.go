@@ -7,6 +7,7 @@ import (
 
 	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -14,6 +15,8 @@ import (
 )
 
 type SystemContracts = []SystemContract
+
+const FEE_COLLECTOR = "fee_collector"
 
 var ADDR_ECRECOVER = "0x0000000000000000000000000000000000000001"
 var ADDR_SHA2_256 = "0x0000000000000000000000000000000000000002"
@@ -90,7 +93,7 @@ func StarterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_STORAGE_CONTRACTS,
+			Role:        &SystemContractRole{Role: ROLE_STORAGE_CONTRACTS, Label: ROLE_STORAGE_CONTRACTS, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -100,7 +103,7 @@ func StarterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_ROLES,
+			Role:        &SystemContractRole{Role: ROLE_ROLES, Label: ADDR_ROLES, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -110,7 +113,7 @@ func StarterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_AUTH,
+			Role:        &SystemContractRole{Role: ROLE_AUTH, Label: ADDR_AUTH, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -231,7 +234,7 @@ func InterpreterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_INTERPRETER,
+			Role:        &SystemContractRole{Role: ROLE_INTERPRETER, Label: INTERPRETER_EVM_SHANGHAI, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -241,7 +244,7 @@ func InterpreterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_INTERPRETER,
+			Role:        &SystemContractRole{Role: ROLE_INTERPRETER, Label: INTERPRETER_PYTHON},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -251,7 +254,7 @@ func InterpreterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_INTERPRETER,
+			Role:        &SystemContractRole{Role: ROLE_INTERPRETER, Label: INTERPRETER_JS},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -261,7 +264,7 @@ func InterpreterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_INTERPRETER,
+			Role:        &SystemContractRole{Role: ROLE_INTERPRETER, Label: INTERPRETER_FSM},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -271,7 +274,7 @@ func InterpreterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_INTERPRETER,
+			Role:        &SystemContractRole{Role: ROLE_INTERPRETER, Label: INTERPRETER_TAY},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{WASMX_MEMORY_TAYLOR},
 		},
@@ -296,22 +299,22 @@ func BasePrecompiles() SystemContracts {
 			InitMessage: storageInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_STORAGE,
+			Role:        &SystemContractRole{Role: ROLE_STORAGE, Label: STORAGE_CHAIN, Primary: true},
 			StorageType: ContractStorageType_MetaConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_ALIAS_ETH,
-			Label:       "alias_eth",
+			Label:       ALIAS_ETH,
 			InitMessage: initMsg,
 			Pinned:      false,
-			Role:        ROLE_ALIAS,
+			Role:        &SystemContractRole{Role: ROLE_ALIAS, Label: ALIAS_ETH, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_PROXY_INTERFACES,
-			Label:       "proxy_interfaces",
+			Label:       PROXY_INTERFACES,
 			InitMessage: initMsg,
 			Pinned:      false,
 			Native:      true,
@@ -320,7 +323,7 @@ func BasePrecompiles() SystemContracts {
 		},
 		{
 			Address:     ADDR_SYS_PROXY,
-			Label:       "sys_proxy",
+			Label:       SYS_PROXY,
 			InitMessage: initMsg,
 			Pinned:      false,
 			StorageType: ContractStorageType_CoreConsensus,
@@ -347,11 +350,11 @@ func EIDPrecompiles() SystemContracts {
 		},
 		{
 			Address:     ADDR_SECP384R1_REGISTRY,
-			Label:       "secp384r1_registry",
+			Label:       SECP384r1_REGISTRY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_EID_REGISTRY,
+			Role:        &SystemContractRole{Role: ROLE_EID_REGISTRY, Label: SECP384r1_REGISTRY, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -394,7 +397,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_STAKING,
+			Role:        &SystemContractRole{Role: ROLE_STAKING, Label: STAKING_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -404,7 +407,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 			InitMessage: bankInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_BANK,
+			Role:        &SystemContractRole{Role: ROLE_BANK, Label: BANK_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -434,7 +437,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_SLASHING,
+			Role:        &SystemContractRole{Role: ROLE_SLASHING, Label: SLASHING_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -444,7 +447,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_DISTRIBUTION,
+			Role:        &SystemContractRole{Role: ROLE_DISTRIBUTION, Label: DISTRIBUTION_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -454,7 +457,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_GOVERNANCE,
+			Role:        &SystemContractRole{Role: ROLE_GOVERNANCE, Label: GOV_v001},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -464,7 +467,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 			InitMessage: govInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_GOVERNANCE,
+			Role:        &SystemContractRole{Role: ROLE_GOVERNANCE, Label: GOV_CONT_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -496,7 +499,7 @@ func HookPrecompiles() SystemContracts {
 			InitMessage: hooksInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_HOOKS,
+			Role:        &SystemContractRole{Role: ROLE_HOOKS, Label: ROLE_HOOKS + "_" + HOOKS_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -506,7 +509,7 @@ func HookPrecompiles() SystemContracts {
 			InitMessage: hooksInitMsgNonC,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_HOOKS_NONC,
+			Role:        &SystemContractRole{Role: ROLE_HOOKS_NONC, Label: ROLE_HOOKS_NONC + "_" + HOOKS_v001, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -573,41 +576,41 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 	return []SystemContract{
 		{
 			Address:     ADDR_CONSENSUS_RAFT_LIBRARY,
-			Label:       "raft_library",
+			Label:       CONSENSUS_RAFT_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_RAFT_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_CONSENSUS_RAFTP2P_LIBRARY,
-			Label:       "raftp2p_library",
+			Label:       CONSENSUS_RAFTP2P_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_RAFTP2P_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_CONSENSUS_TENDERMINT_LIBRARY,
-			Label:       "tendermint_library",
+			Label:       CONSENSUS_TENDERMINT_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_TENDERMINT_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY,
-			Label:       "tendermintp2p_library",
+			Label:       CONSENSUS_TENDERMINTP2P_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_TENDERMINTP2P_LIBRARY, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -649,11 +652,11 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		},
 		{
 			Address:     ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY,
-			Label:       "ava_snowman_library",
+			Label:       CONSENSUS_AVA_SNOWMAN_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_AVA_SNOWMAN_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -672,17 +675,17 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			InitMessage: timeInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_TIME,
+			Role:        &SystemContractRole{Role: ROLE_TIME, Label: TIME_v001, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_LEVEL0_LIBRARY,
-			Label:       "level0_library",
+			Label:       CONSENSUS_LEVEL_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_LEVEL_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -701,17 +704,17 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			InitMessage: mutichainLocalInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_MULTICHAIN_REGISTRY_LOCAL,
+			Role:        &SystemContractRole{Role: ROLE_MULTICHAIN_REGISTRY_LOCAL, Label: MULTICHAIN_REGISTRY_LOCAL_v001, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_LOBBY_LIBRARY,
-			Label:       "lobby_library",
+			Label:       LOBBY_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: LOBBY_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -720,7 +723,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       LOBBY_v001,
 			InitMessage: lobbyInitMsg,
 			Pinned:      false,
-			Role:        ROLE_LOBBY,
+			Role:        &SystemContractRole{Role: ROLE_LOBBY, Label: LOBBY_v001, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LOBBY_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -730,17 +733,17 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			InitMessage: metaregistryInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_METAREGISTRY,
+			Role:        &SystemContractRole{Role: ROLE_METAREGISTRY, Label: METAREGISTRY_v001, Primary: true},
 			StorageType: ContractStorageType_MetaConsensus,
 			Deps:        []string{},
 		},
 		{
 			Address:     ADDR_LEVEL0_ONDEMAND_LIBRARY,
-			Label:       "level0_ondemand_library",
+			Label:       LEVEL0_ONDEMAND_LIBRARY,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_LIBRARY,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: LEVEL0_ONDEMAND_LIBRARY},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -769,7 +772,7 @@ func MultiChainPrecompiles(minValidatorCount int32, enableEIDCheck bool, erc20Co
 			InitMessage: mutichainInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_MULTICHAIN_REGISTRY,
+			Role:        &SystemContractRole{Role: ROLE_MULTICHAIN_REGISTRY, Label: MULTICHAIN_REGISTRY_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -789,7 +792,7 @@ func ChatPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_CHAT,
+			Role:        &SystemContractRole{Role: ROLE_CHAT, Label: CHAT_v001, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -834,14 +837,14 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
 		if val.Label == CONSENSUS_TENDERMINTP2P {
-			consensusPrecompiles[i].Role = ROLE_CONSENSUS
+			consensusPrecompiles[i].Role = &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_TENDERMINTP2P, Primary: true}
 		}
 	}
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 
-	precompiles, err := FillRoles(precompiles, accBech32Codec)
+	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
 		panic(err)
 	}
@@ -891,7 +894,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 			InitMessage: hooksInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_HOOKS,
+			Role:        &SystemContractRole{Role: ROLE_HOOKS, Label: ROLE_HOOKS + "_" + HOOKS_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
@@ -901,7 +904,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 			InitMessage: hooksInitMsgNonC,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        ROLE_HOOKS_NONC,
+			Role:        &SystemContractRole{Role: ROLE_HOOKS_NONC, Label: ROLE_HOOKS_NONC + "_" + HOOKS_v001, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
@@ -934,14 +937,14 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
 		if val.Label == LEVEL0_ONDEMAND_v001 {
-			consensusPrecompiles[i].Role = ROLE_CONSENSUS
+			consensusPrecompiles[i].Role = &SystemContractRole{Role: ROLE_CONSENSUS, Label: LEVEL0_ONDEMAND_v001, Primary: true}
 		}
 	}
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 
-	precompiles, err = FillRoles(precompiles, accBech32Codec)
+	precompiles, err = FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
 		panic(err)
 	}
@@ -1054,32 +1057,109 @@ func ValidateNonZeroAddress(address string) error {
 	return ValidateAddress(address)
 }
 
-func FillRoles(precompiles SystemContracts, accBech32Codec mcodec.AccBech32Codec) (SystemContracts, error) {
-	roles := make([]RoleJSON, 0)
+func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string) ([]SystemContract, error) {
+	// Map to store roles and their corresponding RoleJSON objects
+	roleMap := make(map[string]*RoleJSON)
+
+	// First pass: Collect roles with Primary: true
 	for _, precompile := range precompiles {
-		if precompile.Role != "" {
-			if precompile.Label == "" {
-				panic(fmt.Sprintf("label cannot be empty for role %s", precompile.Role))
+		if precompile.Role != nil {
+			role := precompile.Role.Role
+
+			// Initialize a RoleJSON entry if it doesn't exist
+			if _, exists := roleMap[role]; !exists {
+				roleMap[role] = &RoleJSON{
+					Role:        role,
+					StorageType: precompile.StorageType,
+					Primary:     0,
+					Multiple:    false,
+					Labels:      []string{},
+					Addresses:   []string{},
+				}
 			}
-			prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
-			// roleLabel := precompile.Role + "_" + precompile.Label
-			roleLabel := precompile.Label
-			roles = append(roles, RoleJSON{Role: precompile.Role, Label: roleLabel, ContractAddress: prefixedAddr.String()})
+
+			if precompile.Role.Primary {
+				prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
+				roleMap[role].Primary = int32(len(roleMap[role].Addresses))
+				roleMap[role].Labels = append(roleMap[role].Labels, precompile.Role.Label)
+				roleMap[role].Addresses = append(roleMap[role].Addresses, prefixedAddr.String())
+			}
 		}
 	}
+
+	// Second pass: Add other contracts for roles with multiple = true
+	for _, precompile := range precompiles {
+		if precompile.Role != nil {
+			role := precompile.Role.Role
+			if entry, exists := roleMap[role]; exists {
+				// Check if the contract has already been added
+				prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
+				if !contains(entry.Addresses, prefixedAddr.String()) {
+					entry.Multiple = true
+					entry.Labels = append(entry.Labels, precompile.Role.Label)
+					entry.Addresses = append(entry.Addresses, prefixedAddr.String())
+				}
+			}
+		}
+	}
+
+	// add denom role
+	if _, exists := roleMap[ROLE_DENOM]; !exists {
+		roleMap[ROLE_DENOM] = &RoleJSON{
+			Role:        ROLE_DENOM,
+			StorageType: ContractStorageType_CoreConsensus,
+			Primary:     0,
+			Multiple:    true,
+			Labels:      []string{},
+			Addresses:   []string{},
+		}
+	}
+
+	if _, exists := roleMap[FEE_COLLECTOR]; !exists {
+		feeCollector, _ := accBech32Codec.BytesToString(authtypes.NewModuleAddress(FEE_COLLECTOR))
+		roleMap[FEE_COLLECTOR] = &RoleJSON{
+			Role:        FEE_COLLECTOR,
+			StorageType: ContractStorageType_CoreConsensus,
+			Primary:     0,
+			Multiple:    false,
+			Labels:      []string{FEE_COLLECTOR},
+			Addresses:   []string{feeCollector},
+		}
+	}
+
+	// Prepare the RolesGenesis message
+	roles := make([]RoleJSON, 0, len(roleMap))
+	for _, roleJSON := range roleMap {
+		roles = append(roles, *roleJSON)
+	}
+
 	msgInit := RolesGenesis{Roles: roles}
 	msgInitBz, err := json.Marshal(msgInit)
 	if err != nil {
 		return nil, err
 	}
+
 	msgbz, err := json.Marshal(&WasmxExecutionMessage{Data: msgInitBz})
 	if err != nil {
 		return nil, err
 	}
+
+	// Update the InitMessage for the ROLE_ROLES contract
 	for i, precompile := range precompiles {
-		if precompile.Role == ROLE_ROLES {
+		if precompile.Role != nil && precompile.Role.Role == ROLE_ROLES {
 			precompiles[i].InitMessage = msgbz
 		}
 	}
+
 	return precompiles, nil
+}
+
+// Helper function to check if a slice contains a string
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

@@ -148,7 +148,7 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 
 	newConsensusStr := newConsensus.String()
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"consensus","label":"%s","contract_address":"%s"}}`, newlabel, newConsensusStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensusStr))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	proposal := &wasmxtypes.MsgExecuteContract{
@@ -163,8 +163,8 @@ func (suite *KeeperTestSuite) TestRAFTP2PMigration() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensusStr, role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newConsensusStr, role.Addresses[0])
+	s.Require().Equal(newlabel, role.Labels[0])
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
