@@ -427,8 +427,8 @@ func (k *Keeper) instantiateWithAddress(
 	}
 
 	// res, gasUsed, err := k.ExecuteContractInstantiationInternal(ctx, codeID, &codeInfo, creator, contractAddress, storageType, initMsg, deposit, label)
-
-	info := types.NewInfo(ctx, creator, creator, deposit)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, creator, creator, deposit)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -639,7 +639,8 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	label string,
 ) (types.ContractResponse, uint64, error) {
 	// prepare params for contract instantiate call
-	info := types.NewInfo(ctx, creator, creator, deposit)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, creator, creator, deposit)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -659,7 +660,7 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	handler := k.newCosmosHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
-	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, k.gasMeter(ctx), contractInfo)
+	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, gasMeter, contractInfo)
 }
 
 // PinCode pins the wasm contract in wasmvm cache
@@ -762,7 +763,8 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 		}
 	}
 	// TODO execute with origin
-	info := types.NewInfo(ctx, caller, caller, coins)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, caller, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -776,7 +778,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, inBackground)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -832,7 +834,8 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: execute entry point")
 
-	info := types.NewInfo(ctx, caller, caller, nil)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, caller, caller, nil)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -846,7 +849,7 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
-	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, inBackground)
+	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -961,7 +964,8 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 		}
 	}
 
-	info := types.NewInfo(ctx, origin, caller, coins)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, origin, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -974,7 +978,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	}
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
 
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, nil, false)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, nil, false)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -1033,7 +1037,8 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		}
 	}
 
-	info := types.NewInfo(ctx, caller, caller, coins)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, caller, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -1046,7 +1051,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
-	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, isdebug)
+	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -1220,41 +1225,8 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 	return dep, nil
 }
 
-// MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier
-type MultipliedGasMeter struct {
-	originalMeter storetypes.GasMeter
-	GasRegister   GasRegister
-}
-
-func NewMultipliedGasMeter(originalMeter storetypes.GasMeter, gr GasRegister) MultipliedGasMeter {
-	return MultipliedGasMeter{originalMeter: originalMeter, GasRegister: gr}
-}
-
-var _ types.GasMeter = MultipliedGasMeter{}
-
-// gas consumed in wasm VM units
-func (m MultipliedGasMeter) GasConsumed() storetypes.Gas {
-	return m.GasRegister.ToWasmVMGas(m.originalMeter.GasConsumed())
-}
-
-// consume gas in wasm VM units
-func (m MultipliedGasMeter) ConsumeGas(gas storetypes.Gas, descriptor string) {
-	descriptor = fmt.Sprintf("wasmx: %s", descriptor)
-	sdkgas := m.GasRegister.FromWasmVMGas(gas)
-	m.originalMeter.ConsumeGas(sdkgas, descriptor)
-}
-
-// gas limit in wasm VM units
-func (m MultipliedGasMeter) GasLimit() storetypes.Gas {
-	return m.GasRegister.ToWasmVMGas(m.originalMeter.Limit())
-}
-
-func (m MultipliedGasMeter) GasRemaining() storetypes.Gas {
-	return m.GasRegister.ToWasmVMGas(m.originalMeter.GasRemaining())
-}
-
-func (k *Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {
-	return NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
+func (k *Keeper) gasMeter(ctx sdk.Context) types.MultipliedGasMeter {
+	return types.NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
 }
 
 func GetExtensionFromDeps(deps []string) string {
