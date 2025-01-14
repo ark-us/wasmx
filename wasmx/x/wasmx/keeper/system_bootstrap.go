@@ -96,6 +96,7 @@ func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 }
 
 func (k *Keeper) FinalizeBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error {
+	// TODO (security) check contract address has correct role!!!
 	for _, txr := range resp.TxResults {
 		for _, ev := range txr.GetEvents() {
 			// [{"type":"register_role","attributes":[{"key":"role","value":"storage_contracts","index":true},{"key":"label","value":"storage_contracts_0.0.1","index":true},{"key":"contract_address","value":"mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrpq5kw64","index":true}]}]

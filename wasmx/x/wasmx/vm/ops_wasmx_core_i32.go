@@ -15,6 +15,19 @@ import (
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
 
+type MigrateContractStateByStorageRequest struct {
+	ContractAddress   string                    `json:"contract_address"`
+	SourceStorageType types.ContractStorageType `json:"source_storage_type"`
+	TargetStorageType types.ContractStorageType `json:"target_storage_type"`
+}
+
+type MigrateContractStateByAddressRequest struct {
+	SourceContractAddress string                    `json:"source_contract_address"`
+	TargetContractAddress string                    `json:"target_contract_address"`
+	SourceStorageType     types.ContractStorageType `json:"source_storage_type"`
+	TargetStorageType     types.ContractStorageType `json:"target_storage_type"`
+}
+
 func migrateContractStateByStorageType(
 	ctx sdk.Context,
 	contractAddress sdk.AccAddress,
@@ -34,13 +47,27 @@ func migrateContractStateByStorageType(
 	}
 }
 
-type MigrateContractStateByStorageRequest struct {
-	ContractAddress   string                    `json:"contract_address"`
-	SourceStorageType types.ContractStorageType `json:"source_storage_type"`
-	TargetStorageType types.ContractStorageType `json:"target_storage_type"`
+func migrateContractStateByAddress(
+	ctx sdk.Context,
+	sourceContractAddress sdk.AccAddress,
+	targetContractAddress sdk.AccAddress,
+	sourceStorageType types.ContractStorageType,
+	targetStorageType types.ContractStorageType,
+	getContractStore func(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store,
+) {
+	prefixStoreKeySource := types.GetContractStorePrefix(sourceContractAddress)
+	prefixStoreKeyTarget := types.GetContractStorePrefix(targetContractAddress)
+	prefixStoreSource := getContractStore(ctx, sourceStorageType, prefixStoreKeySource)
+	prefixStoreTarget := getContractStore(ctx, targetStorageType, prefixStoreKeyTarget)
+	iter := prefixStoreSource.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		prefixStoreTarget.Set(iter.Key(), iter.Value())
+		prefixStoreSource.Delete(iter.Key())
+	}
 }
 
-// address -> codeInfo
 func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
@@ -58,6 +85,32 @@ func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.Runtim
 	}
 
 	migrateContractStateByStorageType(ctx.Ctx, addr.Bytes(), req.SourceStorageType, req.TargetStorageType, ctx.GetCosmosHandler().ContractStore)
+
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreMigrateContractStateByAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	data, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req MigrateContractStateByAddressRequest
+	err = json.Unmarshal(data, &req)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot be unmarshalled")
+	}
+	sourceAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.SourceContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot unmarshal source contract address")
+	}
+	targetAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.TargetContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot unmarshal target contract address")
+	}
+
+	migrateContractStateByAddress(ctx.Ctx, sourceAddr.Bytes(), targetAddr.Bytes(), req.SourceStorageType, req.TargetStorageType, ctx.GetCosmosHandler().ContractStore)
 
 	returns := make([]interface{}, 0)
 	return returns, nil
@@ -588,6 +641,7 @@ func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
 		vm.BuildFn("migrateContractStateByStorageType", coreMigrateContractStateByStorageType, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("migrateContractStateByAddress", coreMigrateContractStateByAddress, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("externalCall", coreExternalCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("grpcRequest", coreWasmxGrpcRequest, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("startTimeout", coreWasmxStartTimeout, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),

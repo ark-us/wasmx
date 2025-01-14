@@ -70,6 +70,68 @@ func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
 
 }
 
+func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
+	// test upgrading staking contract
+	// test storage migration or instantiation with other values
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+	valAccount := simulation.Account{
+		PrivKey: s.Chain().SenderPrivKey,
+		PubKey:  s.Chain().SenderPrivKey.PubKey(),
+		Address: s.Chain().SenderAccount.GetAddress(),
+	}
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	valid, err := appA.App.StakingKeeper.GetAllValidators(appA.Context())
+	s.Require().NoError(err)
+
+	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.STAKING_v001)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+
+	newAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "newstaking", nil)
+
+	newlabel := types.STAKING_v001 + "2"
+	title := "Register staking"
+	description := "Register staking"
+	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
+	newAddressStr := newAddress.String()
+
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STAKING, newlabel, newAddressStr))
+	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+
+	proposal := &types.MsgExecuteContract{
+		Sender:   authority,
+		Contract: rolesAddr.String(),
+		Msg:      msgbz,
+	}
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
+
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newAddress)
+	s.Require().Equal(newlabel, resp)
+
+	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
+	s.Require().Equal(newAddressStr, role.Addresses[0])
+	s.Require().Equal(types.ROLE_STAKING, role.Role)
+	s.Require().Equal(newlabel, role.Labels[0])
+
+	roleAddr, err := appA.App.WasmxKeeper.GetAddressOrRole(appA.Context(), types.ROLE_STAKING)
+	s.Require().NoError(err)
+	s.Require().Equal(newAddress.String(), roleAddr.String())
+
+	// query staking contract
+	validPost, err := appA.App.StakingKeeper.GetAllValidators(appA.Context())
+	s.Require().NoError(err)
+	s.Require().Equal(valid, validPost)
+}
+
 func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	suite.T().Skip("TestRolesContractUpgradeCache")
 	// test upgrading roles contract
