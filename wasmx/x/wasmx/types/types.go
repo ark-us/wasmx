@@ -120,17 +120,17 @@ func NewEnv(accBech32Codec mcodec.AccBech32Codec, ctx sdk.Context, denom string,
 }
 
 // NewInfo initializes the MessageInfo for a contract instance
-func NewInfo(origin mcodec.AccAddressPrefixed, creator mcodec.AccAddressPrefixed, deposit sdk.Coins) MessageInfo {
+func NewInfo(ctx sdk.Context, origin mcodec.AccAddressPrefixed, creator mcodec.AccAddressPrefixed, deposit sdk.Coins) MessageInfo {
 	funds := big.NewInt(0)
 	if len(deposit) > 0 {
 		funds = deposit[0].Amount.BigInt()
 	}
+	gasMeter := ctx.GasMeter()
 	return MessageInfo{
-		Sender: creator,
-		Funds:  funds,
-		Origin: origin,
-		// TODO!!
-		GasLimit: big.NewInt(20000000),
+		Sender:   creator,
+		Funds:    funds,
+		Origin:   origin,
+		GasLimit: big.NewInt(int64(gasMeter.Limit())),
 	}
 }
 

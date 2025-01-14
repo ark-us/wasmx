@@ -428,7 +428,7 @@ func (k *Keeper) instantiateWithAddress(
 
 	// res, gasUsed, err := k.ExecuteContractInstantiationInternal(ctx, codeID, &codeInfo, creator, contractAddress, storageType, initMsg, deposit, label)
 
-	info := types.NewInfo(creator, creator, deposit)
+	info := types.NewInfo(ctx, creator, creator, deposit)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -639,7 +639,7 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	label string,
 ) (types.ContractResponse, uint64, error) {
 	// prepare params for contract instantiate call
-	info := types.NewInfo(creator, creator, deposit)
+	info := types.NewInfo(ctx, creator, creator, deposit)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -762,7 +762,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 		}
 	}
 	// TODO execute with origin
-	info := types.NewInfo(caller, caller, coins)
+	info := types.NewInfo(ctx, caller, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -832,7 +832,7 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: execute entry point")
 
-	info := types.NewInfo(caller, caller, nil)
+	info := types.NewInfo(ctx, caller, caller, nil)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -961,7 +961,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 		}
 	}
 
-	info := types.NewInfo(origin, caller, coins)
+	info := types.NewInfo(ctx, origin, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
@@ -1033,7 +1033,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		}
 	}
 
-	info := types.NewInfo(caller, caller, coins)
+	info := types.NewInfo(ctx, caller, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err

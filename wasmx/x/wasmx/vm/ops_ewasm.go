@@ -34,7 +34,7 @@ func useGas(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 func getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(ctx.GasMeter.GasConsumed())
+	returns[0] = int64(ctx.GasMeter.GasRemaining())
 	return returns, nil
 }
 
