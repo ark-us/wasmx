@@ -486,8 +486,12 @@ func (s *AppContext) DeliverTxRaw(txbz []byte) (*abci.ExecTxResult, error) {
 	return res.TxResults[0], nil
 }
 
-func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
-	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice, "")
+func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, memo string, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
+	_gasLimit := &gasLimit
+	if gasLimit == 0 {
+		_gasLimit = nil
+	}
+	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, _gasLimit, gasPrice, memo)
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.FinalizeBlock(txs)
@@ -611,7 +615,7 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 		Msg:    msgbz,
 		Funds:  funds,
 	}
-	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, DEFAULT_GAS_LIMIT, nil)
+	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, "", DEFAULT_GAS_LIMIT, nil)
 	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
@@ -646,7 +650,7 @@ func (s *AppContext) ExecuteContractNoCheck(sender simulation.Account, contractA
 		Funds:        funds,
 		Dependencies: dependencies,
 	}
-	return s.DeliverTxWithOpts(sender, executeContractMsg, gasLimit, gasPrice)
+	return s.DeliverTxWithOpts(sender, executeContractMsg, "", gasLimit, gasPrice)
 }
 
 func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (sdk.GasInfo, *sdk.Result, error) {

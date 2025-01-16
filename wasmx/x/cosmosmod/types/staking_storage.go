@@ -13,6 +13,14 @@ const STAKING_DELEGATOR_TO_DELEGATION_KEY = "delegator_to_delegation."
 const STAKING_VALIDATOR_TO_DELEGATORS_KEY = "validator_to_delegators."
 const STAKING_VALIDATOR_DELEGATION_KEY = "validator_delegation."
 
+type MsgJail struct {
+	ConsensusAddress string `json:"consaddr"`
+}
+
+type MsgUnjail struct {
+	ConsensusAddress string `json:"consaddr"`
+}
+
 // key_delegator_validator => amount
 func ParseStoredDelegation(key []byte, value []byte) (delegator string, validator string, amount *big.Int, err error) {
 	parts := strings.Split(string(key), STAKING_SPLIT)

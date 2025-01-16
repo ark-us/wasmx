@@ -31,10 +31,13 @@ func (k KeeperSlashing) GetPubkey(goCtx context.Context, a cryptotypes.Address) 
 	return nil, nil
 }
 
-func (k KeeperSlashing) Unjail(ctx sdk.Context, msg *slashingtypes.MsgUnjail) (*slashingtypes.MsgUnjailResponse, error) {
-	// TODO
-	k.Logger(ctx).Debug("KeeperSlashing.Unjail not implemented")
-	return nil, nil
+func (k KeeperSlashing) Unjail(goCtx sdk.Context, msg *slashingtypes.MsgUnjail) (*slashingtypes.MsgUnjailResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	_, err := k.ContractModuleExecution(ctx, "Unjail", msg)
+	if err != nil {
+		return nil, err
+	}
+	return &slashingtypes.MsgUnjailResponse{}, nil
 }
 
 func (k KeeperSlashing) UpdateParams(ctx sdk.Context, params slashingtypes.Params) error {
@@ -101,8 +104,7 @@ func (k KeeperSlashing) IsTombstoned(goCtx context.Context, consAddr sdk.ConsAdd
 // to make the necessary validator changes.
 func (k KeeperSlashing) Jail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Debug("KeeperSlashing.Jail not implemented")
-	return nil
+	return k.sk.Jail(ctx, consAddr)
 }
 
 // JailUntil attempts to set a validator's JailedUntil attribute in its signing
@@ -117,8 +119,7 @@ func (k KeeperSlashing) JailUntil(goCtx context.Context, consAddr sdk.ConsAddres
 // module to make the necessary validator changes. It specifies no intraction reason.
 func (k KeeperSlashing) Slash(goCtx context.Context, consAddr sdk.ConsAddress, fraction sdkmath.LegacyDec, power, distributionHeight int64) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Debug("KeeperSlashing.Slash not implemented")
-	return nil
+	return k.SlashWithInfractionReason(ctx, consAddr, fraction, power, distributionHeight, stakingtypes.Infraction_INFRACTION_UNSPECIFIED)
 }
 
 // SlashFractionDoubleSign - fraction of power slashed in case of double sign
@@ -132,7 +133,10 @@ func (k KeeperSlashing) SlashFractionDoubleSign(goCtx context.Context) (sdkmath.
 // module to make the necessary validator changes. It specifies an intraction reason.
 func (k KeeperSlashing) SlashWithInfractionReason(goCtx context.Context, consAddr sdk.ConsAddress, fraction sdkmath.LegacyDec, power, distributionHeight int64, infraction stakingtypes.Infraction) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Debug("KeeperSlashing.SlashWithInfractionReason not implemented")
+	_, err := k.sk.SlashWithInfractionReason(ctx, consAddr, distributionHeight, power, fraction, infraction)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

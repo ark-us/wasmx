@@ -910,6 +910,7 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("storageLoad", wasmxStorageLoad, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageStore", wasmxStorageStore, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("storageDelete", wasmxStorageDelete, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageDeleteRange", wasmxStorageDeleteRange, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("storageLoadRange", wasmxStorageLoadRange, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageLoadRangePairs", wasmxStorageLoadRangePairs, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("log", wasmxLog, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),

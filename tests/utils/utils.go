@@ -1,8 +1,30 @@
 package utils
 
 import (
+	"encoding/json"
+	"time"
+
+	"cosmossdk.io/math"
+	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
+
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
+
+func GenesisModify(genesisState map[string]json.RawMessage, app ibcgotesting.TestingApp) map[string]json.RawMessage {
+
+	// make it easier to test jailing validators in TestStakingJailValidator
+	var cosmosmodGenState cosmosmodtypes.GenesisState
+	app.AppCodec().MustUnmarshalJSON(genesisState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
+	p, _ := math.LegacyNewDecFromStr("0.6")
+	cosmosmodGenState.Slashing.Params.MinSignedPerWindow = p
+	cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 4
+	cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Second * 1
+
+	genesisState[cosmosmodtypes.ModuleName] = app.AppCodec().MustMarshalJSON(&cosmosmodGenState)
+
+	return genesisState
+}
 
 func SystemContractsModify(wasmRuntime string) func([]wasmxtypes.SystemContract) []wasmxtypes.SystemContract {
 	return func(contracts []wasmxtypes.SystemContract) []wasmxtypes.SystemContract {

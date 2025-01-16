@@ -140,6 +140,11 @@ type StorageRange struct {
 	Reverse  bool   `json:"reverse"`
 }
 
+type StorageDeleteRange struct {
+	StartKey []byte `json:"start_key"`
+	EndKey   []byte `json:"end_key"`
+}
+
 type StoragePair struct {
 	Key   []byte `json:"key"`
 	Value []byte `json:"value"`

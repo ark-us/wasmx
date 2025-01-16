@@ -47,6 +47,7 @@ var s *KeeperTestSuite
 func (suite *KeeperTestSuite) SetupSuite() {
 	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
+	suite.GenesisModify = ut.GenesisModify
 	mydir, err := os.Getwd()
 	if err != nil {
 		panic(err)

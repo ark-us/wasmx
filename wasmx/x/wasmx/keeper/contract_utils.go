@@ -290,6 +290,7 @@ func (k *Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInf
 	defer iter.Close()
 
 	for ; iter.Valid(); iter.Next() {
+		// either this or use storetypes.PrefixEndBytes(codeInfoPrefix) for end prefix
 		key, found := bytes.CutPrefix(iter.Key(), codeInfoPrefix)
 		if !found {
 			// when prefix is no longer found, stop early
