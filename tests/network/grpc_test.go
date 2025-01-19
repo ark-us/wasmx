@@ -455,8 +455,8 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newConsensus.String(), role.Addresses[role.Primary])
+	s.Require().Equal(newlabel, role.Labels[role.Primary])
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
@@ -597,8 +597,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newConsensus.String(), role.Addresses[role.Primary])
+	s.Require().Equal(newlabel, role.Labels[role.Primary])
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract

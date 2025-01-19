@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -329,6 +330,27 @@ func (suite *KeeperTestSuite) TestStakingJailValidator() {
 	s.Require().Equal(int64(0), info.MissedBlocksCounter)
 	s.Require().Equal(int64(0), info.IndexOffset)
 	s.Require().Equal(time.Unix(0, 0).UTC(), info.JailedUntil)
+}
+
+func (suite *KeeperTestSuite) TestStakingUnauthorized() {
+	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
+	suite.SetCurrentChain(chainId)
+
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(10_000_000_000)
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+
+	stakingAddress, err := appA.App.WasmxKeeper.GetAddressOrRole(appA.Context(), wasmxtypes.ROLE_STAKING)
+	s.Require().NoError(err)
+	appA.WasmxQueryRaw(sender, stakingAddress, wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"GetAllValidators":{}"}`)}, nil, nil)
+
+	res, err := appA.ExecuteContractNoCheck(sender, stakingAddress, wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"Unjail":{"address":""}}`)}, nil, nil, 0, nil)
+	s.Require().NoError(err)
+	s.Require().True(res.IsErr(), "should have failed authorization")
+	expectedErr := fmt.Sprintf(`unauthorized caller: %s: Unjail`, senderPrefixed.String())
+	s.Require().Contains(res.Log, hex.EncodeToString([]byte(expectedErr)))
 }
 
 func getBlockBitMap(consAddress string, appA testutil.AppContext) *cosmosmodtypes.MissedBlocksBitMap {
