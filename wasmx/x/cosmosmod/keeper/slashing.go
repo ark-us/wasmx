@@ -192,7 +192,7 @@ func (k KeeperSlashing) ContractModuleExecution(ctx sdk.Context, fname string, r
 		return nil, err
 	}
 	msgbz2 := []byte(fmt.Sprintf(`{"%s":%s}`, fname, string(msgbz)))
-	res1, err := k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_SLASHING,
 		Contract: wasmxtypes.ROLE_SLASHING,
 		Msg:      msgbz2,
@@ -200,10 +200,11 @@ func (k KeeperSlashing) ContractModuleExecution(ctx sdk.Context, fname string, r
 	if err != nil {
 		return nil, err
 	}
-	var resp wasmxtypes.ContractResponse
-	err = json.Unmarshal(res1.Data, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
+	// var resp wasmxtypes.ContractResponse
+	// err = json.Unmarshal(res1.Data, &resp)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return &resp, nil
+	return &wasmxtypes.ContractResponse{}, nil
 }
