@@ -305,10 +305,11 @@ func DefaultAuthGenesisState() *AuthGenesisState {
 // default params and chain config values.
 func DefaultGenesisState(accBech32Codec mcodec.AccBech32Codec, denomUnit string, baseDenomUnit uint32, baseDenom string) *GenesisState {
 	return &GenesisState{
-		Staking: *DefaultStakingGenesisState(baseDenom),
-		Bank:    *DefaultBankGenesisState(accBech32Codec, denomUnit, baseDenomUnit),
-		Gov:     *DefaultGovGenesisState(),
-		Auth:    *DefaultAuthGenesisState(),
+		Staking:  *DefaultStakingGenesisState(baseDenom),
+		Bank:     *DefaultBankGenesisState(accBech32Codec, denomUnit, baseDenomUnit),
+		Gov:      *DefaultGovGenesisState(),
+		Auth:     *DefaultAuthGenesisState(),
+		Slashing: *DefaultSlashingGenesisState(),
 	}
 }
 

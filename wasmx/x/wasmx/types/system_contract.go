@@ -1070,7 +1070,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 			if _, exists := roleMap[role]; !exists {
 				roleMap[role] = &RoleJSON{
 					Role:        role,
-					StorageType: precompile.StorageType,
+					StorageType: int32(precompile.StorageType),
 					Primary:     0,
 					Multiple:    false,
 					Labels:      []string{},
@@ -1107,7 +1107,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 	if _, exists := roleMap[ROLE_DENOM]; !exists {
 		roleMap[ROLE_DENOM] = &RoleJSON{
 			Role:        ROLE_DENOM,
-			StorageType: ContractStorageType_CoreConsensus,
+			StorageType: int32(ContractStorageType_CoreConsensus),
 			Primary:     0,
 			Multiple:    true,
 			Labels:      []string{},
@@ -1119,7 +1119,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 		feeCollector, _ := accBech32Codec.BytesToString(authtypes.NewModuleAddress(FEE_COLLECTOR))
 		roleMap[FEE_COLLECTOR] = &RoleJSON{
 			Role:        FEE_COLLECTOR,
-			StorageType: ContractStorageType_CoreConsensus,
+			StorageType: int32(ContractStorageType_CoreConsensus),
 			Primary:     0,
 			Multiple:    false,
 			Labels:      []string{FEE_COLLECTOR},
@@ -1133,7 +1133,8 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 		roles = append(roles, *roleJSON)
 	}
 
-	msgInit := RolesGenesis{Roles: roles}
+	// IndividualMigration - a list of roles that handle their own role migration for action type Replace
+	msgInit := RolesGenesis{Roles: roles, IndividualMigration: []string{ROLE_CONSENSUS}}
 	msgInitBz, err := json.Marshal(msgInit)
 	if err != nil {
 		return nil, err

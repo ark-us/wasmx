@@ -18,16 +18,17 @@ var (
 )
 
 type RoleJSON struct {
-	Role        string              `json:"role"`
-	StorageType ContractStorageType `json:"storageType"`
-	Primary     int32               `json:"primary"`
-	Multiple    bool                `json:"multiple"`
-	Labels      []string            `json:"labels"`
-	Addresses   []string            `json:"addresses"`
+	Role        string   `json:"role"`
+	StorageType int32    `json:"storage_type"`
+	Primary     int32    `json:"primary"`
+	Multiple    bool     `json:"multiple"`
+	Labels      []string `json:"labels"`
+	Addresses   []string `json:"addresses"`
 }
 
 type RolesGenesis struct {
-	Roles []RoleJSON `json:"roles"`
+	Roles               []RoleJSON `json:"roles"`
+	IndividualMigration []string   `json:"individual_migration"`
 }
 
 // GetRoleLabelPrefix returns the store prefix for the system roles

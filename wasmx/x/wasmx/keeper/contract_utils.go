@@ -104,9 +104,9 @@ func (k *Keeper) GetNextCodeId(ctx sdk.Context) (codeId uint64, err error) {
 }
 
 func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeId uint64) (*types.CodeInfo, error) {
-	cache, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
-	if err != nil {
-		return nil, err
+	cache := k.GetSystemBootstrap(ctx)
+	if cache == nil {
+		return nil, fmt.Errorf("cannot find system bootstrap data")
 	}
 	if cache.CodeRegistryId == codeId {
 		return cache.CodeRegistryCodeInfo, nil
@@ -131,9 +131,9 @@ func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeId uint64) (*types.CodeInfo, e
 }
 
 func (k *Keeper) GetContractInfo(ctx sdk.Context, address mcodec.AccAddressPrefixed) (*types.ContractInfo, error) {
-	cache, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
-	if err != nil {
-		return nil, err
+	cache := k.GetSystemBootstrap(ctx)
+	if cache == nil {
+		return nil, fmt.Errorf("cannot find system bootstrap data")
 	}
 	registryAddr := cache.CodeRegistryAddress
 	if registryAddr.String() == address.String() {
@@ -164,9 +164,9 @@ func (k *Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode
 func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*types.ContractInfo, *types.CodeInfo, []byte, error) {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
 
-	cache, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
-	if err != nil {
-		return nil, nil, nil, err
+	cache := k.GetSystemBootstrap(ctx)
+	if cache == nil {
+		return nil, nil, nil, fmt.Errorf("cannot find system bootstrap data")
 	}
 	registryAddr := cache.CodeRegistryAddress
 	if registryAddr.String() == contractAddress.String() {

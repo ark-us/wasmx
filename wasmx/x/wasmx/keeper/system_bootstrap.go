@@ -53,24 +53,24 @@ func (k *Keeper) GetSystemBootstrapData(ctx sdk.Context) (*types.SystemBootstrap
 }
 
 func (k *Keeper) GetRoleContractAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
-	data, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
-	if err != nil {
-		panic(err)
+	data := k.GetSystemBootstrap(ctx)
+	if data == nil {
+		panic("cannot find system bootstrap data")
 	}
 	return data.RoleAddress
 }
 
 func (k *Keeper) GetCodeRegistryAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
-	data, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
-	if err != nil {
-		panic(err)
+	data := k.GetSystemBootstrap(ctx)
+	if data == nil {
+		panic("cannot find system bootstrap data")
 	}
 	return data.CodeRegistryAddress
 }
 
 func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 	data, err := types.GetSystemBootstrap(k.wasmvm.goContextParent)
-	if err != nil || data == nil {
+	if err != nil || data == nil || len(data.RoleAddress.Bytes()) == 0 {
 		// read from storage
 		_data, err := k.GetSystemBootstrapData(ctx)
 		if err != nil {

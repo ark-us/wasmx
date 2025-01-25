@@ -375,3 +375,11 @@ mythosd tendermint show-validator --home ./testnet/node2/mythosd
 mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node2 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node2/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos17nknqm99dmukyhf4e2tyxcjgxjk5cnxh5g7rng@/ip4/127.0.0.1/tcp/5005/p2p/12D3KooWPoLGpkrC9nMUC2j8a7cj7qxHRDVJhRSXSn9NVovgMGUs" --node tcp://127.0.0.1:26661 --yes
 
 ```
+
+## upgrade consensus contract
+
+## jail/unjail
+
+- start chain with 3 nodes, set missed blocks window at 10
+- stop 1 node until it gets jailed
+- wait downtime & send unjail tx

@@ -2,15 +2,8 @@ package keeper_test
 
 import (
 	"encoding/json"
-	"flag"
 	"os"
 	"path"
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
-	"github.com/stretchr/testify/suite"
 
 	//nolint
 
@@ -23,28 +16,14 @@ import (
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 )
 
-var (
-	wasmRuntime string
-)
-
-// TestMain is the main entry point for the tests.
-func TestMain(m *testing.M) {
-	flag.StringVar(&wasmRuntime, "wasm-runtime", "default", "Set the wasm runtime (e.g. wasmedge, wazero)")
-
-	// Parse the flags. Only flags after `--` in `go test` command line will be passed here.
-	flag.Parse()
-
-	os.Exit(m.Run())
-}
-
-// KeeperTestSuite is a testing suite to run tests on the same chain
-type KeeperTestSuite struct {
+// KeeperTestSuite2 is a testing suite that runs each test on a separate chain
+type KeeperTestSuite2 struct {
 	wt.KeeperTestSuite
 }
 
-var s *KeeperTestSuite
+var s2 *KeeperTestSuite2
 
-func (suite *KeeperTestSuite) SetupSuite() {
+func (suite *KeeperTestSuite2) SetupSuite() {
 	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
 	suite.GenesisModify = ut.GenesisModify
@@ -70,29 +49,17 @@ func (suite *KeeperTestSuite) SetupSuite() {
 	suite.SetupChains()
 }
 
-func (suite *KeeperTestSuite) TearDownSuite() {
+func (suite *KeeperTestSuite2) TearDownSuite() {
 	suite.TearDownChains()
 }
 
-func (suite *KeeperTestSuite) SetupTest() {
+func (suite *KeeperTestSuite2) SetupTest() {
 }
 
-func (suite *KeeperTestSuite) TearDownTest() {
+func (suite *KeeperTestSuite2) TearDownTest() {
 }
 
-// TestKeeperTestSuite runs all the tests within this package.
-func TestKeeperTestSuite(t *testing.T) {
-	s = new(KeeperTestSuite)
-	s2 = new(KeeperTestSuite2)
-	suite.Run(t, s)
-	suite.Run(t, s2)
-
-	// Run Ginkgo integration tests
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Keeper Suite")
-}
-
-func (suite *KeeperTestSuite) getPropExtended(appA wt.AppContext) *types.ProposalExtended {
+func (suite *KeeperTestSuite2) getPropExtended(appA wt.AppContext) *types.ProposalExtended {
 	msg := []byte(`{"GetProposalExtended":{"proposal_id":1}}`)
 	resp, err := suite.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,

@@ -927,6 +927,12 @@ func initGenFiles(
 	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
+	p, _ := math.LegacyNewDecFromStr("0.6")
+	cosmosmodGenState.Slashing.Params.MinSignedPerWindow = p
+	cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Hour * 24
+	cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 40000
+	// cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Minute
+	// cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 4
 	cosmosmodGenState.Distribution.BaseDenom = mcfg.BaseDenom
 	cosmosmodGenState.Distribution.RewardsDenom = cosmosmodGenState.Bank.DenomInfo[2].Metadata.Base
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = mcfg.BaseDenom
