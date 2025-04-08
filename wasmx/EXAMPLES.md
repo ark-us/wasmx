@@ -383,3 +383,10 @@ mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-t
 - start chain with 3 nodes, set missed blocks window at 10
 - stop 1 node until it gets jailed
 - wait downtime & send unjail tx
+
+```bash
+mythosd tx cosmosmod slashing unjail
+
+
+mythosd tx wasmx execute mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz9qrmj7f '{"Unjail":{"address":"mythos1xj4zx788m83ap3usxhkxpmh5wm37ncdzjswnc3"}}' --chain-id=mythos_7000-14 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000amyt --gas=10000000 --node tcp://localhost:26663 --yes
+```

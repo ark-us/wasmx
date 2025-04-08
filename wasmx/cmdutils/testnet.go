@@ -929,7 +929,7 @@ func initGenFiles(
 	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
 	p, _ := math.LegacyNewDecFromStr("0.6")
 	cosmosmodGenState.Slashing.Params.MinSignedPerWindow = p
-	cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Hour * 24
+	cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Hour * 2
 	cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 40000
 	// cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Minute
 	// cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 4
