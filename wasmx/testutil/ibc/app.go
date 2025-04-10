@@ -11,6 +11,8 @@ import (
 	"github.com/cometbft/cometbft/libs/rand"
 	tmtypes "github.com/cometbft/cometbft/types"
 
+	dbm "github.com/cosmos/cosmos-db"
+
 	sdkmath "cosmossdk.io/math"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
@@ -31,14 +33,14 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chainCfg *menc.ChainConfig, index int32) (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp
+var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chainCfg *menc.ChainConfig, index int32, getDB func(dbpath string) dbm.DB) (ibcgotesting.TestingApp, map[string]json.RawMessage) = wasmxapp.SetupTestingApp
 
 // SetupWithGenesisValSet initializes a new SimApp with a validator set and genesis accounts
 // that also act as delegators. For simplicity, each validator is bonded with a delegation
 // of one consensus engine unit (10^6) in the default token of the simapp from first genesis
 // account. A Nop logger is set in SimApp.
-func SetupWithGenesisValSet(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir string, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
-	app, genesisState, err := BuildGenesisData(wasmVmMeta, valSet, genAccs, chainID, chaincfg, index, balances, compiledCacheDir)
+func SetupWithGenesisValSet(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir string, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, getDB func(dbpath string) dbm.DB, balances ...banktypes.Balance) (ibcgotesting.TestingApp, *abci.ResponseInitChain) {
+	app, genesisState, err := BuildGenesisData(wasmVmMeta, valSet, genAccs, chainID, chaincfg, index, balances, compiledCacheDir, getDB)
 	require.NoError(t, err)
 
 	return InitAppChain(t, app, genesisState, chainID)
@@ -72,8 +74,8 @@ func InitAppChain(t *testing.T, app ibcgotesting.TestingApp, genesisState map[st
 	return app, resInit
 }
 
-func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances []banktypes.Balance, compiledCacheDir string) (ibcgotesting.TestingApp, map[string]json.RawMessage, error) {
-	app, genesisState := DefaultTestingAppInit(wasmVmMeta, chainID, &chaincfg, index)
+func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet, genAccs []cosmosmodtypes.GenesisAccount, chainID string, chaincfg menc.ChainConfig, index int32, balances []banktypes.Balance, compiledCacheDir string, getDB func(dbpath string) dbm.DB) (ibcgotesting.TestingApp, map[string]json.RawMessage, error) {
+	app, genesisState := DefaultTestingAppInit(wasmVmMeta, chainID, &chaincfg, index, getDB)
 	validators := make([]stakingtypes.Validator, 0, len(valSet.Validators))
 	delegations := make([]cosmosmodtypes.Delegation, 0, len(valSet.Validators))
 	signingInfos := make([]slashingtypes.SigningInfo, 0, len(valSet.Validators))

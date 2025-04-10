@@ -70,7 +70,7 @@ import (
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
-func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Command, appencoding.EncodingConfig) {
+func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error)) (*cobra.Command, appencoding.EncodingConfig) {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
 	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
@@ -173,7 +173,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Com
 		ClientCtx:       initClientCtx,
 	}
 
-	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx, defaultNodeHome)
+	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx, defaultNodeHome, initializeDb)
 
 	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
@@ -212,6 +212,7 @@ func initRootCmd(
 	apictx mcfg.APICtxI,
 	clientCtx client.Context,
 	defaultNodeHome string,
+	initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error),
 ) {
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
@@ -254,6 +255,7 @@ func initRootCmd(
 		a.appExport,
 		addModuleInitFlags,
 		wasmVmMeta,
+		initializeDb,
 	)
 	extendUnsafeResetAllCmd(rootCmd)
 

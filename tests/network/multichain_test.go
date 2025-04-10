@@ -145,7 +145,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 
 	genesisAccs := []cosmosmodtypes.GenesisAccount{}
 	balances := []banktypes.Balance{}
-	_, genesisState, err := ibctesting.BuildGenesisData(suite.App().WasmxKeeper.WasmRuntime, &tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances, suite.CompiledCacheDir)
+	_, genesisState, err := ibctesting.BuildGenesisData(suite.App().WasmxKeeper.WasmRuntime, &tmtypes.ValidatorSet{}, genesisAccs, subChainId, subChainConfig, 10, balances, suite.CompiledCacheDir, suite.GetDB)
 	s.Require().NoError(err)
 
 	genesisStateWasmx := map[string][]byte{}
@@ -1123,7 +1123,7 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 
 	// create a temporary app, to sign the transaction
 	// must be in a different directory than when the subchain is instantiated later
-	_, appCreator := multichain.CreateMockAppCreator(suite.WasmVmMeta, app.NewAppCreator, app.DefaultNodeHome+"temp")
+	_, appCreator := multichain.CreateMockAppCreator(suite.WasmVmMeta, app.NewAppCreator, app.DefaultNodeHome+"temp", nil)
 	iapp := appCreator(subChainId, &subchainConfig)
 	subchainapp := iapp.(*app.App)
 	subtxconfig := subchainapp.TxConfig()

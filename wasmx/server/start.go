@@ -73,7 +73,7 @@ var flagSameMachineNodeIndex = "same-machine-node-index"
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
 // Tendermint.
-func StartCmd(wasmVmMeta memc.IWasmVmMeta, appCreator servertypes.AppCreator, defaultNodeHome string) *cobra.Command {
+func StartCmd(wasmVmMeta memc.IWasmVmMeta, appCreator servertypes.AppCreator, defaultNodeHome string, initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error)) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Run the full node",
@@ -146,7 +146,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			serverCtx.Logger.Info("starting ABCI with WasmX Tendermint")
 
 			// amino is needed here for backwards compatibility of REST routes
-			return startInProcess(wasmVmMeta, serverCtx, clientCtx, appCreator)
+			return StartInProcess(wasmVmMeta, serverCtx, clientCtx, appCreator, initializeDb)
 		},
 	}
 
@@ -311,11 +311,14 @@ func startStandAlone(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, _ serv
 }
 
 // legacyAminoCdc is used for the legacy REST API
-func startInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientCtx client.Context, _ servertypes.AppCreator) (err error) {
+func StartInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientCtx client.Context, _ servertypes.AppCreator, initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error)) (err error) {
 	tndcfg := svrCtx.Config
 	home := tndcfg.RootDir
 	logger := svrCtx.Logger
 	nodeOffset := svrCtx.Viper.GetUint32(flagSameMachineNodeIndex)
+	if initializeDb == nil {
+		initializeDb = openDB
+	}
 
 	g, ctx := getCtx(svrCtx, true)
 
@@ -390,7 +393,8 @@ func startInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientC
 	}
 
 	traceWriterFile := svrCtx.Viper.GetString(srvflags.TraceStore)
-	db, err := openDB(home, server.GetAppDBBackend(svrCtx.Viper))
+	// db, err := openDB(home, server.GetAppDBBackend(svrCtx.Viper))
+	db, err := initializeDb(home, server.GetAppDBBackend(svrCtx.Viper))
 	if err != nil {
 		logger.Error("failed to open DB", "error", err.Error())
 		return err

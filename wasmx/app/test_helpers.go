@@ -35,8 +35,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-// DefaultTestingAppInit defines the IBC application used for testing
-var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
+var DefaultTestingAppInit func(wasmVmMeta memc.IWasmVmMeta, chainId string, chainCfg *appencoding.ChainConfig, index int32, getDB func(dbpath string) dbm.DB) (ibctesting.TestingApp, map[string]json.RawMessage) = SetupTestingApp
 
 // DefaultTestingConsensusParams defines the default Tendermint consensus params used in
 // Mythos testing.
@@ -70,7 +69,7 @@ func SetupApp(
 	if err != nil {
 		panic(err)
 	}
-	_, appCreator := multichain.CreateMockAppCreator(wasmVmMeta, NewAppCreator, DefaultNodeHome)
+	_, appCreator := multichain.CreateMockAppCreator(wasmVmMeta, NewAppCreator, DefaultNodeHome, nil)
 	iapp := appCreator(chainId, chainCfg)
 	app := iapp.(*App)
 
@@ -99,8 +98,8 @@ func SetupApp(
 }
 
 // SetupTestingApp initializes the IBC-go testing application
-func SetupTestingApp(wasmVmMeta memc.IWasmVmMeta, chainID string, chainCfg *appencoding.ChainConfig, index int32) (ibctesting.TestingApp, map[string]json.RawMessage) {
-	_, appCreator := multichain.CreateMockAppCreator(wasmVmMeta, NewAppCreator, DefaultNodeHome+strconv.Itoa(int(index)))
+func SetupTestingApp(wasmVmMeta memc.IWasmVmMeta, chainID string, chainCfg *appencoding.ChainConfig, index int32, getDB func(dbpath string) dbm.DB) (ibctesting.TestingApp, map[string]json.RawMessage) {
+	_, appCreator := multichain.CreateMockAppCreator(wasmVmMeta, NewAppCreator, DefaultNodeHome+strconv.Itoa(int(index)), getDB)
 	iapp := appCreator(chainID, chainCfg)
 	app := iapp.(*App)
 	return app, app.DefaultGenesis()

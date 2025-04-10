@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	dbm "github.com/cosmos/cosmos-db"
 	ibcgotesting "github.com/cosmos/ibc-go/v8/testing"
 
 	mcfg "github.com/loredanacirstea/wasmx/config"
@@ -15,7 +16,7 @@ var (
 )
 
 // NewCoordinator initializes Coordinator with N TestChain's
-func NewCoordinator(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir string, chainIds []string, index int32) *ibcgotesting.Coordinator {
+func NewCoordinator(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir string, chainIds []string, index int32, getDB func(dbpath string) dbm.DB) *ibcgotesting.Coordinator {
 	chains := make(map[string]*ibcgotesting.TestChain)
 	coord := &ibcgotesting.Coordinator{
 		T:           t,
@@ -30,7 +31,7 @@ func NewCoordinator(t *testing.T, wasmVmMeta memc.IWasmVmMeta, compiledCacheDir 
 		if err != nil {
 			panic(err)
 		}
-		chains[chainID] = NewTestChain(t, wasmVmMeta, compiledCacheDir, coord, chainID, *config, index)
+		chains[chainID] = NewTestChain(t, wasmVmMeta, compiledCacheDir, coord, chainID, *config, index, getDB)
 	}
 
 	coord.Chains = chains

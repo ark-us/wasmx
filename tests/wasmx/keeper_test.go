@@ -12,12 +12,14 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	//nolint
+	dbm "github.com/cosmos/cosmos-db"
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
 
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
+
+	sqlite "github.com/loredanacirstea/db-sqlite"
 
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 )
@@ -51,6 +53,14 @@ var s *KeeperTestSuite
 func (suite *KeeperTestSuite) SetupSuite() {
 	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
+	suite.GetDB = func(homepath string) dbm.DB {
+		// db, err := sqlite.NewSqliteChainDb("mythos_sqlite.db")
+		db, err := sqlite.NewSqliteChainDb(path.Join(homepath, "mythos_sqlite.db"))
+		if err != nil {
+			panic(err)
+		}
+		return db
+	}
 	mydir, err := os.Getwd()
 	if err != nil {
 		panic(err)

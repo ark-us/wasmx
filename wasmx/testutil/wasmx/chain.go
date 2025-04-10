@@ -20,6 +20,7 @@ import (
 	//nolint
 
 	sdkmath "cosmossdk.io/math"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -81,6 +82,7 @@ type KeeperTestSuite struct {
 	MaxBlockGas           int64
 	SystemContractsModify func([]wasmxtypes.SystemContract) []wasmxtypes.SystemContract
 	GenesisModify         func(genesisState map[string]json.RawMessage, app ibcgotesting.TestingApp) map[string]json.RawMessage
+	GetDB                 func(dbpath string) dbm.DB
 }
 
 type TestChain struct {
@@ -266,7 +268,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	}
 	// testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
 
-	testApp, genesisState, err := ibctesting.BuildGenesisData(suite.WasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance}, suite.CompiledCacheDir)
+	testApp, genesisState, err := ibctesting.BuildGenesisData(suite.WasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance}, suite.CompiledCacheDir, suite.GetDB)
 	require.NoError(t, err)
 
 	var wasmxGenState wasmxtypes.GenesisState
