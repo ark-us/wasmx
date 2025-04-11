@@ -10,6 +10,9 @@ use (
 )
 
 replace (
+	// go get github.com/loredanacirstea/cosmos-db@dbbff15fa5a47482bafd1756b16536d1563bbad1
+	github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411202914-dbbff15fa5a4
+
 	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// cosmossdk.io/store => ../cosmos-sdk/store
 	// github.com/cosmos/iavl => ../iavl

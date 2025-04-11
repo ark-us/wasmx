@@ -735,6 +735,10 @@ github.com/linxGnu/grocksdb v1.7.15/go.mod h1:pY55D0o+r8yUYLq70QmhdudxYvoDb9F+9p
 github.com/linxGnu/grocksdb v1.7.16/go.mod h1:JkS7pl5qWpGpuVb3bPqTz8nC12X3YtPZT+Xq7+QfQo4=
 github.com/linxGnu/grocksdb v1.8.12/go.mod h1:xZCIb5Muw+nhbDK4Y5UJuOrin5MceOuiXkVUR7vp4WY=
 github.com/linxGnu/grocksdb v1.9.3/go.mod h1:QYiYypR2d4v63Wj1adOOfzglnoII0gLj3PNh4fZkcFA=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411180238-8dc3093e2e12 h1:8MsYBmrx80lpHK8bPHtuJuJ3dOHC2AnxJnnTJihuyjI=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411180238-8dc3093e2e12/go.mod h1:Juy7gvQ93XXQz/50/NQePuN+O2zOQHb22nfuZSEcM68=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411202914-dbbff15fa5a4 h1:7VdVeciS5IiWxgE69kKQZTM99+y4273kRjCK9xOXd4Q=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411202914-dbbff15fa5a4/go.mod h1:Juy7gvQ93XXQz/50/NQePuN+O2zOQHb22nfuZSEcM68=
 github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1 h1:cbP1SRIGCacsckhFRoBb2UiF9LZ6mhCr/L30gX9YKME=
 github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
 github.com/lufeee/execinquery v1.2.1/go.mod h1:EC7DrEKView09ocscGHC+apXMIaorh4xqSxS/dy8SbM=
