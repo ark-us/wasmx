@@ -344,7 +344,4 @@ replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero-wasmx
 
 replace github.com/loredanacirstea/wasmx-wazero => ../wasmx-wazero
 
-require github.com/loredanacirstea/db-sqlite v0.0.0
-
-replace github.com/loredanacirstea/db-sqlite => ../db-sqlite
 

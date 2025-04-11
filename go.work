@@ -7,7 +7,6 @@ use (
 	./mythos-wazero
 	./mythos-wasmedge
 	./tests
-	./db-sqlite
 )
 
 replace (

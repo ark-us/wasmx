@@ -19,8 +19,6 @@ import (
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
 
-	// sqlite "github.com/loredanacirstea/db-sqlite"
-
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 )
 
@@ -55,18 +53,6 @@ var s *KeeperTestSuite
 func (suite *KeeperTestSuite) SetupSuite() {
 	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
-	// suite.GetDB = func(homepath string) dbm.DB {
-	// 	db, err := sqlite.NewSqliteChainDb("mythos_sqlite.db")
-	// 	// db, err := sqlite.NewSqliteChainDb(path.Join(homepath, "mythos_sqlite.db"))
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	suite.db = db
-	// 	dir, err := os.Getwd()
-	// 	suite.Require().NoError(err)
-	// 	suite.dbFilePath = path.Join(dir, "mythos_sqlite.db")
-	// 	return db
-	// }
 	mydir, err := os.Getwd()
 	if err != nil {
 		panic(err)
