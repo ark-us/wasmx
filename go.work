@@ -13,5 +13,7 @@ use (
 replace (
 	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// cosmossdk.io/store => ../cosmos-sdk/store
+	// github.com/cosmos/iavl => ../iavl
+	// github.com/cosmos/cosmos-db => ../cosmos-db
 	// github.com/tetratelabs/wazero => ../wazero
 )

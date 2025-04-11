@@ -19,22 +19,13 @@ type iterator struct {
 	start, end []byte
 	valid      bool
 	err        error
-	// reverse    bool
 }
 
-func newIterator(db *SqliteChainDb, storeKey []byte, targetVersion uint64, start, end []byte, reverse bool) (*iterator, error) {
-	fmt.Println("--newIterator--", targetVersion, reverse, string(storeKey), string(start), string(end))
-	if targetVersion < db.earliestVersion {
-		return &iterator{
-			start: start,
-			end:   end,
-			valid: false,
-		}, nil
-	}
-
+func newIterator(db *SqliteChainDb, start, end []byte, reverse bool) (*iterator, error) {
 	var (
-		keyClause = []string{"store_key = ?", "version <= ?"}
-		queryArgs = []any{storeKey, targetVersion}
+		keyClause = []string{}
+		queryArgs = []any{}
+		tombstone = 0
 	)
 
 	switch {
@@ -44,7 +35,7 @@ func newIterator(db *SqliteChainDb, storeKey []byte, targetVersion uint64, start
 		} else {
 			keyClause = append(keyClause, "key >= ?", "key < ?")
 		}
-		queryArgs = []any{storeKey, targetVersion, start, end, targetVersion}
+		queryArgs = []any{start, end, tombstone}
 
 	case len(start) > 0 && len(end) == 0:
 		if reverse {
@@ -52,7 +43,7 @@ func newIterator(db *SqliteChainDb, storeKey []byte, targetVersion uint64, start
 		} else {
 			keyClause = append(keyClause, "key >= ?")
 		}
-		queryArgs = []any{storeKey, targetVersion, start, targetVersion}
+		queryArgs = []any{start, tombstone}
 
 	case len(start) == 0 && len(end) > 0:
 		if reverse {
@@ -60,25 +51,24 @@ func newIterator(db *SqliteChainDb, storeKey []byte, targetVersion uint64, start
 		} else {
 			keyClause = append(keyClause, "key < ?")
 		}
-		queryArgs = []any{storeKey, targetVersion, end, targetVersion}
+		queryArgs = []any{end, tombstone}
 
 	default:
-		queryArgs = []any{storeKey, targetVersion, targetVersion}
+		queryArgs = []any{}
 	}
 
 	orderBy := "ASC"
 	if reverse {
 		orderBy = "DESC"
 	}
-	fmt.Println("--query--", strings.Join(keyClause, " AND "))
 
 	// Note, this is not susceptible to SQL injection because placeholders are used
 	// for parts of the query outside the store's direct control.
 	stmt, err := db.db.Prepare(fmt.Sprintf(`
 	SELECT x.key, x.value
 	FROM (
-		SELECT key, value, version, tombstone,
-			row_number() OVER (PARTITION BY key ORDER BY version DESC) AS _rn
+		SELECT key, value, tombstone,
+			row_number() OVER (PARTITION BY key) AS _rn
 			FROM state_storage WHERE %s
 		) x
 	WHERE x._rn = 1 AND (x.tombstone = 0 OR x.tombstone > ?) ORDER BY x.key %s;
@@ -97,19 +87,11 @@ func newIterator(db *SqliteChainDb, storeKey []byte, targetVersion uint64, start
 		statement: stmt,
 		rows:      rows,
 		start:     start,
-		// key:       start,
-		end: end,
-		// reverse:   reverse,
-		valid: rows.Next(),
+		end:       end,
+		valid:     rows.Next(),
 	}
-	fmt.Println("--iterator.valid--", itr.valid)
-	// if reverse {
-	// 	itr.key = end
-	// }
-	// itr.valid = itr.Valid()
 
 	if !itr.valid {
-		// itr.err = fmt.Errorf("iterator invalid: %w", sql.ErrNoRows)
 		return itr, nil
 	}
 
@@ -155,23 +137,7 @@ func (itr *iterator) Valid() bool {
 		itr.valid = false
 		return itr.valid
 	}
-
-	// start := itr.start
-	// end := itr.end
 	key := itr.Key()
-
-	// if key is at the end or past it, consider it invalid
-	// if itr.reverse {
-	// 	if start != nil && bytes.Compare(key, start) < 0 {
-	// 		itr.valid = false
-	// 		return itr.valid
-	// 	}
-	// } else {
-	// 	if end != nil && bytes.Compare(end, key) <= 0 {
-	// 		itr.valid = false
-	// 		return itr.valid
-	// 	}
-	// }
 
 	if end := itr.end; end != nil {
 		if bytes.Compare(end, key) <= 0 {

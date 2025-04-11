@@ -19,7 +19,7 @@ import (
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
 
-	sqlite "github.com/loredanacirstea/db-sqlite"
+	// sqlite "github.com/loredanacirstea/db-sqlite"
 
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 )
@@ -46,6 +46,8 @@ type KeeperTestSuite struct {
 	wt.KeeperTestSuite
 	testStart  time.Time
 	suiteStart time.Time
+	db         dbm.DB
+	dbFilePath string
 }
 
 var s *KeeperTestSuite
@@ -53,14 +55,18 @@ var s *KeeperTestSuite
 func (suite *KeeperTestSuite) SetupSuite() {
 	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
-	suite.GetDB = func(homepath string) dbm.DB {
-		// db, err := sqlite.NewSqliteChainDb("mythos_sqlite.db")
-		db, err := sqlite.NewSqliteChainDb(path.Join(homepath, "mythos_sqlite.db"))
-		if err != nil {
-			panic(err)
-		}
-		return db
-	}
+	// suite.GetDB = func(homepath string) dbm.DB {
+	// 	db, err := sqlite.NewSqliteChainDb("mythos_sqlite.db")
+	// 	// db, err := sqlite.NewSqliteChainDb(path.Join(homepath, "mythos_sqlite.db"))
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	suite.db = db
+	// 	dir, err := os.Getwd()
+	// 	suite.Require().NoError(err)
+	// 	suite.dbFilePath = path.Join(dir, "mythos_sqlite.db")
+	// 	return db
+	// }
 	mydir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -100,6 +106,12 @@ func (suite *KeeperTestSuite) TearDownSuite() {
 		elapsed := time.Since(s.suiteStart)
 		// Print or log the elapsed time for the entire suite
 		println("Suite time:", elapsed.String())
+	}
+	if suite.db != nil {
+		err := suite.db.Close()
+		suite.Require().NoError(err)
+		err = os.Remove(suite.dbFilePath)
+		suite.Require().NoError(err)
 	}
 	suite.TearDownChains()
 }

@@ -2,6 +2,7 @@ package db_sqlite_test
 
 import (
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,10 @@ import (
 )
 
 func TestDb(t *testing.T) {
+	defer func() {
+		dir, _ := os.Getwd()
+		os.Remove(path.Join(dir, "testdb.db"))
+	}()
 	db, err := sqlite.NewSqliteChainDb("testdb.db")
 	require.NoError(t, err)
 
@@ -33,7 +38,4 @@ func TestDb(t *testing.T) {
 	value, err = db.Get([]byte{1, 2, 3})
 	require.NoError(t, err)
 	require.Equal(t, []byte{2, 2, 2}, value)
-
-	err = os.Remove("testdb.db")
-	require.NoError(t, err)
 }

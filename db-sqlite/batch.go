@@ -22,24 +22,22 @@ type batchOp struct {
 }
 
 type Batch struct {
-	db      *sql.DB
-	tx      *sql.Tx
-	ops     []batchOp
-	size    int
-	version uint64
+	db   *sql.DB
+	tx   *sql.Tx
+	ops  []batchOp
+	size int
 }
 
-func NewBatch(db *sql.DB, version uint64) (*Batch, error) {
+func NewBatch(db *sql.DB) (*Batch, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SQL transaction: %w", err)
 	}
 
 	return &Batch{
-		db:      db,
-		tx:      tx,
-		ops:     make([]batchOp, 0),
-		version: version,
+		db:  db,
+		tx:  tx,
+		ops: make([]batchOp, 0),
 	}, nil
 }
 
@@ -74,27 +72,22 @@ func (b *Batch) Delete(key []byte) error {
 }
 
 func (b *Batch) Write() error {
-	storeKey := []byte{}
-	_, err := b.tx.Exec(reservedUpsertStmt, reservedStoreKey, keyLatestHeight, b.version, 0, b.version)
+	_, err := b.tx.Exec(reservedUpsertStmt, keyLatestHeight, 0, 0)
+
 	if err != nil {
 		return fmt.Errorf("failed to exec reserved upsert SQL statement: %w", err)
 	}
 
-	fmt.Println("--batchActionSet b.ops: ", len(b.ops))
-
 	for _, op := range b.ops {
 		switch op.action {
 		case batchActionSet:
-			fmt.Println("--batchActionSet key: ", op.key, string(op.key))
-			fmt.Println("--batchActionSet value: ", op.value, string(op.value))
-			_, err := b.tx.Exec(upsertStmt, storeKey, op.key, op.value, b.version, op.value)
-			fmt.Println("--batchActionSet err: ", err)
+			_, err := b.tx.Exec(upsertStmt, op.key, op.value, op.value)
 			if err != nil {
 				return fmt.Errorf("failed to exec batch set SQL statement: %w", err)
 			}
 
 		case batchActionDel:
-			_, err := b.tx.Exec(delStmt, b.version, storeKey, op.key, b.version)
+			_, err := b.tx.Exec(delStmt, op.key)
 			if err != nil {
 				return fmt.Errorf("failed to exec batch del SQL statement: %w", err)
 			}
@@ -102,17 +95,14 @@ func (b *Batch) Write() error {
 	}
 
 	if err := b.tx.Commit(); err != nil {
-		fmt.Println("--batchActionSet Commit err: ", err)
 		return fmt.Errorf("failed to write SQL transaction: %w", err)
 	}
-	fmt.Println("--batchActionSet Commit DONE: ")
 
 	return nil
 }
 
 // Close implements Batch.
 func (b *Batch) Close() error {
-	fmt.Println("--Batch.Close()--")
 	// if b.batch != nil {
 	// 	b.batch.Destroy()
 	// 	b.batch = nil
