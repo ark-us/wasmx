@@ -5,6 +5,10 @@ go 1.23.1
 toolchain go1.23.2
 
 require (
+	github.com/mattn/go-sqlite3 v1.14.24
+)
+
+require (
 	cosmossdk.io/errors v1.0.1 // indirect
 	cosmossdk.io/math v1.3.0 // indirect
 	github.com/cometbft/cometbft v0.38.6 // indirect

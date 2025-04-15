@@ -203,6 +203,11 @@ import (
 	mctx "github.com/loredanacirstea/wasmx/context"
 
 	srvconfig "github.com/loredanacirstea/wasmx/server/config"
+
+	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
+	"github.com/loredanacirstea/wasmx/x/network/vmmc"
+	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmsql"
 )
 
 // this line is used by starport scaffolding # stargate/app/moduleImport
@@ -240,6 +245,12 @@ func init() {
 	}
 
 	DefaultNodeHome = filepath.Join(userHomeDir, "."+cfg.Name)
+
+	// enabled VM extensions for contracts
+	vmp2p.Setup()
+	vmmc.Setup()
+	vmcrosschain.Setup()
+	vmsql.Setup()
 }
 
 // App extends an ABCI application, but with most of its parameters exported.

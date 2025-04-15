@@ -23,6 +23,7 @@ import (
 	multichain "github.com/loredanacirstea/wasmx/multichain"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
@@ -41,6 +42,7 @@ func NewAppCreator(
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = vmp2p.WithP2PEmptyContext(ctx)
 	ctx = networktypes.ContextWithMultiChainContext(g, ctx, logger)
+	ctx = vmsql.WithSqlEmptyContext(ctx)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	ctx, _ = mctx.WithExecutionMetaInfoEmpty(ctx)
 	ctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(ctx)

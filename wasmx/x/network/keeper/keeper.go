@@ -10,9 +10,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/loredanacirstea/wasmx/x/network/types"
-	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
-	"github.com/loredanacirstea/wasmx/x/network/vmmc"
-	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
 )
 
 type (
@@ -28,12 +25,6 @@ type (
 		authority string
 	}
 )
-
-func init() {
-	vmp2p.Setup()
-	vmmc.Setup()
-	vmcrosschain.Setup()
-}
 
 func NewKeeper(
 	goRoutineGroup *errgroup.Group,

@@ -65,6 +65,7 @@ import (
 	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
@@ -95,6 +96,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
 	goctx = networktypes.ContextWithMultiChainContext(g, goctx, logger)
+	goctx = vmsql.WithSqlEmptyContext(goctx)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	goctx, _ = mctx.WithExecutionMetaInfoEmpty(goctx)
 	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
