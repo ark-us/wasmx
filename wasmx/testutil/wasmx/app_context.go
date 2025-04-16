@@ -11,6 +11,8 @@ import (
 
 	//nolint
 
+	"github.com/cosmos/gogoproto/proto"
+
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/config"
 
@@ -623,6 +625,25 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 	contractAddress, err := s.AddressStringToAccAddressPrefixed(contractAddressStr)
 	s.S.Require().NoError(err)
 	return contractAddress
+}
+
+func (s *AppContext) DecodeExecuteResponse(res *abci.ExecTxResult, msg interface{}) error {
+	sdkmsg := &sdk.TxMsgData{}
+	err := proto.Unmarshal(res.Data, sdkmsg)
+	if err != nil {
+		return err
+	}
+	anymsg := sdkmsg.MsgResponses[0]
+	msgi, err := mcodec.AnyToSdkMsg(s.App.AppCodec(), anymsg)
+	if err != nil {
+		return err
+	}
+	msgii := msgi.(*types.MsgExecuteContractResponse)
+	err = json.Unmarshal(msgii.Data, msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *AppContext) ExecuteContract(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {

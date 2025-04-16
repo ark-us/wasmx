@@ -20,9 +20,14 @@ import (
 
 type Calldata struct {
 	Connect *vmsql.SqlConnectionRequest `json:"Connect,omitempty"`
+	Close   *vmsql.SqlCloseRequest      `json:"Close,omitempty"`
 	Ping    *vmsql.SqlPingRequest       `json:"Ping,omitempty"`
 	Execute *vmsql.SqlExecuteRequest    `json:"Execute,omitempty"`
 	Query   *vmsql.SqlQueryRequest      `json:"Query,omitempty"`
+}
+
+type KV struct {
+	Value string `json:"value"`
 }
 
 func (suite *KeeperTestSuite) TestSqlite() {
@@ -45,7 +50,11 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	}}
 	data, err := json.Marshal(cmdConn)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss := &vmsql.SqlConnectionResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
 	defer os.Remove("test.db")
 
 	// create tables
@@ -55,7 +64,15 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex := &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(0), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(0), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
 
 	// create indexes
 	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
@@ -64,7 +81,15 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex = &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(0), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(0), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
 
 	key := []byte{2, 3}
 	value := []byte{4, 5}
@@ -80,7 +105,15 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex = &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(1), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(1), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
 
 	// query
 	cmdQuery := &Calldata{Query: &vmsql.SqlQueryRequest{
@@ -95,5 +128,23 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	err = json.Unmarshal(qres, qresp)
 	suite.Require().NoError(err)
 	suite.Require().Equal(qresp.Error, "")
-	suite.Require().True(bytes.Equal(qresp.Data, value))
+
+	rows := []KV{}
+	err = json.Unmarshal(qresp.Data, &rows)
+	suite.Require().NoError(err)
+
+	suite.Require().Equal(1, len(rows))
+	suite.Require().Equal("\u0004\u0005", rows[0].Value)
+	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
+
+	cmdExec = &Calldata{Close: &vmsql.SqlCloseRequest{
+		Id: "conn1",
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssclose := &vmsql.SqlCloseResponse{}
+	err = appA.DecodeExecuteResponse(res, resssclose)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssclose.Error)
 }

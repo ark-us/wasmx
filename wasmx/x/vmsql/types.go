@@ -61,6 +61,14 @@ type SqlConnectionResponse struct {
 	Error string `json:"error"`
 }
 
+type SqlCloseRequest struct {
+	Id string `json:"id"`
+}
+
+type SqlCloseResponse struct {
+	Error string `json:"error"`
+}
+
 type SqlPingRequest struct {
 	Id string `json:"id"`
 }
