@@ -250,6 +250,7 @@ func init() {
 	vmp2p.Setup()
 	vmmc.Setup()
 	vmcrosschain.Setup()
+	// experimental WIP, do not enable in production
 	vmsql.Setup()
 }
 

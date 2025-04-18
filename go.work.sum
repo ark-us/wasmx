@@ -739,6 +739,8 @@ github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411180238-8dc3093e2e12 h1:8Ms
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411180238-8dc3093e2e12/go.mod h1:Juy7gvQ93XXQz/50/NQePuN+O2zOQHb22nfuZSEcM68=
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411202914-dbbff15fa5a4 h1:7VdVeciS5IiWxgE69kKQZTM99+y4273kRjCK9xOXd4Q=
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250411202914-dbbff15fa5a4/go.mod h1:Juy7gvQ93XXQz/50/NQePuN+O2zOQHb22nfuZSEcM68=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250418184042-283045794970 h1:XfSPZX1JBRkMG7nYvjPGiocqacBj85G+7wV/AANFq/M=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250418184042-283045794970/go.mod h1:Juy7gvQ93XXQz/50/NQePuN+O2zOQHb22nfuZSEcM68=
 github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1 h1:cbP1SRIGCacsckhFRoBb2UiF9LZ6mhCr/L30gX9YKME=
 github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
 github.com/lufeee/execinquery v1.2.1/go.mod h1:EC7DrEKView09ocscGHC+apXMIaorh4xqSxS/dy8SbM=

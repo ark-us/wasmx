@@ -2,12 +2,19 @@ package vmsql
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
+// TODO this API is only for priviledged contracts
+// have a way of running as consensusless contract
+// and as part of the deterministic engine, but without waiting for a side effect/error
+// TODO reverting database executions
+// TODO tx vs. queries
 func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	requestbz, err := rnh.ReadMemFromPtr(params[0])
@@ -133,7 +140,18 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		response.Error = "sql connection not found"
 		return prepareResponse(rnh, response)
 	}
-	res, err := db.Exec(req.Query)
+
+	reqparams := &SqlQueryParams{}
+	if len(req.Params) > 0 {
+		err = json.Unmarshal(req.Params, reqparams)
+		if err != nil {
+			response.Error = fmt.Sprintf("invalid query params: %s", err.Error())
+			return prepareResponse(rnh, response)
+		}
+	}
+
+	qparams := parseSqlQueryParams(reqparams.Params)
+	res, err := db.Exec(req.Query, qparams...)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -151,6 +169,33 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	response.RowsAffected = rows
 
 	return prepareResponse(rnh, response)
+}
+
+func parseSqlQueryParams(params []SqlQueryParam) []interface{} {
+	qparams := []interface{}{}
+	for _, param := range params {
+		switch param.Type {
+		case "":
+			qparams = append(qparams, param.Value)
+		case "blob":
+			// expect base64-encoded string
+			// otherwise, just insert the value as is
+			v, ok := param.Value.(string)
+			if !ok {
+				qparams = append(qparams, param.Value)
+				break
+			}
+			value, err := base64.StdEncoding.DecodeString(v)
+			if err != nil {
+				qparams = append(qparams, param.Value)
+				break
+			}
+			qparams = append(qparams, value)
+		default:
+			qparams = append(qparams, param.Value)
+		}
+	}
+	return qparams
 }
 
 func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -176,7 +221,18 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		response.Error = "sql connection not found"
 		return prepareResponse(rnh, response)
 	}
-	rows, err := db.Query(req.Query)
+
+	reqparams := &SqlQueryParams{}
+	if len(req.Params) > 0 {
+		err = json.Unmarshal(req.Params, reqparams)
+		if err != nil {
+			response.Error = fmt.Sprintf("invalid query params: %s", err.Error())
+			return prepareResponse(rnh, response)
+		}
+	}
+
+	qparams := parseSqlQueryParams(reqparams.Params)
+	rows, err := db.Query(req.Query, qparams...)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)

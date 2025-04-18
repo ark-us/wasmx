@@ -59,8 +59,9 @@ func (suite *KeeperTestSuite) TestSqlite() {
 
 	// create tables
 	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
-		Id:    "conn1",
-		Query: `CREATE TABLE IF NOT EXISTS kvstore (key BLOB PRIMARY KEY, value BLOB)`,
+		Id:     "conn1",
+		Query:  `CREATE TABLE IF NOT EXISTS kvstore (key BLOB PRIMARY KEY, value BLOB)`,
+		Params: []byte{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -76,8 +77,9 @@ func (suite *KeeperTestSuite) TestSqlite() {
 
 	// create indexes
 	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
-		Id:    "conn1",
-		Query: `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
+		Id:     "conn1",
+		Query:  `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
+		Params: []byte{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -102,6 +104,7 @@ func (suite *KeeperTestSuite) TestSqlite() {
 			key,
 			value,
 		),
+		Params: []byte{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -117,26 +120,68 @@ func (suite *KeeperTestSuite) TestSqlite() {
 
 	// query
 	cmdQuery := &Calldata{Query: &vmsql.SqlQueryRequest{
-		Id:    "conn1",
-		Query: fmt.Sprintf(`SELECT value FROM kvstore WHERE key = X'%X'`, key),
+		Id:     "conn1",
+		Query:  fmt.Sprintf(`SELECT value FROM kvstore WHERE key = X'%X'`, key),
+		Params: []byte{},
 	}}
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-
 	qresp := &vmsql.SqlQueryResponse{}
 	err = json.Unmarshal(qres, qresp)
 	suite.Require().NoError(err)
 	suite.Require().Equal(qresp.Error, "")
-
 	rows := []KV{}
 	err = json.Unmarshal(qresp.Data, &rows)
 	suite.Require().NoError(err)
-
 	suite.Require().Equal(1, len(rows))
 	suite.Require().Equal("\u0004\u0005", rows[0].Value)
 	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
 
+	// insert2
+	key = []byte{1, 1, 1, 1, 1}
+	value = []byte{2, 2, 2, 2, 2}
+	paramsbz, err := json.Marshal(&vmsql.SqlQueryParams{Params: []vmsql.SqlQueryParam{{Type: "blob", Value: key}, {Type: "blob", Value: value}}})
+	suite.Require().NoError(err)
+	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
+		Id:     "conn1",
+		Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES (?,?)`,
+		Params: paramsbz,
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex = &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(2), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(1), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
+
+	// query2
+	paramsbz, err = json.Marshal(&vmsql.SqlQueryParams{Params: []vmsql.SqlQueryParam{{Type: "blob", Value: key}}})
+	suite.Require().NoError(err)
+	cmdQuery = &Calldata{Query: &vmsql.SqlQueryRequest{
+		Id:     "conn1",
+		Query:  `SELECT value FROM kvstore WHERE key = ?`,
+		Params: paramsbz,
+	}}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	qresp = &vmsql.SqlQueryResponse{}
+	err = json.Unmarshal(qres, qresp)
+	suite.Require().NoError(err)
+	suite.Require().Equal(qresp.Error, "")
+	rows = []KV{}
+	err = json.Unmarshal(qresp.Data, &rows)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(rows))
+	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
+
+	// close connection
 	cmdExec = &Calldata{Close: &vmsql.SqlCloseRequest{
 		Id: "conn1",
 	}}

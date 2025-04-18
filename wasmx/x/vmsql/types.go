@@ -78,8 +78,18 @@ type SqlPingResponse struct {
 }
 
 type SqlExecuteRequest struct {
-	Id    string `json:"id"`
-	Query string `json:"query"`
+	Id     string `json:"id"`
+	Query  string `json:"query"`
+	Params []byte `json:"params"`
+}
+
+type SqlQueryParam struct {
+	Type  string      `json:"type"`
+	Value interface{} `json:"value"`
+}
+
+type SqlQueryParams struct {
+	Params []SqlQueryParam `json:"params"`
 }
 
 type SqlExecuteResponse struct {
@@ -91,8 +101,9 @@ type SqlExecuteResponse struct {
 }
 
 type SqlQueryRequest struct {
-	Id    string `json:"id"`
-	Query string `json:"query"`
+	Id     string `json:"id"`
+	Query  string `json:"query"`
+	Params []byte `json:"params"`
 }
 
 type SqlQueryResponse struct {

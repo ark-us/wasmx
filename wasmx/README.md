@@ -134,3 +134,52 @@ UDP: 5353 (libp2p)
 ./wasmx/scripts/compile_as_contracts.sh tests,gov,staking,tendermintp2p
 ./wasmx/scripts/compile_as_contracts.sh --wasmxdir="path/to/project/wasmx" --contractsdir="path/to/project/wasmx-as-contracts"
 ```
+
+## Add local chain to Keplr
+
+```js
+await window.keplr.experimentalSuggestChain({
+    chainId: "mythos_7000-14",
+    chainName: "Mythos Local 14",
+    rpc: "http://localhost:26657",
+    rest: "http://localhost:1317",
+    bip44: {
+        coinType: 118,
+    },
+    bech32Config: {
+        bech32PrefixAccAddr: "mythos",
+        bech32PrefixAccPub: "mythos" + "pub",
+        bech32PrefixValAddr: "mythos",
+        bech32PrefixValPub: "mythos" + "pub",
+        bech32PrefixConsAddr: "mythos",
+        bech32PrefixConsPub: "mythos" + "pub",
+    },
+    currencies: [
+        {
+            coinDenom: "myt",
+            coinMinimalDenom: "amyt",
+            coinDecimals: 18,
+            coinGeckoId: "myt",
+        },
+    ],
+    feeCurrencies: [
+        {
+            coinDenom: "myt",
+            coinMinimalDenom: "amyt",
+            coinDecimals: 18,
+            coinGeckoId: "myt",
+            gasPriceStep: {
+                low: 1000,
+                average: 1000,
+                high: 10000,
+            },
+        },
+    ],
+    stakeCurrency: {
+        coinDenom: "myt",
+        coinMinimalDenom: "amyt",
+        coinDecimals: 18,
+        coinGeckoId: "myt",
+    },
+});
+```
