@@ -11,8 +11,6 @@ import (
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-const FEE_COLLECTOR = "fee_collector"
-
 const (
 	Bech32Prefix  = "mythos"
 	Name          = "mythos"

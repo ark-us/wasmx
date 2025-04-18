@@ -205,7 +205,7 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 		ctx := sdk.UnwrapSDKContext(goctx)
 		var erreur error
 
-		mythosapp.GetWasmxKeeper().IterateContractInfo(ctx, func(addr sdk.AccAddress, cinfo wasmxtypes.ContractInfo) bool {
+		mythosapp.GetWasmxKeeper().IterateContractInfos(ctx, func(addr sdk.AccAddress, cinfo wasmxtypes.ContractInfo) bool {
 			// TODO metaconsensus state sync as an extension and remove from here
 			if cinfo.StorageType != wasmxtypes.ContractStorageType_SingleConsensus && cinfo.StorageType != wasmxtypes.ContractStorageType_MetaConsensus {
 				return false
@@ -227,7 +227,11 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 				erreur = err
 				return true
 			}
-			codeInfo := mythosapp.GetWasmxKeeper().GetCodeInfo(ctx, cinfo.CodeId)
+			codeInfo, err := mythosapp.GetWasmxKeeper().GetCodeInfo(ctx, cinfo.CodeId)
+			if err != nil {
+				erreur = err
+				return true
+			}
 			if codeInfo == nil {
 				erreur = fmt.Errorf("no code info found for codeID %d", cinfo.CodeId)
 				return true

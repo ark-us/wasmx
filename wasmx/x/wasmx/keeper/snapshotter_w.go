@@ -120,7 +120,7 @@ func finalizeV1(ctx sdk.Context, k *Keeper) error {
 		if !info.Pinned {
 			return false
 		}
-		k.PinCode(ctx, id, "", info.MeteringOff)
+		k.PinCode(ctx, info.CodeHash, "", info.MeteringOff)
 		return false
 	})
 	return nil

@@ -51,7 +51,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	initvaluebz, err := hex.DecodeString(initvalue)
 	s.Require().NoError(err)
 	codeId2, contractAddress2 := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
-	codeInfo := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId2)
+	codeInfo, err := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId2)
+	s.Require().NoError(err)
 	s.Require().NotNil(codeInfo)
 
 	getHex := `6d4ce63c`
@@ -103,7 +104,7 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 		Msg:    msgbz,
 		Funds:  nil,
 	}
-	res, err = appA.DeliverTxWithOpts(sender, instantiateContractMsg, 15000000, nil)
+	res, err = appA.DeliverTxWithOpts(sender, instantiateContractMsg, "", 15000000, nil)
 	s.Require().NoError(err)
 	suite.Require().True(res.IsErr(), res.GetLog())
 	suite.Require().Contains(res.GetLog(), "invalid address for system contracts")
@@ -139,6 +140,30 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 	data = []byte(`{"get":{"key":"hello"}}`)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(string(qres), "sammy")
+}
+
+func (suite *KeeperTestSuite) TestWasmxSameCode() {
+	wasmbin := wasmxtest.WasmxSimpleStorage
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
+
+	contractInfo, codeInfo, _, err := appA.App.WasmxKeeper.ContractInstance(appA.Context(), contractAddress)
+	s.Require().NoError(err)
+	s.Require().NotNil(codeInfo)
+	s.Require().NotNil(contractInfo)
+
+	codeId2 := appA.StoreCode(sender, wasmbin, nil)
+	// TODO we may eventually force same codeid
+	// s.Require().Equal(codeId, codeId2)
+	s.Require().Equal(codeId+1, codeId2)
 }
 
 func (suite *KeeperTestSuite) TestWasmxTime() {
@@ -185,6 +210,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	// start time chain
 	msgexec := types.WasmxExecutionMessage{Data: []byte(`{"StartNode":{}}`)}
 	msgbz, err := json.Marshal(&msgexec)
+	suite.Require().NoError(err)
 	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, nil, false)
 	suite.Require().NoError(err)
 

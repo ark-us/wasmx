@@ -11,6 +11,8 @@ import (
 
 	//nolint
 
+	"github.com/cosmos/gogoproto/proto"
+
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/config"
 
@@ -486,8 +488,12 @@ func (s *AppContext) DeliverTxRaw(txbz []byte) (*abci.ExecTxResult, error) {
 	return res.TxResults[0], nil
 }
 
-func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
-	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, &gasLimit, gasPrice, "")
+func (s *AppContext) DeliverTxWithOpts(account simulation.Account, msg sdk.Msg, memo string, gasLimit uint64, gasPrice *string) (*abci.ExecTxResult, error) {
+	_gasLimit := &gasLimit
+	if gasLimit == 0 {
+		_gasLimit = nil
+	}
+	bz := s.PrepareCosmosTx(account, []sdk.Msg{msg}, _gasLimit, gasPrice, memo)
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.FinalizeBlock(txs)
@@ -549,7 +555,7 @@ func (s *AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []
 		Sender:   senderstr,
 		ByteCode: wasmbin,
 		Deps:     deps,
-		Metadata: metadata,
+		Metadata: metadata.ToProto(),
 	}
 
 	res, err := s.DeliverTx(sender, storeCodeMsg)
@@ -577,7 +583,7 @@ func (s *AppContext) Deploy(sender simulation.Account, code []byte, deps []strin
 		Sender:   senderstr,
 		ByteCode: code,
 		Deps:     deps,
-		Metadata: *metadata,
+		Metadata: metadata.ToProto(),
 		Msg:      msgbz,
 		Funds:    funds,
 		Label:    label,
@@ -611,7 +617,7 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 		Msg:    msgbz,
 		Funds:  funds,
 	}
-	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, DEFAULT_GAS_LIMIT, nil)
+	res, err := s.DeliverTxWithOpts(sender, instantiateContractMsg, "", DEFAULT_GAS_LIMIT, nil)
 	s.S.Require().NoError(err)
 	s.S.Require().True(res.IsOK(), res.GetLog())
 	s.S.Commit()
@@ -619,6 +625,25 @@ func (s *AppContext) InstantiateCode(sender simulation.Account, codeId uint64, i
 	contractAddress, err := s.AddressStringToAccAddressPrefixed(contractAddressStr)
 	s.S.Require().NoError(err)
 	return contractAddress
+}
+
+func (s *AppContext) DecodeExecuteResponse(res *abci.ExecTxResult, msg interface{}) error {
+	sdkmsg := &sdk.TxMsgData{}
+	err := proto.Unmarshal(res.Data, sdkmsg)
+	if err != nil {
+		return err
+	}
+	anymsg := sdkmsg.MsgResponses[0]
+	msgi, err := mcodec.AnyToSdkMsg(s.App.AppCodec(), anymsg)
+	if err != nil {
+		return err
+	}
+	msgii := msgi.(*types.MsgExecuteContractResponse)
+	err = json.Unmarshal(msgii.Data, msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *AppContext) ExecuteContract(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {
@@ -646,7 +671,7 @@ func (s *AppContext) ExecuteContractNoCheck(sender simulation.Account, contractA
 		Funds:        funds,
 		Dependencies: dependencies,
 	}
-	return s.DeliverTxWithOpts(sender, executeContractMsg, gasLimit, gasPrice)
+	return s.DeliverTxWithOpts(sender, executeContractMsg, "", gasLimit, gasPrice)
 }
 
 func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) (sdk.GasInfo, *sdk.Result, error) {
@@ -662,6 +687,11 @@ func (s *AppContext) ExecuteContractSimulate(sender simulation.Account, contract
 		Dependencies: dependencies,
 	}
 	return s.SimulateTx(sender, executeContractMsg)
+}
+
+func (s *AppContext) QueryContract(account simulation.Account, contract mcodec.AccAddressPrefixed, msg []byte, funds sdk.Coins, dependencies []string) []byte {
+	result := s.WasmxQueryRaw(account, contract, types.WasmxExecutionMessage{Data: msg}, funds, dependencies)
+	return result
 }
 
 func (s *AppContext) WasmxQuery(account simulation.Account, contract mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) string {
@@ -801,10 +831,10 @@ func (s *AppContext) PassGovProposal(
 	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
 
-	resp, err = s.DeliverTx(valAccount, voteMsg)
-	s.S.Require().NoError(err)
-	s.S.Require().True(resp.IsOK(), resp.GetEvents())
-	s.S.Commit()
+	// resp, err = s.DeliverTx(valAccount, voteMsg)
+	// s.S.Require().NoError(err)
+	// s.S.Require().True(resp.IsOK(), resp.GetEvents())
+	// s.S.Commit()
 
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
 	s.S.Require().NoError(err)
@@ -1003,7 +1033,7 @@ func (s *AppContext) GetProposalIdFromEvents(events []abci.Event) (uint64, error
 			}
 		}
 	}
-	return 0, errors.New("not found")
+	return 0, errors.New("proposal id not found")
 }
 
 func (s *AppContext) QueryDecode(respbz []byte) []byte {

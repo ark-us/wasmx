@@ -287,11 +287,11 @@ func GetCmdQueryCodeInfo(ac address.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if res.CodeInfo == nil {
+			if res.CodeInfoPB == nil {
 				return fmt.Errorf("contract not found")
 			}
 
-			return mcctx.ClientCtx.PrintProto(res.CodeInfo)
+			return mcctx.ClientCtx.PrintProto(res.CodeInfoPB)
 		},
 		SilenceUsage: true,
 	}

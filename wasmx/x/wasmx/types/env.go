@@ -122,6 +122,7 @@ type MessageInfo struct {
 type ContractDependency struct {
 	Address       mcodec.AccAddressPrefixed
 	Role          string
+	RoleLabel     string
 	Label         string
 	StoreKey      []byte
 	CodeFilePath  string
@@ -144,6 +145,7 @@ func (v ContractDependency) Clone() *ContractDependency {
 	return &ContractDependency{
 		Address:       mcodec.NewAccAddressPrefixed(cloneBytes(v.Address.Bytes()), v.Address.Prefix()),
 		Role:          v.Role,
+		RoleLabel:     v.RoleLabel,
 		Label:         v.Label,
 		StoreKey:      cloneBytes(v.StoreKey),
 		CodeFilePath:  v.CodeFilePath,

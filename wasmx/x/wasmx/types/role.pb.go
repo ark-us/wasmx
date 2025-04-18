@@ -23,21 +23,122 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+type RoleChangedActionType int32
+
+const (
+	RoleChangedActionType_Replace RoleChangedActionType = 0
+	RoleChangedActionType_Add     RoleChangedActionType = 1
+	RoleChangedActionType_Remove  RoleChangedActionType = 2
+)
+
+var RoleChangedActionType_name = map[int32]string{
+	0: "Replace",
+	1: "Add",
+	2: "Remove",
+}
+
+var RoleChangedActionType_value = map[string]int32{
+	"Replace": 0,
+	"Add":     1,
+	"Remove":  2,
+}
+
+func (x RoleChangedActionType) String() string {
+	return proto.EnumName(RoleChangedActionType_name, int32(x))
+}
+
+func (RoleChangedActionType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_eb153cad38096551, []int{0}
+}
+
 // RegisterRouteProposal is a gov Content type to register a web server route
-type Role struct {
+type RoleChanged struct {
 	// smart contract role
 	Role string `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 	// smart contract label
 	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
 	// contract address in bech32 format
-	ContractAddress string `protobuf:"bytes,3,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+	ContractAddress string                `protobuf:"bytes,3,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
+	ActionType      RoleChangedActionType `protobuf:"varint,4,opt,name=action_type,json=actionType,proto3,enum=mythos.wasmx.v1.RoleChangedActionType" json:"action_type,omitempty"`
+}
+
+func (m *RoleChanged) Reset()         { *m = RoleChanged{} }
+func (m *RoleChanged) String() string { return proto.CompactTextString(m) }
+func (*RoleChanged) ProtoMessage()    {}
+func (*RoleChanged) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eb153cad38096551, []int{0}
+}
+func (m *RoleChanged) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RoleChanged) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RoleChanged.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RoleChanged) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RoleChanged.Merge(m, src)
+}
+func (m *RoleChanged) XXX_Size() int {
+	return m.Size()
+}
+func (m *RoleChanged) XXX_DiscardUnknown() {
+	xxx_messageInfo_RoleChanged.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RoleChanged proto.InternalMessageInfo
+
+func (m *RoleChanged) GetRole() string {
+	if m != nil {
+		return m.Role
+	}
+	return ""
+}
+
+func (m *RoleChanged) GetLabel() string {
+	if m != nil {
+		return m.Label
+	}
+	return ""
+}
+
+func (m *RoleChanged) GetContractAddress() string {
+	if m != nil {
+		return m.ContractAddress
+	}
+	return ""
+}
+
+func (m *RoleChanged) GetActionType() RoleChangedActionType {
+	if m != nil {
+		return m.ActionType
+	}
+	return RoleChangedActionType_Replace
+}
+
+type Role struct {
+	// smart contract role
+	Role        string              `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	StorageType ContractStorageType `protobuf:"varint,2,opt,name=storage_type,json=storageType,proto3,enum=mythos.wasmx.v1.ContractStorageType" json:"storage_type,omitempty"`
+	Primary     int32               `protobuf:"varint,3,opt,name=primary,proto3" json:"primary,omitempty"`
+	Multiple    bool                `protobuf:"varint,4,opt,name=multiple,proto3" json:"multiple,omitempty"`
+	Labels      []string            `protobuf:"bytes,5,rep,name=labels,proto3" json:"labels,omitempty"`
+	// contract address in bech32 format
+	Addresses []string `protobuf:"bytes,6,rep,name=addresses,proto3" json:"addresses,omitempty"`
 }
 
 func (m *Role) Reset()         { *m = Role{} }
 func (m *Role) String() string { return proto.CompactTextString(m) }
 func (*Role) ProtoMessage()    {}
 func (*Role) Descriptor() ([]byte, []int) {
-	return fileDescriptor_eb153cad38096551, []int{0}
+	return fileDescriptor_eb153cad38096551, []int{1}
 }
 func (m *Role) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -73,45 +174,229 @@ func (m *Role) GetRole() string {
 	return ""
 }
 
-func (m *Role) GetLabel() string {
+func (m *Role) GetStorageType() ContractStorageType {
+	if m != nil {
+		return m.StorageType
+	}
+	return ContractStorageType_CoreConsensus
+}
+
+func (m *Role) GetPrimary() int32 {
+	if m != nil {
+		return m.Primary
+	}
+	return 0
+}
+
+func (m *Role) GetMultiple() bool {
+	if m != nil {
+		return m.Multiple
+	}
+	return false
+}
+
+func (m *Role) GetLabels() []string {
+	if m != nil {
+		return m.Labels
+	}
+	return nil
+}
+
+func (m *Role) GetAddresses() []string {
+	if m != nil {
+		return m.Addresses
+	}
+	return nil
+}
+
+type SystemContractRole struct {
+	Role    string `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	Label   string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Primary bool   `protobuf:"varint,3,opt,name=primary,proto3" json:"primary,omitempty"`
+}
+
+func (m *SystemContractRole) Reset()         { *m = SystemContractRole{} }
+func (m *SystemContractRole) String() string { return proto.CompactTextString(m) }
+func (*SystemContractRole) ProtoMessage()    {}
+func (*SystemContractRole) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eb153cad38096551, []int{2}
+}
+func (m *SystemContractRole) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SystemContractRole) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SystemContractRole.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SystemContractRole) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SystemContractRole.Merge(m, src)
+}
+func (m *SystemContractRole) XXX_Size() int {
+	return m.Size()
+}
+func (m *SystemContractRole) XXX_DiscardUnknown() {
+	xxx_messageInfo_SystemContractRole.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SystemContractRole proto.InternalMessageInfo
+
+func (m *SystemContractRole) GetRole() string {
+	if m != nil {
+		return m.Role
+	}
+	return ""
+}
+
+func (m *SystemContractRole) GetLabel() string {
 	if m != nil {
 		return m.Label
 	}
 	return ""
 }
 
-func (m *Role) GetContractAddress() string {
+func (m *SystemContractRole) GetPrimary() bool {
 	if m != nil {
-		return m.ContractAddress
+		return m.Primary
+	}
+	return false
+}
+
+type SystemBootstrapData struct {
+	// bech32 address of contract for roles
+	RoleAddress string `protobuf:"bytes,1,opt,name=role_address,json=roleAddress,proto3" json:"role_address,omitempty"`
+	// bech32 address of contract for contract data storage
+	CodeRegistryAddress      string          `protobuf:"bytes,2,opt,name=code_registry_address,json=codeRegistryAddress,proto3" json:"code_registry_address,omitempty"`
+	CodeRegistryId           uint64          `protobuf:"varint,3,opt,name=code_registry_id,json=codeRegistryId,proto3" json:"code_registry_id,omitempty"`
+	CodeRegistryCodeInfo     *CodeInfoPB     `protobuf:"bytes,4,opt,name=code_registry_code_info,json=codeRegistryCodeInfo,proto3" json:"code_registry_code_info,omitempty"`
+	CodeRegistryContractInfo *ContractInfoPB `protobuf:"bytes,5,opt,name=code_registry_contract_info,json=codeRegistryContractInfo,proto3" json:"code_registry_contract_info,omitempty"`
+}
+
+func (m *SystemBootstrapData) Reset()         { *m = SystemBootstrapData{} }
+func (m *SystemBootstrapData) String() string { return proto.CompactTextString(m) }
+func (*SystemBootstrapData) ProtoMessage()    {}
+func (*SystemBootstrapData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_eb153cad38096551, []int{3}
+}
+func (m *SystemBootstrapData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SystemBootstrapData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SystemBootstrapData.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SystemBootstrapData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SystemBootstrapData.Merge(m, src)
+}
+func (m *SystemBootstrapData) XXX_Size() int {
+	return m.Size()
+}
+func (m *SystemBootstrapData) XXX_DiscardUnknown() {
+	xxx_messageInfo_SystemBootstrapData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SystemBootstrapData proto.InternalMessageInfo
+
+func (m *SystemBootstrapData) GetRoleAddress() string {
+	if m != nil {
+		return m.RoleAddress
 	}
 	return ""
 }
 
+func (m *SystemBootstrapData) GetCodeRegistryAddress() string {
+	if m != nil {
+		return m.CodeRegistryAddress
+	}
+	return ""
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryId() uint64 {
+	if m != nil {
+		return m.CodeRegistryId
+	}
+	return 0
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryCodeInfo() *CodeInfoPB {
+	if m != nil {
+		return m.CodeRegistryCodeInfo
+	}
+	return nil
+}
+
+func (m *SystemBootstrapData) GetCodeRegistryContractInfo() *ContractInfoPB {
+	if m != nil {
+		return m.CodeRegistryContractInfo
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterEnum("mythos.wasmx.v1.RoleChangedActionType", RoleChangedActionType_name, RoleChangedActionType_value)
+	proto.RegisterType((*RoleChanged)(nil), "mythos.wasmx.v1.RoleChanged")
 	proto.RegisterType((*Role)(nil), "mythos.wasmx.v1.Role")
+	proto.RegisterType((*SystemContractRole)(nil), "mythos.wasmx.v1.SystemContractRole")
+	proto.RegisterType((*SystemBootstrapData)(nil), "mythos.wasmx.v1.SystemBootstrapData")
 }
 
 func init() { proto.RegisterFile("mythos/wasmx/v1/role.proto", fileDescriptor_eb153cad38096551) }
 
 var fileDescriptor_eb153cad38096551 = []byte{
-	// 218 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0xca, 0xad, 0x2c, 0xc9,
-	0xc8, 0x2f, 0xd6, 0x2f, 0x4f, 0x2c, 0xce, 0xad, 0xd0, 0x2f, 0x33, 0xd4, 0x2f, 0xca, 0xcf, 0x49,
-	0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x87, 0xc8, 0xe9, 0x81, 0xe5, 0xf4, 0xca, 0x0c,
-	0xa5, 0x44, 0xd2, 0xf3, 0xd3, 0xf3, 0xc1, 0x72, 0xfa, 0x20, 0x16, 0x44, 0x99, 0x52, 0x22, 0x17,
-	0x4b, 0x50, 0x7e, 0x4e, 0xaa, 0x90, 0x10, 0x17, 0x0b, 0x48, 0xb3, 0x04, 0xa3, 0x02, 0xa3, 0x06,
-	0x67, 0x10, 0x98, 0x2d, 0x24, 0xc2, 0xc5, 0x9a, 0x93, 0x98, 0x94, 0x9a, 0x23, 0xc1, 0x04, 0x16,
-	0x84, 0x70, 0x84, 0x34, 0xb9, 0x04, 0x92, 0xf3, 0xf3, 0x4a, 0x8a, 0x12, 0x93, 0x4b, 0xe2, 0x13,
-	0x53, 0x52, 0x8a, 0x52, 0x8b, 0x8b, 0x25, 0x98, 0xc1, 0x0a, 0xf8, 0x61, 0xe2, 0x8e, 0x10, 0x61,
-	0x2b, 0x96, 0x17, 0x0b, 0xe4, 0x19, 0x9c, 0x3c, 0x4e, 0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e,
-	0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x09, 0x8f, 0xe5, 0x18, 0x2e, 0x3c, 0x96, 0x63, 0xb8, 0xf1, 0x58,
-	0x8e, 0x21, 0x4a, 0x2f, 0x3d, 0xb3, 0x24, 0xa3, 0x34, 0x49, 0x2f, 0x39, 0x3f, 0x57, 0x3f, 0x27,
-	0xbf, 0x28, 0x35, 0x25, 0x31, 0x2f, 0x31, 0x39, 0xb3, 0xa8, 0xb8, 0x24, 0x35, 0x11, 0xea, 0xa7,
-	0x0a, 0x28, 0x5d, 0x52, 0x59, 0x90, 0x5a, 0x9c, 0xc4, 0x06, 0x76, 0xb3, 0x31, 0x20, 0x00, 0x00,
-	0xff, 0xff, 0xf3, 0xe8, 0xc7, 0x59, 0xf8, 0x00, 0x00, 0x00,
+	// 551 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x53, 0xcf, 0x6e, 0xd3, 0x4e,
+	0x10, 0x8e, 0xf3, 0x3f, 0xe3, 0xaa, 0x8d, 0xb6, 0xe9, 0xef, 0x67, 0xa5, 0xc8, 0x0d, 0x15, 0x42,
+	0x81, 0x83, 0xa3, 0x86, 0x13, 0xdc, 0x92, 0x22, 0x95, 0xde, 0xd0, 0x96, 0x13, 0x87, 0x46, 0x1b,
+	0x7b, 0xeb, 0x58, 0xb2, 0xbd, 0xd6, 0xee, 0x36, 0xd4, 0x6f, 0xc1, 0x23, 0xf0, 0x0a, 0xbc, 0x05,
+	0xc7, 0x5c, 0x90, 0x38, 0xa2, 0xe4, 0xc2, 0x63, 0x20, 0xef, 0xda, 0x49, 0x1a, 0xd2, 0x93, 0x77,
+	0xe6, 0xfb, 0xfc, 0xcd, 0x37, 0x3b, 0xb3, 0xd0, 0x8d, 0x52, 0x39, 0x63, 0x62, 0xf0, 0x85, 0x88,
+	0xe8, 0x61, 0x30, 0xbf, 0x18, 0x70, 0x16, 0x52, 0x27, 0xe1, 0x4c, 0x32, 0x74, 0xa4, 0x31, 0x47,
+	0x61, 0xce, 0xfc, 0xa2, 0xdb, 0xf1, 0x99, 0xcf, 0x14, 0x36, 0xc8, 0x4e, 0x9a, 0xd6, 0xb5, 0x77,
+	0x25, 0x5c, 0x16, 0x4b, 0x4e, 0x5c, 0xa9, 0xf1, 0xf3, 0xef, 0x06, 0x98, 0x98, 0x85, 0xf4, 0x72,
+	0x46, 0x62, 0x9f, 0x7a, 0x08, 0x41, 0x35, 0x2b, 0x62, 0x19, 0x3d, 0xa3, 0xdf, 0xc2, 0xea, 0x8c,
+	0x3a, 0x50, 0x0b, 0xc9, 0x94, 0x86, 0x56, 0x59, 0x25, 0x75, 0x80, 0x5e, 0x41, 0xbb, 0xd0, 0x9a,
+	0x10, 0xcf, 0xe3, 0x54, 0x08, 0xab, 0xa2, 0x08, 0x47, 0x45, 0x7e, 0xa4, 0xd3, 0xe8, 0x0a, 0x4c,
+	0xe2, 0xca, 0x80, 0xc5, 0x13, 0x99, 0x26, 0xd4, 0xaa, 0xf6, 0x8c, 0xfe, 0xe1, 0xf0, 0xa5, 0xb3,
+	0xd3, 0x81, 0xb3, 0xe5, 0x63, 0xa4, 0xe8, 0x9f, 0xd2, 0x84, 0x62, 0x20, 0xeb, 0xf3, 0xbb, 0xea,
+	0x9f, 0x6f, 0x67, 0xa5, 0xf3, 0x9f, 0x06, 0x54, 0x33, 0xee, 0x5e, 0xb3, 0x57, 0x70, 0x20, 0x24,
+	0xe3, 0xc4, 0xa7, 0xba, 0x58, 0x59, 0x15, 0x7b, 0xf1, 0x4f, 0xb1, 0xcb, 0xdc, 0xe3, 0x8d, 0x26,
+	0xab, 0x52, 0xa6, 0xd8, 0x04, 0xc8, 0x82, 0x46, 0xc2, 0x83, 0x88, 0xf0, 0x54, 0xb5, 0x55, 0xc3,
+	0x45, 0x88, 0xba, 0xd0, 0x8c, 0xee, 0x43, 0x19, 0x24, 0xa1, 0xee, 0xa5, 0x89, 0xd7, 0x31, 0xfa,
+	0x0f, 0xea, 0xea, 0x7a, 0x84, 0x55, 0xeb, 0x55, 0xfa, 0x2d, 0x9c, 0x47, 0xe8, 0x19, 0xb4, 0xf2,
+	0x4b, 0xa2, 0xc2, 0xaa, 0x2b, 0x68, 0x93, 0xc8, 0xfb, 0xba, 0x05, 0x74, 0x93, 0x0a, 0x49, 0xa3,
+	0xc2, 0xdb, 0x93, 0x4d, 0xee, 0x9f, 0xc8, 0x8e, 0xe3, 0xe6, 0xda, 0x71, 0xae, 0xbf, 0x28, 0xc3,
+	0xb1, 0x2e, 0x30, 0x66, 0x4c, 0x0a, 0xc9, 0x49, 0xf2, 0x9e, 0x48, 0x82, 0x9e, 0xc3, 0x41, 0xa6,
+	0xba, 0x9e, 0xa2, 0xae, 0x64, 0x66, 0xb9, 0x62, 0x82, 0x43, 0x38, 0x71, 0x99, 0x47, 0x27, 0x9c,
+	0xfa, 0x81, 0x90, 0x3c, 0x5d, 0x73, 0xb5, 0x81, 0xe3, 0x0c, 0xc4, 0x39, 0x56, 0xfc, 0xd3, 0xcf,
+	0x16, 0x64, 0xfb, 0x9f, 0xc0, 0x53, 0xbe, 0xaa, 0xf8, 0x70, 0x9b, 0x7e, 0xed, 0x21, 0x0c, 0xff,
+	0x3f, 0x66, 0xaa, 0x28, 0x88, 0xef, 0x98, 0xba, 0x5f, 0x73, 0x78, 0xba, 0x67, 0x7c, 0x1e, 0xbd,
+	0x8e, 0xef, 0xd8, 0xc7, 0x31, 0xee, 0x6c, 0xab, 0x15, 0x79, 0x74, 0x0b, 0xa7, 0xbb, 0x9a, 0xf9,
+	0xb2, 0x2a, 0xdd, 0x9a, 0xd2, 0x3d, 0x7b, 0x72, 0x2d, 0x72, 0x6d, 0xeb, 0xb1, 0xf6, 0x06, 0xd3,
+	0x57, 0xfa, 0xfa, 0x2d, 0x9c, 0xec, 0xdd, 0x5a, 0x64, 0x42, 0x03, 0xd3, 0x24, 0x24, 0x2e, 0x6d,
+	0x97, 0x50, 0x03, 0x2a, 0x23, 0xcf, 0x6b, 0x1b, 0x08, 0xa0, 0x8e, 0x69, 0xc4, 0xe6, 0xb4, 0x5d,
+	0x1e, 0x7f, 0xf8, 0xb1, 0xb4, 0x8d, 0xc5, 0xd2, 0x36, 0x7e, 0x2f, 0x6d, 0xe3, 0xeb, 0xca, 0x2e,
+	0x2d, 0x56, 0x76, 0xe9, 0xd7, 0xca, 0x2e, 0x7d, 0x76, 0xfc, 0x40, 0xce, 0xee, 0xa7, 0x8e, 0xcb,
+	0xa2, 0x41, 0xc8, 0x38, 0xf5, 0x48, 0x4c, 0xdc, 0x80, 0x0b, 0x49, 0x49, 0xfe, 0x8e, 0x1f, 0xf2,
+	0x6f, 0xb6, 0xe1, 0x62, 0x5a, 0x57, 0x4f, 0xf9, 0xcd, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x1f,
+	0xa3, 0xce, 0x11, 0x2f, 0x04, 0x00, 0x00,
 }
 
-func (m *Role) Marshal() (dAtA []byte, err error) {
+func (m *RoleChanged) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -121,16 +406,21 @@ func (m *Role) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Role) MarshalTo(dAtA []byte) (int, error) {
+func (m *RoleChanged) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Role) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *RoleChanged) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.ActionType != 0 {
+		i = encodeVarintRole(dAtA, i, uint64(m.ActionType))
+		i--
+		dAtA[i] = 0x20
+	}
 	if len(m.ContractAddress) > 0 {
 		i -= len(m.ContractAddress)
 		copy(dAtA[i:], m.ContractAddress)
@@ -155,6 +445,187 @@ func (m *Role) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *Role) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Role) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Role) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Addresses) > 0 {
+		for iNdEx := len(m.Addresses) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Addresses[iNdEx])
+			copy(dAtA[i:], m.Addresses[iNdEx])
+			i = encodeVarintRole(dAtA, i, uint64(len(m.Addresses[iNdEx])))
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if len(m.Labels) > 0 {
+		for iNdEx := len(m.Labels) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Labels[iNdEx])
+			copy(dAtA[i:], m.Labels[iNdEx])
+			i = encodeVarintRole(dAtA, i, uint64(len(m.Labels[iNdEx])))
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
+	if m.Multiple {
+		i--
+		if m.Multiple {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.Primary != 0 {
+		i = encodeVarintRole(dAtA, i, uint64(m.Primary))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.StorageType != 0 {
+		i = encodeVarintRole(dAtA, i, uint64(m.StorageType))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Role) > 0 {
+		i -= len(m.Role)
+		copy(dAtA[i:], m.Role)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.Role)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SystemContractRole) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SystemContractRole) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SystemContractRole) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Primary {
+		i--
+		if m.Primary {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.Label) > 0 {
+		i -= len(m.Label)
+		copy(dAtA[i:], m.Label)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.Label)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Role) > 0 {
+		i -= len(m.Role)
+		copy(dAtA[i:], m.Role)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.Role)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SystemBootstrapData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SystemBootstrapData) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SystemBootstrapData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.CodeRegistryContractInfo != nil {
+		{
+			size, err := m.CodeRegistryContractInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRole(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.CodeRegistryCodeInfo != nil {
+		{
+			size, err := m.CodeRegistryCodeInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRole(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.CodeRegistryId != 0 {
+		i = encodeVarintRole(dAtA, i, uint64(m.CodeRegistryId))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.CodeRegistryAddress) > 0 {
+		i -= len(m.CodeRegistryAddress)
+		copy(dAtA[i:], m.CodeRegistryAddress)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.CodeRegistryAddress)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.RoleAddress) > 0 {
+		i -= len(m.RoleAddress)
+		copy(dAtA[i:], m.RoleAddress)
+		i = encodeVarintRole(dAtA, i, uint64(len(m.RoleAddress)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintRole(dAtA []byte, offset int, v uint64) int {
 	offset -= sovRole(v)
 	base := offset
@@ -166,7 +637,7 @@ func encodeVarintRole(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *Role) Size() (n int) {
+func (m *RoleChanged) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -184,6 +655,91 @@ func (m *Role) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovRole(uint64(l))
 	}
+	if m.ActionType != 0 {
+		n += 1 + sovRole(uint64(m.ActionType))
+	}
+	return n
+}
+
+func (m *Role) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Role)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	if m.StorageType != 0 {
+		n += 1 + sovRole(uint64(m.StorageType))
+	}
+	if m.Primary != 0 {
+		n += 1 + sovRole(uint64(m.Primary))
+	}
+	if m.Multiple {
+		n += 2
+	}
+	if len(m.Labels) > 0 {
+		for _, s := range m.Labels {
+			l = len(s)
+			n += 1 + l + sovRole(uint64(l))
+		}
+	}
+	if len(m.Addresses) > 0 {
+		for _, s := range m.Addresses {
+			l = len(s)
+			n += 1 + l + sovRole(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *SystemContractRole) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Role)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	l = len(m.Label)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	if m.Primary {
+		n += 2
+	}
+	return n
+}
+
+func (m *SystemBootstrapData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.RoleAddress)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	l = len(m.CodeRegistryAddress)
+	if l > 0 {
+		n += 1 + l + sovRole(uint64(l))
+	}
+	if m.CodeRegistryId != 0 {
+		n += 1 + sovRole(uint64(m.CodeRegistryId))
+	}
+	if m.CodeRegistryCodeInfo != nil {
+		l = m.CodeRegistryCodeInfo.Size()
+		n += 1 + l + sovRole(uint64(l))
+	}
+	if m.CodeRegistryContractInfo != nil {
+		l = m.CodeRegistryContractInfo.Size()
+		n += 1 + l + sovRole(uint64(l))
+	}
 	return n
 }
 
@@ -193,7 +749,7 @@ func sovRole(x uint64) (n int) {
 func sozRole(x uint64) (n int) {
 	return sovRole(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *Role) Unmarshal(dAtA []byte) error {
+func (m *RoleChanged) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -216,10 +772,10 @@ func (m *Role) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Role: wiretype end group for non-group")
+			return fmt.Errorf("proto: RoleChanged: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Role: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: RoleChanged: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -317,6 +873,568 @@ func (m *Role) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ContractAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ActionType", wireType)
+			}
+			m.ActionType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ActionType |= RoleChangedActionType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRole(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRole
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Role) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRole
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Role: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Role: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Role", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Role = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StorageType", wireType)
+			}
+			m.StorageType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.StorageType |= ContractStorageType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Primary", wireType)
+			}
+			m.Primary = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Primary |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Multiple", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Multiple = bool(v != 0)
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Labels", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Labels = append(m.Labels, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Addresses", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Addresses = append(m.Addresses, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRole(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRole
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SystemContractRole) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRole
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SystemContractRole: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SystemContractRole: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Role", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Role = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Label", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Label = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Primary", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Primary = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRole(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthRole
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SystemBootstrapData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRole
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SystemBootstrapData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SystemBootstrapData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RoleAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RoleAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CodeRegistryAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryId", wireType)
+			}
+			m.CodeRegistryId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CodeRegistryId |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryCodeInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CodeRegistryCodeInfo == nil {
+				m.CodeRegistryCodeInfo = &CodeInfoPB{}
+			}
+			if err := m.CodeRegistryCodeInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeRegistryContractInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRole
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRole
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthRole
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CodeRegistryContractInfo == nil {
+				m.CodeRegistryContractInfo = &ContractInfoPB{}
+			}
+			if err := m.CodeRegistryContractInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

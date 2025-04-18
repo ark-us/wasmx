@@ -100,6 +100,48 @@ func wasmxStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []in
 	return returns, nil
 }
 
+// wasmxStorageDelete(key: ArrayBuffer)
+func wasmxStorageDelete(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	key, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	// refund some gas?
+	ctx.ContractStore.Delete(key)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func wasmxStorageDeleteRange(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req StorageDeleteRange
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	startKey := req.StartKey
+	endKey := req.EndKey
+	if len(startKey) == 0 {
+		startKey = nil
+	}
+	if len(endKey) == 0 {
+		endKey = nil
+	}
+
+	iter := ctx.ContractStore.Iterator(startKey, endKey)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		ctx.ContractStore.Delete(iter.Key())
+	}
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
 func wasmxStorageLoadRange(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	reqbz, err := rnh.ReadMemFromPtr(params[0])
@@ -220,18 +262,6 @@ func wasmxLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 		Topics:           wlog.Topics,
 	}
 	ctx.Logs = append(ctx.Logs, log)
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
-// SSTORE key_ptr: i32, value_ptr: i32,
-func storageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 0)
-	return returns, nil
-}
-
-// SLOAD key_ptr: i32, result_ptr: i32
-func storageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
@@ -384,8 +414,6 @@ func BuildWasmxEnv1(context *Context, rnh memc.RuntimeHandler) (interface{}, err
 		vm.BuildFn("setReturnData", wasmxSetFinishData, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("finish", wasmxFinish, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("revert", wasmxRevert, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("storageLoad_global", storageLoadGlobal, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
-		vm.BuildFn("storageStore_global", storageStoreGlobal, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)

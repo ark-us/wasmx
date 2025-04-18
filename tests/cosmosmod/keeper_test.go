@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// KeeperTestSuite is a testing suite to test keeper functions
+// KeeperTestSuite is a testing suite to run tests on the same chain
 type KeeperTestSuite struct {
 	wt.KeeperTestSuite
 }
@@ -47,6 +47,7 @@ var s *KeeperTestSuite
 func (suite *KeeperTestSuite) SetupSuite() {
 	suite.MaxBlockGas = 100_000_000_000
 	suite.SystemContractsModify = ut.SystemContractsModify(wasmRuntime)
+	suite.GenesisModify = ut.GenesisModify
 	mydir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -69,10 +70,22 @@ func (suite *KeeperTestSuite) SetupSuite() {
 	suite.SetupChains()
 }
 
+func (suite *KeeperTestSuite) TearDownSuite() {
+	suite.TearDownChains()
+}
+
+func (suite *KeeperTestSuite) SetupTest() {
+}
+
+func (suite *KeeperTestSuite) TearDownTest() {
+}
+
 // TestKeeperTestSuite runs all the tests within this package.
 func TestKeeperTestSuite(t *testing.T) {
 	s = new(KeeperTestSuite)
+	s2 = new(KeeperTestSuite2)
 	suite.Run(t, s)
+	suite.Run(t, s2)
 
 	// Run Ginkgo integration tests
 	RegisterFailHandler(Fail)

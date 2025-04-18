@@ -72,7 +72,7 @@ func getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 		return nil, err
 	}
 	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	_, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address.Bytes())
+	_, codeInfo, _, err := ctx.CosmosHandler.GetContractInstance(address)
 	if err != nil {
 		return nil, err
 	}
@@ -87,53 +87,6 @@ func getAccount(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 		return nil, err
 	}
 	ptr, err := rnh.AllocateWriteMem(codebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
-}
-
-// address -> codeInfo
-func getCodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	codeId := uint64(params[0].(int64))
-	codeInfo := ctx.CosmosHandler.GetCodeInfo(codeId)
-	var err error
-	bz := []byte{}
-	if codeInfo != nil {
-		bz, err = ctx.CosmosHandler.Codec().MarshalJSON(codeInfo)
-		if err != nil {
-			return nil, err
-		}
-	}
-	ptr, err := rnh.AllocateWriteMem(bz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
-}
-
-// address -> contractInfo
-func getContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	addr, err := rnh.ReadMemFromPtr(params[0])
-	if err != nil {
-		return nil, err
-	}
-	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	contractInfo := ctx.CosmosHandler.GetContractInfo(address.Bytes())
-	bz := []byte{}
-	if contractInfo != nil {
-		bz, err = ctx.CosmosHandler.Codec().MarshalJSON(contractInfo)
-		if err != nil {
-			return nil, err
-		}
-	}
-	ptr, err := rnh.AllocateWriteMem(bz)
 	if err != nil {
 		return nil, err
 	}
@@ -956,6 +909,8 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getAddress", wasmxGetAddress, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageLoad", wasmxStorageLoad, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageStore", wasmxStorageStore, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageDelete", wasmxStorageDelete, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageDeleteRange", wasmxStorageDeleteRange, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("storageLoadRange", wasmxStorageLoadRange, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageLoadRangePairs", wasmxStorageLoadRangePairs, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("log", wasmxLog, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
@@ -970,8 +925,6 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getBlockHash", wasmxGetBlockHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getCurrentBlock", wasmxGetCurrentBlock, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getAccount", getAccount, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("getCodeInfo", getCodeInfo, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("getContractInfo", getContractInfo, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("getBalance", wasmxGetBalance, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("call", wasmxCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("keccak256", keccak256Util, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),

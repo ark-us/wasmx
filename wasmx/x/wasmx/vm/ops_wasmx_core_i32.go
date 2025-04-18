@@ -6,6 +6,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
@@ -13,6 +14,19 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
 )
+
+type MigrateContractStateByStorageRequest struct {
+	ContractAddress   string                    `json:"contract_address"`
+	SourceStorageType types.ContractStorageType `json:"source_storage_type"`
+	TargetStorageType types.ContractStorageType `json:"target_storage_type"`
+}
+
+type MigrateContractStateByAddressRequest struct {
+	SourceContractAddress string                    `json:"source_contract_address"`
+	TargetContractAddress string                    `json:"target_contract_address"`
+	SourceStorageType     types.ContractStorageType `json:"source_storage_type"`
+	TargetStorageType     types.ContractStorageType `json:"target_storage_type"`
+}
 
 func migrateContractStateByStorageType(
 	ctx sdk.Context,
@@ -33,13 +47,27 @@ func migrateContractStateByStorageType(
 	}
 }
 
-type MigrateContractStateByStorageRequest struct {
-	ContractAddress   string                    `json:"contract_address"`
-	SourceStorageType types.ContractStorageType `json:"source_storage_type"`
-	TargetStorageType types.ContractStorageType `json:"target_storage_type"`
+func migrateContractStateByAddress(
+	ctx sdk.Context,
+	sourceContractAddress sdk.AccAddress,
+	targetContractAddress sdk.AccAddress,
+	sourceStorageType types.ContractStorageType,
+	targetStorageType types.ContractStorageType,
+	getContractStore func(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store,
+) {
+	prefixStoreKeySource := types.GetContractStorePrefix(sourceContractAddress)
+	prefixStoreKeyTarget := types.GetContractStorePrefix(targetContractAddress)
+	prefixStoreSource := getContractStore(ctx, sourceStorageType, prefixStoreKeySource)
+	prefixStoreTarget := getContractStore(ctx, targetStorageType, prefixStoreKeyTarget)
+	iter := prefixStoreSource.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		prefixStoreTarget.Set(iter.Key(), iter.Value())
+		prefixStoreSource.Delete(iter.Key())
+	}
 }
 
-// address -> codeInfo
 func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	data, err := rnh.ReadMemFromPtr(params[0])
@@ -62,24 +90,28 @@ func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.Runtim
 	return returns, nil
 }
 
-func setContractInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func coreMigrateContractStateByAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	addr, err := rnh.ReadMemFromPtr(params[0])
+	data, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
 		return nil, err
 	}
-	address := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addr))
-	data, err := rnh.ReadMemFromPtr(params[1])
+	var req MigrateContractStateByAddressRequest
+	err = json.Unmarshal(data, &req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot be unmarshalled")
+	}
+	sourceAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.SourceContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot unmarshal source contract address")
+	}
+	targetAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.TargetContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot unmarshal target contract address")
 	}
 
-	var contractInfo types.ContractInfo
-	err = ctx.CosmosHandler.Codec().UnmarshalJSON(data, &contractInfo)
-	if err != nil {
-		return nil, fmt.Errorf("ContractInfo cannot be unmarshalled")
-	}
-	ctx.CosmosHandler.SetContractInfo(address.Bytes(), &contractInfo)
+	migrateContractStateByAddress(ctx.Ctx, sourceAddr.Bytes(), targetAddr.Bytes(), req.SourceStorageType, req.TargetStorageType, ctx.GetCosmosHandler().ContractStore)
+
 	returns := make([]interface{}, 0)
 	return returns, nil
 }
@@ -462,11 +494,154 @@ func coreWasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHa
 	return returns, nil
 }
 
+type GlobalStorageStoreRequest struct {
+	StoreKey string `json:"store_key"`
+	Key      []byte `json:"key"`
+	Value    []byte `json:"value"`
+}
+
+type GlobalStorageLoadRequest struct {
+	StoreKey string `json:"store_key"`
+	Key      []byte `json:"key"`
+}
+
+type GlobalStorageResetRequest struct {
+	StoreKey string `json:"store_key"`
+}
+
+type GlobalStorageResetResponse struct {
+	Error string `json:"error"`
+}
+
+func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageStoreRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	store.Set(req.Key, req.Value)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreWasmxStorageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	data := store.Get(req.Key)
+	ptr, err := rnh.AllocateWriteMem(data)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
+func coreWasmxStorageDeleteGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	store.Delete(req.Key)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreWasmxStorageHasGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	haskey := store.Has(req.Key)
+	returns := make([]interface{}, 1)
+	returns[0] = int32(0)
+	if haskey {
+		returns[0] = int32(1)
+	}
+	return returns, nil
+}
+
+func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageResetRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	err = store.Reset()
+	resp := GlobalStorageResetResponse{Error: ""}
+	if err != nil {
+		resp.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	ptr, err := rnh.AllocateWriteMem(responsebz)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
 func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("setContractInfo", setContractInfo, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("migrateContractStateByStorageType", coreMigrateContractStateByStorageType, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("migrateContractStateByAddress", coreMigrateContractStateByAddress, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("externalCall", coreExternalCall, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("grpcRequest", coreWasmxGrpcRequest, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("startTimeout", coreWasmxStartTimeout, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
@@ -477,6 +652,12 @@ func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{
 
 		// TODO
 		// env.AddFunction("endBackgroundProcess", NewFunction(functype_i32_, wasmxEndBackgroundProcess, context, 0))
+
+		vm.BuildFn("storageLoadGlobal", coreWasmxStorageLoadGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("storageStoreGlobal", coreWasmxStorageStoreGlobal, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageDeleteGlobal", coreWasmxStorageDeleteGlobal, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("storageHasGlobal", coreWasmxStorageHasGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("storageResetGlobal", coreWasmxStorageResetGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmxcore", context, fndefs)

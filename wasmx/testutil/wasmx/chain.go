@@ -20,6 +20,7 @@ import (
 	//nolint
 
 	sdkmath "cosmossdk.io/math"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -80,6 +81,8 @@ type KeeperTestSuite struct {
 	CompiledCacheDir      string
 	MaxBlockGas           int64
 	SystemContractsModify func([]wasmxtypes.SystemContract) []wasmxtypes.SystemContract
+	GenesisModify         func(genesisState map[string]json.RawMessage, app ibcgotesting.TestingApp) map[string]json.RawMessage
+	GetDB                 func(dbpath string) dbm.DB
 }
 
 type TestChain struct {
@@ -224,6 +227,17 @@ func (suite *KeeperTestSuite) SetupChains() {
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 }
 
+func (suite *KeeperTestSuite) NewValidator() *tmtypes.Validator {
+	t := suite.T()
+	// generate validator private/public key
+	privVal := mock.NewPV()
+	pubKey, err := privVal.GetPubKey()
+	require.NoError(t, err)
+	// create validator set with single validator
+	validator := tmtypes.NewValidator(pubKey, 1)
+	return validator
+}
+
 func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfig, index int32) {
 	t := suite.T()
 
@@ -254,14 +268,14 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	}
 	// testApp, resInit := ibctesting.SetupWithGenesisValSet(t, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, balance)
 
-	testApp, genesisState, err := ibctesting.BuildGenesisData(suite.WasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance}, suite.CompiledCacheDir)
+	testApp, genesisState, err := ibctesting.BuildGenesisData(suite.WasmVmMeta, valSet, []cosmosmodtypes.GenesisAccount{acc}, chainId, *chaincfg, index, []banktypes.Balance{balance}, suite.CompiledCacheDir, suite.GetDB)
 	require.NoError(t, err)
 
 	var wasmxGenState wasmxtypes.GenesisState
 	testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
 
 	if strings.Contains(chainId, "level") {
-		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+		feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 		require.NoError(t, err)
 		mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
 		require.NoError(t, err)
@@ -273,6 +287,10 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	}
 
 	genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
+
+	if suite.GenesisModify != nil {
+		genesisState = suite.GenesisModify(genesisState, testApp)
+	}
 
 	testApp, resInit := ibctesting.InitAppChain(t, testApp, genesisState, chainId)
 
@@ -654,7 +672,7 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 		}
 	}
 	lastBlock := suite.App().LastBlockHeight()
-	res, err := suite.GetBlock(suite.TestChain.GetContext(), lastBlock)
+	res, _, _, err := suite.GetBlock(suite.TestChain.GetContext(), lastBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -698,36 +716,36 @@ func (suite *KeeperTestSuite) GetLastInterval(ctx sdk.Context) string {
 	return suite.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
 }
 
-func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFinalizeBlock, error) {
+func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFinalizeBlock, *cmttypes.Header, *cmttypes.Commit, error) {
 	key := types.GetBlockKey(height)
 	data := suite.GetContextValue(ctx, key, wasmxtypes.ROLE_STORAGE)
 	if len(data) == 0 {
-		return nil, fmt.Errorf("tx block (%d) not found", height)
+		return nil, nil, nil, fmt.Errorf("tx block (%d) not found", height)
 	}
 	var entry types.BlockEntry
 	err := json.Unmarshal([]byte(data), &entry)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	var blockResultData abci.ResponseFinalizeBlock
 	err = json.Unmarshal(entry.Result, &blockResultData)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	var header cmttypes.Header
 	err = json.Unmarshal(entry.Header, &header)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	var lastCommit cmttypes.Commit
 	err = json.Unmarshal(entry.LastCommit, &lastCommit)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	return &blockResultData, nil
+	return &blockResultData, &header, &lastCommit, nil
 }
 
 func (suite *KeeperTestSuite) raftToLeader() {

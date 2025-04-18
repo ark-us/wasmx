@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -38,12 +37,16 @@ func (k *Keeper) Deploy(
 	return k.CreateInterpreted(ctx, &creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{})
 }
 
-func (k *Keeper) PinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) (*types.CodeInfo, error) {
-	return k.pinCode(ctx, codeId, compiledFolderPath, meteringOff)
+func (k *Keeper) PinCode(ctx sdk.Context, codeHash []byte, compiledFolderPath string, meteringOff bool) error {
+	return k.pinCode(ctx, codeHash, compiledFolderPath, meteringOff)
 }
 
 func (k *Keeper) PinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) error {
-	return k.pinCodeAndStore(ctx, codeId, compiledFolderPath, meteringOff)
+	codeInfo, err := k.GetCodeInfo(ctx, codeId)
+	if err != nil {
+		return err
+	}
+	return k.pinCodeAndStore(ctx, codeInfo, compiledFolderPath, meteringOff)
 }
 
 func (k *Keeper) UnpinCode(ctx sdk.Context, codeId uint64) error {
@@ -117,15 +120,53 @@ func (k *Keeper) QuerySmart(ctx sdk.Context, contractAddr mcodec.AccAddressPrefi
 	return res.Data, nil
 }
 
-func (k *Keeper) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (types.ContractDependency, error) {
-	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr.Bytes())
+func (k *Keeper) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (*types.ContractDependency, error) {
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, addr)
 	if err != nil {
-		return types.ContractDependency{}, err
+		return nil, err
 	}
-	return k.GetContractDependencyInner(ctx, addr, contractInfo, codeInfo, prefixStoreKey)
+	// there is not contract registered yet, we just have a simple address
+	if codeInfo == nil || contractInfo == nil {
+		return nil, nil
+	}
+	cdep, err := k.GetContractDependencyInner(ctx, addr, *contractInfo, *codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
+	return &cdep, nil
 }
 
 func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddressPrefixed, contractInfo types.ContractInfo, codeInfo types.CodeInfo, prefixStoreKey []byte) (types.ContractDependency, error) {
+	cdep, err := k.GetContractDependencyInnerWithoutRoles(ctx, addr, contractInfo, codeInfo, prefixStoreKey)
+	if err != nil {
+		return types.ContractDependency{}, err
+	}
+
+	// shortcut for roles contract, to avoid cycle
+	if k.GetRoleContractAddress(ctx).String() == addr.String() {
+		cdep.Role = types.ROLE_ROLES
+		cdep.RoleLabel = contractInfo.Label
+		return cdep, nil
+	}
+	if k.GetCodeRegistryAddress(ctx).String() == addr.String() {
+		cdep.Role = types.ROLE_STORAGE_CONTRACTS
+		cdep.RoleLabel = contractInfo.Label
+		return cdep, nil
+	}
+
+	label := k.GetRoleLabelByContract(ctx, addr)
+	role := k.GetRoleByLabel(ctx, label)
+	rolename := ""
+	if role != nil {
+		rolename = role.Role
+	}
+
+	cdep.Role = rolename
+	cdep.RoleLabel = label
+	return cdep, nil
+}
+
+func (k *Keeper) GetContractDependencyInnerWithoutRoles(ctx sdk.Context, addr mcodec.AccAddressPrefixed, contractInfo types.ContractInfo, codeInfo types.CodeInfo, prefixStoreKey []byte) (types.ContractDependency, error) {
 	var sdeps = k.SystemDepsFromCodeDeps(ctx, codeInfo.Deps)
 	aotFilePath := ""
 	if codeInfo.Pinned {
@@ -135,6 +176,7 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 
 	cdep := types.ContractDependency{
 		Address:       addr,
+		Label:         contractInfo.Label,
 		StoreKey:      prefixStoreKey,
 		CodeFilePath:  filepath,
 		AotFilePath:   aotFilePath,
@@ -147,23 +189,6 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 		Pinned:        codeInfo.Pinned,
 		MeteringOff:   codeInfo.MeteringOff,
 	}
-
-	// shortcut for roles contract, to avoid cycle
-	if bytes.Equal(k.GetRoleContractAddress(ctx), addr.Bytes()) {
-		cdep.Role = types.ROLE_ROLES
-		cdep.Label = contractInfo.Label
-		return cdep, nil
-	}
-
-	label := k.GetRoleLabelByContract(ctx, addr)
-	role := k.GetRoleByLabel(ctx, label)
-	rolename := ""
-	if role != nil {
-		rolename = role.Role
-	}
-
-	cdep.Role = rolename
-	cdep.Label = label
 	return cdep, nil
 }
 
@@ -171,7 +196,6 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 	if creator == nil {
 		return 0, checksum, sdkerr.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
 	}
-
 	if ioutils.IsGzip(wasmCode) {
 		ctx.GasMeter().ConsumeGas(k.gasRegister.UncompressCosts(len(wasmCode)), "Uncompress gzip bytecode")
 		wasmCode, err = ioutils.Uncompress(wasmCode, uint64(types.MaxWasmSize))
@@ -179,7 +203,34 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 			return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 		}
 	}
+	codeInfo, err := k.createCodeInfo(ctx, *creator, wasmCode, deps, metadata, pinned, meteringOff)
+	if err != nil {
+		return 0, checksum, err
+	}
+	codeID, err = k.storeNewCodeInfo(ctx, codeInfo)
+	if err != nil {
+		return 0, checksum, err
+	}
 
+	k.Logger(ctx).Debug("storing new contract", "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(checksum))
+
+	evt := sdk.NewEvent(
+		types.EventTypeStoreCode,
+		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(checksum)),
+		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)), // last element to be compatible with scripts
+	)
+	for _, d := range codeInfo.Deps {
+		evt.AppendAttributes(sdk.NewAttribute(types.AttributeKeyRequiredCapability, d))
+	}
+	ctx.EventManager().EmitEvent(evt)
+
+	k.Logger(ctx).Debug("created new contract", "code_id", codeID)
+
+	return codeID, checksum, nil
+}
+
+func (k *Keeper) createCodeInfo(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool) (codeInfo types.CodeInfo, err error) {
+	var checksum []byte
 	var reportDeps = make([]string, 0)
 
 	if ioutils.IsWasm(wasmCode) {
@@ -192,12 +243,12 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 		}
 	}
 	if err != nil {
-		return 0, checksum, err
+		return types.CodeInfo{}, err
 	}
 	reportDeps = uniqueStrings(append(reportDeps, deps...))
 
 	if len(checksum) == 0 {
-		return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")
+		return types.CodeInfo{}, sdkerr.Wrap(types.ErrCreateFailed, "this is not wasm code, use deploy")
 	}
 
 	// TODO cache current supported deps (including interpreters) and verify these here
@@ -205,29 +256,14 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 	// 	return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, "incorrect deps")
 	// }
 
-	codeID = k.autoIncrementID(ctx)
-	k.Logger(ctx).Debug("storing new contract", "deps", reportDeps, "code_id", codeID, "checksum", hex.EncodeToString(checksum))
-	codeInfo := types.NewCodeInfo(checksum, creator.String(), reportDeps, metadata, pinned, meteringOff)
+	codeInfo = types.NewCodeInfo(checksum, creator.String(), reportDeps, metadata, pinned, meteringOff)
 	if types.HasInterpreterDep(deps) && !types.HasUtf8Dep(deps) {
 		// TODO only store one
 		codeInfo.InterpretedBytecodeDeployment = wasmCode
 		codeInfo.InterpretedBytecodeRuntime = wasmCode
 	}
-	k.storeCodeInfo(ctx, codeID, codeInfo)
 
-	evt := sdk.NewEvent(
-		types.EventTypeStoreCode,
-		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(checksum)),
-		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)), // last element to be compatible with scripts
-	)
-	for _, d := range reportDeps {
-		evt.AppendAttributes(sdk.NewAttribute(types.AttributeKeyRequiredCapability, d))
-	}
-	ctx.EventManager().EmitEvent(evt)
-
-	k.Logger(ctx).Debug("created new contract", "code_id", codeID)
-
-	return codeID, checksum, nil
+	return codeInfo, nil
 }
 
 func (k *Keeper) createWasm(ctx sdk.Context, wasmCode []byte) (checksum []byte, reportDeps []string, err error) {
@@ -289,7 +325,10 @@ func (k *Keeper) CreateInterpreted(
 	// }
 
 	checksum = k.wasmvm.checksum(wasmCode)
-	codeID = k.autoIncrementID(ctx)
+	codeID, err = k.GetNextCodeId(ctx)
+	if err != nil {
+		return 0, nil, mcodec.AccAddressPrefixed{}, err
+	}
 	k.Logger(ctx).Debug("storing new contract", "deps", deps, "code_id", codeID, "checksum", checksum)
 	codeInfo := types.NewCodeInfo(checksum, creator.String(), deps, metadata, false, false)
 	codeInfo.InterpretedBytecodeDeployment = wasmCode
@@ -314,7 +353,13 @@ func (k *Keeper) CreateInterpreted(
 	codeInfo.InterpretedBytecodeRuntime = runtimeCode
 	// TODO the hash algo will depend on deps
 	codeInfo.RuntimeHash = k.wasmvm.checksum(runtimeCode)
-	k.storeCodeInfo(ctx, codeID, codeInfo)
+	newCodeId, err := k.storeNewCodeInfo(ctx, codeInfo)
+	if err != nil {
+		return 0, checksum, contractAddress, sdkerr.Wrapf(types.ErrCreateFailed, "store code failure: %s", err.Error())
+	}
+	if newCodeId != codeID {
+		return 0, checksum, contractAddress, sdkerr.Wrap(types.ErrCreateFailed, "unexpected code id")
+	}
 
 	evt := sdk.NewEvent(
 		types.EventTypeStoreCode,
@@ -335,61 +380,91 @@ func (k *Keeper) CreateInterpreted(
 	return codeID, checksum, contractAddress, nil
 }
 
-func (k *Keeper) storeCodeInfo(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo) {
-	store := ctx.KVStore(k.storeKey)
-	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(types.GetCodeKey(codeID), k.cdc.MustMarshal(&codeInfo))
-}
+// func (k *Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
+// 	if ioutils.IsGzip(wasmCode) {
+// 		var err error
+// 		wasmCode, err = ioutils.Uncompress(wasmCode, uint64(types.MaxWasmSize))
+// 		if err != nil {
+// 			return sdkerr.Wrap(types.ErrCreateFailed, err.Error())
+// 		}
+// 	}
+// 	newCodeHash, err := k.wasmvm.Create(wasmCode)
+// 	if err != nil {
+// 		return sdkerr.Wrap(types.ErrCreateFailed, err.Error())
+// 	}
+// 	if !bytes.Equal(codeInfo.CodeHash, newCodeHash) {
+// 		return sdkerr.Wrap(types.ErrInvalid, "code hashes not same")
+// 	}
 
-func (k *Keeper) importCode(ctx sdk.Context, codeID uint64, codeInfo types.CodeInfo, wasmCode []byte) error {
-	if ioutils.IsGzip(wasmCode) {
-		var err error
-		wasmCode, err = ioutils.Uncompress(wasmCode, uint64(types.MaxWasmSize))
-		if err != nil {
-			return sdkerr.Wrap(types.ErrCreateFailed, err.Error())
-		}
-	}
-	newCodeHash, err := k.wasmvm.Create(wasmCode)
-	if err != nil {
-		return sdkerr.Wrap(types.ErrCreateFailed, err.Error())
-	}
-	if !bytes.Equal(codeInfo.CodeHash, newCodeHash) {
-		return sdkerr.Wrap(types.ErrInvalid, "code hashes not same")
-	}
+// 	store := ctx.KVStore(k.storeKey)
+// 	key := types.GetCodeKey(codeID)
+// 	if store.Has(key) {
+// 		return sdkerr.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
+// 	}
+// 	// 0x01 | codeID (uint64) -> ContractInfo
+// 	store.Set(key, k.cdc.MustMarshal(&codeInfo))
+// 	return nil
+// }
 
-	store := ctx.KVStore(k.storeKey)
-	key := types.GetCodeKey(codeID)
-	if store.Has(key) {
-		return sdkerr.Wrapf(types.ErrDuplicate, "duplicate code: %d", codeID)
-	}
-	// 0x01 | codeID (uint64) -> ContractInfo
-	store.Set(key, k.cdc.MustMarshal(&codeInfo))
-	return nil
-}
-
+// must be used only internally
 func (k *Keeper) instantiateWithAddress(
 	ctx sdk.Context,
 	codeID uint64,
-	creator *mcodec.AccAddressPrefixed,
+	creator mcodec.AccAddressPrefixed,
 	contractAddress mcodec.AccAddressPrefixed,
 	storageType types.ContractStorageType,
 	initMsg []byte,
 	deposit sdk.Coins,
 	label string,
+	role string,
+	roleLabel string,
+	codeInfo types.CodeInfo,
 ) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate_with_address")
 
-	if creator == nil {
-		return nil, sdkerr.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
+	if err := RequireNotSystemContract(contractAddress.Bytes(), codeInfo.Deps); err != nil {
+		return nil, err
 	}
 
-	// get contact info
-	codeInfo := k.GetCodeInfo(ctx, codeID)
-	if codeInfo == nil {
-		return nil, sdkerr.Wrap(types.ErrNotFound, "code")
+	// res, gasUsed, err := k.ExecuteContractInstantiationInternal(ctx, codeID, &codeInfo, creator, contractAddress, storageType, initMsg, deposit, label)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, creator, creator, deposit)
+	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
+	if err != nil {
+		return nil, err
 	}
-	_, data, err := k.instantiateInternal(ctx, codeID, *creator, *creator, storageType, initMsg, deposit, contractAddress, codeInfo, label)
-	return data, err
+	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
+	prefixStore := k.ContractStore(ctx, storageType, prefixStoreKey)
+
+	contractInfo, err := k.GetContractDependencyInnerWithoutRoles(ctx, contractAddress, types.ContractInfo{CodeId: codeID, StorageType: storageType}, codeInfo, prefixStoreKey)
+	if err != nil {
+		return nil, err
+	}
+	contractInfo.Role = role
+	contractInfo.RoleLabel = roleLabel
+
+	// prepare querier
+	handler := k.newCosmosHandler(ctx, contractAddress)
+
+	// instantiate wasm contract
+	res, gasUsed, err := k.wasmvm.Instantiate(ctx, &codeInfo, env, initMsg, prefixStore, handler, k.gasMeter(ctx), contractInfo)
+
+	k.consumeRuntimeGas(ctx, gasUsed)
+	if err != nil {
+		return nil, sdkerr.Wrap(types.ErrInstantiateFailed, err.Error())
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventTypeInstantiate,
+		sdk.NewAttribute(types.AttributeKeyContractAddrCreated, contractAddress.String()),
+		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeID, 10)),
+	))
+
+	err = k.handleResponseEvents(ctx, contractAddress.String(), "", res.Attributes, res.Events)
+	if err != nil {
+		return nil, sdkerr.Wrap(err, "instantiate dispatch")
+	}
+	return res.Data, err
 }
 
 func (k *Keeper) instantiate(
@@ -403,7 +478,10 @@ func (k *Keeper) instantiate(
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate")
 
 	// get contact info
-	codeInfo := k.GetCodeInfo(ctx, codeID)
+	codeInfo, err := k.GetCodeInfo(ctx, codeID)
+	if err != nil {
+		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrapf(err, "instantiate: cannot get code info")
+	}
 	if codeInfo == nil {
 		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrap(types.ErrNotFound, "code")
 	}
@@ -425,7 +503,10 @@ func (k *Keeper) instantiate2(
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "instantiate")
 
 	// get contact info
-	codeInfo := k.GetCodeInfo(ctx, codeID)
+	codeInfo, err := k.GetCodeInfo(ctx, codeID)
+	if err != nil {
+		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrapf(err, "instantiate2: cannot get code info")
+	}
 	if codeInfo == nil {
 		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrap(types.ErrNotFound, "code")
 	}
@@ -453,7 +534,7 @@ func (k *Keeper) instantiateInternal(
 	instanceCosts := k.gasRegister.NewContractInstanceCosts(k.IsPinnedCode(ctx, codeID), len(initMsg))
 	ctx.GasMeter().ConsumeGas(instanceCosts, "Loading wasm module: instantiate")
 
-	if k.HasContractInfo(ctx, contractAddress.Bytes()) {
+	if k.HasContractInfo(ctx, contractAddress) {
 		return mcodec.AccAddressPrefixed{}, nil, types.ErrDuplicate.Wrap("instance with this contract address already exists")
 	}
 
@@ -465,7 +546,6 @@ func (k *Keeper) instantiateInternal(
 	}
 	res, gasUsed, err := k.ExecuteContractInstantiationInternal(ctx, codeID, codeInfo, creator, contractAddress, storageType, initMsg, deposit, label)
 	k.consumeRuntimeGas(ctx, gasUsed)
-
 	if err != nil {
 		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrap(types.ErrInstantiateFailed, err.Error())
 	}
@@ -489,7 +569,10 @@ func (k *Keeper) instantiateInternal(
 	// }
 
 	// store contract before dispatch so that contract could be called back
-	k.storeContractInfo(ctx, contractAddress.Bytes(), &contractInfo)
+	err = k.storeContractInfo(ctx, contractAddress, contractInfo)
+	if err != nil {
+		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrap(err, "instantiate store contract info")
+	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypeInstantiate,
@@ -503,7 +586,17 @@ func (k *Keeper) instantiateInternal(
 	}
 
 	// we run this logic after instantiation, to be able to initiate the auth contract at genesis
+	err = k.instantiateNewContractAccount(ctx, contractAddress)
+	if err != nil {
+		return mcodec.AccAddressPrefixed{}, nil, sdkerr.Wrap(err, "instantiate create account")
+	}
 
+	k.Logger(ctx).Debug("instantiated new contract", "address", contractAddress.String())
+
+	return contractAddress, res.Data, nil
+}
+
+func (k *Keeper) instantiateNewContractAccount(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) error {
 	// check account
 	// every cosmos module can define custom account types when needed. The cosmos-sdk comes with extension points
 	// to support this and a set of base and vesting account types that we integrated in our default lists.
@@ -513,7 +606,7 @@ func (k *Keeper) instantiateInternal(
 	existingAcct, err := k.GetAccountKeeper().GetAccountPrefixed(ctx, contractAddress)
 	if err != nil && existingAcct != nil {
 		if existingAcct.GetSequence() != 0 || existingAcct.GetPubKey() != nil {
-			return mcodec.AccAddressPrefixed{}, nil, types.ErrAccountExists.Wrap("address is claimed by external account")
+			return types.ErrAccountExists.Wrap("address is claimed by external account")
 		}
 
 		// consider an account in the wasmx namespace spam and overwrite it.
@@ -531,9 +624,7 @@ func (k *Keeper) instantiateInternal(
 			panic(fmt.Sprintf("account not created: %s: %s", contractAddress.String(), err.Error()))
 		}
 	}
-	k.Logger(ctx).Debug("instantiated new contract", "address", contractAddress.String())
-
-	return contractAddress, res.Data, nil
+	return nil
 }
 
 func (k *Keeper) ExecuteContractInstantiationInternal(
@@ -548,7 +639,8 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	label string,
 ) (types.ContractResponse, uint64, error) {
 	// prepare params for contract instantiate call
-	info := types.NewInfo(creator, creator, deposit)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, creator, creator, deposit)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeDeployment, codeInfo.Deps, info)
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -568,43 +660,47 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	handler := k.newCosmosHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
-	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, k.gasMeter(ctx), contractInfo)
+	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, gasMeter, contractInfo)
 }
 
 // PinCode pins the wasm contract in wasmvm cache
-func (k *Keeper) pinCode(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) (*types.CodeInfo, error) {
-	codeInfo := k.GetCodeInfo(ctx, codeId)
-	if codeInfo == nil {
-		return nil, sdkerr.Wrap(types.ErrNotFound, "code info")
+func (k *Keeper) pinCode(ctx sdk.Context, codeHash []byte, compiledFolderPath string, meteringOff bool) error {
+	if err := k.wasmvm.Pin(ctx, codeHash, compiledFolderPath, meteringOff); err != nil {
+		return sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
 	}
-
-	if err := k.wasmvm.Pin(ctx, codeInfo.CodeHash, compiledFolderPath, meteringOff); err != nil {
-		return nil, sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
-	}
-	k.Logger(ctx).Info("contract is AOT compiled", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
-	return codeInfo, nil
+	k.Logger(ctx).Info("contract is AOT compiled", "code_hash", hex.EncodeToString(codeHash))
+	return nil
 }
 
 // PinCode pins the wasm contract in wasmvm cache
-func (k *Keeper) pinCodeAndStore(ctx sdk.Context, codeId uint64, compiledFolderPath string, meteringOff bool) error {
-	codeInfo, err := k.pinCode(ctx, codeId, compiledFolderPath, meteringOff)
+func (k *Keeper) pinCodeAndStore(ctx sdk.Context, codeInfo *types.CodeInfo, compiledFolderPath string, meteringOff bool) error {
+	codeInfo.Pinned = true
+	codeId, err := k.storeNewCodeInfo(ctx, *codeInfo)
+	if err != nil {
+		return sdkerr.Wrap(types.ErrCreateFailed, err.Error())
+	}
+	return k.pinCodeWithEvent(ctx, codeId, codeInfo.CodeHash, compiledFolderPath, meteringOff)
+}
+
+func (k *Keeper) pinCodeWithEvent(ctx sdk.Context, codeId uint64, codeHash []byte, compiledFolderPath string, meteringOff bool) error {
+	err := k.pinCode(ctx, codeHash, compiledFolderPath, meteringOff)
 	if err != nil {
 		return sdkerr.Wrap(types.ErrPinContractFailed, err.Error())
 	}
-	codeInfo.Pinned = true
-	k.storeCodeInfo(ctx, codeId, *codeInfo)
-
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventTypePinCode,
 		sdk.NewAttribute(types.AttributeKeyCodeID, strconv.FormatUint(codeId, 10)),
-		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(codeInfo.CodeHash)),
+		sdk.NewAttribute(types.AttributeKeyChecksum, hex.EncodeToString(codeHash)),
 	))
 	return nil
 }
 
 // UnpinCode removes the wasm contract from wasmvm cache
 func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
-	codeInfo := k.GetCodeInfo(ctx, codeId)
+	codeInfo, err := k.GetCodeInfo(ctx, codeId)
+	if err != nil {
+		return err
+	}
 	if codeInfo == nil {
 		return sdkerr.Wrap(types.ErrNotFound, "code info")
 	}
@@ -613,7 +709,10 @@ func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 	}
 
 	codeInfo.Pinned = false
-	k.storeCodeInfo(ctx, codeId, *codeInfo)
+	err = k.storeCodeInfo(ctx, codeId, *codeInfo)
+	if err != nil {
+		return err
+	}
 	k.Logger(ctx).Info("contract AOT compiled module removed ", "codeId", codeId, "code_hash", hex.EncodeToString(codeInfo.CodeHash))
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
@@ -626,8 +725,8 @@ func (k *Keeper) unpinCode(ctx sdk.Context, codeId uint64) error {
 // Execute executes the contract instance
 func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed, caller mcodec.AccAddressPrefixed, msg []byte, coins sdk.Coins, dependencies []string, inBackground bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "execute")
-	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress.Bytes())
-	if err != nil {
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
+	if err != nil || contractInfo == nil || codeInfo == nil {
 		// This can be just an ethcall sending value
 		// we do not fail, to maintain compatibility with EVM
 		if coins.IsZero() {
@@ -664,21 +763,22 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 		}
 	}
 	// TODO execute with origin
-	info := types.NewInfo(caller, caller, coins)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, caller, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
 	}
 
-	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, *contractInfo, *codeInfo, prefixStoreKey)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, inBackground)
+	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -706,9 +806,12 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 // Execute executes the contract instance
 func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, contractAddress mcodec.AccAddressPrefixed, caller mcodec.AccAddressPrefixed, msg []byte, dependencies []string, inBackground bool) ([]byte, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasmx", "contract", "ExecuteEntryPoint")
-	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress.Bytes())
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
+	}
+	if contractInfo == nil || codeInfo == nil {
+		return nil, fmt.Errorf("contract not found %s", contractAddress.String())
 	}
 
 	if err := RequireNotSystemContract(contractAddress.Bytes(), codeInfo.Deps); err != nil {
@@ -731,21 +834,22 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	executeCosts := k.gasRegister.InstantiateContractCosts(k.IsPinnedCode(ctx, contractInfo.CodeId), len(msg))
 	ctx.GasMeter().ConsumeGas(executeCosts, "WasmX module execution: execute entry point")
 
-	info := types.NewInfo(caller, caller, nil)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, caller, caller, nil)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
 	}
 
-	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, *contractInfo, *codeInfo, prefixStoreKey)
 	if err != nil {
 		return nil, err
 	}
 
 	// prepare querier
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
-	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, inBackground)
+	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
+	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	if execErr != nil {
@@ -773,9 +877,12 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 // For CosmWasm compatibility
 // reply is only called from keeper internal functions (dispatchSubmessages) after processing the submessage
 func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed, reply cw8types.Reply) ([]byte, error) {
-	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress.Bytes())
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
+	}
+	if contractInfo == nil || codeInfo == nil {
+		return nil, fmt.Errorf("contract not found %s", contractAddress.String())
 	}
 
 	// TODO
@@ -798,14 +905,14 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		return nil, sdkerr.Wrap(err, "marshal reply failed")
 	}
 
-	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, *contractInfo, *codeInfo, prefixStoreKey)
 	if err != nil {
 		return nil, err
 	}
-	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
+	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
 
 	// TODO costJSONDeserialization
-	res, gasUsed, execErr := k.wasmvm.Reply(ctx, &codeInfo, env, replyBz, store, handler, k.gasMeter(ctx), extendedContractInfo, nil)
+	res, gasUsed, execErr := k.wasmvm.Reply(ctx, codeInfo, env, replyBz, store, handler, k.gasMeter(ctx), extendedContractInfo, nil)
 	k.consumeRuntimeGas(ctx, gasUsed)
 	if execErr != nil {
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, execErr.Error())
@@ -834,12 +941,12 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "executeWithOrigin")
 
 	// fail if caller is not a contract
-	_, _, _, err := k.ContractInstance(ctx, caller.Bytes())
-	if err != nil {
+	contractInfo, codeInfo, _, err := k.ContractInstance(ctx, caller)
+	if err != nil || contractInfo == nil || codeInfo == nil {
 		return nil, sdkerr.Wrap(types.ErrExecuteFailed, "cannot executeWithOrigin from EOA")
 	}
 
-	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress.Bytes())
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -857,20 +964,21 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 		}
 	}
 
-	info := types.NewInfo(origin, caller, coins)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, origin, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
 	}
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, *contractInfo, *codeInfo, prefixStoreKey)
 	if err != nil {
 		return nil, err
 	}
-	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
+	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
 
-	res, gasUsed, execErr := k.wasmvm.Execute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, nil, false)
+	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, nil, false)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -895,9 +1003,12 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 // Execute executes the contract instance
 func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed, caller mcodec.AccAddressPrefixed, msg []byte, coins sdk.Coins, dependencies []string, isdebug bool) (*types.ContractResponse, error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "query")
-	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress.Bytes())
+	contractInfo, codeInfo, prefixStoreKey, err := k.ContractInstance(ctx, contractAddress)
 	if err != nil {
 		return nil, err
+	}
+	if contractInfo == nil || codeInfo == nil {
+		return nil, fmt.Errorf("contract not found %s", contractAddress.String())
 	}
 	if err := RequireNotSystemContract(contractAddress.Bytes(), codeInfo.Deps); err != nil {
 		return nil, err
@@ -926,20 +1037,21 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		}
 	}
 
-	info := types.NewInfo(caller, caller, coins)
+	gasMeter := k.gasMeter(ctx)
+	info := types.NewInfo(gasMeter, caller, caller, coins)
 	env, err := types.NewEnv(k.accBech32Codec, ctx, k.denom, contractAddress, codeInfo.CodeHash, codeInfo.InterpretedBytecodeRuntime, codeInfo.Deps, info)
 	if err != nil {
 		return nil, err
 	}
 
-	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, contractInfo, codeInfo, prefixStoreKey)
+	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, *contractInfo, *codeInfo, prefixStoreKey)
 	if err != nil {
 		return nil, err
 	}
 
 	handler := k.newCosmosHandler(ctx, contractAddress)
-	store := k.ContractStore(ctx, contractInfo.GetStorageType(), prefixStoreKey)
-	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, &codeInfo, env, msg, store, handler, k.gasMeter(ctx), extendedContractInfo, contractDeps, isdebug)
+	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
+	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)
 
 	// res, _, execErr = k.handleExecutionRerun(ctx, codeInfo.CodeHash, env, info, msg, prefixStore, cosmwasmAPI, querier, gas, costJSONDeserialization, contractAddress, contractInfo, res, gasUsed, execErr, k.wasmVM.Execute)
@@ -1030,12 +1142,16 @@ func (k *Keeper) ContractDepsFromCodeDeps(ctx sdk.Context, allDeps []string) ([]
 		}
 		hexaddr, role := types.ParseDep(hexaddr)
 		addr := types.AccAddressFromHex(hexaddr)
-		contractDep, err := k.GetContractDependency(ctx, k.accBech32Codec.BytesToAccAddressPrefixed(addr))
+		addrPrefixed := k.accBech32Codec.BytesToAccAddressPrefixed(addr)
+		contractDep, err := k.GetContractDependency(ctx, addrPrefixed)
 		if err != nil {
 			return nil, err
 		}
+		if contractDep == nil {
+			return nil, fmt.Errorf("contract dependency not found %s", addrPrefixed.String())
+		}
 		contractDep.Role = role
-		contractDeps = append(contractDeps, contractDep)
+		contractDeps = append(contractDeps, *contractDep)
 	}
 	return contractDeps, nil
 }
@@ -1061,12 +1177,28 @@ func (k *Keeper) SystemDepsFromCodeDeps(ctx sdk.Context, depLabels []string) []t
 	return sdeps
 }
 
+func GetAddressFromRoleByLabel(role types.RoleJSON, label string) (string, error) {
+	for i, roleLabel := range role.Labels {
+		if roleLabel == label {
+			if len(role.Addresses) <= i {
+				return "", fmt.Errorf("mismatch length role labels and addresses")
+			}
+			return role.Addresses[i], nil
+		}
+	}
+	return "", fmt.Errorf("address not found for role %s and label %s", role.Role, label)
+}
+
 func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.SystemDep, error) {
 	role := k.GetRoleByLabel(ctx, label)
 	if role == nil {
 		return types.SystemDep{}, fmt.Errorf("no role from label")
 	}
-	contractAddress, err := k.addressCodec.StringToBytes(role.ContractAddress)
+	addr, err := GetAddressFromRoleByLabel(*role, label)
+	if err != nil {
+		return types.SystemDep{}, err
+	}
+	contractAddress, err := k.accBech32Codec.StringToAccAddressPrefixed(addr)
 	if err != nil {
 		return types.SystemDep{}, err
 	}
@@ -1074,11 +1206,14 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 	if err != nil {
 		return types.SystemDep{}, err
 	}
+	if codeInfo == nil {
+		return types.SystemDep{}, fmt.Errorf("contract dependency not found %s", contractAddress.String())
+	}
 	aotFilePath := ""
 	if codeInfo.Pinned {
 		aotFilePath = k.wasmvm.BuildPathPinned(codeInfo.CodeHash)
 	}
-	filepath := k.wasmvm.GetCodeFilePath(codeInfo)
+	filepath := k.wasmvm.GetCodeFilePath(*codeInfo)
 	dep := types.SystemDep{
 		Role:         role.Role,
 		Label:        label,
@@ -1090,41 +1225,8 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 	return dep, nil
 }
 
-// MultipliedGasMeter wraps the GasMeter from context and multiplies all reads by out defined multiplier
-type MultipliedGasMeter struct {
-	originalMeter storetypes.GasMeter
-	GasRegister   GasRegister
-}
-
-func NewMultipliedGasMeter(originalMeter storetypes.GasMeter, gr GasRegister) MultipliedGasMeter {
-	return MultipliedGasMeter{originalMeter: originalMeter, GasRegister: gr}
-}
-
-var _ types.GasMeter = MultipliedGasMeter{}
-
-// gas consumed in wasm VM units
-func (m MultipliedGasMeter) GasConsumed() storetypes.Gas {
-	return m.GasRegister.ToWasmVMGas(m.originalMeter.GasConsumed())
-}
-
-// consume gas in wasm VM units
-func (m MultipliedGasMeter) ConsumeGas(gas storetypes.Gas, descriptor string) {
-	descriptor = fmt.Sprintf("wasmx: %s", descriptor)
-	sdkgas := m.GasRegister.FromWasmVMGas(gas)
-	m.originalMeter.ConsumeGas(sdkgas, descriptor)
-}
-
-// gas limit in wasm VM units
-func (m MultipliedGasMeter) GasLimit() storetypes.Gas {
-	return m.GasRegister.ToWasmVMGas(m.originalMeter.Limit())
-}
-
-func (m MultipliedGasMeter) GasRemaining() storetypes.Gas {
-	return m.GasRegister.ToWasmVMGas(m.originalMeter.GasRemaining())
-}
-
-func (k *Keeper) gasMeter(ctx sdk.Context) MultipliedGasMeter {
-	return NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
+func (k *Keeper) gasMeter(ctx sdk.Context) types.MultipliedGasMeter {
+	return types.NewMultipliedGasMeter(ctx.GasMeter(), k.gasRegister)
 }
 
 func GetExtensionFromDeps(deps []string) string {

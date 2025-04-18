@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	"cosmossdk.io/log"
+	dbm "github.com/cosmos/cosmos-db"
 	sdkflags "github.com/cosmos/cosmos-sdk/client/flags"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
@@ -29,6 +30,7 @@ func AddCommands(
 	appExport types.AppExporter,
 	addStartFlags types.ModuleInitFlags,
 	wasmVmMeta memc.IWasmVmMeta,
+	initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error),
 ) {
 	tendermintCmd := &cobra.Command{
 		Use:   "tendermint",
@@ -44,7 +46,7 @@ func AddCommands(
 		tmcmd.ResetStateCmd,
 	)
 
-	startCmd := StartCmd(wasmVmMeta, appCreator, defaultNodeHome)
+	startCmd := StartCmd(wasmVmMeta, appCreator, defaultNodeHome, initializeDb)
 	addStartFlags(startCmd)
 
 	rootCmd.AddCommand(

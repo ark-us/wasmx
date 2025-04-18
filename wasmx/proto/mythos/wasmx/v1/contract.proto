@@ -6,7 +6,7 @@ import "gogoproto/gogo.proto";
 option go_package = "github.com/loredanacirstea/wasmx/x/wasmx/types";
 
 // ContractStorage
-message ContractStorage {
+message ContractStoragePB {
     // hex-encode key
     bytes key = 1 [ (gogoproto.casttype) =
                         "github.com/cometbft/cometbft/libs/bytes.HexBytes" ];
@@ -15,7 +15,7 @@ message ContractStorage {
 }
 
 // Metadata for each codeId
-message CodeMetadata {
+message CodeMetadataPB {
     option (gogoproto.equal) = true;
 
     string name = 1 [(gogoproto.nullable) = true];
@@ -25,13 +25,13 @@ message CodeMetadata {
     // off-chain identifier
     string author = 4 [(gogoproto.nullable) = true];
     string site = 5 [(gogoproto.nullable) = true];
-    string abi = 6 [(gogoproto.nullable) = true];
+    bytes abi = 6 [(gogoproto.nullable) = true];
     string json_schema = 7 [(gogoproto.nullable) = true];
-    CodeOrigin origin = 8;
+    CodeOriginPB origin = 8;
 }
 
 // CodeInfo is data for the uploaded contract WASM code
-message CodeInfo {
+message CodeInfoPB {
     option (gogoproto.equal) = true;
 
     // CodeHash is the unique identifier created by hashing the
@@ -45,14 +45,14 @@ message CodeInfo {
     // Pinned contract
     bool pinned = 4;
     bool metering_off = 5; // default is on, but some system contracts may have metering off
-    CodeMetadata metadata = 6 [(gogoproto.nullable) = false];
+    CodeMetadataPB metadata = 6 [(gogoproto.nullable) = false];
     // for code that has a different runtime, like EVM
     bytes interpreted_bytecode_deployment = 7;
     bytes interpreted_bytecode_runtime = 8;
     bytes runtime_hash = 9;
 }
 
-message CodeOrigin {
+message CodeOriginPB {
     option (gogoproto.equal) = true;
 
     // unique chain ID
@@ -73,7 +73,7 @@ enum ContractStorageType {
 }
 
 // ContractInfo stores a WASM contract instance
-message ContractInfo {
+message ContractInfoPB {
     option (gogoproto.equal) = true;
     // CodeID is the reference to the stored Wasm code
     uint64 code_id = 1;

@@ -273,7 +273,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	msgServer := wasmxkeeper.NewMsgServerImpl(&appA.App.WasmxKeeper)
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"consensus_raft_0.0.2","contract_address":"%s"}}`, wasmxtypes.ROLE_CONSENSUS, newConsensus.String()))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"consensus_raft_0.0.2","contract_address":"%s","action_type":0}}`, wasmxtypes.ROLE_CONSENSUS, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	_, err = msgServer.ExecuteContract(appA.Context(), &wasmxtypes.MsgExecuteContract{
@@ -357,7 +357,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 	s.Require().NoError(err)
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"consensus_tendermint_0.0.2","contract_address":"%s"}}`, wasmxtypes.ROLE_CONSENSUS, newConsensus.String()))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"consensus_tendermint_0.0.2","contract_address":"%s","action_type":0}}`, wasmxtypes.ROLE_CONSENSUS, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	_, err = msgServer.ExecuteContract(appA.Context(), &wasmxtypes.MsgExecuteContract{
@@ -441,7 +441,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"consensus","label":"%s","contract_address":"%s"}}`, newlabel, newConsensus.String()))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	proposal := &wasmxtypes.MsgExecuteContract{
@@ -455,8 +455,8 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newConsensus.String(), role.Addresses[role.Primary])
+	s.Require().Equal(newlabel, role.Labels[role.Primary])
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract
@@ -474,7 +474,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	msgServer := wasmxkeeper.NewMsgServerImpl(&appA.App.WasmxKeeper)
 
-	msg = []byte(fmt.Sprintf(`{"RegisterRole":{"role":"%s","label":"consensus_tendermint_0.0.1","contract_address":"%s"}}`, wasmxtypes.ROLE_CONSENSUS, appA.MustAccAddressToString(tendermintContract)))
+	msg = []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"consensus_tendermint_0.0.1","contract_address":"%s","action_type":0}}`, wasmxtypes.ROLE_CONSENSUS, appA.MustAccAddressToString(tendermintContract)))
 	msgbz, err = json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	_, err = msgServer.ExecuteContract(appA.Context(), &wasmxtypes.MsgExecuteContract{
@@ -583,7 +583,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 	suite.Require().NoError(err)
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
-	msg := []byte(fmt.Sprintf(`{"RegisterRole":{"role":"consensus","label":"%s","contract_address":"%s"}}`, newlabel, newConsensus.String()))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	proposal := &wasmxtypes.MsgExecuteContract{
@@ -597,8 +597,8 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newConsensus.String(), role.ContractAddress)
-	s.Require().Equal(newlabel, role.Label)
+	s.Require().Equal(newConsensus.String(), role.Addresses[role.Primary])
+	s.Require().Equal(newlabel, role.Labels[role.Primary])
 	s.Require().Equal("consensus", role.Role)
 
 	// check that the setup was done on the new contract

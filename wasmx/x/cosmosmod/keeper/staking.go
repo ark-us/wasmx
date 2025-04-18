@@ -147,7 +147,10 @@ func (k KeeperStaking) IterateValidators(goCtx context.Context, fn func(index in
 // jail a validator
 func (k KeeperStaking) Jail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("KeeperStaking.Jail not implemented")
+	_, err := k.ContractModuleExecution(ctx, "Jail", &types.MsgJail{ConsensusAddress: consAddr.String()})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -176,7 +179,10 @@ func (k KeeperStaking) SlashWithInfractionReason(goCtx context.Context, consAddr
 // unjail a validator
 func (k KeeperStaking) Unjail(goCtx context.Context, consAddr sdk.ConsAddress) error {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	k.Logger(ctx).Error("KeeperStaking.Unjail not implemented")
+	_, err := k.ContractModuleExecution(ctx, "Unjail", &types.MsgUnjail{ConsensusAddress: consAddr.String()})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

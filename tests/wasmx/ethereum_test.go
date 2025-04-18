@@ -60,7 +60,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 
 func (suite *KeeperTestSuite) TestAliasContract() {
 	appA := s.AppContext()
-	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "alias_eth")
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.ALIAS_ETH)
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 

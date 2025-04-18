@@ -59,8 +59,11 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string
 
 	if wasmFilePath != "" || aotFilePath != "" || len(wasmbuffer) > 0 {
 		err = contractVm.InstantiateWasm(wasmFilePath, aotFilePath, wasmbuffer)
+		if err != nil {
+			return err
+		}
 	}
-	return err
+	return nil
 }
 
 func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []types.SystemDep) error {

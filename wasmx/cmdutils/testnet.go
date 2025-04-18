@@ -927,6 +927,12 @@ func initGenFiles(
 	cosmosmodGenState.Bank.Balances = genBalances
 	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
 	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
+	p, _ := math.LegacyNewDecFromStr("0.6")
+	cosmosmodGenState.Slashing.Params.MinSignedPerWindow = p
+	cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Hour * 2
+	cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 40000
+	// cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Minute
+	// cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 4
 	cosmosmodGenState.Distribution.BaseDenom = mcfg.BaseDenom
 	cosmosmodGenState.Distribution.RewardsDenom = cosmosmodGenState.Bank.DenomInfo[2].Metadata.Base
 	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = mcfg.BaseDenom
@@ -955,7 +961,7 @@ func initGenFiles(
 	mintGenState.Params.MintDenom = mcfg.BaseDenom
 	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
 
-	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 	if err != nil {
 		panic(err)
 	}
@@ -1014,7 +1020,7 @@ func initGenFilesLevel0(
 
 	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 
-	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(mcfg.FEE_COLLECTOR))
+	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
 	if err != nil {
 		panic(err)
 	}

@@ -34,6 +34,7 @@ import (
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	cfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/server/config"
 	"github.com/loredanacirstea/wasmx/x/network/types"
@@ -169,7 +170,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			if len(sdktx.GetMsgs()) > 0 {
 				// we just take the first one // TODO fixme
 				msg := sdktx.GetMsgs()[0]
-				var contractAddress sdk.AccAddress
+				var contractAddress mcodec.AccAddressPrefixed
 				// TODO all messages, like MsgExecuteEth
 				// msgEthTx, ok := msg.(*wasmxtypes.MsgExecuteEth)
 				// if ok {
@@ -179,7 +180,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 				// } else {
 				msgExec, ok := msg.(*wasmxtypes.MsgExecuteContract)
 				if ok {
-					contractAddress, err = mapp.AddressCodec().StringToBytes(msgExec.Contract)
+					contractAddress, err = mapp.AccBech32Codec().StringToAccAddressPrefixed(msgExec.Contract)
 					if err != nil {
 						return nil, err
 					}
@@ -188,22 +189,21 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 				// if consensusless or consensusmeta contract -> just execute it
 				// whitelist of contracts exposed like this - just chat
 				if len(contractAddress.Bytes()) > 0 {
-					contractInfo := c.nk.GetContractInfo(ctx, contractAddress)
+					contractInfo, err := c.nk.GetContractInfo(ctx, contractAddress)
+					if err != nil {
+						return nil, err
+					}
 
 					// whitelist is in hex
-					addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress).Hex()
+					addrhex := wasmxtypes.EvmAddressFromAcc(contractAddress.Bytes()).Hex()
 
 					if contractInfo != nil && contractInfo.StorageType != wasmxtypes.ContractStorageType_CoreConsensus && slices.Contains(types.CONSENSUSLESS_EXTERNAL_WHITELIST, addrhex) {
-						contractAddressStr, err := mapp.AddressCodec().BytesToString(contractAddress)
-						if err != nil {
-							return nil, err
-						}
-						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless or consensusmeta contract", "address", contractAddressStr)
+						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless or consensusmeta contract", "address", contractAddress.String())
 
 						// we sent directly to the contract
 						rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
 							Sender:   msgExec.Sender, // sender will be taken from decoded tx
-							Contract: contractAddressStr,
+							Contract: contractAddress.String(),
 							Msg:      []byte(fmt.Sprintf(`{"HandleTx":"%s"}`, base64.StdEncoding.EncodeToString(tx))),
 						})
 

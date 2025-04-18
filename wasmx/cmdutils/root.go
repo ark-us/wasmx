@@ -65,12 +65,13 @@ import (
 	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // NewRootCmd creates a new root command for a Cosmos SDK application
-func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Command, appencoding.EncodingConfig) {
+func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error)) (*cobra.Command, appencoding.EncodingConfig) {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// note, this is not necessary when using app wiring, as depinject can be directly used (see root_v2.go)
 	chainId := mcfg.MYTHOS_CHAIN_ID_TESTNET
@@ -95,9 +96,11 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Com
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
 	goctx = networktypes.ContextWithMultiChainContext(g, goctx, logger)
+	goctx = vmsql.WithSqlEmptyContext(goctx)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	goctx, _ = mctx.WithExecutionMetaInfoEmpty(goctx)
 	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
+	goctx, _ = wasmxtypes.WithSystemBootstrap(goctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))
@@ -172,7 +175,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string) (*cobra.Com
 		ClientCtx:       initClientCtx,
 	}
 
-	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx, defaultNodeHome)
+	initRootCmd(wasmVmMeta, rootCmd, encodingConfig, tempApp.BasicModuleManager, g, goctx, apictx, initClientCtx, defaultNodeHome, initializeDb)
 
 	// add keyring to autocli opts
 	autoCliOpts := tempApp.AutoCliOpts()
@@ -211,6 +214,7 @@ func initRootCmd(
 	apictx mcfg.APICtxI,
 	clientCtx client.Context,
 	defaultNodeHome string,
+	initializeDb func(rootDir string, backendType dbm.BackendType) (dbm.DB, error),
 ) {
 	gentxModule := basicManager[genutiltypes.ModuleName].(genutil.AppModuleBasic)
 
@@ -253,6 +257,7 @@ func initRootCmd(
 		a.appExport,
 		addModuleInitFlags,
 		wasmVmMeta,
+		initializeDb,
 	)
 	extendUnsafeResetAllCmd(rootCmd)
 

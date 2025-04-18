@@ -14,7 +14,6 @@ func MockWithPanic(_context interface{}, rnh memc.RuntimeHandler, params []inter
 func BuildWasmxCoreEnvMocki32(context *Context, rnh memc.RuntimeHandler, modname string) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("setContractInfo", MockWithPanic, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("migrateContractStateByStorageType", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("externalCall", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("grpcRequest", MockWithPanic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),

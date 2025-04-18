@@ -2,11 +2,18 @@ syntax = "proto3";
 package mythos.wasmx.v1;
 
 import "gogoproto/gogo.proto";
+import "mythos/wasmx/v1/contract.proto";
 
 option go_package = "github.com/loredanacirstea/wasmx/x/wasmx/types";
 
+enum RoleChangedActionType {
+    Replace = 0;
+    Add = 1;
+    Remove = 2;
+}
+
 // RegisterRouteProposal is a gov Content type to register a web server route
-message Role {
+message RoleChanged {
     option (gogoproto.equal) = false;
     // smart contract role
     string role = 1;
@@ -14,4 +21,35 @@ message Role {
     string label = 2;
     // contract address in bech32 format
     string contract_address = 3;
+    RoleChangedActionType action_type = 4;
+}
+
+message Role {
+    option (gogoproto.equal) = false;
+    // smart contract role
+    string role = 1;
+    ContractStorageType storage_type = 2;
+    int32 primary = 3;
+    bool multiple = 4;
+    repeated string labels = 5;
+    // contract address in bech32 format
+    repeated string addresses = 6;
+}
+
+message SystemContractRole {
+    option (gogoproto.equal) = false;
+    string role = 1;
+    string label = 2;
+    bool primary = 3;
+}
+
+message SystemBootstrapData {
+    option (gogoproto.equal) = false;
+    // bech32 address of contract for roles
+    string role_address = 1;
+    // bech32 address of contract for contract data storage
+    string code_registry_address = 2;
+    uint64 code_registry_id = 3;
+    CodeInfoPB code_registry_code_info = 4;
+    ContractInfoPB code_registry_contract_info = 5;
 }

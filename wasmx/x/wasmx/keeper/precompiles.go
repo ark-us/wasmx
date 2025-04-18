@@ -2,6 +2,10 @@ package keeper
 
 import (
 	_ "embed"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"slices"
 
 	sdkerr "cosmossdk.io/errors"
 	"cosmossdk.io/store/prefix"
@@ -18,8 +22,97 @@ func (k *Keeper) BootstrapSystemContracts(
 	contracts []types.SystemContract,
 	compiledFolderPath string,
 ) error {
-	for _, contract := range contracts {
-		err := k.ActivateEmbeddedSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath)
+	if len(contracts) < 3 {
+		return fmt.Errorf("not enough system contracts")
+	}
+	if contracts[0].Role == nil || contracts[0].Role.Role != types.ROLE_STORAGE_CONTRACTS {
+		return fmt.Errorf("genesis system contract 0 must be %s", types.ROLE_STORAGE_CONTRACTS)
+	}
+	if contracts[1].Role == nil || contracts[1].Role.Role != types.ROLE_ROLES {
+		return fmt.Errorf("genesis system contract 1 must be %s", types.ROLE_ROLES)
+	}
+	if contracts[2].Role == nil || contracts[2].Role.Role != types.ROLE_AUTH {
+		return fmt.Errorf("genesis system contract 2 must be %s", types.ROLE_AUTH)
+	}
+
+	var rolesAddress mcodec.AccAddressPrefixed
+	var registryAddress mcodec.AccAddressPrefixed
+	var registryId uint64
+	var registryCodeInfo types.CodeInfo
+	var registryContractInfo types.ContractInfo
+	genesisRegistry := types.GenesisRegistryContract{
+		CodeInfos:     make([]types.CodeInfo, len(contracts)),
+		ContractInfos: make([]types.MsgSetContractInfoRequest, len(contracts)),
+	}
+
+	// initialize temporary roles first
+	// and collect init msg data for the contract registry
+	for i, contract := range contracts {
+		contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
+		if contract.Role != nil {
+			// roleLabel must be unique
+			// roleLabel := contract.Role + "_" + contract.Label
+			roleLabel := contract.Label
+			k.RegisterRoleInitial(ctx, contract.Role.Role, roleLabel, contractAddress)
+			if contract.Role.Role == types.ROLE_ROLES {
+				rolesAddress = contractAddress
+			}
+		}
+
+		var codeInfo types.CodeInfo
+		var contractInfo types.ContractInfo
+		var err error
+		codeID := uint64(i + 1)
+
+		if contract.Native {
+			codeInfo = types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff)
+		} else {
+			wasmbin := precompiles.GetPrecompileByLabel(k.AddressCodec(), contract.Label)
+
+			codeInfo, err = k.createCodeInfo(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff)
+			if err != nil {
+				return sdkerr.Wrap(err, "store system contract: "+contract.Label)
+			}
+		}
+
+		contractInfo = types.NewContractInfo(codeID, bootstrapAccountAddr.String(), bootstrapAccountAddr.String(), contract.InitMessage, contract.Label)
+		if !contract.Native {
+			contractInfo.StorageType = contract.StorageType
+		}
+
+		k.Logger(ctx).Debug("core contract", "label", contractInfo.Label, "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(codeInfo.CodeHash), "address", contractAddress.String())
+
+		if contract.Role != nil && contract.Role.Role == types.ROLE_STORAGE_CONTRACTS {
+			registryAddress = contractAddress
+			registryId = codeID
+			registryCodeInfo = codeInfo
+			registryContractInfo = contractInfo
+		}
+
+		genesisRegistry.CodeInfos[i] = codeInfo
+		genesisRegistry.ContractInfos[i] = types.MsgSetContractInfoRequest{Address: contractAddress.Bytes(), ContractInfo: contractInfo}
+	}
+
+	// initialize SystemBootstrap
+	bootstrapData := &types.SystemBootstrap{RoleAddress: rolesAddress, CodeRegistryAddress: registryAddress, CodeRegistryId: registryId, CodeRegistryCodeInfo: &registryCodeInfo, CodeRegistryContractInfo: &registryContractInfo}
+	err := k.SetSystemBootstrap(ctx, bootstrapData)
+	if err != nil {
+		return err
+	}
+	registryGenesisBz, err := json.Marshal(&genesisRegistry)
+	if err != nil {
+		return err
+	}
+	registryGenesisWrap, err := json.Marshal(&types.WasmxExecutionMessage{Data: registryGenesisBz})
+	if err != nil {
+		return err
+	}
+
+	for i, contract := range contracts {
+		if contract.Role != nil && contract.Role.Role == types.ROLE_STORAGE_CONTRACTS {
+			contract.InitMessage = registryGenesisWrap
+		}
+		err := k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, compiledFolderPath, uint64(i+1), genesisRegistry.CodeInfos[i], registryAddress, rolesAddress)
 		if err != nil {
 			return sdkerr.Wrap(err, "bootstrap")
 		}
@@ -27,42 +120,23 @@ func (k *Keeper) BootstrapSystemContracts(
 	return nil
 }
 
-// ActivateEmbeddedSystemContract
-func (k *Keeper) ActivateEmbeddedSystemContract(
-	ctx sdk.Context,
-	bootstrapAccountAddr mcodec.AccAddressPrefixed,
-	contract types.SystemContract,
-	compiledFolderPath string,
-) error {
-	wasmbin := precompiles.GetPrecompileByLabel(k.AddressCodec(), contract.Label)
-	return k.ActivateSystemContract(ctx, bootstrapAccountAddr, contract, wasmbin, compiledFolderPath)
-}
-
 // ActivateSystemContract
 func (k *Keeper) ActivateSystemContract(
 	ctx sdk.Context,
 	bootstrapAccountAddr mcodec.AccAddressPrefixed,
 	contract types.SystemContract,
-	wasmbin []byte,
 	compiledFolderPath string,
+	codeID uint64,
+	codeInfo types.CodeInfo,
+	// contractInfo types.ContractInfo,
+	registryAddress mcodec.AccAddressPrefixed,
+	rolesAddress mcodec.AccAddressPrefixed,
 ) error {
-	k.SetSystemContract(ctx, contract)
-	var codeID uint64
 	var err error
-
-	if contract.Native {
-		codeID = k.autoIncrementID(ctx)
-		codeInfo := types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata, contract.Pinned, contract.MeteringOff)
-		k.storeCodeInfo(ctx, codeID, codeInfo)
-	} else {
-		codeID, _, err = k.Create(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata, contract.Pinned, contract.MeteringOff)
-		if err != nil {
-			return sdkerr.Wrap(err, "store system contract: "+contract.Label)
-		}
-	}
+	k.SetSystemContract(ctx, contract)
 
 	if contract.Pinned {
-		if err := k.PinCodeAndStore(ctx, codeID, compiledFolderPath, contract.MeteringOff); err != nil {
+		if err := k.pinCodeWithEvent(ctx, codeID, codeInfo.CodeHash, compiledFolderPath, contract.MeteringOff); err != nil {
 			return sdkerr.Wrap(err, "pin system contract: "+contract.Label)
 		}
 	}
@@ -73,23 +147,26 @@ func (k *Keeper) ActivateSystemContract(
 	}
 
 	contractAddress := k.accBech32Codec.BytesToAccAddressPrefixed(types.AccAddressFromHex(contract.Address))
-	// register role first, to be able to initialize the account keeper
-	if contract.Role != "" {
-		k.RegisterRoleInitial(ctx, contract.Role, contract.Label, contractAddress)
+	roleName := ""
+	roleLabel := ""
+	if contract.Role != nil {
+		roleName = contract.Role.Role
+		roleLabel = contract.Role.Label
 	}
-	if contract.Native {
-		contractInfo := types.NewContractInfo(codeID, bootstrapAccountAddr.String(), "", contract.InitMessage, contract.Label)
-		k.storeContractInfo(ctx, contractAddress.Bytes(), &contractInfo)
-	} else {
+
+	if !contract.Native {
 		_, err = k.instantiateWithAddress(
 			ctx,
 			codeID,
-			&bootstrapAccountAddr,
+			bootstrapAccountAddr,
 			contractAddress,
 			contract.StorageType,
 			contract.InitMessage,
 			nil,
 			contract.Label,
+			roleName,
+			roleLabel,
+			codeInfo,
 		)
 		if err != nil {
 			return sdkerr.Wrap(err, "instantiate system contract: "+contract.Label)
@@ -100,8 +177,28 @@ func (k *Keeper) ActivateSystemContract(
 
 	// this must be stored separately, as the gateway for other roles
 	// do this after instantiation to avoid a cycle for the ROLES contract instantiation
-	if contract.Role == types.ROLE_ROLES {
-		k.SetRoleContractAddress(ctx, contractAddress.Bytes())
+	// if contract.Role == types.ROLE_ROLES {
+	// 	k.SetRoleContractAddress(ctx, contractAddress)
+	// }
+
+	if !slices.Contains([]string{types.ROLE_STORAGE_CONTRACTS, types.ROLE_ROLES}, roleName) {
+		// register the auth account
+		err = k.instantiateNewContractAccount(ctx, contractAddress)
+		if err != nil {
+			return sdkerr.Wrapf(err, "create auth account for contract %s", contract.Label)
+		}
+	}
+
+	if roleName == types.ROLE_AUTH {
+		// only now we create the account for the first 2 precompile - contract storage, roles
+		err = k.instantiateNewContractAccount(ctx, registryAddress)
+		if err != nil {
+			return sdkerr.Wrap(err, "create auth account for contracts registry")
+		}
+		err = k.instantiateNewContractAccount(ctx, rolesAddress)
+		if err != nil {
+			return sdkerr.Wrap(err, "create auth account for roles contract")
+		}
 	}
 
 	k.Logger(ctx).Info("activated system contract", "label", contract.Label, "address", contractAddress.String(), "hex_address", contract.Address, "code_id", codeID, "role", contract.Role)

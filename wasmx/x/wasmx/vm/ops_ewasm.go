@@ -34,7 +34,7 @@ func useGas(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 func getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = int64(ctx.GasMeter.GasConsumed())
+	returns[0] = int64(ctx.GasMeter.GasRemaining())
 	return returns, nil
 }
 
@@ -276,7 +276,8 @@ func getExternalCodeHash(_context interface{}, rnh memc.RuntimeHandler, params [
 	if err != nil {
 		return nil, err
 	}
-	data := ctx.CosmosHandler.GetCodeHash(vmtypes.CleanupAddress(addressbz))
+	addrPrefixed := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(vmtypes.CleanupAddress(addressbz))
+	data := ctx.CosmosHandler.GetCodeHash(addrPrefixed)
 	err = mem.WriteRaw(params[1], data)
 	if err != nil {
 		return returns, err

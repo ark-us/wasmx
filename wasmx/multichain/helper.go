@@ -60,7 +60,7 @@ func (*MockApiCtx) StartChainApis(
 	return nil, nil, client.Context{}, nil, nil, nil, fmt.Errorf("ApiCtx.StartChainApis not implemented")
 }
 
-func CreateMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
+func CreateMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, homeDir string, getDB func(dbpath string) dbm.DB) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
 	// level := "x/wasmx:debug,*:info"
 	level := "error"
 	filter, _ := ParseLogLevel(level)
@@ -71,7 +71,12 @@ func CreateMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppC
 		log.TimeFormatOption(time.RFC3339),
 	)
 	// logger := log.NewNopLogger()
-	db := dbm.NewMemDB()
+	var db dbm.DB
+	if getDB != nil {
+		db = getDB(homeDir)
+	} else {
+		db = dbm.NewMemDB()
+	}
 	appOpts := DefaultAppOptions{}
 	appOpts.Set(flags.FlagHome, homeDir)
 	// we set this so it does not try to read a genesis file

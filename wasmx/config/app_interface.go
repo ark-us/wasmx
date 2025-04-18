@@ -53,15 +53,15 @@ type NetworkKeeper interface {
 	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
 	QueryContract(ctx sdk.Context, req *networktypes.MsgQueryContract) (*networktypes.MsgQueryContractResponse, error)
 
-	GetContractInfo(ctx sdk.Context, contractAddress sdk.AccAddress) *wasmxtypes.ContractInfo
+	GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, error)
 	Codec() codec.Codec
 
 	GetHeaderByHeight(app MythosApp, logger log.Logger, height int64, prove bool) (*cmtproto.Header, error)
 }
 
 type WasmxKeeper interface {
-	GetCodeInfo(ctx sdk.Context, codeID uint64) *wasmxtypes.CodeInfo
-	IterateContractInfo(ctx sdk.Context, cb func(sdk.AccAddress, wasmxtypes.ContractInfo) bool)
+	GetCodeInfo(ctx sdk.Context, codeID uint64) (*wasmxtypes.CodeInfo, error)
+	IterateContractInfos(ctx sdk.Context, cb func(sdk.AccAddress, wasmxtypes.ContractInfo) bool)
 	IterateCodeInfos(ctx sdk.Context, cb func(uint64, wasmxtypes.CodeInfo) bool)
 	ExecuteContractInstantiationInternal(
 		ctx sdk.Context,
@@ -80,6 +80,8 @@ type MythosApp interface {
 	AddressCodec() address.Codec
 	AppCodec() codec.Codec
 	JSONCodec() codec.JSONCodec
+	AccBech32Codec() mcodec.AccBech32Codec
+
 	BeginBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (sdk.BeginBlock, error)
 	BlockedModuleAccountAddrs() map[string]bool
 	ConsensusAddressCodec() address.Codec

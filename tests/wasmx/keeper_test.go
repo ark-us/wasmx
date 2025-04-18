@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	//nolint
+	dbm "github.com/cosmos/cosmos-db"
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
 
@@ -44,6 +44,8 @@ type KeeperTestSuite struct {
 	wt.KeeperTestSuite
 	testStart  time.Time
 	suiteStart time.Time
+	db         dbm.DB
+	dbFilePath string
 }
 
 var s *KeeperTestSuite
@@ -90,6 +92,12 @@ func (suite *KeeperTestSuite) TearDownSuite() {
 		elapsed := time.Since(s.suiteStart)
 		// Print or log the elapsed time for the entire suite
 		println("Suite time:", elapsed.String())
+	}
+	if suite.db != nil {
+		err := suite.db.Close()
+		suite.Require().NoError(err)
+		err = os.Remove(suite.dbFilePath)
+		suite.Require().NoError(err)
 	}
 	suite.TearDownChains()
 }

@@ -99,7 +99,7 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 		Msg:      executeMsg,
 		Funds:    sdk.Coins{},
 	}
-	res, err := appA.DeliverTxWithOpts(sender, executeCodeMsg, 5500000, nil)
+	res, err := appA.DeliverTxWithOpts(sender, executeCodeMsg, "", 5500000, nil)
 	s.Require().NoError(err)
 	s.Require().False(res.IsOK(), res.GetLog())
 	suite.Commit()

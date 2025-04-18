@@ -60,7 +60,7 @@ type (
 		cch *cchtypes.ContractHandlerMap
 		// queryGasLimit is the max wasmvm gas that can be spent on executing a query with a contract
 		queryGasLimit uint64
-		gasRegister   GasRegister
+		gasRegister   types.GasRegister
 		denom         string
 		permAddrs     map[string]authtypes.PermissionsForAddress
 
