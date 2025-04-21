@@ -18,8 +18,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
-	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/ginkgo/v2 v2.13.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/spf13/cast v1.6.0
@@ -315,8 +314,8 @@ replace (
 	// github.com/loredanacirstea/cometbft@27cc98dcda07f38451e77c4a1477aaa5d2a096e4
 	github.com/cometbft/cometbft => github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07
 
-	// github.com/loredanacirstea/cosmos-sdk@c083933d515d6d99c85be1609ac513b1af228191
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20241022111342-c083933d515d
+	// github.com/loredanacirstea/cosmos-sdk@f467a3b4d9f6ada1dd1b733a6079663afda455c7
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6
 
 	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 

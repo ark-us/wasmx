@@ -5,6 +5,7 @@ var (
 	HOOK_START_NODE   = "StartNode"
 	HOOK_SETUP_NODE   = "SetupNode"
 	HOOK_NEW_SUBCHAIN = "NewSubChain"
+	// TODO HOOK_STOP_NODE for libp2p connections, db connection close
 
 	// consenssus
 	HOOK_BEGIN_BLOCK      = "BeginBlock"

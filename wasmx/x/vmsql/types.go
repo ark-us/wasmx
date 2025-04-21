@@ -8,6 +8,17 @@ import (
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
 
+const (
+	// ModuleName defines the module name
+	ModuleName = "vmsql"
+
+	// StoreKey defines the primary module store key
+	StoreKey = ModuleName
+
+	// RouterKey defines the module's message routing key
+	RouterKey = ModuleName
+)
+
 const HOST_WASMX_ENV_SQL_VER1 = "wasmx_sql_1"
 
 const HOST_WASMX_ENV_SQL_EXPORT = "wasmx_sql_"
@@ -22,26 +33,38 @@ type Context struct {
 	*vmtypes.Context
 }
 
-type SqlContext struct {
-	mtx           sync.Mutex
-	DbConnections map[string]*sql.DB
+type SqlOpenConnection struct {
+	Connection      string
+	Db              *sql.DB
+	OpenSavepointTx *sql.Tx
+	SavePointMap    map[string]bool
 }
 
-func (p *SqlContext) GetConnection(id string) (*sql.DB, bool) {
+func (conn *SqlOpenConnection) hasSavePoint(savepoint string) bool {
+	sv, ok := conn.SavePointMap[savepoint]
+	return ok && sv
+}
+
+type SqlContext struct {
+	mtx           sync.Mutex
+	DbConnections map[string]*SqlOpenConnection
+}
+
+func (p *SqlContext) GetConnection(id string) (*SqlOpenConnection, bool) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	db, found := p.DbConnections[id]
 	return db, found
 }
 
-func (p *SqlContext) SetConnection(id string, db *sql.DB) error {
+func (p *SqlContext) SetConnection(id string, connection string, db *sql.DB) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	_, found := p.DbConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite sql connection: %s", id)
 	}
-	p.DbConnections[id] = db
+	p.DbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, SavePointMap: make(map[string]bool, 0)}
 	return nil
 }
 

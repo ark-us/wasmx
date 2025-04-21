@@ -28,53 +28,57 @@ type NativePrecompileHandler interface {
 type ContractRouter = map[string]*Context
 
 type Context struct {
-	GoRoutineGroup  *errgroup.Group
-	GoContextParent context.Context
-	Ctx             sdk.Context
-	Logger          func(ctx sdk.Context) log.Logger
-	GasMeter        types.GasMeter
-	Env             *types.Env
-	ContractRouter  ContractRouter
-	ContractStore   prefix.Store
-	CosmosHandler   types.WasmxCosmosHandler
-	App             types.Application
-	NativeHandler   NativePrecompileHandler
-	ReturnData      []byte
-	FinishData      []byte
-	CurrentCallId   uint32
-	Logs            []WasmxLog
-	CosmosEvents    []types.Event
-	Messages        []cw8types.SubMsg `json:"messages"`
-	dbIterators     map[int32]types.Iterator
-	RuntimeHandler  memc.RuntimeHandler
-	ContractInfo    *types.ContractDependency
-	newIVmFn        memc.NewIVmFn
+	GoRoutineGroup           *errgroup.Group
+	GoContextParent          context.Context
+	Ctx                      sdk.Context
+	Logger                   func(ctx sdk.Context) log.Logger
+	GasMeter                 types.GasMeter
+	Env                      *types.Env
+	ContractRouter           ContractRouter
+	ContractStore            prefix.Store
+	CosmosHandler            types.WasmxCosmosHandler
+	App                      types.Application
+	NativeHandler            NativePrecompileHandler
+	ReturnData               []byte
+	FinishData               []byte
+	CurrentSubCallLevel      uint32
+	CurrentSubCallId         uint32
+	CurrentSubCallLevelCount uint32
+	Logs                     []WasmxLog
+	CosmosEvents             []types.Event
+	Messages                 []cw8types.SubMsg `json:"messages"`
+	dbIterators              map[int32]types.Iterator
+	RuntimeHandler           memc.RuntimeHandler
+	ContractInfo             *types.ContractDependency
+	newIVmFn                 memc.NewIVmFn
 }
 
 // not used at this point
 func (c *Context) Clone() *Context {
 	return &Context{
-		GoRoutineGroup:  c.GoRoutineGroup,
-		GoContextParent: c.GoContextParent,
-		Ctx:             c.Ctx,
-		Logger:          c.Logger,
-		GasMeter:        c.GasMeter,
-		Env:             c.Env.Clone(),
-		ContractRouter:  c.ContractRouter,
-		ContractStore:   c.ContractStore,
-		CosmosHandler:   c.CosmosHandler,
-		App:             c.App,
-		NativeHandler:   c.NativeHandler,
-		ReturnData:      []byte{},
-		FinishData:      []byte{},
-		CurrentCallId:   c.CurrentCallId,
-		Logs:            []WasmxLog{},
-		CosmosEvents:    []types.Event{},
-		Messages:        []cw8types.SubMsg{},
-		dbIterators:     c.dbIterators,
-		RuntimeHandler:  c.RuntimeHandler,
-		ContractInfo:    c.ContractInfo.Clone(),
-		newIVmFn:        c.newIVmFn,
+		GoRoutineGroup:           c.GoRoutineGroup,
+		GoContextParent:          c.GoContextParent,
+		Ctx:                      c.Ctx,
+		Logger:                   c.Logger,
+		GasMeter:                 c.GasMeter,
+		Env:                      c.Env.Clone(),
+		ContractRouter:           c.ContractRouter,
+		ContractStore:            c.ContractStore,
+		CosmosHandler:            c.CosmosHandler,
+		App:                      c.App,
+		NativeHandler:            c.NativeHandler,
+		ReturnData:               []byte{},
+		FinishData:               []byte{},
+		CurrentSubCallLevel:      c.CurrentSubCallLevel,
+		CurrentSubCallId:         c.CurrentSubCallId,
+		CurrentSubCallLevelCount: c.CurrentSubCallLevelCount,
+		Logs:                     []WasmxLog{},
+		CosmosEvents:             []types.Event{},
+		Messages:                 []cw8types.SubMsg{},
+		dbIterators:              c.dbIterators,
+		RuntimeHandler:           c.RuntimeHandler,
+		ContractInfo:             c.ContractInfo.Clone(),
+		newIVmFn:                 c.newIVmFn,
 	}
 }
 
@@ -157,4 +161,17 @@ type StoragePairs struct {
 type VerifyCosmosTxResponse struct {
 	Valid bool   `json:"valid"`
 	Error string `json:"error"`
+}
+
+type AppWithSubCallHook interface {
+	BeginSubCall(ctx context.Context, level uint32, index uint32, isquery bool) error
+	EndSubCall(ctx context.Context, level uint32, index uint32, isquery bool, err error) error
+}
+
+type HasBeginSubCall interface {
+	BeginSubCall(ctx context.Context, level uint32, index uint32, isquery bool) error
+}
+
+type HasEndSubCall interface {
+	EndSubCall(ctx context.Context, level uint32, index uint32, isquery bool, err error) error
 }

@@ -18,19 +18,29 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
+type MsgNestedCall struct {
+	Execute        []*vmsql.SqlExecuteRequest `json:"execute"`
+	Query          []*vmsql.SqlQueryRequest   `json:"query"`
+	IterationIndex uint32                     `json:"iteration_index"`
+	RevertArray    []bool                     `json:"revert_array"`
+	IsQueryArray   []bool                     `json:"isquery_array"`
+}
+
 type Calldata struct {
-	Connect *vmsql.SqlConnectionRequest `json:"Connect,omitempty"`
-	Close   *vmsql.SqlCloseRequest      `json:"Close,omitempty"`
-	Ping    *vmsql.SqlPingRequest       `json:"Ping,omitempty"`
-	Execute *vmsql.SqlExecuteRequest    `json:"Execute,omitempty"`
-	Query   *vmsql.SqlQueryRequest      `json:"Query,omitempty"`
+	Connect    *vmsql.SqlConnectionRequest `json:"Connect,omitempty"`
+	Close      *vmsql.SqlCloseRequest      `json:"Close,omitempty"`
+	Ping       *vmsql.SqlPingRequest       `json:"Ping,omitempty"`
+	Execute    *vmsql.SqlExecuteRequest    `json:"Execute,omitempty"`
+	Query      *vmsql.SqlQueryRequest      `json:"Query,omitempty"`
+	NestedCall *MsgNestedCall              `json:"NestedCall,omitempty"`
 }
 
 type KV struct {
+	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-func (suite *KeeperTestSuite) TestSqlite() {
+func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	wasmbin := testdata.WasmxTestSql
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
@@ -127,13 +137,7 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	qresp := &vmsql.SqlQueryResponse{}
-	err = json.Unmarshal(qres, qresp)
-	suite.Require().NoError(err)
-	suite.Require().Equal(qresp.Error, "")
-	rows := []KV{}
-	err = json.Unmarshal(qresp.Data, &rows)
-	suite.Require().NoError(err)
+	rows := suite.parseQueryToRows(qres)
 	suite.Require().Equal(1, len(rows))
 	suite.Require().Equal("\u0004\u0005", rows[0].Value)
 	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
@@ -171,13 +175,7 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	qresp = &vmsql.SqlQueryResponse{}
-	err = json.Unmarshal(qres, qresp)
-	suite.Require().NoError(err)
-	suite.Require().Equal(qresp.Error, "")
-	rows = []KV{}
-	err = json.Unmarshal(qresp.Data, &rows)
-	suite.Require().NoError(err)
+	rows = suite.parseQueryToRows(qres)
 	suite.Require().Equal(1, len(rows))
 	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
 
@@ -192,4 +190,414 @@ func (suite *KeeperTestSuite) TestSqlite() {
 	err = appA.DecodeExecuteResponse(res, resssclose)
 	suite.Require().NoError(err)
 	suite.Require().Equal("", resssclose.Error)
+}
+
+func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
+	wasmbin := testdata.WasmxTestSql
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
+
+	// connect
+	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{
+		Driver:     "sqlite3",
+		Connection: "test.db",
+		Id:         "conn2",
+	}}
+	data, err := json.Marshal(cmdConn)
+	suite.Require().NoError(err)
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss := &vmsql.SqlConnectionResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	defer os.Remove("test.db")
+
+	// create tables
+	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
+		Id:     "conn2",
+		Query:  `CREATE TABLE IF NOT EXISTS kvstore (key VARCHAR PRIMARY KEY, value VARCHAR)`,
+		Params: []byte{},
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex := &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(0), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(0), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
+
+	// create indexes
+	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
+		Id:     "conn2",
+		Query:  `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
+		Params: []byte{},
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex = &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(0), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(0), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
+
+	// simple reverted call
+	cmdExec = &Calldata{
+		NestedCall: &MsgNestedCall{
+			IterationIndex: 0,
+			RevertArray:    []bool{true},
+			IsQueryArray:   []bool{},
+			Execute: []*vmsql.SqlExecuteRequest{
+				{
+					Id:     "conn2",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice")`,
+					Params: []byte{},
+				},
+			},
+			Query: []*vmsql.SqlQueryRequest{
+				{
+					Id:     "conn2",
+					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
+					Params: []byte{},
+				},
+			},
+		},
+	}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res, err = appA.ExecuteContractNoCheck(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 3000000, nil)
+	suite.Require().NoError(err)
+	suite.Require().True(res.IsErr(), "tx should have reverted")
+
+	// alice failed
+	cmdQuery := &Calldata{Query: cmdExec.NestedCall.Query[0]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows := suite.parseQueryToRows(qres)
+	suite.Require().Equal(0, len(rows))
+
+	// simple query call -> rolled back db changes
+	cmdExec = &Calldata{
+		NestedCall: &MsgNestedCall{
+			IterationIndex: 1,
+			RevertArray:    []bool{false, false},
+			IsQueryArray:   []bool{true},
+			Execute: []*vmsql.SqlExecuteRequest{
+				{
+					Id:     "conn2",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice")`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn2",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello2", "alice2")`,
+					Params: []byte{},
+				},
+			},
+			Query: []*vmsql.SqlQueryRequest{
+				{
+					Id:     "conn2",
+					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn2",
+					Query:  `SELECT value FROM kvstore WHERE key = "hello2"`,
+					Params: []byte{},
+				},
+			},
+		},
+	}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	// alice was committed
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[0]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(1, len(rows))
+	suite.Require().Equal("alice", rows[0].Value)
+
+	// alice2 was rolled back
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[1]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(0, len(rows))
+
+	// close connection
+	cmdExec = &Calldata{Close: &vmsql.SqlCloseRequest{
+		Id: "conn2",
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssclose := &vmsql.SqlCloseResponse{}
+	err = appA.DecodeExecuteResponse(res, resssclose)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssclose.Error)
+}
+
+func (suite *KeeperTestSuite) TestNestedCalls() {
+	wasmbin := testdata.WasmxTestSql
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
+
+	// connect
+	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{
+		Driver:     "sqlite3",
+		Connection: "test.db",
+		Id:         "conn3",
+	}}
+	data, err := json.Marshal(cmdConn)
+	suite.Require().NoError(err)
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss := &vmsql.SqlConnectionResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	defer os.Remove("test.db")
+
+	// create tables
+	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
+		Id:     "conn3",
+		Query:  `CREATE TABLE IF NOT EXISTS kvstore (key VARCHAR PRIMARY KEY, value VARCHAR)`,
+		Params: []byte{},
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex := &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(0), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(0), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
+
+	// create indexes
+	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
+		Id:     "conn3",
+		Query:  `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
+		Params: []byte{},
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssex = &vmsql.SqlExecuteResponse{}
+	err = appA.DecodeExecuteResponse(res, resssex)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssex.Error)
+	suite.Require().Equal(int64(0), resssex.LastInsertId)
+	suite.Require().Equal("", resssex.LastInsertIdError)
+	suite.Require().Equal(int64(0), resssex.RowsAffected)
+	suite.Require().Equal("", resssex.RowsAffectedError)
+
+	// nested call with reverted transaction
+	cmdExec = &Calldata{
+		NestedCall: &MsgNestedCall{
+			IterationIndex: 2,
+			RevertArray:    []bool{false, true, false},
+			IsQueryArray:   []bool{false, false},
+			Execute: []*vmsql.SqlExecuteRequest{
+				{
+					Id:     "conn3",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice")`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey", "myvalue")`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey2", "myvalue2")`,
+					Params: []byte{},
+				},
+			},
+			Query: []*vmsql.SqlQueryRequest{
+				{
+					Id:     "conn3",
+					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `SELECT value FROM kvstore WHERE key = "mykey"`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `SELECT value FROM kvstore WHERE key = "mykey2"`,
+					Params: []byte{},
+				},
+			},
+		},
+	}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	nestedresp := []string{}
+	err = appA.DecodeExecuteResponse(res, &nestedresp)
+	suite.Require().NoError(err)
+	suite.Require().Equal(2, len(nestedresp))
+	suite.Require().Equal("nested call must revert", nestedresp[1])
+	rows := suite.parseQueryToRows([]byte(nestedresp[0]))
+	suite.Require().Equal(1, len(rows))
+	suite.Require().Equal("alice", rows[0].Value)
+
+	// alice passed
+	cmdQuery := &Calldata{Query: cmdExec.NestedCall.Query[0]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(1, len(rows))
+	suite.Require().Equal("alice", rows[0].Value)
+
+	// myvalue was rolled back
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[1]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(0, len(rows))
+
+	// myvalue2 was rolled back
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[2]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(0, len(rows))
+
+	// test nested query
+	cmdExec = &Calldata{
+		NestedCall: &MsgNestedCall{
+			IterationIndex: 2,
+			RevertArray:    []bool{false, false, false},
+			IsQueryArray:   []bool{true, false},
+			Execute: []*vmsql.SqlExecuteRequest{
+				{
+					Id:     "conn3",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice2")`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey", "myvalue")`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey2", "myvalue2")`,
+					Params: []byte{},
+				},
+			},
+			Query: []*vmsql.SqlQueryRequest{
+				{
+					Id:     "conn3",
+					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `SELECT value FROM kvstore WHERE key = "mykey"`,
+					Params: []byte{},
+				},
+				{
+					Id:     "conn3",
+					Query:  `SELECT value FROM kvstore WHERE key = "mykey2"`,
+					Params: []byte{},
+				},
+			},
+		},
+	}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	err = appA.DecodeExecuteResponse(res, &nestedresp)
+	suite.Require().NoError(err)
+	suite.Require().Equal(2, len(nestedresp))
+
+	// alice2 passed
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[0]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(1, len(rows))
+	suite.Require().Equal("alice2", rows[0].Value)
+
+	// myvalue was rolled back (query)
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[1]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(0, len(rows))
+
+	// myvalue2 was rolled back (query)
+	cmdQuery = &Calldata{Query: cmdExec.NestedCall.Query[2]}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(0, len(rows))
+
+	// close connection
+	cmdExec = &Calldata{Close: &vmsql.SqlCloseRequest{
+		Id: "conn3",
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssclose := &vmsql.SqlCloseResponse{}
+	err = appA.DecodeExecuteResponse(res, resssclose)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resssclose.Error)
+}
+
+func (suite *KeeperTestSuite) parseQueryResponse(qres []byte) *vmsql.SqlQueryResponse {
+	qresp := &vmsql.SqlQueryResponse{}
+	err := json.Unmarshal(qres, qresp)
+	suite.Require().NoError(err)
+	suite.Require().Equal(qresp.Error, "")
+	return qresp
+}
+
+func (suite *KeeperTestSuite) parseQueryToRows(qres []byte) []KV {
+	qresp := suite.parseQueryResponse(qres)
+	rows := []KV{}
+	err := json.Unmarshal(qresp.Data, &rows)
+	suite.Require().NoError(err)
+	return rows
 }

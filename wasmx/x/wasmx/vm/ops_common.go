@@ -105,6 +105,7 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 // All WasmX, eWasm calls must go through here
 // Returns 0 on success, 1 on failure and 2 on revert
 func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
+	appWithHooks, appWithHooksEnabled := ctx.App.(AppWithSubCallHook)
 	if types.IsSystemAddress(req.To.Bytes()) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From) {
 		return int32(1), []byte(`wasmxcall: cannot call system contract`)
 	}
@@ -230,21 +231,27 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	sysDeps := newrouter[routerAddress].ContractInfo.SystemDeps
 	pinned := newrouter[routerAddress].ContractInfo.Pinned
 	rnh := getRuntimeHandler(ctx.newIVmFn, tempCtx, sysDeps, pinned)
+	// increase current call count at this level
+	ctx.CurrentSubCallLevelCount += 1
+
 	newctx := &Context{
-		GoRoutineGroup:  ctx.GoRoutineGroup,
-		GoContextParent: ctx.GoContextParent,
-		Ctx:             tempCtx,
-		Logger:          GetVmLogger(ctx.Logger, ctx.Env.Chain.ChainIdFull, to.String()),
-		GasMeter:        ctx.GasMeter,
-		ContractStore:   contractStore,
-		CosmosHandler:   newCosmosHandler,
-		ContractRouter:  newrouter,
-		App:             ctx.App,
-		NativeHandler:   ctx.NativeHandler,
-		dbIterators:     map[int32]types.Iterator{},
-		RuntimeHandler:  rnh,
-		newIVmFn:        ctx.newIVmFn,
-		ContractInfo:    newrouter[routerAddress].ContractInfo,
+		GoRoutineGroup:           ctx.GoRoutineGroup,
+		GoContextParent:          ctx.GoContextParent,
+		Ctx:                      tempCtx,
+		Logger:                   GetVmLogger(ctx.Logger, ctx.Env.Chain.ChainIdFull, to.String()),
+		GasMeter:                 ctx.GasMeter,
+		ContractStore:            contractStore,
+		CosmosHandler:            newCosmosHandler,
+		ContractRouter:           newrouter,
+		App:                      ctx.App,
+		NativeHandler:            ctx.NativeHandler,
+		dbIterators:              map[int32]types.Iterator{},
+		RuntimeHandler:           rnh,
+		newIVmFn:                 ctx.newIVmFn,
+		ContractInfo:             newrouter[routerAddress].ContractInfo,
+		CurrentSubCallLevel:      ctx.CurrentSubCallLevel + 1,
+		CurrentSubCallId:         ctx.CurrentSubCallLevelCount,
+		CurrentSubCallLevelCount: 0, // new level, reset to 0
 		Env: &types.Env{
 			Block:       ctx.Env.Block,
 			Transaction: ctx.Env.Transaction,
@@ -258,6 +265,14 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			},
 			CurrentCall: callContext,
 		},
+	}
+
+	if appWithHooksEnabled {
+		err := appWithHooks.BeginSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery)
+		if err != nil {
+			errmsg := fmt.Sprintf("BeginSubCall error: %s", err.Error())
+			return int32(1), []byte(errmsg)
+		}
 	}
 	_, err := newctx.Execute()
 	var success int32
@@ -273,6 +288,13 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			// Write events
 			ctx.Ctx.EventManager().EmitEvents(tempCtx.EventManager().Events())
 			ctx.Logs = append(ctx.Logs, newctx.Logs...)
+		}
+	}
+	if appWithHooksEnabled {
+		err := appWithHooks.EndSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery, err)
+		if err != nil {
+			errmsg := fmt.Sprintf("BeginSubCall error: %s", err.Error())
+			return int32(1), []byte(errmsg)
 		}
 	}
 	return success, newctx.ReturnData

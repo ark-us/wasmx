@@ -2,12 +2,11 @@ package vmsql
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 )
 
 func WithSqlEmptyContext(ctx context.Context) context.Context {
-	vctx := &SqlContext{DbConnections: map[string]*sql.DB{}}
+	vctx := &SqlContext{DbConnections: map[string]*SqlOpenConnection{}}
 	return context.WithValue(ctx, SqlContextKey, vctx)
 }
 

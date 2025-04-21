@@ -180,6 +180,8 @@ import (
 
 	wasmxmoduletypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 
+	wasmxvm "github.com/loredanacirstea/wasmx/x/wasmx/vm"
+
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
@@ -339,6 +341,9 @@ type App struct {
 	initialPorts mctx.NodePorts
 
 	db dbm.DB
+
+	OrderBeginSubCall []string
+	OrderEndSubCall   []string
 }
 
 // New returns a reference to an initialized blockchain app
@@ -864,6 +869,7 @@ func NewApp(
 		networkModule,
 		cosmosmodModule,
 		websrvModule,
+		vmsql.NewAppModule(app.goContextParent),
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -911,6 +917,7 @@ func NewApp(
 		networktypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
+		vmsql.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
 	)
 
@@ -934,8 +941,20 @@ func NewApp(
 		networktypes.ModuleName,
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
+		vmsql.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers
 	)
+
+	app.mm.SetOrderBeginTransaction(
+		vmsql.ModuleName,
+	)
+
+	app.mm.SetOrderEndTransaction(
+		vmsql.ModuleName,
+	)
+
+	app.OrderBeginSubCall = []string{vmsql.ModuleName}
+	app.OrderEndSubCall = []string{vmsql.ModuleName}
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
@@ -971,6 +990,7 @@ func NewApp(
 		icatypes.ModuleName,
 		// mythos extra
 		websrvmoduletypes.ModuleName,
+		vmsql.ModuleName,
 	}
 
 	app.mm.SetOrderInitGenesis(genesisModuleOrder...)
@@ -1023,6 +1043,8 @@ func NewApp(
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 	app.setAnteHandler(encodingConfig.TxConfig)
+	app.SetBeginTransaction(app.BeginTransaction)
+	app.SetEndTransaction(app.EndTransaction)
 
 	// must be before Loading version
 	// requires the snapshot store to be created and registered as a BaseAppOption
@@ -1170,6 +1192,40 @@ func (app *App) EndBlocker(ctx sdk.Context, metadata []byte) (sdk.EndBlock, erro
 		}
 	}
 	return app.mm.EndBlock(ctx)
+}
+
+func (app *App) BeginTransaction(ctx context.Context, txmode sdk.ExecMode, txBytes []byte) error {
+	// TODO maybe give access to contracts to this hook
+	return app.mm.BeginTransaction(ctx, txmode, txBytes)
+}
+
+func (app *App) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, err error) error {
+	// TODO maybe give access to contracts to this hook
+	return app.mm.EndTransaction(ctx, txmode, gInfo, result, anteEvents, err)
+}
+
+func (app *App) BeginSubCall(ctx context.Context, level uint32, index uint32, isquery bool) error {
+	for _, moduleName := range app.OrderBeginSubCall {
+		if module, ok := app.mm.Modules[moduleName].(wasmxvm.HasBeginSubCall); ok {
+			err := module.BeginSubCall(ctx, level, index, isquery)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (app *App) EndSubCall(ctx context.Context, level uint32, index uint32, isquery bool, err error) error {
+	for _, moduleName := range app.OrderEndSubCall {
+		if module, ok := app.mm.Modules[moduleName].(wasmxvm.HasEndSubCall); ok {
+			err := module.EndSubCall(ctx, level, index, isquery, err)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (a *App) Configurator() module.Configurator {

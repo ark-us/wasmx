@@ -19,7 +19,7 @@ func InstantiateWasmxP2PJson(context *vmtypes.Context, rnh memc.RuntimeHandler, 
 }
 
 func Setup() {
-	vmtypes.DependenciesMap[HOST_WASMX_ENV_EXPORT] = true
+	vmtypes.DependenciesMap[HOST_WASMX_ENV_P2P_EXPORT] = true
 	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_P2P_VER1, InstantiateWasmxP2PJson)
 	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_P2P_VER1] = true
 }
