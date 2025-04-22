@@ -46,8 +46,27 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
+	closedChannel := make(chan struct{})
 
-	err = vctx.SetConnection(connId, req.Connection, db)
+	ctx.GoRoutineGroup.Go(func() error {
+		select {
+		case <-ctx.GoContextParent.Done():
+			ctx.Ctx.Logger().Info(fmt.Sprintf("parent context was closed, closing database connection: %s", connId))
+			err := db.Close()
+			if err != nil {
+				ctx.Ctx.Logger().Error(fmt.Sprintf(`database close error for connection id "%s": %v`, connId, err))
+			}
+			close(closedChannel)
+			return nil
+		case <-closedChannel:
+			// when close signal is received from Close() API
+			// database is already closed, so we exit this goroutine
+			ctx.Ctx.Logger().Info(fmt.Sprintf("database connection closed: %s", connId))
+			return nil
+		}
+	})
+
+	err = vctx.SetConnection(connId, req.Connection, db, closedChannel)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -84,6 +103,7 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
+	close(db.Closed) // signal closing the database
 	return prepareResponse(rnh, response)
 }
 

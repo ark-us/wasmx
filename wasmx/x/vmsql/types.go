@@ -38,6 +38,7 @@ type SqlOpenConnection struct {
 	Db              *sql.DB
 	OpenSavepointTx *sql.Tx
 	SavePointMap    map[string]bool
+	Closed          chan struct{}
 }
 
 func (conn *SqlOpenConnection) hasSavePoint(savepoint string) bool {
@@ -57,14 +58,14 @@ func (p *SqlContext) GetConnection(id string) (*SqlOpenConnection, bool) {
 	return db, found
 }
 
-func (p *SqlContext) SetConnection(id string, connection string, db *sql.DB) error {
+func (p *SqlContext) SetConnection(id string, connection string, db *sql.DB, closed chan struct{}) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	_, found := p.DbConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite sql connection: %s", id)
 	}
-	p.DbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, SavePointMap: make(map[string]bool, 0)}
+	p.DbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, Closed: closed, SavePointMap: make(map[string]bool, 0)}
 	return nil
 }
 
