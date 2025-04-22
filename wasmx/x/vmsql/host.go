@@ -34,10 +34,16 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	conn, found := vctx.GetConnection(connId)
 	if found {
 		if conn.Connection == req.Connection {
+			// we test the connection with a ping
+			// if not successful, we try one more time to open it, below
+			err := conn.Db.Ping()
+			if err == nil {
+				return prepareResponse(rnh, response)
+			}
+		} else {
+			response.Error = "connection id already in use"
 			return prepareResponse(rnh, response)
 		}
-		response.Error = "connection id already in use"
-		return prepareResponse(rnh, response)
 	}
 
 	// TODO req.Connection - should we restrict this path and make it relative to our DataDirectory? or introduce a list of allowed directories that WASMX can modify and make sure the path is within these directories.
@@ -139,7 +145,7 @@ func Ping(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 	return prepareResponse(rnh, response)
 }
 
-// TODO to have flexibility, we need to allow contracts to create the full sql query
+// to have flexibility, we need to allow contracts to create the full sql query
 // but this has security issues that should be addressed on the contract side
 // and provide JSON-encoded arguments that the host can use to construct the query
 // Embedding values directly in a SQL query is dangerous and should be avoided
@@ -331,11 +337,11 @@ func BuildWasmxSqlVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{
 		// Connect(req) -> resp
 		vm.BuildFn("Connect", Connect, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		// TODO
-		// vm.BuildFn("SetOptions", SetOptions, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Ping", Ping, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Execute", Execute, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Query", Query, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		// TODO
+		// vm.BuildFn("SetOptions", SetOptions, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		// vm.BuildFn("QueryRow", QueryRow, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		// vm.BuildFn("Stats", Stats, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
