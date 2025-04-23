@@ -43,7 +43,7 @@ type KV struct {
 func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	wasmbin := testdata.WasmxTestSql
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -51,6 +51,9 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
+
+	// set a role to have access to protected APIs
+	suite.registerRole("somerole", contractAddress, sender)
 
 	// connect
 	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{
@@ -195,7 +198,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	wasmbin := testdata.WasmxTestSql
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -203,6 +206,9 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
+
+	// set a role to have access to protected APIs
+	suite.registerRole("somerole", contractAddress, sender)
 
 	// connect
 	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{
@@ -360,7 +366,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 func (suite *KeeperTestSuite) TestNestedCalls() {
 	wasmbin := testdata.WasmxTestSql
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -368,6 +374,9 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
+
+	// set a role to have access to protected APIs
+	suite.registerRole("somerole", contractAddress, sender)
 
 	// connect
 	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{

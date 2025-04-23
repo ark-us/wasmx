@@ -240,6 +240,8 @@ func InitiateCosmWasmEnv8(context *Context, rnh memc.RuntimeHandler, dep *types.
 
 var SystemDepHandler = map[string]func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error{}
 
+var SystemDepHandlerMock = map[string]func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error{}
+
 type ExecuteFunctionInterface func(context *Context, vm memc.IVm, funcName string, args []interface{}) ([]int32, error)
 
 var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
@@ -301,6 +303,13 @@ func SetSystemDepHandler(
 	handler func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error,
 ) {
 	SystemDepHandler[key] = handler
+}
+
+func SetSystemDepHandlerMock(
+	key string,
+	handler func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error,
+) {
+	SystemDepHandlerMock[key] = handler
 }
 
 func SetExecuteFunctionHandler(

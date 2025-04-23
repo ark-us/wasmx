@@ -172,9 +172,9 @@ func (k *Keeper) GetRoleByRoleName(ctx sdk.Context, roleName string) (*types.Rol
 
 // GetRoleLabelByContract
 func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) string {
-	contractAddr := k.GetRoleContractAddress(ctx)
+	roleAddress := k.GetRoleContractAddress(ctx)
 	msg := fmt.Sprintf(`{"GetRoleLabelByContract":{"address":"%s"}}`, contractAddress.String())
-	data, err := k.internalQuery(ctx, contractAddr, msg)
+	data, err := k.internalQuery(ctx, roleAddress, msg)
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {

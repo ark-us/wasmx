@@ -212,6 +212,10 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 	WASMX_MEMORY_TAYLOR:         true,
 }
 
+var PROTECTED_HOST_APIS = map[string]bool{
+	WASMX_CONSENSUS_JSON_1: true,
+}
+
 var ROLE_EID_REGISTRY = "eid_registry"
 var ROLE_STORAGE = "storage"
 var ROLE_STAKING = "staking"

@@ -39,16 +39,6 @@ import (
 	mcfg "github.com/loredanacirstea/wasmx/config"
 )
 
-func returnResult(ctx *Context, rnh memc.RuntimeHandler, responsebz []byte) ([]interface{}, error) {
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
-}
-
 func StartNodeWithIdentity(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	requestbz, err := rnh.ReadMemFromPtr(params[0])
@@ -71,18 +61,8 @@ func StartNodeWithIdentity(_context interface{}, rnh memc.RuntimeHandler, params
 		return nil, err
 	}
 
-	response := StartNodeWithIdentityResponse{Error: "", Data: make([]byte, 0)}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	response := &StartNodeWithIdentityResponse{Error: "", Data: make([]byte, 0)}
+	return prepareResponse(rnh, response)
 }
 
 func GetNodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -97,22 +77,12 @@ func GetNodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		return nil, fmt.Errorf(ERROR_NODE_NOT_INSTANTIATED)
 	}
 	node := *p2pctx.Node
-	response := NodeInfo{Id: node.ID().String(), Ip: node.Addrs()[0].String()}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	response := &NodeInfo{Id: node.ID().String(), Ip: node.Addrs()[0].String()}
+	return prepareResponse(rnh, response)
 }
 
 func ConnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	response := ConnectPeerResponse{}
+	response := &ConnectPeerResponse{}
 	ctx := _context.(*Context)
 	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
@@ -129,17 +99,7 @@ func ConnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		response.Error = err.Error()
 	}
 
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, response)
 }
 
 // sends to all connected peers
@@ -179,18 +139,8 @@ func SendMessage(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		return nil, err
 	}
 
-	response := SendMessageResponse{}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	response := &SendMessageResponse{}
+	return prepareResponse(rnh, response)
 }
 
 func SendMessageToPeers(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -210,22 +160,12 @@ func SendMessageToPeers(_context interface{}, rnh memc.RuntimeHandler, params []
 		return nil, err
 	}
 
-	response := SendMessageToPeersResponse{}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	response := &SendMessageToPeersResponse{}
+	return prepareResponse(rnh, response)
 }
 
 func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	response := ConnectChatRoomResponse{Error: ""}
+	response := &ConnectChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
 	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
@@ -236,11 +176,7 @@ func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		response.Error = fmt.Sprintf("send message to chat room failed: %s", err.Error())
 		ctx.Logger.Error(response.Error)
-		responsebz, err := json.Marshal(response)
-		if err != nil {
-			return nil, err
-		}
-		return returnResult(ctx, rnh, responsebz)
+		return prepareResponse(rnh, response)
 	}
 	_, err = connectChatRoomAndListen(ctx, req.ProtocolId, req.Topic)
 	// TODO send error to contract
@@ -248,11 +184,7 @@ func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []int
 		if err.Error() != ERROR_CTX_CANCELED {
 			response.Error = fmt.Sprintf("error chat room connection: topic %s: %s", req.Topic, err.Error())
 			ctx.Logger.Error("Error chat room connection ", "error", err.Error(), "topic", req.Topic)
-			responsebz, err := json.Marshal(response)
-			if err != nil {
-				return nil, err
-			}
-			return returnResult(ctx, rnh, responsebz)
+			return prepareResponse(rnh, response)
 		}
 		// remove chat room; it will be reconnected when needed
 		p2pctx, err := GetP2PContext(ctx.Context.GoContextParent)
@@ -260,21 +192,11 @@ func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []int
 			p2pctx.DeleteChatRoom(req.ProtocolId, req.Topic)
 		}
 	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, response)
 }
 
 func SendMessageToChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	response := SendMessageToChatRoomResponse{Error: ""}
+	response := &SendMessageToChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
 	requestbz, err := rnh.ReadMemFromPtr(params[0])
 	if err != nil {
@@ -312,24 +234,10 @@ func SendMessageToChatRoom(_context interface{}, rnh memc.RuntimeHandler, params
 		err = sendMessageToChatRoomInternal(ctx, cr, req)
 		if err != nil {
 			response.Error = err.Error()
-			responsebz, err := json.Marshal(response)
-			if err != nil {
-				return nil, err
-			}
-			return returnResult(ctx, rnh, responsebz)
+			return prepareResponse(rnh, response)
 		}
 	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, response)
 }
 
 func CloseNode(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -379,18 +287,8 @@ func DisconnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []
 		p2pctx.DeleteChatRoom(req.ProtocolId, req.Topic)
 	}
 
-	response := DisconnectChatRoomResponse{}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	response := &DisconnectChatRoomResponse{}
+	return prepareResponse(rnh, response)
 }
 
 func DisconnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -548,6 +446,20 @@ func StartStateSyncResponse(_context interface{}, rnh memc.RuntimeHandler, param
 		response.Error = fmt.Sprintf("state sync failed: connect to peer failed: %s: %s", req.PeerAddress, err.Error())
 	}
 
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	ptr, err := rnh.AllocateWriteMem(responsebz)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
+func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
 	responsebz, err := json.Marshal(response)
 	if err != nil {
 		return nil, err

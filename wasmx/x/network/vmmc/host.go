@@ -56,17 +56,7 @@ func StartSubChain(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		ctx.Logger(ctx.Ctx).Error("could not start subchain app", "error", err.Error())
 		response.Error = err.Error()
 	}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, response)
 }
 
 func GetSubChainIds(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -75,17 +65,7 @@ func GetSubChainIds(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	if err != nil {
 		return nil, err
 	}
-	responsebz, err := json.Marshal(multichainapp.ChainIds)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, multichainapp.ChainIds)
 }
 
 // this is what we use to statesync subchains
@@ -107,6 +87,10 @@ func StartStateSyncRequest(_context interface{}, rnh memc.RuntimeHandler, params
 		ctx.Logger(ctx.Ctx).Error("could not start subchain app", "error", err.Error())
 		response.Error = err.Error()
 	}
+	return prepareResponse(rnh, response)
+}
+
+func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
 	responsebz, err := json.Marshal(response)
 	if err != nil {
 		return nil, err

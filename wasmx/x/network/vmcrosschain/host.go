@@ -17,8 +17,6 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-// TODO!! this API should only be used by core contracts
-
 // executeCrossChainTx(*MsgExecuteCrossChainCallRequest) (*abci.MsgExecuteCrossChainCallResponse, error)
 func executeCrossChainTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
@@ -104,7 +102,6 @@ func executeCrossChainQuery(_context interface{}, rnh memc.RuntimeHandler, param
 	return returnResultAndAddCrossChainInfo(ctx, rnh, req, resp)
 }
 
-// TODO API can only be used by core contracts
 // like consensus, lobby, etc
 // internal communication with private chains, like level0, or between consensusless / consensusmeta
 // contracts on different chains, which do not require determinism

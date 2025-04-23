@@ -100,7 +100,7 @@ func (c *Context) Execute() ([]byte, error) {
 	defer func() {
 		rnh.GetVm().Cleanup()
 	}()
-	err := InitiateWasm(c, rnh, filepath, c.ContractInfo.AotFilePath, nil, c.ContractInfo.SystemDeps)
+	err := InitiateWasm(c, rnh, filepath, c.ContractInfo.AotFilePath, nil, c.ContractInfo.SystemDeps, c.ContractInfo.Role != "")
 	if err != nil {
 		return nil, err
 	}

@@ -20,42 +20,17 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string, aotFilePath string, wasmbuffer []byte, systemDeps []types.SystemDep) error {
+func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string, aotFilePath string, wasmbuffer []byte, systemDeps []types.SystemDep, hasCoreRole bool) error {
 	// set default
 	if len(systemDeps) == 0 {
 		label := types.DEFAULT_SYS_DEP
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
-	err := initiateWasmDeps(context, rnh, systemDeps)
+	err := initiateWasmDeps(context, rnh, systemDeps, hasCoreRole)
 	if err != nil {
 		return err
 	}
 	contractVm := rnh.GetVm()
-	registered := contractVm.ListRegisteredModule()
-	// register mocks if dependencies are not already registered
-	if !slices.Contains(registered, "consensus") {
-		mock, err := BuildWasmxConsensusJson1Mock(context, rnh)
-		if err != nil {
-			return err
-		}
-		err = contractVm.RegisterModule(mock)
-		if err != nil {
-			return err
-		}
-	}
-	// if !slices.Contains(registered, types.WASMX_VM_CORE_EXPORT) {
-	// 	if slices.Contains(registered, types.WASMX_VM_CORE_EXPORT) {
-
-	// 	}
-	// 	mock, err := BuildWasmxCoreEnvMocki32(context, rnh)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	err = contractVm.RegisterModule(mock)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	if wasmFilePath != "" || aotFilePath != "" || len(wasmbuffer) > 0 {
 		err = contractVm.InstantiateWasm(wasmFilePath, aotFilePath, wasmbuffer)
@@ -66,17 +41,29 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string
 	return nil
 }
 
-func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []types.SystemDep) error {
+// finds registered host APIs for the given role
+func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []types.SystemDep, hasCoreRole bool) error {
 	for _, systemDep := range systemDeps {
 		// system deps of system deps
-		err := initiateWasmDeps(context, rnh, systemDep.Deps)
+		err := initiateWasmDeps(context, rnh, systemDep.Deps, hasCoreRole)
 		if err != nil {
 			return err
 		}
-		handler, found := SystemDepHandler[systemDep.Role]
-		if !found {
-			handler, found = SystemDepHandler[systemDep.Label]
+
+		_, isProtected := getFirstKeyFromMapping(types.PROTECTED_HOST_APIS, []string{systemDep.Role, systemDep.Label})
+
+		if isProtected && !hasCoreRole {
+			handler, found := getFirstKeyFromMapping(SystemDepHandlerMock, []string{systemDep.Role, systemDep.Label})
+			if found {
+				err := handler(context, rnh, &systemDep)
+				if err != nil {
+					return err
+				}
+			}
+			// we do not allow a contract with no roles to access protected APIs, below
+			continue
 		}
+		handler, found := getFirstKeyFromMapping(SystemDepHandler, []string{systemDep.Role, systemDep.Label})
 		if found {
 			err := handler(context, rnh, &systemDep)
 			if err != nil {
@@ -85,6 +72,16 @@ func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []ty
 		}
 	}
 	return nil
+}
+
+func getFirstKeyFromMapping[T any](vmap map[string]T, keys []string) (T, bool) {
+	var zero T
+	for _, key := range keys {
+		if v, ok := vmap[key]; ok {
+			return v, true
+		}
+	}
+	return zero, false
 }
 
 func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []types.SystemDep, pinned bool) memc.RuntimeHandler {
@@ -297,7 +294,7 @@ func ExecuteWasmInterpreted(
 
 	// add itself
 	contractstr := env.Contract.Address.String()
-	err = InitiateWasm(context, rnh, "", "", nil, contractInfo.SystemDeps)
+	err = InitiateWasm(context, rnh, "", "", nil, contractInfo.SystemDeps, contractInfo.Role != "")
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
@@ -417,7 +414,7 @@ func ExecuteWasm(
 	}
 	// add itself
 	contractstr := env.Contract.Address.String()
-	err = InitiateWasm(context, rnh, contractInfo.CodeFilePath, contractInfo.AotFilePath, nil, contractInfo.SystemDeps)
+	err = InitiateWasm(context, rnh, contractInfo.CodeFilePath, contractInfo.AotFilePath, nil, contractInfo.SystemDeps, contractInfo.Role != "")
 	if err != nil {
 		return types.ContractResponse{}, err
 	}
