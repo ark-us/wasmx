@@ -1,9 +1,9 @@
 name: Run Go WasmX Tests
 
 on:
-  # push:
-  #  branches:
-  #    - main # Trigger on push to the "main" branch
+  push:
+   branches:
+     - main # Trigger on push to the "main" branch
   pull_request:
     branches:
       - main # Trigger on pull request to the "main" branch
@@ -48,6 +48,7 @@ jobs:
           go test -failfast=false -v ./wasmx/...
           go test -failfast=false -v ./wasmx-wazero/...
           go test -failfast=false -v ./mythos-wazero/...
+          go test -failfast=false -timeout 2000s -v ./tests/vmsql -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/wasmx -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/cosmosmod -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/network -wasm-runtime=wazero

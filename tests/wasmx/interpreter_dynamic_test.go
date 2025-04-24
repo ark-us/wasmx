@@ -21,7 +21,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
-func (suite *KeeperTestSuite) TestDynamicInterpreter() {
+func (suite *KeeperTestSuite) TestUpgradeInterpreterEVM() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 	valAccount := simulation.Account{
@@ -98,6 +98,12 @@ func (suite *KeeperTestSuite) TestDynamicInterpreter() {
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
 	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", hex.EncodeToString(queryres))
 
+	// now also use the previous interpreter, which should still work
+	_, contractAddress = appA.Deploy(sender, evmcode, []string{types.INTERPRETER_EVM_SHANGHAI}, types.WasmxExecutionMessage{Data: initvaluebz}, nil, "simpleStorage", nil)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(setHex + "0000000000000000000000000000000000000000000000000000000000000006")}, nil, nil)
+
+	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
+	suite.Require().Equal("0000000000000000000000000000000000000000000000000000000000000006", hex.EncodeToString(queryres))
 }
 
 func (suite *KeeperTestSuite) TestWasmxDebug() {
