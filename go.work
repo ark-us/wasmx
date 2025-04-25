@@ -13,7 +13,7 @@ replace (
 	// go get github.com/loredanacirstea/cosmos-db@2830457949700fbd5c99a1052144e3a58b8ab8ea
 	github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250418184042-283045794970
 
-	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
+	github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// cosmossdk.io/store => ../cosmos-sdk/store
 	// github.com/cosmos/iavl => ../iavl
 	// github.com/cosmos/cosmos-db => ../cosmos-db

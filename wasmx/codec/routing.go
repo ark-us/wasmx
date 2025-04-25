@@ -20,10 +20,11 @@ type QueryRouter struct {
 }
 
 func (k QueryRouter) SubmitCosmosQuery(ctx sdk.Context, reqQuery *abci.RequestQuery) ([]byte, error) {
-	// TODO if we allow historical queries, at a certain block
-	// use app.Query(queryReq)
+	// TODO should we allow historical queries, at a certain block
 	queryFn := k.Router.Route(reqQuery.Path)
-	res, err := safeQuery(ctx, reqQuery, queryFn)
+	// use a new context here, that we do not commit
+	newctx, _ := ctx.CacheContext()
+	res, err := safeQuery(newctx, reqQuery, queryFn)
 	if err != nil {
 		return nil, err
 	}

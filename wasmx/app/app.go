@@ -209,6 +209,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
 	"github.com/loredanacirstea/wasmx/x/network/vmmc"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmkv"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 )
 
@@ -254,6 +255,7 @@ func init() {
 	vmcrosschain.Setup()
 	// experimental WIP, do not enable in production
 	vmsql.Setup()
+	vmkv.Setup()
 }
 
 // App extends an ABCI application, but with most of its parameters exported.
@@ -870,6 +872,7 @@ func NewApp(
 		cosmosmodModule,
 		websrvModule,
 		vmsql.NewAppModule(app.goContextParent),
+		vmkv.NewAppModule(app.goContextParent),
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -918,6 +921,7 @@ func NewApp(
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
 		vmsql.ModuleName,
+		vmkv.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
 	)
 
@@ -942,19 +946,22 @@ func NewApp(
 		cosmosmodtypes.ModuleName,
 		websrvmoduletypes.ModuleName,
 		vmsql.ModuleName,
+		vmkv.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers
 	)
 
 	app.mm.SetOrderBeginTransaction(
 		vmsql.ModuleName,
+		vmkv.ModuleName,
 	)
 
 	app.mm.SetOrderEndTransaction(
 		vmsql.ModuleName,
+		vmkv.ModuleName,
 	)
 
-	app.OrderBeginSubCall = []string{vmsql.ModuleName}
-	app.OrderEndSubCall = []string{vmsql.ModuleName}
+	app.OrderBeginSubCall = []string{vmsql.ModuleName, vmkv.ModuleName}
+	app.OrderEndSubCall = []string{vmsql.ModuleName, vmkv.ModuleName}
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
@@ -991,6 +998,7 @@ func NewApp(
 		// mythos extra
 		websrvmoduletypes.ModuleName,
 		vmsql.ModuleName,
+		vmkv.ModuleName,
 	}
 
 	app.mm.SetOrderInitGenesis(genesisModuleOrder...)

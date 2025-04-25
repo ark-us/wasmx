@@ -291,9 +291,9 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		}
 	}
 	if appWithHooksEnabled {
-		err := appWithHooks.EndSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery, err)
-		if err != nil {
-			errmsg := fmt.Sprintf("BeginSubCall error: %s", err.Error())
+		err2 := appWithHooks.EndSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery, err)
+		if err2 != nil {
+			errmsg := fmt.Sprintf("BeginSubCall error: %s", err2.Error())
 			return int32(1), []byte(errmsg)
 		}
 	}

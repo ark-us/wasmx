@@ -43,6 +43,7 @@ export WASMX_GO_PRECOMPILES="${WASMX_PROJECT_ROOT}/wasmx/x/wasmx/vm/precompiles"
 export WASMX_GO_TESTDATA="${WASMX_PROJECT_ROOT}/tests/testdata/wasmx"
 export WASMX_GO_TESTDATA_NETWORK="${WASMX_PROJECT_ROOT}/tests/network/testdata/wasmx"
 export WASMX_GO_TESTDATA_SQL="${WASMX_PROJECT_ROOT}/tests/vmsql/testdata/as"
+export WASMX_GO_TESTDATA_KVDB="${WASMX_PROJECT_ROOT}/tests/vmkv/testdata/as"
 
 # precompiles
 export WASMX_BLOCKS="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-blocks"
@@ -80,6 +81,7 @@ export WASMX_CODES_REGISTRY="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-codes-regi
 export WASMX_TESTS_CROSSCHAIN="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-crosschain"
 export WASMX_TESTS_SIMPLESTORAGE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-simplestorage"
 export WASMX_TESTS_SQL="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-sql"
+export WASMX_TESTS_KVDB="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-kvdb"
 
 labels=$(echo $TO_COMPILE | tr "," "\n")
 for label in $labels
@@ -246,6 +248,9 @@ do
 
         cd $WASMX_TESTS_SQL && npm run asbuild
         mv -f $WASMX_TESTS_SQL/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_test_sql.wasm
+
+        cd $WASMX_TESTS_KVDB && npm run asbuild
+        mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
     fi
 done
 
@@ -280,6 +285,7 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_TESTS_CROSSCHAIN && npm run asbuild
     cd $WASMX_TESTS_SIMPLESTORAGE && npm run asbuild
     cd $WASMX_TESTS_SQL && npm run asbuild
+    cd $WASMX_TESTS_KVDB && npm run asbuild
     cd $WASMX_LOBBY && npm run asbuild
     cd $WASMX_METAREGISTRY && npm run asbuild
     cd $WASMX_CODES_REGISTRY && npm run asbuild
@@ -321,4 +327,5 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_TESTS_SIMPLESTORAGE/build/release.wasm $WASMX_GO_TESTDATA_NETWORK/simple_storage.wasm
 
     mv -f $WASMX_TESTS_SQL/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_test_sql.wasm
+    mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
 fi

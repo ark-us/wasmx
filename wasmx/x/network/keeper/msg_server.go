@@ -11,6 +11,10 @@ import (
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
+// TODO security - these network messages are entrypoints for deterministic executions triggered by single-consensus contracts
+// they must not be triggered by users
+// they must not be called by normal, deterministic contracts
+// same for queries
 type msgServer struct {
 	*Keeper
 }

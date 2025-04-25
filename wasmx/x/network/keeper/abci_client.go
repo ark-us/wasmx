@@ -51,6 +51,8 @@ type ABCIClient struct {
 	config         *config.Config
 }
 
+// this API must only be used as an entrypoint
+// not internally, inside a deterministic contract call
 func NewABCIClient(
 	mapp cfg.MythosApp,
 	bapp cfg.BaseApp,

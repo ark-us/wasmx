@@ -308,6 +308,8 @@ func wasmxExecuteCosmosMsg(_context interface{}, rnh memc.RuntimeHandler, params
 	var msg cdctypes.Any
 	ctx.CosmosHandler.JSONCodec().UnmarshalJSON(reqbz, &msg)
 
+	// TODO ExecuteCosmosMsg and ExecuteCosmosQuery may trigger subcals
+	// which mess up subcall hooks
 	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsgAny(&msg)
 	errmsg := ""
 	success := 0

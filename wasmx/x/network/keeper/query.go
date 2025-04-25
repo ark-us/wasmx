@@ -17,6 +17,10 @@ import (
 
 var _ types.QueryServer = &Keeper{}
 
+// TODO this API must only be used as an entrypoint
+// not internally, inside a deterministic contract call
+// baseapp.Query() must not be used inside a deterministic call - subcall hooks are not triggered; only ExecuteCosmosMsgAny, SubmitCosmosQuery from CosmosHandler are used inside a deterministic call
+
 func (k *Keeper) QueryMultiChain(goCtx context.Context, req *types.QueryMultiChainRequest) (*types.QueryMultiChainResponse, error) {
 	abciReq, err := mcodec.RequestQueryFromBz(req.QueryData)
 	if err != nil {
