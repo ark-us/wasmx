@@ -74,7 +74,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn1",
 		Query:  `CREATE TABLE IF NOT EXISTS kvstore (key BLOB PRIMARY KEY, value BLOB)`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -92,7 +92,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn1",
 		Query:  `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -117,7 +117,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 			key,
 			value,
 		),
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -135,7 +135,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	cmdQuery := &Calldata{Query: &vmsql.SqlQueryRequest{
 		Id:     "conn1",
 		Query:  fmt.Sprintf(`SELECT value FROM kvstore WHERE key = X'%X'`, key),
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
@@ -148,7 +148,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	// insert2
 	key = []byte{1, 1, 1, 1, 1}
 	value = []byte{2, 2, 2, 2, 2}
-	paramsbz, err := json.Marshal(&vmsql.SqlQueryParams{Params: []vmsql.SqlQueryParam{{Type: "blob", Value: key}, {Type: "blob", Value: value}}})
+	paramsbz, err := paramsMarshal([]vmsql.SqlQueryParam{{Type: "blob", Value: key}, {Type: "blob", Value: value}})
 	suite.Require().NoError(err)
 	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn1",
@@ -168,7 +168,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	suite.Require().Equal("", resssex.RowsAffectedError)
 
 	// query2
-	paramsbz, err = json.Marshal(&vmsql.SqlQueryParams{Params: []vmsql.SqlQueryParam{{Type: "blob", Value: key}}})
+	paramsbz, err = paramsMarshal([]vmsql.SqlQueryParam{{Type: "blob", Value: key}})
 	suite.Require().NoError(err)
 	cmdQuery = &Calldata{Query: &vmsql.SqlQueryRequest{
 		Id:     "conn1",
@@ -229,7 +229,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn2",
 		Query:  `CREATE TABLE IF NOT EXISTS kvstore (key VARCHAR PRIMARY KEY, value VARCHAR)`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -247,7 +247,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn2",
 		Query:  `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -271,14 +271,14 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 				{
 					Id:     "conn2",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 			Query: []*vmsql.SqlQueryRequest{
 				{
 					Id:     "conn2",
 					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 		},
@@ -307,24 +307,24 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 				{
 					Id:     "conn2",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn2",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello2", "alice2")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 			Query: []*vmsql.SqlQueryRequest{
 				{
 					Id:     "conn2",
 					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn2",
 					Query:  `SELECT value FROM kvstore WHERE key = "hello2"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 		},
@@ -397,7 +397,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn3",
 		Query:  `CREATE TABLE IF NOT EXISTS kvstore (key VARCHAR PRIMARY KEY, value VARCHAR)`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -415,7 +415,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	cmdExec = &Calldata{Execute: &vmsql.SqlExecuteRequest{
 		Id:     "conn3",
 		Query:  `CREATE INDEX IF NOT EXISTS idx_kvstore_key ON kvstore(key)`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdExec)
 	suite.Require().NoError(err)
@@ -439,34 +439,34 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 				{
 					Id:     "conn3",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey", "myvalue")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey2", "myvalue2")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 			Query: []*vmsql.SqlQueryRequest{
 				{
 					Id:     "conn3",
 					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `SELECT value FROM kvstore WHERE key = "mykey"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `SELECT value FROM kvstore WHERE key = "mykey2"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 		},
@@ -518,34 +518,34 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 				{
 					Id:     "conn3",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("hello", "alice2")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey", "myvalue")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `INSERT OR REPLACE INTO kvstore(key, value) VALUES ("mykey2", "myvalue2")`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 			Query: []*vmsql.SqlQueryRequest{
 				{
 					Id:     "conn3",
 					Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `SELECT value FROM kvstore WHERE key = "mykey"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 				{
 					Id:     "conn3",
 					Query:  `SELECT value FROM kvstore WHERE key = "mykey2"`,
-					Params: []byte{},
+					Params: vmsql.Params{},
 				},
 			},
 		},
@@ -609,4 +609,16 @@ func (suite *KeeperTestSuite) parseQueryToRows(qres []byte) []KV {
 	err := json.Unmarshal(qresp.Data, &rows)
 	suite.Require().NoError(err)
 	return rows
+}
+
+func paramsMarshal(params []vmsql.SqlQueryParam) ([][]byte, error) {
+	res := vmsql.Params{}
+	for _, param := range params {
+		paramsbz, err := json.Marshal(&param)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, paramsbz)
+	}
+	return res, nil
 }

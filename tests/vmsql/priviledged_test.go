@@ -36,7 +36,7 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	cmdQuery := &Calldata{Query: &vmsql.SqlQueryRequest{
 		Id:     "conn1",
 		Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err := json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
@@ -50,7 +50,7 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	cmdQuery = &Calldata{Query: &vmsql.SqlQueryRequest{
 		Id:     "conn1",
 		Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-		Params: []byte{},
+		Params: vmsql.Params{},
 	}}
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)

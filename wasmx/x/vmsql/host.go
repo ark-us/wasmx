@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -76,6 +77,11 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
+	}
+
+	if req.Driver == "sqlite3" {
+		db.Exec("PRAGMA journal_mode = WAL")
+		db.Exec("PRAGMA foreign_keys = ON")
 	}
 	return prepareResponse(rnh, response)
 }
@@ -183,16 +189,13 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		}
 	}
 
-	reqparams := &SqlQueryParams{}
-	if len(req.Params) > 0 {
-		err = json.Unmarshal(req.Params, reqparams)
-		if err != nil {
-			response.Error = fmt.Sprintf("invalid query params: %s", err.Error())
-			return prepareResponse(rnh, response)
-		}
+	reqparams, err := parseRequestParams(req.Params)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
 	}
 
-	qparams := parseSqlQueryParams(reqparams.Params)
+	qparams := parseSqlQueryParams(reqparams)
 	res, err := db.OpenSavepointTx.ExecContext(ctx.Ctx, req.Query, qparams...)
 	if err != nil {
 		response.Error = err.Error()
@@ -210,6 +213,55 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	}
 	response.RowsAffected = rows
 
+	return prepareResponse(rnh, response)
+}
+
+func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req SqlExecuteBatchRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetSqlContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SqlExecuteBatchResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+	db, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "sql connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	if db.OpenSavepointTx == nil {
+		err := beginDbTx(db, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, cmd := range req.Commands {
+		reqparams, err := parseRequestParams(cmd.Params)
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+
+		qparams := parseSqlQueryParams(reqparams)
+		_, err = db.OpenSavepointTx.ExecContext(ctx.Ctx, cmd.Query, qparams...)
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+	}
 	return prepareResponse(rnh, response)
 }
 
@@ -245,16 +297,13 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		}
 	}
 
-	reqparams := &SqlQueryParams{}
-	if len(req.Params) > 0 {
-		err = json.Unmarshal(req.Params, reqparams)
-		if err != nil {
-			response.Error = fmt.Sprintf("invalid query params: %s", err.Error())
-			return prepareResponse(rnh, response)
-		}
+	reqparams, err := parseRequestParams(req.Params)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
 	}
 
-	qparams := parseSqlQueryParams(reqparams.Params)
+	qparams := parseSqlQueryParams(reqparams)
 	rows, err := db.OpenSavepointTx.QueryContext(ctx.Ctx, req.Query, qparams...)
 	if err != nil {
 		response.Error = err.Error()
@@ -299,10 +348,24 @@ func beginDbTx(db *SqlOpenConnection, ctx *Context) error {
 	return nil
 }
 
+func parseRequestParams(params [][]byte) ([]SqlQueryParam, error) {
+	reqparams := []SqlQueryParam{}
+	for _, param := range params {
+		reqp := SqlQueryParam{}
+		err := json.Unmarshal(param, &reqp)
+		if err != nil {
+			return nil, fmt.Errorf("invalid query params: %s", err.Error())
+		}
+		reqparams = append(reqparams, reqp)
+	}
+	return reqparams, nil
+}
+
 func parseSqlQueryParams(params []SqlQueryParam) []interface{} {
 	qparams := []interface{}{}
 	for _, param := range params {
-		switch param.Type {
+		typeLower := strings.ToLower(param.Type)
+		switch typeLower {
 		case "":
 			qparams = append(qparams, param.Value)
 		case "blob":
@@ -339,6 +402,7 @@ func BuildWasmxSqlVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{
 		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Ping", Ping, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Execute", Execute, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("BatchAtomic", BatchAtomic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Query", Query, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		// TODO
 		// vm.BuildFn("SetOptions", SetOptions, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
