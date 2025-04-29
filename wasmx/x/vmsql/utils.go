@@ -29,10 +29,6 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 		rowMap := make(map[string]interface{})
 		for i, col := range cols {
 			val := columnValues[i]
-			// Convert []byte to string to make JSON cleaner
-			if b, ok := val.([]byte); ok {
-				val = string(b)
-			}
 			rowMap[col] = val
 		}
 
@@ -43,5 +39,5 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 		return nil, err
 	}
 
-	return json.MarshalIndent(results, "", "  ")
+	return json.Marshal(results)
 }

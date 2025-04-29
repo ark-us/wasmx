@@ -156,7 +156,7 @@ func (suite *KeeperTestSuite) TestDType() {
 
 	fields2 := []string{
 		fmt.Sprintf(`{"name":"id","table_id":%d,"order_index":1,"value_type":"INTEGER","indexed":false,"sql_options":"PRIMARY KEY","permissions":""}`, tableId2),
-		fmt.Sprintf(`{"name":"table1_id","table_id":%d,"order_index":2,"value_type":"VARCHAR","indexed":true,"foreign_key_table":"newtable1","foreign_key_field":"id","foreign_key_sql_options":"ON DELETE CASCADE ON UPDATE CASCADE","permissions":""}`, tableId2),
+		fmt.Sprintf(`{"name":"table1_id","table_id":%d,"order_index":2,"value_type":"INTEGER","indexed":true,"foreign_key_table":"newtable1","foreign_key_field":"id","foreign_key_sql_options":"ON DELETE CASCADE ON UPDATE CASCADE","permissions":""}`, tableId2),
 		fmt.Sprintf(`{"name":"field1","table_id":%d,"order_index":3,"value_type":"VARCHAR","indexed":false,"permissions":""}`, tableId2),
 	}
 
@@ -273,8 +273,8 @@ func (suite *KeeperTestSuite) TestDType() {
 	qresp := suite.parseQueryResponse(qres)
 	var table2rows []struct {
 		Field1   string `json:"field1"`
-		ID       int    `json:"id"`
-		Table1ID string `json:"table1_id"`
+		ID       int64  `json:"id"`
+		Table1ID int64  `json:"table1_id"`
 	}
 	err = json.Unmarshal(qresp.Data, &table2rows)
 	suite.Require().NoError(err, string(qresp.Data))

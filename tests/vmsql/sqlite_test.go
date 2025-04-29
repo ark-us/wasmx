@@ -27,15 +27,21 @@ type MsgNestedCall struct {
 }
 
 type Calldata struct {
-	Connect    *vmsql.SqlConnectionRequest `json:"Connect,omitempty"`
-	Close      *vmsql.SqlCloseRequest      `json:"Close,omitempty"`
-	Ping       *vmsql.SqlPingRequest       `json:"Ping,omitempty"`
-	Execute    *vmsql.SqlExecuteRequest    `json:"Execute,omitempty"`
-	Query      *vmsql.SqlQueryRequest      `json:"Query,omitempty"`
-	NestedCall *MsgNestedCall              `json:"NestedCall,omitempty"`
+	Connect     *vmsql.SqlConnectionRequest   `json:"Connect,omitempty"`
+	Close       *vmsql.SqlCloseRequest        `json:"Close,omitempty"`
+	Ping        *vmsql.SqlPingRequest         `json:"Ping,omitempty"`
+	Execute     *vmsql.SqlExecuteRequest      `json:"Execute,omitempty"`
+	BatchAtomic *vmsql.SqlExecuteBatchRequest `json:"BatchAtomic,omitempty"`
+	Query       *vmsql.SqlQueryRequest        `json:"Query,omitempty"`
+	NestedCall  *MsgNestedCall                `json:"NestedCall,omitempty"`
 }
 
 type KV struct {
+	Key   []byte `json:"key"`
+	Value []byte `json:"value"`
+}
+
+type KVString struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
@@ -142,8 +148,8 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	rows := suite.parseQueryToRows(qres)
 	suite.Require().Equal(1, len(rows))
-	suite.Require().Equal("\u0004\u0005", rows[0].Value)
-	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
+	suite.Require().Equal(value, rows[0].Value)
+	suite.Require().True(bytes.Equal(value, rows[0].Value))
 
 	// insert2
 	key = []byte{1, 1, 1, 1, 1}
@@ -180,7 +186,40 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	rows = suite.parseQueryToRows(qres)
 	suite.Require().Equal(1, len(rows))
-	suite.Require().True(bytes.Equal(value, []byte(rows[0].Value)))
+	suite.Require().True(bytes.Equal(value, rows[0].Value))
+
+	// batch atomic
+	cmdExec = &Calldata{BatchAtomic: &vmsql.SqlExecuteBatchRequest{
+		Id: "conn1",
+		Commands: []vmsql.SqlExecuteCommand{
+			{
+				Query:  fmt.Sprintf(`INSERT OR REPLACE INTO kvstore(key, value) VALUES (X'%X',X'%X')`, []byte{2, 2, 2}, []byte{2, 2, 3}),
+				Params: [][]byte{},
+			},
+			{
+				Query:  fmt.Sprintf(`INSERT OR REPLACE INTO kvstore(key, value) VALUES (X'%X')`, []byte{2, 2, 2}),
+				Params: [][]byte{},
+			},
+		},
+	}}
+	data, err = json.Marshal(cmdExec)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resssexb := &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resssexb)
+	suite.Require().NoError(err)
+	suite.Require().Equal("1 values for 2 columns", resssexb.Error)
+
+	cmdQuery = &Calldata{Query: &vmsql.SqlQueryRequest{
+		Id:    "conn1",
+		Query: `SELECT * FROM kvstore WHERE 1;`,
+	}}
+	data, err = json.Marshal(cmdQuery)
+	suite.Require().NoError(err)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	fmt.Println(string(qres))
+	rows = suite.parseQueryToRows(qres)
+	suite.Require().Equal(2, len(rows))
 
 	// close connection
 	cmdExec = &Calldata{Close: &vmsql.SqlCloseRequest{
@@ -224,6 +263,8 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	suite.Require().NoError(err)
 	suite.Require().Equal("", resss.Error)
 	defer os.Remove("test.db")
+	defer os.Remove("test.db-shm")
+	defer os.Remove("test.db-wal")
 
 	// create tables
 	cmdExec := &Calldata{Execute: &vmsql.SqlExecuteRequest{
@@ -294,7 +335,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows := suite.parseQueryToRows(qres)
+	rows := suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(0, len(rows))
 
 	// simple query call -> rolled back db changes
@@ -338,7 +379,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(1, len(rows))
 	suite.Require().Equal("alice", rows[0].Value)
 
@@ -347,7 +388,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(0, len(rows))
 
 	// close connection
@@ -479,7 +520,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	suite.Require().NoError(err)
 	suite.Require().Equal(2, len(nestedresp))
 	suite.Require().Equal("nested call must revert", nestedresp[1])
-	rows := suite.parseQueryToRows([]byte(nestedresp[0]))
+	rows := suite.parseQueryToRowsStr([]byte(nestedresp[0]))
 	suite.Require().Equal(1, len(rows))
 	suite.Require().Equal("alice", rows[0].Value)
 
@@ -488,7 +529,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(1, len(rows))
 	suite.Require().Equal("alice", rows[0].Value)
 
@@ -497,7 +538,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(0, len(rows))
 
 	// myvalue2 was rolled back
@@ -505,7 +546,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(0, len(rows))
 
 	// test nested query
@@ -562,7 +603,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(1, len(rows))
 	suite.Require().Equal("alice2", rows[0].Value)
 
@@ -571,7 +612,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(0, len(rows))
 
 	// myvalue2 was rolled back (query)
@@ -579,7 +620,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	rows = suite.parseQueryToRows(qres)
+	rows = suite.parseQueryToRowsStr(qres)
 	suite.Require().Equal(0, len(rows))
 
 	// close connection
@@ -606,6 +647,14 @@ func (suite *KeeperTestSuite) parseQueryResponse(qres []byte) *vmsql.SqlQueryRes
 func (suite *KeeperTestSuite) parseQueryToRows(qres []byte) []KV {
 	qresp := suite.parseQueryResponse(qres)
 	rows := []KV{}
+	err := json.Unmarshal(qresp.Data, &rows)
+	suite.Require().NoError(err)
+	return rows
+}
+
+func (suite *KeeperTestSuite) parseQueryToRowsStr(qres []byte) []KVString {
+	qresp := suite.parseQueryResponse(qres)
+	rows := []KVString{}
 	err := json.Unmarshal(qresp.Data, &rows)
 	suite.Require().NoError(err)
 	return rows

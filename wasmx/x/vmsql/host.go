@@ -248,19 +248,43 @@ func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		}
 	}
 
+	// to make this atomic, we add a savepoint
+	savepoint := "batchatomic"
+	_, err = db.OpenSavepointTx.Exec(fmt.Sprintf("SAVEPOINT %s", savepoint))
+	if err != nil {
+		ctx.Logger(ctx.Ctx).Error(fmt.Sprintf("cannot add savepoint: %s, %s", savepoint, err.Error()))
+		return nil, err
+	}
+
+	var txerr error
 	for _, cmd := range req.Commands {
 		reqparams, err := parseRequestParams(cmd.Params)
 		if err != nil {
-			response.Error = err.Error()
-			return prepareResponse(rnh, response)
+			txerr = err
+			break
 		}
 
 		qparams := parseSqlQueryParams(reqparams)
 		_, err = db.OpenSavepointTx.ExecContext(ctx.Ctx, cmd.Query, qparams...)
 		if err != nil {
-			response.Error = err.Error()
-			return prepareResponse(rnh, response)
+			txerr = err
+			break
 		}
+	}
+	if txerr != nil {
+		_, err = db.OpenSavepointTx.Exec(fmt.Sprintf("ROLLBACK TO %s", savepoint))
+		if err != nil {
+			ctx.Logger(ctx.Ctx).Error(fmt.Sprintf("cannot rollback to savepoint: %s, %s", savepoint, err.Error()))
+			return nil, err
+		}
+		response.Error = txerr.Error()
+		return prepareResponse(rnh, response)
+	}
+
+	_, err = db.OpenSavepointTx.Exec(fmt.Sprintf("RELEASE %s", savepoint))
+	if err != nil {
+		ctx.Logger(ctx.Ctx).Error(fmt.Sprintf("cannot release savepoint: %s, %s", savepoint, err.Error()))
+		return nil, err
 	}
 	return prepareResponse(rnh, response)
 }
