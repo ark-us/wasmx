@@ -217,7 +217,6 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	data, err = json.Marshal(cmdQuery)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	fmt.Println(string(qres))
 	rows = suite.parseQueryToRows(qres)
 	suite.Require().Equal(2, len(rows))
 

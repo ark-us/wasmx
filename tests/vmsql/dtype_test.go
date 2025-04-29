@@ -62,6 +62,14 @@ type ReadDTypeRequest struct {
 	Data       []byte          `json:"data"`
 }
 
+type BuildSchemaRequest struct {
+	Identifier TableIdentifier `json:"identifier"`
+}
+
+type BuildSchemaResponse struct {
+	Data []byte `json:"data"`
+}
+
 type InsertDTypeResponse struct {
 }
 
@@ -80,9 +88,13 @@ type CalldataDType struct {
 	Update          *UpdateDTypeRequest      `json:"Update,omitempty"`
 	Delete          *DeleteDTypeRequest      `json:"Delete,omitempty"`
 	Read            *ReadDTypeRequest        `json:"Read,omitempty"`
+	BuildSchema     *BuildSchemaRequest      `json:"BuildSchema,omitempty"`
 }
 
 func (suite *KeeperTestSuite) TestDType() {
+	defer os.Remove("dtype.db")
+	defer os.Remove("dtype.db-shm")
+	defer os.Remove("dtype.db-wal")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 
@@ -105,15 +117,15 @@ func (suite *KeeperTestSuite) TestDType() {
 	suite.Require().NoError(err)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	defer os.Remove("dtype.db")
-	defer os.Remove("dtype.db-shm")
-	defer os.Remove("dtype.db-wal")
-
 	connFile := "newdb.db"
 	connDriver := "sqlite3"
 	connName := "newdbconn"
 	dbname := "newdb"
 	tablename1 := "newtable1"
+
+	defer os.Remove(connFile)
+	defer os.Remove(connFile + "-shm")
+	defer os.Remove(connFile + "-wal")
 
 	identif := suite.createDb(
 		sender,
@@ -141,10 +153,6 @@ func (suite *KeeperTestSuite) TestDType() {
 	suite.createFields(sender, contractAddress, fields)
 	suite.instantiateTable(sender, contractAddress, identif.DbConnectionId, tableId1)
 
-	defer os.Remove(connFile)
-	defer os.Remove(connFile + "-shm")
-	defer os.Remove(connFile + "-wal")
-
 	// create table2
 	tablename2 := "newtable2"
 	tableId2 := suite.createTable(
@@ -162,6 +170,22 @@ func (suite *KeeperTestSuite) TestDType() {
 
 	suite.createFields(sender, contractAddress, fields2)
 	suite.instantiateTable(sender, contractAddress, identif.DbConnectionId, tableId2)
+
+	// build json schema for table1
+
+	// create rows in table1
+	cmd = &CalldataDType{BuildSchema: &BuildSchemaRequest{Identifier: TableIdentifier{
+		DbConnectionId: identif.DbConnectionId,
+		DbId:           identif.DbId,
+		TableId:        tableId1,
+	},
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	var schemaResp BuildSchemaResponse
+	err = json.Unmarshal(qres, &schemaResp)
+	suite.Require().NoError(err, string(qres))
 
 	// create rows in table1
 	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
@@ -269,7 +293,7 @@ func (suite *KeeperTestSuite) TestDType() {
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
-	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	qresp := suite.parseQueryResponse(qres)
 	var table2rows []struct {
 		Field1   string `json:"field1"`
