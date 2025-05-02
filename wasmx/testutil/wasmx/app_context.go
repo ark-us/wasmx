@@ -647,7 +647,7 @@ func (s *AppContext) DecodeExecuteResponse(res *abci.ExecTxResult, msg interface
 }
 
 func (s *AppContext) ExecuteContract(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string) *abci.ExecTxResult {
-	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 10000000, nil)
+	return s.ExecuteContractWithGas(sender, contractAddress, executeMsg, funds, dependencies, 20000000, nil)
 }
 
 func (s *AppContext) ExecuteContractWithGas(sender simulation.Account, contractAddress mcodec.AccAddressPrefixed, executeMsg types.WasmxExecutionMessage, funds sdk.Coins, dependencies []string, gasLimit uint64, gasPrice *string) *abci.ExecTxResult {

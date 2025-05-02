@@ -67,6 +67,14 @@ func (suite *KeeperTestSuite) SetupSuite() {
 	suite.SetupChains()
 }
 
+func (suite *KeeperTestSuite) TearDownTest() {
+	defer os.Remove("dtype.db")
+	defer os.Remove("dtype.db-shm")
+	defer os.Remove("dtype.db-wal")
+}
+
+func (suite *KeeperTestSuite) TearDownSuite() {}
+
 // TestKeeperTestSuite runs all the tests within this package.
 func TestKeeperTestSuite(t *testing.T) {
 	s = new(KeeperTestSuite)

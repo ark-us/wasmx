@@ -149,7 +149,8 @@ type SqlExecuteBatchRequest struct {
 }
 
 type SqlExecuteBatchResponse struct {
-	Error string `json:"error"`
+	Error     string               `json:"error"`
+	Responses []SqlExecuteResponse `json:"responses"`
 }
 
 type SqlQueryParam struct {
