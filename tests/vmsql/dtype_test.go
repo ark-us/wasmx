@@ -410,6 +410,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 func (suite *KeeperTestSuite) TestDTypeErc20() {
 	sender := suite.GetRandomAccount()
 	receiver := suite.GetRandomAccount()
+	spender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 
 	appA := s.AppContext()
@@ -419,6 +420,10 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 
 	receiverPrefixed := appA.BytesToAccAddressPrefixed(receiver.Address)
 	appA.Faucet.Fund(appA.Context(), receiverPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	spenderPrefixed := appA.BytesToAccAddressPrefixed(spender.Address)
+	appA.Faucet.Fund(appA.Context(), spenderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
 	wasmbin := testdata.WasmxErc20DType
@@ -506,6 +511,40 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 	err = json.Unmarshal(qres, &respBalance)
 	suite.Require().NoError(err, string(qres))
 	suite.Require().Equal("999999000", respBalance.Balance.Amount.BigInt().String())
+
+	// test allowance
+	qres = appA.WasmxQueryRaw(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"allowance":{"owner":"%s","spender":"%s"}}`, senderPrefixed.String(), spenderPrefixed.String()))}, nil, nil)
+	var respAllowance struct {
+		Remaining sdkmath.Int `json:"remaining"`
+	} // *big.Int
+	err = json.Unmarshal(qres, &respAllowance)
+	suite.Require().NoError(err, string(qres))
+	suite.Require().Equal("0", respAllowance.Remaining.BigInt().String())
+
+	appA.ExecuteContractWithGas(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"approve":{"spender":"%s","value":"10000"}}`, spenderPrefixed.String()))}, nil, nil, 100000000, nil)
+
+	qres = appA.WasmxQueryRaw(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"allowance":{"owner":"%s","spender":"%s"}}`, senderPrefixed.String(), spenderPrefixed.String()))}, nil, nil)
+	err = json.Unmarshal(qres, &respAllowance)
+	suite.Require().NoError(err, string(qres))
+	suite.Require().Equal("10000", respAllowance.Remaining.BigInt().String())
+
+	// test transferFrom
+	appA.ExecuteContractWithGas(spender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"transferFrom":{"from":"%s","to":"%s","value":"1000"}}`, senderPrefixed.String(), receiverPrefixed.String()))}, nil, nil, 100000000, nil)
+
+	qres = appA.WasmxQueryRaw(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"allowance":{"owner":"%s","spender":"%s"}}`, senderPrefixed.String(), spenderPrefixed.String()))}, nil, nil)
+	err = json.Unmarshal(qres, &respAllowance)
+	suite.Require().NoError(err, string(qres))
+	suite.Require().Equal("9000", respAllowance.Remaining.BigInt().String())
+
+	qres = appA.WasmxQueryRaw(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, receiverPrefixed.String()))}, nil, nil)
+	err = json.Unmarshal(qres, &respBalance)
+	suite.Require().NoError(err, string(qres))
+	suite.Require().Equal("2000", respBalance.Balance.Amount.BigInt().String())
+
+	qres = appA.WasmxQueryRaw(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, senderPrefixed.String()))}, nil, nil)
+	err = json.Unmarshal(qres, &respBalance)
+	suite.Require().NoError(err, string(qres))
+	suite.Require().Equal("999998000", respBalance.Balance.Amount.BigInt().String())
 }
 
 func (suite *KeeperTestSuite) deployDType(sender simulation.Account) mcodec.AccAddressPrefixed {
