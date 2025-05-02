@@ -83,6 +83,7 @@ export WASMX_TESTS_CROSSCHAIN="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-cro
 export WASMX_TESTS_SIMPLESTORAGE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-simplestorage"
 export WASMX_TESTS_SQL="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-sql"
 export WASMX_TESTS_KVDB="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-kvdb"
+export WASMX_ERC20_DTYPE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-erc20-sql"
 
 labels=$(echo $TO_COMPILE | tr "," "\n")
 for label in $labels
@@ -256,6 +257,9 @@ do
         cd $WASMX_TESTS_SQL && npm run asbuild
         mv -f $WASMX_TESTS_SQL/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_test_sql.wasm
 
+        cd $WASMX_ERC20_DTYPE && npm run asbuild
+        mv -f $WASMX_ERC20_DTYPE/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_erc20_sql.wasm
+
         cd $WASMX_TESTS_KVDB && npm run asbuild
         mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
     fi
@@ -297,6 +301,7 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_METAREGISTRY && npm run asbuild
     cd $WASMX_CODES_REGISTRY && npm run asbuild
     cd $WASMX_DTYPE && npm run asbuild
+    cd $WASMX_ERC20_DTYPE && npm run asbuild
     # cd $WASMX_PARAMS && npm run asbuild
 
     mv -f $WASMX_FSM/build/release.wasm $WASMX_GO_PRECOMPILES/28.finite_state_machine.wasm
@@ -337,4 +342,5 @@ if [[ $TO_COMPILE = '' ]]; then
 
     mv -f $WASMX_TESTS_SQL/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_test_sql.wasm
     mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
+    mv -f $WASMX_ERC20_DTYPE/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_erc20_sql.wasm
 fi

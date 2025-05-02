@@ -254,6 +254,8 @@ var ROLE_SECRET_SHARING = "secret_sharing"
 var ROLE_LOBBY = "lobby"
 var ROLE_METAREGISTRY = "metaregistry"
 
+var ROLE_DTYPE = "dtype"
+
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
 // encoding = ""

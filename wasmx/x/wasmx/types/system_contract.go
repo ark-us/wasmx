@@ -76,6 +76,7 @@ var ADDR_LEVEL0_ONDEMAND_LIBRARY = "0x0000000000000000000000000000000000000052"
 
 var ADDR_ROLES = "0x0000000000000000000000000000000000000060"
 var ADDR_STORAGE_CONTRACTS = "0x0000000000000000000000000000000000000061"
+var ADDR_DTYPE = "0x0000000000000000000000000000000000000062"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -808,6 +809,27 @@ func ChatPrecompiles() SystemContracts {
 	}
 }
 
+func SpecialPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("SpecialPrecompiles: cannot marshal init message")
+	}
+	return []SystemContract{
+		// contract storage needs to be initialized first, roles second, auth third
+		{
+			Address:     ADDR_DTYPE,
+			Label:       DTYPE_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_DTYPE, Label: ROLE_DTYPE, Primary: true},
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+	}
+}
+
 func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
 
 	precompiles := StarterPrecompiles()
@@ -843,6 +865,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
+	// precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
@@ -943,6 +966,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
+	// precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err = FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {

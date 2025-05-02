@@ -202,6 +202,12 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		return prepareResponse(rnh, response)
 	}
 
+	prepareExecutionResponse(res, response)
+
+	return prepareResponse(rnh, response)
+}
+
+func prepareExecutionResponse(res sql.Result, response *SqlExecuteResponse) {
 	id, err := res.LastInsertId()
 	if err != nil {
 		response.LastInsertIdError = err.Error()
@@ -212,8 +218,6 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		response.RowsAffectedError = err.Error()
 	}
 	response.RowsAffected = rows
-
-	return prepareResponse(rnh, response)
 }
 
 func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -233,7 +237,7 @@ func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		return nil, err
 	}
 
-	response := &SqlExecuteBatchResponse{Error: ""}
+	response := &SqlExecuteBatchResponse{Error: "", Responses: make([]SqlExecuteResponse, 0)}
 	connId := buildConnectionId(req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
@@ -265,11 +269,14 @@ func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		}
 
 		qparams := parseSqlQueryParams(reqparams)
-		_, err = db.OpenSavepointTx.ExecContext(ctx.Ctx, cmd.Query, qparams...)
+		res, err := db.OpenSavepointTx.ExecContext(ctx.Ctx, cmd.Query, qparams...)
 		if err != nil {
 			txerr = err
 			break
 		}
+		execResp := SqlExecuteResponse{}
+		prepareExecutionResponse(res, &execResp)
+		response.Responses = append(response.Responses, execResp)
 	}
 	if txerr != nil {
 		_, err = db.OpenSavepointTx.Exec(fmt.Sprintf("ROLLBACK TO %s", savepoint))
@@ -334,6 +341,11 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		return prepareResponse(rnh, response)
 	}
 	defer rows.Close()
+
+	if rows == nil {
+		response.Data = []byte(`[]`)
+		return prepareResponse(rnh, response)
+	}
 
 	resp, err := RowsToJSON(rows)
 	if err != nil {

@@ -11,7 +11,7 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 		return nil, err
 	}
 
-	var results []map[string]interface{}
+	results := []map[string]interface{}{}
 
 	for rows.Next() {
 		// Create a slice of empty interfaces to hold each column value
