@@ -22,6 +22,39 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
+var DbName = "dtype"
+var DTypeConnection = "dtype_connection"
+var DTypeDbName = "dtype_db"
+var DTypeDbConnName = "dtype_db_connection"
+var DTypeTableName = "dtype_table"
+var DTypeFieldName = "dtype_field"
+
+var DTypeNodeName = "node"
+var DTypeRelationName = "relation"
+var DTypeRelationTypeName = "relation_type"
+
+var TokensTable = "token"
+var OwnedTable = "owned"
+var AllowanceTable = "allowance"
+
+var IdentityTable = "identity"
+var FullNameTable = "identity_full_name"
+var EmailTable = "identity_email"
+
+var tableDbConnId = int64(1)
+var tableDbId = int64(2)
+var tableTableId = int64(3)
+var tableFieldsId = int64(4)
+var tableNodeId = int64(5)
+var tableRelationId = int64(6)
+var tableRelationTypeId = int64(7)
+var TokensTableId = int64(8)
+var OwnedTableId = int64(9)
+var AllowanceTableId = int64(10)
+var IdentityTableId = int64(11)
+var FullNameTableId = int64(12)
+var EmailTableId = int64(13)
+
 type InstantiateDType struct {
 	Dir    string `json:"dir"`
 	Driver string `json:"driver"`
@@ -87,21 +120,23 @@ type ConnectRequest struct {
 	Name string `json:"name"`
 }
 
-type InstantiateTokens struct{}
+type InitializeTokens struct{}
+type InitializeIdentity struct{}
 
 type CalldataDType struct {
-	Initialize       *InstantiateDType        `json:"Initialize,omitempty"`
-	InitializeTokens *InstantiateTokens       `json:"InitializeTokens,omitempty"`
-	CreateTable      *CreateTableDTypeRequest `json:"CreateTable,omitempty"`
-	Connect          *ConnectRequest          `json:"Connect,omitempty"`
-	Close            *ConnectRequest          `json:"Close,omitempty"`
-	Insert           *InsertDTypeRequest      `json:"Insert,omitempty"`
-	InsertOrReplace  *InsertDTypeRequest      `json:"InsertOrReplace,omitempty"`
-	Update           *UpdateDTypeRequest      `json:"Update,omitempty"`
-	Delete           *DeleteDTypeRequest      `json:"Delete,omitempty"`
-	Read             *ReadDTypeRequest        `json:"Read,omitempty"`
-	ReadField        *ReadFieldRequest        `json:"ReadField,omitempty"`
-	BuildSchema      *BuildSchemaRequest      `json:"BuildSchema,omitempty"`
+	Initialize         *InstantiateDType        `json:"Initialize,omitempty"`
+	InitializeTokens   *InitializeTokens        `json:"InitializeTokens,omitempty"`
+	InitializeIdentity *InitializeIdentity      `json:"InitializeIdentity,omitempty"`
+	CreateTable        *CreateTableDTypeRequest `json:"CreateTable,omitempty"`
+	Connect            *ConnectRequest          `json:"Connect,omitempty"`
+	Close              *ConnectRequest          `json:"Close,omitempty"`
+	Insert             *InsertDTypeRequest      `json:"Insert,omitempty"`
+	InsertOrReplace    *InsertDTypeRequest      `json:"InsertOrReplace,omitempty"`
+	Update             *UpdateDTypeRequest      `json:"Update,omitempty"`
+	Delete             *DeleteDTypeRequest      `json:"Delete,omitempty"`
+	Read               *ReadDTypeRequest        `json:"Read,omitempty"`
+	ReadField          *ReadFieldRequest        `json:"ReadField,omitempty"`
+	BuildSchema        *BuildSchemaRequest      `json:"BuildSchema,omitempty"`
 }
 
 func (suite *KeeperTestSuite) TestDTypeContract() {
@@ -396,7 +431,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal("", resssclose.Error)
 
 	cmd = &CalldataDType{Close: &ConnectRequest{
-		Name: "dtype_connection",
+		Name: DTypeConnection,
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -547,6 +582,213 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 	suite.Require().Equal("999998000", respBalance.Balance.Amount.BigInt().String())
 }
 
+func (suite *KeeperTestSuite) TestDTypeIdentity() {
+	sender := suite.GetRandomAccount()
+	receiver := suite.GetRandomAccount()
+	spender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+
+	appA := s.AppContext()
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	receiverPrefixed := appA.BytesToAccAddressPrefixed(receiver.Address)
+	appA.Faucet.Fund(appA.Context(), receiverPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	spenderPrefixed := appA.BytesToAccAddressPrefixed(spender.Address)
+	appA.Faucet.Fund(appA.Context(), spenderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	dtypeAddress := suite.deployDType(sender)
+	identif := TableIdentifier{
+		DbConnectionName: DTypeConnection,
+		DbName:           DbName,
+	}
+
+	// insert identity
+	identif.TableName = IdentityTable
+	identif.TableId = IdentityTableId
+	cmd := &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(fmt.Sprintf(`{"name":"Reri Palma","address":"%s"}`, senderPrefixed.String())),
+	}}
+	data, err := json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res := appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss := &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	identityId := resss.Responses[0].LastInsertId
+
+	identif.TableName = FullNameTable
+	identif.TableId = FullNameTableId
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(`{"title":"Ms","honorific_prefix":"Dr.","given_name":"Reri","middle_name":"","family_name":"Palma","suffix":"","postnominal":"","full_display_name":"","locale":"en-US","notes":""}`),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	fullNameId := resss.Responses[0].LastInsertId
+
+	identif.TableName = EmailTable
+	identif.TableId = EmailTableId
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(`{"full_address":"reri.palma@gmail.com","username":"reri.palma","domain":"mail.com","provider":"Google","host":"smtp.gmail.com","category":"personal","notes":""}`),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	emailId := resss.Responses[0].LastInsertId
+
+	// insert identity node
+	identif.TableName = DTypeNodeName
+	identif.TableId = tableNodeId
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, IdentityTableId, identityId, "Reri Palma")),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	// identityNodeIdId := resss.Responses[0].LastInsertId
+
+	// insert full name node
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, FullNameTableId, fullNameId, "Reri Palma")),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	// fullNameNodeIdId := resss.Responses[0].LastInsertId
+
+	// insert email node
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, EmailTableId, emailId, "Reri Palma")),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	// emailNodeIdId := resss.Responses[0].LastInsertId
+
+	// create relation type
+	identif.TableName = DTypeRelationTypeName
+	identif.TableId = tableRelationTypeId
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(`{"name":"identity shard","reverse_name":"full identity","reversable":true})`),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+	relType := resss.Responses[0].LastInsertId
+
+	// create relation for full name
+	identif.TableName = DTypeRelationName
+	identif.TableId = tableRelationId
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0})`, relType, fullNameId, identityId)),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+
+	// create relation for email
+	identif.TableName = DTypeRelationName
+	identif.TableId = tableRelationId
+	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+		Identifier: identif,
+		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0})`, relType, emailId, identityId)),
+	}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContract(sender, dtypeAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resss = &vmsql.SqlExecuteBatchResponse{}
+	err = appA.DecodeExecuteResponse(res, resss)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resss.Error)
+	suite.Require().Equal(1, len(resss.Responses))
+	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
+	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
+	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
+	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
+}
+
 func (suite *KeeperTestSuite) deployDType(sender simulation.Account) mcodec.AccAddressPrefixed {
 	appA := s.AppContext()
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.DTYPE_v001)
@@ -564,7 +806,12 @@ func (suite *KeeperTestSuite) deployDType(sender simulation.Account) mcodec.AccA
 	suite.Require().NoError(err)
 	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	cmd = &CalldataDType{InitializeTokens: &InstantiateTokens{}}
+	cmd = &CalldataDType{InitializeTokens: &InitializeTokens{}}
+	data, err = json.Marshal(cmd)
+	suite.Require().NoError(err)
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 50000000, nil)
+
+	cmd = &CalldataDType{InitializeIdentity: &InitializeIdentity{}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 50000000, nil)
@@ -683,9 +930,9 @@ func (suite *KeeperTestSuite) createDb(
 	appA := s.AppContext()
 	// insert new database with connection
 	cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-		DbConnectionName: "dtype_connection",
-		DbName:           "dtype",
-		TableName:        "dtype_db_connection",
+		DbConnectionName: DTypeConnection,
+		DbName:           DbName,
+		TableName:        DTypeDbConnName,
 	},
 		Data: []byte(fmt.Sprintf(`{"connection":"%s","driver":"%s","name":"%s"}`, connFile, connDriver, connName)),
 	}}
@@ -705,9 +952,9 @@ func (suite *KeeperTestSuite) createDb(
 
 	// new db definition
 	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-		DbConnectionName: "dtype_connection",
-		DbName:           "dtype",
-		TableName:        "dtype_db",
+		DbConnectionName: DTypeConnection,
+		DbName:           DbName,
+		TableName:        DTypeDbName,
 	},
 		Data: []byte(fmt.Sprintf(`{"name":"%s","connection_id":%d}`, dbname, newconnId)),
 	}}
@@ -742,9 +989,9 @@ func (suite *KeeperTestSuite) createTable(
 	appA := s.AppContext()
 	// insert new table definition
 	cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-		DbConnectionName: "dtype_connection",
-		DbName:           "dtype",
-		TableName:        "dtype_table",
+		DbConnectionName: DTypeConnection,
+		DbName:           DbName,
+		TableName:        DTypeTableName,
 	},
 		Data: []byte(fmt.Sprintf(`{"name":"%s","db_id":%d}`, tablename, dbId)),
 	}}
@@ -774,9 +1021,9 @@ func (suite *KeeperTestSuite) createFields(
 	// insert table fields
 	for _, fielddef := range fields {
 		cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-			DbConnectionName: "dtype_connection",
-			DbName:           "dtype",
-			TableName:        "dtype_field",
+			DbConnectionName: DTypeConnection,
+			DbName:           DbName,
+			TableName:        DTypeFieldName,
 		},
 			Data: []byte(fielddef),
 		}}

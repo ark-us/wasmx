@@ -315,18 +315,8 @@ func DisconnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		ctx.Logger.Debug("p2p disconnect from peer", "protocolID", req.ProtocolId, "peer", req.Peer)
 	}
 
-	response := DisconnectPeerResponse{}
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	response := &DisconnectPeerResponse{}
+	return prepareResponse(rnh, response)
 }
 
 // TODO this is temporary, to be replaced with consensus api methods like ApplySnapshotChunk, LoadSnapshotChunk, OfferSnapshot, ListSnapshots
@@ -386,17 +376,7 @@ func StartStateSyncRequest(_context interface{}, rnh memc.RuntimeHandler, params
 		response.Error = fmt.Sprintf("state sync failed: connect to peer failed: %s: %s", req.PeerAddress, err.Error())
 	}
 
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, response)
 }
 
 func StartStateSyncResponse(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -446,17 +426,7 @@ func StartStateSyncResponse(_context interface{}, rnh memc.RuntimeHandler, param
 		response.Error = fmt.Sprintf("state sync failed: connect to peer failed: %s: %s", req.PeerAddress, err.Error())
 	}
 
-	responsebz, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return prepareResponse(rnh, response)
 }
 
 func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
