@@ -54,6 +54,7 @@ import (
 
 	// this line is used by starport scaffolding # root/moduleImport
 
+	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	app "github.com/loredanacirstea/wasmx/app"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	mcfg "github.com/loredanacirstea/wasmx/config"
@@ -97,12 +98,14 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	goctx = wasmxtypes.ContextWithBackgroundProcesses(goctx)
 	goctx = vmp2p.WithP2PEmptyContext(goctx)
 	goctx = networktypes.ContextWithMultiChainContext(g, goctx, logger)
-	goctx = vmsql.WithSqlEmptyContext(goctx)
-	goctx = vmkv.WithKvDbEmptyContext(goctx)
 	goctx, _ = mcfg.WithMultiChainAppEmpty(goctx)
 	goctx, _ = mctx.WithExecutionMetaInfoEmpty(goctx)
 	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
 	goctx, _ = wasmxtypes.WithSystemBootstrap(goctx)
+	goctx = vmsql.WithSqlEmptyContext(goctx)
+	goctx = vmkv.WithKvDbEmptyContext(goctx)
+	goctx = vmimap.WithImapEmptyContext(goctx)
+
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))

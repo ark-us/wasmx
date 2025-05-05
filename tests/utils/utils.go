@@ -28,27 +28,28 @@ func GenesisModify(genesisState map[string]json.RawMessage, app ibcgotesting.Tes
 
 func SystemContractsModify(wasmRuntime string) func([]wasmxtypes.SystemContract) []wasmxtypes.SystemContract {
 	return func(contracts []wasmxtypes.SystemContract) []wasmxtypes.SystemContract {
-		var compiledMap map[string]bool
+		var compiledMap map[string]bool = nil
 		if wasmRuntime == "wasmedge" {
 			compiledMap = wasmedgeCompiled
 		} else {
-			// compiledMap = wazeroCompiled
-			return contracts
+			compiledMap = wazeroCompiled
 		}
-		for i := range contracts {
-			pinned, ok := compiledMap[contracts[i].Label]
-			if ok && pinned {
-				contracts[i].Pinned = true
-			} else {
-				contracts[i].Pinned = false
-			}
+		if compiledMap != nil {
+			for i := range contracts {
+				pinned, ok := compiledMap[contracts[i].Label]
+				if ok && pinned {
+					contracts[i].Pinned = true
+				} else {
+					contracts[i].Pinned = false
+				}
 
+			}
 		}
 		return contracts
 	}
 }
 
-var wazeroCompiled = map[string]bool{}
+var wazeroCompiled map[string]bool = nil
 
 var wasmedgeCompiled = map[string]bool{
 	// wasmxtypes.AUTH_v001:                true,

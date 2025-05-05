@@ -335,3 +335,6 @@ replace (
 	// https://github.com/cosmos/cosmos-sdk/blob/e0bda6d7bc73fc4d6664c77c71d46cdc99ee0e6a/UPGRADING.md#replaces
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
+
+require github.com/loredanacirstea/wasmx-vmimap v0.0.0
+replace github.com/loredanacirstea/wasmx-vmimap => ../wasmx-vmimap

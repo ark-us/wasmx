@@ -1,0 +1,412 @@
+package vmimap
+
+import (
+	"encoding/json"
+	"fmt"
+	"slices"
+	"strings"
+
+	imap "github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/imapclient"
+
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+)
+
+func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapConnectionSimpleRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapConnectionResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if found {
+		if conn.ImapServerUrl == req.ImapServerUrl {
+			return prepareResponse(rnh, response)
+		} else {
+			response.Error = "connection id already in use"
+			return prepareResponse(rnh, response)
+		}
+	}
+
+	getClient := func(opts *imapclient.Options) (*imapclient.Client, error) {
+		c, err := connectToIMAP(req.ImapServerUrl, req.Username, req.Password, opts)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
+
+	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.ImapServerUrl)
+}
+
+func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapConnectionOauth2Request
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapConnectionResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if found {
+		if conn.ImapServerUrl == req.ImapServerUrl {
+			return prepareResponse(rnh, response)
+		} else {
+			response.Error = "connection id already in use"
+			return prepareResponse(rnh, response)
+		}
+	}
+
+	getClient := func(opts *imapclient.Options) (*imapclient.Client, error) {
+		c, err := connectToIMAPOauth2(req.ImapServerUrl, req.Username, req.AccessToken, opts)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
+
+	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.ImapServerUrl)
+}
+
+func connectCommon(
+	ctx *Context,
+	rnh memc.RuntimeHandler,
+	vctx *ImapContext,
+	getClient func(opts *imapclient.Options) (*imapclient.Client, error),
+	response *ImapConnectionResponse,
+	connId string,
+	username string,
+	imapServerUrl string,
+) ([]interface{}, error) {
+	client, err := getClient(nil)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	closedChannel := make(chan struct{})
+
+	// TODO this should be done in 1 cleanup hook per vm extension
+	ctx.GoRoutineGroup.Go(func() error {
+		select {
+		case <-ctx.GoContextParent.Done():
+			ctx.Ctx.Logger().Info(fmt.Sprintf("parent context was closed, closing database connection: %s", connId))
+			err := client.Close()
+			if err != nil {
+				ctx.Ctx.Logger().Error(fmt.Sprintf(`database close error for connection id "%s": %v`, connId, err))
+			}
+			close(closedChannel)
+			return nil
+		case <-closedChannel:
+			// when close signal is received from Close() API
+			// database is already closed, so we exit this goroutine
+			ctx.Ctx.Logger().Info(fmt.Sprintf("database connection closed: %s", connId))
+			return nil
+		}
+	})
+
+	conn := &ImapOpenConnection{
+		GoContextParent: ctx.GoContextParent,
+		Username:        username,
+		ImapServerUrl:   imapServerUrl,
+		Client:          client,
+		Closed:          closedChannel,
+		GetClient:       getClient,
+		listeners:       make(map[string]*IMAPListener, 0),
+	}
+
+	err = vctx.SetConnection(connId, conn)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	return prepareResponse(rnh, response)
+}
+
+func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapCloseRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapCloseResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+	err = conn.Client.Close()
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	close(conn.Closed) // signal closing the database
+	return prepareResponse(rnh, response)
+}
+
+func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapListenRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapListenResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	dataHandler := callbackMailboxChange(ctx, connId, conn.Username)
+	err = conn.StartListener(ctx.GoContextParent, req.Folder, dataHandler)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	return prepareResponse(rnh, response)
+}
+
+func Fetch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapFetchRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapFetchResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	// bodySection := &imap.FetchItemBodySection{Specifier: imap.PartSpecifierHeader}
+	bodySection := req.BodySection
+	if bodySection == nil {
+		bodySection = &imap.FetchItemBodySection{}
+	}
+
+	options := req.Options
+	if options == nil {
+		options = &imap.FetchOptions{
+			Flags:         true,
+			Envelope:      true,
+			InternalDate:  true,
+			RFC822Size:    true,
+			UID:           true,
+			BodyStructure: &imap.FetchItemBodyStructure{Extended: true},
+			BodySection:   []*imap.FetchItemBodySection{bodySection},
+		}
+	}
+
+	folder, err := conn.Client.Select(req.Folder, nil).Wait()
+	if err != nil {
+		return nil, fmt.Errorf("failed to select email folder: %v", err.Error())
+	}
+	response.Count = int64(folder.NumMessages)
+	emails := []Email{}
+	if len(req.SeqSet) > 0 {
+		e, err := imapFetch(conn.Client, ctx.Ctx.Logger(), req.SeqSet, options, bodySection)
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+		emails = e
+	}
+	if len(req.UidSet) > 0 {
+		e, err := imapFetch(conn.Client, ctx.Ctx.Logger(), req.UidSet, options, bodySection)
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+		emails = append(emails, e...)
+	}
+	if req.FetchFilter != nil {
+		numset, count, err := fetchEmailIds(conn.Client, folder, conn.Username, *req.FetchFilter)
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+		if count > 0 {
+			e, err := imapFetch(conn.Client, ctx.Ctx.Logger(), numset, options, bodySection)
+			if err != nil {
+				response.Error = err.Error()
+				return prepareResponse(rnh, response)
+			}
+			emails = append(emails, e...)
+		}
+	}
+	if req.Reverse {
+		slices.Reverse(emails)
+	}
+	response.Data = emails
+	return prepareResponse(rnh, response)
+}
+
+func CreateFolder(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapCreateFolderRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapCreateFolderResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	err = conn.Client.Create(req.Path, req.Options).Wait()
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	return prepareResponse(rnh, response)
+}
+
+// TODO call contract
+func callbackMailboxChange(ctx *Context, sessionId string, sessionUsername string) *imapclient.UnilateralDataHandler {
+	return &imapclient.UnilateralDataHandler{
+		Expunge: func(seqNum uint32) {
+			ctx.Ctx.Logger().Info("message seqnum %v has been expunged\n", seqNum)
+		},
+		Mailbox: func(data *imapclient.UnilateralDataMailbox) {
+			if data.NumMessages != nil {
+				seqNum := *data.NumMessages
+				ctx.Ctx.Logger().Info("a new message has been received seqnum: %d \n", seqNum)
+			}
+		},
+		Fetch: func(msg *imapclient.FetchMessageData) {
+			if msg == nil {
+				return
+			}
+			ctx.Ctx.Logger().Info("new message seqnum: %d \n", msg.SeqNum)
+
+			// TODO use Next() for big attachments and maybe restrict size of data forwarded to the contract if needed (TBD)
+			data, err := msg.Collect()
+			if err != nil {
+				ctx.Ctx.Logger().Info("new message collect error: seqnum %d: %v\n", msg.SeqNum, err)
+				return
+			}
+			if data == nil {
+				return
+			}
+			ctx.Ctx.Logger().Info("new message seqnum: %d, uid: %d \n", msg.SeqNum, data.UID)
+		},
+
+		// requires ENABLE METADATA or ENABLE SERVER-METADATA
+		Metadata: func(mailbox string, entries []string) {
+			ctx.Ctx.Logger().Info("new message metadata for mailbox: %s, entries: %s \n", mailbox, strings.Join(entries, ","))
+		},
+	}
+}
+
+func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	ptr, err := rnh.AllocateWriteMem(responsebz)
+	if err != nil {
+		return nil, err
+	}
+	returns := make([]interface{}, 1)
+	returns[0] = ptr
+	return returns, nil
+}
+
+// per session
+func buildConnectionId(id string, ctx *Context) string {
+	return fmt.Sprintf("%s_%s", ctx.Env.Contract.Address.String(), id)
+}
+
+func BuildWasmxImapVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	context := &Context{Context: ctx_}
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("ConnectWithPassword", ConnectWithPassword, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ConnectOAuth2", ConnectOAuth2, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Listen", Listen, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Fetch", Fetch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("CreateFolder", CreateFolder, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+	}
+
+	return vm.BuildModule(rnh, "imap", context, fndefs)
+}

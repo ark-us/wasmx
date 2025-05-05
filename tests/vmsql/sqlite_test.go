@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/loredanacirstea/mythos-tests/vmsql/testdata"
+	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	vmsql "github.com/loredanacirstea/wasmx/x/vmsql"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -59,7 +60,7 @@ func (suite *KeeperTestSuite) TestSqliteWrapContract() {
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
 
 	// set a role to have access to protected APIs
-	suite.registerRole("somerole", contractAddress, sender)
+	utils.RegisterRole(suite, appA, "somerole", contractAddress, sender)
 
 	// connect
 	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{
@@ -246,7 +247,7 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
 
 	// set a role to have access to protected APIs
-	suite.registerRole("somerole", contractAddress, sender)
+	utils.RegisterRole(suite, appA, "somerole", contractAddress, sender)
 
 	// connect
 	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{
@@ -416,7 +417,7 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)
 
 	// set a role to have access to protected APIs
-	suite.registerRole("somerole", contractAddress, sender)
+	utils.RegisterRole(suite, appA, "somerole", contractAddress, sender)
 
 	// connect
 	cmdConn := &Calldata{Connect: &vmsql.SqlConnectionRequest{

@@ -44,6 +44,7 @@ export WASMX_GO_TESTDATA="${WASMX_PROJECT_ROOT}/tests/testdata/wasmx"
 export WASMX_GO_TESTDATA_NETWORK="${WASMX_PROJECT_ROOT}/tests/network/testdata/wasmx"
 export WASMX_GO_TESTDATA_SQL="${WASMX_PROJECT_ROOT}/tests/vmsql/testdata/as"
 export WASMX_GO_TESTDATA_KVDB="${WASMX_PROJECT_ROOT}/tests/vmkv/testdata/as"
+export WASMX_GO_TESTDATA_IMAP="${WASMX_PROJECT_ROOT}/tests/vmimap/testdata/as"
 
 # precompiles
 export WASMX_BLOCKS="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-blocks"
@@ -84,6 +85,7 @@ export WASMX_TESTS_SIMPLESTORAGE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-
 export WASMX_TESTS_SQL="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-sql"
 export WASMX_TESTS_KVDB="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-kvdb"
 export WASMX_ERC20_DTYPE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-erc20-sql"
+export WASMX_TESTS_IMAP="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-imap"
 
 labels=$(echo $TO_COMPILE | tr "," "\n")
 for label in $labels
@@ -262,6 +264,13 @@ do
 
         cd $WASMX_TESTS_KVDB && npm run asbuild
         mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
+
+        cd $WASMX_TESTS_IMAP && npm run asbuild
+        mv -f $WASMX_TESTS_IMAP/build/release.wasm $WASMX_GO_TESTDATA_IMAP/wasmx_test_imap.wasm
+    fi
+    if [[ $label = 'imap' ]]; then
+        cd $WASMX_TESTS_IMAP && npm run asbuild
+        mv -f $WASMX_TESTS_IMAP/build/release.wasm $WASMX_GO_TESTDATA_IMAP/wasmx_test_imap.wasm
     fi
 done
 
@@ -302,6 +311,7 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_CODES_REGISTRY && npm run asbuild
     cd $WASMX_DTYPE && npm run asbuild
     cd $WASMX_ERC20_DTYPE && npm run asbuild
+    cd $WASMX_TESTS_IMAP && npm run asbuild
     # cd $WASMX_PARAMS && npm run asbuild
 
     mv -f $WASMX_FSM/build/release.wasm $WASMX_GO_PRECOMPILES/28.finite_state_machine.wasm
@@ -343,4 +353,5 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_TESTS_SQL/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_test_sql.wasm
     mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
     mv -f $WASMX_ERC20_DTYPE/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_erc20_sql.wasm
+    mv -f $WASMX_TESTS_IMAP/build/release.wasm $WASMX_GO_TESTDATA_IMAP/wasmx_test_imap.wasm
 fi

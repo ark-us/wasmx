@@ -3,16 +3,14 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/json"
-	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/simulation"
 
 	"github.com/loredanacirstea/mythos-tests/vmsql/testdata"
-	mcodec "github.com/loredanacirstea/wasmx/codec"
+	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	vmsql "github.com/loredanacirstea/wasmx/x/vmsql"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -45,7 +43,7 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	suite.Require().Equal(`{"error":"","data":"null"}`, string(qres))
 
 	// now set a role for this priviledged contract
-	suite.registerRole("somerole", contractAddress, sender)
+	utils.RegisterRole(suite, appA, "somerole", contractAddress, sender)
 
 	cmdQuery = &Calldata{Query: &vmsql.SqlQueryRequest{
 		Id:     "conn1",
@@ -56,39 +54,4 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(`{"error":"sql connection not found","data":"null"}`, string(qres))
-}
-
-func (suite *KeeperTestSuite) registerRole(rolename string, contractAddress mcodec.AccAddressPrefixed, sender simulation.Account) {
-	title := "Register " + rolename
-	description := "Register " + rolename
-	appA := s.AppContext()
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
-
-	valAccount := simulation.Account{
-		PrivKey: s.Chain().SenderPrivKey,
-		PubKey:  s.Chain().SenderPrivKey.PubKey(),
-		Address: s.Chain().SenderAccount.GetAddress(),
-	}
-	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(500000)
-	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
-
-	// register new role
-	msg := []byte(fmt.Sprintf(`{"SetRole":{"role":{"role":"%s","storage_type":0,"primary":0,"multiple":false,"labels":["%s"],"addresses":["%s"]}}}`, rolename, rolename, contractAddress))
-	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
-	s.Require().NoError(err)
-	exec := &types.MsgExecuteContract{
-		Sender:   appA.App.WasmxKeeper.GetAuthority(),
-		Contract: rolesAddr.String(),
-		Msg:      msgbz,
-	}
-	appA.PassGovProposal(valAccount, sender, []sdk.Msg{exec}, "", title, description, false)
-
-	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), contractAddress)
-	s.Require().Equal(rolename, resp)
-
-	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), rolename)
-	s.Require().Equal(contractAddress.String(), role.Addresses[0])
-	s.Require().Equal(rolename, role.Labels[0])
-	s.Require().Equal(rolename, role.Role)
 }

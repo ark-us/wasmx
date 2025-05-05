@@ -15,129 +15,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 
 	"github.com/loredanacirstea/mythos-tests/vmsql/testdata"
+	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
-	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
-
-var DbName = "dtype"
-var DTypeConnection = "dtype_connection"
-var DTypeDbName = "dtype_db"
-var DTypeDbConnName = "dtype_db_connection"
-var DTypeTableName = "dtype_table"
-var DTypeFieldName = "dtype_field"
-
-var DTypeNodeName = "node"
-var DTypeRelationName = "relation"
-var DTypeRelationTypeName = "relation_type"
-
-var TokensTable = "token"
-var OwnedTable = "owned"
-var AllowanceTable = "allowance"
-
-var IdentityTable = "identity"
-var FullNameTable = "identity_full_name"
-var EmailTable = "identity_email"
-
-var tableDbConnId = int64(1)
-var tableDbId = int64(2)
-var tableTableId = int64(3)
-var tableFieldsId = int64(4)
-var tableNodeId = int64(5)
-var tableRelationId = int64(6)
-var tableRelationTypeId = int64(7)
-var TokensTableId = int64(8)
-var OwnedTableId = int64(9)
-var AllowanceTableId = int64(10)
-var IdentityTableId = int64(11)
-var FullNameTableId = int64(12)
-var EmailTableId = int64(13)
-
-type InstantiateDType struct {
-	Dir    string `json:"dir"`
-	Driver string `json:"driver"`
-}
-
-type CreateTableDTypeRequest struct {
-	TableId int64 `json:"table_id"`
-}
-
-type CreateTableDTypeResponse struct {
-}
-
-type TableIdentifier struct {
-	DbConnectionId   int64  `json:"db_connection_id"`
-	DbId             int64  `json:"db_id"`
-	TableId          int64  `json:"table_id"`
-	DbConnectionName string `json:"db_connection_name"`
-	DbName           string `json:"db_name"`
-	TableName        string `json:"table_name"`
-}
-
-type InsertDTypeRequest struct {
-	Identifier TableIdentifier `json:"identifier"`
-	Data       []byte          `json:"data"`
-}
-
-type UpdateDTypeRequest struct {
-	Identifier TableIdentifier `json:"identifier"`
-	Condition  []byte          `json:"condition"`
-	Data       []byte          `json:"data"`
-}
-
-type DeleteDTypeRequest struct {
-	Identifier TableIdentifier `json:"identifier"`
-	Condition  []byte          `json:"condition"`
-}
-
-type ReadDTypeRequest struct {
-	Identifier TableIdentifier `json:"identifier"`
-	Data       []byte          `json:"data"`
-}
-
-type ReadFieldRequest struct {
-	Identifier TableIdentifier `json:"identifier"`
-	FieldId    int64           `json:"fieldId"`
-	FieldName  string          `json:"fieldName"`
-	Data       []byte          `json:"data"`
-}
-
-type BuildSchemaRequest struct {
-	Identifier TableIdentifier `json:"identifier"`
-}
-
-type BuildSchemaResponse struct {
-	Data []byte `json:"data"`
-}
-
-type InsertDTypeResponse struct {
-}
-
-type ConnectRequest struct {
-	Id   int64  `json:"id"`
-	Name string `json:"name"`
-}
-
-type InitializeTokens struct{}
-type InitializeIdentity struct{}
-
-type CalldataDType struct {
-	Initialize         *InstantiateDType        `json:"Initialize,omitempty"`
-	InitializeTokens   *InitializeTokens        `json:"InitializeTokens,omitempty"`
-	InitializeIdentity *InitializeIdentity      `json:"InitializeIdentity,omitempty"`
-	CreateTable        *CreateTableDTypeRequest `json:"CreateTable,omitempty"`
-	Connect            *ConnectRequest          `json:"Connect,omitempty"`
-	Close              *ConnectRequest          `json:"Close,omitempty"`
-	Insert             *InsertDTypeRequest      `json:"Insert,omitempty"`
-	InsertOrReplace    *InsertDTypeRequest      `json:"InsertOrReplace,omitempty"`
-	Update             *UpdateDTypeRequest      `json:"Update,omitempty"`
-	Delete             *DeleteDTypeRequest      `json:"Delete,omitempty"`
-	Read               *ReadDTypeRequest        `json:"Read,omitempty"`
-	ReadField          *ReadFieldRequest        `json:"ReadField,omitempty"`
-	BuildSchema        *BuildSchemaRequest      `json:"BuildSchema,omitempty"`
-}
 
 func (suite *KeeperTestSuite) TestDTypeContract() {
 	connFile := "newdb.db"
@@ -156,9 +39,12 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	contractAddress := suite.deployDType(sender)
+	contractAddress, err := utils.DeployDType(suite, appA, sender)
+	suite.Require().NoError(err)
 
-	identif := suite.createDb(
+	identif := utils.CreateDb(
+		suite,
+		appA,
 		sender,
 		contractAddress,
 		connFile,
@@ -166,7 +52,9 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 		connName,
 		dbname,
 	)
-	tableId1 := suite.createTable(
+	tableId1 := utils.CreateTable(
+		suite,
+		appA,
 		sender,
 		contractAddress,
 		identif.DbId,
@@ -181,12 +69,14 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 		fmt.Sprintf(`{"name":"field4","table_id":%d,"order_index":5,"value_type":"BOOLEAN","indexed":false,"permissions":""}`, tableId1),
 	}
 
-	suite.createFields(sender, contractAddress, fields)
-	suite.instantiateTable(sender, contractAddress, identif.DbConnectionId, tableId1)
+	utils.CreateFields(suite, appA, sender, contractAddress, fields)
+	utils.InstantiateTable(suite, appA, sender, contractAddress, identif.DbConnectionId, tableId1)
 
 	// create table2
 	tablename2 := "newtable2"
-	tableId2 := suite.createTable(
+	tableId2 := utils.CreateTable(
+		suite,
+		appA,
 		sender,
 		contractAddress,
 		identif.DbId,
@@ -199,13 +89,13 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 		fmt.Sprintf(`{"name":"field1","table_id":%d,"order_index":3,"value_type":"VARCHAR","indexed":false,"permissions":""}`, tableId2),
 	}
 
-	suite.createFields(sender, contractAddress, fields2)
-	suite.instantiateTable(sender, contractAddress, identif.DbConnectionId, tableId2)
+	utils.CreateFields(suite, appA, sender, contractAddress, fields2)
+	utils.InstantiateTable(suite, appA, sender, contractAddress, identif.DbConnectionId, tableId2)
 
 	// build json schema for table1
 
 	// create rows in table1
-	cmd := &CalldataDType{BuildSchema: &BuildSchemaRequest{Identifier: TableIdentifier{
+	cmd := &vmsql.CalldataDType{BuildSchema: &vmsql.BuildSchemaRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId1,
@@ -214,12 +104,12 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	data, err := json.Marshal(cmd)
 	suite.Require().NoError(err)
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	var schemaResp BuildSchemaResponse
+	var schemaResp vmsql.BuildSchemaResponse
 	err = json.Unmarshal(qres, &schemaResp)
 	suite.Require().NoError(err, string(qres))
 
 	// create rows in table1
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId1,
@@ -240,7 +130,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
 	row1_1 := resss.Responses[0].LastInsertId
 
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId1,
@@ -262,7 +152,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	// row1_2 := resss.Responses[0].LastInsertId
 
 	// create rows in table2
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -278,7 +168,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal("", resss.Error)
 	suite.Require().Equal(1, len(resss.Responses))
 
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -294,7 +184,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal("", resss.Error)
 	suite.Require().Equal(1, len(resss.Responses))
 
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -311,7 +201,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(1, len(resss.Responses))
 
 	// update rows in table2
-	cmd = &CalldataDType{Update: &UpdateDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Update: &vmsql.UpdateDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -329,7 +219,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(1, len(resss.Responses))
 
 	// read
-	cmd = &CalldataDType{Read: &ReadDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Read: &vmsql.ReadDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -350,7 +240,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(1, len(table2rows))
 
 	// readField
-	cmd = &CalldataDType{ReadField: &ReadFieldRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{ReadField: &vmsql.ReadFieldRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -368,7 +258,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(table2rows[0].Table1ID, int64(v))
 
 	// count
-	cmd = &CalldataDType{Read: &ReadDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Read: &vmsql.ReadDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -384,7 +274,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(3, len(table2rows))
 
 	// delete in cascade
-	cmd = &CalldataDType{Delete: &DeleteDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Delete: &vmsql.DeleteDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId1,
@@ -401,7 +291,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(1, len(resss.Responses))
 
 	// count
-	cmd = &CalldataDType{Read: &ReadDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Read: &vmsql.ReadDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
@@ -419,7 +309,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.testGraph(sender, contractAddress, tableId1)
 
 	// close connection
-	cmd = &CalldataDType{Close: &ConnectRequest{
+	cmd = &vmsql.CalldataDType{Close: &vmsql.ConnectRequest{
 		Id: identif.DbConnectionId,
 	}}
 	data, err = json.Marshal(cmd)
@@ -430,8 +320,8 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().NoError(err)
 	suite.Require().Equal("", resssclose.Error)
 
-	cmd = &CalldataDType{Close: &ConnectRequest{
-		Name: DTypeConnection,
+	cmd = &vmsql.CalldataDType{Close: &vmsql.ConnectRequest{
+		Name: vmsql.DTypeConnection,
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -464,7 +354,7 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 	wasmbin := testdata.WasmxErc20DType
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 
-	suite.deployDType(sender)
+	utils.DeployDType(suite, appA, sender)
 
 	tokenInfo := struct {
 		Name        string `json:"name"`
@@ -485,7 +375,7 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 	erc20Address := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: tokenInfoBz}, "erc20dtype", nil)
 
 	// set a role to have access to protected APIs
-	suite.registerRole("erc20dtype", erc20Address, sender)
+	utils.RegisterRole(suite, appA, "erc20dtype", erc20Address, sender)
 
 	// TODO remove & just trigger activate() for a role
 	appA.ExecuteContractWithGas(sender, erc20Address, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":%s}`, string(tokenInfoBz)))}, nil, nil, 50000000, nil)
@@ -601,16 +491,17 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	appA.Faucet.Fund(appA.Context(), spenderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	suite.Commit()
 
-	dtypeAddress := suite.deployDType(sender)
-	identif := TableIdentifier{
-		DbConnectionName: DTypeConnection,
-		DbName:           DbName,
+	dtypeAddress, err := utils.DeployDType(suite, appA, sender)
+	suite.Require().NoError(err)
+	identif := vmsql.TableIdentifier{
+		DbConnectionName: vmsql.DTypeConnection,
+		DbName:           vmsql.DbName,
 	}
 
 	// insert identity
-	identif.TableName = IdentityTable
-	identif.TableId = IdentityTableId
-	cmd := &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.IdentityTable
+	identif.TableId = vmsql.IdentityTableId
+	cmd := &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
 		Data:       []byte(fmt.Sprintf(`{"name":"Reri Palma","address":"%s"}`, senderPrefixed.String())),
 	}}
@@ -628,9 +519,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
 	identityId := resss.Responses[0].LastInsertId
 
-	identif.TableName = FullNameTable
-	identif.TableId = FullNameTableId
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.FullNameTable
+	identif.TableId = vmsql.FullNameTableId
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
 		Data:       []byte(`{"title":"Ms","honorific_prefix":"Dr.","given_name":"Reri","middle_name":"","family_name":"Palma","suffix":"","postnominal":"","full_display_name":"","locale":"en-US","notes":""}`),
 	}}
@@ -648,9 +539,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
 	fullNameId := resss.Responses[0].LastInsertId
 
-	identif.TableName = EmailTable
-	identif.TableId = EmailTableId
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.EmailTable
+	identif.TableId = vmsql.EmailTableId
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
 		Data:       []byte(`{"full_address":"reri.palma@gmail.com","username":"reri.palma","domain":"mail.com","provider":"Google","host":"smtp.gmail.com","category":"personal","notes":""}`),
 	}}
@@ -669,11 +560,11 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	emailId := resss.Responses[0].LastInsertId
 
 	// insert identity node
-	identif.TableName = DTypeNodeName
-	identif.TableId = tableNodeId
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.DTypeNodeName
+	identif.TableId = vmsql.TableNodeId
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
-		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, IdentityTableId, identityId, "Reri Palma")),
+		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, vmsql.IdentityTableId, identityId, "Reri Palma")),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -690,9 +581,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	// identityNodeIdId := resss.Responses[0].LastInsertId
 
 	// insert full name node
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
-		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, FullNameTableId, fullNameId, "Reri Palma")),
+		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, vmsql.FullNameTableId, fullNameId, "Reri Palma")),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -709,9 +600,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	// fullNameNodeIdId := resss.Responses[0].LastInsertId
 
 	// insert email node
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
-		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, EmailTableId, emailId, "Reri Palma")),
+		Data:       []byte(fmt.Sprintf(`{"table_id":%d,"record_id":%d,"name":"%s"}`, vmsql.EmailTableId, emailId, "Reri Palma")),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -728,9 +619,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	// emailNodeIdId := resss.Responses[0].LastInsertId
 
 	// create relation type
-	identif.TableName = DTypeRelationTypeName
-	identif.TableId = tableRelationTypeId
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.DTypeRelationTypeName
+	identif.TableId = vmsql.TableRelationTypeId
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
 		Data:       []byte(`{"name":"identity shard","reverse_name":"full identity","reversable":true})`),
 	}}
@@ -749,9 +640,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	relType := resss.Responses[0].LastInsertId
 
 	// create relation for full name
-	identif.TableName = DTypeRelationName
-	identif.TableId = tableRelationId
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.DTypeRelationName
+	identif.TableId = vmsql.TableRelationId
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
 		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0})`, relType, fullNameId, identityId)),
 	}}
@@ -769,9 +660,9 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
 
 	// create relation for email
-	identif.TableName = DTypeRelationName
-	identif.TableId = tableRelationId
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{
+	identif.TableName = vmsql.DTypeRelationName
+	identif.TableId = vmsql.TableRelationId
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
 		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0})`, relType, emailId, identityId)),
 	}}
@@ -789,35 +680,6 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
 }
 
-func (suite *KeeperTestSuite) deployDType(sender simulation.Account) mcodec.AccAddressPrefixed {
-	appA := s.AppContext()
-	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.DTYPE_v001)
-	codeId := appA.StoreCode(sender, wasmbin, nil)
-	cmdi := &InstantiateDType{Dir: "", Driver: "sqlite3"}
-	data, err := json.Marshal(cmdi)
-	suite.Require().NoError(err)
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "dtype", nil)
-
-	// set a role to have access to protected APIs
-	suite.registerRole("dtype", contractAddress, sender)
-
-	cmd := &CalldataDType{Initialize: cmdi}
-	data, err = json.Marshal(cmd)
-	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-
-	cmd = &CalldataDType{InitializeTokens: &InitializeTokens{}}
-	data, err = json.Marshal(cmd)
-	suite.Require().NoError(err)
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 50000000, nil)
-
-	cmd = &CalldataDType{InitializeIdentity: &InitializeIdentity{}}
-	data, err = json.Marshal(cmd)
-	suite.Require().NoError(err)
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 50000000, nil)
-	return contractAddress
-}
-
 func (suite *KeeperTestSuite) testGraph(
 	sender simulation.Account,
 	contractAddress mcodec.AccAddressPrefixed,
@@ -831,7 +693,7 @@ func (suite *KeeperTestSuite) testGraph(
 	tableRelationTypeId := int64(7)
 
 	// node1
-	cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd := &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: dtypeConnId,
 		DbId:           dtypeDbId,
 		TableId:        tableNodeId,
@@ -853,7 +715,7 @@ func (suite *KeeperTestSuite) testGraph(
 	node1Id := resss.Responses[0].LastInsertId
 
 	// node 2
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: dtypeConnId,
 		DbId:           dtypeDbId,
 		TableId:        tableNodeId,
@@ -875,7 +737,7 @@ func (suite *KeeperTestSuite) testGraph(
 	node2Id := resss.Responses[0].LastInsertId
 
 	// create relation type
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: dtypeConnId,
 		DbId:           dtypeDbId,
 		TableId:        tableRelationTypeId,
@@ -897,7 +759,7 @@ func (suite *KeeperTestSuite) testGraph(
 	relType1 := resss.Responses[0].LastInsertId
 
 	// create relation
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
+	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: dtypeConnId,
 		DbId:           dtypeDbId,
 		TableId:        tableRelationId,
@@ -917,153 +779,4 @@ func (suite *KeeperTestSuite) testGraph(
 	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
 	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
 	// relId := resss.Responses[0].LastInsertId
-}
-
-func (suite *KeeperTestSuite) createDb(
-	sender simulation.Account,
-	contractAddress mcodec.AccAddressPrefixed,
-	connFile string,
-	connDriver string,
-	connName string,
-	dbname string,
-) TableIdentifier {
-	appA := s.AppContext()
-	// insert new database with connection
-	cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-		DbConnectionName: DTypeConnection,
-		DbName:           DbName,
-		TableName:        DTypeDbConnName,
-	},
-		Data: []byte(fmt.Sprintf(`{"connection":"%s","driver":"%s","name":"%s"}`, connFile, connDriver, connName)),
-	}}
-	data, err := json.Marshal(cmd)
-	suite.Require().NoError(err)
-	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	resss := &vmsql.SqlExecuteBatchResponse{}
-	err = appA.DecodeExecuteResponse(res, resss)
-	suite.Require().NoError(err)
-	suite.Require().Equal("", resss.Error)
-	suite.Require().Equal(1, len(resss.Responses))
-	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
-	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
-	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
-	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
-	newconnId := resss.Responses[0].LastInsertId
-
-	// new db definition
-	cmd = &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-		DbConnectionName: DTypeConnection,
-		DbName:           DbName,
-		TableName:        DTypeDbName,
-	},
-		Data: []byte(fmt.Sprintf(`{"name":"%s","connection_id":%d}`, dbname, newconnId)),
-	}}
-	data, err = json.Marshal(cmd)
-	suite.Require().NoError(err)
-	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	resss = &vmsql.SqlExecuteBatchResponse{}
-	err = appA.DecodeExecuteResponse(res, resss)
-	suite.Require().NoError(err)
-	suite.Require().Equal("", resss.Error)
-	suite.Require().Equal(1, len(resss.Responses))
-	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
-	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
-	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
-	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
-	newDbId := resss.Responses[0].LastInsertId
-
-	return TableIdentifier{
-		DbConnectionId:   newconnId,
-		DbId:             newDbId,
-		DbConnectionName: connName,
-		DbName:           dbname,
-	}
-}
-
-func (suite *KeeperTestSuite) createTable(
-	sender simulation.Account,
-	contractAddress mcodec.AccAddressPrefixed,
-	dbId int64,
-	tablename string,
-) int64 {
-	appA := s.AppContext()
-	// insert new table definition
-	cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-		DbConnectionName: DTypeConnection,
-		DbName:           DbName,
-		TableName:        DTypeTableName,
-	},
-		Data: []byte(fmt.Sprintf(`{"name":"%s","db_id":%d}`, tablename, dbId)),
-	}}
-	data, err := json.Marshal(cmd)
-	suite.Require().NoError(err)
-	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	resss := &vmsql.SqlExecuteBatchResponse{}
-	err = appA.DecodeExecuteResponse(res, resss)
-	suite.Require().NoError(err)
-	suite.Require().Equal("", resss.Error)
-	suite.Require().Equal(1, len(resss.Responses))
-	suite.Require().Equal("", resss.Responses[0].LastInsertIdError)
-	suite.Require().Equal("", resss.Responses[0].RowsAffectedError)
-	suite.Require().Greater(resss.Responses[0].LastInsertId, int64(0))
-	suite.Require().Greater(resss.Responses[0].RowsAffected, int64(0))
-	tableId := resss.Responses[0].LastInsertId
-
-	return tableId
-}
-
-func (suite *KeeperTestSuite) createFields(
-	sender simulation.Account,
-	contractAddress mcodec.AccAddressPrefixed,
-	fields []string,
-) {
-	appA := s.AppContext()
-	// insert table fields
-	for _, fielddef := range fields {
-		cmd := &CalldataDType{Insert: &InsertDTypeRequest{Identifier: TableIdentifier{
-			DbConnectionName: DTypeConnection,
-			DbName:           DbName,
-			TableName:        DTypeFieldName,
-		},
-			Data: []byte(fielddef),
-		}}
-		data, err := json.Marshal(cmd)
-		suite.Require().NoError(err)
-		res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-		resss := &vmsql.SqlExecuteBatchResponse{}
-		err = appA.DecodeExecuteResponse(res, resss)
-		suite.Require().NoError(err)
-		suite.Require().Equal("", resss.Error)
-		suite.Require().Equal(1, len(resss.Responses))
-	}
-}
-
-func (suite *KeeperTestSuite) instantiateTable(
-	sender simulation.Account,
-	contractAddress mcodec.AccAddressPrefixed,
-	newconnId int64,
-	tableId int64,
-) {
-	appA := s.AppContext()
-	// start database connection
-	cmd := &CalldataDType{Connect: &ConnectRequest{Id: newconnId}}
-	data, err := json.Marshal(cmd)
-	suite.Require().NoError(err)
-	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	resssc := &vmsql.SqlConnectionResponse{}
-	err = appA.DecodeExecuteResponse(res, resssc)
-	suite.Require().NoError(err)
-	suite.Require().Equal("", resssc.Error)
-
-	// create table
-	cmd = &CalldataDType{CreateTable: &CreateTableDTypeRequest{
-		TableId: tableId,
-	}}
-	data, err = json.Marshal(cmd)
-	suite.Require().NoError(err)
-	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	resss := &vmsql.SqlExecuteResponse{}
-	err = appA.DecodeExecuteResponse(res, resss)
-	suite.Require().NoError(err)
-	suite.Require().Equal("", resssc.Error)
 }

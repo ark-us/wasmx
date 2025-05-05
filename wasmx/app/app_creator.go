@@ -27,6 +27,8 @@ import (
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+
+	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 )
 
 // newApp creates a new Cosmos SDK app
@@ -43,12 +45,13 @@ func NewAppCreator(
 	ctx = wasmxtypes.ContextWithBackgroundProcesses(ctx)
 	ctx = vmp2p.WithP2PEmptyContext(ctx)
 	ctx = networktypes.ContextWithMultiChainContext(g, ctx, logger)
-	ctx = vmsql.WithSqlEmptyContext(ctx)
-	ctx = vmkv.WithKvDbEmptyContext(ctx)
 	ctx, bapps := mcfg.WithMultiChainAppEmpty(ctx)
 	ctx, _ = mctx.WithExecutionMetaInfoEmpty(ctx)
 	ctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(ctx)
 	ctx, _ = wasmxtypes.WithSystemBootstrap(ctx)
+	ctx = vmsql.WithSqlEmptyContext(ctx)
+	ctx = vmkv.WithKvDbEmptyContext(ctx)
+	ctx = vmimap.WithImapEmptyContext(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 
