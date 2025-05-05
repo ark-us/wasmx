@@ -126,6 +126,9 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
+	github.com/emersion/go-imap/v2 v2.0.0-beta.5 // indirect
+	github.com/emersion/go-message v0.18.2 // indirect
+	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
 	github.com/emicklei/dot v1.6.1 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
@@ -337,4 +340,5 @@ replace (
 )
 
 require github.com/loredanacirstea/wasmx-vmimap v0.0.0
+
 replace github.com/loredanacirstea/wasmx-vmimap => ../wasmx-vmimap
