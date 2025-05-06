@@ -10,7 +10,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/loredanacirstea/mythos-tests/vmimap/testdata"
+	"github.com/loredanacirstea/mythos-tests/vmemail/testdata"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"

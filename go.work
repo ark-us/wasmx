@@ -7,6 +7,8 @@ use (
 	./mythos-wazero
 	./mythos-wasmedge
 	./tests
+	./wasmx-vmimap
+	./wasmx-vmsmtp
 )
 
 replace (

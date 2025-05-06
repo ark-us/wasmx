@@ -1,11 +1,11 @@
 module github.com/loredanacirstea/wasmx-wazero
 
-go 1.23.2
+go 1.21
 
 require (
 	cosmossdk.io/errors v1.0.2
 	cosmossdk.io/math v1.5.3 // indirect
-	github.com/cometbft/cometbft v1.0.1 // indirect
+	github.com/cometbft/cometbft v0.38.6 // indirect
 	github.com/cosmos/cosmos-sdk v0.53.0
 	github.com/cosmos/gogoproto v1.7.0 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
@@ -32,7 +32,7 @@ require (
 	cosmossdk.io/log v1.5.1 // indirect
 	cosmossdk.io/schema v1.0.0 // indirect
 	cosmossdk.io/store v1.1.2 // indirect
-	cosmossdk.io/x/tx v1.1.0 // indirect
+	cosmossdk.io/x/tx v0.13.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -42,7 +42,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.2.0 // indirect
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/bytedance/sonic v1.13.1 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect

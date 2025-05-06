@@ -1,9 +1,8 @@
-package vmsql
+package vmsmtp
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	// this line is used by starport scaffolding # 1
 
@@ -124,89 +123,13 @@ func (am AppModule) BeginTransaction(ctx context.Context, txmode sdk.ExecMode, t
 }
 
 func (am AppModule) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, txerr error) error {
-	vctx, err := GetSqlContext(am.goContextParent)
-	if err != nil {
-		return err
-	}
-	shouldCommit := false
-	if txmode == sdk.ExecModeFinalize {
-		shouldCommit = true
-	}
-	for _, conn := range vctx.DbConnections {
-		if conn.OpenSavepointTx == nil {
-			continue
-		}
-		if shouldCommit {
-			cmd := "RELEASE sp0"
-			if txerr != nil {
-				cmd = "ROLLBACK TO sp0"
-			}
-			_, err := conn.OpenSavepointTx.Exec(cmd)
-			if err != nil {
-				return fmt.Errorf("db tx command failed: %s, %s", cmd, err.Error())
-			}
-			err = conn.OpenSavepointTx.Commit()
-			if err != nil {
-				return fmt.Errorf("cannot commit sql open tx: %s", err.Error())
-			}
-		} else {
-			err = conn.OpenSavepointTx.Rollback()
-			if err != nil {
-				return fmt.Errorf("cannot rollback sql open tx: %s", err.Error())
-			}
-		}
-		conn.OpenSavepointTx = nil
-		conn.SavePointMap = make(map[string]bool, 0)
-	}
 	return nil
 }
 
 func (am AppModule) BeginSubCall(ctx context.Context, level uint32, index uint32, isquery bool) error {
-	vctx, err := GetSqlContext(am.goContextParent)
-	if err != nil {
-		return err
-	}
-	for _, conn := range vctx.DbConnections {
-		if conn.OpenSavepointTx == nil {
-			continue
-		}
-		savepoint := buildSavepoint(level, index)
-		cmd := fmt.Sprintf("SAVEPOINT %s", savepoint)
-		conn.SavePointMap[savepoint] = true
-		_, err := conn.OpenSavepointTx.Exec(cmd)
-		if err != nil {
-			return fmt.Errorf("cannot add savepoint: %s, %s", savepoint, err.Error())
-		}
-	}
 	return nil
 }
 
 func (am AppModule) EndSubCall(_ context.Context, level uint32, index uint32, isquery bool, txerr error) error {
-	// check err & rollback to previous savepoint
-	vctx, err := GetSqlContext(am.goContextParent)
-	if err != nil {
-		return err
-	}
-	for _, conn := range vctx.DbConnections {
-		if conn.OpenSavepointTx == nil {
-			continue
-		}
-		savepoint := buildSavepoint(level, index)
-		if !conn.hasSavePoint(savepoint) {
-			continue
-		}
-		cmd := fmt.Sprintf("RELEASE sp%d_%d", level, index)
-		if isquery || txerr != nil {
-			cmd = fmt.Sprintf("ROLLBACK TO sp%d_%d", level, index)
-		}
-		_, err := conn.OpenSavepointTx.Exec(cmd)
-		if err != nil {
-			return fmt.Errorf("db tx command failed: %s, %s", cmd, err.Error())
-		}
-	}
 	return nil
-}
-
-func buildSavepoint(level, index uint32) string {
-	return fmt.Sprintf("sp%d_%d", level, index)
 }
