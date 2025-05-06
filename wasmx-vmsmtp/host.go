@@ -33,7 +33,7 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 
 	conn, found := vctx.GetConnection(connId)
 	if found {
-		if conn.SmtpServerUrl == req.SmtpServerUrl {
+		if conn.SmtpServerUrlSTARTTLS == req.SmtpServerUrlSTARTTLS || conn.SmtpServerUrlTLS == req.SmtpServerUrlTLS {
 			return prepareResponse(rnh, response)
 		} else {
 			response.Error = "connection id already in use"
@@ -42,14 +42,14 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 	}
 
 	getClient := func() (*gosmtp.Client, error) {
-		c, err := connectToSMTP(req.SmtpServerUrl, req.Username, req.Password)
+		c, err := connectToSMTP(req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS, req.Username, req.Password)
 		if err != nil {
 			return nil, err
 		}
 		return c, nil
 	}
 
-	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.SmtpServerUrl)
+	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS)
 }
 
 func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -74,7 +74,7 @@ func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []inter
 
 	conn, found := vctx.GetConnection(connId)
 	if found {
-		if conn.SmtpServerUrl == req.SmtpServerUrl {
+		if conn.SmtpServerUrlSTARTTLS == req.SmtpServerUrlSTARTTLS || conn.SmtpServerUrlTLS == req.SmtpServerUrlTLS {
 			return prepareResponse(rnh, response)
 		} else {
 			response.Error = "connection id already in use"
@@ -83,14 +83,14 @@ func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 
 	getClient := func() (*gosmtp.Client, error) {
-		c, err := connectToSMTPOauth2(req.SmtpServerUrl, req.Username, req.AccessToken)
+		c, err := connectToSMTPOauth2(req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS, req.Username, req.AccessToken)
 		if err != nil {
 			return nil, err
 		}
 		return c, nil
 	}
 
-	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.SmtpServerUrl)
+	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS)
 }
 
 func connectCommon(
@@ -101,7 +101,8 @@ func connectCommon(
 	response *SmtpConnectionResponse,
 	connId string,
 	username string,
-	imapServerUrl string,
+	imapServerUrlStartTls string,
+	imapServerUrlTls string,
 ) ([]interface{}, error) {
 	client, err := getClient()
 	if err != nil {
@@ -130,12 +131,13 @@ func connectCommon(
 	})
 
 	conn := &SmtpOpenConnection{
-		GoContextParent: ctx.GoContextParent,
-		Username:        username,
-		SmtpServerUrl:   imapServerUrl,
-		Client:          client,
-		Closed:          closedChannel,
-		GetClient:       getClient,
+		GoContextParent:       ctx.GoContextParent,
+		Username:              username,
+		SmtpServerUrlSTARTTLS: imapServerUrlStartTls,
+		SmtpServerUrlTLS:      imapServerUrlTls,
+		Client:                client,
+		Closed:                closedChannel,
+		GetClient:             getClient,
 	}
 
 	err = vctx.SetConnection(connId, conn)

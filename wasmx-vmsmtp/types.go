@@ -37,13 +37,14 @@ type Context struct {
 }
 
 type SmtpOpenConnection struct {
-	mtx             sync.Mutex
-	GoContextParent context.Context
-	Username        string
-	SmtpServerUrl   string `json:"smtp_server_url"`
-	Client          *gosmtp.Client
-	Closed          chan struct{}
-	GetClient       func() (*gosmtp.Client, error)
+	mtx                   sync.Mutex
+	GoContextParent       context.Context
+	Username              string
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Client                *gosmtp.Client
+	Closed                chan struct{}
+	GetClient             func() (*gosmtp.Client, error)
 }
 
 type SmtpContext struct {
@@ -76,17 +77,19 @@ func (p *SmtpContext) DeleteConnection(id string) {
 }
 
 type SmtpConnectionSimpleRequest struct {
-	Id            string `json:"id"`
-	SmtpServerUrl string `json:"smtp_server_url"`
-	Username      string `json:"username"`
-	Password      string `json:"password"`
+	Id                    string `json:"id"`
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Username              string `json:"username"`
+	Password              string `json:"password"`
 }
 
 type SmtpConnectionOauth2Request struct {
-	Id            string `json:"id"`
-	SmtpServerUrl string `json:"smtp_server_url"`
-	Username      string `json:"username"`
-	AccessToken   string `json:"access_token"`
+	Id                    string `json:"id"`
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Username              string `json:"username"`
+	AccessToken           string `json:"access_token"`
 }
 
 type SmtpConnectionResponse struct {

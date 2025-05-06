@@ -20,10 +20,12 @@ import (
 
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
+	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 )
 
 func init() {
 	vmimap.Setup()
+	vmsmtp.Setup()
 }
 
 var (

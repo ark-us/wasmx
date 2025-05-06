@@ -50,7 +50,11 @@ func (suite *KeeperTestSuite) TestImap() {
 		}}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resc := &vmimap.ImapConnectionResponse{}
+	err = appA.DecodeExecuteResponse(res, resc)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resc.Error)
 
 	msg = &Calldata{
 		Fetch: &vmimap.ImapFetchRequest{
@@ -76,7 +80,11 @@ func (suite *KeeperTestSuite) TestImap() {
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rescf := &vmimap.ImapCreateFolderResponse{}
+	err = appA.DecodeExecuteResponse(res, rescf)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", rescf.Error)
 
 	msg = &Calldata{
 		Listen: &vmimap.ImapListenRequest{
@@ -85,7 +93,11 @@ func (suite *KeeperTestSuite) TestImap() {
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resl := &vmimap.ImapListenResponse{}
+	err = appA.DecodeExecuteResponse(res, resl)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resl.Error)
 
 	msg = &Calldata{
 		Close: &vmimap.ImapCloseRequest{
@@ -93,5 +105,9 @@ func (suite *KeeperTestSuite) TestImap() {
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rescl := &vmimap.ImapCloseResponse{}
+	err = appA.DecodeExecuteResponse(res, rescl)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", rescl.Error)
 }

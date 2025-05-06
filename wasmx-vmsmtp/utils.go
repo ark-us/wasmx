@@ -15,8 +15,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func connectToSMTP(serverUrl string, username, password string) (*gosmtp.Client, error) {
-	sclient, err := gosmtp.DialStartTLS(serverUrl, nil)
+func connectToSMTP(serverUrlStartTls string, serverUrlTls string, username, password string) (sclient *gosmtp.Client, err error) {
+	if serverUrlStartTls != "" {
+		sclient, err = gosmtp.DialStartTLS(serverUrlStartTls, nil)
+	} else {
+		sclient, err = gosmtp.DialTLS(serverUrlTls, nil)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
 	}
@@ -29,8 +33,12 @@ func connectToSMTP(serverUrl string, username, password string) (*gosmtp.Client,
 	return sclient, nil
 }
 
-func connectToSMTPOauth2(smtpServerUrl string, username string, accessToken string) (*gosmtp.Client, error) {
-	sclient, err := gosmtp.DialStartTLS(smtpServerUrl, nil)
+func connectToSMTPOauth2(serverUrlStartTls string, serverUrlTls string, username string, accessToken string) (sclient *gosmtp.Client, err error) {
+	if serverUrlStartTls != "" {
+		sclient, err = gosmtp.DialStartTLS(serverUrlStartTls, nil)
+	} else {
+		sclient, err = gosmtp.DialTLS(serverUrlTls, nil)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
 	}
@@ -46,7 +54,7 @@ func connectToSMTPOauth2(smtpServerUrl string, username string, accessToken stri
 func BuildRawEmail(e Email) (string, error) {
 	var buf bytes.Buffer
 
-	// 1) Build the top-level headers
+	// Build the top-level headers
 	hdr := mail.Header{}
 
 	// From
@@ -75,12 +83,7 @@ func BuildRawEmail(e Email) (string, error) {
 	hdr.Set("Subject", e.Envelope.Subject)
 
 	// Date
-	hdr.Set("Date", e.Envelope.Date.Format(time.RFC1123Z))
-
-	// Message-ID
-	if e.Envelope.MessageID != "" {
-		hdr.Set("Message-ID", e.Envelope.MessageID)
-	}
+	hdr.Set("Date", time.Now().UTC().Format(time.RFC1123Z))
 
 	// Copy any extra header fields
 	for k, vals := range e.Header {
@@ -100,20 +103,19 @@ func BuildRawEmail(e Email) (string, error) {
 		return "", fmt.Errorf("mail.CreateWriter: %v", err)
 	}
 
-	// Write the body as an inline part
-	if len(e.Body) > 0 {
-		header := mail.InlineHeader{}
-		header.Set("Content-Type", "text/plain; charset=\"UTF-8\"")
-		bodyWriter, err := mw.CreateSingleInline(header)
-		if err != nil {
-			return "", fmt.Errorf("failed to create body writer: %v", err)
-		}
-		if _, err := bodyWriter.Write([]byte(e.Body)); err != nil {
-			return "", fmt.Errorf("failed to write body: %v", err)
-		}
-		if err := bodyWriter.Close(); err != nil {
-			return "", fmt.Errorf("failed to close body writer: %v", err)
-		}
+	// Write body and attachments
+	// Always write something (even if empty) so the SMTP server sees a body part.
+	header := mail.InlineHeader{}
+	// header.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
+	bodyWriter, err := mw.CreateSingleInline(header)
+	if err != nil {
+		return "", fmt.Errorf("failed to create body writer: %v", err)
+	}
+	if _, err := bodyWriter.Write([]byte(e.Body)); err != nil {
+		return "", fmt.Errorf("failed to write body: %v", err)
+	}
+	if err := bodyWriter.Close(); err != nil {
+		return "", fmt.Errorf("failed to close body writer: %v", err)
 	}
 
 	// Add each attachment

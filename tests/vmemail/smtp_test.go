@@ -47,19 +47,23 @@ func (suite *KeeperTestSuite) TestSmtp() {
 
 	msg := &CalldataTestSmpt{
 		ConnectWithPassword: &vmsmtp.SmtpConnectionSimpleRequest{
-			Id:            "conn1",
-			SmtpServerUrl: "mail.mail.provable.dev:993",
-			Username:      "test@mail.provable.dev",
-			Password:      "uwsawW3A6**yB^kp",
+			Id:                    "conn1",
+			SmtpServerUrlSTARTTLS: "mail.mail.provable.dev:587",
+			Username:              "test@mail.provable.dev",
+			Password:              "uwsawW3A6**yB^kp",
 		}}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resc := &vmsmtp.SmtpConnectionResponse{}
+	err = appA.DecodeExecuteResponse(res, resc)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resc.Error)
 
 	msg = &CalldataTestSmpt{
 		Verify: &vmsmtp.SmtpVerifyRequest{
 			Id:      "conn1",
-			Address: "test@mail.provable.dev",
+			Address: "test",
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
@@ -67,7 +71,7 @@ func (suite *KeeperTestSuite) TestSmtp() {
 	qresp := &vmsmtp.SmtpVerifyResponse{}
 	err = json.Unmarshal(qres, qresp)
 	suite.Require().NoError(err)
-	suite.Require().Equal(qresp.Error, "")
+	suite.Require().Contains(qresp.Error, "SMTP error 252")
 
 	email := vmsmtp.Email{
 		Envelope: &imap.Envelope{
@@ -96,7 +100,11 @@ func (suite *KeeperTestSuite) TestSmtp() {
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	ress := &vmsmtp.SmtpSendMailResponse{}
+	err = appA.DecodeExecuteResponse(res, ress)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", ress.Error)
 
 	msg = &CalldataTestSmpt{
 		Close: &vmsmtp.SmtpCloseRequest{
@@ -104,5 +112,9 @@ func (suite *KeeperTestSuite) TestSmtp() {
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	res = appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	rescl := &vmsmtp.SmtpCloseResponse{}
+	err = appA.DecodeExecuteResponse(res, rescl)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", rescl.Error)
 }

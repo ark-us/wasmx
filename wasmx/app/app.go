@@ -256,6 +256,8 @@ func init() {
 	vmcrosschain.Setup()
 	vmsql.Setup()
 	vmkv.Setup()
+	// vmimap.Setup()
+	// vmsmtp.Setup()
 }
 
 // App extends an ABCI application, but with most of its parameters exported.

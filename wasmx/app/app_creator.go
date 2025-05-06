@@ -29,6 +29,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
+	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 )
 
 // newApp creates a new Cosmos SDK app
@@ -52,6 +53,7 @@ func NewAppCreator(
 	ctx = vmsql.WithSqlEmptyContext(ctx)
 	ctx = vmkv.WithKvDbEmptyContext(ctx)
 	ctx = vmimap.WithImapEmptyContext(ctx)
+	ctx = vmsmtp.WithSmtpEmptyContext(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 
