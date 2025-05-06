@@ -159,7 +159,6 @@ require (
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -201,9 +200,7 @@ replace (
 require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.5
 	github.com/emersion/go-message v0.18.2
-	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/loredanacirstea/wasmx v0.0.0
-	golang.org/x/oauth2 v0.18.0
 )
 
 replace github.com/loredanacirstea/wasmx => ../wasmx
