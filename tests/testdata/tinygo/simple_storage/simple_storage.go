@@ -1,67 +1,100 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/tidwall/gjson"
+	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-tinygo"
 )
 
 //go:wasm-module simplestorage
 //export instantiate
-func instantiate() {
+func Instantiate() {
 	data := wasmx.GetCallData()
 	key := []byte("storagekey")
 	wasmx.StorageStore(key, data)
 }
 
+type StoreRequest struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type LoadRequest struct {
+	Key string `json:"key"`
+}
+
+type WrapStoreRequest struct {
+	Address string `json:"address"`
+	Key     string `json:"key"`
+	Value   string `json:"value"`
+}
+
+type WrapLoadRequest struct {
+	Address string `json:"address"`
+	Key     string `json:"key"`
+	Sm      any    `json:"sm"`
+}
+
 type Calldata struct {
-	Store []string `json:"store,omitempty"`
-	Load  []string `json:"load,omitempty"`
+	Store     *StoreRequest     `json:"store,omitempty"`
+	Load      *LoadRequest      `json:"load,omitempty"`
+	WrapStore *WrapStoreRequest `json:"wrapStore,omitempty"`
+	WrapLoad  *WrapLoadRequest  `json:"wrapLoad,omitempty"`
 }
 
 func main() {
-	data := string(wasmx.GetCallData())
+	databz := wasmx.GetCallData()
+	calld := &Calldata{}
+	err := json.Unmarshal(databz, calld)
+	if err != nil {
+		wasmx.SetExitCode(2, []byte(err.Error()))
+	}
 
-	if gjson.Get(data, "store").Exists() {
-		value := gjson.Get(data, "store|0")
-		storageStore([]byte(value.String()))
-	} else if gjson.Get(data, "load").Exists() {
-		resp := storageLoad()
+	if calld.Store != nil {
+		storageStore([]byte(calld.Store.Key), []byte(calld.Store.Value))
+	} else if calld.Load != nil {
+		resp := storageLoad([]byte(calld.Load.Key))
 		wasmx.SetFinishData(resp)
-	} else if gjson.Get(data, "wrapStore").Exists() {
-		addr := gjson.Get(data, "wrapStore|0")
-		value := gjson.Get(data, "wrapStore|1")
-		wrapStore(addr.String(), value.String())
-	} else if gjson.Get(data, "wrapLoad").Exists() {
-		addr := gjson.Get(data, "wrapLoad|0")
-		resp := wrapLoad(addr.String())
+	} else if calld.WrapStore != nil {
+		wrapStore(calld.WrapStore.Address, calld.WrapStore.Key, calld.WrapStore.Value)
+	} else if calld.WrapLoad != nil {
+		resp := wrapLoad(calld.WrapStore.Address, calld.WrapStore.Key)
 		wasmx.SetFinishData(resp)
 	}
 }
 
-func storageStore(value []byte) {
-	key := []byte("storagekey")
+func storageStore(key []byte, value []byte) {
 	wasmx.StorageStore(key, value)
 }
 
-func storageLoad() []byte {
-	key := []byte("storagekey")
+func storageLoad(key []byte) []byte {
 	return wasmx.StorageLoad(key)
 }
 
-func wrapStore(address string, value string) {
-	calldata := fmt.Sprintf(`{"store":["%s"]}`, value)
-	success, _ := wasmx.Call(50000000, address, make([]byte, 32), []byte(calldata))
+func wrapStore(address string, key string, value string) {
+	calldata := &Calldata{Store: &StoreRequest{
+		Key:   key,
+		Value: value,
+	}}
+	calld, err := json.Marshal(calldata)
+	if err != nil {
+		panic(err)
+	}
+	success, _ := wasmx.Call(50000000, address, make([]byte, 32), calld)
 	if !success {
 		panic("call failed")
 	}
 }
 
-func wrapLoad(address string) []byte {
-	calldata := []byte(`{"load":[]}`)
-	success, data := wasmx.CallStatic(50000000, address, calldata)
+func wrapLoad(address string, key string) []byte {
+	calldata := &Calldata{Load: &LoadRequest{
+		Key: key,
+	}}
+	calld, err := json.Marshal(calldata)
+	if err != nil {
+		panic(err)
+	}
+	success, data := wasmx.CallStatic(50000000, address, calld)
 	if !success {
 		panic("call failed")
 	}

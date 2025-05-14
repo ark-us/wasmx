@@ -126,7 +126,7 @@ func wasiSetExitCode(_context interface{}, rnh memc.RuntimeHandler, params []int
 	}
 	ctx.FinishData = errorMsg
 	ctx.ReturnData = errorMsg
-	return returns, fmt.Errorf(string(errorMsg))
+	return returns, fmt.Errorf("code %d: %s", code, string(errorMsg))
 }
 
 func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -619,6 +619,22 @@ func wasiLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	return returns, nil
 }
 
+func wasiPrintln(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	data, err := mem.ReadRaw(params[0], params[1])
+	if err != nil {
+		return nil, err
+	}
+	ctx.Ctx.Logger().Debug("wasi println", "message", string(data))
+	// fmt.Println(string(data))
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
 func BuildWasiWasmxEnv(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
@@ -650,6 +666,7 @@ func BuildWasiWasmxEnv(context *Context, rnh memc.RuntimeHandler) (interface{}, 
 		vm.BuildFn("bech32StringToBytes", wasi_bech32StringToBytes, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("bech32BytesToString", wasi_bech32BytesToString, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("log", wasiLog, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("println", wasiPrintln, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)

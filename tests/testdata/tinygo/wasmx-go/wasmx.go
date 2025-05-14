@@ -22,6 +22,12 @@ func GetCallData_() int64
 //go:wasmimport wasmx setFinishData
 func SetFinishData_(dataPtr, dataLen int32)
 
+//go:wasmimport wasmx setReturnData
+func SetReturnData_(dataPtr, dataLen int32)
+
+//go:wasmimport wasmx setExitCode
+func SetExitCode_(code, dataPtr, dataLen int32)
+
 //go:wasmimport wasmx getEnv
 func GetEnv_() int64
 
@@ -70,6 +76,9 @@ func Bech32BytesToString_(dataPtr int32) int64
 //go:wasmimport wasmx log
 func Log_(ptr, size int32)
 
+//go:wasmimport wasmx println
+func Println_(ptr, size int32)
+
 type CallResult struct {
 	Success int    `json:"success"`
 	Data    []byte `json:"data"`
@@ -96,6 +105,16 @@ func GetCallData() []byte {
 func SetFinishData(data []byte) {
 	keyPtr, keyLength := BytesToLeakedPtr(data)
 	SetFinishData_(keyPtr, keyLength)
+}
+
+func SetReturnData(data []byte) {
+	keyPtr, keyLength := BytesToLeakedPtr(data)
+	SetReturnData_(keyPtr, keyLength)
+}
+
+func SetExitCode(code int32, data []byte) {
+	keyPtr, keyLength := BytesToLeakedPtr(data)
+	SetExitCode_(code, keyPtr, keyLength)
 }
 
 func Bech32StringToBytes(addrBech32 string) []byte {
@@ -156,6 +175,11 @@ func Log(data []byte, topics [][32]byte) {
 	encoded, _ := json.Marshal(WasmxLog{Data: data, Topics: topics})
 	ptr, size := BytesToLeakedPtr(encoded)
 	Log_(ptr, size)
+}
+
+func Println(data string) {
+	ptr, size := BytesToLeakedPtr([]byte(data))
+	Println_(ptr, size)
 }
 
 func splitPtr(ptr int64) (int32, int32) {

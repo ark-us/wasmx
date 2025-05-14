@@ -46,15 +46,15 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("hello"), value)
 
-	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"store":["goodbye"]}`)}, nil, nil)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"store":{"key":"storagekey","value":"goodbye"}}`)}, nil, nil)
 
 	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte(`goodbye`), value)
 
-	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"load":[]}`)}, nil, nil)
+	resp := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"load":{"key":"storagekey"}}`)}, nil, nil)
 	s.Require().Equal([]byte("goodbye"), resp)
 
-	appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"store":["hello"]}`)}, nil, nil)
+	appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"store":{"key":"storagekey","value":"hello"}}`)}, nil, nil)
 
 	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("goodbye"), value)
@@ -80,12 +80,12 @@ func (suite *KeeperTestSuite) TestWasiTinygoCallSimpleStorage() {
 	value := appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("123"), value)
 
-	data := []byte(fmt.Sprintf(`{"wrapStore":["%s", "goodbye"]}`, contractAddress.String()))
+	data := []byte(fmt.Sprintf(`{"wrapStore":{"address":"%s","key":"storagekey","value":"goodbye"}}`, contractAddress.String()))
 	appA.ExecuteContract(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
 	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte(`goodbye`), value)
 
-	resp := appA.WasmxQueryRaw(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"wrapLoad":["%s"]}`, contractAddress.String()))}, nil, nil)
+	resp := appA.WasmxQueryRaw(sender, contractAddressWrap, types.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"wrapLoad":{"address":"%s","key":"storagekey"}}`, contractAddress.String()))}, nil, nil)
 	s.Require().Equal([]byte("goodbye23"), resp)
 }
