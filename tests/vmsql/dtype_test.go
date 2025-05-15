@@ -623,7 +623,7 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	identif.TableId = vmsql.TableRelationTypeId
 	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
-		Data:       []byte(`{"name":"identity shard","reverse_name":"full identity","reversable":true})`),
+		Data:       []byte(`{"name":"identity shard","reverse_name":"full identity","reversable":true}`),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -644,7 +644,7 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	identif.TableId = vmsql.TableRelationId
 	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
-		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0})`, relType, fullNameId, identityId)),
+		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0}`, relType, fullNameId, identityId)),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
@@ -664,7 +664,7 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	identif.TableId = vmsql.TableRelationId
 	cmd = &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{
 		Identifier: identif,
-		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0})`, relType, emailId, identityId)),
+		Data:       []byte(fmt.Sprintf(`{"relation_type_id":%d,"source_node_id":%d,"target_node_id":%d,"order_index":0}`, relType, emailId, identityId)),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)

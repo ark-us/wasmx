@@ -77,6 +77,7 @@ var ADDR_LEVEL0_ONDEMAND_LIBRARY = "0x0000000000000000000000000000000000000052"
 var ADDR_ROLES = "0x0000000000000000000000000000000000000060"
 var ADDR_STORAGE_CONTRACTS = "0x0000000000000000000000000000000000000061"
 var ADDR_DTYPE = "0x0000000000000000000000000000000000000062"
+var ADDR_EMAIL_HANDLER = "0x0000000000000000000000000000000000000063"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -816,7 +817,6 @@ func SpecialPrecompiles() SystemContracts {
 		panic("SpecialPrecompiles: cannot marshal init message")
 	}
 	return []SystemContract{
-		// contract storage needs to be initialized first, roles second, auth third
 		{
 			Address:     ADDR_DTYPE,
 			Label:       DTYPE_v001,
@@ -825,6 +825,17 @@ func SpecialPrecompiles() SystemContracts {
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_DTYPE, Label: ROLE_DTYPE, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		// TODO dtype nondeterministic version
+		{
+			Address:     ADDR_EMAIL_HANDLER,
+			Label:       EMAIL_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_EMAIL_HANDLER, Label: ROLE_EMAIL_HANDLER, Primary: true},
+			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},
 	}

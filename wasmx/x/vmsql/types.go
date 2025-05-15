@@ -154,7 +154,8 @@ type SqlExecuteBatchResponse struct {
 }
 
 type SqlQueryParam struct {
-	Type  string      `json:"type"`
+	Type string `json:"type"`
+	// TODO consider using []byte instead of interface{} -> encode-decode for each supported type
 	Value interface{} `json:"value"`
 }
 

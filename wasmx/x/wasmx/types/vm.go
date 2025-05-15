@@ -255,6 +255,7 @@ var ROLE_LOBBY = "lobby"
 var ROLE_METAREGISTRY = "metaregistry"
 
 var ROLE_DTYPE = "dtype"
+var ROLE_EMAIL_HANDLER = "email_handler"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -329,6 +330,7 @@ var ERC20_ROLLUP_v001 = "erc20rollupjson_0.0.1"
 var LOBBY_v001 = "lobby_json_0.0.1"
 var METAREGISTRY_v001 = "metaregistry_json_0.0.1"
 var DTYPE_v001 = "dtype_0.0.1"
+var EMAIL_v001 = "email_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"
