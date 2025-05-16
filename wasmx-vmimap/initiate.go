@@ -38,4 +38,6 @@ func Setup() {
 
 	vmtypes.SetSystemDepHandlerMock(HOST_WASMX_ENV_IMAP_VER1, InstantiateImapVMMock)
 	types.PROTECTED_HOST_APIS[HOST_WASMX_ENV_IMAP_VER1] = true
+
+	types.SetEntryPoint(ENTRY_POINT_IMAP)
 }

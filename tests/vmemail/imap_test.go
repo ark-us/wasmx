@@ -45,8 +45,8 @@ func (suite *KeeperTestSuite) TestImap() {
 		ConnectWithPassword: &vmimap.ImapConnectionSimpleRequest{
 			Id:            "conn1",
 			ImapServerUrl: "mail.mail.provable.dev:993",
-			Username:      "test@mail.provable.dev",
-			Password:      "uwsawW3A6**yB^kp",
+			Username:      suite.emailUsername,
+			Password:      suite.emailPassword,
 		}}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)

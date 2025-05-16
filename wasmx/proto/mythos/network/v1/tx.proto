@@ -33,8 +33,9 @@ service Msg {
     // MultiChainWrap wraps a message to be executed on one of the available chains
     rpc MultiChainWrap(MsgMultiChainWrap) returns (MsgMultiChainWrapResponse);
 
-    // this is external, for the grpc server
-    // TODO remove from the message server, only keep for grpc?
+    // MsgReentry is an internal message for contracts
+    // It cannot be called by EOAs
+    rpc Reentry(MsgReentry) returns (MsgReentryResponse);
 
     // GrpcReceiveRequest
     rpc GrpcReceiveRequest(MsgGrpcReceiveRequest) returns (MsgGrpcReceiveRequestResponse);
@@ -205,6 +206,19 @@ message MsgExecuteContract {
 message MsgExecuteContractResponse {
     bytes data = 1;
 }
+
+// MsgReentry
+message MsgReentry {
+    option (cosmos.msg.v1.signer) = "sender";
+    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    // contract address
+    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string entry_point = 3;
+    bytes msg = 4;
+}
+
+// MsgReentryResponse
+message MsgReentryResponse {}
 
 // QueryContract
 message MsgQueryContract {

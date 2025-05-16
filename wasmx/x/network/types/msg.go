@@ -24,6 +24,18 @@ var (
 
 type RawContractMessage = wasmxtypes.RawContractMessage
 
+func (msg MsgReentry) Route() string {
+	return RouterKey
+}
+
+func (msg MsgReentry) Type() string {
+	return "reentry"
+}
+
+func (msg MsgReentry) ValidateBasic() error {
+	return nil
+}
+
 func (msg MsgGrpcSendRequest) Route() string {
 	return RouterKey
 }

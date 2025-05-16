@@ -2,13 +2,15 @@ package vmimap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
-
 	imap "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
+
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
 
 const (
@@ -27,6 +29,8 @@ const HOST_WASMX_ENV_IMAP_VER1 = "wasmx_imap_1"
 const HOST_WASMX_ENV_IMAP_EXPORT = "wasmx_imap_"
 
 const HOST_WASMX_ENV_IMAP = "imap"
+
+const ENTRY_POINT_IMAP = "imap_update"
 
 type ContextKey string
 
@@ -176,4 +180,90 @@ type ImapCreateFolderRequest struct {
 
 type ImapCreateFolderResponse struct {
 	Error string `json:"error"`
+}
+
+type MsgIncomingEmail struct {
+	Folder string `json:"folder"`
+	UID    uint32 `json:"uid"`
+	SeqNum uint32 `json:"seq_num"`
+	Owner  string `json:"owner"`
+}
+
+type MsgExpunge struct {
+	Owner  string `json:"owner"`
+	Folder string `json:"folder"`
+	SeqNum uint32 `json:"seq_num"`
+}
+
+type MsgMetadata struct {
+	Owner   string   `json:"owner"`
+	Folder  string   `json:"folder"`
+	Entries []string `json:"entries"`
+}
+
+type ReentryCalldata struct {
+	IncomingEmail *MsgIncomingEmail `json:"IncomingEmail"`
+	Expunge       *MsgExpunge       `json:"Expunge"`
+	Metadata      *MsgMetadata      `json:"IncominMetadatagEmail"`
+}
+
+func (c *Context) HandleIncomingEmail(owner string, folder string, uid uint32, seq uint32) {
+	// TODO remove in production
+	c.Ctx.Logger().Debug("email received", "owner", owner, "folder", folder, "uid", uid, "seq", seq)
+
+	msg := &ReentryCalldata{
+		IncomingEmail: &MsgIncomingEmail{
+			Owner:  owner,
+			Folder: folder,
+			UID:    uid,
+			SeqNum: seq,
+		}}
+	c.handleReentry(msg)
+}
+
+func (c *Context) handleExpunge(owner string, folder string, seq uint32) {
+	// TODO remove in production
+	c.Ctx.Logger().Debug("email expunge", "owner", owner, "folder", folder, "seq", seq)
+
+	msg := &ReentryCalldata{
+		Expunge: &MsgExpunge{
+			Owner:  owner,
+			Folder: folder,
+			SeqNum: seq,
+		}}
+	c.handleReentry(msg)
+}
+
+func (c *Context) handleMetadata(owner string, folder string, entries []string) {
+	// TODO remove in production
+	c.Ctx.Logger().Debug("email metadata", "owner", owner, "folder", folder)
+
+	msg := &ReentryCalldata{
+		Metadata: &MsgMetadata{
+			Owner:   owner,
+			Folder:  folder,
+			Entries: entries,
+		}}
+	c.handleReentry(msg)
+}
+
+func (c *Context) handleReentry(msg *ReentryCalldata) {
+	msgbz, err := json.Marshal(msg)
+	if err != nil {
+		c.Ctx.Logger().Error("cannot marshal Expunge", "error", err.Error())
+		return
+	}
+
+	contractAddress := c.Env.Contract.Address
+
+	msgtosend := &networktypes.MsgReentry{
+		Sender:     contractAddress.String(),
+		Contract:   contractAddress.String(),
+		EntryPoint: ENTRY_POINT_IMAP,
+		Msg:        msgbz,
+	}
+	_, _, err = c.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		c.Ctx.Logger().Error(err.Error())
+	}
 }

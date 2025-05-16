@@ -704,7 +704,7 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 		if !found {
 			return nil, nil
 		}
-	} else if funcName == types.ENTRY_POINT_TIMED || funcName == types.ENTRY_POINT_P2P_MSG {
+	} else if v, ok := types.AdditionalEntryPointMap[funcName]; ok && v {
 		res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 	} else {
 		// WASI command - no args, no return

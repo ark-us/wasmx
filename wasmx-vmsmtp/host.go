@@ -118,7 +118,7 @@ func connectCommon(
 			ctx.Ctx.Logger().Info(fmt.Sprintf("parent context was closed, closing database connection: %s", connId))
 			err := client.Close()
 			if err != nil {
-				ctx.Ctx.Logger().Error(fmt.Sprintf(`database close error for connection id "%s": %v`, connId, err))
+				ctx.Ctx.Logger().Error(fmt.Sprintf(`smtp close error for connection id "%s": %v`, connId, err))
 			}
 			close(closedChannel)
 			return nil

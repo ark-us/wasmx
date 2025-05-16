@@ -80,16 +80,14 @@ func (lm *ImapOpenConnection) listenForEmails(ctx context.Context, listener *IMA
 		if err := idleCmd.Close(); err != nil {
 			log.Printf("Error stopping IDLE: %v \n", err)
 		}
-		listener.Client.Close()
-		return nil
+		return listener.Client.Close()
 	case <-ctx.Done():
 		// Received signal to exit idle loop.
 		if err := idleCmd.Close(); err != nil {
 			log.Printf("Error stopping IDLE: %v \n", err)
 		}
 		log.Println("Exiting IMAP idle loop")
-		listener.Client.Close()
-		return nil
+		return listener.Client.Close()
 	case err := <-errCh:
 		fmt.Println("* IMAP IDLE error", err)
 		listener.Client.Close()

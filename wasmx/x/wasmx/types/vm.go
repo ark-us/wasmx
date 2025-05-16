@@ -53,6 +53,18 @@ var (
 	ENTRY_POINT_P2P_MSG     = "p2pmsg"
 )
 
+var AdditionalEntryPointMap = map[string]bool{}
+
+func init() {
+	AdditionalEntryPointMap[ENTRY_POINT_REPLY] = true
+	AdditionalEntryPointMap[ENTRY_POINT_TIMED] = true
+	AdditionalEntryPointMap[ENTRY_POINT_P2P_MSG] = true
+}
+
+func SetEntryPoint(key string) {
+	AdditionalEntryPointMap[key] = true
+}
+
 // Checksum represents a hash of the Wasm bytecode that serves as an ID. Must be generated from this library.
 type Checksum RawContractMessage
 

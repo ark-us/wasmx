@@ -82,8 +82,10 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	select {
 	case err := <-errCh:
 		k.actionExecutor.GetLogger().Error("eventual execution failed to start", "error", err.Error())
+		cancel()
 		return err
 	case <-intervalEnded:
+		cancel()
 		return nil
 	}
 }
@@ -111,12 +113,12 @@ func (k *Keeper) startTimeoutInternal(
 
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-		msg := &types.MsgExecuteContract{
+		execmsg := &types.MsgExecuteContract{
 			Sender:   msg.Sender,
 			Contract: msg.Contract,
 			Msg:      msg.Args,
 		}
-		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_TIMED, msg)
+		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_TIMED, execmsg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("Closing eventual thread", "description", description, err.Error())

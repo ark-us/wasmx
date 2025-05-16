@@ -444,7 +444,7 @@ func (k *Keeper) instantiateWithAddress(
 	contractInfo.RoleLabel = roleLabel
 
 	// prepare querier
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
 	res, gasUsed, err := k.wasmvm.Instantiate(ctx, &codeInfo, env, initMsg, prefixStore, handler, k.gasMeter(ctx), contractInfo)
@@ -657,7 +657,7 @@ func (k *Keeper) ExecuteContractInstantiationInternal(
 	}
 
 	// prepare querier
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 
 	// instantiate wasm contract
 	return k.wasmvm.Instantiate(ctx, codeInfo, env, initMsg, prefixStore, handler, gasMeter, contractInfo)
@@ -776,7 +776,7 @@ func (k *Keeper) execute(ctx sdk.Context, contractAddress mcodec.AccAddressPrefi
 	}
 
 	// prepare querier
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
 	res, gasUsed, execErr := k.wasmvm.Execute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
@@ -847,7 +847,7 @@ func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, contractEntryPoint string, c
 	}
 
 	// prepare querier
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
 	res, gasUsed, execErr := k.wasmvm.ExecuteEntryPoint(ctx, contractEntryPoint, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, inBackground)
 	k.consumeRuntimeGas(ctx, gasUsed)
@@ -897,7 +897,7 @@ func (k *Keeper) Reply(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 	}
 
 	// prepare querier
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 	// gas := k.runtimeGasForContract(ctx)
 
 	replyBz, err := json.Marshal(reply)
@@ -971,7 +971,7 @@ func (k *Keeper) executeWithOrigin(ctx sdk.Context, origin mcodec.AccAddressPref
 		return nil, err
 	}
 
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 	extendedContractInfo, err := k.GetContractDependencyInner(ctx, contractAddress, *contractInfo, *codeInfo, prefixStoreKey)
 	if err != nil {
 		return nil, err
@@ -1049,7 +1049,7 @@ func (k *Keeper) query(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixe
 		return nil, err
 	}
 
-	handler := k.newCosmosHandler(ctx, contractAddress)
+	handler := k.NewCosmosHandler(ctx, contractAddress)
 	store := k.ContractStore(ctx, contractInfo.StorageType, prefixStoreKey)
 	res, gasUsed, execErr := k.wasmvm.QueryExecute(ctx, codeInfo, env, msg, store, handler, gasMeter, extendedContractInfo, contractDeps, isdebug)
 	k.consumeRuntimeGas(ctx, gasUsed)

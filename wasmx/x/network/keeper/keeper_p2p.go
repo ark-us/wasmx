@@ -60,12 +60,12 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageRequest, chainId string) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-		msg := &types.MsgExecuteContract{
+		execmsg := &types.MsgExecuteContract{
 			Sender:   msg.Sender,
 			Contract: msg.Contract,
 			Msg:      msg.Data,
 		}
-		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, msg)
+		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, execmsg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("closing p2p message receival thread", err.Error())

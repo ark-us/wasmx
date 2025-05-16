@@ -63,7 +63,7 @@ func (c *Context) handleChatRoomMessage(crmsg *ChatRoomMessage) {
 func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, senderAddress string) {
 	netmsgbz, err := json.Marshal(netmsg)
 	if err != nil {
-		c.Logger.Error("cannot marshall P2PMessage", "error", err.Error())
+		c.Logger.Error("cannot marshal P2PMessage", "error", err.Error())
 		return
 	}
 

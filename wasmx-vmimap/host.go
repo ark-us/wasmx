@@ -119,7 +119,7 @@ func connectCommon(
 			ctx.Ctx.Logger().Info(fmt.Sprintf("parent context was closed, closing database connection: %s", connId))
 			err := client.Close()
 			if err != nil {
-				ctx.Ctx.Logger().Error(fmt.Sprintf(`database close error for connection id "%s": %v`, connId, err))
+				ctx.Ctx.Logger().Error(fmt.Sprintf(`imap close error for connection id "%s": %v`, connId, err))
 			}
 			close(closedChannel)
 			return nil
@@ -208,7 +208,7 @@ func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 		return prepareResponse(rnh, response)
 	}
 
-	dataHandler := callbackMailboxChange(ctx, connId, conn.Username)
+	dataHandler := callbackMailboxChange(ctx, req.Folder, connId, conn.Username)
 	err = conn.StartListener(ctx.GoContextParent, req.Folder, dataHandler)
 	if err != nil {
 		response.Error = err.Error()
@@ -341,10 +341,11 @@ func CreateFolder(_context interface{}, rnh memc.RuntimeHandler, params []interf
 }
 
 // TODO call contract
-func callbackMailboxChange(ctx *Context, sessionId string, sessionUsername string) *imapclient.UnilateralDataHandler {
+func callbackMailboxChange(ctx *Context, folder string, sessionId string, sessionUsername string) *imapclient.UnilateralDataHandler {
 	return &imapclient.UnilateralDataHandler{
 		Expunge: func(seqNum uint32) {
 			ctx.Ctx.Logger().Info("message seqnum %v has been expunged\n", seqNum)
+			ctx.handleExpunge(sessionUsername, folder, seqNum)
 		},
 		Mailbox: func(data *imapclient.UnilateralDataMailbox) {
 			if data.NumMessages != nil {
@@ -368,11 +369,13 @@ func callbackMailboxChange(ctx *Context, sessionId string, sessionUsername strin
 				return
 			}
 			ctx.Ctx.Logger().Info("new message seqnum: %d, uid: %d \n", msg.SeqNum, data.UID)
+			ctx.HandleIncomingEmail(sessionUsername, folder, uint32(data.UID), msg.SeqNum)
 		},
 
 		// requires ENABLE METADATA or ENABLE SERVER-METADATA
 		Metadata: func(mailbox string, entries []string) {
 			ctx.Ctx.Logger().Info("new message metadata for mailbox: %s, entries: %s \n", mailbox, strings.Join(entries, ","))
+			ctx.handleMetadata(sessionUsername, mailbox, entries)
 		},
 	}
 }

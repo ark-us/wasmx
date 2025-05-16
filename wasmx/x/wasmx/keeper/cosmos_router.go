@@ -205,10 +205,10 @@ func (h *WasmxCosmosHandler) FinalizeBlockResultHandler(ctx sdk.Context, resp *a
 }
 
 func (h *WasmxCosmosHandler) WithNewAddress(addr mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
-	return h.Keeper.newCosmosHandler(h.Ctx, addr)
+	return h.Keeper.NewCosmosHandler(h.Ctx, addr)
 }
 
-func (k *Keeper) newCosmosHandler(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
+func (k *Keeper) NewCosmosHandler(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
 	return &WasmxCosmosHandler{
 		Ctx:             ctx,
 		Keeper:          k,

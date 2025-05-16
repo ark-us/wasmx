@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -29,14 +30,19 @@ func init() {
 }
 
 var (
-	wasmRuntime string
+	wasmRuntime   string
+	emailUsername string
+	emailPassword string
+	runListen     bool
 )
 
 // TestMain is the main entry point for the tests.
 func TestMain(m *testing.M) {
 	flag.StringVar(&wasmRuntime, "wasm-runtime", "default", "Set the wasm runtime (e.g. wasmedge, wazero)")
+	flag.StringVar(&emailUsername, "email-username", "", "Set the email account address for tests")
+	flag.StringVar(&emailPassword, "email-password", "", "Set the email account password for tests")
+	flag.BoolVar(&runListen, "run-listen", false, "Run email listen test")
 
-	// Parse the flags. Only flags after `--` in `go test` command line will be passed here.
 	flag.Parse()
 
 	os.Exit(m.Run())
@@ -45,6 +51,9 @@ func TestMain(m *testing.M) {
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	wt.KeeperTestSuite
+	emailUsername string
+	emailPassword string
+	runListen     bool
 }
 
 var s *KeeperTestSuite
@@ -84,7 +93,13 @@ func (suite *KeeperTestSuite) TearDownSuite() {}
 
 // TestKeeperTestSuite runs all the tests within this package.
 func TestKeeperTestSuite(t *testing.T) {
+	flag.Parse() // <- force parse here, in case it wasn't called
+	fmt.Println("runListen: ", runListen, emailUsername, emailPassword)
+
 	s = new(KeeperTestSuite)
+	s.emailUsername = emailUsername
+	s.emailPassword = emailPassword
+	s.runListen = runListen
 	suite.Run(t, s)
 
 	// Run Ginkgo integration tests

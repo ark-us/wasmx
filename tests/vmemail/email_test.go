@@ -3,6 +3,9 @@ package keeper_test
 import (
 	_ "embed"
 	"encoding/json"
+	"os"
+	"os/signal"
+	"syscall"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -11,11 +14,12 @@ import (
 
 	imap "github.com/emersion/go-imap/v2"
 
+	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
+	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
-
-	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 )
 
 type Provider struct {
@@ -54,13 +58,13 @@ type MsgCacheEmailRequest struct {
 }
 
 type MsgListenEmailRequest struct {
-	UserId      Provider `json:"user_id"`
-	Username    string   `json:"username"`
-	EmailFolder string   `json:"email_folder"`
+	UserId      int64  `json:"user_id"`
+	Username    string `json:"username"`
+	EmailFolder string `json:"email_folder"`
 }
 
 type MsgSendEmailRequest struct {
-	UserId   Provider `json:"user_id"`
+	UserId   int64    `json:"user_id"`
 	Username string   `json:"username"`
 	Subject  string   `json:"subject"`
 	Body     string   `json:"body"`
@@ -115,8 +119,8 @@ func (suite *KeeperTestSuite) TestEmail() {
 
 	msg = &CalldataEmailProver{
 		ConnectUser: &MsgConnectUserRequest{
-			Username:   "test@mail.provable.dev",
-			Secret:     "uwsawW3A6**yB^kp",
+			Username:   suite.emailUsername,
+			Secret:     suite.emailPassword,
 			SecretType: "password",
 		},
 	}
@@ -126,7 +130,7 @@ func (suite *KeeperTestSuite) TestEmail() {
 
 	msg = &CalldataEmailProver{
 		CacheEmail: &MsgCacheEmailRequest{
-			Username:    "test@mail.provable.dev",
+			Username:    suite.emailUsername,
 			EmailFolder: "INBOX",
 			UidRange:    imap.UIDSetNum(6, 7, 8),
 		},
@@ -134,12 +138,91 @@ func (suite *KeeperTestSuite) TestEmail() {
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 1000000000, nil)
+}
 
-	// qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"name":{}}`)}, nil, nil)
-	// var respName struct {
-	// 	Name string `json:"name"`
-	// }
-	// err = json.Unmarshal(qres, &respName)
-	// suite.Require().NoError(err, string(qres))
-	// suite.Require().Equal("token", respName.Name)
+func (suite *KeeperTestSuite) TestEmailListen() {
+	if !suite.runListen {
+		suite.T().Skipf("Skipping listen test: TestEmailListen")
+	}
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	_, err := utils.DeployDType(suite, appA, sender)
+	suite.Require().NoError(err)
+
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AccBech32Codec(), types.EMAIL_v001)
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "emailtest", nil)
+
+	// set a role to have access to protected APIs
+	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
+
+	msg := &CalldataEmailProver{
+		Initialize: &MsgInitializeRequest{
+			Providers: []Provider{
+				{
+					Name:                  "provable",
+					Domain:                "mail.provable.dev",
+					ImapServerUrl:         "mail.mail.provable.dev:993",
+					SmtpServerUrlStarttls: "mail.mail.provable.dev:587",
+					SmtpServerUrlTls:      "mail.mail.provable.dev:465",
+				},
+			},
+		},
+	}
+	data, err := json.Marshal(msg)
+	suite.Require().NoError(err)
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 100000000, nil)
+
+	msg = &CalldataEmailProver{
+		ConnectUser: &MsgConnectUserRequest{
+			Username:   suite.emailUsername,
+			Secret:     suite.emailPassword,
+			SecretType: "password",
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	msg = &CalldataEmailProver{
+		ListenEmail: &MsgListenEmailRequest{
+			Username:    suite.emailUsername,
+			EmailFolder: "INBOX",
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+
+	ctx := vmimap.Context{
+		Context: &vmtypes.Context{
+			GoRoutineGroup:  appA.App.GetGoRoutineGroup(),
+			GoContextParent: appA.App.GetGoContextParent(),
+			Ctx:             appA.Context(),
+			Logger:          appA.App.AccountKeeper.Logger,
+			Env: &types.Env{
+				Contract: types.EnvContractInfo{
+					Address: contractAddress,
+				},
+			},
+			CosmosHandler: appA.App.WasmxKeeper.NewCosmosHandler(appA.Context(), contractAddress),
+		},
+	}
+	ctx.HandleIncomingEmail(suite.emailUsername, "INBOX", 3, 3)
+
+	suite.T().Log("Running... Press Ctrl+C to exit")
+
+	// Create a channel to listen for interrupt/terminate signals
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+
+	// Block until a signal is received
+	<-sig
+
+	suite.T().Log("Received exit signal. Test ending.")
 }

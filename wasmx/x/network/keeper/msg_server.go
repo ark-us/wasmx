@@ -114,6 +114,7 @@ func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSend
 	}, nil
 }
 
+// TODO should be reentry
 func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
@@ -133,8 +134,12 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 	}, nil
 }
 
+func (m msgServer) Reentry(goCtx context.Context, msg *types.MsgReentry) (*types.MsgReentryResponse, error) {
+	return m.Keeper.Reentry(goCtx, msg)
+}
+
 // TODO this must not be called from outside, only from wasmx... (authority)
-// maybe only from the contract that the interval is for?
+// only from the contract that the interval is for?
 func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
 	return m.Keeper.StartTimeout(goCtx, msg)
 }
