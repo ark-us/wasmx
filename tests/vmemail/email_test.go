@@ -95,29 +95,26 @@ func (suite *KeeperTestSuite) TestEmail() {
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AccBech32Codec(), types.EMAIL_v001)
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "emailtest", nil)
+
+	msginit := &MsgInitializeRequest{
+		Providers: []Provider{
+			{
+				Name:                  "provable",
+				Domain:                "mail.provable.dev",
+				ImapServerUrl:         "mail.mail.provable.dev:993",
+				SmtpServerUrlStarttls: "mail.mail.provable.dev:587",
+				SmtpServerUrlTls:      "mail.mail.provable.dev:465",
+			},
+		},
+	}
+	data, err := json.Marshal(msginit)
+	suite.Require().NoError(err)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "emailtest", nil)
 
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
 
 	msg := &CalldataEmailProver{
-		Initialize: &MsgInitializeRequest{
-			Providers: []Provider{
-				{
-					Name:                  "provable",
-					Domain:                "mail.provable.dev",
-					ImapServerUrl:         "mail.mail.provable.dev:993",
-					SmtpServerUrlStarttls: "mail.mail.provable.dev:587",
-					SmtpServerUrlTls:      "mail.mail.provable.dev:465",
-				},
-			},
-		},
-	}
-	data, err := json.Marshal(msg)
-	suite.Require().NoError(err)
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 100000000, nil)
-
-	msg = &CalldataEmailProver{
 		ConnectUser: &MsgConnectUserRequest{
 			Username:   suite.emailUsername,
 			Secret:     suite.emailPassword,
@@ -156,29 +153,26 @@ func (suite *KeeperTestSuite) TestEmailListen() {
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AccBech32Codec(), types.EMAIL_v001)
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "emailtest", nil)
+
+	msginit := &MsgInitializeRequest{
+		Providers: []Provider{
+			{
+				Name:                  "provable",
+				Domain:                "mail.provable.dev",
+				ImapServerUrl:         "mail.mail.provable.dev:993",
+				SmtpServerUrlStarttls: "mail.mail.provable.dev:587",
+				SmtpServerUrlTls:      "mail.mail.provable.dev:465",
+			},
+		},
+	}
+	data, err := json.Marshal(msginit)
+	suite.Require().NoError(err)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: data}, "emailtest", nil)
 
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
 
 	msg := &CalldataEmailProver{
-		Initialize: &MsgInitializeRequest{
-			Providers: []Provider{
-				{
-					Name:                  "provable",
-					Domain:                "mail.provable.dev",
-					ImapServerUrl:         "mail.mail.provable.dev:993",
-					SmtpServerUrlStarttls: "mail.mail.provable.dev:587",
-					SmtpServerUrlTls:      "mail.mail.provable.dev:465",
-				},
-			},
-		},
-	}
-	data, err := json.Marshal(msg)
-	suite.Require().NoError(err)
-	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 100000000, nil)
-
-	msg = &CalldataEmailProver{
 		ConnectUser: &MsgConnectUserRequest{
 			Username:   suite.emailUsername,
 			Secret:     suite.emailPassword,

@@ -52,7 +52,7 @@ func (k *Keeper) reentryInternalGoroutine(
 
 	select {
 	case err := <-errCh:
-		k.actionExecutor.GetLogger().Error("reentry execution failed to start", "error", err.Error())
+		k.actionExecutor.GetLogger().Error("reentry execution failed", "error", err.Error())
 		// cancel context
 		cancel()
 		return err
