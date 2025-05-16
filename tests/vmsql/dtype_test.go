@@ -686,11 +686,11 @@ func (suite *KeeperTestSuite) testGraph(
 	tableId1 int64,
 ) {
 	appA := s.AppContext()
-	dtypeConnId := int64(1)
-	dtypeDbId := int64(1)
-	tableNodeId := int64(5)
-	tableRelationId := int64(6)
-	tableRelationTypeId := int64(7)
+	dtypeConnId := int64(1) // record id inside connection table
+	dtypeDbId := int64(1)   // record id inside db table
+	tableNodeId := int64(6)
+	tableRelationId := int64(7)
+	tableRelationTypeId := int64(8)
 
 	// node1
 	cmd := &vmsql.CalldataDType{Insert: &vmsql.InsertDTypeRequest{Identifier: vmsql.TableIdentifier{
