@@ -1,4 +1,4 @@
-package vmhttp
+package vmhttpclient
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 
 const (
 	// ModuleName defines the module name
-	ModuleName = "vmhttp"
+	ModuleName = "vmhttpclient"
 
 	// StoreKey defines the primary module store key
 	StoreKey = ModuleName
@@ -17,11 +17,11 @@ const (
 	RouterKey = ModuleName
 )
 
-const HOST_WASMX_ENV_HTTP_VER1 = "wasmx_http_1"
+const HOST_WASMX_ENV_HTTP_VER1 = "wasmx_httpclient_1"
 
-const HOST_WASMX_ENV_HTTP_EXPORT = "wasmx_http_"
+const HOST_WASMX_ENV_HTTP_EXPORT = "wasmx_httpclient_"
 
-const HOST_WASMX_ENV_HTTP = "http"
+const HOST_WASMX_ENV_HTTP = "httpclient"
 
 type Context struct {
 	*vmtypes.Context

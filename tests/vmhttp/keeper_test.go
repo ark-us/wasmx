@@ -15,7 +15,7 @@ import (
 	//nolint
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
-	"github.com/loredanacirstea/wasmx/x/vmhttp"
+	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
 
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
@@ -28,7 +28,7 @@ var (
 )
 
 func init() {
-	vmhttp.Setup()
+	vmhttpclient.Setup()
 }
 
 // TestMain is the main entry point for the tests.

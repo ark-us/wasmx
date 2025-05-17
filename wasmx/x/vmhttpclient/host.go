@@ -1,4 +1,4 @@
-package vmhttp
+package vmhttpclient
 
 import (
 	"bytes"
@@ -84,12 +84,12 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	return returns, nil
 }
 
-func BuildWasmxHttp(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
+func BuildWasmxHttpClient(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	context := &Context{Context: ctx_}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
 		vm.BuildFn("Request", Request, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
-	return vm.BuildModule(rnh, "http", context, fndefs)
+	return vm.BuildModule(rnh, "httpclient", context, fndefs)
 }
