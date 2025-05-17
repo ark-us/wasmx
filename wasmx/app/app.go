@@ -258,6 +258,7 @@ func init() {
 	vmkv.Setup()
 	// vmimap.Setup()
 	// vmsmtp.Setup()
+	// vmhttp.Setup()
 }
 
 // App extends an ABCI application, but with most of its parameters exported.

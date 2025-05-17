@@ -47,6 +47,7 @@ export WASMX_GO_TESTDATA_KVDB="${WASMX_PROJECT_ROOT}/tests/vmkv/testdata/as"
 export WASMX_GO_TESTDATA_IMAP="${WASMX_PROJECT_ROOT}/tests/vmemail/testdata/as"
 export WASMX_GO_TESTDATA_SMTP="${WASMX_GO_TESTDATA_IMAP}"
 export WASMX_GO_TESTDATA_EMAIL="${WASMX_GO_TESTDATA_IMAP}"
+export WASMX_GO_TESTDATA_HTTP="${WASMX_PROJECT_ROOT}/tests/vmhttp/testdata/as"
 
 # precompiles
 export WASMX_BLOCKS="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-blocks"
@@ -90,6 +91,7 @@ export WASMX_TESTS_KVDB="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-kvdb"
 export WASMX_ERC20_DTYPE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-erc20-sql"
 export WASMX_TESTS_IMAP="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-imap"
 export WASMX_TESTS_SMTP="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-smtp"
+export WASMX_TESTS_HTTP="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-http"
 
 labels=$(echo $TO_COMPILE | tr "," "\n")
 for label in $labels
@@ -280,6 +282,9 @@ do
 
         cd $WASMX_TESTS_SMTP && npm run asbuild
         mv -f $WASMX_TESTS_SMTP/build/release.wasm $WASMX_GO_TESTDATA_SMTP/wasmx_test_smtp.wasm
+
+        cd $WASMX_TESTS_HTTP && npm run asbuild
+        mv -f $WASMX_TESTS_HTTP/build/release.wasm $WASMX_GO_TESTDATA_HTTP/wasmx_test_http.wasm
     fi
     if [[ $label = 'imap' ]]; then
         cd $WASMX_TESTS_IMAP && npm run asbuild
@@ -288,6 +293,10 @@ do
     if [[ $label = 'smtp' ]]; then
         cd $WASMX_TESTS_SMTP && npm run asbuild
         mv -f $WASMX_TESTS_SMTP/build/release.wasm $WASMX_GO_TESTDATA_SMTP/wasmx_test_smtp.wasm
+    fi
+    if [[ $label = 'http' ]]; then
+        cd $WASMX_TESTS_HTTP && npm run asbuild
+        mv -f $WASMX_TESTS_HTTP/build/release.wasm $WASMX_GO_TESTDATA_HTTP/wasmx_test_http.wasm
     fi
 done
 
@@ -331,6 +340,7 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_ERC20_DTYPE && npm run asbuild
     cd $WASMX_TESTS_IMAP && npm run asbuild
     cd $WASMX_TESTS_SMTP && npm run asbuild
+    cd $WASMX_TESTS_HTTP && npm run asbuild
     # cd $WASMX_PARAMS && npm run asbuild
 
     mv -f $WASMX_FSM/build/release.wasm $WASMX_GO_PRECOMPILES/28.finite_state_machine.wasm
@@ -374,5 +384,6 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_TESTS_KVDB/build/release.wasm $WASMX_GO_TESTDATA_KVDB/wasmx_test_kvdb.wasm
     mv -f $WASMX_ERC20_DTYPE/build/release.wasm $WASMX_GO_TESTDATA_SQL/wasmx_erc20_sql.wasm
     mv -f $WASMX_TESTS_IMAP/build/release.wasm $WASMX_GO_TESTDATA_IMAP/wasmx_test_imap.wasm
-     mv -f $WASMX_TESTS_SMTP/build/release.wasm $WASMX_GO_TESTDATA_SMTP/wasmx_test_smtp.wasm
+    mv -f $WASMX_TESTS_SMTP/build/release.wasm $WASMX_GO_TESTDATA_SMTP/wasmx_test_smtp.wasm
+    mv -f $WASMX_TESTS_HTTP/build/release.wasm $WASMX_GO_TESTDATA_HTTP/wasmx_test_http.wasm
 fi
