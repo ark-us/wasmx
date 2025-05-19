@@ -23,6 +23,7 @@ import (
 	multichain "github.com/loredanacirstea/wasmx/multichain"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 	"github.com/loredanacirstea/wasmx/x/vmkv"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -54,6 +55,7 @@ func NewAppCreator(
 	ctx = vmkv.WithKvDbEmptyContext(ctx)
 	ctx = vmimap.WithImapEmptyContext(ctx)
 	ctx = vmsmtp.WithSmtpEmptyContext(ctx)
+	ctx = vmhttpserver.WithHttpServerEmptyContext(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 

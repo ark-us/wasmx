@@ -256,7 +256,7 @@ func (c *Context) handleReentry(msg *ReentryCalldata) {
 
 	contractAddress := c.Env.Contract.Address
 
-	msgtosend := &networktypes.MsgReentry{
+	msgtosend := &networktypes.MsgReentryWithGoRoutine{
 		Sender:     contractAddress.String(),
 		Contract:   contractAddress.String(),
 		EntryPoint: ENTRY_POINT_IMAP,

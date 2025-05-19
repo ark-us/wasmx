@@ -82,6 +82,7 @@ export WASMX_PARAMS="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-params"
 export WASMX_CODES_REGISTRY="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-codes-registry"
 export WASMX_DTYPE="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-dtype"
 export WASMX_EMAIL="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-email-prover"
+export WASMX_HTTP_REGISTRY="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-httpserver-registry"
 
 # tests
 export WASMX_TESTS_CROSSCHAIN="${CONTRACTS_PROJECT_ROOT}/packages/wasmx-test-crosschain"
@@ -260,6 +261,12 @@ do
         mv -f $WASMX_EMAIL/build/release.wasm $WASMX_GO_PRECOMPILES/63.wasmx_email_0.0.1.wasm
     fi
 
+    if [[ $label = 'httpregistry' ]]; then
+        echo "building httpregistry"
+         cd $WASMX_HTTP_REGISTRY && npm run asbuild
+        mv -f $WASMX_HTTP_REGISTRY/build/release.wasm $WASMX_GO_PRECOMPILES/64.wasmx_httpserver_registry_0.0.1.wasm
+    fi
+
     if [[ $label = 'tests' ]]; then
         echo "building tests crosschain"
         cd $WASMX_TESTS_CROSSCHAIN && npm run asbuild
@@ -337,6 +344,7 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_CODES_REGISTRY && npm run asbuild
     cd $WASMX_DTYPE && npm run asbuild
     cd $WASMX_EMAIL && npm run asbuild
+    cd $WASMX_HTTP_REGISTRY && npm run asbuild
     cd $WASMX_ERC20_DTYPE && npm run asbuild
     cd $WASMX_TESTS_IMAP && npm run asbuild
     cd $WASMX_TESTS_SMTP && npm run asbuild
@@ -375,6 +383,7 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_CODES_REGISTRY/build/release.wasm $WASMX_GO_PRECOMPILES/61.wasmx_codes_registry_0.0.1.wasm
     mv -f $WASMX_DTYPE/build/release.wasm $WASMX_GO_PRECOMPILES/62.wasmx_dtype_0.0.1.wasm
     mv -f $WASMX_EMAIL/build/release.wasm $WASMX_GO_PRECOMPILES/63.wasmx_email_0.0.1.wasm
+    mv -f $WASMX_HTTP_REGISTRY/build/release.wasm $WASMX_GO_PRECOMPILES/64.wasmx_httpserver_registry_0.0.1.wasm
 
     # tests
     mv -f $WASMX_TESTS_CROSSCHAIN/build/release.wasm $WASMX_GO_TESTDATA_NETWORK/crosschain.wasm

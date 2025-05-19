@@ -16,6 +16,7 @@ import (
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
@@ -29,6 +30,7 @@ var (
 
 func init() {
 	vmhttpclient.Setup()
+	vmhttpserver.Setup()
 }
 
 // TestMain is the main entry point for the tests.
@@ -71,6 +73,12 @@ func (suite *KeeperTestSuite) SetupSuite() {
 	}
 
 	suite.SetupChains()
+}
+
+func (suite *KeeperTestSuite) TearDownTest() {
+	defer os.Remove("dtype.db")
+	defer os.Remove("dtype.db-shm")
+	defer os.Remove("dtype.db-wal")
 }
 
 // TestKeeperTestSuite runs all the tests within this package.

@@ -67,6 +67,7 @@ import (
 	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 	"github.com/loredanacirstea/wasmx/x/vmkv"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -107,6 +108,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	goctx = vmkv.WithKvDbEmptyContext(goctx)
 	goctx = vmimap.WithImapEmptyContext(goctx)
 	goctx = vmsmtp.WithSmtpEmptyContext(goctx)
+	goctx = vmhttpserver.WithHttpServerEmptyContext(goctx)
 
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)

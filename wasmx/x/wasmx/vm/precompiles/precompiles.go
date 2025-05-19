@@ -153,6 +153,9 @@ var (
 	//go:embed 63.wasmx_email_0.0.1.wasm
 	wasmx_email []byte
 
+	//go:embed 64.wasmx_httpserver_registry_0.0.1.wasm
+	wasmx_httpserver_registry []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -314,6 +317,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_dtype
 	case types.EMAIL_v001:
 		wasmbin = wasmx_email
+	case types.HTTPSERVER_REGISTRY_v001:
+		wasmbin = wasmx_httpserver_registry
 	}
 	return wasmbin
 }

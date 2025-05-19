@@ -36,6 +36,18 @@ func (msg MsgReentry) ValidateBasic() error {
 	return nil
 }
 
+func (msg MsgReentryWithGoRoutine) Route() string {
+	return RouterKey
+}
+
+func (msg MsgReentryWithGoRoutine) Type() string {
+	return "reentry-with-goroutine"
+}
+
+func (msg MsgReentryWithGoRoutine) ValidateBasic() error {
+	return nil
+}
+
 func (msg MsgGrpcSendRequest) Route() string {
 	return RouterKey
 }

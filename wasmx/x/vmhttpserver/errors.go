@@ -1,0 +1,14 @@
+package vmhttpserver
+
+import (
+	sdkerr "cosmossdk.io/errors"
+)
+
+// Codes for wasm contract errors
+var (
+	DefaultCodespace = ModuleName
+
+	// Note: code 1 is reserved for ErrInternal in the core cosmos sdk
+
+	ErrGoroutineClosed = sdkerr.Register(DefaultCodespace, 1, "goroutine closed")
+)

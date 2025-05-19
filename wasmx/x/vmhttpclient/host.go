@@ -59,14 +59,16 @@ func Request(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		response.Error = "not implemented"
 		return prepareResponse(rnh, response)
 	}
-	if reqw.ResponseHandler.MaxSize > 0 {
-		body, err := io.ReadAll(io.LimitReader(resp.Body, reqw.ResponseHandler.MaxSize))
-		if err != nil {
-			response.Error = err.Error()
-			return prepareResponse(rnh, response)
-		}
-		response.Data.Data = body
+	if reqw.ResponseHandler.MaxSize > 0 && reqw.ResponseHandler.MaxSize < resp.ContentLength {
+		response.Error = "http response body exceeds max length"
+		return prepareResponse(rnh, response)
 	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	response.Data.Data = body
 	return prepareResponse(rnh, response)
 }
 

@@ -138,6 +138,10 @@ func (m msgServer) Reentry(goCtx context.Context, msg *types.MsgReentry) (*types
 	return m.Keeper.Reentry(goCtx, msg)
 }
 
+func (m msgServer) ReentryWithGoRoutine(goCtx context.Context, msg *types.MsgReentryWithGoRoutine) (*types.MsgReentryWithGoRoutineResponse, error) {
+	return m.Keeper.ReentryWithGoRoutine(goCtx, msg)
+}
+
 // TODO this must not be called from outside, only from wasmx... (authority)
 // only from the contract that the interval is for?
 func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {

@@ -14,7 +14,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-type CalldataTestHttp struct {
+type CalldataTestHttpClient struct {
 	HttpRequest *vmhttpclient.HttpRequestWrap `json:"HttpRequest"`
 }
 
@@ -28,12 +28,12 @@ func (suite *KeeperTestSuite) TestHttpClient() {
 	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "httptest", nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "httpclient", nil)
 
 	// set a role to have access to protected APIs
-	utils.RegisterRole(suite, appA, "somehttprole", contractAddress, sender)
+	utils.RegisterRole(suite, appA, "httpclient", contractAddress, sender)
 
-	msg := &CalldataTestHttp{
+	msg := &CalldataTestHttpClient{
 		HttpRequest: &vmhttpclient.HttpRequestWrap{
 			Request: vmhttpclient.HttpRequest{
 				Method: "GET",
@@ -57,7 +57,7 @@ func (suite *KeeperTestSuite) TestHttpClient() {
 	suite.Require().Equal([]string{"application/json"}, qresp.Data.Header.Values("Content-Type"))
 	// suite.Require().Contains(string(qresp.Data.Data), `"args":{"key":"1","value":"hello"}`)
 
-	msg = &CalldataTestHttp{
+	msg = &CalldataTestHttpClient{
 		HttpRequest: &vmhttpclient.HttpRequestWrap{
 			Request: vmhttpclient.HttpRequest{
 				Method: "POST",
