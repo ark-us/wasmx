@@ -58,7 +58,6 @@ func StartWebServer(_context interface{}, rnh memc.RuntimeHandler, params []inte
 			if err != nil {
 				ctx.Ctx.Logger().Error(fmt.Sprintf(`webserver close error: %v`, err))
 			}
-			close(httpSrvDone)
 			return nil
 		case <-httpSrvDone:
 			// when close signal is received from Close() API

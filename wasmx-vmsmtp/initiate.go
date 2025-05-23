@@ -1,6 +1,8 @@
 package vmsmtp
 
 import (
+	"fmt"
+
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -19,7 +21,7 @@ func InstantiateSmtpVM(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *t
 }
 
 func InstantiateSmtpVMMock(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	context.Ctx.Logger().Info("* instantiate SMTP mock APIs: %s", context.ContractInfo.Address.String())
+	context.Ctx.Logger().Info(fmt.Sprintf("instantiate SMTP mock APIs: %s", context.ContractInfo.Address.String()))
 	wasmx, err := BuildWasmxSmtpVMMock(context, rnh)
 	if err != nil {
 		return err

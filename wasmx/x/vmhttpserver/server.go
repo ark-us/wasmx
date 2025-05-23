@@ -102,7 +102,6 @@ func startWebServerGoRoutine(
 			logger.Error("stopping websrv web server error: ", err.Error())
 		}
 		close(errCh)
-		close(httpSrvDone)
 		return nil
 	case err := <-errCh:
 		logger.Error("failed to boot websrv server", "error", err.Error())
