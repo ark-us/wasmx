@@ -614,7 +614,7 @@ func (suite *KeeperTestSuite) AddToMempoolFSM(txs [][]byte) ([]*types.MsgExecute
 		}
 		return resps, nil
 	}
-	resp, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb)
+	resp, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		return nil, err
 	}
@@ -658,7 +658,7 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 			return nil, nil
 		}
 	}
-	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb(blockDelay, currentState, lastInterval))
+	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb(blockDelay, currentState, lastInterval))
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +666,7 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	if strings.Contains(strings.ToLower(currentState), "ondemand") {
 		lastInterval = suite.GetLastInterval(suite.TestChain.GetContext())
 		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
-		_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), cb("batchTimeout", currentState, lastInterval))
+		_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb("batchTimeout", currentState, lastInterval))
 		if err != nil {
 			return nil, err
 		}
@@ -802,6 +802,11 @@ func (suite *KeeperTestSuite) commitBlock(res *abci.ResponseFinalizeBlock) {
 		NextValidatorsHash: suite.TestChain.NextVals.Hash(),
 		ProposerAddress:    suite.TestChain.CurrentHeader.ProposerAddress,
 	}
+}
+
+func (suite *KeeperTestSuite) ParseQueryResponse(qres []byte, qresp interface{}) {
+	err := json.Unmarshal(qres, qresp)
+	suite.Require().NoError(err)
 }
 
 // CreateTMClientHeader creates a TM header to update the TM client. Args are passed in to allow

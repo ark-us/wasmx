@@ -148,7 +148,7 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 
 	actionExecutor := mythosapp.GetActionExecutor()
 
-	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func ConsensusTx(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg
 
 	actionExecutor := mythosapp.GetActionExecutor()
 
-	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
+	_, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func ConsensusQuery(mythosapp mcfg.MythosApp, logger log.Logger, networkServer m
 	}
 
 	actionExecutor := mythosapp.GetActionExecutor()
-	resp, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), cb)
+	resp, err := actionExecutor.ExecuteWithMockHeader(mythosapp.GetGoContextParent(), sdk.ExecModeQuery, cb)
 	if err != nil {
 		return nil, err
 	}

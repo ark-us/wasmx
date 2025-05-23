@@ -15,6 +15,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino" // Import amino.proto file for reflection
 
+	tabci "github.com/cometbft/cometbft/abci/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 	cmttypes "github.com/cometbft/cometbft/types"
@@ -23,6 +24,14 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
+
+/*
+there is only one action executor per App
+the action executor is for executing contracts outside a deterministic transaction.
+used for core protocol contracts, for reentry mechanisms (timed actions, incoming p2p messages, incoming http requests or emails)
+
+it supports the BeginTransaction-EndTransaction hooks for contract executions outside the context of a deterministic transaction, just like the BaseApp.runTx & BaseApp.handleQueryGRPC does for a deterministic transaction
+*/
 
 func checkNegativeHeight(height int64) error {
 	if height < 0 {
@@ -189,19 +198,19 @@ func (r *ActionExecutor) GetBaseApp() mcfg.BaseApp {
 	return r.app.GetBaseApp()
 }
 
-func (r *ActionExecutor) Execute(goCtx context.Context, height int64, cb func(goctx context.Context) (any, error)) (any, error) {
+func (r *ActionExecutor) Execute(goCtx context.Context, height int64, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error) {
 	header, err := GetHeaderByHeight(r.app, r.logger, height, false)
 	if err != nil {
 		return nil, err
 	}
-	return r.ExecuteWithHeader(goCtx, *header, cb)
+	return r.ExecuteWithHeader(goCtx, *header, mode, cb)
 }
 
-func (r *ActionExecutor) ExecuteWithMockHeader(goCtx context.Context, cb func(goctx context.Context) (any, error)) (any, error) {
-	return r.ExecuteWithHeader(context.Background(), GetMockHeader(r.GetBaseApp(), r.GetBaseApp().LastBlockHeight()), cb)
+func (r *ActionExecutor) ExecuteWithMockHeader(goCtx context.Context, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error) {
+	return r.ExecuteWithHeader(context.Background(), GetMockHeader(r.GetBaseApp(), r.GetBaseApp().LastBlockHeight()), mode, cb)
 }
 
-func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, cb func(goctx context.Context) (any, error)) (any, error) {
+func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
@@ -209,7 +218,7 @@ func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtprot
 	if err != nil {
 		return nil, err
 	}
-	return r.ExecuteInternal(goCtx, sdkCtx, commitCacheCtx, ctxcachems, cb)
+	return r.ExecuteInternal(goCtx, sdkCtx, commitCacheCtx, ctxcachems, mode, cb)
 }
 
 func (r *ActionExecutor) ExecuteInternal(
@@ -217,18 +226,43 @@ func (r *ActionExecutor) ExecuteInternal(
 	sdkCtx sdk.Context,
 	commitCacheCtx func(),
 	ctxcachems storetypes.CacheMultiStore,
+	mode sdk.ExecMode,
 	cb func(goctx context.Context) (any, error),
 ) (any, error) {
 	if goCtx == nil {
 		goCtx = context.Background()
 	}
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
+
+	// call app BeginTransaction hook
+	begintx := r.app.GetBaseApp().BeginTransaction
+	if begintx != nil {
+		err := begintx(goCtx, mode, []byte{})
+		if err != nil {
+			r.logger.Error("BeginTransaction", "err", err)
+		}
+	}
+
 	res, err := cb(goCtx)
+
+	// call app EndTransaction hook with any returned error
+	endtx := r.app.GetBaseApp().EndTransaction
+	if endtx != nil {
+		err2 := endtx(goCtx, mode, sdk.GasInfo{}, nil, []tabci.Event{}, err)
+		if err2 != nil {
+			r.logger.Error("EndTransaction", "err", err2)
+		}
+	}
+
+	// we only commit if callback was successful and we are not in a query
 	if err != nil {
 		return nil, err
 	}
+	if mode == sdk.ExecModeQuery {
+		return res, nil
+	}
 
-	// we only commit if callback was successful
+	// commit
 	err = commitCtx(r.app, sdkCtx, commitCacheCtx, ctxcachems)
 	if err != nil {
 		return nil, err

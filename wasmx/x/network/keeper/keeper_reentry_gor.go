@@ -41,7 +41,7 @@ func (k *Keeper) reentryInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("contract reentry triggered", "entry_point", msg.EntryPoint)
-		err := k.reentryInternal(goctx, msg, chainId)
+		_, err := k.reentryInternal(goctx, msg.Sender, msg.Contract, msg.Msg, msg.EntryPoint)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("reentry execution failed", "err", err, "entry_point", msg.EntryPoint)
 			errCh <- err
@@ -64,22 +64,24 @@ func (k *Keeper) reentryInternalGoroutine(
 
 func (k *Keeper) reentryInternal(
 	goctx context.Context,
-	msg *types.MsgReentryWithGoRoutine,
-	chainId string,
-) error {
-	k.actionExecutor.GetLogger().Debug("reentry started", "entry_point", msg.EntryPoint)
+	senderAddress string,
+	contractAddress string,
+	msg []byte,
+	entryPoint string,
+) (*types.MsgExecuteContractResponse, error) {
+	k.actionExecutor.GetLogger().Debug("reentry started", "entry_point", entryPoint)
 
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		execmsg := &types.MsgExecuteContract{
-			Sender:   msg.Sender,
-			Contract: msg.Contract,
-			Msg:      msg.Msg,
+			Sender:   senderAddress,
+			Contract: contractAddress,
+			Msg:      msg,
 		}
-		res, err := k.ExecuteEntryPoint(ctx, msg.EntryPoint, execmsg)
+		res, err := k.ExecuteEntryPoint(ctx, entryPoint, execmsg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
-				k.actionExecutor.GetLogger().Error("Closing reentry thread", "entry_point", msg.EntryPoint, err.Error())
+				k.actionExecutor.GetLogger().Error("Closing reentry thread", "entry_point", entryPoint, err.Error())
 				return res, nil
 			}
 			k.actionExecutor.GetLogger().Error("reentry execution failed", "error", err.Error())
@@ -89,9 +91,9 @@ func (k *Keeper) reentryInternal(
 	}
 	// disregard result
 	bapp := k.actionExecutor.GetBaseApp()
-	_, err := k.actionExecutor.Execute(goctx, bapp.LastBlockHeight(), cb)
+	res, err := k.actionExecutor.Execute(goctx, bapp.LastBlockHeight(), sdk.ExecModeFinalize, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return res.(*types.MsgExecuteContractResponse), nil
 }

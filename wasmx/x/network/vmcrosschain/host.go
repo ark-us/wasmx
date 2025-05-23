@@ -158,7 +158,7 @@ func executeCrossChainTxNonDeterministic(_context interface{}, rnh memc.RuntimeH
 		return resp, nil
 	}
 
-	_, err = app.GetActionExecutor().Execute(context.Background(), app.GetBaseApp().LastBlockHeight(), cb)
+	_, err = app.GetActionExecutor().Execute(context.Background(), app.GetBaseApp().LastBlockHeight(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		resp.Error = err.Error()
 		return returnResult(ctx, rnh, resp)

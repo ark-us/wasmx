@@ -18,7 +18,7 @@ func GetHttpServerContext(goContextParent context.Context) (*HttpServerContext, 
 	vctx_ := goContextParent.Value(HttpServerContextKey)
 	vctx := (vctx_).(*HttpServerContext)
 	if vctx == nil {
-		return nil, fmt.Errorf("kv db context not set")
+		return nil, fmt.Errorf("httpserver context not set")
 	}
 	return vctx, nil
 }

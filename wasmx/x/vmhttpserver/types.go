@@ -25,6 +25,8 @@ const HOST_WASMX_ENV_HTTP = "httpserver"
 
 const ENTRY_POINT_HTTP_SERVER = "http_request_incoming"
 
+const ROLE = "http_server_registry"
+
 type ContextKey string
 
 const HttpServerContextKey ContextKey = "httpserver-context"
@@ -112,10 +114,12 @@ func (c *WebsrvConfig) IsCorsEnabled() bool {
 }
 
 type HttpResponse struct {
-	Status     string      `json:"status"`
-	StatusCode int         `json:"status_code"`
-	Header     http.Header `json:"header"`
-	Data       []byte      `json:"data"`
+	Status      string      `json:"status"`
+	StatusCode  int         `json:"status_code"`
+	Header      http.Header `json:"header"`
+	Data        []byte      `json:"data"`
+	RedirectUrl string      `json:"redirect_url"`
+	// TODO: what other http response aside from redirect?
 }
 
 type HttpResponseWrap struct {

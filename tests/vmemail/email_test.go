@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/oauth2"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -31,16 +32,36 @@ type Provider struct {
 	SmtpServerUrlTls      string `json:"smtp_server_url_tls"`
 }
 
+type Endpoint struct {
+	Name          string           `json:"name"`
+	AuthURL       string           `json:"auth_url"`
+	DeviceAuthURL string           `json:"device_auth_url"`
+	TokenURL      string           `json:"token_url"`
+	AuthStyle     oauth2.AuthStyle `json:"auth_style"`
+	UserInfoUrl   string           `json:"user_info_url"`
+}
+
 type MsgResponseDefault struct {
 	Error string `json:"error"`
 }
 
+type OAuth2ConfigToWrite struct {
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	RedirectURL  string   `json:"redirect_url"`
+	Scopes       []string `json:"scopes"`
+	Provider     string   `json:"provider"`
+}
+
 type MsgInitializeRequest struct {
-	Providers []Provider `json:"providers"`
+	Providers     []Provider            `json:"providers"`
+	Endpoints     []Endpoint            `json:"endpoints"`
+	OAuth2Configs []OAuth2ConfigToWrite `json:"outh2_configs"`
 }
 
 type MsgRegisterProviderRequest struct {
-	Provider Provider `json:"provider"`
+	Providers []Provider `json:"providers"`
+	Endpoints []Endpoint `json:"endpoints"`
 }
 
 type MsgConnectUserRequest struct {
@@ -74,12 +95,12 @@ type MsgSendEmailRequest struct {
 }
 
 type CalldataEmailProver struct {
-	Initialize       *MsgInitializeRequest       `json:"Initialize"`
-	RegisterProvider *MsgRegisterProviderRequest `json:"RegisterProvider"`
-	ConnectUser      *MsgConnectUserRequest      `json:"ConnectUser"`
-	CacheEmail       *MsgCacheEmailRequest       `json:"CacheEmail"`
-	ListenEmail      *MsgListenEmailRequest      `json:"ListenEmail"`
-	SendEmail        *MsgSendEmailRequest        `json:"SendEmail"`
+	Initialize        *MsgInitializeRequest       `json:"Initialize"`
+	RegisterProviders *MsgRegisterProviderRequest `json:"RegisterProviders"`
+	ConnectUser       *MsgConnectUserRequest      `json:"ConnectUser"`
+	CacheEmail        *MsgCacheEmailRequest       `json:"CacheEmail"`
+	ListenEmail       *MsgListenEmailRequest      `json:"ListenEmail"`
+	SendEmail         *MsgSendEmailRequest        `json:"SendEmail"`
 }
 
 func (suite *KeeperTestSuite) TestEmail() {
@@ -106,6 +127,8 @@ func (suite *KeeperTestSuite) TestEmail() {
 				SmtpServerUrlTls:      "mail.mail.provable.dev:465",
 			},
 		},
+		Endpoints:     []Endpoint{},
+		OAuth2Configs: []OAuth2ConfigToWrite{},
 	}
 	data, err := json.Marshal(msginit)
 	suite.Require().NoError(err)
@@ -164,6 +187,8 @@ func (suite *KeeperTestSuite) TestEmailListen() {
 				SmtpServerUrlTls:      "mail.mail.provable.dev:465",
 			},
 		},
+		Endpoints:     []Endpoint{},
+		OAuth2Configs: []OAuth2ConfigToWrite{},
 	}
 	data, err := json.Marshal(msginit)
 	suite.Require().NoError(err)

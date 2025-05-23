@@ -220,7 +220,7 @@ func RegisterGRPCServer(
 			}
 			return handler(goctx, req)
 		}
-		return actionExecutor.Execute(grpcCtx, height, cb)
+		return actionExecutor.Execute(grpcCtx, height, sdk.ExecModeFinalize, cb)
 	}
 
 	handler := NewMsgServerImpl(mythosapp.GetNetworkKeeper().(*Keeper))

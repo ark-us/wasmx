@@ -16,6 +16,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
+	regi "github.com/loredanacirstea/mythos-tests/utils/httpserver_registry"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
@@ -24,27 +25,6 @@ type CalldataTestHttpServer struct {
 	SetRouteHandler    *vmhttpserver.SetRouteHandlerRequest    `json:"SetRouteHandler"`
 	RemoveRouteHandler *vmhttpserver.RemoveRouteHandlerRequest `json:"RemoveRouteHandler"`
 	Close              *vmhttpserver.CloseRequest              `json:"Close"`
-}
-
-type RolesChangedHook struct{}
-
-type GetRoutesRequest struct{}
-
-type GetRouteRequest struct {
-	Route string `json:"route"`
-}
-
-type CalldataTestHttpRegistry struct {
-	RoleChanged *RolesChangedHook `json:"RoleChanged"`
-
-	StartWebServer *vmhttpserver.StartWebServerRequest `json:"StartWebServer"`
-	Close          *vmhttpserver.CloseRequest          `json:"Close"`
-
-	SetRoute           *vmhttpserver.SetRouteHandlerRequest    `json:"SetRoute"`
-	RemoveRoute        *vmhttpserver.RemoveRouteHandlerRequest `json:"RemoveRoute"`
-	HttpRequestHandler *vmhttpserver.HttpRequestIncoming       `json:"HttpRequestHandler"`
-	GetRoutes          *GetRoutesRequest                       `json:"GetRoutes"`
-	GetRoute           *GetRouteRequest                        `json:"GetRoute"`
 }
 
 func (suite *KeeperTestSuite) TestHttpServer() {
@@ -177,7 +157,7 @@ func (suite *KeeperTestSuite) TestHttpServerRegistry() {
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "httpserver_registry", contractAddressR, sender)
 
-	msg := &CalldataTestHttpRegistry{
+	msg := &regi.CalldataTestHttpRegistry{
 		SetRoute: &vmhttpserver.SetRouteHandlerRequest{
 			Route:           "/hello1",
 			ContractAddress: contractAddress.String(),
@@ -187,7 +167,7 @@ func (suite *KeeperTestSuite) TestHttpServerRegistry() {
 	suite.Require().NoError(err)
 	appA.ExecuteContract(sender, contractAddressR, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	msg = &CalldataTestHttpRegistry{
+	msg = &regi.CalldataTestHttpRegistry{
 		SetRoute: &vmhttpserver.SetRouteHandlerRequest{
 			Route:           "/hello2",
 			ContractAddress: contractAddressR.String(),
@@ -197,7 +177,7 @@ func (suite *KeeperTestSuite) TestHttpServerRegistry() {
 	suite.Require().NoError(err)
 	appA.ExecuteContract(sender, contractAddressR, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	msg = &CalldataTestHttpRegistry{
+	msg = &regi.CalldataTestHttpRegistry{
 		SetRoute: &vmhttpserver.SetRouteHandlerRequest{
 			Route:           "/hello3",
 			ContractAddress: contractAddress.String(),
@@ -207,7 +187,7 @@ func (suite *KeeperTestSuite) TestHttpServerRegistry() {
 	suite.Require().NoError(err)
 	appA.ExecuteContract(sender, contractAddressR, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	msg = &CalldataTestHttpRegistry{
+	msg = &regi.CalldataTestHttpRegistry{
 		RemoveRoute: &vmhttpserver.RemoveRouteHandlerRequest{
 			Route: "/hello3",
 		},
@@ -216,7 +196,7 @@ func (suite *KeeperTestSuite) TestHttpServerRegistry() {
 	suite.Require().NoError(err)
 	appA.ExecuteContract(sender, contractAddressR, types.WasmxExecutionMessage{Data: data}, nil, nil)
 
-	msg = &CalldataTestHttpRegistry{
+	msg = &regi.CalldataTestHttpRegistry{
 		StartWebServer: &vmhttpserver.StartWebServerRequest{
 			Config: vmhttpserver.WebsrvConfig{
 				EnableOAuth:        true,
@@ -246,7 +226,7 @@ func (suite *KeeperTestSuite) TestHttpServerRegistry() {
 
 	suite.T().Log("Received exit signal. Test ending.")
 
-	msg = &CalldataTestHttpRegistry{
+	msg = &regi.CalldataTestHttpRegistry{
 		Close: &vmhttpserver.CloseRequest{},
 	}
 	data, err = json.Marshal(msg)

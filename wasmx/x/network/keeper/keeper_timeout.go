@@ -131,7 +131,7 @@ func (k *Keeper) startTimeoutInternal(
 	}
 	// disregard result
 	bapp := k.actionExecutor.GetBaseApp()
-	_, err := k.actionExecutor.Execute(goctx, bapp.LastBlockHeight(), cb)
+	_, err := k.actionExecutor.Execute(goctx, bapp.LastBlockHeight(), sdk.ExecModeFinalize, cb)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package vmhttpclient
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -21,21 +22,12 @@ func Request(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return nil, err
 	}
-	req := reqw.Request
 
-	httpreq, err := http.NewRequest(req.Method, req.Url, bytes.NewBuffer(req.Data))
+	httpreq, err := BuildHttpRequest(reqw.Request)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
-
-	for key, values := range req.Header {
-		for _, value := range values {
-			httpreq.Header.Add(key, value)
-		}
-	}
-
-	// TODO multipart uploads
 
 	// Make the request
 	client := &http.Client{}
@@ -46,29 +38,12 @@ func Request(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	}
 	defer resp.Body.Close()
 
-	response.Data = HttpResponse{
-		Status:        resp.Status,
-		StatusCode:    resp.StatusCode,
-		ContentLength: resp.ContentLength,
-		Uncompressed:  resp.Uncompressed,
-		Header:        resp.Header,
-	}
-
-	if reqw.ResponseHandler.FilePath != "" {
-		// TODO download to file & set the apropriate extension based on Content-Type
-		response.Error = "not implemented"
-		return prepareResponse(rnh, response)
-	}
-	if reqw.ResponseHandler.MaxSize > 0 && reqw.ResponseHandler.MaxSize < resp.ContentLength {
-		response.Error = "http response body exceeds max length"
-		return prepareResponse(rnh, response)
-	}
-	body, err := io.ReadAll(resp.Body)
+	r, err := BuildHttpResponse(resp, reqw.ResponseHandler)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
-	response.Data.Data = body
+	response.Data = *r
 	return prepareResponse(rnh, response)
 }
 
@@ -84,6 +59,45 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	returns := make([]interface{}, 1)
 	returns[0] = ptr
 	return returns, nil
+}
+
+func BuildHttpRequest(req HttpRequest) (*http.Request, error) {
+	httpreq, err := http.NewRequest(req.Method, req.Url, bytes.NewBuffer(req.Data))
+	if err != nil {
+		return nil, err
+	}
+
+	for key, values := range req.Header {
+		for _, value := range values {
+			httpreq.Header.Add(key, value)
+		}
+	}
+	// TODO multipart uploads
+	return httpreq, nil
+}
+
+func BuildHttpResponse(resp *http.Response, resph ResponseHandler) (*HttpResponse, error) {
+	response := &HttpResponse{
+		Status:        resp.Status,
+		StatusCode:    resp.StatusCode,
+		ContentLength: resp.ContentLength,
+		Uncompressed:  resp.Uncompressed,
+		Header:        resp.Header,
+	}
+
+	if resph.FilePath != "" {
+		// TODO download to file & set the apropriate extension based on Content-Type
+		return nil, fmt.Errorf("not implemented")
+	}
+	if resph.MaxSize > 0 && resph.MaxSize < resp.ContentLength {
+		return nil, fmt.Errorf("http response body exceeds max length")
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	response.Data = body
+	return response, nil
 }
 
 func BuildWasmxHttpClient(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {

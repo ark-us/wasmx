@@ -56,6 +56,10 @@ func (k *WebsrvServer) Route(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add(key, value)
 		}
 	}
+	if response.Data.RedirectUrl != "" {
+		http.Redirect(w, r, response.Data.RedirectUrl, response.Data.StatusCode)
+		return
+	}
 	w.Write([]byte(response.Data.Data))
 }
 
@@ -93,30 +97,19 @@ func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, 
 		return nil, sdkerr.Wrapf(err, "cannot marshal HttpRequestGet")
 	}
 
-	cb := func(goctx context.Context) (any, error) {
-		// TODO consider not using reentry, just use normal contract execution...
-		msg := &networktypes.MsgReentry{
-			Sender:     k.senderAddress,
-			Contract:   contractAddress,
-			EntryPoint: ENTRY_POINT_HTTP_SERVER,
-			Msg:        httpReqBz,
-		}
-		_, res, err := k.coreHandler.ExecuteCosmosMsg(msg)
-		if err != nil {
-			return nil, sdkerr.Wrapf(err, "http server incoming request execution failed")
-		}
-		return res, nil
+	msg := &networktypes.MsgReentry{
+		Sender:     k.senderAddress,
+		Contract:   contractAddress,
+		EntryPoint: ENTRY_POINT_HTTP_SERVER,
+		Msg:        httpReqBz,
 	}
-	bapp := k.actionExecutor.GetBaseApp()
-	newctx, cancel := context.WithCancel(k.parentCtx)
-	defer cancel()
-	resp, err := k.actionExecutor.Execute(newctx, bapp.LastBlockHeight(), cb)
+	_, resp, err := k.coreHandler.ExecuteCosmosMsg(msg)
 	if err != nil {
-		return nil, sdkerr.Wrapf(err, "Websrv HttpGet failed")
+		return nil, sdkerr.Wrapf(err, "http server incoming request execution failed")
 	}
 
 	var requestResp networktypes.MsgReentryResponse
-	err = requestResp.Unmarshal(resp.([]byte))
+	err = requestResp.Unmarshal(resp)
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "cannot unmarshal MsgReentryResponse")
 	}
@@ -126,6 +119,5 @@ func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, 
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "cannot unmarshal HttpResponseWrap")
 	}
-
 	return respHttp, nil
 }

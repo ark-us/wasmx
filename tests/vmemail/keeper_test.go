@@ -22,18 +22,28 @@ import (
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
+	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
+	"github.com/loredanacirstea/wasmx/x/vmoauth2client"
 )
 
 func init() {
 	vmimap.Setup()
 	vmsmtp.Setup()
+	vmhttpclient.Setup()
+	vmhttpserver.Setup()
+	vmoauth2client.Setup()
 }
 
 var (
-	wasmRuntime   string
-	emailUsername string
-	emailPassword string
-	runListen     bool
+	wasmRuntime       string
+	emailUsername     string
+	emailPassword     string
+	runListen         bool
+	CLIENT_ID_WEB     string
+	CLIENT_SECRET_WEB string
+	provider          string = "google"
+	runOAuth2         bool
 )
 
 // TestMain is the main entry point for the tests.
@@ -42,6 +52,10 @@ func TestMain(m *testing.M) {
 	flag.StringVar(&emailUsername, "email-username", "", "Set the email account address for tests")
 	flag.StringVar(&emailPassword, "email-password", "", "Set the email account password for tests")
 	flag.BoolVar(&runListen, "run-listen", false, "Run email listen test")
+	flag.BoolVar(&runOAuth2, "run-oauth2", false, "Run email oauth2 test")
+	flag.StringVar(&CLIENT_ID_WEB, "client-id", "", "Set the client ID")
+	flag.StringVar(&CLIENT_SECRET_WEB, "client-secret", "", "Set the client secret")
+	flag.StringVar(&provider, "provider", "", "Set the provider for the client ID")
 
 	flag.Parse()
 
@@ -51,9 +65,13 @@ func TestMain(m *testing.M) {
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	wt.KeeperTestSuite
-	emailUsername string
-	emailPassword string
-	runListen     bool
+	emailUsername     string
+	emailPassword     string
+	runListen         bool
+	runOAuth2         bool
+	CLIENT_ID_WEB     string
+	CLIENT_SECRET_WEB string
+	provider          string
 }
 
 var s *KeeperTestSuite
@@ -100,6 +118,10 @@ func TestKeeperTestSuite(t *testing.T) {
 	s.emailUsername = emailUsername
 	s.emailPassword = emailPassword
 	s.runListen = runListen
+	s.runOAuth2 = runOAuth2
+	s.CLIENT_ID_WEB = CLIENT_ID_WEB
+	s.CLIENT_SECRET_WEB = CLIENT_SECRET_WEB
+	s.provider = provider
 	suite.Run(t, s)
 
 	// Run Ginkgo integration tests

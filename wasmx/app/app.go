@@ -260,6 +260,7 @@ func init() {
 	// vmsmtp.Setup()
 	// vmhttpclient.Setup()
 	// vmhttpserver.Setup()
+	// vmoauth2client.Setup()
 }
 
 // App extends an ABCI application, but with most of its parameters exported.
@@ -479,6 +480,7 @@ func NewApp(
 	app.valCodec = valCodec
 	app.consCodec = consCodec
 	app.addrCodec = addrCodec
+	// only one action executor per App
 	app.actionExecutor = networkmodulekeeper.NewActionExecutor(app, logger)
 
 	// TODO replace NewPermissionsForAddress with address by role
