@@ -45,6 +45,10 @@ func (suite *KeeperTestSuite) TestEmailOauth2() {
 	utils.RegisterRole(suite, appA, "httpserver_registry", contractAddressR, sender)
 
 	msginit := &MsgInitializeRequest{
+		Config: Config{
+			SessionExpirationMs: 10000000000,
+			JWTSecret:           []byte(`sfshfjkhjkdfgfdgdggdfgdfgdf`),
+		},
 		Providers: []Provider{
 			{
 				Name:                  "provable",
@@ -52,6 +56,13 @@ func (suite *KeeperTestSuite) TestEmailOauth2() {
 				ImapServerUrl:         "mail.mail.provable.dev:993",
 				SmtpServerUrlStarttls: "mail.mail.provable.dev:587",
 				SmtpServerUrlTls:      "mail.mail.provable.dev:465",
+			},
+			{
+				Name:                  "google",
+				Domain:                "gmail.com",
+				ImapServerUrl:         "imap.gmail.com:993",
+				SmtpServerUrlStarttls: "smtp.gmail.com:587",
+				SmtpServerUrlTls:      "smtp.gmail.com:465",
 			},
 		},
 		Endpoints: []Endpoint{

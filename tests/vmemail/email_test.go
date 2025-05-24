@@ -53,7 +53,13 @@ type OAuth2ConfigToWrite struct {
 	Provider     string   `json:"provider"`
 }
 
+type Config struct {
+	SessionExpirationMs int64  `json:"session_expiration_ms"`
+	JWTSecret           []byte `json:"jwt_secret"`
+}
+
 type MsgInitializeRequest struct {
+	Config        Config                `json:"config"`
 	Providers     []Provider            `json:"providers"`
 	Endpoints     []Endpoint            `json:"endpoints"`
 	OAuth2Configs []OAuth2ConfigToWrite `json:"outh2_configs"`
@@ -118,6 +124,10 @@ func (suite *KeeperTestSuite) TestEmail() {
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 
 	msginit := &MsgInitializeRequest{
+		Config: Config{
+			SessionExpirationMs: 10000000000,
+			JWTSecret:           []byte("jdjfhjfhdskjifjeijklkfjngjnfjksnlkldkadjffskfsd"),
+		},
 		Providers: []Provider{
 			{
 				Name:                  "provable",

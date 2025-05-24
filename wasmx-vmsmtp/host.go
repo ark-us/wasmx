@@ -116,7 +116,10 @@ func connectCommon(
 		select {
 		case <-ctx.GoContextParent.Done():
 			ctx.Ctx.Logger().Info(fmt.Sprintf("parent context was closed, closing database connection: %s", connId))
-			err := client.Close()
+			err := client.Quit()
+			if err != nil {
+				err = client.Close()
+			}
 			if err != nil {
 				ctx.Ctx.Logger().Error(fmt.Sprintf(`smtp close error for connection id "%s": %v`, connId, err))
 			}

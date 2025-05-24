@@ -3,6 +3,7 @@ package vmhttpserver
 import (
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v4"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
 
@@ -125,4 +126,72 @@ type HttpResponse struct {
 type HttpResponseWrap struct {
 	Error string       `json:"error"`
 	Data  HttpResponse `json:"data"`
+}
+
+type GenerateJWTRequest struct {
+	Secret          []byte           `json:"secret"`
+	Claims          RegisteredClaims `json:"claims"`
+	AdditionalClaim string           `json:"additional_claim"`
+	SigningMethod   string           `json:"signing_method"`
+}
+
+type GenerateJWTResponse struct {
+	Token string `json:"token"`
+	Error string `json:"error"`
+}
+
+type VerifyJWTRequest struct {
+	Secret          []byte           `json:"secret"`
+	Token           string           `json:"token"`
+	Claims          RegisteredClaims `json:"claims"`
+	AdditionalClaim string           `json:"additional_claim"`
+}
+
+type VerifyJWTResponse struct {
+	Valid bool   `json:"valid"`
+	Error string `json:"error"`
+}
+
+// Claims defines the JWT claims we’ll include.
+type Claims struct {
+	Additional string `json:"additional"`
+	jwt.RegisteredClaims
+}
+
+type RegisteredClaims struct {
+	Issuer    string   `json:"issuer"`
+	Subject   string   `json:"subject"`
+	Audience  []string `json:"audience"`
+	ExpiresAt int64    `json:"expires_at"`
+	NotBefore int64    `json:"not_before"`
+	IssuedAt  int64    `json:"issued_at"`
+	ID        string   `json:"id"`
+}
+
+func buildClaims(claim RegisteredClaims, addl string) *Claims {
+	claims := &Claims{
+		Additional: addl,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(NewExpirationTime(claim.ExpiresAt)),
+		},
+	}
+	if claim.Issuer != "" {
+		claims.Issuer = claim.Issuer
+	}
+	if claim.Subject != "" {
+		claims.Subject = claim.Subject
+	}
+	if claim.ID != "" {
+		claims.ID = claim.ID
+	}
+	if len(claim.Audience) > 0 {
+		claims.Audience = claim.Audience
+	}
+	if claim.NotBefore > 0 {
+		claims.NotBefore = jwt.NewNumericDate(NewExpirationTime(claim.NotBefore))
+	}
+	if claim.IssuedAt > 0 {
+		claims.IssuedAt = jwt.NewNumericDate(NewExpirationTime(claim.IssuedAt))
+	}
+	return claims
 }

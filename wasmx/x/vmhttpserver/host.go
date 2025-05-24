@@ -3,7 +3,9 @@ package vmhttpserver
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	cfg "github.com/loredanacirstea/wasmx/config"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -152,6 +154,73 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	return prepareResponse(rnh, response)
 }
 
+func GenerateJWT(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &GenerateJWTResponse{Error: ""}
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req GenerateJWTRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	claims := buildClaims(req.Claims, req.AdditionalClaim)
+
+	var method jwt.SigningMethod
+	switch req.SigningMethod {
+	case "HS256":
+		method = jwt.SigningMethodHS384
+	case "HS384":
+		method = jwt.SigningMethodHS384
+	case "HS512":
+		method = jwt.SigningMethodHS512
+	case "":
+		method = jwt.SigningMethodHS384
+	default:
+		response.Error = "invalid signing method"
+		return prepareResponse(rnh, response)
+	}
+
+	token := jwt.NewWithClaims(method, claims)
+	signed, err := token.SignedString(req.Secret)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	response.Token = signed
+	return prepareResponse(rnh, response)
+}
+
+func VerifyJWT(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &VerifyJWTResponse{Error: ""}
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req VerifyJWTRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	claims := buildClaims(req.Claims, req.AdditionalClaim)
+
+	token, err := jwt.ParseWithClaims(req.Token, claims, func(token *jwt.Token) (interface{}, error) {
+		return req.Secret, nil
+	})
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	response.Valid = token.Valid
+	return prepareResponse(rnh, response)
+}
+
+func NewExpirationTime(expirationMs int64) time.Time {
+	return time.Now().Add(time.Duration(expirationMs) * time.Millisecond)
+}
+
 func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
 	responsebz, err := json.Marshal(response)
 	if err != nil {
@@ -176,6 +245,10 @@ func BuildWasmxHttpServer(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (inter
 		vm.BuildFn("SetRouteHandler", SetRouteHandler, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("RemoveRouteHandler", RemoveRouteHandler, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+
+		// temporary, these should be provided by a smart contract
+		vm.BuildFn("GenerateJWT", GenerateJWT, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("VerifyJWT", VerifyJWT, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "httpserver", context, fndefs)
