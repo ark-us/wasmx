@@ -34,7 +34,12 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 	conn, found := vctx.GetConnection(connId)
 	if found {
 		if conn.SmtpServerUrlSTARTTLS == req.SmtpServerUrlSTARTTLS || conn.SmtpServerUrlTLS == req.SmtpServerUrlTLS {
-			return prepareResponse(rnh, response)
+			err := conn.Client.Noop()
+			if err == nil {
+				return prepareResponse(rnh, response)
+			} else {
+				_ = closeConnection(vctx, conn, connId)
+			}
 		} else {
 			response.Error = "connection id already in use"
 			return prepareResponse(rnh, response)
@@ -75,7 +80,12 @@ func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	conn, found := vctx.GetConnection(connId)
 	if found {
 		if conn.SmtpServerUrlSTARTTLS == req.SmtpServerUrlSTARTTLS || conn.SmtpServerUrlTLS == req.SmtpServerUrlTLS {
-			return prepareResponse(rnh, response)
+			err := conn.Client.Noop()
+			if err == nil {
+				return prepareResponse(rnh, response)
+			} else {
+				_ = closeConnection(vctx, conn, connId)
+			}
 		} else {
 			response.Error = "connection id already in use"
 			return prepareResponse(rnh, response)
@@ -175,13 +185,22 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		response.Error = "SMTP connection not found"
 		return prepareResponse(rnh, response)
 	}
-	err = conn.Client.Close()
+	err = closeConnection(vctx, conn, connId)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
-	close(conn.Closed) // signal closing the database
 	return prepareResponse(rnh, response)
+}
+
+func closeConnection(vctx *SmtpContext, conn *SmtpOpenConnection, connId string) error {
+	err := conn.Client.Quit()
+	if err != nil {
+		err = conn.Client.Close()
+	}
+	close(conn.Closed) // signal closing the database
+	vctx.DeleteConnection(connId)
+	return err
 }
 
 func Quit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {

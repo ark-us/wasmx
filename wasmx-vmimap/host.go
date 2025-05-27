@@ -36,7 +36,12 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 	conn, found := vctx.GetConnection(connId)
 	if found {
 		if conn.ImapServerUrl == req.ImapServerUrl {
-			return prepareResponse(rnh, response)
+			err := conn.Client.Noop().Wait()
+			if err == nil {
+				return prepareResponse(rnh, response)
+			} else {
+				_ = closeConnection(vctx, conn, connId)
+			}
 		} else {
 			response.Error = "connection id already in use"
 			return prepareResponse(rnh, response)
@@ -77,7 +82,12 @@ func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	conn, found := vctx.GetConnection(connId)
 	if found {
 		if conn.ImapServerUrl == req.ImapServerUrl {
-			return prepareResponse(rnh, response)
+			err := conn.Client.Noop().Wait()
+			if err == nil {
+				return prepareResponse(rnh, response)
+			} else {
+				_ = closeConnection(vctx, conn, connId)
+			}
 		} else {
 			response.Error = "connection id already in use"
 			return prepareResponse(rnh, response)
@@ -173,13 +183,20 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		response.Error = "IMAP connection not found"
 		return prepareResponse(rnh, response)
 	}
-	err = conn.Client.Close()
+	err = closeConnection(vctx, conn, connId)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
-	close(conn.Closed) // signal closing the database
 	return prepareResponse(rnh, response)
+}
+
+func closeConnection(vctx *ImapContext, conn *ImapOpenConnection, connId string) error {
+	err := conn.Client.Close()
+	close(conn.Closed) // signal closing the database
+	vctx.DeleteConnection(connId)
+	// TODO listeners?
+	return err
 }
 
 func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
