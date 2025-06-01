@@ -46,15 +46,15 @@ func connectToIMAPOauth2(imapServerUrl string, username string, accessToken stri
 	return c, nil
 }
 
-// fetchEmailIds returns an array of email summaries
 func fetchEmailIds(c *imapclient.Client, folder *imap.SelectData, username string, filters FetchFilter) (imap.NumSet, uint32, error) {
-	var seqset imap.NumSet
+	var uidSet imap.NumSet
 	var count uint32
 	var criteria *imap.SearchCriteria = nil
 	var err error
 	limit := filters.Limit
 	start := filters.Start
 	numMsg := folder.NumMessages
+	var uids *imap.SearchData
 
 	criteria, err = buildSearchCriteria(filters)
 	if err != nil {
@@ -62,19 +62,19 @@ func fetchEmailIds(c *imapclient.Client, folder *imap.SelectData, username strin
 	}
 
 	if criteria != nil {
-		uids, err := c.UIDSearch(criteria, nil).Wait()
+		uids, err = c.UIDSearch(criteria, nil).Wait()
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to search emails: %v", err)
 		}
 
 		// Fetch only the matching UIDs
-		seqset = uids.All
+		uidSet = uids.All
 		count = uint32(len(uids.AllUIDs()))
-		return seqset, count, nil
+		return uidSet, count, nil
 	}
 
 	// empty criteria should return all emails, but the library throws an error
-	var seqNums []uint32
+	var uidNums []imap.UID
 	max := start + limit
 	count = limit
 	if start > numMsg {
@@ -85,10 +85,10 @@ func fetchEmailIds(c *imapclient.Client, folder *imap.SelectData, username strin
 		count = numMsg - start + 1
 	}
 	for i := start; i <= max; i++ {
-		seqNums = append(seqNums, i)
+		uidNums = append(uidNums, imap.UID(i))
 	}
-	seqset = imap.SeqSetNum(seqNums...)
-	return seqset, count, nil
+	uidSet = imap.UIDSetNum(uidNums...)
+	return uidSet, count, nil
 }
 
 func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, options *imap.FetchOptions, bodySection *imap.FetchItemBodySection) ([]Email, error) {

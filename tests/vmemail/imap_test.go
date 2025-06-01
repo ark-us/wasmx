@@ -22,6 +22,8 @@ type Calldata struct {
 	ConnectWithPassword *vmimap.ImapConnectionSimpleRequest `json:"ConnectWithPassword"`
 	ConnectOAuth2       *vmimap.ImapConnectionOauth2Request `json:"ConnectOAuth2"`
 	Close               *vmimap.ImapCloseRequest            `json:"Close"`
+	Count               *vmimap.ImapCountRequest            `json:"Count"`
+	ListMailboxes       *vmimap.ListMailboxesRequest        `json:"ListMailboxes"`
 	Fetch               *vmimap.ImapFetchRequest            `json:"Fetch"`
 	Listen              *vmimap.ImapListenRequest           `json:"Listen"`
 	CreateFolder        *vmimap.ImapCreateFolderRequest     `json:"CreateFolder"`
@@ -58,6 +60,20 @@ func (suite *KeeperTestSuite) TestImap() {
 	suite.Require().Equal("", resc.Error)
 
 	msg = &Calldata{
+		ListMailboxes: &vmimap.ListMailboxesRequest{
+			Id: "conn1",
+		}}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	qrespm := &vmimap.ListMailboxesResponse{}
+	err = json.Unmarshal(qres, qrespm)
+	suite.Require().NoError(err)
+	suite.Require().Equal(qrespm.Error, "")
+	suite.Require().Greater(len(qrespm.Mailboxes), 1)
+	suite.Require().Contains(qrespm.Mailboxes, "INBOX")
+
+	msg = &Calldata{
 		Fetch: &vmimap.ImapFetchRequest{
 			Id:          "conn1",
 			Folder:      "INBOX",
@@ -67,7 +83,7 @@ func (suite *KeeperTestSuite) TestImap() {
 		}}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	qresp := &vmimap.ImapFetchResponse{}
 	err = json.Unmarshal(qres, qresp)
 	suite.Require().NoError(err)

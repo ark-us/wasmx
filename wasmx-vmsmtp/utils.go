@@ -106,7 +106,9 @@ func BuildRawEmail(e Email) (string, error) {
 	// Write body and attachments
 	// Always write something (even if empty) so the SMTP server sees a body part.
 	header := mail.InlineHeader{}
-	// header.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
+	if len(e.Attachments) == 0 {
+		header.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
+	}
 	bodyWriter, err := mw.CreateSingleInline(header)
 	if err != nil {
 		return "", fmt.Errorf("failed to create body writer: %v", err)

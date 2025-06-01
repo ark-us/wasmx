@@ -155,6 +155,28 @@ type FetchFilter struct {
 	Content string               `json:"content"`
 }
 
+type ImapCountRequest struct {
+	Id     string `json:"id"`
+	Folder string `json:"folder"`
+}
+
+type ImapCountResponse struct {
+	Error string `json:"error"`
+	Count int64  `json:"count"`
+}
+
+type ImapUIDSearchRequest struct {
+	Id          string       `json:"id"`
+	Folder      string       `json:"folder"`
+	FetchFilter *FetchFilter `json:"fetch_filter"`
+}
+
+type ImapUIDSearchResponse struct {
+	Error string      `json:"error"`
+	UIDs  imap.UIDSet `json:"uids"`
+	Count int64       `json:"count"`
+}
+
 type ImapFetchRequest struct {
 	Id          string                     `json:"id"`
 	Folder      string                     `json:"folder"`
@@ -170,6 +192,15 @@ type ImapFetchResponse struct {
 	Error string  `json:"error"`
 	Data  []Email `json:"data"`
 	Count int64   `json:"count"`
+}
+
+type ListMailboxesRequest struct {
+	Id string `json:"id"`
+}
+
+type ListMailboxesResponse struct {
+	Error     string   `json:"error"`
+	Mailboxes []string `json:"mailboxes"`
 }
 
 type ImapCreateFolderRequest struct {

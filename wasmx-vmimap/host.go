@@ -234,6 +234,88 @@ func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 	return prepareResponse(rnh, response)
 }
 
+func Count(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapCountRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapCountResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	folder, err := conn.Client.Select(req.Folder, nil).Wait()
+	if err != nil {
+		response.Error = "failed to select email folder"
+		return prepareResponse(rnh, response)
+	}
+	response.Count = int64(folder.NumMessages)
+	return prepareResponse(rnh, response)
+}
+
+func UIDSearch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ImapUIDSearchRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImapUIDSearchResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	folder, err := conn.Client.Select(req.Folder, nil).Wait()
+	if err != nil {
+		response.Error = "failed to select email folder"
+		return prepareResponse(rnh, response)
+	}
+	if req.FetchFilter == nil {
+		response.UIDs = make(imap.UIDSet, 0)
+		response.Count = 0
+		return prepareResponse(rnh, response)
+	}
+
+	numset, count, err := fetchEmailIds(conn.Client, folder, conn.Username, *req.FetchFilter)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	response.UIDs = numset.(imap.UIDSet)
+	response.Count = int64(count)
+	return prepareResponse(rnh, response)
+}
+
 func Fetch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	requestbz, err := rnh.ReadMemFromPtr(params[0])
@@ -320,6 +402,45 @@ func Fetch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		slices.Reverse(emails)
 	}
 	response.Data = emails
+	return prepareResponse(rnh, response)
+}
+
+func ListMailboxes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	if err != nil {
+		return nil, err
+	}
+	var req ListMailboxesRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListMailboxesResponse{Error: "", Mailboxes: []string{}}
+	connId := buildConnectionId(req.Id, ctx)
+
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "IMAP connection not found"
+		return prepareResponse(rnh, response)
+	}
+
+	// List all mailboxes (use the empty string for the reference and "*" for the mailbox pattern)
+	cmd := conn.Client.List("", "*", nil)
+	defer cmd.Close()
+	for {
+		d := cmd.Next()
+		if d == nil {
+			break
+		}
+		response.Mailboxes = append(response.Mailboxes, d.Mailbox)
+	}
 	return prepareResponse(rnh, response)
 }
 
@@ -424,8 +545,15 @@ func BuildWasmxImapVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface
 		vm.BuildFn("ConnectOAuth2", ConnectOAuth2, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Listen", Listen, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Count", Count, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("UIDSearch", UIDSearch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ListMailboxes", ListMailboxes, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Fetch", Fetch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("CreateFolder", CreateFolder, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+
+		// TODO
+		// Move
+		// RenameMailbox
 	}
 
 	return vm.BuildModule(rnh, "imap", context, fndefs)
