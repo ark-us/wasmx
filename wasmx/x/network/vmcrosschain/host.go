@@ -21,7 +21,8 @@ import (
 func executeCrossChainTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
 		return returnResult(ctx, rnh, resp)
@@ -63,7 +64,8 @@ func executeCrossChainTx(_context interface{}, rnh memc.RuntimeHandler, params [
 func executeCrossChainQuery(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	resp := &types.WrappedResponse{}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
 		return returnResult(ctx, rnh, resp)
@@ -111,7 +113,8 @@ func executeCrossChainTxNonDeterministic(_context interface{}, rnh memc.RuntimeH
 	ctx := _context.(*Context)
 
 	// we do not want to fail and end the transaction
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		resp.Error = "cannot read request" + err.Error()
 		return returnResult(ctx, rnh, resp)
@@ -182,8 +185,8 @@ func executeCrossChainQueryNonDeterministic(_context interface{}, rnh memc.Runti
 		return nil, fmt.Errorf(errmsg)
 	}
 	// otherwise revert
-
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -275,19 +278,14 @@ func returnResult(ctx *Context, rnh memc.RuntimeHandler, resp *types.WrappedResp
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 // isAtomicTxInExecution(*MsgIsAtomicTxInExecutionRequest) (*abci.MsgIsAtomicTxInExecutionResponse, error)
 func isAtomicTxInExecution(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -323,13 +321,7 @@ func returnIsInExecutionResult(ctx *Context, rnh memc.RuntimeHandler, resp *MsgI
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {

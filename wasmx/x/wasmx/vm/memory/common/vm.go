@@ -91,8 +91,9 @@ type IVm interface {
 type RuntimeHandler interface {
 	GetVm() IVm
 	GetMemory() (IMemory, error)
-	ReadMemFromPtr(pointer interface{}) ([]byte, error)
-	AllocateWriteMem(data []byte) (interface{}, error)
+	PtrParamsLength() int
+	ReadMemFromPtr(pointer []interface{}) ([]byte, error)
+	AllocateWriteMem(data []byte) (pointer []interface{}, err error)
 	ReadStringFromPtr(pointer interface{}) (string, error)
 	ReadJsString(arr []byte) string
 }
@@ -227,6 +228,28 @@ func FromInt32Slice(input []int32) []interface{} {
 		result[i] = v
 	}
 	return result
+}
+
+func AllocateMemory(vm IVm, allocMemName string, size int32) (int32, error) {
+	result, err := vm.Call(allocMemName, []interface{}{size}, nil)
+	if err != nil {
+		return 0, err
+	}
+	return result[0], nil
+}
+
+func FreeMemory(vm IVm, freeMemName string, ptr int32) error {
+	_, err := vm.Call(freeMemName, []interface{}{ptr}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetPointerFromParams(rnh RuntimeHandler, params []interface{}, index int) ([]interface{}, int) {
+	newindex := index + rnh.PtrParamsLength()
+	pointer := params[index:newindex]
+	return pointer, newindex
 }
 
 var _ IWasmVmMeta = (*WasmRuntimeMockVmMeta)(nil)

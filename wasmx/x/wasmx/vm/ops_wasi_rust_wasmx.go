@@ -527,7 +527,7 @@ func wasi_sendCosmosQuery(_context interface{}, rnh memc.RuntimeHandler, params 
 // getGasLeft(): i64
 func wasi_getGasLeft(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 0)
-	returns[0] = int32(0)
+	returns[0] = int64(0)
 	return returns, nil
 }
 

@@ -21,56 +21,20 @@ func BuildWasmxConsensusJson1Mock(context *Context, rnh memc.RuntimeHandler) (in
 }
 
 func MockCheckTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(make([]byte, 0))
 }
 func MockPrepareProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(make([]byte, 0))
 }
 func MockProcessProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(make([]byte, 0))
 }
 func MockFinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(make([]byte, 0))
 }
 func MockCommit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(make([]byte, 0))
 }
 func MockRollbackToVersion(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	returns := make([]interface{}, 1)
-	ptr, err := rnh.AllocateWriteMem(make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(make([]byte, 0))
 }

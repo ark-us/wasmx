@@ -1,25 +1,30 @@
-package rust
+package ptrlen_i64
 
 import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-type RuntimeHandlerRust struct {
-	vm memc.IVm
+// outdated, TO be replaced with ptrlen_i32 (ptr: i32, len: i32) for pointer
+// currently used by python interpreter (Rust)
+
+type RuntimeHandler struct {
+	vm           memc.IVm
+	allocMemName string
+	freeMemName  string
 }
 
-var _ memc.RuntimeHandler = (*RuntimeHandlerRust)(nil)
+var _ memc.RuntimeHandler = (*RuntimeHandler)(nil)
 
-func NewRuntimeHandlerRust(vm memc.IVm) memc.RuntimeHandler {
-	return RuntimeHandlerRust{vm}
+func NewRuntimeHandler(vm memc.IVm) memc.RuntimeHandler {
+	return RuntimeHandler{vm, types.MEMORY_EXPORT_ALLOC, types.MEMORY_EXPORT_FREE}
 }
 
-func (h RuntimeHandlerRust) GetVm() memc.IVm {
+func (h RuntimeHandler) GetVm() memc.IVm {
 	return h.vm
 }
 
-func (h RuntimeHandlerRust) GetMemory() (memc.IMemory, error) {
+func (h RuntimeHandler) GetMemory() (memc.IMemory, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return nil, err
@@ -27,25 +32,29 @@ func (h RuntimeHandlerRust) GetMemory() (memc.IMemory, error) {
 	return mem, nil
 }
 
-func (h RuntimeHandlerRust) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
+func (h RuntimeHandler) PtrParamsLength() int {
+	return 1
+}
+
+func (h RuntimeHandler) ReadMemFromPtr(pointer []interface{}) ([]byte, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	return ReadMemFromPtr(mem, pointer)
+	return ReadMemFromPtr(mem, pointer[0])
 }
-func (h RuntimeHandlerRust) AllocateWriteMem(data []byte) (interface{}, error) {
-	ptr, err := AllocateAndWriteMem(h.vm, data)
+func (h RuntimeHandler) AllocateWriteMem(data []byte) ([]interface{}, error) {
+	ptr, err := AllocateAndWriteMem(h.vm, h.allocMemName, data)
 	if err != nil {
-		return int64(0), err
+		return []interface{}{}, err
 	}
 	ptr64 := BuildPtrI64(ptr, int32(len(data)))
-	return ptr64, nil
+	return []interface{}{ptr64}, nil
 }
-func (RuntimeHandlerRust) ReadJsString(arr []byte) string {
+func (RuntimeHandler) ReadJsString(arr []byte) string {
 	return ReadJsString(arr)
 }
-func (h RuntimeHandlerRust) ReadStringFromPtr(pointer interface{}) (string, error) {
+func (h RuntimeHandler) ReadStringFromPtr(pointer interface{}) (string, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return "", err
@@ -71,13 +80,13 @@ func ReadJsString(data []byte) string {
 	return string(data)
 }
 
-func AllocateAndWriteMem(vm memc.IVm, data []byte) (int32, error) {
+func AllocateAndWriteMem(vm memc.IVm, allocMemName string, data []byte) (int32, error) {
 	mem, err := vm.GetMemory()
 	if err != nil {
 		return 0, err
 	}
 	datalen := int32(len(data))
-	ptr, err := AllocateMemory(vm, datalen)
+	ptr, err := memc.AllocateMemory(vm, allocMemName, datalen)
 	if err != nil {
 		return 0, err
 	}
@@ -88,8 +97,8 @@ func AllocateAndWriteMem(vm memc.IVm, data []byte) (int32, error) {
 	return ptr, nil
 }
 
-func AllocateAndWriteMemi64(vm memc.IVm, data []byte) (int64, error) {
-	ptr, err := AllocateAndWriteMem(vm, data)
+func AllocateAndWriteMemi64(vm memc.IVm, allocMemName string, data []byte) (int64, error) {
+	ptr, err := AllocateAndWriteMem(vm, allocMemName, data)
 	if err != nil {
 		return 0, err
 	}
@@ -104,20 +113,4 @@ func DecodePtrI64(value int64) (int32, int32) {
 	ptr := int32(value >> 32)
 	len := int32(value & 0xFFFFFFFF)
 	return ptr, len
-}
-
-func AllocateMemory(vm memc.IVm, size int32) (int32, error) {
-	result, err := vm.Call(types.MEMORY_EXPORT_ALLOC, []interface{}{size}, nil)
-	if err != nil {
-		return 0, err
-	}
-	return result[0], nil
-}
-
-func FreeMemory(vm memc.IVm, ptr int32) error {
-	_, err := vm.Call(types.MEMORY_EXPORT_FREE, []interface{}{ptr}, nil)
-	if err != nil {
-		return err
-	}
-	return nil
 }

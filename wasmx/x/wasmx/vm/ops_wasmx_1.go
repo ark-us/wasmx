@@ -28,49 +28,31 @@ type WasmxJsonLog struct {
 // getCallData(): ArrayBuffer
 func getCallData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	ptr, err := rnh.AllocateWriteMem(ctx.Env.CurrentCall.CallData)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(ctx.Env.CurrentCall.CallData)
 }
 
 func wasmxGetCaller(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	addr := types.PaddLeftTo32(ctx.Env.CurrentCall.Sender.Bytes())
-	ptr, err := rnh.AllocateWriteMem(addr)
-	if err != nil {
-		return nil, err
-
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(addr)
 }
 
 func wasmxGetAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	addr := types.PaddLeftTo32(ctx.Env.Contract.Address.Bytes())
-	ptr, err := rnh.AllocateWriteMem(addr)
-	if err != nil {
-		return nil, err
-
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(addr)
 }
 
 // storageStore(key: ArrayBuffer, value: ArrayBuffer)
 func wasmxStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	key, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, ndx := memc.GetPointerFromParams(rnh, params, 0)
+	key, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
-	data, err := rnh.ReadMemFromPtr(params[1])
+	dataptr, _ := memc.GetPointerFromParams(rnh, params, ndx)
+	data, err := rnh.ReadMemFromPtr(dataptr)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +65,8 @@ func wasmxStorageStore(_context interface{}, rnh memc.RuntimeHandler, params []i
 // storageLoad(key: ArrayBuffer): ArrayBuffer
 func wasmxStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	keybz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	keybz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -91,19 +74,14 @@ func wasmxStorageLoad(_context interface{}, rnh memc.RuntimeHandler, params []in
 	// if len(data) == 0 {
 	// 	data = make([]byte, 32)
 	// }
-	newptr, err := rnh.AllocateWriteMem(data)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = newptr
-	return returns, nil
+	return rnh.AllocateWriteMem(data)
 }
 
 // wasmxStorageDelete(key: ArrayBuffer)
 func wasmxStorageDelete(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	key, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	key, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +93,8 @@ func wasmxStorageDelete(_context interface{}, rnh memc.RuntimeHandler, params []
 
 func wasmxStorageDeleteRange(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +123,8 @@ func wasmxStorageDeleteRange(_context interface{}, rnh memc.RuntimeHandler, para
 
 func wasmxStorageLoadRange(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -178,18 +158,13 @@ func wasmxStorageLoadRange(_context interface{}, rnh memc.RuntimeHandler, params
 		return nil, err
 	}
 
-	newptr, err := rnh.AllocateWriteMem(data)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = newptr
-	return returns, nil
+	return rnh.AllocateWriteMem(data)
 }
 
 func wasmxStorageLoadRangePairs(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -225,18 +200,13 @@ func wasmxStorageLoadRangePairs(_context interface{}, rnh memc.RuntimeHandler, p
 		return nil, err
 	}
 
-	newptr, err := rnh.AllocateWriteMem(data)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = newptr
-	return returns, nil
+	return rnh.AllocateWriteMem(data)
 }
 
 func wasmxLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -268,29 +238,18 @@ func wasmxLog(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 
 func wasmxGetReturnData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	newptr, err := rnh.AllocateWriteMem(ctx.ReturnData)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = newptr
-	return returns, nil
+	return rnh.AllocateWriteMem(ctx.ReturnData)
 }
 
 func wasmxGetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	newptr, err := rnh.AllocateWriteMem(ctx.FinishData)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = newptr
-	return returns, nil
+	return rnh.AllocateWriteMem(ctx.FinishData)
 }
 
 func wasmxSetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +260,8 @@ func wasmxSetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []
 
 func wasmxFinish(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +273,8 @@ func wasmxFinish(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 func wasmxRevert(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -326,8 +287,10 @@ func wasmxRevert(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 // message: usize, fileName: usize, line: u32, column: u32
 func asAbort(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	message, _ := rnh.ReadMemFromPtr(params[0])
-	fileName, _ := rnh.ReadMemFromPtr(params[1])
+	keyptr, ndx := memc.GetPointerFromParams(rnh, params, 0)
+	message, _ := rnh.ReadMemFromPtr(keyptr)
+	dataptr, _ := memc.GetPointerFromParams(rnh, params, ndx)
+	fileName, _ := rnh.ReadMemFromPtr(dataptr)
 	ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx_env_1: ABORT: %s, %s. line: %d, column: %d", ctx.RuntimeHandler.ReadJsString(message), ctx.RuntimeHandler.ReadJsString(fileName), params[2], params[3]))
 	return wasmxRevert(_context, rnh, params)
 }
@@ -340,6 +303,7 @@ func asConsoleLog(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	} else {
 		ctx.Logger(ctx.Ctx).Info(fmt.Sprintf("wasmx: console.log error: %s", err.Error()))
 	}
+	fmt.Println(message)
 	returns := make([]interface{}, 0)
 	return returns, nil
 }

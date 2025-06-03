@@ -41,7 +41,8 @@ import (
 
 func StartNodeWithIdentity(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,8 @@ func GetNodeInfo(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 func ConnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &ConnectPeerResponse{}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +107,8 @@ func ConnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 // sends to all connected peers
 func SendMessage(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +148,8 @@ func SendMessage(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 func SendMessageToPeers(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +171,8 @@ func SendMessageToPeers(_context interface{}, rnh memc.RuntimeHandler, params []
 func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &ConnectChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +203,8 @@ func ConnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []int
 func SendMessageToChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &SendMessageToChatRoomResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +272,8 @@ func CloseNode(_context interface{}, rnh memc.RuntimeHandler, params []interface
 
 func DisconnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +300,8 @@ func DisconnectChatRoom(_context interface{}, rnh memc.RuntimeHandler, params []
 
 func DisconnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +332,8 @@ func DisconnectPeer(_context interface{}, rnh memc.RuntimeHandler, params []inte
 func StartStateSyncRequest(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &StartStateSyncReqResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +391,8 @@ func StartStateSyncRequest(_context interface{}, rnh memc.RuntimeHandler, params
 func StartStateSyncResponse(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &StartStateSyncRespResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -434,13 +444,7 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(responsebz)
 }
 
 func BuildWasmxP2P1(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {

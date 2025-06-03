@@ -70,7 +70,8 @@ func migrateContractStateByAddress(
 
 func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,8 @@ func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.Runtim
 
 func coreMigrateContractStateByAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	data, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +121,8 @@ func coreMigrateContractStateByAddress(_context interface{}, rnh memc.RuntimeHan
 // call request -> call response
 func coreExternalCall(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +133,6 @@ func coreExternalCall(_context interface{}, rnh memc.RuntimeHandler, params []in
 		return nil, err
 	}
 
-	returns := make([]interface{}, 1)
 	var success int32
 	var returnData []byte
 
@@ -156,12 +158,7 @@ func coreExternalCall(_context interface{}, rnh memc.RuntimeHandler, params []in
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(responsebz)
 }
 
 type GrpcRequest struct {
@@ -177,8 +174,8 @@ type GrpcResponse struct {
 
 func coreWasmxGrpcRequest(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	returns := make([]interface{}, 1)
-	databz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	databz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -222,12 +219,7 @@ func coreWasmxGrpcRequest(_context interface{}, rnh memc.RuntimeHandler, params 
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 type StartTimeoutRequest struct {
@@ -277,7 +269,8 @@ type ReadFromBackgroundProcessResponse struct {
 func coreWasmxStartTimeout(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +305,8 @@ func coreWasmxStartTimeout(_context interface{}, rnh memc.RuntimeHandler, params
 func coreWasmxCancelTimeout(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +333,8 @@ func coreWasmxCancelTimeout(_context interface{}, rnh memc.RuntimeHandler, param
 func coreWasmxStartBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 0)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +367,8 @@ func coreWasmxStartBackgroundProcess(_context interface{}, rnh memc.RuntimeHandl
 func coreWasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +430,8 @@ func coreWasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHan
 func coreWasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +512,8 @@ type GlobalStorageResetResponse struct {
 
 func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +534,8 @@ func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, 
 
 func coreWasmxStorageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -551,18 +550,13 @@ func coreWasmxStorageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, p
 	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
 	store := ctx.Ctx.KVStore(storeKey)
 	data := store.Get(req.Key)
-	ptr, err := rnh.AllocateWriteMem(data)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(data)
 }
 
 func coreWasmxStorageDeleteGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +577,8 @@ func coreWasmxStorageDeleteGlobal(_context interface{}, rnh memc.RuntimeHandler,
 
 func coreWasmxStorageHasGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -608,7 +603,8 @@ func coreWasmxStorageHasGlobal(_context interface{}, rnh memc.RuntimeHandler, pa
 
 func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -628,13 +624,7 @@ func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, 
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(responsebz)
 }
 
 func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {

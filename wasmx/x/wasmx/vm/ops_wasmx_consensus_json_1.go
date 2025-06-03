@@ -37,7 +37,8 @@ type WrapResult struct {
 // PrepareProposal(*abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error)
 func PrepareProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -56,20 +57,14 @@ func PrepareProposal(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 // ProcessProposal(*abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error)
 func ProcessProposal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -91,23 +86,18 @@ func ProcessProposal(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 func OptimisticExecution(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, ndx := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
-	resbz, err := rnh.ReadMemFromPtr(params[1])
+	resptr, ndx := memc.GetPointerFromParams(rnh, params, ndx)
+	resbz, err := rnh.ReadMemFromPtr(resptr)
 	if err != nil {
 		return nil, err
 	}
@@ -150,20 +140,14 @@ func OptimisticExecution(_context interface{}, rnh memc.RuntimeHandler, params [
 		return nil, err
 	}
 
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 // FinalizeBlock(*abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error)
 func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -210,19 +194,14 @@ func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respwrapbz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respwrapbz)
 }
 
 // BeginBlock(*abci.RequestFinalizeBlock) (sdk.BeginBlock, error)
 func BeginBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -249,19 +228,14 @@ func BeginBlock(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respwrapbz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respwrapbz)
 }
 
 // EndBlock(metadata string) (*abci.ResponseFinalizeBlock, error)
 func EndBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	metadata, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	metadata, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -283,13 +257,7 @@ func EndBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respwrapbz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respwrapbz)
 }
 
 // Commit() (*abci.ResponseCommit, error)
@@ -304,14 +272,7 @@ func Commit(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 func RollbackToVersion(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -321,19 +282,13 @@ func RollbackToVersion(_context interface{}, rnh memc.RuntimeHandler, params []i
 	if err != nil {
 		errMsg = err.Error()
 	}
-	ptr, err := rnh.AllocateWriteMem([]byte(errMsg))
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem([]byte(errMsg))
 }
 
 func CheckTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -351,19 +306,13 @@ func CheckTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(respbz)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(respbz)
 }
 
 func wasmxHeaderHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -374,14 +323,7 @@ func wasmxHeaderHash(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 	hash := req.Hash()
-	ptr, err := rnh.AllocateWriteMem(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(hash)
 }
 
 func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, vals []networktypes.TendermintValidator) ([]*cmttypes.Validator, error) {
@@ -417,7 +359,8 @@ func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, val
 
 func wasmxValidatorsHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -438,19 +381,13 @@ func wasmxValidatorsHash(_context interface{}, rnh memc.RuntimeHandler, params [
 		return nil, err
 	}
 	hash := valSet.Hash()
-	ptr, err := rnh.AllocateWriteMem(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(hash)
 }
 
 func wasmxConsensusParamsHash(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -461,19 +398,13 @@ func wasmxConsensusParamsHash(_context interface{}, rnh memc.RuntimeHandler, par
 		return nil, err
 	}
 	hash := cparams.Hash()
-	ptr, err := rnh.AllocateWriteMem(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(hash)
 }
 
 func wasmxBlockCommitVoteBytes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	reqbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -490,14 +421,7 @@ func wasmxBlockCommitVoteBytes(_context interface{}, rnh memc.RuntimeHandler, pa
 		ctx.Ctx.Logger().Error(err.Error(), "consensus", "BlockCommitVoteBytes", "reason", "marshal cmtproto.CanonicalVote")
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(bz)
-	if err != nil {
-		return nil, err
-	}
-
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(bz)
 }
 
 func BuildWasmxConsensusJson1(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {

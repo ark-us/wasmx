@@ -26,11 +26,15 @@ func (h RuntimeHandlerBase) GetMemory() (memc.IMemory, error) {
 	return mem, nil
 }
 
-func (h RuntimeHandlerBase) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
+func (h RuntimeHandlerBase) PtrParamsLength() int {
+	return 1
+}
+
+func (h RuntimeHandlerBase) ReadMemFromPtr(pointer []interface{}) ([]byte, error) {
 	panic("RuntimeHandlerBase.ReadMemFromPtr not implemented")
 }
 
-func (h RuntimeHandlerBase) AllocateWriteMem(data []byte) (interface{}, error) {
+func (h RuntimeHandlerBase) AllocateWriteMem(data []byte) ([]interface{}, error) {
 	panic("RuntimeHandlerBase.AllocateWriteMem not implemented")
 }
 

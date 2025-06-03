@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/tidwall/gjson v1.16.0
-	github.com/loredanacirstea/wasmx-tinygo v0.0.0
+	github.com/loredanacirstea/wasmx-env v0.0.0
 )
 
 require (
@@ -12,4 +12,4 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 )
 
-replace github.com/loredanacirstea/wasmx-tinygo v0.0.0 => ../wasmx-go
+replace github.com/loredanacirstea/wasmx-env v0.0.0 => ../wasmx-env

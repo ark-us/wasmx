@@ -21,13 +21,7 @@ func timeNow(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		magnitude = 0
 	}
 	timed := time.Now().UnixNano() / int64(math.Pow10(int(9-magnitude)))
-	ptr, err := rnh.AllocateWriteMem(big.NewInt(timed).FillBytes(make([]byte, 32)))
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(big.NewInt(timed).FillBytes(make([]byte, 32)))
 }
 
 // timeNow is non-deterministic

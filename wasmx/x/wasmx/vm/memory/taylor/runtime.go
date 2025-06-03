@@ -36,19 +36,27 @@ func (h RuntimeHandlerTay) GetMemory() (memc.IMemory, error) {
 	return mem, nil
 }
 
-func (h RuntimeHandlerTay) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
+func (h RuntimeHandlerTay) PtrParamsLength() int {
+	return 1
+}
+
+func (h RuntimeHandlerTay) ReadMemFromPtr(pointer []interface{}) ([]byte, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	return ReadMemFromPtr(mem, pointer)
+	return ReadMemFromPtr(mem, pointer[0])
 }
-func (h RuntimeHandlerTay) AllocateWriteMem(data []byte) (interface{}, error) {
+func (h RuntimeHandlerTay) AllocateWriteMem(data []byte) ([]interface{}, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
-		return 0, err
+		return []interface{}{}, err
 	}
-	return AllocateWriteMem(h.vm, mem, data)
+	ptr, err := AllocateWriteMem(h.vm, mem, data)
+	if err != nil {
+		return []interface{}{}, err
+	}
+	return []interface{}{ptr}, nil
 }
 func (RuntimeHandlerTay) ReadJsString(arr []byte) string {
 	return ReadJsString(arr)

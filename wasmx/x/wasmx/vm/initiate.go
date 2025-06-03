@@ -9,7 +9,8 @@ import (
 	memas "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/assemblyscript"
 	membase "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/base"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
-	memrust "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/rust"
+	memptrlen_i32 "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/ptrlen_i32"
+	memptrlen_i64 "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/ptrlen_i64"
 	memtay "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/taylor"
 )
 
@@ -295,7 +296,8 @@ func init() {
 
 	RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
 	RuntimeDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
-	RuntimeDepHandler[types.WASMX_MEMORY_RUSTi64] = memrust.NewRuntimeHandlerRust
+	RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i64] = memptrlen_i64.NewRuntimeHandler
+	RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i32] = memptrlen_i32.NewRuntimeHandler
 }
 
 func SetSystemDepHandler(
