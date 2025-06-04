@@ -1,6 +1,9 @@
 package imap
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type SeqSet []SeqRange
 type UIDSet []UIDRange
@@ -101,6 +104,11 @@ type Address struct {
 	Name    string
 	Mailbox string
 	Host    string
+}
+
+func AddressFromString(account string, name string) Address {
+	parts := strings.Split(account, "@")
+	return Address{name, parts[0], parts[1]}
 }
 
 type Envelope struct {

@@ -14,6 +14,12 @@ var (
 	//go:embed simple_storage.wasm
 	TinyGoSimpleStorage []byte
 
-	//go:embed emailchain.wasm
-	EmailTestWrapSdk []byte
+	//go:embed imaptest.wasm
+	ImapTestWrapSdk []byte
+
+	//go:embed smtptest.wasm
+	SmtpTestWrapSdk []byte
+
+	// //go:embed emailchain.wasm
+	// EmailChain []byte
 )

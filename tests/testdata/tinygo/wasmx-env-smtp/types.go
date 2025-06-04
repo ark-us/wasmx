@@ -1,81 +1,6 @@
-package vmsmtp
+package smtp
 
-import (
-	"context"
-	"fmt"
-	"sync"
-
-	"github.com/emersion/go-imap/v2"
-	gosmtp "github.com/emersion/go-smtp"
-
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
-)
-
-const (
-	// ModuleName defines the module name
-	ModuleName = "vmsmtp"
-
-	// StoreKey defines the primary module store key
-	StoreKey = ModuleName
-
-	// RouterKey defines the module's message routing key
-	RouterKey = ModuleName
-)
-
-const HOST_WASMX_ENV_SMTP_i32_VER1 = "wasmx_smtp_i32_1"
-const HOST_WASMX_ENV_SMTP_i64_VER1 = "wasmx_smtp_i64_1"
-
-const HOST_WASMX_ENV_SMTP_EXPORT = "wasmx_smtp_"
-
-const HOST_WASMX_ENV_SMTP = "smtp"
-
-type ContextKey string
-
-const SmtpContextKey ContextKey = "smtp-context"
-
-type Context struct {
-	*vmtypes.Context
-}
-
-type SmtpOpenConnection struct {
-	mtx                   sync.Mutex
-	GoContextParent       context.Context
-	Username              string
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Client                *gosmtp.Client
-	Closed                chan struct{}
-	GetClient             func() (*gosmtp.Client, error)
-}
-
-type SmtpContext struct {
-	mtx           sync.Mutex
-	DbConnections map[string]*SmtpOpenConnection
-}
-
-func (p *SmtpContext) GetConnection(id string) (*SmtpOpenConnection, bool) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	db, found := p.DbConnections[id]
-	return db, found
-}
-
-func (p *SmtpContext) SetConnection(id string, conn *SmtpOpenConnection) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.DbConnections[id]
-	if found {
-		return fmt.Errorf("cannot overwrite SMTP connection: %s", id)
-	}
-	p.DbConnections[id] = conn
-	return nil
-}
-
-func (p *SmtpContext) DeleteConnection(id string) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	delete(p.DbConnections, id)
-}
+import "time"
 
 type SmtpConnectionSimpleRequest struct {
 	Id                    string `json:"id"`
@@ -178,8 +103,27 @@ type Attachment struct {
 	Data        []byte
 }
 
+type Address struct {
+	Name    string
+	Mailbox string
+	Host    string
+}
+
+type Envelope struct {
+	Date      time.Time
+	Subject   string
+	From      []Address
+	Sender    []Address
+	ReplyTo   []Address
+	To        []Address
+	Cc        []Address
+	Bcc       []Address
+	InReplyTo []string
+	MessageID string
+}
+
 type Email struct {
-	Envelope    *imap.Envelope      `json:"envelope"` // Header fields (From, To, Subject, etc.)
+	Envelope    *Envelope           `json:"envelope"` // Header fields (From, To, Subject, etc.)
 	Header      map[string][]string `json:"header"`   // Parsed headers (future use)
 	Body        string              `json:"body"`     // Body content (if separated)
 	Attachments []Attachment        `json:"attachments"`
