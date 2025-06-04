@@ -31,7 +31,7 @@ func WriteDynMemDefaultMalloc(vm memc.IVm, data []byte) (int64, error) {
 }
 
 func AllocateMemDefaultMalloc(vm memc.IVm, size int32) (int32, error) {
-	result, err := vm.Call(types.MEMORY_EXPORT_MALLOC, []interface{}{size}, nil)
+	result, err := vm.Call(types.MEMORY_EXPORT_ALLOC, []interface{}{size}, nil)
 	if err != nil {
 		return 0, err
 	}

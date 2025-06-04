@@ -27,7 +27,7 @@ type RuntimeHandlerAS struct {
 
 var _ memc.RuntimeHandler = (*RuntimeHandlerAS)(nil)
 
-func NewRuntimeHandlerAS(vm memc.IVm) memc.RuntimeHandler {
+func NewRuntimeHandlerAS(vm memc.IVm, _ []types.SystemDep) memc.RuntimeHandler {
 	return RuntimeHandlerAS{vm}
 }
 

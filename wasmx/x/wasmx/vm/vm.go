@@ -101,7 +101,7 @@ func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []typ
 	}
 	// default is assemblyscript memory
 	// if we change this, we should add the dependency in the system contracts
-	return RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT](vm)
+	return RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT](vm, systemDeps)
 }
 
 func getRuntimeHandlerFromDeps(vm memc.IVm, systemDeps []types.SystemDep) memc.RuntimeHandler {
@@ -111,7 +111,7 @@ func getRuntimeHandlerFromDeps(vm memc.IVm, systemDeps []types.SystemDep) memc.R
 			handler, found = RuntimeDepHandler[systemDep.Label]
 		}
 		if found {
-			return handler(vm)
+			return handler(vm, systemDeps)
 		}
 	}
 	// look in dep.Deps

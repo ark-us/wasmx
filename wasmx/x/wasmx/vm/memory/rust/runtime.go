@@ -1,15 +1,11 @@
-package ptrlen_i64
+package rust
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
-
-// outdated, TO be replaced with ptrlen_i32 (ptr: i32, len: i32) for pointer
-// currently used by python interpreter (Rust)
 
 type RuntimeHandler struct {
 	vm           memc.IVm
@@ -46,23 +42,14 @@ func (h RuntimeHandler) GetMemory() (memc.IMemory, error) {
 }
 
 func (h RuntimeHandler) PtrParamsLength() int {
-	return 1
+	panic("use ptrlen_i64")
 }
 
 func (h RuntimeHandler) ReadMemFromPtr(pointer []interface{}) ([]byte, error) {
-	mem, err := h.vm.GetMemory()
-	if err != nil {
-		return nil, err
-	}
-	return ReadMemFromPtr(mem, h.vm, h.freeMemName, pointer[0])
+	panic("use ptrlen_i64")
 }
 func (h RuntimeHandler) AllocateWriteMem(data []byte) ([]interface{}, error) {
-	ptr, err := AllocateAndWriteMem(h.vm, h.allocMemName, data)
-	if err != nil {
-		return []interface{}{}, err
-	}
-	ptr64 := BuildPtrI64(ptr, int32(len(data)))
-	return []interface{}{ptr64}, nil
+	panic("use ptrlen_i64")
 }
 func (RuntimeHandler) ReadJsString(arr []byte) string {
 	return ReadJsString(arr)
@@ -79,15 +66,19 @@ func (h RuntimeHandler) ReadStringFromPtr(pointer interface{}) (string, error) {
 	return string(bz), nil
 }
 
-func ReadMemFromPtr(mem memc.IMemory, vm memc.IVm, freeMemName string, pointer interface{}) ([]byte, error) {
+func (h RuntimeHandler) WriteMemDefaultMalloc(data []byte) (int32, error) {
+	return AllocateAndWriteMem(h.vm, h.allocMemName, data)
+}
+
+func (h RuntimeHandler) WriteMemDefaultMallocI64(data []byte) (int64, error) {
+	return AllocateAndWriteMemi64(h.vm, h.allocMemName, data)
+}
+
+func ReadMemFromPtr(mem memc.IMemory, pointer interface{}) ([]byte, error) {
 	ptr, size := DecodePtrI64(pointer.(int64))
 	data, err := mem.Read(ptr, size)
 	if err != nil {
 		return nil, err
-	}
-	err = memc.FreeMemory(vm, freeMemName, ptr)
-	if err != nil {
-		return nil, fmt.Errorf("cannot free memory: %s", err)
 	}
 	return data, nil
 }
@@ -103,7 +94,7 @@ func AllocateAndWriteMem(vm memc.IVm, allocMemName string, data []byte) (int32, 
 		return 0, err
 	}
 	datalen := int32(len(data))
-	ptr, err := memc.AllocateMemory(vm, allocMemName, datalen)
+	ptr, err := AllocateMemory(vm, allocMemName, datalen)
 	if err != nil {
 		return 0, err
 	}
@@ -130,4 +121,20 @@ func DecodePtrI64(value int64) (int32, int32) {
 	ptr := int32(value >> 32)
 	len := int32(value & 0xFFFFFFFF)
 	return ptr, len
+}
+
+func AllocateMemory(vm memc.IVm, allocMemName string, size int32) (int32, error) {
+	result, err := vm.Call(allocMemName, []interface{}{size}, nil)
+	if err != nil {
+		return 0, err
+	}
+	return result[0], nil
+}
+
+func FreeMemory(vm memc.IVm, freeMemName string, ptr int32) error {
+	_, err := vm.Call(freeMemName, []interface{}{ptr}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

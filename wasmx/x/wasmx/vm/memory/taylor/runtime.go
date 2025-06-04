@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
@@ -20,7 +21,7 @@ type RuntimeHandlerTay struct {
 
 var _ memc.RuntimeHandler = (*RuntimeHandlerTay)(nil)
 
-func NewRuntimeHandlerTay(vm memc.IVm) memc.RuntimeHandler {
+func NewRuntimeHandlerTay(vm memc.IVm, _ []types.SystemDep) memc.RuntimeHandler {
 	return RuntimeHandlerTay{vm}
 }
 

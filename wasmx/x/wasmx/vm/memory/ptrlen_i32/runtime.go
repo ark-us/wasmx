@@ -24,7 +24,7 @@ var _ memc.RuntimeHandler = (*RuntimeHandler)(nil)
 // 	return RuntimeHandler{vm, allocMemName, freeMemName}
 // }
 
-func NewRuntimeHandler(vm memc.IVm) memc.RuntimeHandler {
+func NewRuntimeHandler(vm memc.IVm, sysdeps []types.SystemDep) memc.RuntimeHandler {
 	return RuntimeHandler{vm, types.MEMORY_EXPORT_MALLOC, types.MEMORY_EXPORT_FREE}
 }
 
