@@ -296,6 +296,7 @@ func init() {
 
 	RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
 	RuntimeDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
+	RuntimeDepHandler[types.WASMX_MEMORY_RUST_i64] = memptrlen_i64.NewRuntimeHandler
 	RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i64] = memptrlen_i64.NewRuntimeHandler
 	RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i32] = memptrlen_i32.NewRuntimeHandler
 }

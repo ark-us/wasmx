@@ -17,7 +17,7 @@ type RuntimeHandler struct {
 var _ memc.RuntimeHandler = (*RuntimeHandler)(nil)
 
 func NewRuntimeHandler(vm memc.IVm) memc.RuntimeHandler {
-	return RuntimeHandler{vm, types.MEMORY_EXPORT_ALLOC, types.MEMORY_EXPORT_FREE}
+	return RuntimeHandler{vm, types.MEMORY_EXPORT_MALLOC, types.MEMORY_EXPORT_FREE}
 }
 
 func (h RuntimeHandler) GetVm() memc.IVm {
@@ -41,7 +41,7 @@ func (h RuntimeHandler) ReadMemFromPtr(pointer []interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ReadMemFromPtr(mem, pointer[0])
+	return ReadMemFromPtr(mem, h.vm, h.freeMemName, pointer[0])
 }
 func (h RuntimeHandler) AllocateWriteMem(data []byte) ([]interface{}, error) {
 	ptr, err := AllocateAndWriteMem(h.vm, h.allocMemName, data)

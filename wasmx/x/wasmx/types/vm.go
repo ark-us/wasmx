@@ -220,6 +220,7 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 
 	WASMX_MEMORY_ASSEMBLYSCRIPT: true,
 	WASMX_MEMORY_DEFAULT:        true,
+	WASMX_MEMORY_RUST_i64:       true,
 	WASMX_MEMORY_PTRLEN_i64:     true,
 	WASMX_MEMORY_PTRLEN_i32:     true,
 	WASMX_MEMORY_TAYLOR:         true,
@@ -358,7 +359,8 @@ var MEMORY_EXPORT_FREE = "free"
 var WASMX_MEMORY_DEFAULT = "memory_default_1"
 var WASMX_MEMORY_ASSEMBLYSCRIPT = "memory_assemblyscript_1"
 var WASMX_MEMORY_TAYLOR = "memory_taylor"
-var WASMX_MEMORY_PTRLEN_i64 = "memory_rust_i64_1" // TODO rename
+var WASMX_MEMORY_RUST_i64 = "memory_rust_i64_1"     // TODO replace with memory_ptrlen_i64_1, used by python interpreter
+var WASMX_MEMORY_PTRLEN_i64 = "memory_ptrlen_i64_1" // TODO rename
 var WASMX_MEMORY_PTRLEN_i32 = "memory_ptrlen_i32_1"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})

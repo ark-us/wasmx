@@ -25,7 +25,7 @@ var _ memc.RuntimeHandler = (*RuntimeHandler)(nil)
 // }
 
 func NewRuntimeHandler(vm memc.IVm) memc.RuntimeHandler {
-	return RuntimeHandler{vm, types.MEMORY_EXPORT_ALLOC, types.MEMORY_EXPORT_FREE}
+	return RuntimeHandler{vm, types.MEMORY_EXPORT_MALLOC, types.MEMORY_EXPORT_FREE}
 }
 
 func (h RuntimeHandler) GetVm() memc.IVm {

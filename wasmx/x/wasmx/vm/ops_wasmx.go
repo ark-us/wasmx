@@ -541,7 +541,7 @@ func ed25519Verify(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	if err != nil {
 		return nil, err
 	}
-	msgptr, ndx := memc.GetPointerFromParams(rnh, params, ndx)
+	msgptr, _ := memc.GetPointerFromParams(rnh, params, ndx)
 	msgbz, err := rnh.ReadMemFromPtr(msgptr)
 	if err != nil {
 		return nil, err
@@ -717,9 +717,6 @@ func wasmxLoggerInfo(_context interface{}, rnh memc.RuntimeHandler, params []int
 		return nil, err
 	}
 	ctx.Logger(ctx.Ctx).Info(msg, parts...)
-	// if strings.Contains(msg, "start block proposal") {
-	// 	panic("000")
-	// }
 	returns := make([]interface{}, 0)
 	return returns, nil
 }

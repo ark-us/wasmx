@@ -9,7 +9,6 @@ import (
 	imap "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
@@ -538,26 +537,4 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 // per session
 func buildConnectionId(id string, ctx *Context) string {
 	return fmt.Sprintf("%s_%s", ctx.Env.Contract.Address.String(), id)
-}
-
-func BuildWasmxImapVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	context := &Context{Context: ctx_}
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		vm.BuildFn("ConnectWithPassword", ConnectWithPassword, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ConnectOAuth2", ConnectOAuth2, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Listen", Listen, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Count", Count, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("UIDSearch", UIDSearch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ListMailboxes", ListMailboxes, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Fetch", Fetch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("CreateFolder", CreateFolder, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-
-		// TODO
-		// Move
-		// RenameMailbox
-	}
-
-	return vm.BuildModule(rnh, "imap", context, fndefs)
 }

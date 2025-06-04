@@ -9,79 +9,32 @@ import (
 	"unsafe"
 )
 
-//go:wasmimport wasmx storageStore
-func StorageStore_(keyPtr *uint8, keyLen uint32, valuePtr *uint8, valueLen uint32)
+//go:wasmimport imap ConnectWithPassword
+func ConnectWithPassword_(reqPtr int64) int64
 
-//go:wasmimport wasmx storageLoad
-func StorageLoad_(keyPtr *uint8, keyLen uint32) (*uint8, uint32)
+//go:wasmimport imap ConnectOAuth2
+func ConnectOAuth2_(reqPtr int64) int64
 
-//go:wasmimport wasmx getCallData
-func GetCallData_() (*uint8, uint32)
+//go:wasmimport imap Close
+func Close_(reqPtr int64) int64
 
-//go:wasmimport wasmx setFinishData
-func SetFinishData_(dataPtr *uint8, dataLen uint32)
+//go:wasmimport imap Listen
+func Listen_(reqPtr int64) int64
 
-//go:wasmimport wasmx setReturnData
-func SetReturnData_(dataPtr *uint8, dataLen uint32)
+//go:wasmimport imap Count
+func Count_(reqPtr int64) int64
 
-//go:wasmimport wasmx setExitCode
-func SetExitCode_(code int32, dataPtr *uint8, dataLen uint32)
+//go:wasmimport imap UIDSearch
+func UIDSearch_(reqPtr int64) int64
 
-//go:wasmimport wasmx getEnv
-func GetEnv_() (*uint8, uint32)
+//go:wasmimport imap ListMailboxes
+func ListMailboxes_(reqPtr int64) int64
 
-//go:wasmimport wasmx callClassic
-func CallClassic_(gasLimit int64, addressPtr *uint8, valuePtr *uint8, calldPtr *uint8, calldLen uint32) (*uint8, uint32)
+//go:wasmimport imap Fetch
+func Fetch_(reqPtr int64) int64
 
-//go:wasmimport wasmx callStatic
-func CallStatic_(gasLimit int64, addressPtr *uint8, calldPtr *uint8, calldLen uint32) (*uint8, uint32)
-
-//go:wasmimport wasmx getBlockHash
-func GetBlockHash_(blockNumber int64) (*uint8, uint32)
-
-//go:wasmimport wasmx getAccount
-func GetAccount_(addrPtr *uint8) (*uint8, uint32)
-
-//go:wasmimport wasmx getCodeHash
-func GetCodeHash_(addrPtr *uint8) (*uint8, uint32)
-
-//go:wasmimport wasmx getBalance
-func GetBalance_(addrPtr *uint8) (*uint8, uint32)
-
-//go:wasmimport wasmx keccak256
-func Keccak256_(dataPtr *uint8, dataLen uint32) (*uint8, uint32)
-
-//go:wasmimport wasmx createAccount
-func CreateAccount_(dataPtr *uint8, dataLen uint32) (*uint8, uint32)
-
-//go:wasmimport wasmx createAccount2
-func CreateAccount2_(dataPtr *uint8, dataLen uint32) (*uint8, uint32)
-
-//go:wasmimport wasmx sendCosmosMsg
-func SendCosmosMsg_(dataPtr *uint8, dataLen uint32) (*uint8, uint32)
-
-//go:wasmimport wasmx sendCosmosQuery
-func SendCosmosQuery_(dataPtr *uint8, dataLen uint32) (*uint8, uint32)
-
-//go:wasmimport wasmx getGasLeft
-func GetGasLeft_() int64
-
-//go:wasmimport wasmx bech32StringToBytes
-func Bech32StringToBytes_(dataPtr *uint8, dataLen uint32) *uint8
-
-//go:wasmimport wasmx bech32BytesToString
-func Bech32BytesToString_(dataPtr *uint8) (*uint8, uint32)
-
-//go:wasmimport wasmx log
-func Log_(ptr *uint8, size uint32)
-
-//go:wasmimport wasmx println
-func Println_(ptr *uint8, size uint32)
-
-type CallResult struct {
-	Success int    `json:"success"`
-	Data    []byte `json:"data"`
-}
+//go:wasmimport imap CreateFolder
+func CreateFolder_(reqPtr int64) int64
 
 func StorageStore(key, value []byte) {
 	Log([]byte("storagestore"), [][32]byte{})

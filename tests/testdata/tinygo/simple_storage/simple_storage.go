@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"math/big"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 )
@@ -47,7 +48,7 @@ func main() {
 	calld := &Calldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
-		wasmx.SetExitCode(2, []byte(err.Error()))
+		wasmx.Revert([]byte(err.Error()))
 	}
 
 	if calld.Store != nil {
@@ -80,7 +81,7 @@ func wrapStore(address string, key string, value string) {
 	if err != nil {
 		panic(err)
 	}
-	success, _ := wasmx.Call(50000000, address, make([]byte, 32), calld)
+	success, _ := wasmx.Call(address, nil, calld, big.NewInt(50000000))
 	if !success {
 		panic("call failed")
 	}
@@ -94,7 +95,7 @@ func wrapLoad(address string, key string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.CallStatic(50000000, address, calld)
+	success, data := wasmx.CallStatic(address, calld, big.NewInt(50000000))
 	if !success {
 		panic("call failed")
 	}
