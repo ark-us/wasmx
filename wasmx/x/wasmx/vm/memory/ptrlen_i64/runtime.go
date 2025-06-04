@@ -1,6 +1,8 @@
 package ptrlen_i64
 
 import (
+	"fmt"
+
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
@@ -66,11 +68,15 @@ func (h RuntimeHandler) ReadStringFromPtr(pointer interface{}) (string, error) {
 	return string(bz), nil
 }
 
-func ReadMemFromPtr(mem memc.IMemory, pointer interface{}) ([]byte, error) {
+func ReadMemFromPtr(mem memc.IMemory, vm memc.IVm, freeMemName string, pointer interface{}) ([]byte, error) {
 	ptr, size := DecodePtrI64(pointer.(int64))
 	data, err := mem.Read(ptr, size)
 	if err != nil {
 		return nil, err
+	}
+	err = memc.FreeMemory(vm, freeMemName, ptr)
+	if err != nil {
+		return nil, fmt.Errorf("cannot free memory: %s", err)
 	}
 	return data, nil
 }

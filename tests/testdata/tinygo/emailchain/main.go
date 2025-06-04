@@ -4,99 +4,51 @@ import (
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 )
 
-//go:wasm-module simplestorage
+//go:wasm-module emailprover
 //export instantiate
-func Instantiate() {
-	data := wasmx.GetCallData()
-	key := []byte("storagekey")
-	wasmx.StorageStore(key, data)
-}
-
-type StoreRequest struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type LoadRequest struct {
-	Key string `json:"key"`
-}
-
-type WrapStoreRequest struct {
-	Address string `json:"address"`
-	Key     string `json:"key"`
-	Value   string `json:"value"`
-}
-
-type WrapLoadRequest struct {
-	Address string `json:"address"`
-	Key     string `json:"key"`
-	Sm      any    `json:"sm"`
-}
-
-type Calldata struct {
-	Store     *StoreRequest     `json:"store,omitempty"`
-	Load      *LoadRequest      `json:"load,omitempty"`
-	WrapStore *WrapStoreRequest `json:"wrapStore,omitempty"`
-	WrapLoad  *WrapLoadRequest  `json:"wrapLoad,omitempty"`
-}
+func Instantiate() {}
 
 func main() {
 	databz := wasmx.GetCallData()
 	calld := &Calldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
-		wasmx.SetExitCode(2, []byte(err.Error()))
+		wasmx.Revert([]byte(err.Error()))
 	}
+	response := []byte{}
 
-	if calld.Store != nil {
-		storageStore([]byte(calld.Store.Key), []byte(calld.Store.Value))
-	} else if calld.Load != nil {
-		resp := storageLoad([]byte(calld.Load.Key))
-		wasmx.SetFinishData(resp)
-	} else if calld.WrapStore != nil {
-		wrapStore(calld.WrapStore.Address, calld.WrapStore.Key, calld.WrapStore.Value)
-	} else if calld.WrapLoad != nil {
-		resp := wrapLoad(calld.WrapStore.Address, calld.WrapStore.Key)
-		wasmx.SetFinishData(resp)
+	if calld.ConnectWithPassword != nil {
+		resp := vmimap.ConnectWithPassword(calld.ConnectWithPassword)
+		response, err = json.Marshal(&resp)
+	} else if calld.ConnectOAuth2 != nil {
+		resp := vmimap.ConnectOAuth2(calld.ConnectOAuth2)
+		response, err = json.Marshal(&resp)
+	} else if calld.Close != nil {
+		resp := vmimap.Close(calld.Close)
+		response, err = json.Marshal(&resp)
+	} else if calld.Listen != nil {
+		resp := vmimap.Listen(calld.Listen)
+		response, err = json.Marshal(&resp)
+	} else if calld.Count != nil {
+		resp := vmimap.Count(calld.Count)
+		response, err = json.Marshal(&resp)
+	} else if calld.UIDSearch != nil {
+		resp := vmimap.UIDSearch(calld.UIDSearch)
+		response, err = json.Marshal(&resp)
+	} else if calld.ListMailboxes != nil {
+		resp := vmimap.ListMailboxes(calld.ListMailboxes)
+		response, err = json.Marshal(&resp)
+	} else if calld.Fetch != nil {
+		resp := vmimap.Fetch(calld.Fetch)
+		response, err = json.Marshal(&resp)
+	} else if calld.CreateFolder != nil {
+		resp := vmimap.CreateFolder(calld.CreateFolder)
+		response, err = json.Marshal(&resp)
+	} else {
+		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}
-}
-
-func storageStore(key []byte, value []byte) {
-	wasmx.StorageStore(key, value)
-}
-
-func storageLoad(key []byte) []byte {
-	return wasmx.StorageLoad(key)
-}
-
-func wrapStore(address string, key string, value string) {
-	calldata := &Calldata{Store: &StoreRequest{
-		Key:   key,
-		Value: value,
-	}}
-	calld, err := json.Marshal(calldata)
-	if err != nil {
-		panic(err)
-	}
-	success, _ := wasmx.Call(50000000, address, make([]byte, 32), calld)
-	if !success {
-		panic("call failed")
-	}
-}
-
-func wrapLoad(address string, key string) []byte {
-	calldata := &Calldata{Load: &LoadRequest{
-		Key: key,
-	}}
-	calld, err := json.Marshal(calldata)
-	if err != nil {
-		panic(err)
-	}
-	success, data := wasmx.CallStatic(50000000, address, calld)
-	if !success {
-		panic("call failed")
-	}
-	return append(data, []byte("23")...)
+	wasmx.SetFinishData(response)
 }
