@@ -27,7 +27,7 @@ type RuntimeHandlerAS struct {
 
 var _ memc.RuntimeHandler = (*RuntimeHandlerAS)(nil)
 
-func NewRuntimeHandlerAS(vm memc.IVm) memc.RuntimeHandler {
+func NewRuntimeHandlerAS(vm memc.IVm, _ []types.SystemDep) memc.RuntimeHandler {
 	return RuntimeHandlerAS{vm}
 }
 
@@ -39,20 +39,28 @@ func (h RuntimeHandlerAS) GetMemory() (memc.IMemory, error) {
 	return h.vm.GetMemory()
 }
 
-func (h RuntimeHandlerAS) ReadMemFromPtr(pointer interface{}) ([]byte, error) {
+func (h RuntimeHandlerAS) PtrParamsLength() int {
+	return 1
+}
+
+func (h RuntimeHandlerAS) ReadMemFromPtr(pointer []interface{}) ([]byte, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
 		return nil, err
 	}
-	return ReadMemFromPtr(mem, pointer)
+	return ReadMemFromPtr(mem, pointer[0])
 }
 
-func (h RuntimeHandlerAS) AllocateWriteMem(data []byte) (interface{}, error) {
+func (h RuntimeHandlerAS) AllocateWriteMem(data []byte) ([]interface{}, error) {
 	mem, err := h.vm.GetMemory()
 	if err != nil {
-		return 0, err
+		return []interface{}{}, err
 	}
-	return AllocateWriteMem(h.vm, mem, data)
+	ptr, err := AllocateWriteMem(h.vm, mem, data)
+	if err != nil {
+		return []interface{}{}, err
+	}
+	return []interface{}{ptr}, nil
 }
 
 func (RuntimeHandlerAS) ReadJsString(arr []byte) string {

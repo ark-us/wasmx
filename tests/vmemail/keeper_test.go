@@ -44,6 +44,7 @@ var (
 	CLIENT_SECRET_WEB string
 	provider          string = "google"
 	runOAuth2         bool
+	isOAuth2          bool
 )
 
 // TestMain is the main entry point for the tests.
@@ -56,6 +57,7 @@ func TestMain(m *testing.M) {
 	flag.StringVar(&CLIENT_ID_WEB, "client-id", "", "Set the client ID")
 	flag.StringVar(&CLIENT_SECRET_WEB, "client-secret", "", "Set the client secret")
 	flag.StringVar(&provider, "provider", "", "Set the provider for the client ID")
+	flag.BoolVar(&isOAuth2, "is-oauth2", false, "password is access token")
 
 	flag.Parse()
 
@@ -72,6 +74,7 @@ type KeeperTestSuite struct {
 	CLIENT_ID_WEB     string
 	CLIENT_SECRET_WEB string
 	provider          string
+	isOAuth2          bool
 }
 
 var s *KeeperTestSuite
@@ -122,6 +125,7 @@ func TestKeeperTestSuite(t *testing.T) {
 	s.CLIENT_ID_WEB = CLIENT_ID_WEB
 	s.CLIENT_SECRET_WEB = CLIENT_SECRET_WEB
 	s.provider = provider
+	s.isOAuth2 = isOAuth2
 	suite.Run(t, s)
 
 	// Run Ginkgo integration tests

@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"math/big"
 
 	"github.com/tidwall/gjson"
 
-	wasmx "github.com/loredanacirstea/wasmx-tinygo"
+	wasmx "github.com/loredanacirstea/wasmx-env"
 )
 
 //go:wasm-module forward
@@ -65,7 +66,7 @@ func forward(value string, addrs []string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.Call(1000000, address, make([]byte, 32), calldata)
+	success, data := wasmx.Call(address, nil, calldata, big.NewInt(1000000))
 	if !success {
 		panic("[go] call failed")
 	}
@@ -81,7 +82,7 @@ func forwardGet(addrs []string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.CallStatic(1000000, address, calldata)
+	success, data := wasmx.CallStatic(address, calldata, big.NewInt(1000000))
 	if !success {
 		panic("[go] call_static failed")
 	}

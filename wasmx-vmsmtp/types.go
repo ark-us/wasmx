@@ -22,7 +22,8 @@ const (
 	RouterKey = ModuleName
 )
 
-const HOST_WASMX_ENV_SMTP_VER1 = "wasmx_smtp_1"
+const HOST_WASMX_ENV_SMTP_i32_VER1 = "wasmx_smtp_i32_1"
+const HOST_WASMX_ENV_SMTP_i64_VER1 = "wasmx_smtp_i64_1"
 
 const HOST_WASMX_ENV_SMTP_EXPORT = "wasmx_smtp_"
 

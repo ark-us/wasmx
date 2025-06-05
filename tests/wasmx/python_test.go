@@ -178,8 +178,7 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 	s.Require().NoError(err)
 	s.Require().True(txresp.IsErr(), txresp.GetLog())
 	s.Require().Contains(txresp.GetLog(), "failed to execute message", txresp.GetLog())
-	// TODO
-	// s.Require().Contains(txresp.GetLog(), "just error", txresp.GetLog())
+	s.Require().Contains(txresp.GetLog(), "just error", txresp.GetLog())
 	s.Commit()
 
 	// TODO proper getBlockHash

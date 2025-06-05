@@ -27,10 +27,10 @@ def main(dataObj):
         return instantiateAccount(*dataObj["instantiateAccount"])
     if "instantiateAccount2" in dataObj:
         return instantiateAccount2(*dataObj["instantiateAccount2"])
-    raise ValueError('Invalid function')
+    wasmx.set_exit_code(1, 'Invalid function')
 
 def justError():
-    raise ValueError('just error')
+    wasmx.set_exit_code(1, 'just error')
 
 def getEnv_():
     envbuf = wasmx.get_env()

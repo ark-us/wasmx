@@ -14,7 +14,8 @@ import (
 
 func GetRedirectUrl(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &GetRedirectUrlResponse{Error: ""}
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,8 @@ func GetRedirectUrl(_context interface{}, rnh memc.RuntimeHandler, params []inte
 func ExchangeCodeForToken(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &ExchangeCodeForTokenResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +70,8 @@ func ExchangeCodeForToken(_context interface{}, rnh memc.RuntimeHandler, params 
 func RefreshToken(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &RefreshTokenResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +101,8 @@ func RefreshToken(_context interface{}, rnh memc.RuntimeHandler, params []interf
 func Oauth2ClientGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &Oauth2ClientGetResponse{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +136,8 @@ func Oauth2ClientGet(_context interface{}, rnh memc.RuntimeHandler, params []int
 func Oauth2ClientDo(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &vmhttpclient.HttpResponseWrap{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +177,8 @@ func Oauth2ClientDo(_context interface{}, rnh memc.RuntimeHandler, params []inte
 func Oauth2ClientPost(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &vmhttpclient.HttpResponseWrap{Error: ""}
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -208,13 +214,7 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(responsebz)
 }
 
 func BuildWasmxOAuth2Client(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {

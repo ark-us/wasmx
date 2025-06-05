@@ -9,13 +9,13 @@ import (
 	imap "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,8 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 
 func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +162,8 @@ func connectCommon(
 
 func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +203,8 @@ func closeConnection(vctx *ImapContext, conn *ImapOpenConnection, connId string)
 
 func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +239,8 @@ func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 
 func Count(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +275,8 @@ func Count(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 
 func UIDSearch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +323,8 @@ func UIDSearch(_context interface{}, rnh memc.RuntimeHandler, params []interface
 
 func Fetch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +413,8 @@ func Fetch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 
 func ListMailboxes(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -446,7 +453,8 @@ func ListMailboxes(_context interface{}, rnh memc.RuntimeHandler, params []inter
 
 func CreateFolder(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -523,38 +531,10 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(responsebz)
 }
 
 // per session
 func buildConnectionId(id string, ctx *Context) string {
 	return fmt.Sprintf("%s_%s", ctx.Env.Contract.Address.String(), id)
-}
-
-func BuildWasmxImapVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	context := &Context{Context: ctx_}
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		vm.BuildFn("ConnectWithPassword", ConnectWithPassword, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ConnectOAuth2", ConnectOAuth2, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Listen", Listen, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Count", Count, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("UIDSearch", UIDSearch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ListMailboxes", ListMailboxes, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Fetch", Fetch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("CreateFolder", CreateFolder, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-
-		// TODO
-		// Move
-		// RenameMailbox
-	}
-
-	return vm.BuildModule(rnh, "imap", context, fndefs)
 }

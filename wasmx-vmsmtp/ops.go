@@ -7,13 +7,13 @@ import (
 
 	gosmtp "github.com/emersion/go-smtp"
 
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,8 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 
 func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +164,8 @@ func connectCommon(
 
 func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +207,8 @@ func closeConnection(vctx *SmtpContext, conn *SmtpOpenConnection, connId string)
 
 func Quit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +241,8 @@ func Quit(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 
 func Extension(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +272,8 @@ func Extension(_context interface{}, rnh memc.RuntimeHandler, params []interface
 
 func Noop(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +305,8 @@ func Noop(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 
 func Verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +338,8 @@ func Verify(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 
 func SupportsAuth(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +368,8 @@ func SupportsAuth(_context interface{}, rnh memc.RuntimeHandler, params []interf
 
 func MaxMessageSize(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +399,8 @@ func MaxMessageSize(_context interface{}, rnh memc.RuntimeHandler, params []inte
 
 func SendMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +432,8 @@ func SendMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 }
 
 func BuildMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	requestbz, err := rnh.ReadMemFromPtr(params[0])
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
@@ -447,36 +457,10 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	ptr, err := rnh.AllocateWriteMem(responsebz)
-	if err != nil {
-		return nil, err
-	}
-	returns := make([]interface{}, 1)
-	returns[0] = ptr
-	return returns, nil
+	return rnh.AllocateWriteMem(responsebz)
 }
 
 // per session
 func buildConnectionId(id string, ctx *Context) string {
 	return fmt.Sprintf("%s_%s", ctx.Env.Contract.Address.String(), id)
-}
-
-func BuildWasmxSmtpVM(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	context := &Context{Context: ctx_}
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		vm.BuildFn("ConnectWithPassword", ConnectWithPassword, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ConnectOAuth2", ConnectOAuth2, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Quit", Quit, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Extension", Extension, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Noop", Noop, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("SendMail", SendMail, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Verify", Verify, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("SupportsAuth", SupportsAuth, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("MaxMessageSize", MaxMessageSize, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("BuildMail", BuildMail, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-	}
-
-	return vm.BuildModule(rnh, "smtp", context, fndefs)
 }

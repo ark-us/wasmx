@@ -45,15 +45,18 @@ var (
 	//go:embed 22.secret_sharing.wasm
 	secret_sharing []byte
 
+	// https://github.com/loredanacirstea/assembly-examples/tree/master/interpreters
 	//go:embed 23.evm_shanghai.wasm
 	interpreter_evm_shanghai []byte
 
 	//go:embed 24.alias_eth.wasm
 	alias_eth []byte
 
+	// https://github.com/loredanacirstea/wasmx-rustpython
 	//go:embed 26.rustpython.wasm
 	rustpython []byte
 
+	// https://github.com/loredanacirstea/wasi-lab-private/tree/mythos/qjs-wasi
 	//go:embed 27.quickjs.wasm
 	quickjs []byte
 

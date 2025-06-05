@@ -9,7 +9,9 @@ import (
 	memas "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/assemblyscript"
 	membase "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/base"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
-	memrust "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/rust"
+	memptrlen_i32 "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/ptrlen_i32"
+	memptrlen_i64 "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/ptrlen_i64"
+	memrust_i64 "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/rust"
 	memtay "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/taylor"
 )
 
@@ -196,8 +198,13 @@ func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDe
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not register wasi module")
 	}
-	// TODO BuildWasiWasmxEnv should be a runtime handler for Rust, so we can enable WASI for any language/encoding
-	env1, err := BuildWasiWasmxEnv(context, rnh)
+	return nil
+}
+
+func InitiateWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+	vm := rnh.GetVm()
+	// TODO javascript interpreter change!!
+	env1, err := BuildWasmxEnvRusti64(context, rnh)
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not build wasmx wasi module")
 	}
@@ -248,7 +255,7 @@ var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
 
 var DependenciesMap = map[string]bool{}
 
-var RuntimeDepHandler = map[string]func(vm memc.IVm) memc.RuntimeHandler{}
+var RuntimeDepHandler = map[string]func(vm memc.IVm, sysdeps []types.SystemDep) memc.RuntimeHandler{}
 
 func init() {
 	SystemDepHandler[types.SYS_ENV_1] = InitiateSysEnv1
@@ -256,6 +263,7 @@ func init() {
 	SystemDepHandler[types.WASMX_ENV_2] = InitiateWasmxEnv2
 	SystemDepHandler[types.WASMX_ENVi32_2] = InitiateWasmxEnvi32
 	SystemDepHandler[types.WASMX_ENVi64_2] = InitiateWasmxEnvi64
+	SystemDepHandler[types.WASMX_ENV_RUSTi64_2] = InitiateWasmxEnvRusti64
 	SystemDepHandler[types.WASMX_CORE_ENVi32_1] = InitiateWasmxCoreEnvi32
 	SystemDepHandler[types.WASMX_CORE_ENVi64_1] = InitiateWasmxCoreEnvi64
 	SystemDepHandler[types.WASI_SNAPSHOT_PREVIEW1] = InitiateWasi
@@ -295,7 +303,9 @@ func init() {
 
 	RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
 	RuntimeDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
-	RuntimeDepHandler[types.WASMX_MEMORY_RUSTi64] = memrust.NewRuntimeHandlerRust
+	RuntimeDepHandler[types.WASMX_MEMORY_RUST_i64] = memrust_i64.NewRuntimeHandler
+	RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i64] = memptrlen_i64.NewRuntimeHandler
+	RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i32] = memptrlen_i32.NewRuntimeHandler
 }
 
 func SetSystemDepHandler(

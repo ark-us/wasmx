@@ -177,6 +177,7 @@ var WASMX_ENV_1 = "wasmx_env_1"
 var WASMX_ENV_2 = "wasmx_env_2"
 var WASMX_ENVi32_2 = "wasmx_env_i32_2"
 var WASMX_ENVi64_2 = "wasmx_env_i64_2"
+var WASMX_ENV_RUSTi64_2 = "wasmx_env_rusti64_2"
 
 var WASMX_CORE_ENVi32_1 = "wasmx_env_core_i32_1"
 var WASMX_CORE_ENVi64_1 = "wasmx_env_core_i64_1"
@@ -220,7 +221,9 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 
 	WASMX_MEMORY_ASSEMBLYSCRIPT: true,
 	WASMX_MEMORY_DEFAULT:        true,
-	WASMX_MEMORY_RUSTi64:        true,
+	WASMX_MEMORY_RUST_i64:       true,
+	WASMX_MEMORY_PTRLEN_i64:     true,
+	WASMX_MEMORY_PTRLEN_i32:     true,
 	WASMX_MEMORY_TAYLOR:         true,
 }
 
@@ -349,15 +352,20 @@ var HTTPSERVER_REGISTRY_v001 = "httpserver_registry_0.0.1"
 // var ALLOC_DEFAULT = "alloc_default"
 var MEMORY_EXPORT_MALLOC = "malloc"
 var MEMORY_EXPORT_ALLOCATE = "allocate"
-var MEMORY_EXPORT_ALLOC = "alloc"
+var MEMORY_EXPORT_ALLOC = "alloc" // used for python interpreter (could not use malloc)
 var MEMORY_EXPORT_AS = "__new"
 
 var MEMORY_EXPORT_FREE = "free"
 
+var MEMORY_ENTRYPOINT_ALLOC = "memory_entrypoint_alloc:"
+var MEMORY_ENTRYPOINT_FREE = "memory_entrypoint_free:"
+
 var WASMX_MEMORY_DEFAULT = "memory_default_1"
 var WASMX_MEMORY_ASSEMBLYSCRIPT = "memory_assemblyscript_1"
 var WASMX_MEMORY_TAYLOR = "memory_taylor"
-var WASMX_MEMORY_RUSTi64 = "memory_rust_i64_1"
+var WASMX_MEMORY_RUST_i64 = "memory_rust_i64_1"     // TODO replace with memory_ptrlen_i64_1, used by python interpreter
+var WASMX_MEMORY_PTRLEN_i64 = "memory_ptrlen_i64_1" // TODO rename
+var WASMX_MEMORY_PTRLEN_i32 = "memory_ptrlen_i32_1"
 
 var TRUSTED_ADDRESS_LIMIT = big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 128})
 

@@ -101,7 +101,7 @@ func getRuntimeHandler(newIVmFn memc.NewIVmFn, ctx sdk.Context, systemDeps []typ
 	}
 	// default is assemblyscript memory
 	// if we change this, we should add the dependency in the system contracts
-	return RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT](vm)
+	return RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT](vm, systemDeps)
 }
 
 func getRuntimeHandlerFromDeps(vm memc.IVm, systemDeps []types.SystemDep) memc.RuntimeHandler {
@@ -111,7 +111,7 @@ func getRuntimeHandlerFromDeps(vm memc.IVm, systemDeps []types.SystemDep) memc.R
 			handler, found = RuntimeDepHandler[systemDep.Label]
 		}
 		if found {
-			return handler(vm)
+			return handler(vm, systemDeps)
 		}
 	}
 	// look in dep.Deps
@@ -530,6 +530,8 @@ func handleContractResponse(context *Context, vm memc.IVm, isdebug bool) types.C
 	messages := context.Messages
 	var events []types.Event
 	// module and contract address for the main transaction are added later
+	// TODO fixme duplicate keys are shown once
+	// we may need to add indexes or use arrays for values
 	for i, log := range logs {
 		contractAddressStr := log.ContractAddress.String()
 		var attributes []types.EventAttribute

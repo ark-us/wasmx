@@ -248,7 +248,7 @@ func InterpreterPrecompiles() SystemContracts {
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_INTERPRETER, Label: INTERPRETER_PYTHON},
 			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
+			Deps:        []string{MEMORY_ENTRYPOINT_ALLOC + MEMORY_EXPORT_ALLOC},
 		},
 		{
 			Address:     ADDR_INTERPRETER_JS,

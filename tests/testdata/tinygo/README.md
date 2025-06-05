@@ -14,13 +14,16 @@ tinygo version 0.37.0 darwin/arm64 (using go version go1.23.2 and LLVM version 1
 
 tinygo build -o add.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi ./add
 
-tinygo build -o add.wasm -target=wasi ./add
-
-cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -target=wasi . && cd ..
-
 cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
 
-cd forward && GOWORK=off tinygo build -o ../forward.wasm -target=wasi . && cd ..
+cd forward && GOWORK=off tinygo build -o ../forward.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+
+cd imaptest && GOWORK=off tinygo build -o ../imaptest.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+
+cd smtptest && GOWORK=off tinygo build -o ../smtptest.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+
+cd emailchain && GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+
 
 ```
 
