@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
+	_ "github.com/loredanacirstea/wasmx-env-httpclient"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 )
 
