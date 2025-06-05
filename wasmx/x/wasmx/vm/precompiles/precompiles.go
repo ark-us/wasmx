@@ -51,6 +51,7 @@ var (
 	//go:embed 24.alias_eth.wasm
 	alias_eth []byte
 
+	// https://github.com/loredanacirstea/wasmx-rustpython
 	//go:embed 26.rustpython.wasm
 	rustpython []byte
 
