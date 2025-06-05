@@ -16,11 +16,11 @@ import (
 // tinygo does not support multi value return
 // so we need to pack (*uint8, uint32) into a int64
 
-//go:wasm-module simplestorage
+//go:wasm-module wasmx
 //export memory_ptrlen_i64_1
 func memory_ptrlen_i64_1() {}
 
-//go:wasm-module simplestorage
+//go:wasm-module wasmx
 //export wasmx_env_i64_2
 func wasmx_env_i64_2() {}
 

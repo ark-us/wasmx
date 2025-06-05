@@ -9,7 +9,7 @@ import (
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
-//go:wasm-module emailprover
+//go:wasm-module imap
 //export wasmx_imap_i64_1
 func wasmx_imap_i64_1() {}
 

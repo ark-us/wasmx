@@ -5,12 +5,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func RequestMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	response := &HttpResponseWrap{Error: ""}
-	return prepareResponse(rnh, response)
-}
-
-func BuildWasmxHttpClientMock(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
+func BuildWasmxHttpClientMock_i32(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	context := &Context{Context: ctx_}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{

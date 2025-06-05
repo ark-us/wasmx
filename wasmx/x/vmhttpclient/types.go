@@ -17,7 +17,8 @@ const (
 	RouterKey = ModuleName
 )
 
-const HOST_WASMX_ENV_HTTP_VER1 = "wasmx_httpclient_1"
+const HOST_WASMX_ENV_HTTP_i32_VER1 = "wasmx_httpclient_i32_1"
+const HOST_WASMX_ENV_HTTP_i64_VER1 = "wasmx_httpclient_i64_1"
 
 const HOST_WASMX_ENV_HTTP_EXPORT = "wasmx_httpclient_"
 
