@@ -22,9 +22,10 @@ const (
 	RouterKey = ModuleName
 )
 
-const HOST_WASMX_ENV_OAUTH2CLIENT_VER1 = "wasmx_oauth2client_1"
-
 const HOST_WASMX_ENV_OAUTH2CLIENT_EXPORT = "wasmx_oauth2client_"
+
+const HOST_WASMX_ENV_OAUTH2CLIENT_i32_VER1 = "wasmx_oauth2client_i32_1"
+const HOST_WASMX_ENV_OAUTH2CLIENT_i64_VER1 = "wasmx_oauth2client_i64_1"
 
 const HOST_WASMX_ENV_OAUTH2CLIENT = "oauth2client"
 

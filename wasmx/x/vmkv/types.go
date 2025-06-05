@@ -21,7 +21,8 @@ const (
 	RouterKey = ModuleName
 )
 
-const HOST_WASMX_ENV_KVDB_VER1 = "wasmx_kvdb_1"
+const HOST_WASMX_ENV_KVDB_i32_VER1 = "wasmx_kvdb_i32_1"
+const HOST_WASMX_ENV_KVDB_i64_VER1 = "wasmx_kvdb_i64_1"
 
 const HOST_WASMX_ENV_KVDB_EXPORT = "wasmx_kvdb_"
 

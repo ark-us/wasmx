@@ -21,7 +21,8 @@ const (
 	RouterKey = ModuleName
 )
 
-const HOST_WASMX_ENV_SQL_VER1 = "wasmx_sql_1"
+const HOST_WASMX_ENV_SQL_i32_VER1 = "wasmx_sql_i32_1"
+const HOST_WASMX_ENV_SQL_i64_VER1 = "wasmx_sql_i64_1"
 
 const HOST_WASMX_ENV_SQL_EXPORT = "wasmx_sql_"
 

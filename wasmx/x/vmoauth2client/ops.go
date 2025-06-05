@@ -7,7 +7,6 @@ import (
 	"io"
 
 	vmhttpclient "github.com/loredanacirstea/wasmx/x/vmhttpclient"
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	"golang.org/x/oauth2"
 )
@@ -215,19 +214,4 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 		return nil, err
 	}
 	return rnh.AllocateWriteMem(responsebz)
-}
-
-func BuildWasmxOAuth2Client(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	context := &Context{Context: ctx_}
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		vm.BuildFn("GetRedirectUrl", GetRedirectUrl, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ExchangeCodeForToken", ExchangeCodeForToken, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("RefreshToken", RefreshToken, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Get", Oauth2ClientGet, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Do", Oauth2ClientDo, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Post", Oauth2ClientPost, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-	}
-
-	return vm.BuildModule(rnh, "oauth2client", context, fndefs)
 }
