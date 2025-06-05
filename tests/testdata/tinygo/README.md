@@ -20,6 +20,8 @@ cd forward && GOWORK=off tinygo build -o ../forward.wasm -no-debug -panic=trap -
 
 cd imaptest && GOWORK=off tinygo build -o ../imaptest.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
 
+cd smtptest && GOWORK=off tinygo build -o ../smtptest.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+
 cd emailchain && GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
 
 
