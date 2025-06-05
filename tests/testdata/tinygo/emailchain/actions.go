@@ -22,6 +22,7 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 		resp.Error = err.Error()
 		return resp
 	}
+	resp.Verifications = verifications
 
 	verificationsbz, err := json.Marshal(verifications)
 	if err != nil {
@@ -30,7 +31,6 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 	}
 	fmt.Printf("DKIM verifications: %s\n", string(verificationsbz))
 
-	// Process verification results
 	allValid := true
 	for _, v := range verifications {
 		if v.Valid {

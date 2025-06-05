@@ -14,6 +14,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
+	testdata "github.com/loredanacirstea/mythos-tests/vmemail/testdata"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
@@ -190,4 +191,53 @@ func (suite *KeeperTestSuite) TestEmailTinyGoSmtp() {
 	err = appA.DecodeExecuteResponse(res, rescl)
 	suite.Require().NoError(err)
 	suite.Require().Equal("", rescl.Error)
+}
+
+type VerifyDKIMTestRequest struct {
+	VerifyDKIM *VerifyDKIMTestData `json:"VerifyDKIM,omitempty"`
+}
+
+type VerifyDKIMTestData struct {
+	EmailRaw string `json:"email_raw"`
+}
+
+func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
+	wasmbin := tinygo.EmailChain
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	// Store the emailchain contract and instantiate it
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "emailchain", nil)
+
+	// Define email input for DKIM verification
+	emailRaw := testdata.Email1
+
+	// Prepare the VerifyDKIM request
+	msg := &VerifyDKIMTestRequest{
+		VerifyDKIM: &VerifyDKIMTestData{
+			EmailRaw: emailRaw,
+		},
+	}
+	data, err := json.Marshal(msg)
+	suite.Require().NoError(err)
+
+	// Execute the VerifyDKIM message
+	res := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
+	resp := make(map[string]interface{})
+	err = json.Unmarshal(res.Data, &resp)
+	suite.Require().NoError(err)
+	suite.Require().Equal(resp["error"], "")
+	verifications := resp["verifications"].([]interface{})
+	suite.Require().Greater(len(verifications), 0)
+	fmt.Println("--verifications--", verifications)
+
+	for _, v := range verifications {
+		verification := v.(map[string]interface{})
+		suite.Require().Equal(verification["status"], "success")
+	}
 }

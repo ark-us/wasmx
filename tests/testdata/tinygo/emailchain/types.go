@@ -37,6 +37,7 @@ type VerifyDKIMRequest struct {
 }
 
 type VerifyDKIMResponse struct {
-	Error   string `json:"error"`
-	IsValid bool   `json:"is_valid"`
+	Error         string             `json:"error"`
+	Verifications []DKIMVerification `json:"verifications"`
+	IsValid       bool               `json:"is_valid"`
 }
