@@ -29,23 +29,11 @@ func main() {
 	} else if calld.Close != nil {
 		resp := vmimap.Close(calld.Close)
 		response, err = json.Marshal(&resp)
-	} else if calld.Listen != nil {
-		resp := vmimap.Listen(calld.Listen)
+	} else if calld.SignDKIM != nil {
+		resp := SignDKIM(calld.SignDKIM)
 		response, err = json.Marshal(&resp)
-	} else if calld.Count != nil {
-		resp := vmimap.Count(calld.Count)
-		response, err = json.Marshal(&resp)
-	} else if calld.UIDSearch != nil {
-		resp := vmimap.UIDSearch(calld.UIDSearch)
-		response, err = json.Marshal(&resp)
-	} else if calld.ListMailboxes != nil {
-		resp := vmimap.ListMailboxes(calld.ListMailboxes)
-		response, err = json.Marshal(&resp)
-	} else if calld.Fetch != nil {
-		resp := vmimap.Fetch(calld.Fetch)
-		response, err = json.Marshal(&resp)
-	} else if calld.CreateFolder != nil {
-		resp := vmimap.CreateFolder(calld.CreateFolder)
+	} else if calld.VerifyDKIM != nil {
+		resp := VerifyDKIM(calld.VerifyDKIM)
 		response, err = json.Marshal(&resp)
 	} else {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
