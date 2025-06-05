@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/emersion/go-msgauth v0.7.0
 	github.com/loredanacirstea/wasmx-env v0.0.0
+	github.com/loredanacirstea/wasmx-env-httpclient v0.0.0
 	github.com/loredanacirstea/wasmx-env-imap v0.0.0
 )
 
@@ -24,3 +25,5 @@ replace github.com/loredanacirstea/wasmx-env-imap v0.0.0 => ../wasmx-env-imap
 replace github.com/loredanacirstea/wasmx-env-smtp v0.0.0 => ../wasmx-env-smtp
 
 replace github.com/loredanacirstea/wasmx-utils v0.0.0 => ../wasmx-utils
+
+replace github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 => ../wasmx-env-httpclient
