@@ -530,6 +530,8 @@ func handleContractResponse(context *Context, vm memc.IVm, isdebug bool) types.C
 	messages := context.Messages
 	var events []types.Event
 	// module and contract address for the main transaction are added later
+	// TODO fixme duplicate keys are shown once
+	// we may need to add indexes or use arrays for values
 	for i, log := range logs {
 		contractAddressStr := log.ContractAddress.String()
 		var attributes []types.EventAttribute
