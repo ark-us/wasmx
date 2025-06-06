@@ -11,6 +11,7 @@ func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
 }
 
 func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
+	fmt.Println("--VerifyDKIM--" + req.EmailRaw)
 	resp := VerifyDKIMResponse{Error: ""}
 
 	// Create custom DKIM verifier with DNS-over-HTTPS
@@ -18,6 +19,7 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 
 	// Verify DKIM signatures
 	verifications, err := verifier.VerifyDKIMSignatures(req.EmailRaw)
+	fmt.Println("--VerifyDKIM verifications--", err, verifications)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
