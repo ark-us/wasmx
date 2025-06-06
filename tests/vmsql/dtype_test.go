@@ -240,13 +240,13 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	suite.Require().Equal(1, len(table2rows))
 
 	// readField
-	cmd = &vmsql.CalldataDType{ReadField: &vmsql.ReadFieldRequest{Identifier: vmsql.TableIdentifier{
+	cmd = &vmsql.CalldataDType{ReadFields: &vmsql.ReadFieldsRequest{Identifier: vmsql.TableIdentifier{
 		DbConnectionId: identif.DbConnectionId,
 		DbId:           identif.DbId,
 		TableId:        tableId2,
 	},
-		FieldName: "table1_id",
-		Data:      []byte(`{"id":1}`),
+		Fields: []string{"table1_id"},
+		Data:   []byte(`{"id":1}`),
 	}}
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)

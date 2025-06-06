@@ -75,10 +75,9 @@ type ReadDTypeRequest struct {
 	Data       []byte          `json:"data"`
 }
 
-type ReadFieldRequest struct {
+type ReadFieldsRequest struct {
 	Identifier TableIdentifier `json:"identifier"`
-	FieldId    int64           `json:"fieldId"`
-	FieldName  string          `json:"fieldName"`
+	Fields     []string        `json:"fields"`
 	Data       []byte          `json:"data"`
 }
 
@@ -113,6 +112,6 @@ type CalldataDType struct {
 	Update             *UpdateDTypeRequest      `json:"Update,omitempty"`
 	Delete             *DeleteDTypeRequest      `json:"Delete,omitempty"`
 	Read               *ReadDTypeRequest        `json:"Read,omitempty"`
-	ReadField          *ReadFieldRequest        `json:"ReadField,omitempty"`
+	ReadFields         *ReadFieldsRequest       `json:"ReadFields,omitempty"`
 	BuildSchema        *BuildSchemaRequest      `json:"BuildSchema,omitempty"`
 }
