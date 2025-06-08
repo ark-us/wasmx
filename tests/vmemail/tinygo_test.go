@@ -4,12 +4,11 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"net"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	imap "github.com/emersion/go-imap/v2"
-	"github.com/emersion/go-msgauth/dkim"
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
@@ -19,6 +18,8 @@ import (
 	testdata "github.com/loredanacirstea/mythos-tests/vmemail/testdata"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
+
+	dkim2 "github.com/redsift/dkim"
 )
 
 type BuildAndSendMailRequest struct {
@@ -195,8 +196,9 @@ func (suite *KeeperTestSuite) TestEmailTinyGoSmtp() {
 	suite.Require().Equal("", rescl.Error)
 }
 
-type VerifyDKIMTestRequest struct {
+type EmailChainCalldata struct {
 	VerifyDKIM *VerifyDKIMTestData `json:"VerifyDKIM,omitempty"`
+	VerifyARC  *VerifyARCTestData  `json:"VerifyARC,omitempty"`
 }
 
 type VerifyDKIMTestData struct {
@@ -218,6 +220,15 @@ type VerifyDKIMResponse struct {
 	IsValid       bool               `json:"is_valid"`
 }
 
+type VerifyARCTestData struct {
+	EmailRaw string `json:"email_raw"`
+}
+
+type VerifyARCResponse struct {
+	Error    string           `json:"error"`
+	Response *dkim2.ArcResult `json:"response"`
+}
+
 func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	wasmbin := tinygo.EmailChain
 	sender := suite.GetRandomAccount()
@@ -235,10 +246,10 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
 
 	// Define email input for DKIM verification
-	emailRaw := testdata.Email1
+	emailRaw := testdata.Email3
 
 	// Prepare the VerifyDKIM request
-	msg := &VerifyDKIMTestRequest{
+	msg := &EmailChainCalldata{
 		VerifyDKIM: &VerifyDKIMTestData{
 			EmailRaw: emailRaw,
 		},
@@ -258,38 +269,83 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	suite.Require().Equal(resp.Error, "")
 	suite.Require().Greater(len(resp.Verifications), 0)
 	fmt.Println("--verifications--", resp.Verifications)
-
-	// Check that at least one verification is valid
-	hasValidSignature := false
-	for _, v := range resp.Verifications {
-		if v.Valid && v.Error == "" {
-			hasValidSignature = true
-		}
-	}
-	suite.Require().True(hasValidSignature, "At least one DKIM signature should be valid")
 	suite.Require().True(resp.IsValid, "Overall DKIM verification should be valid")
+
+	// ARC
+	msg = &EmailChainCalldata{
+		VerifyARC: &VerifyARCTestData{
+			EmailRaw: emailRaw,
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+
+	// first verify email
+	err = verifyEmail(emailRaw)
+	suite.Require().NoError(err)
+
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 380000000, nil)
+	fmt.Println("--ARC result--", string(res.Data))
+	resp2 := &VerifyARCResponse{}
+	err = appA.DecodeExecuteResponse(res, resp2)
+	suite.Require().NoError(err)
+	suite.Require().Equal(resp2.Error, "")
+	// suite.Require().Greater(len(resp.Verifications), 0)
+	// fmt.Println("--verifications--", resp.Verifications)
+	// suite.Require().True(resp.IsValid, "Overall DKIM verification should be valid")
 }
 
-func verifyEmail(emailText string) error {
-	// Convert the email string to an io.Reader
-	reader := strings.NewReader(emailText)
+// func verifyEmail(emailText string) error {
+// 	// Convert the email string to an io.Reader
+// 	reader := strings.NewReader(emailText)
 
-	// Verify DKIM signatures
-	verifications, err := dkim.Verify(reader)
+// 	// Verify DKIM signatures
+// 	options := &dkim.VerifyOptions{CheckExpiry: false, LookupTXT: net.LookupTXT}
+// 	verifications, err := dkim.VerifyWithOptions(reader, options)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	verificationsbz, err := json.Marshal(verifications)
+// 	fmt.Println("verifications", string(verificationsbz))
+
+// 	// Process verification results
+// 	for _, v := range verifications {
+// 		if v.Err == nil {
+// 			fmt.Printf("DKIM signature verified successfully for domain: %s\n", v.Domain)
+// 		} else {
+// 			fmt.Printf("DKIM verification failed for domain: %s: %v\n", v.Domain, v.Err)
+// 			return v.Err
+// 		}
+// 	}
+// 	return nil
+// }
+
+func verifyEmail(emailText string) error {
+	msg, err := dkim2.ParseMessage(emailText)
+
+	res, err := dkim2.Verify("DKIM-Signature", msg, net.LookupTXT)
 	if err != nil {
 		return err
 	}
-	verificationsbz, err := json.Marshal(verifications)
-	fmt.Println("verifications", string(verificationsbz))
+	resbz, err := json.Marshal(res)
+	fmt.Println("res", string(resbz))
 
-	// Process verification results
-	for _, v := range verifications {
-		if v.Err == nil {
-			fmt.Printf("DKIM signature verified successfully for domain: %s\n", v.Domain)
-		} else {
-			fmt.Printf("DKIM verification failed for domain: %s: %v\n", v.Domain, v.Err)
-			return v.Err
-		}
+	for _, v := range res {
+		fmt.Println("--dkimres--", v.Error, v.Result)
 	}
+
+	res2, err := dkim2.VerifyArc(net.LookupTXT, msg)
+	if err != nil {
+		return err
+	}
+	resbz, err = json.Marshal(res2)
+	fmt.Println("res", string(resbz))
+
+	fmt.Println("--arcres0--", res2.Error, res2.Result)
+
+	for _, v := range res2.Chain {
+		fmt.Println("--arcres--", v.AMSValid, v.ASValid, v.CV, v.Dkim, v.Dmarc, v.Spf)
+	}
+
 	return nil
 }

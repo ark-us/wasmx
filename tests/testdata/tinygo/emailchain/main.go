@@ -36,6 +36,9 @@ func main() {
 	} else if calld.VerifyDKIM != nil {
 		resp := VerifyDKIM(calld.VerifyDKIM)
 		response, err = json.Marshal(&resp)
+	} else if calld.VerifyARC != nil {
+		resp := VerifyARC(calld.VerifyARC)
+		response, err = json.Marshal(&resp)
 	} else {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}

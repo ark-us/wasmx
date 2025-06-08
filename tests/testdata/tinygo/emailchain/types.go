@@ -1,7 +1,10 @@
 package main
 
 import (
+	"github.com/emersion/go-msgauth/dkim"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+
+	dkim2 "github.com/redsift/dkim"
 )
 
 type Calldata struct {
@@ -12,6 +15,7 @@ type Calldata struct {
 	BuildAndSend        *BuildAndSendMailRequest            `json:"BuildAndSend,omitempty"`
 	SignDKIM            *SignDKIMRequest                    `json:"SignDKIM,omitempty"`
 	VerifyDKIM          *VerifyDKIMRequest                  `json:"VerifyDKIM,omitempty"`
+	VerifyARC           *VerifyDKIMRequest                  `json:"VerifyARC,omitempty"`
 }
 
 type BuildAndSendMailRequest struct {
@@ -37,7 +41,13 @@ type VerifyDKIMRequest struct {
 }
 
 type VerifyDKIMResponse struct {
-	Error         string             `json:"error"`
-	Verifications []DKIMVerification `json:"verifications"`
-	IsValid       bool               `json:"is_valid"`
+	Error string `json:"error"`
+	// Verifications []DKIMVerification `json:"verifications"`
+	Verifications []*dkim.Verification `json:"verifications"`
+	IsValid       bool                 `json:"is_valid"`
+}
+
+type VerifyARCResponse struct {
+	Error    string           `json:"error"`
+	Response *dkim2.ArcResult `json:"response"`
 }

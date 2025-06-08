@@ -3,10 +3,37 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/emersion/go-msgauth/dkim"
+
+	dkim2 "github.com/redsift/dkim"
 )
 
 func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
 	resp := SignDKIMResponse{Error: ""}
+	return resp
+}
+
+func VerifyARC(req *VerifyDKIMRequest) VerifyARCResponse {
+	resp := VerifyARCResponse{Error: ""}
+	msg, err := dkim2.ParseMessage(req.EmailRaw)
+	if err != nil {
+		resp.Error = err.Error()
+		return resp
+	}
+
+	dnsResolver := NewDNSResolver()
+	lookupTxt := func(name string) ([]string, error) {
+		return dnsResolver.LookupTXT(name)
+	}
+
+	res, err := dkim2.VerifyArc(lookupTxt, msg)
+	if err != nil {
+		resp.Error = err.Error()
+		return resp
+	}
+	resp.Response = res
 	return resp
 }
 
@@ -15,11 +42,23 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 	resp := VerifyDKIMResponse{Error: ""}
 
 	// Create custom DKIM verifier with DNS-over-HTTPS
-	verifier := NewCustomDKIMVerifier()
+	// verifier := NewCustomDKIMVerifier()
 
 	// Verify DKIM signatures
-	verifications, err := verifier.VerifyDKIMSignatures(req.EmailRaw)
-	fmt.Println("--VerifyDKIM verifications--", err, verifications)
+	// verifications, err := verifier.VerifyDKIMSignatures(req.EmailRaw)
+
+	// Create DNS resolver for DKIM verification
+	dnsResolver := NewDNSResolver()
+
+	reader := strings.NewReader(req.EmailRaw)
+	// Create custom DKIM verification options with our DNS resolver
+	options := &dkim.VerifyOptions{
+		LookupTXT: func(name string) ([]string, error) {
+			return dnsResolver.LookupTXT(name)
+		},
+	}
+
+	verifications, err := dkim.VerifyWithOptions(reader, options)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
@@ -35,16 +74,11 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 
 	allValid := true
 	for _, v := range verifications {
-		if v.Valid {
-			fmt.Printf("DKIM signature verified successfully for domain: %s\n", v.Domain)
-		} else {
-			fmt.Printf("DKIM verification failed for domain: %s: %s\n", v.Domain, v.Error)
+		if v.Err != nil {
 			allValid = false
+			break
 		}
-		fmt.Printf("* Domain: %s, Selector: %s, Algorithm: %s\n", v.Domain, v.Selector, v.Algorithm)
-		fmt.Printf("* Header Keys: %v\n", v.HeaderKeys)
 	}
-
 	resp.IsValid = allValid
 	return resp
 }
