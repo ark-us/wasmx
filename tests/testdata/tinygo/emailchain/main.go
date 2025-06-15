@@ -39,6 +39,12 @@ func main() {
 	} else if calld.VerifyARC != nil {
 		resp := VerifyARC(calld.VerifyARC)
 		response, err = json.Marshal(&resp)
+	} else if calld.SignDKIM != nil {
+		resp := SignDKIM(calld.SignDKIM)
+		response, err = json.Marshal(&resp)
+	} else if calld.SignARC != nil {
+		resp := SignARC(calld.SignARC)
+		response, err = json.Marshal(&resp)
 	} else {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}

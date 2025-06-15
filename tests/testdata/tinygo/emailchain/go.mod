@@ -10,6 +10,7 @@ require (
 	github.com/loredanacirstea/wasmx-env v0.0.0
 	github.com/loredanacirstea/wasmx-env-httpclient v0.0.0
 	github.com/loredanacirstea/wasmx-env-imap v0.0.0
+	github.com/loredanacirstea/wasmx-env-smtp v0.0.0
 	github.com/redsift/dkim v0.1.2
 )
 

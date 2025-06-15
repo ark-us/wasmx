@@ -1,23 +1,76 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/emersion/go-msgauth/dkim"
+	dkim "github.com/redsift/dkim"
 
-	dkim2 "github.com/redsift/dkim"
+	dkimS "github.com/emersion/go-msgauth/dkim"
 )
 
+const DKIM_HEADER = "DKIM-Signature"
+
 func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
+	fmt.Println("--SignDKIM--")
 	resp := SignDKIMResponse{Error: ""}
+
+	r := strings.NewReader(req.EmailRaw)
+	var b bytes.Buffer
+
+	now := func() time.Time {
+		return req.Timestamp
+	}
+
+	options := req.Options.toLib()
+	fmt.Println("--SignSync options--")
+	err := dkimS.SignSync(&b, r, options, now)
+	fmt.Println("--SignSync--")
+	fmt.Println("--SignSync err--", err)
+	if err != nil {
+		resp.Error = err.Error()
+		return resp
+	}
+	resp.SignedEmail = b.String()
+	return resp
+}
+
+func SignARC(req *SignARCRequest) SignARCResponse {
+	resp := SignARCResponse{Error: ""}
+
+	r := strings.NewReader(req.EmailRaw)
+	var b bytes.Buffer
+
+	now := func() time.Time {
+		return req.Timestamp
+	}
+
+	dnsResolver := NewDNSResolver()
+	lookupTxt := func(name string) ([]string, error) {
+		return dnsResolver.LookupTXT(name)
+	}
+
+	options := req.Options.toLib()
+	options.LookupTXT = lookupTxt
+	fmt.Println("--SignSync options--")
+	err := dkimS.SignARCSync(&b, r, options, now)
+	fmt.Println("--SignSync--")
+	fmt.Println("--SignSync err--", err)
+	if err != nil {
+		resp.Error = err.Error()
+		return resp
+	}
+	resp.SignedEmail = b.String()
 	return resp
 }
 
 func VerifyARC(req *VerifyDKIMRequest) VerifyARCResponse {
+	fmt.Println("--VerifyARC--")
 	resp := VerifyARCResponse{Error: ""}
-	msg, err := dkim2.ParseMessage(req.EmailRaw)
+	msg, err := dkim.ParseMessage(req.EmailRaw)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
@@ -28,12 +81,23 @@ func VerifyARC(req *VerifyDKIMRequest) VerifyARCResponse {
 		return dnsResolver.LookupTXT(name)
 	}
 
-	res, err := dkim2.VerifyArc(lookupTxt, msg)
+	res, err := dkim.VerifyArc(lookupTxt, req.PublicKey, msg)
+	fmt.Println("--VerifyArc err, res--", err, res)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
 	}
-	resp.Response = res
+
+	resbz, err := json.Marshal(res)
+	fmt.Println("--dkim.VerifyArc resbz--", err, string(resbz))
+
+	resp.Response = &ArcResult{}
+	fmt.Println("--VerifyArc FromLib pre--")
+	resp.Response.FromLib(res)
+	fmt.Println("--VerifyArc FromLib--")
+
+	resbz, err = json.Marshal(resp.Response)
+	fmt.Println("--dkim.VerifyArc resp.Response--", err, string(resbz))
 	return resp
 }
 
@@ -41,44 +105,38 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 	fmt.Println("--VerifyDKIM--" + req.EmailRaw)
 	resp := VerifyDKIMResponse{Error: ""}
 
-	// Create custom DKIM verifier with DNS-over-HTTPS
-	// verifier := NewCustomDKIMVerifier()
-
-	// Verify DKIM signatures
-	// verifications, err := verifier.VerifyDKIMSignatures(req.EmailRaw)
-
-	// Create DNS resolver for DKIM verification
-	dnsResolver := NewDNSResolver()
-
-	reader := strings.NewReader(req.EmailRaw)
-	// Create custom DKIM verification options with our DNS resolver
-	options := &dkim.VerifyOptions{
-		LookupTXT: func(name string) ([]string, error) {
-			return dnsResolver.LookupTXT(name)
-		},
-	}
-
-	verifications, err := dkim.VerifyWithOptions(reader, options)
+	msg, err := dkim.ParseMessage(req.EmailRaw)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
 	}
-	resp.Verifications = verifications
 
-	verificationsbz, err := json.Marshal(verifications)
+	dnsResolver := NewDNSResolver()
+	lookupTxt := func(name string) ([]string, error) {
+		return dnsResolver.LookupTXT(name)
+	}
+
+	// if we want to exclude domains
+	// InvalidSigningEntityOption("com", "org", "net"),
+
+	// if we want to fail if expiration date failed
+	// SignatureTimingOption(5*time.Minute)
+	res, err := dkim.Verify(DKIM_HEADER, msg, lookupTxt, req.PublicKey)
+	fmt.Println("--dkim.Verify--", err, res)
 	if err != nil {
-		resp.Error = fmt.Sprintf("failed to marshal verifications: %v", err)
+		resp.Error = err.Error()
 		return resp
 	}
-	fmt.Printf("DKIM verifications: %s\n", string(verificationsbz))
 
-	allValid := true
-	for _, v := range verifications {
-		if v.Err != nil {
-			allValid = false
-			break
-		}
-	}
-	resp.IsValid = allValid
+	resbz, err := json.Marshal(res)
+	fmt.Println("--dkim.Verify resbz--", err, string(resbz))
+
+	resp.Response = ResultArrFromLib(res)
+
+	fmt.Println("--dkim.Verify post ResultArrFromLib--")
+
+	resbz, err = json.Marshal(resp.Response)
+	fmt.Println("--dkim.Verify resp.Response--", err, string(resbz))
+
 	return resp
 }
