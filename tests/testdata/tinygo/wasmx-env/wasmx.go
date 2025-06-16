@@ -48,6 +48,9 @@ func Revert_(dataPtr int64)
 //go:wasmimport wasmx call
 func Call_(reqPtr int64) int64
 
+//go:wasmimport wasmx getChainId
+func GetChainId_() int64
+
 //go:wasmimport wasmx getBlockHash
 func GetBlockHash_(blockNumber int64) int64
 
@@ -128,6 +131,10 @@ func Finish(data []byte) {
 
 func Revert(data []byte) {
 	Revert_(BytesToPackedPtr(data))
+}
+
+func GetChainId() string {
+	return string(PackedPtrToBytes(GetChainId_()))
 }
 
 func Bech32StringToBytes(addrBech32 string) []byte {

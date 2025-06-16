@@ -423,7 +423,14 @@ func SendMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 		return prepareResponse(rnh, response)
 	}
 	msgreader := strings.NewReader(string(req.Email))
+	fmt.Println("--SendMail from,to--", req.From, req.To)
+
+	fmt.Println("===============sendMail")
+	fmt.Println(string(req.Email))
+	fmt.Println("=====================")
+
 	err = conn.Client.SendMail(req.From, req.To, msgreader)
+	fmt.Println("--SendMail--", err)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)

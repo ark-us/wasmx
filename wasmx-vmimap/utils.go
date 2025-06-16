@@ -1,6 +1,7 @@
 package vmimap
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -129,7 +130,8 @@ func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, opti
 			continue
 		}
 
-		header := make(map[string][]string)
+		headers := make([]Header, 0)
+		// topmost headers are last
 		fields := mr.Header.Fields()
 		bh := "" // body hash
 		for {
@@ -140,7 +142,7 @@ func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, opti
 
 			key := fields.Key()
 			value := fields.Value()
-			header[key] = append(header[key], value)
+			headers = append(headers, Header{Key: key, Value: value})
 			if key == "Dkim-Signature" {
 				parts := strings.Split(value, "; ")
 				for _, p := range parts {
@@ -151,7 +153,11 @@ func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, opti
 			}
 		}
 
+		headersbz, _ := json.Marshal(headers)
+		fmt.Println("--headers--", string(headersbz))
+
 		body, attachments := extractEmailParts(logger, mr, msg)
+		fmt.Println("--extractEmailParts--", body)
 
 		// Populate Email struct
 		email := Email{
@@ -162,7 +168,7 @@ func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, opti
 			RFC822Size:   msg.RFC822Size,
 			Envelope:     msg.Envelope,
 			// BodyStructure: &msg.BodyStructure,
-			Header:      header,
+			Headers:     headers,
 			Body:        body,
 			Attachments: attachments,
 			Bh:          bh,
@@ -180,8 +186,14 @@ func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, opti
 }
 
 // extractEmailParts extracts the body (first text part) and attachments from a mail.Reader.
-func extractEmailParts(logger log.Logger, mr *mail.Reader, msg *imapclient.FetchMessageBuffer) (body string, attachments []Attachment) {
-	attachments = []Attachment{}
+func extractEmailParts(logger log.Logger, mr *mail.Reader, msg *imapclient.FetchMessageBuffer) (EmailBody, []Attachment) {
+	var emailBody EmailBody
+	var attachments []Attachment
+
+	// Check for multipart boundary
+	if contentType, params, err := mr.Header.ContentType(); err == nil && strings.HasPrefix(contentType, "multipart/") {
+		emailBody.Boundary = params["boundary"]
+	}
 
 	// Iterate through each part of the message.
 	for {
@@ -194,43 +206,42 @@ func extractEmailParts(logger log.Logger, mr *mail.Reader, msg *imapclient.Fetch
 			break
 		}
 
-		// If the part is inline (text content)
-		if inlineHeader, ok := part.Header.(*mail.InlineHeader); ok {
-			contentType, _, _ := inlineHeader.ContentType()
-			if contentType == "text/plain" || contentType == "text/html" {
-				bodyBytes, err := io.ReadAll(part.Body)
-				if err != nil {
-					logger.Info("Failed to read body for UID %d: %v", msg.UID, err)
-					continue
-				}
-				// Save the first text part as body (or you can concatenate if you expect multiple)
-				if body == "" {
-					body = string(bodyBytes)
-				}
-			}
+		fmt.Println("--extractEmailPart part.Header--", part.Header)
+		fmt.Println("--extractEmailPart part.Body--", part.Body)
+
+		// Get full raw Content-Type string
+		rawContentType := part.Header.Get("Content-Type")
+		if rawContentType == "" {
+			rawContentType = "application/octet-stream"
 		}
 
-		// If the part is an attachment
-		if attachHeader, ok := part.Header.(*mail.AttachmentHeader); ok {
-			// Try to get the filename; if not available, set a default.
-			filename, err := attachHeader.Filename()
+		body, err := io.ReadAll(part.Body)
+		if err != nil {
+			logger.Info("Failed to read body for UID %d: %v", msg.UID, err)
+			continue
+		}
+
+		fmt.Println("--extractEmailPart contentType--", rawContentType)
+		fmt.Println("--extractEmailPart body--", string(body))
+
+		if ah, ok := part.Header.(*mail.AttachmentHeader); ok {
+			filename, err := ah.Filename()
 			if err != nil {
 				filename = "unknown"
 			}
-			contentType, _, _ := attachHeader.ContentType()
-			data, err := io.ReadAll(part.Body)
-			if err != nil {
-				logger.Info("Failed to read attachment for UID %d: %v", msg.UID, err)
-				continue
-			}
 			attachments = append(attachments, Attachment{
 				Filename:    filename,
-				ContentType: contentType,
-				Data:        data,
+				ContentType: rawContentType,
+				Data:        body,
+			})
+		} else {
+			emailBody.Parts = append(emailBody.Parts, BodyPart{
+				ContentType: rawContentType,
+				Body:        body,
 			})
 		}
 	}
-	return
+	return emailBody, attachments
 }
 
 func buildSearchCriteria(filters FetchFilter) (*imap.SearchCriteria, error) {

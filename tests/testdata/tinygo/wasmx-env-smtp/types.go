@@ -1,6 +1,10 @@
 package smtp
 
-import "time"
+import (
+	"time"
+
+	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+)
 
 type SmtpConnectionSimpleRequest struct {
 	Id                    string `json:"id"`
@@ -123,10 +127,10 @@ type Envelope struct {
 }
 
 type Email struct {
-	Envelope    *Envelope           `json:"envelope"` // Header fields (From, To, Subject, etc.)
-	Header      map[string][]string `json:"header"`   // Parsed headers (future use)
-	Body        string              `json:"body"`     // Body content (if separated)
-	Attachments []Attachment        `json:"attachments"`
+	Envelope    *Envelope       `json:"envelope"` // Header fields (From, To, Subject, etc.)
+	Headers     []vmimap.Header `json:"headers"`  // Parsed headers (future use)
+	Body        string          `json:"body"`     // Body content (if separated)
+	Attachments []Attachment    `json:"attachments"`
 }
 
 type SmtpBuildMailRequest struct {

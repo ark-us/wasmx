@@ -18,15 +18,38 @@ import (
 )
 
 type Calldata struct {
-	ConnectWithPassword *vmimap.ImapConnectionSimpleRequest `json:"ConnectWithPassword,omitempty"`
-	ConnectOAuth2       *vmimap.ImapConnectionOauth2Request `json:"ConnectOAuth2,omitempty"`
-	Close               *vmimap.ImapCloseRequest            `json:"Close,omitempty"`
-	SendEmail           *vmimap.ImapCreateFolderRequest     `json:"SendEmail,omitempty"`
-	BuildAndSend        *BuildAndSendMailRequest            `json:"BuildAndSend,omitempty"`
-	VerifyDKIM          *VerifyDKIMRequest                  `json:"VerifyDKIM,omitempty"`
-	VerifyARC           *VerifyDKIMRequest                  `json:"VerifyARC,omitempty"`
-	SignDKIM            *SignDKIMRequest                    `json:"SignDKIM,omitempty"`
-	SignARC             *SignARCRequest                     `json:"SignARC,omitempty"`
+	ConnectWithPassword *ConnectionSimpleRequest        `json:"ConnectWithPassword,omitempty"`
+	ConnectOAuth2       *ConnectionOauth2Request        `json:"ConnectOAuth2,omitempty"`
+	Close               *CloseRequest                   `json:"Close,omitempty"`
+	SendEmail           *vmimap.ImapCreateFolderRequest `json:"SendEmail,omitempty"`
+	BuildAndSend        *BuildAndSendMailRequest        `json:"BuildAndSend,omitempty"`
+	VerifyDKIM          *VerifyDKIMRequest              `json:"VerifyDKIM,omitempty"`
+	VerifyARC           *VerifyDKIMRequest              `json:"VerifyARC,omitempty"`
+	SignDKIM            *SignDKIMRequest                `json:"SignDKIM,omitempty"`
+	SignARC             *SignARCRequest                 `json:"SignARC,omitempty"`
+	ForwardEmail        *ForwardEmailRequest            `json:"ForwardEmail,omitempty"`
+}
+
+type ConnectionSimpleRequest struct {
+	Id                    string `json:"id"`
+	ImapServerUrl         string `json:"imap_server_url"`
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Username              string `json:"username"`
+	Password              string `json:"password"`
+}
+
+type ConnectionOauth2Request struct {
+	Id                    string `json:"id"`
+	ImapServerUrl         string `json:"imap_server_url"`
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Username              string `json:"username"`
+	AccessToken           string `json:"access_token"`
+}
+
+type CloseRequest struct {
+	Id string `json:"id"`
 }
 
 type BuildAndSendMailRequest struct {
@@ -133,6 +156,8 @@ type SignDKIMRequest struct {
 }
 
 type SignARCRequest struct {
+	MailFrom  string      `json:"mailfrom"`
+	IP        string      `json:"ip"`
 	EmailRaw  string      `json:"email_raw"`
 	Options   SignOptions `json:"options"`
 	Timestamp time.Time   `json:"timestamp"`
@@ -177,6 +202,25 @@ type ArcSetResult struct {
 	AMSValid bool   `json:"ams-vaild"`
 	ASValid  bool   `json:"as-valid"`
 	CV       string `json:"cv"`
+}
+
+type ForwardEmailRequest struct {
+	ConnectionId string           `json:"connection_id"`
+	Folder       string           `json:"folder"`
+	Uid          uint32           `json:"uid"`
+	MessageId    string           `json:"message_id"`
+	From         vmimap.Address   `json:"from"`
+	To           []vmimap.Address `json:"to"`
+	Cc           []vmimap.Address `json:"cc"`
+	Bcc          []vmimap.Address `json:"bcc"`
+	Options      SignOptions      `json:"options"`
+	Timestamp    time.Time        `json:"timestamp"`
+	SendEmail    bool             `json:"send_email"`
+}
+
+type ForwardEmailResponse struct {
+	Error    string `json:"error"`
+	EmailRaw string `json:"email_raw"`
 }
 
 type Signature struct {
@@ -387,3 +431,10 @@ func loadPrivateKey(keyBytes []byte) (ed25519.PrivateKey, error) {
 // 		return 100
 // 	}
 // }
+
+const (
+	HEADER_PROVABLE_DNS_REGISTRY                = "Provable-DNS-Registry"
+	HEADER_PROVABLE_EMAIL_REGISTRY              = "Provable-Email-Registry"
+	HEADER_PROVABLE_FORWARD_ORIGIN_DKIM_CONTEXT = "Provable-Forward-Origin-DKIM-Context"
+	HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE     = "Provable-Forward-Chain-Signature"
+)

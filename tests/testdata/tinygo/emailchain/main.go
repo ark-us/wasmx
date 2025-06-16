@@ -6,6 +6,7 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	_ "github.com/loredanacirstea/wasmx-env-httpclient"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 )
 
 //go:wasm-module emailprover
@@ -22,13 +23,51 @@ func main() {
 	response := []byte{}
 
 	if calld.ConnectWithPassword != nil {
-		resp := vmimap.ConnectWithPassword(calld.ConnectWithPassword)
+		resp := vmimap.ConnectWithPassword(&vmimap.ImapConnectionSimpleRequest{
+			Id:            calld.ConnectWithPassword.Id,
+			ImapServerUrl: calld.ConnectWithPassword.ImapServerUrl,
+			Username:      calld.ConnectWithPassword.Username,
+			Password:      calld.ConnectWithPassword.Password,
+		})
+		if resp.Error == "" {
+			resp2 := vmsmtp.ConnectWithPassword(&vmsmtp.SmtpConnectionSimpleRequest{
+				Id:                    calld.ConnectWithPassword.Id,
+				SmtpServerUrlSTARTTLS: calld.ConnectWithPassword.SmtpServerUrlSTARTTLS,
+				SmtpServerUrlTLS:      calld.ConnectWithPassword.SmtpServerUrlTLS,
+				Username:              calld.ConnectWithPassword.Username,
+				Password:              calld.ConnectWithPassword.Password,
+			})
+			if resp2.Error != "" {
+				resp.Error = resp2.Error
+			}
+		}
 		response, err = json.Marshal(&resp)
 	} else if calld.ConnectOAuth2 != nil {
-		resp := vmimap.ConnectOAuth2(calld.ConnectOAuth2)
+		resp := vmimap.ConnectOAuth2(&vmimap.ImapConnectionOauth2Request{
+			Id:            calld.ConnectOAuth2.Id,
+			ImapServerUrl: calld.ConnectOAuth2.ImapServerUrl,
+			Username:      calld.ConnectOAuth2.Username,
+			AccessToken:   calld.ConnectOAuth2.AccessToken,
+		})
+		if resp.Error == "" {
+			resp2 := vmsmtp.ConnectOAuth2(&vmsmtp.SmtpConnectionOauth2Request{
+				Id:                    calld.ConnectOAuth2.Id,
+				SmtpServerUrlSTARTTLS: calld.ConnectOAuth2.SmtpServerUrlSTARTTLS,
+				SmtpServerUrlTLS:      calld.ConnectOAuth2.SmtpServerUrlTLS,
+				Username:              calld.ConnectOAuth2.Username,
+				AccessToken:           calld.ConnectOAuth2.AccessToken,
+			})
+			if resp2.Error != "" {
+				resp.Error = resp2.Error
+			}
+		}
 		response, err = json.Marshal(&resp)
 	} else if calld.Close != nil {
-		resp := vmimap.Close(calld.Close)
+		resp := vmimap.Close(&vmimap.ImapCloseRequest{Id: calld.Close.Id})
+		resp2 := vmsmtp.Close(&vmsmtp.SmtpCloseRequest{Id: calld.Close.Id})
+		if resp2.Error != "" {
+			resp.Error = resp2.Error
+		}
 		response, err = json.Marshal(&resp)
 	} else if calld.SignDKIM != nil {
 		resp := SignDKIM(calld.SignDKIM)
@@ -44,6 +83,9 @@ func main() {
 		response, err = json.Marshal(&resp)
 	} else if calld.SignARC != nil {
 		resp := SignARC(calld.SignARC)
+		response, err = json.Marshal(&resp)
+	} else if calld.ForwardEmail != nil {
+		resp := ForwardEmail(calld.ForwardEmail)
 		response, err = json.Marshal(&resp)
 	} else {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))

@@ -1,6 +1,7 @@
 package imap
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -106,9 +107,49 @@ type Address struct {
 	Host    string
 }
 
+func (a Address) ToString() string {
+	addr := a.ToAddress()
+	if a.Name == "" {
+		return addr
+	}
+	return fmt.Sprintf("%s <%s>", a.Name, addr)
+}
+
+func (a Address) ToAddress() string {
+	return fmt.Sprintf("%s@%s", a.Mailbox, a.Host)
+}
+
 func AddressFromString(account string, name string) Address {
 	parts := strings.Split(account, "@")
 	return Address{name, parts[0], parts[1]}
+}
+
+func ToAddresses(addresses []Address) []string {
+	addrs := make([]string, len(addresses))
+	for i, addr := range addresses {
+		addrs[i] = addr.ToAddress()
+	}
+	return addrs
+}
+
+func SerializeAddresses(addresses []Address) string {
+	addrs := make([]string, len(addresses))
+	for i, addr := range addresses {
+		addrs[i] = addr.ToString()
+	}
+	return strings.Join(addrs, ", ")
+}
+
+func SerializeMessageId(messageIds string) string {
+	return fmt.Sprintf("<%s>", messageIds)
+}
+
+func SerializeMessageIds(messageIds []string) string {
+	ids := make([]string, len(messageIds))
+	for i, id := range messageIds {
+		ids[i] = SerializeMessageId(id)
+	}
+	return strings.Join(ids, " ")
 }
 
 type Envelope struct {

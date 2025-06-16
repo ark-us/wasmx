@@ -203,10 +203,36 @@ func (suite *KeeperTestSuite) TestEmailTinyGoSmtp() {
 }
 
 type EmailChainCalldata struct {
-	VerifyDKIM *VerifyDKIMTestData `json:"VerifyDKIM,omitempty"`
-	VerifyARC  *VerifyARCTestData  `json:"VerifyARC,omitempty"`
-	SignDKIM   *SignDKIMRequest    `json:"SignDKIM,omitempty"`
-	SignARC    *SignARCRequest     `json:"SignARC,omitempty"`
+	ConnectWithPassword *ConnectionSimpleRequest `json:"ConnectWithPassword,omitempty"`
+	ConnectOAuth2       *ConnectionOauth2Request `json:"ConnectOAuth2,omitempty"`
+	Close               *CloseRequest            `json:"Close,omitempty"`
+	VerifyDKIM          *VerifyDKIMTestData      `json:"VerifyDKIM,omitempty"`
+	VerifyARC           *VerifyARCTestData       `json:"VerifyARC,omitempty"`
+	SignDKIM            *SignDKIMRequest         `json:"SignDKIM,omitempty"`
+	SignARC             *SignARCRequest          `json:"SignARC,omitempty"`
+	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
+}
+
+type ConnectionSimpleRequest struct {
+	Id                    string `json:"id"`
+	ImapServerUrl         string `json:"imap_server_url"`
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Username              string `json:"username"`
+	Password              string `json:"password"`
+}
+
+type ConnectionOauth2Request struct {
+	Id                    string `json:"id"`
+	ImapServerUrl         string `json:"imap_server_url"`
+	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
+	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
+	Username              string `json:"username"`
+	AccessToken           string `json:"access_token"`
+}
+
+type CloseRequest struct {
+	Id string `json:"id"`
 }
 
 type VerifyDKIMTestData struct {
@@ -362,6 +388,23 @@ type SignARCResponse struct {
 	SignedEmail string `json:"signed_email"`
 }
 
+type ForwardEmailRequest struct {
+	ConnectionId string         `json:"connection_id"`
+	Folder       string         `json:"folder"`
+	Uid          uint32         `json:"uid"`
+	MessageId    string         `json:"message_id"`
+	From         imap.Address   `json:"from"`
+	To           []imap.Address `json:"to"`
+	Options      SignOptions    `json:"options"`
+	Timestamp    time.Time      `json:"timestamp"`
+	SendEmail    bool           `json:"send_email"`
+}
+
+type ForwardEmailResponse struct {
+	Error    string `json:"error"`
+	EmailRaw string `json:"email_raw"`
+}
+
 var now = func() time.Time {
 	return time.Unix(424242, 0)
 }
@@ -386,7 +429,9 @@ func TestSignARCSync(t *testing.T) {
 		Data:       testPrivateKey.PublicKey.N.Bytes(),
 	}
 
-	newemail, resARC := ARCSignAndVerify(t, signedMailString, options, "seth.one.info@gmail.com", "209.85.220.41", pubk)
+	emailStr := testdata.EmailARC3
+	// emailStr := signedMailString
+	newemail, resARC := ARCSignAndVerify(t, emailStr, options, "seth.one.info@gmail.com", "209.85.214.177", pubk)
 
 	require.Nil(t, resARC.Error)
 	require.Equal(t, dkim.Pass, resARC.Code)
@@ -661,12 +706,6 @@ func verifyEmail(emailText string, pubk *dkim.PublicKey) ([]*dkim.Result, *dkim.
 	msg, err := dkim.ParseMessage(emailText)
 	if err != nil {
 		return nil, nil, err
-	}
-	fmt.Println("--msg.Header--", msg.Header)
-	header := msg.Header.CanonicalizedAndFolded()
-	fmt.Println("--header--", header)
-	for k, _ := range header {
-		fmt.Println("--header--", k)
 	}
 
 	resDKIM, err := dkim.Verify("DKIM-Signature", msg, net.LookupTXT, pubk)
