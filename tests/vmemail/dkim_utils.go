@@ -41,12 +41,22 @@ const mailBodyString = "Hi.\r\n" +
 
 const mailString = mailHeaderString + "\r\n" + mailBodyString
 
-const signedMailString = "DKIM-Signature: a=rsa-sha256; bh=2jUSOH9NhtVGCQWNr9BrIAPreKQjO6Sn7XIkfJVOzv8=;" + "\r\n" +
-	" " + "c=simple/simple; d=example.org; h=From:To:Subject:Date:Message-ID;" + "\r\n" +
-	" " + "s=brisbane; t=424242; v=1;" + "\r\n" +
-	" " + "b=MobyyDTeHhMhNJCEI6ATNK63ZQ7deSXK9umyzAvYwFqE6oGGvlQBQwqr1aC11hWpktjMLP1/" + "\r\n" +
-	" " + "m0PBi9v7cRLKMXXBIv2O0B1mIWdZPqd9jveRJqKzCb7SpqH2u5kK6i2vZI639ENTQzRQdxSAGXc" + "\r\n" +
-	" " + "PcPYjrgkqj7xklnrNBs0aIUA=" + "\r\n" +
+// const signedMailString = "DKIM-Signature: a=rsa-sha256; bh=2jUSOH9NhtVGCQWNr9BrIAPreKQjO6Sn7XIkfJVOzv8=;" + "\r\n" +
+// 	" " + "c=simple/simple; d=example.org; h=From:To:Subject:Date:Message-ID;" + "\r\n" +
+// 	" " + "s=brisbane; t=424242; v=1;" + "\r\n" +
+// 	" " + "b=MobyyDTeHhMhNJCEI6ATNK63ZQ7deSXK9umyzAvYwFqE6oGGvlQBQwqr1aC11hWpktjMLP1/" + "\r\n" +
+// 	" " + "m0PBi9v7cRLKMXXBIv2O0B1mIWdZPqd9jveRJqKzCb7SpqH2u5kK6i2vZI639ENTQzRQdxSAGXc" + "\r\n" +
+// 	" " + "PcPYjrgkqj7xklnrNBs0aIUA=" + "\r\n" +
+// 	mailHeaderString +
+// 	"\r\n" +
+// 	mailBodyString
+
+const mailStringDkim = "DKIM-Signature: v=1; d=example.org; s=football; i=joe@example.org; a=rsa-sha256; t=424242; h=From:To:Cc:Bcc:Reply-To:References:In-Reply-To:" + "\r\n" +
+	" " + "Subject:Date:Message-ID:Content-Type; bh=2jUSOH9NhtVGCQWNr9BrIAPreKQjO6Sn7XIkfJVOzv8=; b=dOh/+3OaXjU2VCHG2odzVYq4" + "\r\n" +
+	" " + "AUIKzgkyKCxl1KVBF1fBtJo24KHKU4+rOndhsp+htFWVU1G5pFxpYIacVOedMBAdt6lPSHZBe1p" + "\r\n" +
+	" " + "Rr6T404Dpc7UIiZypfRAnoEsC6pZeuCmnpX/H0olAkSk4Pdel2e+iud92JQMwGlgHy/a3JcQ="
+
+const signedMailString = mailStringDkim + "\r\n" +
 	mailHeaderString +
 	"\r\n" +
 	mailBodyString
@@ -69,4 +79,8 @@ func init() {
 		panic(err)
 	}
 	testEd25519PrivateKey = ed25519.NewKeyFromSeed(ed25519Seed)
+}
+
+func appendDKIM(mailStringDkim string, restofemail string) string {
+	return mailStringDkim + "\r\n" + restofemail
 }

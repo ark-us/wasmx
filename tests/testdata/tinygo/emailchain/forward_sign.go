@@ -150,16 +150,16 @@ func NewSignerForward(headerName string, options *dkimS.SignOptions, email vmima
 
 	hasher.Reset()
 	for _, k := range headerKeys {
-		kv := email.Headers.Get(k)
-		if kv == "" {
+		h := email.Headers.Get(k)
+		if h.Key == "" {
 			// The Signer MAY include more instances of a header field name
 			// in "h=" than there are actual corresponding header fields so
 			// that the signature will not verify if additional header
 			// fields of that name are added.
 			continue
 		}
-		kv = dkimS.GetCanonicalizer(headerCan).CanonicalizeHeader(kv)
-		if _, err := io.WriteString(hasher, kv); err != nil {
+		h.Key = dkimS.GetCanonicalizer(headerCan).CanonicalizeHeader(h.Key)
+		if _, err := io.WriteString(hasher, h.Key); err != nil {
 			return nil, err
 		}
 	}

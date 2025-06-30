@@ -87,6 +87,7 @@ var (
 type Header struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+	Raw   []byte `json:"raw"`
 }
 
 type Headers []Header
@@ -103,35 +104,35 @@ func (h Headers) Has(key string) bool {
 }
 
 // Get header with the given key exists (case-insensitive)
-func (h Headers) Get(key string) string {
+func (h Headers) Get(key string) *Header {
 	key = strings.ToLower(key)
 	for _, header := range h {
 		if strings.ToLower(header.Key) == key {
-			return header.Value
+			return &header
 		}
 	}
-	return ""
+	return nil
 }
 
 // Set sets the value for a header key, replacing any existing entry with the same key (case-insensitive)
-func (h *Headers) Set(key, value string) {
-	keyLower := strings.ToLower(key)
+func (h *Headers) Set(header Header) {
+	keyLower := strings.ToLower(header.Key)
 	for i, header := range *h {
 		if strings.ToLower(header.Key) == keyLower {
-			(*h)[i].Value = value
+			(*h)[i] = header
 			return
 		}
 	}
-	*h = append(*h, Header{Key: key, Value: value})
+	*h = append(*h, header)
 }
 
 // Append adds a new header entry, even if one with the same key exists
-func (h *Headers) Append(key, value string) {
-	*h = append(*h, Header{Key: key, Value: value})
+func (h *Headers) Append(header Header) {
+	*h = append(*h, header)
 }
 
-func (h *Headers) AppendTop(key, value string) {
-	*h = append([]Header{{Key: key, Value: value}}, *h...)
+func (h *Headers) AppendTop(header Header) {
+	*h = append([]Header{header}, *h...)
 }
 
 type BodyPart struct {

@@ -35,7 +35,8 @@ var (
 	MaxLabelSize = 128 // extension point for chains to customize via compile flag.
 
 	// MaxWasmSize is the largest a compiled contract code can be when storing code on chain
-	MaxWasmSize = 1500 * 1024 // extension point for chains to customize via compile flag.
+	// 15360000 bytes
+	MaxWasmSize = 15000 * 1024 // extension point for chains to customize via compile flag.
 
 	// MaxProposalWasmSize is the largest a gov proposal compiled contract code can be when storing code on chain
 	MaxProposalWasmSize = 3 * 1024 * 1024 // extension point for chains to customize via compile flag.

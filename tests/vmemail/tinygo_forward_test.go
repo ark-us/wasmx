@@ -1,23 +1,206 @@
 package keeper_test
 
 import (
+	"crypto"
+	"crypto/ed25519"
+	"crypto/x509"
 	_ "embed"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"log/slog"
+	"net"
+	"os"
 	"strings"
+	"testing"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/emersion/go-imap/v2"
+	"github.com/stretchr/testify/require"
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
+	testdata "github.com/loredanacirstea/mythos-tests/vmemail/testdata"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
+
+	dkimS "github.com/emersion/go-msgauth/dkim"
+
+	dkimMox "github.com/loredanacirstea/mailverif/dkim"
+	dnsMox "github.com/loredanacirstea/mailverif/dns"
+	utilsMox "github.com/loredanacirstea/mailverif/utils"
 )
+
+type DNSResolver struct{}
+
+func (r *DNSResolver) LookupTXT(name string) ([]string, dnsMox.Result, error) {
+	res, err := net.LookupTXT(name)
+	return res, dnsMox.Result{Authentic: true}, err
+}
+
+func TestEmailTinyGoVerifyDKIM(t *testing.T) {
+	dkimres, arcres, err := verifyEmail(testdata.EmailDkim1, nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(dkimres))
+	require.Nil(t, dkimres[0].Err)
+	require.Equal(t, "pass", string(dkimres[0].Status))
+	require.Nil(t, dkimres[1].Err)
+	require.Equal(t, "pass", string(dkimres[1].Status))
+	require.Nil(t, arcres.Error)
+	require.Equal(t, "pass", arcres.Code.String())
+
+	dkimres, arcres, err = verifyEmail(testdata.EmailDkim2, nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(dkimres))
+	require.Nil(t, dkimres[0].Err)
+	require.Equal(t, "pass", string(dkimres[0].Status))
+	require.Nil(t, dkimres[1].Err)
+	require.Equal(t, "pass", string(dkimres[1].Status))
+	require.Nil(t, arcres.Error)
+	require.Equal(t, "pass", arcres.Code.String())
+
+	publicKey := &dkimMox.Record{
+		Version:   "DKIM1",
+		Key:       "rsa",
+		Hashes:    []string{"sha256"},
+		Services:  []string{"email"},
+		PublicKey: &testPrivateKey.PublicKey,
+		Pubkey:    testPrivateKey.PublicKey.N.Bytes(),
+	}
+
+	r := strings.NewReader(mailString)
+	now := func() time.Time {
+		return time.Unix(424242, 0)
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	identif := utilsMox.Localpart("joe")
+	domain := dnsMox.Domain{ASCII: "example.org"}
+	key := ToPrivateKey("rsa", []byte(testPrivateKeyPEM))
+	sel := dkimMox.Selector{
+		Hash:       "sha256",
+		PrivateKey: key,
+		Headers:    strings.Split("From,To,Cc,Bcc,Reply-To,References,In-Reply-To,Subject,Date,Message-ID,Content-Type", ","),
+		Domain:     dnsMox.Domain{ASCII: "football"},
+	}
+	selectors := []dkimMox.Selector{sel}
+	header, err := dkimMox.Sign(logger, identif, domain, selectors, false, r, now)
+	require.NoError(t, err)
+
+	newemailstr := header + mailString
+	dkimres, arcres, err = verifyEmail(newemailstr, publicKey)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(dkimres))
+	require.Nil(t, dkimres[0].Err)
+	require.Equal(t, "pass", string(dkimres[0].Status))
+	require.Nil(t, arcres.Error)
+	require.Equal(t, "pass", arcres.Code.String())
+}
+
+func TestEmailTinyGoForwardSignature(t *testing.T) {
+	// options := &dkimS.SignOptions{
+	// 	Domain:    "example.org",
+	// 	Selector:  "brisbane",
+	// 	Signer:    testPrivateKey,
+	// 	LookupTXT: net.LookupTXT,
+	// }
+
+	// pubk := &dkim.PublicKey{
+	// 	Version:    "DKIM1",
+	// 	KeyType:    "rsa",
+	// 	Algorithms: []string{"rsa-sha256"},
+	// 	Revoked:    false,
+	// 	Testing:    false,
+	// 	Strict:     false,
+	// 	Services:   []string{"email"},
+	// 	Key:        &testPrivateKey.PublicKey,
+	// 	Data:       testPrivateKey.PublicKey.N.Bytes(),
+	// }
+	// fromParts := strings.Split("test@mail.provable.dev", "@")
+	// fromAddr := imap.Address{Mailbox: fromParts[0], Host: fromParts[1]}
+	// toAddrs := []imap.Address{{Mailbox: "seth.one.info", Host: "gmail.com"}}
+	// timestamp := time.Unix(424242, 0)
+
+	// email := emailchain.BuildForwardHeaders(testdata.EmailForwarded0, fromAddr, toAddrs, []imap.Address{}, []imap.Address{}, options, timestamp)
+	// emailstr, err := emailchain.BuildRawEmail2(email, true)
+	// require.NoError(t, err)
+	// fmt.Println("--BuildRawEmail2-", emailstr)
+
+	dkimres0, arcres0, err := verifyEmail(testdata.EmailForwarded0, nil)
+	require.NoError(t, err)
+	fmt.Println("--dkimres0--", len(dkimres0), dkimres0)
+	for _, v := range dkimres0 {
+		fmt.Println("--dkimres0--", v.Err, v.Status, v)
+	}
+	fmt.Println("--arcres0--", arcres0.Error, arcres0.Code, arcres0)
+
+	dkimres1, arcres1, err := verifyEmail(testdata.EmailDkim1, nil)
+	require.NoError(t, err)
+	fmt.Println("--dkimres1--", len(dkimres1), dkimres1)
+	for _, v := range dkimres1 {
+		fmt.Println("--dkimres1--", v.Err, v.Status, v)
+	}
+	fmt.Println("--arcres1--", arcres1.Error, arcres1.Code, arcres1)
+
+	options := dkimS.VerifyOptions{LookupTXT: net.LookupTXT}
+	verifications, err := dkimS.VerifyWithOptions(strings.NewReader(testdata.EmailDkim1), &options)
+	fmt.Println("--QQ dkimres1 err--", len(verifications), err)
+	for _, v := range verifications {
+		fmt.Println("--QQ dkimres1--", v.Expired, v.Err, v.Domain, v)
+	}
+
+	dkimres2, arcres2, err := verifyEmail(testdata.EmailForwarded1, nil)
+	require.NoError(t, err)
+
+	fmt.Println("--dkimres2--", len(dkimres2), dkimres2)
+	for _, v := range dkimres2 {
+		fmt.Println("--dkimres2--", v.Err, v.Status, v)
+	}
+	fmt.Println("--arcres2--", arcres2.Error, arcres2.Code, arcres2)
+
+	// emailStr := testdata.EmailARC3
+	// // emailStr := signedMailString
+	// newemail, resARC := ARCSignAndVerify(t, emailStr, options, "seth.one.info@gmail.com", "209.85.214.177", pubk)
+
+	// require.Nil(t, resARC.Error)
+	// require.Equal(t, dkim.Pass, resARC.Code)
+	// require.Equal(t, 1, len(resARC.Chain))
+
+	// require.True(t, resARC.Chain[0].AMSValid)
+	// require.True(t, resARC.Chain[0].ASValid)
+	// require.Equal(t, 1, resARC.Chain[0].Instance)
+	// require.Equal(t, "none", resARC.Chain[0].CV.String())
+	// require.Equal(t, "fail", resARC.Chain[0].Dkim.String())
+	// require.Equal(t, "fail", resARC.Chain[0].Dmarc.String())
+	// require.Equal(t, "fail", resARC.Chain[0].Spf.String())
+
+	// // sign another time
+	// _, resARC = ARCSignAndVerify(t, newemail, options, "test@provable.dev", "85.215.130.119", pubk)
+	// require.NotNil(t, resARC.Error)
+	// require.Contains(t, resARC.Error.Error(), "ARC-Seal reported failure, the chain is terminated")
+	// require.Equal(t, dkim.Fail, resARC.Code)
+	// require.Equal(t, 2, len(resARC.Chain))
+
+	// require.True(t, resARC.Chain[0].AMSValid)
+	// require.False(t, resARC.Chain[0].ASValid)
+	// require.Equal(t, 2, resARC.Chain[0].Instance)
+	// require.Equal(t, "fail", resARC.Chain[0].CV.String())
+	// require.Equal(t, "fail", resARC.Chain[0].Dkim.String())
+	// require.Equal(t, "fail", resARC.Chain[0].Dmarc.String())
+	// require.Equal(t, "fail", resARC.Chain[0].Spf.String())
+
+	// require.True(t, resARC.Chain[1].AMSValid)
+	// require.True(t, resARC.Chain[1].ASValid)
+	// require.Equal(t, 1, resARC.Chain[1].Instance)
+	// require.Equal(t, "none", resARC.Chain[1].CV.String())
+	// require.Equal(t, "fail", resARC.Chain[1].Dkim.String())
+	// require.Equal(t, "fail", resARC.Chain[1].Dmarc.String())
+	// require.Equal(t, "fail", resARC.Chain[1].Spf.String())
+}
 
 func (suite *KeeperTestSuite) TestEmailTinyGoForwardCustom() {
 	wasmbin := tinygo.EmailChain
@@ -80,7 +263,9 @@ func (suite *KeeperTestSuite) TestEmailTinyGoForwardCustom() {
 				PrivateKeyType: "rsa",
 				PrivateKey:     []byte(testPrivateKeyPEM),
 			},
-			Timestamp: time.Unix(424242, 0),
+			// Timestamp: time.Unix(424242, 0),
+			Timestamp: time.Now(),
+			SendEmail: true,
 		},
 	}
 	data, err = json.Marshal(msg)
@@ -96,6 +281,32 @@ func (suite *KeeperTestSuite) TestEmailTinyGoForwardCustom() {
 	fmt.Println("=============END ForwardEmail EmailRaw")
 	suite.Require().Equal(resp3.Error, "")
 	// suite.Require().Equal(signedMailString, resp3.EmailRaw)
+
+	dkimres, arcres, err := verifyEmail(resp3.EmailRaw, nil) // publicKey
+	suite.Require().NoError(err)
+
+	fmt.Println("--dkimres--", len(dkimres), dkimres)
+	for _, v := range dkimres {
+		fmt.Println("--dkimres--", v.Err, v.Status, v)
+	}
+	fmt.Println("--arcres--", arcres.Error, arcres.Code, arcres)
+
+	dkimres2, arcres2, err := verifyEmail(testdata.EmailForwarded1, nil)
+	suite.Require().NoError(err)
+
+	fmt.Println("--dkimres2--", len(dkimres2), dkimres2)
+	for _, v := range dkimres2 {
+		fmt.Println("--dkimres2--", v.Err, v.Status, v)
+	}
+	fmt.Println("--arcres2--", arcres2.Error, arcres2.Code, arcres2)
+
+	// TODO test
+	// forwarded email same bh as original email
+	// extract/recover original email + headers & verify it - DKIM & optional ARC
+	// verify forwarded signature
+
+	// TODO
+	// forward again, see instance number change
 
 	// resDKIM, _, err := verifyEmail(resp3.SignedEmail, publicKey)
 	// suite.Require().NoError(err)
@@ -164,4 +375,31 @@ func (suite *KeeperTestSuite) TestEmailTinyGoForwardCustom() {
 	err = appA.DecodeExecuteResponse(res, rescl)
 	suite.Require().NoError(err)
 	suite.Require().Equal("", rescl.Error)
+}
+
+func ToPrivateKey(keyType string, pk []byte) crypto.Signer {
+	var signer crypto.Signer
+	var err error
+	if keyType == "rsa" {
+		// we expect privatekey in PEM format
+		block, _ := pem.Decode(pk)
+		var err error
+		signer, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		signer, err = loadPrivateKey(pk)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return signer
+}
+
+func loadPrivateKey(keyBytes []byte) (ed25519.PrivateKey, error) {
+	if len(keyBytes) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf("invalid key length: got %d, want %d", len(keyBytes), ed25519.PrivateKeySize)
+	}
+	return ed25519.PrivateKey(keyBytes), nil
 }

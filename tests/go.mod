@@ -55,8 +55,8 @@ require (
 	github.com/rs/cors v1.10.0 // indirect
 	github.com/rs/zerolog v1.32.0 // indirect
 	github.com/spf13/viper v1.18.2 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/protobuf v1.33.0
 	sigs.k8s.io/yaml v1.4.0 // indirect
@@ -257,7 +257,7 @@ require (
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect
-	go.etcd.io/bbolt v1.3.8 // indirect
+	go.etcd.io/bbolt v1.3.11 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
@@ -269,13 +269,13 @@ require (
 	go.uber.org/mock v0.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/api v0.162.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
@@ -337,8 +337,9 @@ require (
 	github.com/loredanacirstea/wasmx-vmimap v0.0.0
 	github.com/loredanacirstea/wasmx-vmsmtp v0.0.0
 	github.com/mattn/go-sqlite3 v1.14.15
+	github.com/mjl-/mox v0.0.15
 	github.com/onsi/gomega v1.27.10
-	github.com/redsift/dkim v0.0.0-00010101000000-000000000000
+	github.com/redsift/dkim v0.1.2
 	golang.org/x/oauth2 v0.30.0
 )
 
@@ -349,3 +350,32 @@ replace github.com/loredanacirstea/wasmx-vmsmtp => ../wasmx-vmsmtp
 replace github.com/emersion/go-msgauth => ../../go-msgauth
 
 replace github.com/redsift/dkim => ../../dkim
+
+// require github.com/loredanacirstea/emailchain v0.0.0
+
+// replace github.com/loredanacirstea/emailchain => ./testdata/tinygo/emailchain
+
+// require github.com/loredanacirstea/wasmx-env v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env => ./testdata/tinygo/wasmx-env
+
+// require github.com/loredanacirstea/wasmx-env-imap v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env-imap => ./testdata/tinygo/wasmx-env-imap
+
+// require github.com/loredanacirstea/wasmx-env-smtp v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env-smtp => ./testdata/tinygo/wasmx-env-smtp
+
+// require github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env-httpclient => ./testdata/tinygo/wasmx-env-httpclient
+
+// require github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-utils => ./testdata/tinygo/wasmx-utils
+
+// replace github.com/mjl-/mox => ../../mox
+require github.com/loredanacirstea/mailverif v0.0.0
+
+replace github.com/loredanacirstea/mailverif => ../../mailverif

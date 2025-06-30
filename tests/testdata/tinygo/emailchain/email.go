@@ -113,14 +113,20 @@ func BuildRawEmail2(e vmimap.Email, writeCrlfHeaders bool) (string, error) {
 	attachments := e.Attachments
 	var b strings.Builder
 
-	crlf := "\r\n"
-	if !writeCrlfHeaders {
-		crlf = ""
-	}
+	// crlf := "\r\n"
+	// if !writeCrlfHeaders {
+	// 	crlf = ""
+	// }
 
 	// Write headers
 	for _, h := range headers {
-		fmt.Fprintf(&b, "%s: %s%s", h.Key, h.Value, crlf)
+		// fmt.Println("--BuildRawEmail2 h.Value--", h.Raw)
+		// fmt.Fprintf(&b, "%s: %s%s", h.Key, h.Value, crlf)
+		if len(h.Raw) > 0 {
+			fmt.Fprintf(&b, string(h.Raw))
+		} else {
+			fmt.Fprintf(&b, "%s: %s\r\n", h.Key, h.Value)
+		}
 	}
 	b.WriteString("\r\n") // end of headers
 

@@ -9,6 +9,12 @@ use (
 	./tests
 	./wasmx-vmimap
 	./wasmx-vmsmtp
+	./tests/testdata/tinygo/emailchain
+	./tests/testdata/tinygo/wasmx-env
+	./tests/testdata/tinygo/wasmx-env-httpclient
+	./tests/testdata/tinygo/wasmx-env-imap
+	./tests/testdata/tinygo/wasmx-env-smtp
+	./tests/testdata/tinygo/wasmx-utils
 )
 
 replace (

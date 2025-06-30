@@ -47,6 +47,10 @@ func connectToIMAPOauth2(imapServerUrl string, username string, accessToken stri
 	return c, nil
 }
 
+func FetchEmailIds(c *imapclient.Client, folder *imap.SelectData, username string, filters FetchFilter) (imap.NumSet, uint32, error) {
+	return fetchEmailIds(c, folder, username, filters)
+}
+
 func fetchEmailIds(c *imapclient.Client, folder *imap.SelectData, username string, filters FetchFilter) (imap.NumSet, uint32, error) {
 	var uidSet imap.NumSet
 	var count uint32
@@ -90,6 +94,10 @@ func fetchEmailIds(c *imapclient.Client, folder *imap.SelectData, username strin
 	}
 	uidSet = imap.UIDSetNum(uidNums...)
 	return uidSet, count, nil
+}
+
+func ImapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, options *imap.FetchOptions, bodySection *imap.FetchItemBodySection) ([]Email, error) {
+	return imapFetch(c, logger, numSet, options, bodySection)
 }
 
 func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, options *imap.FetchOptions, bodySection *imap.FetchItemBodySection) ([]Email, error) {
@@ -142,7 +150,15 @@ func imapFetch(c *imapclient.Client, logger log.Logger, numSet imap.NumSet, opti
 
 			key := fields.Key()
 			value := fields.Value()
-			headers = append(headers, Header{Key: key, Value: value})
+			raw, err := fields.Raw()
+			fmt.Println("--header key--", key)
+			fmt.Println("=====header value--")
+			fmt.Println(value)
+			fmt.Println("=====END header value--")
+			fmt.Println("=====header raw--", err)
+			fmt.Println(string(raw))
+			fmt.Println("=====END header raw--")
+			headers = append(headers, Header{Key: key, Value: value, Raw: raw})
 			if key == "Dkim-Signature" {
 				parts := strings.Split(value, "; ")
 				for _, p := range parts {

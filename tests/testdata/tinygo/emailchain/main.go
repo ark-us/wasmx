@@ -41,7 +41,7 @@ func main() {
 				resp.Error = resp2.Error
 			}
 		}
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.ConnectOAuth2 != nil {
 		resp := vmimap.ConnectOAuth2(&vmimap.ImapConnectionOauth2Request{
 			Id:            calld.ConnectOAuth2.Id,
@@ -61,32 +61,29 @@ func main() {
 				resp.Error = resp2.Error
 			}
 		}
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.Close != nil {
 		resp := vmimap.Close(&vmimap.ImapCloseRequest{Id: calld.Close.Id})
 		resp2 := vmsmtp.Close(&vmsmtp.SmtpCloseRequest{Id: calld.Close.Id})
 		if resp2.Error != "" {
 			resp.Error = resp2.Error
 		}
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.SignDKIM != nil {
 		resp := SignDKIM(calld.SignDKIM)
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.VerifyDKIM != nil {
 		resp := VerifyDKIM(calld.VerifyDKIM)
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.VerifyARC != nil {
 		resp := VerifyARC(calld.VerifyARC)
-		response, err = json.Marshal(&resp)
-	} else if calld.SignDKIM != nil {
-		resp := SignDKIM(calld.SignDKIM)
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.SignARC != nil {
 		resp := SignARC(calld.SignARC)
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else if calld.ForwardEmail != nil {
 		resp := ForwardEmail(calld.ForwardEmail)
-		response, err = json.Marshal(&resp)
+		response, _ = json.Marshal(&resp)
 	} else {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}

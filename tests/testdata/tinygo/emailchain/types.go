@@ -14,6 +14,7 @@ import (
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 
 	dkimS "github.com/emersion/go-msgauth/dkim"
+	dkimMox "github.com/loredanacirstea/mailverif/dkim"
 	dkim "github.com/redsift/dkim"
 )
 
@@ -132,9 +133,6 @@ func (v SignOptions) toLib() *dkimS.SignOptions {
 		}
 	}
 
-	// testPrivateKey        *rsa.PrivateKey
-	// testEd25519PrivateKey ed25519.PrivateKey
-
 	return &dkimS.SignOptions{
 		Domain:                 v.Domain,
 		Selector:               v.Selector,
@@ -164,8 +162,8 @@ type SignARCRequest struct {
 }
 
 type SignDKIMResponse struct {
-	Error       string `json:"error"`
-	SignedEmail string `json:"signed_email"`
+	Error  string `json:"error"`
+	Header string `json:"header"`
 }
 
 type SignARCResponse struct {
@@ -175,12 +173,13 @@ type SignARCResponse struct {
 
 type VerifyDKIMRequest struct {
 	EmailRaw  string          `json:"email_raw"`
-	PublicKey *dkim.PublicKey `json:"public_key,omitempty"`
+	PublicKey *dkimMox.Record `json:"public_key,omitempty"`
+	Timestamp time.Time       `json:"timestamp"`
 }
 
 type VerifyDKIMResponse struct {
-	Error    string   `json:"error"`
-	Response []Result `json:"response"`
+	Error    string           `json:"error"`
+	Response []dkimMox.Result `json:"response"`
 }
 
 type VerifyARCResponse struct {

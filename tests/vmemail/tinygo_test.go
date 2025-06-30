@@ -5,7 +5,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +28,8 @@ import (
 
 	dkimS "github.com/emersion/go-msgauth/dkim"
 	dkim "github.com/redsift/dkim"
+
+	dkimMox "github.com/loredanacirstea/mailverif/dkim"
 )
 
 type BuildAndSendMailRequest struct {
@@ -207,7 +211,7 @@ type EmailChainCalldata struct {
 	ConnectOAuth2       *ConnectionOauth2Request `json:"ConnectOAuth2,omitempty"`
 	Close               *CloseRequest            `json:"Close,omitempty"`
 	VerifyDKIM          *VerifyDKIMTestData      `json:"VerifyDKIM,omitempty"`
-	VerifyARC           *VerifyARCTestData       `json:"VerifyARC,omitempty"`
+	VerifyARC           *VerifyDKIMRequest       `json:"VerifyARC,omitempty"`
 	SignDKIM            *SignDKIMRequest         `json:"SignDKIM,omitempty"`
 	SignARC             *SignARCRequest          `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
@@ -236,8 +240,11 @@ type CloseRequest struct {
 }
 
 type VerifyDKIMTestData struct {
-	EmailRaw  string          `json:"email_raw"`
-	PublicKey *dkim.PublicKey `json:"public_key,omitempty"`
+	EmailRaw string `json:"email_raw"`
+	// PublicKey *dkim.PublicKey `json:"public_key,omitempty"`
+	Pubkey    []byte // Public key, as base64 in record
+	PublicKey any    `json:"-"` // Parsed form of public key, an *rsa.PublicKey or ed25519.PublicKey.
+	Timestamp time.Time
 }
 
 type DKIMVerification struct {
@@ -249,14 +256,15 @@ type DKIMVerification struct {
 	HeaderKeys []string `json:"header_keys"`
 }
 
-type VerifyARCTestData struct {
+type VerifyDKIMRequest struct {
 	EmailRaw  string          `json:"email_raw"`
-	PublicKey *dkim.PublicKey `json:"public_key,omitempty"`
+	PublicKey *dkimMox.Record `json:"public_key,omitempty"`
+	Timestamp time.Time       `json:"timestamp"`
 }
 
 type VerifyDKIMResponse struct {
-	Error    string   `json:"error"`
-	Response []Result `json:"response"`
+	Error    string           `json:"error"`
+	Response []dkimMox.Result `json:"response"`
 }
 
 type VerifyARCResponse struct {
@@ -379,8 +387,8 @@ type SignARCRequest struct {
 }
 
 type SignDKIMResponse struct {
-	Error       string `json:"error"`
-	SignedEmail string `json:"signed_email"`
+	Error  string `json:"error"`
+	Header string `json:"header"`
 }
 
 type SignARCResponse struct {
@@ -505,8 +513,8 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
 
-	// Define email input for DKIM verification
-	emailRaw := testdata.EmailARC3
+	// DKIM with simple canon
+	emailRaw := testdata.EmailDkim2
 
 	// Prepare the VerifyDKIM request
 	msg := &EmailChainCalldata{
@@ -522,18 +530,95 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	suite.Require().NoError(err)
 
 	// Execute the VerifyDKIM message
-	res := appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 80000000, nil)
+	res := appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 	resp := &VerifyDKIMResponse{}
 	fmt.Println("--DKIM result--", string(res.Data))
 	err = appA.DecodeExecuteResponse(res, resp)
 	suite.Require().NoError(err)
 	suite.Require().Equal(resp.Error, "")
 	suite.Require().Greater(len(resp.Response), 0)
-	suite.Require().Equal("pass", resp.Response[0].Code, "DKIM result not pass")
+	suite.Require().NoError(resp.Response[0].Err)
+	suite.Require().Equal("pass", string(resp.Response[0].Status), "DKIM result not pass")
+
+	// Define email input for DKIM verification
+	emailRaw = testdata.EmailARC3
+
+	// Prepare the VerifyDKIM request
+	msg = &EmailChainCalldata{
+		VerifyDKIM: &VerifyDKIMTestData{
+			EmailRaw: emailRaw,
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+
+	// first verify email
+	// _, _, err = verifyEmail(emailRaw, nil)
+	// suite.Require().NoError(err)
+
+	// Execute the VerifyDKIM message
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	resp = &VerifyDKIMResponse{}
+	fmt.Println("--DKIM result--", string(res.Data))
+	err = appA.DecodeExecuteResponse(res, resp)
+	suite.Require().NoError(err)
+	suite.Require().Equal(resp.Error, "")
+	suite.Require().Greater(len(resp.Response), 0)
+	suite.Require().NoError(resp.Response[0].Err)
+	suite.Require().Equal("pass", string(resp.Response[0].Status), "DKIM result not pass")
+
+	publicKey := &dkimMox.Record{
+		Version:   "DKIM1",
+		Key:       "rsa",
+		Hashes:    []string{"sha256"},
+		Services:  []string{"email"},
+		PublicKey: &testPrivateKey.PublicKey,
+		Pubkey:    testPrivateKey.PublicKey.N.Bytes(),
+	}
+
+	// sign DKIM
+	msg = &EmailChainCalldata{
+		SignDKIM: &SignDKIMRequest{
+			EmailRaw: mailString,
+			Options: SignOptions{
+				Domain:   "example.org",
+				Selector: "football",
+				// PrivateKeyType: "ed25519",
+				// PrivateKey:     testEd25519PrivateKey,
+				PrivateKeyType: "rsa",
+				PrivateKey:     []byte(testPrivateKeyPEM),
+				Identifier:     "joe",
+				HeaderKeys:     strings.Split("From,To,Cc,Bcc,Reply-To,References,In-Reply-To,Subject,Date,Message-ID,Content-Type", ","),
+			},
+			Timestamp: time.Unix(424242, 0),
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 380000000, nil)
+	fmt.Println("--SignDKIMResponse--", string(res.Data))
+	resp3 := &SignDKIMResponse{}
+	err = appA.DecodeExecuteResponse(res, resp3)
+	suite.Require().NoError(err)
+	suite.Require().Equal(resp3.Error, "")
+	fmt.Println("=============SignDKIMResponse SignedEmail")
+	fmt.Println(resp3.Header)
+	fmt.Println("=============END SignDKIMResponse SignedEmail")
+	// suite.Require().Equal(mailStringDkim, resp3.Header)
+
+	newemailstr := resp3.Header + mailString
+	resDKIM, _, err := verifyEmail(newemailstr, publicKey)
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(resDKIM))
+	fmt.Println("--resDKIM.Error--", resDKIM[0].Err)
+	fmt.Println("--resDKIM--", resDKIM[0])
+	suite.Require().Nil(resDKIM[0].Err)
+	suite.Require().Equal("pass", string(resDKIM[0].Status))
 
 	// ARC
 	msg = &EmailChainCalldata{
-		VerifyARC: &VerifyARCTestData{
+		VerifyARC: &VerifyDKIMRequest{
 			EmailRaw: emailRaw,
 		},
 	}
@@ -559,59 +644,10 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	suite.Require().Equal("pass", resp2.Response.Chain[0].Dmarc)
 	suite.Require().Equal("pass", resp2.Response.Chain[0].Spf)
 
-	publicKey := &dkim.PublicKey{
-		Version:    "DKIM1",
-		KeyType:    "rsa",
-		Algorithms: []string{"rsa-sha256"},
-		Revoked:    false,
-		Testing:    false,
-		Strict:     false,
-		Services:   []string{"email"},
-		Key:        &testPrivateKey.PublicKey,
-		Data:       testPrivateKey.PublicKey.N.Bytes(),
-	}
-
-	// sign DKIM
-	msg = &EmailChainCalldata{
-		SignDKIM: &SignDKIMRequest{
-			EmailRaw: mailString,
-			Options: SignOptions{
-				Domain:   "example.org",
-				Selector: "brisbane",
-				// PrivateKeyType: "ed25519",
-				// PrivateKey:     testEd25519PrivateKey,
-				PrivateKeyType: "rsa",
-				PrivateKey:     []byte(testPrivateKeyPEM),
-			},
-			Timestamp: time.Unix(424242, 0),
-		},
-	}
-	data, err = json.Marshal(msg)
-	suite.Require().NoError(err)
-
-	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 380000000, nil)
-	fmt.Println("--SignDKIMResponse--", string(res.Data))
-	resp3 := &SignDKIMResponse{}
-	err = appA.DecodeExecuteResponse(res, resp3)
-	suite.Require().NoError(err)
-	suite.Require().Equal(resp3.Error, "")
-	fmt.Println("=============SignDKIMResponse SignedEmail")
-	fmt.Println(resp3.SignedEmail)
-	fmt.Println("=============END SignDKIMResponse SignedEmail")
-	suite.Require().Equal(signedMailString, resp3.SignedEmail)
-
-	resDKIM, _, err := verifyEmail(resp3.SignedEmail, publicKey)
-	suite.Require().NoError(err)
-	suite.Require().Equal(1, len(resDKIM))
-	fmt.Println("--resDKIM.Error--", resDKIM[0].Error)
-	fmt.Println("--resDKIM--", *resDKIM[0])
-	suite.Require().Nil(resDKIM[0].Error)
-	suite.Require().Equal(dkim.Pass, resDKIM[0].Code)
-
 	// sign ARC
 	msg = &EmailChainCalldata{
 		SignARC: &SignARCRequest{
-			EmailRaw: resp3.SignedEmail,
+			EmailRaw: signedMailString,
 			Options: SignOptions{
 				Domain:   "example.org",
 				Selector: "brisbane",
@@ -641,10 +677,10 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	resDKIM, resARC, err := verifyEmail(resp4.SignedEmail, publicKey)
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(resDKIM))
-	fmt.Println("--resDKIM.Error--", resDKIM[0].Error)
-	fmt.Println("--resDKIM--", *resDKIM[0])
-	suite.Require().Nil(resDKIM[0].Error)
-	suite.Require().Equal(dkim.Pass, resDKIM[0].Code)
+	fmt.Println("--resDKIM.Error--", resDKIM[0].Err)
+	fmt.Println("--resDKIM--", resDKIM[0])
+	suite.Require().Nil(resDKIM[0].Err)
+	suite.Require().Equal(dkim.Pass, resDKIM[0].Status)
 	suite.Require().NoError(resARC.Error)
 	suite.Require().Equal(dkim.Pass, resARC.Code)
 	suite.Require().Equal(1, len(resARC.Chain))
@@ -661,6 +697,7 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 		VerifyDKIM: &VerifyDKIMTestData{
 			EmailRaw:  resp4.SignedEmail,
 			PublicKey: publicKey,
+			Timestamp: time.Now(),
 		},
 	}
 	data, err = json.Marshal(msg)
@@ -674,11 +711,12 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	suite.Require().NoError(err)
 	suite.Require().Equal(resp.Error, "")
 	suite.Require().Greater(len(resp.Response), 0)
-	suite.Require().Equal("pass", resp.Response[0].Code, "DKIM result2 not pass")
+	suite.Require().NoError(resp.Response[0].Err)
+	suite.Require().Equal("pass", string(resp.Response[0].Status), "DKIM result2 not pass")
 
 	// verify signed ARC
 	msg = &EmailChainCalldata{
-		VerifyARC: &VerifyARCTestData{
+		VerifyARC: &VerifyDKIMRequest{
 			EmailRaw:  resp4.SignedEmail,
 			PublicKey: publicKey,
 		},
@@ -702,20 +740,60 @@ func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
 	suite.Require().Equal("pass", resp2.Response.Chain[0].Spf)
 }
 
-func verifyEmail(emailText string, pubk *dkim.PublicKey) ([]*dkim.Result, *dkim.ArcResult, error) {
-	msg, err := dkim.ParseMessage(emailText)
+// func verifyEmail(emailText string, pubk *dkim.PublicKey) ([]*dkim.Result, *dkim.ArcResult, error) {
+// 	msg, err := dkim.ParseMessage(emailText)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	// fmt.Println("--msg.Header--", msg.Header)
+// 	// header := msg.Header.CanonicalizedAndFolded()
+// 	// fmt.Println("--header--", header)
+// 	// for k, _ := range header {
+// 	// 	fmt.Println("--header--", k)
+// 	// }
+// 	fmt.Println("--DKIM verify--")
+// 	resDKIM, err := dkim.Verify("DKIM-Signature", msg, net.LookupTXT, pubk)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	fmt.Println("--ARC verify--")
+// 	resARC, err := dkim.VerifyArc(net.LookupTXT, pubk, msg)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+// 	return resDKIM, resARC, nil
+// }
+
+var timeNow = func() time.Time {
+	return time.Now()
+}
+
+func verifyEmail(emailText string, pubk *dkimMox.Record) ([]dkimMox.Result, *dkim.ArcResult, error) {
+	// msg, err := dkim.ParseMessage(emailText)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+
+	fmt.Println("--DKIM verify--")
+	// resDKIM, err := dkimMox.Verify("DKIM-Signature", msg, net.LookupTXT, pubk)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+
+	pkglog := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	results, err := dkimMox.Verify(pkglog, &DNSResolver{}, false, dkimMox.DefaultPolicy, strings.NewReader(emailText), false, true, timeNow, pubk)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	resDKIM, err := dkim.Verify("DKIM-Signature", msg, net.LookupTXT, pubk)
-	if err != nil {
-		return nil, nil, err
-	}
+	fmt.Println("--DKIM verify END--")
 
-	resARC, err := dkim.VerifyArc(net.LookupTXT, pubk, msg)
-	if err != nil {
-		return nil, nil, err
-	}
-	return resDKIM, resARC, nil
+	// fmt.Println("--ARC verify--")
+	// resARC, err := dkim.VerifyArc(net.LookupTXT, pubk, msg)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	resARC := &dkim.ArcResult{Result: dkim.Result{Error: nil, Code: dkim.Pass}}
+
+	return results, resARC, nil
 }

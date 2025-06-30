@@ -25,6 +25,7 @@ type Attachment struct {
 type Header struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+	Raw   []byte `json:"raw"`
 }
 
 type BodyPart struct {

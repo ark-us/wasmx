@@ -2,15 +2,17 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
 	"slices"
 	"strings"
 	"time"
 
-	dkim "github.com/redsift/dkim"
-
 	dkimS "github.com/emersion/go-msgauth/dkim"
+	dkimMox "github.com/loredanacirstea/mailverif/dkim"
+	dnsMox "github.com/loredanacirstea/mailverif/dns"
+	utilsMox "github.com/loredanacirstea/mailverif/utils"
 
 	"github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
@@ -19,29 +21,77 @@ import (
 
 const DKIM_HEADER = "DKIM-Signature"
 
+func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
+	resp := VerifyDKIMResponse{Error: ""}
+	dnsResolver := NewDNSResolver()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	now := func() time.Time {
+		return req.Timestamp
+	}
+
+	results, err := dkimMox.Verify(logger, dnsResolver, false, dkimMox.DefaultPolicy, strings.NewReader(req.EmailRaw), false, true, now, req.PublicKey)
+	if err != nil {
+		resp.Error = err.Error()
+		return resp
+	}
+	resp.Response = results
+	return resp
+}
+
 func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
 	fmt.Println("--SignDKIM--")
 	resp := SignDKIMResponse{Error: ""}
 
 	r := strings.NewReader(req.EmailRaw)
-	var b bytes.Buffer
-
 	now := func() time.Time {
 		return req.Timestamp
 	}
 
-	options := req.Options.toLib()
-	fmt.Println("--SignSync options--")
-	err := dkimS.SignSync(&b, r, options, now)
-	fmt.Println("--SignSync--")
-	fmt.Println("--SignSync err--", err)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	identif := utilsMox.Localpart(req.Options.Identifier)
+	domain := dnsMox.Domain{ASCII: req.Options.Domain}
+	key := ToPrivateKey(req.Options.PrivateKeyType, req.Options.PrivateKey)
+	sel := dkimMox.Selector{
+		Hash:       "sha256",
+		PrivateKey: key,
+		// Headers:    strings.Split("From,To,Cc,Bcc,Reply-To,References,In-Reply-To,Subject,Date,Message-ID,Content-Type", ","),
+		Headers: req.Options.HeaderKeys,
+		Domain:  dnsMox.Domain{ASCII: req.Options.Selector},
+	}
+	selectors := []dkimMox.Selector{sel}
+	header, err := dkimMox.Sign(logger, identif, domain, selectors, false, r, now)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
 	}
-	resp.SignedEmail = b.String()
+	resp.Header = header
+
 	return resp
 }
+
+// func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
+// 	fmt.Println("--SignDKIM--")
+// 	resp := SignDKIMResponse{Error: ""}
+
+// 	r := strings.NewReader(req.EmailRaw)
+// 	var b bytes.Buffer
+
+// 	now := func() time.Time {
+// 		return req.Timestamp
+// 	}
+
+// 	options := req.Options.toLib()
+// 	fmt.Println("--SignSync options--")
+// 	err := dkimS.SignSync(&b, r, options, now)
+// 	fmt.Println("--SignSync--")
+// 	fmt.Println("--SignSync err--", err)
+// 	if err != nil {
+// 		resp.Error = err.Error()
+// 		return resp
+// 	}
+// 	resp.SignedEmail = b.String()
+// 	return resp
+// }
 
 func SignARC(req *SignARCRequest) SignARCResponse {
 	resp := SignARCResponse{Error: ""}
@@ -55,7 +105,8 @@ func SignARC(req *SignARCRequest) SignARCResponse {
 
 	dnsResolver := NewDNSResolver()
 	lookupTxt := func(name string) ([]string, error) {
-		return dnsResolver.LookupTXT(name)
+		res, _, err := dnsResolver.LookupTXT(name)
+		return res, err
 	}
 
 	options := req.Options.toLib()
@@ -75,76 +126,78 @@ func SignARC(req *SignARCRequest) SignARCResponse {
 func VerifyARC(req *VerifyDKIMRequest) VerifyARCResponse {
 	fmt.Println("--VerifyARC--")
 	resp := VerifyARCResponse{Error: ""}
-	msg, err := dkim.ParseMessage(req.EmailRaw)
-	if err != nil {
-		resp.Error = err.Error()
-		return resp
-	}
+	// msg, err := dkim.ParseMessage(req.EmailRaw)
+	// if err != nil {
+	// 	resp.Error = err.Error()
+	// 	return resp
+	// }
 
-	dnsResolver := NewDNSResolver()
-	lookupTxt := func(name string) ([]string, error) {
-		return dnsResolver.LookupTXT(name)
-	}
+	// dnsResolver := NewDNSResolver()
+	// lookupTxt := func(name string) ([]string, error) {
+	// 	res, _, err := dnsResolver.LookupTXT(name)
+	// 	return res, err
+	// }
 
-	res, err := dkim.VerifyArc(lookupTxt, req.PublicKey, msg)
-	fmt.Println("--VerifyArc err, res--", err, res)
-	if err != nil {
-		resp.Error = err.Error()
-		return resp
-	}
+	// res, err := dkim.VerifyArc(lookupTxt, req.PublicKey, msg)
+	// fmt.Println("--VerifyArc err, res--", err, res)
+	// if err != nil {
+	// 	resp.Error = err.Error()
+	// 	return resp
+	// }
 
-	resbz, err := json.Marshal(res)
-	fmt.Println("--dkim.VerifyArc resbz--", err, string(resbz))
+	// resbz, err := json.Marshal(res)
+	// fmt.Println("--dkim.VerifyArc resbz--", err, string(resbz))
 
-	resp.Response = &ArcResult{}
-	fmt.Println("--VerifyArc FromLib pre--")
-	resp.Response.FromLib(res)
-	fmt.Println("--VerifyArc FromLib--")
+	// resp.Response = &ArcResult{}
+	// fmt.Println("--VerifyArc FromLib pre--")
+	// resp.Response.FromLib(res)
+	// fmt.Println("--VerifyArc FromLib--")
 
-	resbz, err = json.Marshal(resp.Response)
-	fmt.Println("--dkim.VerifyArc resp.Response--", err, string(resbz))
+	// resbz, err = json.Marshal(resp.Response)
+	// fmt.Println("--dkim.VerifyArc resp.Response--", err, string(resbz))
 	return resp
 }
 
-func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
-	fmt.Println("--VerifyDKIM--" + req.EmailRaw)
-	resp := VerifyDKIMResponse{Error: ""}
+// func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
+// 	fmt.Println("--VerifyDKIM--" + req.EmailRaw)
+// 	resp := VerifyDKIMResponse{Error: ""}
 
-	msg, err := dkim.ParseMessage(req.EmailRaw)
-	if err != nil {
-		resp.Error = err.Error()
-		return resp
-	}
+// 	msg, err := dkim.ParseMessage(req.EmailRaw)
+// 	if err != nil {
+// 		resp.Error = err.Error()
+// 		return resp
+// 	}
 
-	dnsResolver := NewDNSResolver()
-	lookupTxt := func(name string) ([]string, error) {
-		return dnsResolver.LookupTXT(name)
-	}
+// 	dnsResolver := NewDNSResolver()
+// 	lookupTxt := func(name string) ([]string, error) {
+// 		res, _, err := dnsResolver.LookupTXT(name)
+// 		return res, err
+// 	}
 
-	// if we want to exclude domains
-	// InvalidSigningEntityOption("com", "org", "net"),
+// 	// if we want to exclude domains
+// 	// InvalidSigningEntityOption("com", "org", "net"),
 
-	// if we want to fail if expiration date failed
-	// SignatureTimingOption(5*time.Minute)
-	res, err := dkim.Verify(DKIM_HEADER, msg, lookupTxt, req.PublicKey)
-	fmt.Println("--dkim.Verify--", err, res)
-	if err != nil {
-		resp.Error = err.Error()
-		return resp
-	}
+// 	// if we want to fail if expiration date failed
+// 	// SignatureTimingOption(5*time.Minute)
+// 	res, err := dkim.Verify(DKIM_HEADER, msg, lookupTxt, req.PublicKey)
+// 	fmt.Println("--dkim.Verify--", err, res)
+// 	if err != nil {
+// 		resp.Error = err.Error()
+// 		return resp
+// 	}
 
-	resbz, err := json.Marshal(res)
-	fmt.Println("--dkim.Verify resbz--", err, string(resbz))
+// 	resbz, err := json.Marshal(res)
+// 	fmt.Println("--dkim.Verify resbz--", err, string(resbz))
 
-	resp.Response = ResultArrFromLib(res)
+// 	resp.Response = ResultArrFromLib(res)
 
-	fmt.Println("--dkim.Verify post ResultArrFromLib--")
+// 	fmt.Println("--dkim.Verify post ResultArrFromLib--")
 
-	resbz, err = json.Marshal(resp.Response)
-	fmt.Println("--dkim.Verify resp.Response--", err, string(resbz))
+// 	resbz, err = json.Marshal(resp.Response)
+// 	fmt.Println("--dkim.Verify resp.Response--", err, string(resbz))
 
-	return resp
-}
+// 	return resp
+// }
 
 func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 	resp := ForwardEmailResponse{Error: ""}
@@ -195,12 +248,8 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 		resp.Error = err.Error()
 		return resp
 	}
+
 	resp.EmailRaw = emailstr
-
-	// fmt.Println("===============forwarding")
-	// fmt.Println(emailstr)
-	// fmt.Println("=====================")
-
 	if req.SendEmail {
 		sendresp := vmsmtp.SendMail(&vmsmtp.SmtpSendMailRequest{
 			Id:    req.ConnectionId,
@@ -247,10 +296,10 @@ func BuildForwardHeaders(email vmimap.Email, from vmimap.Address, to []vmimap.Ad
 	headers := make([]vmimap.Header, 0)
 
 	for _, h := range email.Headers {
-		switch h.Key {
-		case vmimap.HEADER_MESSAGE_ID:
+		switch strings.ToLower(h.Key) {
+		case vmimap.HEADER_LOW_MESSAGE_ID:
 			messageId = h.Value
-			dkimCtxParams[h.Key] = h.Value
+			dkimCtxParams[vmimap.HEADER_MESSAGE_ID] = h.Value
 		}
 	}
 
@@ -258,21 +307,29 @@ func BuildForwardHeaders(email vmimap.Email, from vmimap.Address, to []vmimap.Ad
 	for _, h := range email.Headers {
 		switch strings.ToLower(h.Key) {
 		case vmimap.HEADER_LOW_SUBJECT:
-			h.Value = "Re: " + h.Value
+			h.Value = "Re: " + h.Value // TODO add from.toAddress()
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_IN_REPLY_TO:
 			h.Value = messageId
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_REFERENCES:
 			h.Value = messageId
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_FROM:
 			h.Value = vmimap.SerializeAddresses([]vmimap.Address{from})
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_TO:
 			h.Value = vmimap.SerializeAddresses(to)
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_CC:
 			h.Value = vmimap.SerializeAddresses(cc)
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_BCC:
 			h.Value = vmimap.SerializeAddresses(bcc)
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_DATE:
 			h.Value = timestamp.UTC().Format(time.RFC1123Z)
+			h.Raw = []byte{}
 		case vmimap.HEADER_LOW_MESSAGE_ID:
 			continue
 		case vmimap.HEADER_LOW_MIME_VERSION:
@@ -294,29 +351,24 @@ func BuildForwardHeaders(email vmimap.Email, from vmimap.Address, to []vmimap.Ad
 	// replace headers
 	email.Headers = headers
 
-	// return email
-
-	// DKIM-Signature will be added by the mail server
-	canonicalizer := dkimS.GetCanonicalizer(dkimS.CanonicalizationRelaxed)
-	// Provable-DNS-Registry
-	// Provable-Email-Registry
-	// Provable-Forward-Origin-DKIM-Context
-	// Provable-Forward-Chain-Signature
-
 	dnsRegistryParams := make(map[string]string, 0)
 	dnsRegistryParams["chain.id"] = wasmx.GetChainId()
 	dnsRegistryFormatted := dkimS.FormatHeaderParams(HEADER_PROVABLE_DNS_REGISTRY, dnsRegistryParams)
 	fmt.Println("--dnsRegistryFormatted--", dnsRegistryFormatted)
-	dnsRegistryHeader := canonicalizer.CanonicalizeHeader(dnsRegistryFormatted)
+	dnsRegistryFormatted = strings.TrimRight(dnsRegistryFormatted, crlf) + crlf
+	fmt.Println("--dnsRegistryFormatted--", dnsRegistryFormatted)
 
 	emailRegistryParams := make(map[string]string, 0)
 	emailRegistryParams["chain.id"] = wasmx.GetChainId()
 	emailRegistryFormatted := dkimS.FormatHeaderParams(HEADER_PROVABLE_EMAIL_REGISTRY, emailRegistryParams)
 	fmt.Println("--emailRegistryFormatted--", emailRegistryFormatted)
-	emailRegistryHeader := canonicalizer.CanonicalizeHeader(emailRegistryFormatted)
+	emailRegistryFormatted = strings.TrimRight(emailRegistryFormatted, crlf) + crlf
+	fmt.Println("--emailRegistryFormatted--", emailRegistryFormatted)
 
 	dkimCtxFormatted := dkimS.FormatHeaderParams(HEADER_PROVABLE_FORWARD_ORIGIN_DKIM_CONTEXT, dkimCtxParams)
-	dkimCtxHeader := canonicalizer.CanonicalizeHeader(dkimCtxFormatted)
+	fmt.Println("--dkimCtxFormatted--", dkimCtxFormatted)
+	dkimCtxFormatted = strings.TrimRight(dkimCtxFormatted, crlf) + crlf
+	fmt.Println("--dkimCtxFormatted--", dkimCtxFormatted)
 
 	forwardSigParams := make(map[string]string, 0)
 	forwardSigParams["v"] = "1"
@@ -327,54 +379,22 @@ func BuildForwardHeaders(email vmimap.Email, from vmimap.Address, to []vmimap.Ad
 	forwardSigParams["h"] = strings.Join(updatedHeaders, ":")
 	forwardSigParams["b"] = ""
 
-	signer, err := NewSignerForward(HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE, options, email, forwardSigParams)
+	signer, err := dkimS.NewSignerForward(HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE, options, []byte(email.Raw), forwardSigParams)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
 
 	fmt.Println("--signature--", signer.Signature())
-	fmt.Println("--signature b--", signer.sigParams["b"])
-	forwardSigParams["b"] = signer.sigParams["b"]
+	fmt.Println("--signature b--", signer.B())
+	forwardSigParams["b"] = signer.B()
 
 	forwardSigFormatted := dkimS.FormatHeaderParams(HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE, forwardSigParams)
 	fmt.Println("--forwardSigFormatted--", forwardSigFormatted)
-	forwardSigHeader := canonicalizer.CanonicalizeHeader(forwardSigFormatted)
 
-	fmt.Println("--dnsRegistryHeader--", dnsRegistryHeader)
-	fmt.Println("--emailRegistryHeader--", emailRegistryHeader)
-	fmt.Println("--dkimCtxHeader--", dkimCtxHeader)
-	fmt.Println("--forwardSigHeader--", forwardSigHeader)
-
-	_, dnsRegistryHeader, _ = strings.Cut(dnsRegistryHeader, ":")
-	_, emailRegistryHeader, _ = strings.Cut(emailRegistryHeader, ":")
-	_, dkimCtxHeader, _ = strings.Cut(dkimCtxHeader, ":")
-	_, forwardSigHeader, _ = strings.Cut(forwardSigHeader, ":")
-
-	// dnsRegistryHeader = strings.SplitN(dnsRegistryHeader, ":", 1)[1]
-	// emailRegistryHeader = strings.SplitN(emailRegistryHeader, ":", 1)[1]
-	// dkimCtxHeader = strings.SplitN(dkimCtxHeader, ":", 1)[1]
-	// forwardSigHeader = strings.SplitN(forwardSigHeader, ":", 1)[1]
-
-	fmt.Println("--dnsRegistryHeader2--", dnsRegistryHeader)
-	fmt.Println("--emailRegistryHeader2--", emailRegistryHeader)
-	fmt.Println("--dkimCtxHeader2--", dkimCtxHeader)
-	fmt.Println("--forwardSigHeader2--", forwardSigHeader)
-
-	dnsRegistryHeader = strings.TrimSuffix(dnsRegistryHeader, "\r\n")
-	emailRegistryHeader = strings.TrimSuffix(emailRegistryHeader, "\r\n")
-	dkimCtxHeader = strings.TrimSuffix(dkimCtxHeader, "\r\n")
-	forwardSigHeader = strings.TrimSuffix(forwardSigHeader, "\r\n")
-
-	fmt.Println("--dnsRegistryHeader3--", dnsRegistryHeader)
-	fmt.Println("--emailRegistryHeader3--", emailRegistryHeader)
-	fmt.Println("--dkimCtxHeader3--", dkimCtxHeader)
-	fmt.Println("--forwardSigHeader3--", forwardSigHeader)
-
-	// if existing ones, keep.
-	email.Headers.AppendTop(HEADER_PROVABLE_DNS_REGISTRY, dnsRegistryHeader)
-	email.Headers.AppendTop(HEADER_PROVABLE_EMAIL_REGISTRY, emailRegistryHeader)
-	email.Headers.AppendTop(HEADER_PROVABLE_FORWARD_ORIGIN_DKIM_CONTEXT, dkimCtxHeader)
-	email.Headers.AppendTop(HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE, forwardSigHeader)
+	email.Headers.AppendTop(vmimap.Header{Key: HEADER_PROVABLE_DNS_REGISTRY, Raw: []byte(dnsRegistryFormatted)})
+	email.Headers.AppendTop(vmimap.Header{Key: HEADER_PROVABLE_EMAIL_REGISTRY, Raw: []byte(emailRegistryFormatted)})
+	email.Headers.AppendTop(vmimap.Header{Key: HEADER_PROVABLE_FORWARD_ORIGIN_DKIM_CONTEXT, Raw: []byte(dkimCtxFormatted)})
+	email.Headers.AppendTop(vmimap.Header{Key: HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE, Raw: []byte(forwardSigFormatted)})
 
 	return email
 }

@@ -1,94 +1,3 @@
-Delivered-To: seth.one.info@gmail.com
-Received: by 2002:a05:7022:68aa:b0:9b:65ec:421a with SMTP id cm42csp2343619dlb;
-        Tue, 10 Jun 2025 14:12:05 -0700 (PDT)
-X-Forwarded-Encrypted: i=4; AJvYcCVxh8PFglGFqOAP+AsLsh/f3ftGU5tylg0uHg8ZsqaSMFRQYWNrLE3Tp5rvRf5ucX1jjvHcw8HSS89TgMVP@gmail.com
-X-Received: by 2002:a17:90b:5404:b0:311:a623:676c with SMTP id 98e67ed59e1d1-313af243c3bmr1398936a91.27.1749589924825;
-        Tue, 10 Jun 2025 14:12:04 -0700 (PDT)
-ARC-Seal: i=3; a=rsa-sha256; t=1749589924; cv=pass;
-        d=google.com; s=arc-20240605;
-        b=k/DDEvhaKSwq1fjWM0FrkW5lbFEVRHln8sdi0ExNdxC5DX2e6Wcc+yDxxesyjpccS/
-         H8f5Ii2NnZShlTB37lgzP0s8knWd0sLnqorv/EM9DaCU/jRPwcPN51k4TOdMZqxzCzUy
-         MHPNZzTN1o4XomdeC2EP2gw90XdaYhzTlmwR6F4uRdU42uPTPfAxHQp7muQSqez8ptF+
-         GC641X6SE9SrCMNdakyj14W85fhc6rRvTzf8itaD1Rl3W3BoYjulSGVoRSYWS16He3uT
-         l6YR7/0sc0tAKKhLYdkwesc81qo65crK6Qc/4F3Xq1iS88+kDc9kqizrg0lT++PNfFgO
-         BC0w==
-ARC-Message-Signature: i=3; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
-        h=content-transfer-encoding:mime-version:user-agent:date:message-id
-         :subject:to:from:dkim-signature:dkim-signature:delivered-to;
-        bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=;
-        fh=Ml91QZNjOUBF4lPxdodEISvnG8cKMzALenqeNxoWqdI=;
-        b=VEGNq275dIibd6+54GYZnP2dIHqFiGkAwALj/FA4hw7weJGTiFvfcb/O7p20PPWbUY
-         isM3m4twYpknpID3hRN/euJJNWqj4VgclnJST3nQ+F0WgfwBCOl/wuVJbu9pO9vgJAY7
-         WglNuiona7FL0Rlwp+KGHllLbR5CA0pak3s9E+OI3fhZya9/v5Gldis8vzsyfOiCnGta
-         5IYVB42Mgdi+tS2SaUaHqPUL+g9eo2hnca56CTkEieuOZcLFDcCOHQTZol4n8ti5aiiI
-         UB2EKnu+PC1JX7Tm2MYYBbIRZhuB9OF2TQat13rr8Hph3I1/cupScIWFRr/8Hkh4PP0q
-         9kUw==;
-        dara=google.com
-ARC-Authentication-Results: i=3; mx.google.com;
-       dkim=neutral (no key) header.i=@mail.provable.dev header.s=2024a;
-       dkim=pass header.i=@mail.provable.dev header.s=2024b header.b=K043WB+2;
-       arc=pass (i=2 spf=pass spfdomain=mail.provable.dev dkim=pass dkdomain=mail.provable.dev dmarc=pass fromdomain=mail.provable.dev);
-       spf=pass (google.com: domain of thelaurel.bot+caf_=seth.one.info=gmail.com@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom="thelaurel.bot+caf_=seth.one.info=gmail.com@gmail.com";
-       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=mail.provable.dev;
-       dara=pass header.i=@gmail.com
-Return-Path: <thelaurel.bot+caf_=seth.one.info=gmail.com@gmail.com>
-Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
-        by mx.google.com with SMTPS id 98e67ed59e1d1-3134b0d75c5sor6293160a91.5.2025.06.10.14.12.04
-        for <seth.one.info@gmail.com>
-        (Google Transport Security);
-        Tue, 10 Jun 2025 14:12:04 -0700 (PDT)
-Received-SPF: pass (google.com: domain of thelaurel.bot+caf_=seth.one.info=gmail.com@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
-Authentication-Results: mx.google.com;
-       dkim=neutral (no key) header.i=@mail.provable.dev header.s=2024a;
-       dkim=pass header.i=@mail.provable.dev header.s=2024b header.b=K043WB+2;
-       arc=pass (i=2 spf=pass spfdomain=mail.provable.dev dkim=pass dkdomain=mail.provable.dev dmarc=pass fromdomain=mail.provable.dev);
-       spf=pass (google.com: domain of thelaurel.bot+caf_=seth.one.info=gmail.com@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom="thelaurel.bot+caf_=seth.one.info=gmail.com@gmail.com";
-       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=mail.provable.dev;
-       dara=pass header.i=@gmail.com
-ARC-Seal: i=2; a=rsa-sha256; t=1749589924; cv=pass;
-        d=google.com; s=arc-20240605;
-        b=PouceSL2DqOihx6kLx+r9iuch/opZ8mVFCT+4tXOP74GLkG2RcfTWKb04BU93eggDN
-         loMcaG+T9vCo7g1PnSUr4EuzLRW3BwGek4t3LHBKp4u7U3M0aY2X1bGmnz3EqKe/V9gq
-         7zv+ExdakSyHwszZU2fOwBEPW1KKOvdILiMkhNLepgX0lzioJ9zJnBDvKhDU3ZxPcbWB
-         vOmNNTX8VH9seQaqgVKh5sqtpyvPYT4mlVAYURZTUNYOZe7RD7yUygIxgyjyvIbDNRN3
-         kin4YzCEHL2vsnYFNr1ZnuKyOMF0RBm9xNpiAIgQt33ClS4iLCzTSiQKIOCToWrWJaHQ
-         bYdg==
-ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
-        h=content-transfer-encoding:mime-version:user-agent:date:message-id
-         :subject:to:from:dkim-signature:dkim-signature:delivered-to;
-        bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=;
-        fh=Ml91QZNjOUBF4lPxdodEISvnG8cKMzALenqeNxoWqdI=;
-        b=Hx3YZqrTC2sXvj25ntj9xc3nBMaYfOwJZQV/SG86UJirOs+P3uEcb1cqtFrSJM1BEQ
-         YFTzYSdQDuGkNzVSKGqP0Vd/SEJZH7WyLRv7KL4ZXaemGu072mnfr8KScHYqoo0Jh/68
-         O24YBOyLqnhi6LmCrbCTNasROMQjmkYeH8CFxw8e3beTzurVWtzoRbtw0SSdaLhlCX8M
-         hPR7bKy1xwUqpIUdzoXGhjMyvvdJjGWVoGX8R5ouHrD+/sGL/yUsoTE4nEUW8Os2L4cB
-         vCq7VGvwOTEYc8h++m50bsix5PIWne06Lu51QVfIIoocy1bIesjg5OEgO3LdEVbXBZyG
-         /28g==;
-        dara=google.com
-ARC-Authentication-Results: i=2; mx.google.com;
-       dkim=neutral (no key) header.i=@mail.provable.dev header.s=2024a;
-       dkim=pass header.i=@mail.provable.dev header.s=2024b header.b=K043WB+2;
-       spf=pass (google.com: domain of test@mail.provable.dev designates 85.215.130.119 as permitted sender) smtp.mailfrom=test@mail.provable.dev;
-       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=mail.provable.dev
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1749589924; x=1750194724;
-        h=content-transfer-encoding:mime-version:user-agent:date:message-id
-         :subject:to:from:dkim-signature:dkim-signature:delivered-to
-         :x-forwarded-for:x-forwarded-to:x-gm-message-state:from:to:cc
-         :subject:date:message-id:reply-to;
-        bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=;
-        b=A5W976h4O/CG/P73lVKQhrPQ9m4Ck8gtOXsdq5r8rYC96rVKE2+l9fxiDW9EyP8Fw2
-         cC/beXjlqXq2x0+7Slgz69xswg7YgQnbOqKNeuw2lnVySpVzm37ofzJxYJc0DlOd8GZf
-         2BclsyFeawJdBw9ShN8hML5lFuSnB/c5BKMUqnZPL2dv2Nn+mecGSGupNKUozgEQoGUB
-         33FZSuu/OJXq80W4g1Zw6f9OI4N5GryuDvkRcMEosr8FXs1oK49LyEL+BLBOkob1ZSq1
-         B9gNHndx1UWdQnAeRugVnVMLbc55g5ljjxPFN/apaXpJRf4d9V44xw0EfXcmxxY95hgN
-         v+bQ==
-X-Forwarded-Encrypted: i=2; AJvYcCVzwbjjEAn5P65ODzz5UJic0iiOWnQHTvzj+23T52cihhu/6J1FehAdcICTsY1M7IXbPZnrUSFw65UJyBVB@gmail.com
-X-Gm-Message-State: AOJu0YwiMmE5+S3vAQj289iAzNuPgjbJqMI42CnVzMr66JItgosD727m +unReCJQNgqhYxwHtnnFQiQhBmE3/0ADm9XcB5G4XovduYB6KUD2S+/rrHuvOs5YuZcYZj++huL Hw2wxPRD5V8wimIXezGumI7/zoVPN+ZoTHKUfpnRc+QUrVT3ibavXbx1LCU63Pg==
-X-Received: by 2002:a17:90b:540c:b0:311:9c9a:58c5 with SMTP id 98e67ed59e1d1-313af142493mr1762856a91.12.1749589924287;
-        Tue, 10 Jun 2025 14:12:04 -0700 (PDT)
-X-Forwarded-To: seth.one.info@gmail.com
-X-Forwarded-For: thelaurel.bot@gmail.com seth.one.info@gmail.com
 Delivered-To: thelaurel.bot@gmail.com
 Received: by 2002:a05:7300:6d24:b0:175:1578:60a4 with SMTP id n36csp3474650dyo;
         Tue, 10 Jun 2025 14:12:02 -0700 (PDT)
@@ -127,9 +36,30 @@ Received: from mail.provable.dev (mail.provable.dev. [85.215.130.119])
         (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
         Tue, 10 Jun 2025 14:12:02 -0700 (PDT)
 Received-SPF: pass (google.com: domain of test@mail.provable.dev designates 85.215.130.119 as permitted sender) client-ip=85.215.130.119;
-Received: from mail.provable.dev by mail.provable.dev id n5-sNLLrTuZJYpcmGH8G1g for <thelaurel.bot@gmail.com>; 10 Jun 2025 21:12:02 +0000
-DKIM-Signature: v=1; d=mail.provable.dev; s=2024a; i=test@mail.provable.dev; a=ed25519-sha256; t=1749589922; x=1749849122; h=From:To:Cc:Bcc:Reply-To: References:In-Reply-To:Subject:Date:Message-Id:Content-Type:From:To:Subject: Date:Message-Id:Content-Type; bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=; b=7J39El5KDL4NPguv2fK3m7xm/F evJN9QFqECm90XGwfWnlqBEEjHteY/P28AJ5xwfenf08TdtBLIMes6PMZTBA==
-DKIM-Signature: v=1; d=mail.provable.dev; s=2024b; i=test@mail.provable.dev; a=rsa-sha256; t=1749589922; x=1749849122; h=From:To:Cc:Bcc:Reply-To: References:In-Reply-To:Subject:Date:Message-Id:Content-Type:From:To:Subject: Date:Message-Id:Content-Type; bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=; b=K043WB+2sby57d3sihT+xRSou8 H2+XTKqUxrfBRaOa6q48hcUs7DVg9n+0bA6T7cAQYlNsc1MNoViH5ebdjYKigJepnwrh4CCGweJUZ plhBWUF2McU4Kgz8XaLyCt5ipots2aOLRG7yT0FkudXYBY2bnG64fbyQABf6LClIF9Gwuq8gNF5Mj YF+oZZCZdnsQnf/AT+qDYCjOgTbjoPosZDOypsHSu42/m12UsYEqAZsBrsqaFV1rmFLlpdWzQ8y41 dySACyWpRiVayzU5vFvfBkd/juhG94xlER9cs8RLE/oeFXqtOqq21HDUfqLp3koxqOeHTgmctN/0r BI+nuopA==
+Authentication-Results: mx.google.com;
+       dkim=neutral (no key) header.i=@mail.provable.dev header.s=2024a;
+       dkim=pass header.i=@mail.provable.dev header.s=2024b header.b=K043WB+2;
+       spf=pass (google.com: domain of test@mail.provable.dev designates 85.215.130.119 as permitted sender) smtp.mailfrom=test@mail.provable.dev;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=mail.provable.dev
+Received: from mail.provable.dev by mail.provable.dev id
+	n5-sNLLrTuZJYpcmGH8G1g for <thelaurel.bot@gmail.com>;
+	10 Jun 2025 21:12:02 +0000
+DKIM-Signature: v=1; d=mail.provable.dev; s=2024a; i=test@mail.provable.dev;
+	a=ed25519-sha256; t=1749589922; x=1749849122; h=From:To:Cc:Bcc:Reply-To:
+	References:In-Reply-To:Subject:Date:Message-Id:Content-Type:From:To:Subject:
+	Date:Message-Id:Content-Type;
+	bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=; b=7J39El5KDL4NPguv2fK3m7xm/F
+	evJN9QFqECm90XGwfWnlqBEEjHteY/P28AJ5xwfenf08TdtBLIMes6PMZTBA==
+DKIM-Signature: v=1; d=mail.provable.dev; s=2024b; i=test@mail.provable.dev;
+	a=rsa-sha256; t=1749589922; x=1749849122; h=From:To:Cc:Bcc:Reply-To:
+	References:In-Reply-To:Subject:Date:Message-Id:Content-Type:From:To:Subject:
+	Date:Message-Id:Content-Type;
+	bh=4fWAjR8dybJoJ7oc+ua358Qnylv7LASFrox6UiJwQ8g=; b=K043WB+2sby57d3sihT+xRSou8
+	H2+XTKqUxrfBRaOa6q48hcUs7DVg9n+0bA6T7cAQYlNsc1MNoViH5ebdjYKigJepnwrh4CCGweJUZ
+	plhBWUF2McU4Kgz8XaLyCt5ipots2aOLRG7yT0FkudXYBY2bnG64fbyQABf6LClIF9Gwuq8gNF5Mj
+	YF+oZZCZdnsQnf/AT+qDYCjOgTbjoPosZDOypsHSu42/m12UsYEqAZsBrsqaFV1rmFLlpdWzQ8y41
+	dySACyWpRiVayzU5vFvfBkd/juhG94xlER9cs8RLE/oeFXqtOqq21HDUfqLp3koxqOeHTgmctN/0r
+	BI+nuopA==
 From: <test@mail.provable.dev>
 To: <thelaurel.bot@gmail.com>
 Subject: Testing forwarding
