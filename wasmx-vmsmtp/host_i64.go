@@ -20,6 +20,7 @@ func BuildWasmxSmtpVM_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (inter
 		vm.BuildFn("SupportsAuth", SupportsAuth, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("MaxMessageSize", MaxMessageSize, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("BuildMail", BuildMail, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("StartServer", StartServer, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "smtp", context, fndefs)

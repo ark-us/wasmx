@@ -91,7 +91,7 @@ func TestEmailTinyGoVerifyDKIM(t *testing.T) {
 	header, err := dkimMox.Sign(logger, identif, domain, selectors, false, r, now)
 	require.NoError(t, err)
 
-	newemailstr := header + mailString
+	newemailstr := strings.Join(header, "") + mailString
 	dkimres, arcres, err = verifyEmail(newemailstr, publicKey)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(dkimres))

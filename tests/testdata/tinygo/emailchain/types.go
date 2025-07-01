@@ -18,6 +18,8 @@ import (
 	dkim "github.com/redsift/dkim"
 )
 
+type EmptyMsg struct{}
+
 type Calldata struct {
 	ConnectWithPassword *ConnectionSimpleRequest        `json:"ConnectWithPassword,omitempty"`
 	ConnectOAuth2       *ConnectionOauth2Request        `json:"ConnectOAuth2,omitempty"`
@@ -29,6 +31,7 @@ type Calldata struct {
 	SignDKIM            *SignDKIMRequest                `json:"SignDKIM,omitempty"`
 	SignARC             *SignARCRequest                 `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest            `json:"ForwardEmail,omitempty"`
+	StartServer         *EmptyMsg                       `json:"StartServer,omitempty"`
 }
 
 type ConnectionSimpleRequest struct {

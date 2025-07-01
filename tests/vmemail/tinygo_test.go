@@ -417,6 +417,44 @@ var now = func() time.Time {
 	return time.Unix(424242, 0)
 }
 
+func TestSignARCSync1(t *testing.T) {
+	options := &dkimS.SignOptions{
+		Domain:    "example.org",
+		Selector:  "brisbane",
+		Signer:    testPrivateKey,
+		LookupTXT: net.LookupTXT,
+	}
+
+	pubk := &dkim.PublicKey{
+		Version:    "DKIM1",
+		KeyType:    "rsa",
+		Algorithms: []string{"rsa-sha256"},
+		Revoked:    false,
+		Testing:    false,
+		Strict:     false,
+		Services:   []string{"email"},
+		Key:        &testPrivateKey.PublicKey,
+		Data:       testPrivateKey.PublicKey.N.Bytes(),
+	}
+
+	// sign test email
+	newemail, resARC := ARCSignAndVerify(t, signedMailString, options, "joe@football.example.com", "85.215.130.119", pubk)
+	fmt.Println("=========")
+	fmt.Println(newemail)
+	fmt.Println("=========")
+	require.Nil(t, resARC.Error)
+	require.Equal(t, dkim.Pass, resARC.Code)
+	require.Equal(t, 1, len(resARC.Chain))
+
+	require.True(t, resARC.Chain[0].AMSValid)
+	require.True(t, resARC.Chain[0].ASValid)
+	require.Equal(t, 1, resARC.Chain[0].Instance)
+	require.Equal(t, "none", resARC.Chain[0].CV.String())
+	require.Equal(t, "pass", resARC.Chain[0].Dkim.String())
+	require.Equal(t, "pass", resARC.Chain[0].Dmarc.String())
+	require.Equal(t, "pass", resARC.Chain[0].Spf.String())
+}
+
 func TestSignARCSync(t *testing.T) {
 	options := &dkimS.SignOptions{
 		Domain:    "example.org",
