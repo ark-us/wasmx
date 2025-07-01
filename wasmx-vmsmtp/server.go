@@ -2,11 +2,14 @@ package vmsmtp
 
 import (
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"time"
 
 	smtp "github.com/emersion/go-smtp"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 )
 
 type ServerConfig struct {
@@ -39,43 +42,71 @@ type ServerConfig struct {
 	// Advertise RRVS (RFC 7293) capability.
 	EnableRRVS bool `json:"enable_rrvs"`
 	// Advertise DELIVERBY (RFC 2852) capability.
-	EnableDELIVERBY bool `json:"enable_deliver_by"`
+	// EnableDELIVERBY bool `json:"enable_deliver_by"`
 
 	// The minimum time (seconds precision) a client may specify in BY=.
 	// Only used if DELIVERBY is enabled.
-	MinimumDeliverByTime time.Duration `json:"minimum_deliver_by_time"`
+	// MinimumDeliverByTime time.Duration `json:"minimum_deliver_by_time"`
 }
 
-type backend struct{}
+type backend struct {
+	ctx *Context
+}
 
 //	func (*backend) Login(_ *smtp.ConnectionState, _, _ string) (smtp.Session, error) {
-//		return &session{}, nil // we don’t require AUTH to receive
+//		return &Session{}, nil // we don’t require AUTH to receive
 //	}
 //
 //	func (*backend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
-//		return &session{}, nil
+//		return &Session{}, nil
 //	}
-func (*backend) NewSession(_ *smtp.Conn) (smtp.Session, error) {
-	return &session{}, nil
+func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
+	fmt.Println("--backend.NewSession--", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
+	return &Session{ctx: b.ctx}, nil
 }
 
-type session struct{}
+type Session struct {
+	ctx      *Context
+	From     []string `json:"from"`
+	To       []string `json:"to"`
+	EmailRaw []byte   `json:"email_raw"`
+}
 
-func (*session) Mail(from string, _ *smtp.MailOptions) error { return nil }
-func (*session) Rcpt(to string, _ *smtp.RcptOptions) error   { return nil }
-func (*session) Data(r io.Reader) error {
-	msg, _ := io.ReadAll(r)
-	log.Printf("=== New message ===\n%s\n", msg) // write to journald/syslog
+func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
+	fmt.Println("--Session.Mail--", from, opts)
+	if opts != nil {
+		fmt.Println("--Session.Mail opts--", opts.EnvelopeID, opts.Auth)
+	}
+	s.From = append(s.From, from)
 	return nil
 }
-func (*session) Reset()        {}
-func (*session) Logout() error { return nil }
+func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
+	fmt.Println("--Session.Rcpt--", to, opts)
+	if opts != nil {
+		fmt.Println("--Session.Rcpt opts--", opts.OriginalRecipient, opts.OriginalRecipientType, opts.Notify)
+	}
+	s.To = append(s.To, to)
+	return nil
+}
+func (s *Session) Data(r io.Reader) error {
+	msg, _ := io.ReadAll(r)
+	log.Printf("=== New message ===\n%s\n", msg) // write to journald/syslog
+	s.EmailRaw = msg
+	return nil
+}
+func (*Session) Reset() {
+	fmt.Println("--Session.Reset--")
+}
+func (s *Session) Logout() error {
+	fmt.Println("--Session.Logout--")
+	s.ctx.HandleIncomingEmail(*s)
+	return nil
+}
 
 func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
-	s := smtp.NewServer(&backend{})
+	s := smtp.NewServer(&backend{ctx: ctx})
 	s.Network = "tcp"
 	s.Addr = ":25"
-	s.Domain = "example.com"
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = 10 << 20 // 10 MiB
@@ -114,8 +145,8 @@ func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
 	s.EnableBINARYMIME = cfg.EnableBINARYMIME
 	s.EnableDSN = cfg.EnableDSN
 	s.EnableRRVS = cfg.EnableRRVS
-	s.EnableDELIVERBY = cfg.EnableDELIVERBY
-	s.MinimumDeliverByTime = cfg.MinimumDeliverByTime
+	// s.EnableDELIVERBY = cfg.EnableDELIVERBY
+	// s.MinimumDeliverByTime = cfg.MinimumDeliverByTime
 
 	startfn := s.ListenAndServe
 
@@ -174,5 +205,33 @@ func startGoRoutine(
 	case err := <-errCh:
 		ctx.Ctx.Logger().Error("failed to boot email server", "error", err.Error())
 		return err
+	}
+}
+
+type ReentryCalldata struct {
+	IncomingEmail *Session `json:"IncomingEmail"`
+}
+
+func (ctx *Context) HandleIncomingEmail(s Session) {
+	msg := &ReentryCalldata{
+		IncomingEmail: &s}
+
+	msgbz, err := json.Marshal(msg)
+	if err != nil {
+		ctx.Ctx.Logger().Error("cannot marshal Expunge", "error", err.Error())
+		return
+	}
+
+	contractAddress := ctx.Env.Contract.Address
+
+	msgtosend := &networktypes.MsgReentryWithGoRoutine{
+		Sender:     contractAddress.String(),
+		Contract:   contractAddress.String(),
+		EntryPoint: ENTRY_POINT_SMTP,
+		Msg:        msgbz,
+	}
+	_, _, err = ctx.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
 	}
 }

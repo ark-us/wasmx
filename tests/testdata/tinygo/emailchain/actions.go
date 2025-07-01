@@ -21,6 +21,17 @@ import (
 
 const DKIM_HEADER = "DKIM-Signature"
 
+func StartServer() {
+	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{})
+	if resp.Error != "" {
+		wasmx.Revert([]byte(resp.Error))
+	}
+}
+
+func SaveEmail(req *IncomingEmail) {
+	// sql.
+}
+
 func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 	resp := VerifyDKIMResponse{Error: ""}
 	dnsResolver := NewDNSResolver()
@@ -29,7 +40,7 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 		return req.Timestamp
 	}
 
-	results, err := dkimMox.Verify(logger, dnsResolver, false, dkimMox.DefaultPolicy, strings.NewReader(req.EmailRaw), false, true, now, req.PublicKey)
+	results, err := dkimMox.Verify2(logger, dnsResolver, false, dkimMox.DefaultPolicy, strings.NewReader(req.EmailRaw), false, true, now, req.PublicKey)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
@@ -59,12 +70,12 @@ func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
 		Domain:  dnsMox.Domain{ASCII: req.Options.Selector},
 	}
 	selectors := []dkimMox.Selector{sel}
-	header, err := dkimMox.Sign(logger, identif, domain, selectors, false, r, now)
+	header, err := dkimMox.Sign2(logger, identif, domain, selectors, false, r, now)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
 	}
-	resp.Header = header
+	resp.Header = utilsMox.SerializeHeaders(header)
 
 	return resp
 }

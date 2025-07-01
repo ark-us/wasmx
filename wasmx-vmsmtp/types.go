@@ -30,6 +30,8 @@ const HOST_WASMX_ENV_SMTP_EXPORT = "wasmx_smtp_"
 
 const HOST_WASMX_ENV_SMTP = "smtp"
 
+const ENTRY_POINT_SMTP = "smtp_update"
+
 type ContextKey string
 
 const SmtpContextKey ContextKey = "smtp-context"

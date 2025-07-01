@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	_ "github.com/loredanacirstea/wasmx-env-httpclient"
@@ -11,7 +12,9 @@ import (
 
 //go:wasm-module emailprover
 //export instantiate
-func Instantiate() {}
+func Instantiate() {
+	InitializeTables(ConnectionId)
+}
 
 func main() {
 	databz := wasmx.GetCallData()
@@ -90,4 +93,19 @@ func main() {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}
 	wasmx.SetFinishData(response)
+}
+
+//go:wasm-module emailprover
+//export smtp_update
+func SmtpUpdate() {
+	fmt.Println("--smtp_update---")
+	databz := wasmx.GetCallData()
+	calld := &ReentryCalldata{}
+	err := json.Unmarshal(databz, calld)
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+	if calld.IncomingEmail != nil {
+		SaveEmail(calld.IncomingEmail)
+	}
 }

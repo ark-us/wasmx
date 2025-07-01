@@ -12,13 +12,14 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 
 	dkimS "github.com/emersion/go-msgauth/dkim"
 	dkimMox "github.com/loredanacirstea/mailverif/dkim"
 	dkim "github.com/redsift/dkim"
 )
 
-type EmptyMsg struct{}
+const ConnectionId = "emailchain"
 
 type Calldata struct {
 	ConnectWithPassword *ConnectionSimpleRequest        `json:"ConnectWithPassword,omitempty"`
@@ -31,7 +32,7 @@ type Calldata struct {
 	SignDKIM            *SignDKIMRequest                `json:"SignDKIM,omitempty"`
 	SignARC             *SignARCRequest                 `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest            `json:"ForwardEmail,omitempty"`
-	StartServer         *EmptyMsg                       `json:"StartServer,omitempty"`
+	StartServer         *vmsmtp.ServerConfig            `json:"StartServer,omitempty"`
 }
 
 type ConnectionSimpleRequest struct {
@@ -440,3 +441,33 @@ const (
 	HEADER_PROVABLE_FORWARD_ORIGIN_DKIM_CONTEXT = "Provable-Forward-Origin-DKIM-Context"
 	HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE     = "Provable-Forward-Chain-Signature"
 )
+
+type ReentryCalldata struct {
+	IncomingEmail *IncomingEmail `json:"IncomingEmail"`
+}
+
+type IncomingEmail struct {
+	From     []string `json:"from"`
+	To       []string `json:"to"`
+	EmailRaw []byte   `json:"email_raw"`
+}
+
+type EmailWrite struct {
+	Owner        string `json:"owner"`         // Email owner address
+	Folder       string `json:"folder"`        // IMAP folder
+	UID          int64  `json:"uid"`           // Unique UID per (owner, folder)
+	SeqNum       int64  `json:"seq_num"`       // Sequence number within folder
+	MessageID    string `json:"message_id"`    // Email Message-ID
+	Subject      string `json:"subject"`       // Email subject
+	InternalDate int64  `json:"internal_date"` // UNIX timestamp (IMAP INTERNALDATE)
+	Flags        string `json:"flags"`         // Flags like "\Seen \Answered" as space-separated text
+	RawEmail     []byte `json:"raw_email"`     // Full RFC5322 email body
+	Size         int64  `json:"size"`          // Size in bytes (matches RFC822.SIZE)
+	Headers      string `json:"headers"`       // Optional: flattened text of all headers (for search)
+	Body         string `json:"body"`          // Optional: plain body text (for search)
+}
+
+type EmailRead struct {
+	ID int64 `json:"id"` // AUTOINCREMENT primary key
+	EmailWrite
+}
