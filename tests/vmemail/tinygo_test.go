@@ -215,6 +215,7 @@ type EmailChainCalldata struct {
 	SignDKIM            *SignDKIMRequest         `json:"SignDKIM,omitempty"`
 	SignARC             *SignARCRequest          `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
+	StartServer         *vmsmtp.ServerConfig     `json:"StartServer,omitempty"`
 }
 
 type ConnectionSimpleRequest struct {
@@ -819,7 +820,7 @@ func verifyEmail(emailText string, pubk *dkimMox.Record) ([]dkimMox.Result, *dki
 	// }
 
 	pkglog := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	results, err := dkimMox.Verify(pkglog, &DNSResolver{}, false, dkimMox.DefaultPolicy, strings.NewReader(emailText), false, true, timeNow, pubk)
+	results, err := dkimMox.Verify2(pkglog, &DNSResolver{}, false, dkimMox.DefaultPolicy, strings.NewReader(emailText), false, true, timeNow, pubk)
 	if err != nil {
 		return nil, nil, err
 	}
