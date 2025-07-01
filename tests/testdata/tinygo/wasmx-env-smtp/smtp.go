@@ -46,6 +46,15 @@ func MaxMessageSize_(reqPtr int64) int64
 //go:wasmimport smtp BuildMail
 func BuildMail_(reqPtr int64) int64
 
+//go:wasmimport smtp ServerStart
+func ServerStart_(reqPtr int64) int64
+
+//go:wasmimport smtp ServerClose
+func ServerClose_(reqPtr int64) int64
+
+//go:wasmimport smtp ServerShutdown
+func ServerShutdown_(reqPtr int64) int64
+
 func ConnectWithPassword(req *SmtpConnectionSimpleRequest) SmtpConnectionResponse {
 	reqbz, err := json.Marshal(req)
 	if err != nil {
@@ -199,6 +208,54 @@ func SendMail(req *SmtpSendMailRequest) SmtpSendMailResponse {
 	ptr := SendMail_(reqPtr)
 	bz := utils.PackedPtrToBytes(ptr)
 	var resp SmtpSendMailResponse
+	err = json.Unmarshal(bz, &resp)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func ServerStart(req *ServerStartRequest) ServerStartResponse {
+	reqbz, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	reqPtr := utils.BytesToPackedPtr(reqbz)
+	ptr := ServerStart_(reqPtr)
+	bz := utils.PackedPtrToBytes(ptr)
+	var resp ServerStartResponse
+	err = json.Unmarshal(bz, &resp)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func ServerClose(req *ServerCloseRequest) ServerCloseResponse {
+	reqbz, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	reqPtr := utils.BytesToPackedPtr(reqbz)
+	ptr := ServerClose_(reqPtr)
+	bz := utils.PackedPtrToBytes(ptr)
+	var resp ServerCloseResponse
+	err = json.Unmarshal(bz, &resp)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func ServerShutdown(req *ServerShutdownRequest) ServerShutdownResponse {
+	reqbz, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	reqPtr := utils.BytesToPackedPtr(reqbz)
+	ptr := ServerShutdown_(reqPtr)
+	bz := utils.PackedPtrToBytes(ptr)
+	var resp ServerShutdownResponse
 	err = json.Unmarshal(bz, &resp)
 	if err != nil {
 		panic(err)

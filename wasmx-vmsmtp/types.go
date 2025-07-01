@@ -8,6 +8,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 	gosmtp "github.com/emersion/go-smtp"
 
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
 
@@ -48,9 +49,16 @@ type SmtpOpenConnection struct {
 	GetClient             func() (*gosmtp.Client, error)
 }
 
+type SmtpServerConnection struct {
+	GoContextParent context.Context
+	Server          *gosmtp.Server
+	ContractAddress mcodec.AccAddressPrefixed
+}
+
 type SmtpContext struct {
-	mtx           sync.Mutex
-	DbConnections map[string]*SmtpOpenConnection
+	mtx              sync.Mutex
+	DbConnections    map[string]*SmtpOpenConnection
+	ServerConnection *SmtpServerConnection
 }
 
 func (p *SmtpContext) GetConnection(id string) (*SmtpOpenConnection, bool) {
@@ -192,4 +200,24 @@ type SmtpBuildMailRequest struct {
 type SmtpBuildMailResponse struct {
 	Error string `json:"error"`
 	Data  []byte `json:"data"`
+}
+
+type ServerStartRequest struct {
+	ServerConfig ServerConfig `json:"server_config"`
+}
+
+type ServerStartResponse struct {
+	Error string `json:"error"`
+}
+
+type ServerCloseRequest struct{}
+
+type ServerCloseResponse struct {
+	Error string `json:"error"`
+}
+
+type ServerShutdownRequest struct{}
+
+type ServerShutdownResponse struct {
+	Error string `json:"error"`
 }

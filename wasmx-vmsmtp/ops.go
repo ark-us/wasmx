@@ -459,6 +459,75 @@ func BuildMail(_context interface{}, rnh memc.RuntimeHandler, params []interface
 	return prepareResponse(rnh, response)
 }
 
+func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerStartResponse{Error: ""}
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req ServerStartRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetSmtpContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	if vctx.ServerConnection != nil {
+		response.Error = "already started"
+		return prepareResponse(rnh, response)
+	}
+	s, err := NewServer(req.ServerConfig, ctx)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	vctx.ServerConnection = &SmtpServerConnection{
+		Server:          s,
+		GoContextParent: ctx.GoContextParent,
+		ContractAddress: ctx.ContractInfo.Address,
+	}
+	return prepareResponse(rnh, response)
+}
+
+func ServerClose(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerCloseResponse{Error: ""}
+	ctx := _context.(*Context)
+	vctx, err := GetSmtpContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	if vctx.ServerConnection != nil {
+		err = vctx.ServerConnection.Server.Close()
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+	}
+	return prepareResponse(rnh, response)
+}
+
+func ServerShutdown(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerCloseResponse{Error: ""}
+	ctx := _context.(*Context)
+	vctx, err := GetSmtpContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	if vctx.ServerConnection != nil {
+		err = vctx.ServerConnection.Server.Shutdown(ctx.Context.GoContextParent)
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+	}
+	return prepareResponse(rnh, response)
+}
+
 func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
 	responsebz, err := json.Marshal(response)
 	if err != nil {

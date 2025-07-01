@@ -9,52 +9,41 @@ import (
 	smtp "github.com/emersion/go-smtp"
 )
 
-type Server struct {
+type ServerConfig struct {
 	// The type of network, "tcp" or "unix".
 	Network string `json:"network"`
 	// TCP or Unix address to listen on.
-	Addr        string `json:"address"`
+	Addr        string `json:"address"` // ":25"
 	TLSCertFile string `json:"tls_cert_file"`
 	TLSKeyFile  string `json:"tls_key_file"`
-	// Enable LMTP mode, as defined in RFC 2033.
-	LMTP bool
 
-	Domain            string
-	MaxRecipients     int
-	MaxMessageBytes   int64
-	MaxLineLength     int
-	AllowInsecureAuth bool
-	ReadTimeout       time.Duration
-	WriteTimeout      time.Duration
+	// Enable LMTP mode, as defined in RFC 2033.
+	LMTP bool `json:"lmtp"`
+
+	Domain            string        `json:"domain"`
+	MaxRecipients     int           `json:"max_recipients"`
+	MaxMessageBytes   int64         `json:"max_message_bytes"`
+	MaxLineLength     int           `json:"max_line_length"`
+	AllowInsecureAuth bool          `json:"allow_insecure_auth"`
+	ReadTimeout       time.Duration `json:"read_timeout"`
+	WriteTimeout      time.Duration `json:"write_timeout"`
 
 	// Advertise SMTPUTF8 (RFC 6531) capability.
-	// Should be used only if backend supports it.
-	EnableSMTPUTF8 bool
-
+	EnableSMTPUTF8 bool `json:"enable_smtp_utf8"`
 	// Advertise REQUIRETLS (RFC 8689) capability.
-	// Should be used only if backend supports it.
-	EnableREQUIRETLS bool
-
+	EnableREQUIRETLS bool `json:"enable_require_tls"`
 	// Advertise BINARYMIME (RFC 3030) capability.
-	// Should be used only if backend supports it.
-	EnableBINARYMIME bool
-
+	EnableBINARYMIME bool `json:"enable_binary_mime"`
 	// Advertise DSN (RFC 3461) capability.
-	// Should be used only if backend supports it.
-	EnableDSN bool
-
+	EnableDSN bool `json:"enable_dsn"`
 	// Advertise RRVS (RFC 7293) capability.
-	// Should be used only if backend supports it.
-	EnableRRVS bool
-
+	EnableRRVS bool `json:"enable_rrvs"`
 	// Advertise DELIVERBY (RFC 2852) capability.
-	// Should be used only if backend supports it.
-	EnableDELIVERBY bool
-	// The minimum time, with seconds precision, that a client
-	// may specify in the BY argument with return mode.
-	// A zero value indicates no set minimum.
-	// Only use if DELIVERBY is enabled.
-	MinimumDeliverByTime time.Duration
+	EnableDELIVERBY bool `json:"enable_deliver_by"`
+
+	// The minimum time (seconds precision) a client may specify in BY=.
+	// Only used if DELIVERBY is enabled.
+	MinimumDeliverByTime time.Duration `json:"minimum_deliver_by_time"`
 }
 
 type backend struct{}
@@ -82,30 +71,108 @@ func (*session) Data(r io.Reader) error {
 func (*session) Reset()        {}
 func (*session) Logout() error { return nil }
 
-// --- Main --------------------------------------------------------------------
-
-func NewServer() {
+func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
 	s := smtp.NewServer(&backend{})
+	s.Network = "tcp"
 	s.Addr = ":25"
-	s.Domain = "provable.dev"
+	s.Domain = "example.com"
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
-	s.MaxMessageBytes = 10 << 20 // 10 MB
+	s.MaxMessageBytes = 10 << 20 // 10 MiB
 	s.MaxRecipients = 100
-	s.AllowInsecureAuth = false // we’re receive-only; no AUTH offered
-	// s.AuthDisabled = true
 
-	// TLS (STARTTLS is advertised automatically)
-	cert, err := tls.LoadX509KeyPair(
-		"/etc/letsencrypt/live/dmail.provable.dev/fullchain.pem",
-		"/etc/letsencrypt/live/dmail.provable.dev/privkey.pem")
-	if err != nil {
-		log.Fatal(err)
+	if cfg.Network != "" {
+		s.Network = cfg.Network
 	}
-	s.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+	if cfg.Addr != "" {
+		s.Addr = cfg.Addr
+	}
+	if cfg.Domain != "" {
+		s.Domain = cfg.Domain
+	}
+	if cfg.ReadTimeout != 0 {
+		s.ReadTimeout = cfg.ReadTimeout
+	}
+	if cfg.WriteTimeout != 0 {
+		s.WriteTimeout = cfg.WriteTimeout
+	}
+	if cfg.MaxMessageBytes != 0 {
+		s.MaxMessageBytes = int64(cfg.MaxMessageBytes)
+	}
+	if cfg.MaxRecipients != 0 {
+		s.MaxRecipients = cfg.MaxRecipients
+	}
+	if cfg.MaxLineLength != 0 {
+		s.MaxLineLength = cfg.MaxLineLength
+	}
 
-	log.Printf("SMTP server listening on %s", s.Addr)
-	if err := s.ListenAndServe(); err != nil {
-		log.Fatal(err)
+	s.AllowInsecureAuth = cfg.AllowInsecureAuth // plain AUTH over cleartext?
+	s.LMTP = cfg.LMTP
+
+	s.EnableSMTPUTF8 = cfg.EnableSMTPUTF8
+	s.EnableREQUIRETLS = cfg.EnableREQUIRETLS
+	s.EnableBINARYMIME = cfg.EnableBINARYMIME
+	s.EnableDSN = cfg.EnableDSN
+	s.EnableRRVS = cfg.EnableRRVS
+	s.EnableDELIVERBY = cfg.EnableDELIVERBY
+	s.MinimumDeliverByTime = cfg.MinimumDeliverByTime
+
+	startfn := s.ListenAndServe
+
+	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
+		if err != nil {
+			log.Fatalf("loading TLS cert: %v", err)
+		}
+		s.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+		startfn = s.ListenAndServeTLS
+	}
+
+	log.Printf("SMTP server listening on %s (%s)", s.Addr, s.Network)
+
+	srvDone := make(chan struct{}, 1)
+	ctx.GoRoutineGroup.Go(func() error {
+		err := startGoRoutine(ctx, s, startfn, srvDone)
+		if err != nil {
+			ctx.Ctx.Logger().Error(err.Error())
+		}
+		return err
+	})
+	return s, nil
+}
+
+func startGoRoutine(
+	ctx *Context,
+	s *smtp.Server,
+	startfn func() error,
+	srvDone chan struct{},
+) error {
+	errCh := make(chan error, 1)
+	go func() {
+		if err := startfn(); err != nil {
+			if err == smtp.ErrServerClosed {
+				ctx.Ctx.Logger().Info("closing email server", "message", err.Error())
+				close(srvDone)
+				return
+			}
+			ctx.Ctx.Logger().Error("failed to serve email server", "error", err.Error())
+			errCh <- err
+		}
+	}()
+
+	select {
+	case <-ctx.GoContextParent.Done():
+		// The calling process canceled or closed the provided context, so we must
+		// gracefully stop the websrv server.
+		ctx.Ctx.Logger().Info("stopping email server...", "addr", s.Addr, "network", s.Network)
+		err := s.Shutdown(ctx.GoContextParent)
+		if err != nil {
+			ctx.Ctx.Logger().Error("stopping email server error: ", err.Error())
+		}
+		close(errCh)
+		return nil
+	case err := <-errCh:
+		ctx.Ctx.Logger().Error("failed to boot email server", "error", err.Error())
+		return err
 	}
 }
