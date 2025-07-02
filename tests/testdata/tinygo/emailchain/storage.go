@@ -117,15 +117,15 @@ func StoreEmail(req *IncomingEmail, connId string) error {
 	fmt.Println("--uid---", string(qresp.Data))
 	// uids := []int64
 	// json.Unmarshal(qresp.Data, )
-	uid := 1
+	// uid := 1
 
-	qresp := sql.Query(&sql.SqlQueryRequest{
+	qresp = sql.Query(&sql.SqlQueryRequest{
 		Id:    connId,
 		Query: ExecGetSeq,
 	})
 	fmt.Println("--seq---", string(qresp.Data))
 
-	resp := sql.Execute(&sql.SqlExecuteRequest{
+	resp = sql.Execute(&sql.SqlExecuteRequest{
 		Id:     connId,
 		Query:  ExecInsertEmail,
 		Params: sql.Params{},
@@ -139,4 +139,5 @@ func StoreEmail(req *IncomingEmail, connId string) error {
 	// 		},
 	// 	},
 	// })
+	return nil
 }

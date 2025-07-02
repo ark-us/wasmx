@@ -1,12 +1,8 @@
 package main
 
 import (
-	"crypto"
-	"crypto/x509"
 	"time"
 
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
 
 	"golang.org/x/crypto/ed25519"
@@ -14,9 +10,8 @@ import (
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 
-	dkimS "github.com/emersion/go-msgauth/dkim"
-	dkimMox "github.com/loredanacirstea/mailverif/dkim"
-	dkim "github.com/redsift/dkim"
+	"github.com/loredanacirstea/mailverif/arc"
+	"github.com/loredanacirstea/mailverif/dkim"
 )
 
 const ConnectionId = "emailchain"
@@ -101,8 +96,8 @@ type SignOptions struct {
 	// Header and body canonicalization algorithms.
 	//
 	// If empty, CanonicalizationSimple is used.
-	HeaderCanonicalization dkimS.Canonicalization `json:"header_canonicalization"`
-	BodyCanonicalization   dkimS.Canonicalization `json:"body_canonicalization"`
+	HeaderRelaxed bool `json:"header_relaxed"`
+	BodyRelaxed   bool `json:"body_relaxed"`
 
 	// A list of header fields to include in the signature. If nil, all headers
 	// will be included. If not nil, "From" MUST be in the list.
@@ -116,39 +111,7 @@ type SignOptions struct {
 	// A list of query methods used to retrieve the public key.
 	//
 	// If nil, it is implicitly defined as QueryMethodDNSTXT.
-	QueryMethods []dkimS.QueryMethod `json:"query_methods"`
-}
-
-func (v SignOptions) toLib() *dkimS.SignOptions {
-	var signer crypto.Signer
-	var err error
-	if v.PrivateKeyType == "rsa" {
-		// we expect privatekey in PEM format
-		block, _ := pem.Decode(v.PrivateKey)
-		var err error
-		signer, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		signer, err = loadPrivateKey(v.PrivateKey)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return &dkimS.SignOptions{
-		Domain:                 v.Domain,
-		Selector:               v.Selector,
-		Identifier:             v.Identifier,
-		Signer:                 signer,
-		Hash:                   crypto.Hash(v.Hash),
-		HeaderCanonicalization: v.HeaderCanonicalization,
-		BodyCanonicalization:   v.BodyCanonicalization,
-		HeaderKeys:             v.HeaderKeys,
-		Expiration:             v.Expiration,
-		QueryMethods:           v.QueryMethods,
-	}
+	// QueryMethods []dkimS.QueryMethod `json:"query_methods"`
 }
 
 type SignDKIMRequest struct {
@@ -158,11 +121,12 @@ type SignDKIMRequest struct {
 }
 
 type SignARCRequest struct {
-	MailFrom  string      `json:"mailfrom"`
-	IP        string      `json:"ip"`
-	EmailRaw  string      `json:"email_raw"`
-	Options   SignOptions `json:"options"`
-	Timestamp time.Time   `json:"timestamp"`
+	MailFrom         string      `json:"mailfrom"`
+	IP               string      `json:"ip"`
+	MailServerDomain string      `json:"mailServerDomain"`
+	EmailRaw         string      `json:"email_raw"`
+	Options          SignOptions `json:"options"`
+	Timestamp        time.Time   `json:"timestamp"`
 }
 
 type SignDKIMResponse struct {
@@ -171,40 +135,24 @@ type SignDKIMResponse struct {
 }
 
 type SignARCResponse struct {
-	Error       string `json:"error"`
-	SignedEmail string `json:"signed_email"`
+	Error  string `json:"error"`
+	Header string `json:"header"`
 }
 
 type VerifyDKIMRequest struct {
-	EmailRaw  string          `json:"email_raw"`
-	PublicKey *dkimMox.Record `json:"public_key,omitempty"`
-	Timestamp time.Time       `json:"timestamp"`
+	EmailRaw  string       `json:"email_raw"`
+	PublicKey *dkim.Record `json:"public_key,omitempty"`
+	Timestamp time.Time    `json:"timestamp"`
 }
 
 type VerifyDKIMResponse struct {
-	Error    string           `json:"error"`
-	Response []dkimMox.Result `json:"response"`
+	Error    string        `json:"error"`
+	Response []dkim.Result `json:"response"`
 }
 
 type VerifyARCResponse struct {
-	Error    string     `json:"error"`
-	Response *ArcResult `json:"response"`
-}
-
-type ArcResult struct {
-	Result Result `json:"result"`
-	// Result data at each part of the chain until failure
-	Chain []ArcSetResult `json:"chain"`
-}
-
-type ArcSetResult struct {
-	Instance int    `json:"instance"`
-	Spf      string `json:"spf"`
-	Dkim     string `json:"dkim"`
-	Dmarc    string `json:"dmarc"`
-	AMSValid bool   `json:"ams-vaild"`
-	ASValid  bool   `json:"as-valid"`
-	CV       string `json:"cv"`
+	Error    string         `json:"error"`
+	Response *arc.ArcResult `json:"response"`
 }
 
 type ForwardEmailRequest struct {
@@ -251,137 +199,137 @@ type Signature struct {
 	Dkim  string `json:"dkim"`  // dkim value for ARC-Authentication-Results
 }
 
-type Result struct {
-	Order     int                     `json:"order"`
-	Code      string                  `json:"code"`
-	Error     *dkim.VerificationError `json:"error,omitempty"`
-	Signature *Signature              `json:"signature,omitempty"`
-	Key       *dkim.PublicKey         `json:"key,omitempty"`
-	Timestamp time.Time               `json:"timestamp"`
-}
+// type Result struct {
+// 	Order     int                     `json:"order"`
+// 	Code      string                  `json:"code"`
+// 	Error     *dkim.VerificationError `json:"error,omitempty"`
+// 	Signature *Signature              `json:"signature,omitempty"`
+// 	Key       *dkim.PublicKey         `json:"key,omitempty"`
+// 	Timestamp time.Time               `json:"timestamp"`
+// }
 
-func (v Result) String() string {
-	vbz, err := json.Marshal(&v)
-	if err == nil {
-		return string(vbz)
-	}
-	errstr := ""
-	signature := ""
-	key := ""
-	if v.Error != nil {
-		if v.Error.Err != nil {
-			errstr = v.Error.Err.Error()
-		} else {
-			errstr = v.Error.Explanation
-		}
-	}
-	return fmt.Sprintf(`order:%d code:%s error:%s signature:%s key:%s timestamp:%s`, v.Order, v.Code, errstr, signature, key, v.Timestamp.UTC().String())
-}
+// func (v Result) String() string {
+// 	vbz, err := json.Marshal(&v)
+// 	if err == nil {
+// 		return string(vbz)
+// 	}
+// 	errstr := ""
+// 	signature := ""
+// 	key := ""
+// 	if v.Error != nil {
+// 		if v.Error.Err != nil {
+// 			errstr = v.Error.Err.Error()
+// 		} else {
+// 			errstr = v.Error.Explanation
+// 		}
+// 	}
+// 	return fmt.Sprintf(`order:%d code:%s error:%s signature:%s key:%s timestamp:%s`, v.Order, v.Code, errstr, signature, key, v.Timestamp.UTC().String())
+// }
 
-func (v *Signature) FromLib(val *dkim.Signature) {
-	fmt.Println("--Signature.FromLib--")
-	fmt.Println("--Signature.FromLib val.AlgorithmID--", val.AlgorithmID)
-	hashbz, err := val.AlgorithmID.MarshalText()
-	fmt.Println("--Signature.FromLib2--")
-	fmt.Println("--Signature.FromLib3--", err, string(hashbz))
-	if err != nil {
-		panic("cannot marshal AlgorithmID: " + err.Error())
-	}
-	v.Header = val.Header
-	v.Raw = val.Raw
-	v.AlgorithmID = string(hashbz)
-	v.Hash = val.Hash
-	v.BodyHash = val.BodyHash
-	v.RelaxedHeader = val.RelaxedHeader
-	v.RelaxedBody = val.RelaxedBody
-	v.SignerDomain = val.SignerDomain
-	v.Headers = val.Headers
-	v.UserIdentifier = val.UserIdentifier
-	v.ArcInstance = val.ArcInstance
-	v.Length = val.Length
-	v.Selector = val.Selector
-	v.Timestamp = val.Timestamp
-	v.Expiration = val.Expiration
-	v.CopiedHeaders = val.CopiedHeaders
-	v.ArcCV = val.ArcCV.String()
-	v.Dmarc = val.Dmarc.String()
-	v.Dkim = val.Dkim.String()
-}
+// func (v *Signature) FromLib(val *dkim.Signature) {
+// 	fmt.Println("--Signature.FromLib--")
+// 	fmt.Println("--Signature.FromLib val.AlgorithmID--", val.AlgorithmID)
+// 	hashbz, err := val.AlgorithmID.MarshalText()
+// 	fmt.Println("--Signature.FromLib2--")
+// 	fmt.Println("--Signature.FromLib3--", err, string(hashbz))
+// 	if err != nil {
+// 		panic("cannot marshal AlgorithmID: " + err.Error())
+// 	}
+// 	v.Header = val.Header
+// 	v.Raw = val.Raw
+// 	v.AlgorithmID = string(hashbz)
+// 	v.Hash = val.Hash
+// 	v.BodyHash = val.BodyHash
+// 	v.RelaxedHeader = val.RelaxedHeader
+// 	v.RelaxedBody = val.RelaxedBody
+// 	v.SignerDomain = val.SignerDomain
+// 	v.Headers = val.Headers
+// 	v.UserIdentifier = val.UserIdentifier
+// 	v.ArcInstance = val.ArcInstance
+// 	v.Length = val.Length
+// 	v.Selector = val.Selector
+// 	v.Timestamp = val.Timestamp
+// 	v.Expiration = val.Expiration
+// 	v.CopiedHeaders = val.CopiedHeaders
+// 	v.ArcCV = val.ArcCV.String()
+// 	v.Dmarc = val.Dmarc.String()
+// 	v.Dkim = val.Dkim.String()
+// }
 
-func (v *Result) FromLib(val *dkim.Result) {
-	fmt.Println("--Result.FromLib--")
-	v.Order = val.Order
-	v.Code = val.Code.String()
-	v.Error = val.Error
-	fmt.Println("--Result.FromLib val.Signature--", val.Signature)
-	if val.Signature != nil {
-		v.Signature = &Signature{}
-		v.Signature.FromLib(val.Signature)
-		fmt.Println("--Result.FromLib v.Signature--", v.Signature)
-	}
-	v.Key = val.Key
-	v.Timestamp = val.Timestamp
-}
+// func (v *Result) FromLib(val *dkim.Result) {
+// 	fmt.Println("--Result.FromLib--")
+// 	v.Order = val.Order
+// 	v.Code = val.Code.String()
+// 	v.Error = val.Error
+// 	fmt.Println("--Result.FromLib val.Signature--", val.Signature)
+// 	if val.Signature != nil {
+// 		v.Signature = &Signature{}
+// 		v.Signature.FromLib(val.Signature)
+// 		fmt.Println("--Result.FromLib v.Signature--", v.Signature)
+// 	}
+// 	v.Key = val.Key
+// 	v.Timestamp = val.Timestamp
+// }
 
-func (v *Result) FromLibArcResult(val *dkim.ArcResult) {
-	fmt.Println("--Result.FromLibArcResult--")
-	v.Order = val.Order
-	v.Code = val.Code.String()
-	v.Error = val.Error
-	fmt.Println("--Result.FromLibArcResult val.Signature--", val.Signature)
-	if val.Signature != nil {
-		fmt.Println("--val.Signature not nil--")
-		v.Signature = &Signature{}
-		v.Signature.FromLib(val.Signature)
-		fmt.Println("--Result.FromLibArcResult v.Signature--", v.Signature)
-	}
-	fmt.Println("--Result.FromLibArcResult post val.Signature--")
-	fmt.Println("--Result.FromLibArcResult val.Key--", val.Key)
-	if val.Key != nil {
-		v.Key = val.Key
-	}
-	fmt.Println("--Result.FromLibArcResult val.Timestamp--", val.Timestamp)
-	v.Timestamp = val.Timestamp
-	fmt.Println("--Result.FromLibArcResult post val.Timestamp--")
-}
+// func (v *Result) FromLibArcResult(val *dkim.ArcResult) {
+// 	fmt.Println("--Result.FromLibArcResult--")
+// 	v.Order = val.Order
+// 	v.Code = val.Code.String()
+// 	v.Error = val.Error
+// 	fmt.Println("--Result.FromLibArcResult val.Signature--", val.Signature)
+// 	if val.Signature != nil {
+// 		fmt.Println("--val.Signature not nil--")
+// 		v.Signature = &Signature{}
+// 		v.Signature.FromLib(val.Signature)
+// 		fmt.Println("--Result.FromLibArcResult v.Signature--", v.Signature)
+// 	}
+// 	fmt.Println("--Result.FromLibArcResult post val.Signature--")
+// 	fmt.Println("--Result.FromLibArcResult val.Key--", val.Key)
+// 	if val.Key != nil {
+// 		v.Key = val.Key
+// 	}
+// 	fmt.Println("--Result.FromLibArcResult val.Timestamp--", val.Timestamp)
+// 	v.Timestamp = val.Timestamp
+// 	fmt.Println("--Result.FromLibArcResult post val.Timestamp--")
+// }
 
-func ResultArrFromLib(vv []*dkim.Result) []Result {
-	r := make([]Result, 0)
-	for _, v := range vv {
-		if v != nil {
-			val := &Result{}
-			val.FromLib(v)
-			r = append(r, *val)
-		}
-	}
-	return r
-}
+// func ResultArrFromLib(vv []*dkim.Result) []Result {
+// 	r := make([]Result, 0)
+// 	for _, v := range vv {
+// 		if v != nil {
+// 			val := &Result{}
+// 			val.FromLib(v)
+// 			r = append(r, *val)
+// 		}
+// 	}
+// 	return r
+// }
 
-func (v *ArcResult) FromLib(val *dkim.ArcResult) {
-	fmt.Println("--ArcResult.FromLib0--", val)
-	r := &Result{}
-	r.FromLibArcResult(val)
-	fmt.Println("--ArcResult.FromLib Result--")
-	fmt.Println("--ArcResult.FromLib Result2--", r)
-	v.Result = *r
-	fmt.Println("--ArcResult.FromLib v.Result--", v.Result)
-	chain := make([]ArcSetResult, len(val.Chain))
-	fmt.Println("--ArcResult.FromLib chain--", chain)
-	for i, res := range val.Chain {
-		fmt.Println("--ArcResult.FromLib i,res--", i, res)
-		chain[i] = ArcSetResult{
-			Instance: res.Instance,
-			Spf:      res.Spf.String(),
-			Dkim:     res.Dkim.String(),
-			Dmarc:    res.Dmarc.String(),
-			AMSValid: res.AMSValid,
-			ASValid:  res.ASValid,
-			CV:       res.CV.String(),
-		}
-	}
-	fmt.Println("--ArcResult.FromLib chain--", chain)
-	v.Chain = chain
-}
+// func (v *ArcResult) FromLib(val *dkim.ArcResult) {
+// 	fmt.Println("--ArcResult.FromLib0--", val)
+// 	r := &Result{}
+// 	r.FromLibArcResult(val)
+// 	fmt.Println("--ArcResult.FromLib Result--")
+// 	fmt.Println("--ArcResult.FromLib Result2--", r)
+// 	v.Result = *r
+// 	fmt.Println("--ArcResult.FromLib v.Result--", v.Result)
+// 	chain := make([]ArcSetResult, len(val.Chain))
+// 	fmt.Println("--ArcResult.FromLib chain--", chain)
+// 	for i, res := range val.Chain {
+// 		fmt.Println("--ArcResult.FromLib i,res--", i, res)
+// 		chain[i] = ArcSetResult{
+// 			Instance: res.Instance,
+// 			Spf:      res.Spf.String(),
+// 			Dkim:     res.Dkim.String(),
+// 			Dmarc:    res.Dmarc.String(),
+// 			AMSValid: res.AMSValid,
+// 			ASValid:  res.ASValid,
+// 			CV:       res.CV.String(),
+// 		}
+// 	}
+// 	fmt.Println("--ArcResult.FromLib chain--", chain)
+// 	v.Chain = chain
+// }
 
 func loadPrivateKey(keyBytes []byte) (ed25519.PrivateKey, error) {
 	if len(keyBytes) != ed25519.PrivateKeySize {

@@ -6,13 +6,11 @@ toolchain go1.24.4
 
 require (
 	github.com/emersion/go-message v0.18.2
-	github.com/emersion/go-msgauth v0.7.0
 	github.com/loredanacirstea/wasmx-env v0.0.0
 	github.com/loredanacirstea/wasmx-env-httpclient v0.0.0
 	github.com/loredanacirstea/wasmx-env-imap v0.0.0
 	github.com/loredanacirstea/wasmx-env-smtp v0.0.0
 	github.com/loredanacirstea/wasmx-env-sql v0.0.0
-	github.com/redsift/dkim v0.1.2
 	golang.org/x/crypto v0.39.0
 )
 
@@ -36,10 +34,10 @@ replace github.com/loredanacirstea/wasmx-utils v0.0.0 => ../wasmx-utils
 
 replace github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 => ../wasmx-env-httpclient
 
-replace github.com/emersion/go-msgauth => ../../../../../go-msgauth
+// replace github.com/emersion/go-msgauth => ../../../../../go-msgauth
 
-replace github.com/redsift/dkim => ../../../../../dkim
+require github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47
 
-require github.com/loredanacirstea/mailverif v0.0.0
-
-replace github.com/loredanacirstea/mailverif => ../../../../../mailverif
+// github.com/loredanacirstea/mailverif@a372606d8d4716e5cf2cc71979c378d9aacaa1da
+// replace github.com/loredanacirstea/mailverif => ../../mailverif
+replace github.com/loredanacirstea/mailverif => github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47

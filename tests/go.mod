@@ -333,13 +333,10 @@ replace github.com/loredanacirstea/wasmx-wazero => ../wasmx-wazero
 
 require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.5
-	github.com/emersion/go-msgauth v0.7.0
 	github.com/loredanacirstea/wasmx-vmimap v0.0.0
 	github.com/loredanacirstea/wasmx-vmsmtp v0.0.0
 	github.com/mattn/go-sqlite3 v1.14.15
-	github.com/mjl-/mox v0.0.15
 	github.com/onsi/gomega v1.27.10
-	github.com/redsift/dkim v0.1.2
 	golang.org/x/oauth2 v0.30.0
 )
 
@@ -347,9 +344,7 @@ replace github.com/loredanacirstea/wasmx-vmimap => ../wasmx-vmimap
 
 replace github.com/loredanacirstea/wasmx-vmsmtp => ../wasmx-vmsmtp
 
-replace github.com/emersion/go-msgauth => ../../go-msgauth
-
-replace github.com/redsift/dkim => ../../dkim
+// replace github.com/emersion/go-msgauth => ../../go-msgauth
 
 // require github.com/loredanacirstea/emailchain v0.0.0
 
@@ -375,7 +370,8 @@ replace github.com/redsift/dkim => ../../dkim
 
 // replace github.com/loredanacirstea/wasmx-utils => ./testdata/tinygo/wasmx-utils
 
-// replace github.com/mjl-/mox => ../../mox
-require github.com/loredanacirstea/mailverif v0.0.0
+require github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47
 
-replace github.com/loredanacirstea/mailverif => ../../mailverif
+// github.com/loredanacirstea/mailverif@a372606d8d4716e5cf2cc71979c378d9aacaa1da
+// replace github.com/loredanacirstea/mailverif => ../../mailverif
+replace github.com/loredanacirstea/mailverif => github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47

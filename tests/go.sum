@@ -1983,6 +1983,8 @@ github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20241019150937-7ce744ab103e
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20241019150937-7ce744ab103e/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
 github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19 h1:qQOX+FXfEuUcXL2cOfbJVfKkhCaneKeOU4I+skRpHOQ=
 github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19/go.mod h1:NRrph2TSHKFlgLGN9OTUOxyKfMyPFOjozqvTO5gaA4Q=
+github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47 h1:lhSfmzJsHaNhFH/Qd/bvQVaTUKSvj5rGKeGJkhdAuB0=
+github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47/go.mod h1:ZnRIO4pInpWQvxheA0j6XUEs6oqnkDAKx9v3bdJuU5s=
 github.com/loredanacirstea/wazero-wasmx v0.0.0-20241221180426-2eea3efd733f h1:uzT9+Q+xTkZs3VTs8AREPHHof24+ydHzMBxL4UsnFwk=
 github.com/loredanacirstea/wazero-wasmx v0.0.0-20241221180426-2eea3efd733f/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
 github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
@@ -2055,8 +2057,6 @@ github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:F
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/mjl-/mox v0.0.15 h1:C3VDXwN33fEI5WTCuBEKZ6KSVh91aNMrFaFLM72ZU4M=
-github.com/mjl-/mox v0.0.15/go.mod h1:Ebxm9+lCApzfS1XSmTISluQGjOVhpa7jesEOYGxEVZE=
 github.com/mmcloughlin/addchain v0.4.0 h1:SobOdjm2xLj1KkXN5/n0xTIWyZA2+s99UCY1iPfkHRY=
 github.com/mmcloughlin/addchain v0.4.0/go.mod h1:A86O+tHqZLMNO4w6ZZ4FlVQEadcoqkyU72HC5wJ4RlU=
 github.com/mmcloughlin/profile v0.1.1/go.mod h1:IhHD7q1ooxgwTgjxQYkACGA77oFTDdFVejUS1/tS/qU=

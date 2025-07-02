@@ -80,3 +80,24 @@ func BuildMailMock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	response := &SmtpBuildMailResponse{Error: ""}
 	return prepareResponse(rnh, response)
 }
+
+func ServerStartMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerStartMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerStartResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}
+
+func ServerCloseMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerCloseMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerCloseResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}
+
+func ServerShutdownMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerShutdownMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerShutdownResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}
