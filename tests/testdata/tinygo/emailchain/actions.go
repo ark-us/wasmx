@@ -17,6 +17,8 @@ import (
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 )
 
+const Domain = "provable.dev"
+
 func StartServer() {
 	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{})
 	if resp.Error != "" {
@@ -24,8 +26,17 @@ func StartServer() {
 	}
 }
 
-func SaveEmail(req *IncomingEmail) {
-	fmt.Println("--SaveEmail--")
+func IncomingEmail(req *IncomingEmailRequest) {
+	err := ConnectSql(ConnectionId)
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+	for _, to := range req.To {
+		err = StoreEmail(Domain, req.From[0], to, req.EmailRaw, ConnectionId)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {

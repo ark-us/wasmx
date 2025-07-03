@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 
@@ -28,6 +29,18 @@ type Calldata struct {
 	SignARC             *SignARCRequest                 `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest            `json:"ForwardEmail,omitempty"`
 	StartServer         *vmsmtp.ServerConfig            `json:"StartServer,omitempty"`
+	IncomingEmail       *IncomingEmailRequest           `json:"IncomingEmail,omitempty"`
+	RoleChanged         *wasmx.RolesChangedHook         `json:"RoleChanged,omitempty"`
+}
+
+type ReentryCalldata struct {
+	IncomingEmail *IncomingEmailRequest `json:"IncomingEmail"`
+}
+
+type IncomingEmailRequest struct {
+	From     []string `json:"from"`
+	To       []string `json:"to"`
+	EmailRaw []byte   `json:"email_raw"`
 }
 
 type ConnectionSimpleRequest struct {
@@ -390,16 +403,6 @@ const (
 	HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE     = "Provable-Forward-Chain-Signature"
 )
 
-type ReentryCalldata struct {
-	IncomingEmail *IncomingEmail `json:"IncomingEmail"`
-}
-
-type IncomingEmail struct {
-	From     []string `json:"from"`
-	To       []string `json:"to"`
-	EmailRaw []byte   `json:"email_raw"`
-}
-
 type EmailWrite struct {
 	Owner        string `json:"owner"`         // Email owner address
 	Folder       string `json:"folder"`        // IMAP folder
@@ -413,6 +416,7 @@ type EmailWrite struct {
 	Size         int64  `json:"size"`          // Size in bytes (matches RFC822.SIZE)
 	Headers      string `json:"headers"`       // Optional: flattened text of all headers (for search)
 	Body         string `json:"body"`          // Optional: plain body text (for search)
+	Bh           string `json:"bh"`
 }
 
 type EmailRead struct {

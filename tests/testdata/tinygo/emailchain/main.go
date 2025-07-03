@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	_ "github.com/loredanacirstea/wasmx-env-httpclient"
@@ -10,7 +9,7 @@ import (
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 )
 
-//go:wasm-module emailprover
+//go:wasm-module emailchain
 //export instantiate
 func Instantiate() {
 	InitializeTables(ConnectionId)
@@ -89,6 +88,13 @@ func main() {
 		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
 		StartServer()
+	} else if calld.IncomingEmail != nil {
+		IncomingEmail(calld.IncomingEmail)
+	} else if calld.RoleChanged != nil {
+		// TODO
+		// utils.OnlyRole(MODULE_NAME, roles.ROLE_ROLES, "RoleChanged")
+		// roleChanged(calld.RoleChanged);
+		InitializeTables(ConnectionId)
 	} else {
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}
@@ -98,7 +104,6 @@ func main() {
 //go:wasm-module emailprover
 //export smtp_update
 func SmtpUpdate() {
-	fmt.Println("--smtp_update---")
 	databz := wasmx.GetCallData()
 	calld := &ReentryCalldata{}
 	err := json.Unmarshal(databz, calld)
@@ -106,6 +111,6 @@ func SmtpUpdate() {
 		wasmx.Revert([]byte(err.Error()))
 	}
 	if calld.IncomingEmail != nil {
-		SaveEmail(calld.IncomingEmail)
+		IncomingEmail(calld.IncomingEmail)
 	}
 }

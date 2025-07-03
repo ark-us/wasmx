@@ -1,8 +1,18 @@
 package main
 
 import (
+	"bufio"
+	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io"
+	"strings"
+	"time"
 
+	// "github.com/emersion/go-message/mail"
+
+	"github.com/loredanacirstea/mailverif/dkim"
+	"github.com/loredanacirstea/mailverif/utils"
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	sql "github.com/loredanacirstea/wasmx-env-sql"
 )
@@ -16,7 +26,7 @@ const DefTableOwners = `CREATE TABLE owners (
 const DefTableFolders = `CREATE TABLE folder_state (
     owner TEXT NOT NULL,
     folder TEXT NOT NULL,
-    last_uid INTEGER NOT NULL,
+    last_uid INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (owner, folder)
 );`
 
@@ -35,8 +45,9 @@ const DefTableEmails = `CREATE TABLE emails (
     size INTEGER NOT NULL,
     headers TEXT,
     body TEXT,
-    UNIQUE (folder, uid),
-	UNIQUE (folder, seq_num)
+	bh VARCHAR,
+    UNIQUE (owner, folder, uid),
+	UNIQUE (owner, folder, seq_num)
 );`
 
 // -- Indexes for fast search and UID operations
@@ -46,19 +57,34 @@ const DefIndexes3 = `CREATE UNIQUE INDEX idx_emails_message_id ON emails(message
 const DefIndexes4 = `CREATE INDEX idx_emails_subject ON emails(owner,subject);`
 const DefIndexes5 = `CREATE INDEX idx_emails_internal_date ON emails(internal_date);`
 
-const ExecUpdateUid = `UPDATE folder_state
-SET last_uid = last_uid + 1
-WHERE owner = ? AND folder = ?`
+const ExecUpdateUid = `INSERT INTO folder_state (owner, folder, last_uid)
+VALUES (?, ?, 1)
+ON CONFLICT(owner, folder)
+DO UPDATE SET last_uid = last_uid + 1;`
 const ExecGetUid = `SELECT last_uid FROM folder_state
 WHERE owner = ? AND folder = ?`
-const ExecGetSeq = `SELECT COALESCE(MAX(seq_num), 0) + 1 FROM emails
-WHERE owner = ? AND folder = ?`
+const ExecGetSeq = `SELECT COALESCE(MAX(seq_num), 0) + 1 AS next_seq_num
+FROM emails
+WHERE owner = ? AND folder = ?;`
 const ExecInsertEmail = `INSERT INTO emails (
-	owner, folder, uid, seq_num, message_id, subject, internal_date,
-	flags, raw_email, size, headers, body
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	owner, folder, uid, seq_num, message_id, subject, internal_date, bh, body, raw_email, size
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+// flags, size, headers,
+
+func ConnectSql(connId string) error {
+	resp := sql.Connect(&sql.SqlConnectionRequest{Id: connId, Driver: "sqlite3", Connection: "emailchain.db"})
+	if resp.Error != "" {
+		return fmt.Errorf(resp.Error)
+	}
+	return nil
+}
 
 func InitializeTables(connId string) {
+	err := ConnectSql(connId)
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
 	createTable := &sql.SqlExecuteBatchRequest{
 		Id: connId,
 		Commands: []sql.SqlExecuteCommand{
@@ -102,42 +128,157 @@ func InitializeTables(connId string) {
 	}
 }
 
-func StoreEmail(req *IncomingEmail, connId string) error {
+func StoreEmail(domain string, from string, to string, emailRaw []byte, connId string) error {
+	folder := "INBOX"
+	paramsbz, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: to},     // owner
+		{Type: "text", Value: folder}, // folder
+	})
+	if err != nil {
+		return err
+	}
 	resp := sql.Execute(&sql.SqlExecuteRequest{
-		Id:    connId,
-		Query: ExecUpdateUid,
+		Id:     connId,
+		Query:  ExecUpdateUid,
+		Params: paramsbz,
 	})
 	if resp.Error != "" {
 		return fmt.Errorf(resp.Error)
 	}
 	qresp := sql.Query(&sql.SqlQueryRequest{
-		Id:    connId,
-		Query: ExecGetUid,
+		Id:     connId,
+		Query:  ExecGetUid,
+		Params: paramsbz,
 	})
-	fmt.Println("--uid---", string(qresp.Data))
-	// uids := []int64
-	// json.Unmarshal(qresp.Data, )
-	// uid := 1
+	uidResp := []UidResponse{}
+	err = json.Unmarshal(qresp.Data, &uidResp)
+	if err != nil {
+		return err
+	}
+	uid := uidResp[0].LastUid
 
 	qresp = sql.Query(&sql.SqlQueryRequest{
-		Id:    connId,
-		Query: ExecGetSeq,
+		Id:     connId,
+		Query:  ExecGetSeq,
+		Params: paramsbz,
 	})
-	fmt.Println("--seq---", string(qresp.Data))
+	seqResp := []SeqNumResponse{}
+	err = json.Unmarshal(qresp.Data, &seqResp)
+	if err != nil {
+		return err
+	}
+	seq := seqResp[0].NextSeqNum
 
+	email, err := extractEmail(emailRaw)
+	if err != nil {
+		return err
+	}
+	mId, err := GenerateMessageID(domain)
+	if err != nil {
+		return err
+	}
+	email.Folder = folder
+	email.UID = int64(uid)
+	email.SeqNum = int64(seq)
+	email.Owner = to
+	email.MessageID = mId
+
+	paramsbz2, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: email.Owner},
+		{Type: "text", Value: email.Folder},
+		{Type: "integer", Value: email.UID},
+		{Type: "integer", Value: email.SeqNum},
+		{Type: "text", Value: email.MessageID},
+		{Type: "text", Value: email.Subject},
+		{Type: "text", Value: email.InternalDate},
+		{Type: "text", Value: email.Bh},
+		{Type: "text", Value: email.Body},
+		{Type: "text", Value: string(email.RawEmail)},
+		{Type: "text", Value: len(email.RawEmail)},
+		// {Type: "text", Value: "INBOX"}, // size
+		// {Type: "text", Value: "INBOX"}, // headers
+		// {Type: "text", Value: email.Flags},
+
+	})
+	if err != nil {
+		return err
+	}
 	resp = sql.Execute(&sql.SqlExecuteRequest{
 		Id:     connId,
 		Query:  ExecInsertEmail,
-		Params: sql.Params{},
+		Params: paramsbz2,
 	})
-
-	// sql.BatchAtomic(&sql.SqlExecuteBatchRequest{
-	// 	Id: connId,
-	// 	Commands: []sql.SqlExecuteCommand{
-	// 		{
-	// 			Query: ``
-	// 		},
-	// 	},
-	// })
+	if resp.Error != "" {
+		return fmt.Errorf(resp.Error)
+	}
 	return nil
+}
+
+// GenerateMessageID generates a unique RFC 5322-compliant Message-ID.
+// Example: <e4cfd38a7bce4fda9a2a4cc21f24a3b2@yourdomain.com>
+func GenerateMessageID(domain string) (string, error) {
+	// 16 bytes of randomness
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+
+	timestamp := time.Now().UnixNano()
+	localPart := fmt.Sprintf("%x.%d", buf, timestamp)
+
+	return fmt.Sprintf("<%s@%s>", localPart, domain), nil
+}
+
+func paramsMarshal(params []sql.SqlQueryParam) ([][]byte, error) {
+	res := sql.Params{}
+	for _, param := range params {
+		paramsbz, err := json.Marshal(&param)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, paramsbz)
+	}
+	return res, nil
+}
+
+func extractEmail(raw []byte) (*EmailWrite, error) {
+	msg := strings.NewReader(string(raw))
+	hdrs, bodyOffset, err := utils.ParseHeaders(bufio.NewReader(&utils.AtReader{R: msg}))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", dkim.ErrHeaderMalformed, err)
+	}
+	rawBody, err := io.ReadAll(bufio.NewReader(&utils.AtReader{R: msg, Offset: int64(bodyOffset)}))
+	if err != nil {
+		return nil, err
+	}
+	subject := ""
+	bh := ""
+	timestamp := time.Now()
+	for _, h := range hdrs {
+		switch h.LKey {
+		case "subject":
+			subject = h.GetValueTrimmed()
+		case "date":
+			t, err := time.Parse(time.RFC3339, h.GetValueTrimmed())
+			if err != nil {
+				timestamp = t
+			}
+		case "dkim-signature":
+			parts := strings.Split(string(h.GetValueTrimmed()), "; ")
+			for _, p := range parts {
+				if p[0:3] == "bh=" {
+					bh = p[3:]
+				}
+			}
+		default:
+			continue
+		}
+	}
+	return &EmailWrite{
+		Subject:      subject,
+		InternalDate: timestamp.Unix(),
+		RawEmail:     raw,
+		Body:         string(rawBody),
+		Bh:           bh,
+	}, nil
 }

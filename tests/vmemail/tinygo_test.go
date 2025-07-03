@@ -215,6 +215,7 @@ type EmailChainCalldata struct {
 	SignARC             *SignARCRequest          `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
 	StartServer         *vmsmtp.ServerConfig     `json:"StartServer,omitempty"`
+	IncomingEmail       *vmsmtp.Session          `json:"IncomingEmail,omitempty"`
 }
 
 type ConnectionSimpleRequest struct {
