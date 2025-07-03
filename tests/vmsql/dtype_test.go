@@ -229,14 +229,15 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	qresp := suite.parseQueryResponse(qres)
+	qdata, err := utils.ParseQueryResponse(qres)
+	suite.Require().NoError(err)
 	var table2rows []struct {
 		Field1   string `json:"field1"`
 		ID       int64  `json:"id"`
 		Table1ID int64  `json:"table1_id"`
 	}
-	err = json.Unmarshal(qresp.Data, &table2rows)
-	suite.Require().NoError(err, string(qresp.Data))
+	err = json.Unmarshal(qdata, &table2rows)
+	suite.Require().NoError(err, string(qdata))
 	suite.Require().Equal(1, len(table2rows))
 
 	// readField
@@ -251,9 +252,9 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	qresp = suite.parseQueryResponse(qres)
-	suite.Require().Equal("", qresp.Error)
-	v, err := strconv.Atoi(string(qresp.Data))
+	qdata, err = utils.ParseQueryResponse(qres)
+	suite.Require().NoError(err)
+	v, err := strconv.Atoi(string(qdata))
 	suite.Require().NoError(err)
 	suite.Require().Equal(table2rows[0].Table1ID, int64(v))
 
@@ -268,9 +269,10 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	qresp = suite.parseQueryResponse(qres)
-	err = json.Unmarshal(qresp.Data, &table2rows)
-	suite.Require().NoError(err, string(qresp.Data))
+	qdata, err = utils.ParseQueryResponse(qres)
+	suite.Require().NoError(err)
+	err = json.Unmarshal(qdata, &table2rows)
+	suite.Require().NoError(err, string(qdata))
 	suite.Require().Equal(3, len(table2rows))
 
 	// delete in cascade
@@ -301,9 +303,10 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 	data, err = json.Marshal(cmd)
 	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
-	qresp = suite.parseQueryResponse(qres)
-	err = json.Unmarshal(qresp.Data, &table2rows)
-	suite.Require().NoError(err, string(qresp.Data))
+	qdata, err = utils.ParseQueryResponse(qres)
+	suite.Require().NoError(err)
+	err = json.Unmarshal(qdata, &table2rows)
+	suite.Require().NoError(err, string(qdata))
 	suite.Require().Equal(0, len(table2rows))
 
 	suite.testGraph(sender, contractAddress, tableId1)
