@@ -13,11 +13,8 @@ import (
 //export wasmx_imap_i64_1
 func wasmx_imap_i64_1() {}
 
-//go:wasmimport imap ConnectWithPassword
-func ConnectWithPassword_(reqPtr int64) int64
-
-//go:wasmimport imap ConnectOAuth2
-func ConnectOAuth2_(reqPtr int64) int64
+//go:wasmimport imap Connect
+func Connect_(reqPtr int64) int64
 
 //go:wasmimport imap Close
 func Close_(reqPtr int64) int64
@@ -40,29 +37,13 @@ func Fetch_(reqPtr int64) int64
 //go:wasmimport imap CreateFolder
 func CreateFolder_(reqPtr int64) int64
 
-func ConnectWithPassword(req *ImapConnectionSimpleRequest) ImapConnectionResponse {
+func Connect(req *ImapConnectionRequest) ImapConnectionResponse {
 	reqbz, err := json.Marshal(req)
 	if err != nil {
 		panic(err)
 	}
 	reqPtr := utils.BytesToPackedPtr(reqbz)
-	ptr := ConnectWithPassword_(reqPtr)
-	bz := utils.PackedPtrToBytes(ptr)
-	var resp ImapConnectionResponse
-	err = json.Unmarshal(bz, &resp)
-	if err != nil {
-		panic(err)
-	}
-	return resp
-}
-
-func ConnectOAuth2(req *ImapConnectionOauth2Request) ImapConnectionResponse {
-	reqbz, err := json.Marshal(req)
-	if err != nil {
-		panic(err)
-	}
-	reqPtr := utils.BytesToPackedPtr(reqbz)
-	ptr := ConnectOAuth2_(reqPtr)
+	ptr := Connect_(reqPtr)
 	bz := utils.PackedPtrToBytes(ptr)
 	var resp ImapConnectionResponse
 	err = json.Unmarshal(bz, &resp)

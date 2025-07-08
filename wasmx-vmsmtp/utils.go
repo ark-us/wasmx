@@ -3,8 +3,10 @@ package vmsmtp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -15,39 +17,73 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func connectToSMTP(serverUrlStartTls string, serverUrlTls string, username, password string) (sclient *gosmtp.Client, err error) {
-	if serverUrlStartTls != "" {
-		sclient, err = gosmtp.DialStartTLS(serverUrlStartTls, nil)
+func connectSmtpClient(
+	ctx context.Context,
+	serverUrl string,
+	startTls bool,
+	networkType string,
+	auth *ConnectionAuth,
+	tlsConfig *TlsConfig,
+) (sclient *gosmtp.Client, err error) {
+	cfg := getTlsConfig(tlsConfig)
+	dialer := &net.Dialer{}
+	var conn net.Conn
+	if cfg == nil {
+		conn, err = dialer.DialContext(ctx, networkType, serverUrl)
 	} else {
-		sclient, err = gosmtp.DialTLS(serverUrlTls, nil)
+		tlsDialer := tls.Dialer{
+			NetDialer: dialer,
+			Config:    cfg,
+		}
+		conn, err = tlsDialer.Dial(networkType, serverUrl)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if startTls {
+		sclient, err = gosmtp.NewClientStartTLS(conn, cfg)
+	} else {
+		sclient = gosmtp.NewClient(conn)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
 	}
-
-	// Authenticate using go-sasl PLAIN mechanism
-	auth := sasl.NewPlainClient("", username, password)
-	if err = sclient.Auth(auth); err != nil {
-		return nil, fmt.Errorf("authentication failed: %v", err)
+	if auth != nil {
+		authClient := getAuthClient(*auth)
+		if err = sclient.Auth(authClient); err != nil {
+			return nil, fmt.Errorf("authentication failed: %v", err)
+		}
 	}
 	return sclient, nil
 }
 
-func connectToSMTPOauth2(serverUrlStartTls string, serverUrlTls string, username string, accessToken string) (sclient *gosmtp.Client, err error) {
-	if serverUrlStartTls != "" {
-		sclient, err = gosmtp.DialStartTLS(serverUrlStartTls, nil)
-	} else {
-		sclient, err = gosmtp.DialTLS(serverUrlTls, nil)
+func getTlsConfig(cfg *TlsConfig) *tls.Config {
+	if cfg == nil {
+		return nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
+	config := &tls.Config{InsecureSkipVerify: false}
+	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
+		if err != nil {
+			log.Fatalf("loading TLS cert: %v", err)
+		}
+		config.Certificates = []tls.Certificate{cert}
 	}
+	if cfg.ServerName != "" {
+		config.ServerName = cfg.ServerName
+	}
+	return config
+}
 
-	xauth := &OAuth2Authenticator{username: username, accessToken: accessToken}
-	if err = sclient.Auth(xauth); err != nil {
-		return nil, fmt.Errorf("authentication failed: %v", err)
+func getAuthClient(auth ConnectionAuth) sasl.Client {
+	switch auth.AuthType {
+	case "password":
+		return sasl.NewPlainClient(auth.Identity, auth.Username, auth.Password)
+	case "oauth2":
+		return &OAuth2Authenticator{username: auth.Username, accessToken: auth.Password}
 	}
-	return sclient, nil
+	return nil
 }
 
 // BuildRawEmail builds a full MIME email from an Email struct.

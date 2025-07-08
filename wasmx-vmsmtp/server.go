@@ -1,7 +1,6 @@
 package vmsmtp
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,13 +11,18 @@ import (
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 )
 
+type TlsConfig struct {
+	ServerName  string `json:"server_name"`
+	TLSCertFile string `json:"tls_cert_file"`
+	TLSKeyFile  string `json:"tls_key_file"`
+}
+
 type ServerConfig struct {
 	// The type of network, "tcp" or "unix".
 	Network string `json:"network"`
 	// TCP or Unix address to listen on.
-	Addr        string `json:"address"` // ":25"
-	TLSCertFile string `json:"tls_cert_file"`
-	TLSKeyFile  string `json:"tls_key_file"`
+	Addr      string     `json:"address"` // ":25"
+	TlsConfig *TlsConfig `json:"tls_config"`
 
 	// Enable LMTP mode, as defined in RFC 2033.
 	LMTP bool `json:"lmtp"`
@@ -150,12 +154,9 @@ func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
 
 	startfn := s.ListenAndServe
 
-	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
-		if err != nil {
-			log.Fatalf("loading TLS cert: %v", err)
-		}
-		s.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+	tlsCfg := getTlsConfig(cfg.TlsConfig)
+	if tlsCfg != nil {
+		s.TLSConfig = tlsCfg
 		startfn = s.ListenAndServeTLS
 	}
 

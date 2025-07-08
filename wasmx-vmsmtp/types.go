@@ -41,14 +41,12 @@ type Context struct {
 }
 
 type SmtpOpenConnection struct {
-	mtx                   sync.Mutex
-	GoContextParent       context.Context
-	Username              string
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Client                *gosmtp.Client
-	Closed                chan struct{}
-	GetClient             func() (*gosmtp.Client, error)
+	mtx             sync.Mutex
+	GoContextParent context.Context
+	Info            SmtpConnectionRequest
+	Client          *gosmtp.Client
+	Closed          chan struct{}
+	GetClient       func() (*gosmtp.Client, error)
 }
 
 type SmtpServerConnection struct {
@@ -87,20 +85,20 @@ func (p *SmtpContext) DeleteConnection(id string) {
 	delete(p.DbConnections, id)
 }
 
-type SmtpConnectionSimpleRequest struct {
-	Id                    string `json:"id"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	Password              string `json:"password"`
+type ConnectionAuth struct {
+	AuthType string `json:"auth_type"` // "password", "oauth2"
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Identity string `json:"identity"`
 }
 
-type SmtpConnectionOauth2Request struct {
-	Id                    string `json:"id"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	AccessToken           string `json:"access_token"`
+type SmtpConnectionRequest struct {
+	Id          string          `json:"id"`
+	ServerUrl   string          `json:"server_url"`
+	StartTLS    bool            `json:"start_tls"`
+	NetworkType string          `json:"network_type"` // "tcp", "tcp4", "udp"
+	Auth        *ConnectionAuth `json:"auth"`
+	TlsConfig   *TlsConfig      `json:"tls_config"`
 }
 
 type SmtpConnectionResponse struct {
@@ -148,6 +146,15 @@ type SmtpNoopRequest struct {
 }
 
 type SmtpNoopResponse struct {
+	Error string `json:"error"`
+}
+
+type SmtpHelloRequest struct {
+	Id        string `json:"id"`
+	LocalName string `json:"local_name"`
+}
+
+type SmtpHelloResponse struct {
 	Error string `json:"error"`
 }
 

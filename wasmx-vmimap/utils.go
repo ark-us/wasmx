@@ -14,35 +14,25 @@ import (
 )
 
 // connectToIMAP establishes a connection to the IMAP server
-func connectToIMAP(imapServer string, username, password string, options *imapclient.Options) (*imapclient.Client, error) {
-	// Connect to IMAP server over TLS.
-	// username-password credentials or OAuth2 or an app password
+func connectToIMAP(
+	imapServer string,
+	auth ConnectionAuth,
+	options *imapclient.Options,
+) (*imapclient.Client, error) {
 	c, err := imapclient.DialTLS(imapServer, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to IMAP server: %v", err)
 	}
-
-	if err := c.Login(username, password).Wait(); err != nil {
-		c.Close()
-		return nil, fmt.Errorf("failed to login: %v", err)
-	}
-
-	return c, nil
-}
-
-// connectToIMAP establishes a connection to the IMAP server
-func connectToIMAPOauth2(imapServerUrl string, username string, accessToken string, options *imapclient.Options) (*imapclient.Client, error) {
-	// Connect to the IMAP server
-	c, err := imapclient.DialTLS(imapServerUrl, options)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to IMAP server: %v", err)
-	}
-	xauth := &OAuth2Authenticator{username: username, accessToken: accessToken}
-
-	// Authenticate using OAuth2
-	// auth := imapoauth2.NewOAuthBearerAuthenticator(accessToken)
-	if err := c.Authenticate(xauth); err != nil {
-		return nil, fmt.Errorf("failed to authenticate with oauth2: %v", err)
+	if auth.AuthType == "password" {
+		if err := c.Login(auth.Username, auth.Password).Wait(); err != nil {
+			c.Close()
+			return nil, fmt.Errorf("failed to login: %v", err)
+		}
+	} else {
+		xauth := &OAuth2Authenticator{username: auth.Username, accessToken: auth.Password}
+		if err := c.Authenticate(xauth); err != nil {
+			return nil, fmt.Errorf("failed to authenticate with oauth2: %v", err)
+		}
 	}
 	return c, nil
 }

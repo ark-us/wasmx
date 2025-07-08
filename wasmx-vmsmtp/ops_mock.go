@@ -4,16 +4,9 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func ConnectWithPasswordMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func ClientConnectMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	ctx.Ctx.Logger().Info("* ConnectWithPasswordMock: %s", ctx.ContractInfo.Address.String())
-	response := &SmtpConnectionResponse{Error: ""}
-	return prepareResponse(rnh, response)
-}
-
-func ConnectOAuth2Mock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	ctx.Ctx.Logger().Info("* ConnectOAuth2Mock: %s", ctx.ContractInfo.Address.String())
+	ctx.Ctx.Logger().Info("* ClientConnectMock: %s", ctx.ContractInfo.Address.String())
 	response := &SmtpConnectionResponse{Error: ""}
 	return prepareResponse(rnh, response)
 }
@@ -43,6 +36,13 @@ func NoopMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	ctx := _context.(*Context)
 	ctx.Ctx.Logger().Info("* NoopMock: %s", ctx.ContractInfo.Address.String())
 	response := &SmtpNoopResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}
+
+func HelloMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* HelloMock: %s", ctx.ContractInfo.Address.String())
+	response := &SmtpHelloResponse{Error: ""}
 	return prepareResponse(rnh, response)
 }
 

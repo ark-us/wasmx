@@ -148,7 +148,7 @@ func Bech32BytesToString(addr []byte) string {
 	return string(data)
 }
 
-func CallInternal(addrBech32 string, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool) (bool, []byte) {
+func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool) (bool, []byte) {
 	req := &SimpleCallRequestRaw{
 		To:       addrBech32,
 		Value:    value,
@@ -173,11 +173,11 @@ func CallInternal(addrBech32 string, value *sdkmath.Int, calldata []byte, gasLim
 	return calld.Success == 0, calld.Data
 }
 
-func Call(addrBech32 string, value *sdkmath.Int, calldata []byte, gasLimit *big.Int) (bool, []byte) {
+func Call(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int) (bool, []byte) {
 	return CallInternal(addrBech32, value, calldata, gasLimit, false)
 }
 
-func CallStatic(addrBech32 string, calldata []byte, gasLimit *big.Int) (bool, []byte) {
+func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int) (bool, []byte) {
 	return CallInternal(addrBech32, nil, calldata, gasLimit, false)
 }
 

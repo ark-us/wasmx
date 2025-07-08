@@ -10,14 +10,14 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func ClientConnect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
 	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
-	var req SmtpConnectionSimpleRequest
+	var req SmtpConnectionRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 
 	conn, found := vctx.GetConnection(connId)
 	if found {
-		if conn.SmtpServerUrlSTARTTLS == req.SmtpServerUrlSTARTTLS || conn.SmtpServerUrlTLS == req.SmtpServerUrlTLS {
+		if conn.Info.ServerUrl == req.ServerUrl {
 			err := conn.Client.Noop()
 			if err == nil {
 				return prepareResponse(rnh, response)
@@ -47,61 +47,14 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 	}
 
 	getClient := func() (*gosmtp.Client, error) {
-		c, err := connectToSMTP(req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS, req.Username, req.Password)
+		c, err := connectSmtpClient(ctx.Context.GoContextParent, req.ServerUrl, req.StartTLS, req.NetworkType, req.Auth, req.TlsConfig)
 		if err != nil {
 			return nil, err
 		}
 		return c, nil
 	}
 
-	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS)
-}
-
-func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
-	requestbz, err := rnh.ReadMemFromPtr(keyptr)
-	if err != nil {
-		return nil, err
-	}
-	var req SmtpConnectionOauth2Request
-	err = json.Unmarshal(requestbz, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	vctx, err := GetSmtpContext(ctx.Context.GoContextParent)
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SmtpConnectionResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
-
-	conn, found := vctx.GetConnection(connId)
-	if found {
-		if conn.SmtpServerUrlSTARTTLS == req.SmtpServerUrlSTARTTLS || conn.SmtpServerUrlTLS == req.SmtpServerUrlTLS {
-			err := conn.Client.Noop()
-			if err == nil {
-				return prepareResponse(rnh, response)
-			} else {
-				_ = closeConnection(vctx, conn, connId)
-			}
-		} else {
-			response.Error = "connection id already in use"
-			return prepareResponse(rnh, response)
-		}
-	}
-
-	getClient := func() (*gosmtp.Client, error) {
-		c, err := connectToSMTPOauth2(req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS, req.Username, req.AccessToken)
-		if err != nil {
-			return nil, err
-		}
-		return c, nil
-	}
-
-	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.SmtpServerUrlSTARTTLS, req.SmtpServerUrlTLS)
+	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req)
 }
 
 func connectCommon(
@@ -111,9 +64,7 @@ func connectCommon(
 	getClient func() (*gosmtp.Client, error),
 	response *SmtpConnectionResponse,
 	connId string,
-	username string,
-	imapServerUrlStartTls string,
-	imapServerUrlTls string,
+	info SmtpConnectionRequest,
 ) ([]interface{}, error) {
 	client, err := getClient()
 	if err != nil {
@@ -145,13 +96,11 @@ func connectCommon(
 	})
 
 	conn := &SmtpOpenConnection{
-		GoContextParent:       ctx.GoContextParent,
-		Username:              username,
-		SmtpServerUrlSTARTTLS: imapServerUrlStartTls,
-		SmtpServerUrlTLS:      imapServerUrlTls,
-		Client:                client,
-		Closed:                closedChannel,
-		GetClient:             getClient,
+		GoContextParent: ctx.GoContextParent,
+		Info:            info,
+		Client:          client,
+		Closed:          closedChannel,
+		GetClient:       getClient,
 	}
 
 	err = vctx.SetConnection(connId, conn)
@@ -296,6 +245,39 @@ func Noop(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 		return prepareResponse(rnh, response)
 	}
 	err = conn.Client.Noop()
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	return prepareResponse(rnh, response)
+}
+
+func Hello(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req SmtpHelloRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	vctx, err := GetSmtpContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SmtpHelloResponse{Error: ""}
+	connId := buildConnectionId(req.Id, ctx)
+	conn, found := vctx.GetConnection(connId)
+	if !found {
+		response.Error = "SMTP connection not found"
+		return prepareResponse(rnh, response)
+	}
+	err = conn.Client.Hello(req.LocalName)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)

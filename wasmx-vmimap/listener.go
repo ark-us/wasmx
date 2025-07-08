@@ -70,7 +70,7 @@ func (lm *ImapOpenConnection) listenForEmails(ctx context.Context, listener *IMA
 			errCh <- err
 			return
 		}
-		log.Printf("Start IDLE: %s \n", lm.Username)
+		log.Printf("Start IDLE: %s \n", lm.Info.Auth.Username)
 	}()
 
 	// Wait for the idleDuration or a done signal, whichever comes first.

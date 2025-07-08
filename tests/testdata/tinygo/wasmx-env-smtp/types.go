@@ -6,20 +6,26 @@ import (
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 )
 
-type SmtpConnectionSimpleRequest struct {
-	Id                    string `json:"id"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	Password              string `json:"password"`
+type TlsConfig struct {
+	ServerName  string `json:"server_name"`
+	TLSCertFile string `json:"tls_cert_file"`
+	TLSKeyFile  string `json:"tls_key_file"`
 }
 
-type SmtpConnectionOauth2Request struct {
-	Id                    string `json:"id"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	AccessToken           string `json:"access_token"`
+type ConnectionAuth struct {
+	AuthType string `json:"auth_type"` // "password", "oauth2"
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Identity string `json:"identity"`
+}
+
+type SmtpConnectionRequest struct {
+	Id          string          `json:"id"`
+	ServerUrl   string          `json:"server_url"`
+	StartTLS    bool            `json:"start_tls"`
+	NetworkType string          `json:"network_type"` // "tcp", "tcp4", "udp"
+	Auth        *ConnectionAuth `json:"auth"`
+	TlsConfig   *TlsConfig      `json:"tls_config"`
 }
 
 type SmtpConnectionResponse struct {
@@ -67,6 +73,15 @@ type SmtpNoopRequest struct {
 }
 
 type SmtpNoopResponse struct {
+	Error string `json:"error"`
+}
+
+type SmtpHelloRequest struct {
+	Id        string `json:"id"`
+	LocalName string `json:"local_name"`
+}
+
+type SmtpHelloResponse struct {
 	Error string `json:"error"`
 }
 

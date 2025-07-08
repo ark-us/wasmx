@@ -50,8 +50,7 @@ type IMAPListener struct {
 type ImapOpenConnection struct {
 	mtx             sync.Mutex
 	GoContextParent context.Context
-	Username        string
-	ImapServerUrl   string             `json:"imap_server_url"`
+	Info            ImapConnectionRequest
 	Client          *imapclient.Client // no mailbox/folder selected
 	Closed          chan struct{}
 	listeners       map[string]*IMAPListener // mailbox/folder => listener
@@ -111,18 +110,17 @@ func (p *ImapContext) DeleteConnection(id string) {
 	delete(p.DbConnections, id)
 }
 
-type ImapConnectionSimpleRequest struct {
-	Id            string `json:"id"`
-	ImapServerUrl string `json:"imap_server_url"`
-	Username      string `json:"username"`
-	Password      string `json:"password"`
+type ConnectionAuth struct {
+	AuthType string `json:"auth_type"` // "password", "oauth2"
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Identity string `json:"identity"`
 }
 
-type ImapConnectionOauth2Request struct {
-	Id            string `json:"id"`
-	ImapServerUrl string `json:"imap_server_url"`
-	Username      string `json:"username"`
-	AccessToken   string `json:"access_token"`
+type ImapConnectionRequest struct {
+	Id            string         `json:"id"`
+	ImapServerUrl string         `json:"imap_server_url"`
+	Auth          ConnectionAuth `json:"auth"`
 }
 
 type ImapConnectionResponse struct {

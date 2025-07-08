@@ -9,8 +9,7 @@ func BuildWasmxImapVMMock_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (i
 	context := &Context{Context: ctx_}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("ConnectWithPassword", ConnectWithPasswordMock, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("ConnectOAuth2", ConnectOAuth2Mock, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("Connect", ConnectMock, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Close", CloseMock, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Listen", ListenMock, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Count", CountMock, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),

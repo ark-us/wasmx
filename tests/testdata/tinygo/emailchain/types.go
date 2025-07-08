@@ -18,19 +18,18 @@ import (
 const ConnectionId = "emailchain"
 
 type Calldata struct {
-	ConnectWithPassword *ConnectionSimpleRequest        `json:"ConnectWithPassword,omitempty"`
-	ConnectOAuth2       *ConnectionOauth2Request        `json:"ConnectOAuth2,omitempty"`
-	Close               *CloseRequest                   `json:"Close,omitempty"`
-	SendEmail           *vmimap.ImapCreateFolderRequest `json:"SendEmail,omitempty"`
-	BuildAndSend        *BuildAndSendMailRequest        `json:"BuildAndSend,omitempty"`
-	VerifyDKIM          *VerifyDKIMRequest              `json:"VerifyDKIM,omitempty"`
-	VerifyARC           *VerifyDKIMRequest              `json:"VerifyARC,omitempty"`
-	SignDKIM            *SignDKIMRequest                `json:"SignDKIM,omitempty"`
-	SignARC             *SignARCRequest                 `json:"SignARC,omitempty"`
-	ForwardEmail        *ForwardEmailRequest            `json:"ForwardEmail,omitempty"`
-	StartServer         *vmsmtp.ServerConfig            `json:"StartServer,omitempty"`
-	IncomingEmail       *IncomingEmailRequest           `json:"IncomingEmail,omitempty"`
-	RoleChanged         *wasmx.RolesChangedHook         `json:"RoleChanged,omitempty"`
+	Connect       *ConnectRequest          `json:"Connect,omitempty"`
+	Close         *CloseRequest            `json:"Close,omitempty"`
+	SendEmail     *BuildAndSendMailRequest `json:"SendEmail,omitempty"`
+	BuildAndSend  *BuildAndSendMailRequest `json:"BuildAndSend,omitempty"`
+	VerifyDKIM    *VerifyDKIMRequest       `json:"VerifyDKIM,omitempty"`
+	VerifyARC     *VerifyDKIMRequest       `json:"VerifyARC,omitempty"`
+	SignDKIM      *SignDKIMRequest         `json:"SignDKIM,omitempty"`
+	SignARC       *SignARCRequest          `json:"SignARC,omitempty"`
+	ForwardEmail  *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
+	StartServer   *vmsmtp.ServerConfig     `json:"StartServer,omitempty"`
+	IncomingEmail *IncomingEmailRequest    `json:"IncomingEmail,omitempty"`
+	RoleChanged   *wasmx.RolesChangedHook  `json:"RoleChanged,omitempty"`
 }
 
 type ReentryCalldata struct {
@@ -43,22 +42,10 @@ type IncomingEmailRequest struct {
 	EmailRaw []byte   `json:"email_raw"`
 }
 
-type ConnectionSimpleRequest struct {
-	Id                    string `json:"id"`
-	ImapServerUrl         string `json:"imap_server_url"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	Password              string `json:"password"`
-}
-
-type ConnectionOauth2Request struct {
-	Id                    string `json:"id"`
-	ImapServerUrl         string `json:"imap_server_url"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	AccessToken           string `json:"access_token"`
+type ConnectRequest struct {
+	Id            string `json:"id"`
+	ImapServerUrl string `json:"imap_server_url"`
+	SmtpRequest   vmsmtp.SmtpConnectionRequest
 }
 
 type CloseRequest struct {

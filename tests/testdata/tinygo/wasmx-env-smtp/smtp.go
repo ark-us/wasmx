@@ -13,11 +13,8 @@ import (
 //export wasmx_smtp_i64_1
 func wasmx_smtp_i64_1() {}
 
-//go:wasmimport smtp ConnectWithPassword
-func ConnectWithPassword_(reqPtr int64) int64
-
-//go:wasmimport smtp ConnectOAuth2
-func ConnectOAuth2_(reqPtr int64) int64
+//go:wasmimport smtp ClientConnect
+func ClientConnect_(reqPtr int64) int64
 
 //go:wasmimport smtp Close
 func Close_(reqPtr int64) int64
@@ -30,6 +27,9 @@ func Extension_(reqPtr int64) int64
 
 //go:wasmimport smtp Noop
 func Noop_(reqPtr int64) int64
+
+//go:wasmimport smtp Hello
+func Hello_(reqPtr int64) int64
 
 //go:wasmimport smtp SendMail
 func SendMail_(reqPtr int64) int64
@@ -55,29 +55,13 @@ func ServerClose_(reqPtr int64) int64
 //go:wasmimport smtp ServerShutdown
 func ServerShutdown_(reqPtr int64) int64
 
-func ConnectWithPassword(req *SmtpConnectionSimpleRequest) SmtpConnectionResponse {
+func ClientConnect(req *SmtpConnectionRequest) SmtpConnectionResponse {
 	reqbz, err := json.Marshal(req)
 	if err != nil {
 		panic(err)
 	}
 	reqPtr := utils.BytesToPackedPtr(reqbz)
-	ptr := ConnectWithPassword_(reqPtr)
-	bz := utils.PackedPtrToBytes(ptr)
-	var resp SmtpConnectionResponse
-	err = json.Unmarshal(bz, &resp)
-	if err != nil {
-		panic(err)
-	}
-	return resp
-}
-
-func ConnectOAuth2(req *SmtpConnectionOauth2Request) SmtpConnectionResponse {
-	reqbz, err := json.Marshal(req)
-	if err != nil {
-		panic(err)
-	}
-	reqPtr := utils.BytesToPackedPtr(reqbz)
-	ptr := ConnectOAuth2_(reqPtr)
+	ptr := ClientConnect_(reqPtr)
 	bz := utils.PackedPtrToBytes(ptr)
 	var resp SmtpConnectionResponse
 	err = json.Unmarshal(bz, &resp)
@@ -144,6 +128,22 @@ func Noop(req *SmtpNoopRequest) SmtpNoopResponse {
 	ptr := Noop_(reqPtr)
 	bz := utils.PackedPtrToBytes(ptr)
 	var resp SmtpNoopResponse
+	err = json.Unmarshal(bz, &resp)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func Hello(req *SmtpHelloRequest) SmtpHelloResponse {
+	reqbz, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	reqPtr := utils.BytesToPackedPtr(reqbz)
+	ptr := Hello_(reqPtr)
+	bz := utils.PackedPtrToBytes(ptr)
+	var resp SmtpHelloResponse
 	err = json.Unmarshal(bz, &resp)
 	if err != nil {
 		panic(err)

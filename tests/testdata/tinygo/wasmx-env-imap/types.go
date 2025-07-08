@@ -165,18 +165,17 @@ type Attachment struct {
 	Data        []byte
 }
 
-type ImapConnectionSimpleRequest struct {
-	Id            string `json:"id"`
-	ImapServerUrl string `json:"imap_server_url"`
-	Username      string `json:"username"`
-	Password      string `json:"password"`
+type ConnectionAuth struct {
+	AuthType string `json:"auth_type"` // "password", "oauth2"
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Identity string `json:"identity"`
 }
 
-type ImapConnectionOauth2Request struct {
-	Id            string `json:"id"`
-	ImapServerUrl string `json:"imap_server_url"`
-	Username      string `json:"username"`
-	AccessToken   string `json:"access_token"`
+type ImapConnectionRequest struct {
+	Id            string         `json:"id"`
+	ImapServerUrl string         `json:"imap_server_url"`
+	Auth          ConnectionAuth `json:"auth"`
 }
 
 type ImapConnectionResponse struct {

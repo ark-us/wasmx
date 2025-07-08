@@ -24,41 +24,14 @@ func main() {
 	}
 	response := []byte{}
 
-	if calld.ConnectWithPassword != nil {
-		resp := vmimap.ConnectWithPassword(&vmimap.ImapConnectionSimpleRequest{
-			Id:            calld.ConnectWithPassword.Id,
-			ImapServerUrl: calld.ConnectWithPassword.ImapServerUrl,
-			Username:      calld.ConnectWithPassword.Username,
-			Password:      calld.ConnectWithPassword.Password,
+	if calld.Connect != nil {
+		resp := vmimap.Connect(&vmimap.ImapConnectionRequest{
+			Id:            calld.Connect.Id,
+			ImapServerUrl: calld.Connect.ImapServerUrl,
+			Auth:          vmimap.ConnectionAuth(*calld.Connect.SmtpRequest.Auth),
 		})
 		if resp.Error == "" {
-			resp2 := vmsmtp.ConnectWithPassword(&vmsmtp.SmtpConnectionSimpleRequest{
-				Id:                    calld.ConnectWithPassword.Id,
-				SmtpServerUrlSTARTTLS: calld.ConnectWithPassword.SmtpServerUrlSTARTTLS,
-				SmtpServerUrlTLS:      calld.ConnectWithPassword.SmtpServerUrlTLS,
-				Username:              calld.ConnectWithPassword.Username,
-				Password:              calld.ConnectWithPassword.Password,
-			})
-			if resp2.Error != "" {
-				resp.Error = resp2.Error
-			}
-		}
-		response, _ = json.Marshal(&resp)
-	} else if calld.ConnectOAuth2 != nil {
-		resp := vmimap.ConnectOAuth2(&vmimap.ImapConnectionOauth2Request{
-			Id:            calld.ConnectOAuth2.Id,
-			ImapServerUrl: calld.ConnectOAuth2.ImapServerUrl,
-			Username:      calld.ConnectOAuth2.Username,
-			AccessToken:   calld.ConnectOAuth2.AccessToken,
-		})
-		if resp.Error == "" {
-			resp2 := vmsmtp.ConnectOAuth2(&vmsmtp.SmtpConnectionOauth2Request{
-				Id:                    calld.ConnectOAuth2.Id,
-				SmtpServerUrlSTARTTLS: calld.ConnectOAuth2.SmtpServerUrlSTARTTLS,
-				SmtpServerUrlTLS:      calld.ConnectOAuth2.SmtpServerUrlTLS,
-				Username:              calld.ConnectOAuth2.Username,
-				AccessToken:           calld.ConnectOAuth2.AccessToken,
-			})
+			resp2 := vmsmtp.ClientConnect(&calld.Connect.SmtpRequest)
 			if resp2.Error != "" {
 				resp.Error = resp2.Error
 			}
