@@ -4,12 +4,20 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"log/slog"
+	"net"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-message/mail"
 
+	"github.com/loredanacirstea/mailverif/dkim"
+	"github.com/loredanacirstea/mailverif/dns"
+	"github.com/loredanacirstea/mailverif/utils"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 )
 
 // TODO remove me
@@ -168,4 +176,109 @@ func BuildRawEmail2(e vmimap.Email, writeCrlfHeaders bool) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func prepareEmailSend(
+	emailstr string,
+	dkimSelector string,
+	from string,
+) (string, error) {
+	parts := strings.Split(from, "@")
+	fromUsername := parts[0]
+	fromDomain := parts[1]
+	date := time.Now().UTC().Format(time.RFC1123Z)
+	emailstr = fmt.Sprintf("Date: %s\r\n", date) + emailstr
+	emailstr, err := signDkim(emailstr, fromUsername, fromDomain, dkimSelector)
+	if err != nil {
+		return "", fmt.Errorf("signDkim: %s", err.Error())
+	}
+	return emailstr, nil
+}
+
+func signDkim(emailstr string, username string, domainstr string, selectorstr string) (string, error) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	r := strings.NewReader(emailstr)
+	identif := utils.Localpart(username)
+	domain := dns.Domain{ASCII: domainstr}
+	key := ToPrivateKey("rsa", []byte(testPrivateKeyPEM))
+	sel := dkim.Selector{
+		Hash:          "sha256",
+		PrivateKey:    key,
+		Headers:       strings.Split("From,To,Cc,Bcc,Reply-To,References,In-Reply-To,Subject,Date,Message-ID,Content-Type", ","),
+		Domain:        dns.Domain{ASCII: selectorstr},
+		HeaderRelaxed: true,
+		BodyRelaxed:   true,
+	}
+	selectors := []dkim.Selector{sel}
+	header, err := dkim.Sign2(logger, identif, domain, selectors, false, r, time.Now)
+	if err != nil {
+		return "", fmt.Errorf("dkim.Sign2: %s", err.Error())
+	}
+	headerstr := utils.SerializeHeaders(header)
+	return headerstr + emailstr, nil
+}
+
+func sendEmailInternal(
+	from string, to string,
+	emailstr string,
+	mailServerDomain string,
+	networkType string, // tcp, tcp4
+) error {
+	var err error
+	at := strings.LastIndex(to, "@")
+	if at == -1 {
+		return fmt.Errorf("invalid recipient address")
+	}
+	toDomain := to[at+1:]
+
+	// Step 2: lookup MX records
+	mxRecords, err := net.LookupMX(toDomain)
+	if err != nil || len(mxRecords) == 0 {
+		return fmt.Errorf("no MX records found for domain %s", toDomain)
+	}
+
+	// Try each MX record in order
+	for _, mx := range mxRecords {
+		mxHost := strings.TrimSuffix(mx.Host, ".")
+		addr := fmt.Sprintf("%s:25", mxHost)
+
+		log.Printf("Trying to send to %s...", addr)
+
+		tlsConfig := &vmsmtp.TlsConfig{
+			ServerName: mxHost,
+		}
+		connResp := vmsmtp.ClientConnect(&vmsmtp.SmtpConnectionRequest{
+			Id:          req.ConnectionId,
+			ServerUrl:   addr,
+			StartTLS:    true,
+			NetworkType: networkType,
+			TlsConfig:   tlsConfig,
+		})
+		if connResp.Error != "" {
+			log.Printf("Failed to connect to %s: %v", addr, err)
+			continue
+		}
+		hresp := vmsmtp.Hello(&vmsmtp.SmtpHelloRequest{Id: req.ConnectionId, LocalName: mailServerDomain})
+		if hresp.Error != "" {
+			log.Printf("EHLO/HELO failed: %v", err)
+			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: req.ConnectionId})
+			continue
+		}
+
+		sendresp := vmsmtp.SendMail(&vmsmtp.SmtpSendMailRequest{
+			Id:    req.ConnectionId,
+			From:  from,
+			To:    []string{to},
+			Email: []byte(emailstr),
+		})
+		if sendresp.Error != "" {
+			log.Println("Email send failed: ", err)
+			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: req.ConnectionId})
+			return err
+		}
+		vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: req.ConnectionId})
+		log.Println("Email sent successfully to", to)
+		return nil
+	}
+	return fmt.Errorf("could not deliver email to any MX server for %s", toDomain)
 }

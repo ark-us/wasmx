@@ -59,6 +59,9 @@ func main() {
 	} else if calld.ForwardEmail != nil {
 		resp := ForwardEmail(calld.ForwardEmail)
 		response, _ = json.Marshal(&resp)
+	} else if calld.SendEmail != nil {
+		resp := SendEmail(calld.SendEmail)
+		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
 		StartServer()
 	} else if calld.IncomingEmail != nil {
