@@ -437,6 +437,76 @@ func CreateFolder(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	return prepareResponse(rnh, response)
 }
 
+func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerStartResponse{Error: ""}
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req ServerStartRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	if req.ConnectionId == "" {
+		response.Error = "imap server connection id empty"
+		return prepareResponse(rnh, response)
+	}
+	connId := buildConnectionId(req.ConnectionId, ctx)
+	_, ok := vctx.GetServerConnection(connId)
+	if ok {
+		response.Error = "already started"
+		return prepareResponse(rnh, response)
+	}
+	s, err := NewServer(req.ServerConfig, ctx)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	vctx.SetServerConnection(connId, &ServerConnection{
+		Server:          s,
+		GoContextParent: ctx.GoContextParent,
+		ContractAddress: ctx.ContractInfo.Address,
+	})
+	return prepareResponse(rnh, response)
+}
+
+func ServerClose(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerCloseResponse{Error: ""}
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req ServerCloseRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	connId := buildConnectionId(req.ConnectionId, ctx)
+	conn, ok := vctx.GetServerConnection(connId)
+	if ok {
+		vctx.DeleteServerConnection(connId)
+		err = conn.Server.Close()
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
+	}
+	return prepareResponse(rnh, response)
+}
+
 // TODO call contract
 func callbackMailboxChange(ctx *Context, folder string, sessionId string, sessionUsername string) *imapclient.UnilateralDataHandler {
 	return &imapclient.UnilateralDataHandler{

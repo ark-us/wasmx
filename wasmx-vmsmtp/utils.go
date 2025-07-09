@@ -25,7 +25,10 @@ func connectSmtpClient(
 	auth *ConnectionAuth,
 	tlsConfig *TlsConfig,
 ) (sclient *gosmtp.Client, err error) {
-	cfg := getTlsConfig(tlsConfig)
+	cfg, err := getTlsConfig(tlsConfig)
+	if err != nil {
+		return nil, err
+	}
 	dialer := &net.Dialer{}
 	var conn net.Conn
 	if cfg == nil {
@@ -58,22 +61,22 @@ func connectSmtpClient(
 	return sclient, nil
 }
 
-func getTlsConfig(cfg *TlsConfig) *tls.Config {
+func getTlsConfig(cfg *TlsConfig) (*tls.Config, error) {
 	if cfg == nil {
-		return nil
+		return nil, nil
 	}
 	config := &tls.Config{InsecureSkipVerify: false}
 	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
 		cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
 		if err != nil {
-			log.Fatalf("loading TLS cert: %v", err)
+			return nil, fmt.Errorf("loading TLS cert: %v", err)
 		}
 		config.Certificates = []tls.Certificate{cert}
 	}
 	if cfg.ServerName != "" {
 		config.ServerName = cfg.ServerName
 	}
-	return config
+	return config, nil
 }
 
 func getAuthClient(auth ConnectionAuth) sasl.Client {

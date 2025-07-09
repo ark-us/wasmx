@@ -17,6 +17,8 @@ func BuildWasmxImapVM_i32(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (inter
 		vm.BuildFn("ListMailboxes", ListMailboxes, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Fetch", Fetch, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("CreateFolder", CreateFolder, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ServerStart", ServerStart, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ServerClose", ServerClose, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 
 		// TODO
 		// Move

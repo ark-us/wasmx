@@ -158,6 +158,7 @@ type SmtpBuildMailResponse struct {
 }
 
 type ServerStartRequest struct {
+	ConnectionId string       `json:"connection_id"`
 	ServerConfig ServerConfig `json:"server_config"`
 }
 
@@ -165,13 +166,17 @@ type ServerStartResponse struct {
 	Error string `json:"error"`
 }
 
-type ServerCloseRequest struct{}
+type ServerCloseRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
 
 type ServerCloseResponse struct {
 	Error string `json:"error"`
 }
 
-type ServerShutdownRequest struct{}
+type ServerShutdownRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
 
 type ServerShutdownResponse struct {
 	Error string `json:"error"`

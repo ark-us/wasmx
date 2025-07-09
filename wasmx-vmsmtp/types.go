@@ -56,9 +56,9 @@ type SmtpServerConnection struct {
 }
 
 type SmtpContext struct {
-	mtx              sync.Mutex
-	DbConnections    map[string]*SmtpOpenConnection
-	ServerConnection *SmtpServerConnection
+	mtx               sync.Mutex
+	DbConnections     map[string]*SmtpOpenConnection
+	ServerConnections map[string]*SmtpServerConnection
 }
 
 func (p *SmtpContext) GetConnection(id string) (*SmtpOpenConnection, bool) {
@@ -85,11 +85,42 @@ func (p *SmtpContext) DeleteConnection(id string) {
 	delete(p.DbConnections, id)
 }
 
+func (p *SmtpContext) GetServerConnection(id string) (*SmtpServerConnection, bool) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	db, found := p.ServerConnections[id]
+	return db, found
+}
+
+func (p *SmtpContext) SetServerConnection(id string, conn *SmtpServerConnection) error {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	_, found := p.ServerConnections[id]
+	if found {
+		return fmt.Errorf("cannot overwrite SMTP connection: %s", id)
+	}
+	p.ServerConnections[id] = conn
+	return nil
+}
+
+func (p *SmtpContext) DeleteServerConnection(id string) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	delete(p.ServerConnections, id)
+}
+
+type ConnectionAuthType string
+
+const (
+	ConnectionAuthTypePassword ConnectionAuthType = "password"
+	ConnectionAuthTypeOAuth2   ConnectionAuthType = "oauth2"
+)
+
 type ConnectionAuth struct {
-	AuthType string `json:"auth_type"` // "password", "oauth2"
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Identity string `json:"identity"`
+	AuthType ConnectionAuthType `json:"auth_type"` // "password", "oauth2"
+	Username string             `json:"username"`
+	Password string             `json:"password"`
+	Identity string             `json:"identity"`
 }
 
 type SmtpConnectionRequest struct {
@@ -212,6 +243,7 @@ type SmtpBuildMailResponse struct {
 }
 
 type ServerStartRequest struct {
+	ConnectionId string       `json:"connection_id"`
 	ServerConfig ServerConfig `json:"server_config"`
 }
 
@@ -219,13 +251,17 @@ type ServerStartResponse struct {
 	Error string `json:"error"`
 }
 
-type ServerCloseRequest struct{}
+type ServerCloseRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
 
 type ServerCloseResponse struct {
 	Error string `json:"error"`
 }
 
-type ServerShutdownRequest struct{}
+type ServerShutdownRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
 
 type ServerShutdownResponse struct {
 	Error string `json:"error"`

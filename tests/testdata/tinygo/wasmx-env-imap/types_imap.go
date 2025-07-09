@@ -124,6 +124,14 @@ func AddressFromString(account string, name string) Address {
 	return Address{name, parts[0], parts[1]}
 }
 
+func AddressesFromString(accounts []string) []Address {
+	addrs := []Address{}
+	for _, v := range accounts {
+		addrs = append(addrs, AddressFromString(v, ""))
+	}
+	return addrs
+}
+
 func ToAddresses(addresses []Address) []string {
 	addrs := make([]string, len(addresses))
 	for i, addr := range addresses {

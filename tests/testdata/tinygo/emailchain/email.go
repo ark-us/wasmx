@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -37,12 +36,6 @@ func BuildRawEmail(e vmimap.Email) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("mail.CreateWriter: %v", err)
 	}
-
-	fmt.Println("==========body???==========")
-	fmt.Println(e.Body)
-	fmt.Println("===============")
-	fmt.Println(hdr.Get(vmimap.HEADER_CONTENT_TYPE))
-	fmt.Println("===============")
 
 	// Write body and attachments
 	// Always write something (even if empty) so the SMTP server sees a body part.
@@ -114,7 +107,25 @@ func SerializeEnvelope(envelope *vmimap.Envelope, hdr mail.Header) mail.Header {
 	return hdr
 }
 
-func BuildRawEmail2(e vmimap.Email, writeCrlfHeaders bool) (string, error) {
+func SerializeEnvelope2(envelope *vmimap.Envelope, hdr mail.Header) ([]vmimap.Header, error) {
+	headers := SerializeEnvelope(envelope, hdr)
+	fields := headers.Fields()
+	hdrs := []vmimap.Header{}
+	for fields.Next() {
+		raw, err := fields.Raw()
+		if err != nil {
+			return nil, err
+		}
+		hdrs = append(hdrs, vmimap.Header{
+			Key:   fields.Key(),
+			Value: fields.Value(),
+			Raw:   raw,
+		})
+	}
+	return hdrs, nil
+}
+
+func BuildRawEmail2(e vmimap.Email) (string, error) {
 	headers := e.Headers
 	bodyParts := e.Body.Parts
 	boundary := e.Body.Boundary
@@ -179,33 +190,32 @@ func BuildRawEmail2(e vmimap.Email, writeCrlfHeaders bool) (string, error) {
 }
 
 func prepareEmailSend(
+	opts SignOptions,
 	emailstr string,
-	dkimSelector string,
 	from string,
 ) (string, error) {
 	parts := strings.Split(from, "@")
 	fromUsername := parts[0]
-	fromDomain := parts[1]
 	date := time.Now().UTC().Format(time.RFC1123Z)
 	emailstr = fmt.Sprintf("Date: %s\r\n", date) + emailstr
-	emailstr, err := signDkim(emailstr, fromUsername, fromDomain, dkimSelector)
+	emailstr, err := signDkim(opts, emailstr, fromUsername)
 	if err != nil {
 		return "", fmt.Errorf("signDkim: %s", err.Error())
 	}
 	return emailstr, nil
 }
 
-func signDkim(emailstr string, username string, domainstr string, selectorstr string) (string, error) {
+func signDkim(opts SignOptions, emailstr string, username string) (string, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	r := strings.NewReader(emailstr)
 	identif := utils.Localpart(username)
-	domain := dns.Domain{ASCII: domainstr}
-	key := ToPrivateKey("rsa", []byte(testPrivateKeyPEM))
+	domain := dns.Domain{ASCII: opts.Domain}
+	key := ToPrivateKey(opts.PrivateKeyType, opts.PrivateKey)
 	sel := dkim.Selector{
 		Hash:          "sha256",
 		PrivateKey:    key,
 		Headers:       strings.Split("From,To,Cc,Bcc,Reply-To,References,In-Reply-To,Subject,Date,Message-ID,Content-Type", ","),
-		Domain:        dns.Domain{ASCII: selectorstr},
+		Domain:        dns.Domain{ASCII: opts.Selector},
 		HeaderRelaxed: true,
 		BodyRelaxed:   true,
 	}
@@ -231,8 +241,10 @@ func sendEmailInternal(
 	}
 	toDomain := to[at+1:]
 
+	dnsResolver := NewDNSResolver()
+
 	// Step 2: lookup MX records
-	mxRecords, err := net.LookupMX(toDomain)
+	mxRecords, _, err := dnsResolver.LookupMX(toDomain)
 	if err != nil || len(mxRecords) == 0 {
 		return fmt.Errorf("no MX records found for domain %s", toDomain)
 	}
@@ -248,7 +260,7 @@ func sendEmailInternal(
 			ServerName: mxHost,
 		}
 		connResp := vmsmtp.ClientConnect(&vmsmtp.SmtpConnectionRequest{
-			Id:          req.ConnectionId,
+			Id:          mxHost,
 			ServerUrl:   addr,
 			StartTLS:    true,
 			NetworkType: networkType,
@@ -258,25 +270,25 @@ func sendEmailInternal(
 			log.Printf("Failed to connect to %s: %v", addr, err)
 			continue
 		}
-		hresp := vmsmtp.Hello(&vmsmtp.SmtpHelloRequest{Id: req.ConnectionId, LocalName: mailServerDomain})
+		hresp := vmsmtp.Hello(&vmsmtp.SmtpHelloRequest{Id: mxHost, LocalName: mailServerDomain})
 		if hresp.Error != "" {
 			log.Printf("EHLO/HELO failed: %v", err)
-			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: req.ConnectionId})
+			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
 			continue
 		}
 
 		sendresp := vmsmtp.SendMail(&vmsmtp.SmtpSendMailRequest{
-			Id:    req.ConnectionId,
+			Id:    mxHost,
 			From:  from,
 			To:    []string{to},
 			Email: []byte(emailstr),
 		})
 		if sendresp.Error != "" {
 			log.Println("Email send failed: ", err)
-			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: req.ConnectionId})
+			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
 			return err
 		}
-		vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: req.ConnectionId})
+		vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
 		log.Println("Email sent successfully to", to)
 		return nil
 	}

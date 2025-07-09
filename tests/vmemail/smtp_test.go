@@ -18,16 +18,15 @@ import (
 )
 
 type CalldataTestSmpt struct {
-	ConnectWithPassword *vmsmtp.SmtpConnectionSimpleRequest `json:"ConnectWithPassword"`
-	ConnectOAuth2       *vmsmtp.SmtpConnectionOauth2Request `json:"ConnectOAuth2"`
-	Close               *vmsmtp.SmtpCloseRequest            `json:"Close"`
-	Quit                *vmsmtp.SmtpQuitRequest             `json:"Quit"`
-	Extension           *vmsmtp.SmtpExtensionRequest        `json:"Extension"`
-	Noop                *vmsmtp.SmtpNoopRequest             `json:"Noop"`
-	SendMail            *vmsmtp.SmtpSendMailRequest         `json:"SendMail"`
-	Verify              *vmsmtp.SmtpVerifyRequest           `json:"Verify"`
-	SupportsAuth        *vmsmtp.SmtpSupportsAuthRequest     `json:"SupportsAuth"`
-	MaxMessageSize      *vmsmtp.SmtpMaxMessageSizeRequest   `json:"MaxMessageSize"`
+	Connect        *vmsmtp.SmtpConnectionRequest     `json:"ConnectWithPassword"`
+	Close          *vmsmtp.SmtpCloseRequest          `json:"Close"`
+	Quit           *vmsmtp.SmtpQuitRequest           `json:"Quit"`
+	Extension      *vmsmtp.SmtpExtensionRequest      `json:"Extension"`
+	Noop           *vmsmtp.SmtpNoopRequest           `json:"Noop"`
+	SendMail       *vmsmtp.SmtpSendMailRequest       `json:"SendMail"`
+	Verify         *vmsmtp.SmtpVerifyRequest         `json:"Verify"`
+	SupportsAuth   *vmsmtp.SmtpSupportsAuthRequest   `json:"SupportsAuth"`
+	MaxMessageSize *vmsmtp.SmtpMaxMessageSizeRequest `json:"MaxMessageSize"`
 }
 
 func (suite *KeeperTestSuite) TestSmtp() {
@@ -46,11 +45,15 @@ func (suite *KeeperTestSuite) TestSmtp() {
 	utils.RegisterRole(suite, appA, "someemailrole", contractAddress, sender)
 
 	msg := &CalldataTestSmpt{
-		ConnectWithPassword: &vmsmtp.SmtpConnectionSimpleRequest{
-			Id:                    "conn1",
-			SmtpServerUrlSTARTTLS: "mail.mail.provable.dev:587",
-			Username:              suite.emailUsername,
-			Password:              suite.emailPassword,
+		Connect: &vmsmtp.SmtpConnectionRequest{
+			Id:        "conn1",
+			ServerUrl: "mail.mail.provable.dev:587",
+			StartTLS:  true,
+			Auth: &vmsmtp.ConnectionAuth{
+				AuthType: vmsmtp.ConnectionAuthTypePassword,
+				Username: suite.emailUsername,
+				Password: suite.emailPassword,
+			},
 		}}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)

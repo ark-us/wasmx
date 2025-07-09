@@ -27,7 +27,7 @@ type Calldata struct {
 	SignDKIM      *SignDKIMRequest         `json:"SignDKIM,omitempty"`
 	SignARC       *SignARCRequest          `json:"SignARC,omitempty"`
 	ForwardEmail  *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
-	StartServer   *vmsmtp.ServerConfig     `json:"StartServer,omitempty"`
+	StartServer   *StartServerRequest      `json:"StartServer,omitempty"`
 	IncomingEmail *IncomingEmailRequest    `json:"IncomingEmail,omitempty"`
 	RoleChanged   *wasmx.RolesChangedHook  `json:"RoleChanged,omitempty"`
 }
@@ -46,6 +46,12 @@ type ConnectRequest struct {
 	Id            string `json:"id"`
 	ImapServerUrl string `json:"imap_server_url"`
 	SmtpRequest   vmsmtp.SmtpConnectionRequest
+}
+
+type StartServerRequest struct {
+	Options SignOptions         `json:"options"`
+	Smtp    vmsmtp.ServerConfig `json:"smtp"`
+	Imap    vmimap.ServerConfig `json:"imap"`
 }
 
 type CloseRequest struct {

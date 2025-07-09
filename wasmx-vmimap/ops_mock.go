@@ -59,3 +59,17 @@ func ListMailboxesMock(_context interface{}, rnh memc.RuntimeHandler, params []i
 	response := &ListMailboxesResponse{Mailboxes: []string{}}
 	return prepareResponse(rnh, response)
 }
+
+func ServerStartMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerStartMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerStartResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}
+
+func ServerCloseMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerCloseMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerCloseResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}

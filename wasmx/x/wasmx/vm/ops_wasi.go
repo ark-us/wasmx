@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 

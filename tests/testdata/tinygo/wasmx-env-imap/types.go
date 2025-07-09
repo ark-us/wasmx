@@ -291,3 +291,33 @@ type ReentryCalldata struct {
 	Expunge       *MsgExpunge       `json:"Expunge"`
 	Metadata      *MsgMetadata      `json:"IncominMetadatagEmail"`
 }
+
+type TlsConfig struct {
+	ServerName  string `json:"server_name"`
+	TLSCertFile string `json:"tls_cert_file"`
+	TLSKeyFile  string `json:"tls_key_file"`
+}
+
+type ServerConfig struct {
+	TlsConfig *TlsConfig `json:"tls_config"`
+	Addr      string     `json:"address"`
+	// The type of network, "tcp", "tcp4", or "unix".
+	Network string `json:"network"`
+}
+
+type ServerStartRequest struct {
+	ConnectionId string       `json:"connection_id"`
+	ServerConfig ServerConfig `json:"server_config"`
+}
+
+type ServerStartResponse struct {
+	Error string `json:"error"`
+}
+
+type ServerCloseRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
+
+type ServerCloseResponse struct {
+	Error string `json:"error"`
+}

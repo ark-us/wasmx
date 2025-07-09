@@ -12,6 +12,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
@@ -73,11 +74,22 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 
 	// Prepare the VerifyDKIM request
 	msg := &EmailChainCalldata{
-		StartServer: &vmsmtp.ServerConfig{
-			Addr:        ":25",
-			Domain:      "dmail.provable.dev",
-			TLSCertFile: "/etc/letsencrypt/live/dmail.provable.dev/fullchain.pem",
-			TLSKeyFile:  "/etc/letsencrypt/live/dmail.provable.dev/privkey.pem",
+		StartServer: &StartServerRequest{
+			Smtp: vmsmtp.ServerConfig{
+				Network: "tcp4",
+				Domain:  "dmail.provable.dev",
+				TlsConfig: &vmsmtp.TlsConfig{
+					TLSCertFile: "/etc/letsencrypt/live/dmail.provable.dev/fullchain.pem",
+					TLSKeyFile:  "/etc/letsencrypt/live/dmail.provable.dev/privkey.pem",
+				},
+			},
+			Imap: vmimap.ServerConfig{
+				TlsConfig: &vmimap.TlsConfig{
+					TLSCertFile: "/etc/letsencrypt/live/dmail.provable.dev/fullchain.pem",
+					TLSKeyFile:  "/etc/letsencrypt/live/dmail.provable.dev/privkey.pem",
+				},
+				Network: "tcp4",
+			},
 		},
 	}
 	data, err := json.Marshal(msg)

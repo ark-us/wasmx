@@ -1,6 +1,7 @@
 package vmimap
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -290,4 +291,22 @@ func buildSearchCriteria(filters FetchFilter) (*imap.SearchCriteria, error) {
 		criteria.Text = []string{filters.Content}
 	}
 	return criteria, nil
+}
+
+func getTlsConfig(cfg *TlsConfig) (*tls.Config, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+	config := &tls.Config{InsecureSkipVerify: false}
+	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("loading TLS cert: %v", err)
+		}
+		config.Certificates = []tls.Certificate{cert}
+	}
+	if cfg.ServerName != "" {
+		config.ServerName = cfg.ServerName
+	}
+	return config, nil
 }

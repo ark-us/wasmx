@@ -17,6 +17,8 @@ func BuildWasmxImapVMMock_i32(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (i
 		vm.BuildFn("ListMailboxes", ListMailboxesMock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("Fetch", FetchMock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("CreateFolder", CreateFolderMock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ServerStart", ServerStartMock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ServerClose", ServerCloseMock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "imap", context, fndefs)

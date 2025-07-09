@@ -18,7 +18,7 @@ type TlsConfig struct {
 }
 
 type ServerConfig struct {
-	// The type of network, "tcp" or "unix".
+	// The type of network, "tcp", "tcp4", or "unix".
 	Network string `json:"network"`
 	// TCP or Unix address to listen on.
 	Addr      string     `json:"address"` // ":25"
@@ -154,7 +154,10 @@ func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
 
 	startfn := s.ListenAndServe
 
-	tlsCfg := getTlsConfig(cfg.TlsConfig)
+	tlsCfg, err := getTlsConfig(cfg.TlsConfig)
+	if err != nil {
+		return nil, err
+	}
 	if tlsCfg != nil {
 		s.TLSConfig = tlsCfg
 		startfn = s.ListenAndServeTLS

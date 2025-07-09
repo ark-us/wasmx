@@ -37,6 +37,12 @@ func Fetch_(reqPtr int64) int64
 //go:wasmimport imap CreateFolder
 func CreateFolder_(reqPtr int64) int64
 
+//go:wasmimport imap ServerStart
+func ServerStart_(reqPtr int64) int64
+
+//go:wasmimport imap ServerClose
+func ServerClose_(reqPtr int64) int64
+
 func Connect(req *ImapConnectionRequest) ImapConnectionResponse {
 	reqbz, err := json.Marshal(req)
 	if err != nil {
@@ -158,6 +164,38 @@ func CreateFolder(req *ImapCreateFolderRequest) ImapCreateFolderResponse {
 	ptr := CreateFolder_(reqPtr)
 	bz := utils.PackedPtrToBytes(ptr)
 	var resp ImapCreateFolderResponse
+	err = json.Unmarshal(bz, &resp)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func ServerStart(req *ServerStartRequest) ServerStartResponse {
+	reqbz, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	reqPtr := utils.BytesToPackedPtr(reqbz)
+	ptr := ServerStart_(reqPtr)
+	bz := utils.PackedPtrToBytes(ptr)
+	var resp ServerStartResponse
+	err = json.Unmarshal(bz, &resp)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func ServerClose(req *ServerCloseRequest) ServerCloseResponse {
+	reqbz, err := json.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	reqPtr := utils.BytesToPackedPtr(reqbz)
+	ptr := ServerClose_(reqPtr)
+	bz := utils.PackedPtrToBytes(ptr)
+	var resp ServerCloseResponse
 	err = json.Unmarshal(bz, &resp)
 	if err != nil {
 		panic(err)

@@ -63,7 +63,7 @@ func main() {
 		resp := SendEmail(calld.SendEmail)
 		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
-		StartServer()
+		StartServer(calld.StartServer)
 	} else if calld.IncomingEmail != nil {
 		IncomingEmail(calld.IncomingEmail)
 	} else if calld.RoleChanged != nil {

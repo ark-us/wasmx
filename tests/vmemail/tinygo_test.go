@@ -62,11 +62,14 @@ func (suite *KeeperTestSuite) TestEmailTinygoImap() {
 	utils.RegisterRole(suite, appA, "someemailrole", contractAddress, sender)
 
 	msg := &Calldata{
-		ConnectWithPassword: &vmimap.ImapConnectionSimpleRequest{
+		Connect: &vmimap.ImapConnectionRequest{
 			Id:            "conn1",
 			ImapServerUrl: "mail.mail.provable.dev:993",
-			Username:      suite.emailUsername,
-			Password:      suite.emailPassword,
+			Auth: vmimap.ConnectionAuth{
+				AuthType: vmimap.ConnectionAuthTypePassword,
+				Username: suite.emailUsername,
+				Password: suite.emailPassword,
+			},
 		}}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)
@@ -153,18 +156,26 @@ func (suite *KeeperTestSuite) TestEmailTinyGoSmtp() {
 
 	msg := &CalldataTestSmpt{}
 	if suite.isOAuth2 {
-		msg.ConnectOAuth2 = &vmsmtp.SmtpConnectionOauth2Request{
-			Id:                    "conn1",
-			SmtpServerUrlSTARTTLS: "smtp.gmail.com:587",
-			Username:              suite.emailUsername,
-			AccessToken:           suite.emailPassword,
+		msg.Connect = &vmsmtp.SmtpConnectionRequest{
+			Id:        "conn1",
+			ServerUrl: "smtp.gmail.com:587",
+			StartTLS:  true,
+			Auth: &vmsmtp.ConnectionAuth{
+				AuthType: vmsmtp.ConnectionAuthTypeOAuth2,
+				Username: suite.emailUsername,
+				Password: suite.emailPassword,
+			},
 		}
 	} else {
-		msg.ConnectWithPassword = &vmsmtp.SmtpConnectionSimpleRequest{
-			Id:                    "conn1",
-			SmtpServerUrlSTARTTLS: "mail.mail.provable.dev:587",
-			Username:              suite.emailUsername,
-			Password:              suite.emailPassword,
+		msg.Connect = &vmsmtp.SmtpConnectionRequest{
+			Id:        "conn1",
+			ServerUrl: "mail.mail.provable.dev:587",
+			StartTLS:  true,
+			Auth: &vmsmtp.ConnectionAuth{
+				AuthType: vmsmtp.ConnectionAuthTypePassword,
+				Username: suite.emailUsername,
+				Password: suite.emailPassword,
+			},
 		}
 	}
 
@@ -214,8 +225,13 @@ type EmailChainCalldata struct {
 	SignDKIM            *SignDKIMRequest         `json:"SignDKIM,omitempty"`
 	SignARC             *SignARCRequest          `json:"SignARC,omitempty"`
 	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
-	StartServer         *vmsmtp.ServerConfig     `json:"StartServer,omitempty"`
+	StartServer         *StartServerRequest      `json:"StartServer,omitempty"`
 	IncomingEmail       *vmsmtp.Session          `json:"IncomingEmail,omitempty"`
+}
+
+type StartServerRequest struct {
+	Smtp vmsmtp.ServerConfig `json:"smtp"`
+	Imap vmimap.ServerConfig `json:"imap"`
 }
 
 type ConnectionSimpleRequest struct {

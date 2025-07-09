@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/emersion/go-message/mail"
+
 	"github.com/loredanacirstea/mailverif/arc"
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/dns"
@@ -19,11 +21,50 @@ import (
 
 const ServerDomain = "provable.dev"
 const MailServerDomain = "dmail.provable.dev"
+const PortSmtpDirectAddr = "25"
+const PortSmtpClientStartTls = "587"
+const PortSmtpClientTls = "465"
+const PortImapClientTls = "993"
+const PortImapClient = "143"
+const DefaultNetworkType = "tcp4"
 
-func StartServer() {
-	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{})
+func StartServer(req *StartServerRequest) {
+	err := StoreDkimKey(req.Options)
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+
+	// SMTP 25
+	req.Smtp.Addr = fmt.Sprintf("%s:%s", req.Smtp.Domain, PortSmtpDirectAddr)
+	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
+		ConnectionId: PortSmtpDirectAddr,
+		ServerConfig: req.Smtp,
+	})
 	if resp.Error != "" {
 		wasmx.Revert([]byte(resp.Error))
+	}
+
+	// SMTP 587
+	req.Smtp.Addr = fmt.Sprintf("%s:%s", req.Smtp.Domain, PortSmtpClientStartTls)
+	resp = vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
+		ConnectionId: PortSmtpClientStartTls,
+		ServerConfig: req.Smtp,
+	})
+	if resp.Error != "" {
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		wasmx.Revert([]byte(resp.Error))
+	}
+
+	// IMAP 993
+	req.Imap.Addr = PortImapClientTls // fmt.Sprintf("%s:%s", req.Imap.Domain, PortImapClientTls)
+	resp2 := vmimap.ServerStart(&vmimap.ServerStartRequest{
+		ConnectionId: PortImapClientTls,
+		ServerConfig: req.Imap,
+	})
+	if resp2.Error != "" {
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
+		wasmx.Revert([]byte(resp2.Error))
 	}
 }
 
@@ -40,15 +81,53 @@ func IncomingEmail(req *IncomingEmailRequest) {
 	}
 }
 
-func SendEmail(req *BuildAndSendMailRequest) {
+func SendEmail(req *BuildAndSendMailRequest) []string {
 	errs := []string{}
+	// from, err := mail.ParseAddress(req.From)
+	// if err != nil {
+	// 	wasmx.Revert([]byte(err.Error()))
+	// }
+	from := vmimap.AddressFromString(req.From, "")
+	headers, err := SerializeEnvelope2(&vmimap.Envelope{
+		Subject: req.Subject,
+		From:    []vmimap.Address{from},
+		To:      vmimap.AddressesFromString(req.To),
+		Cc:      vmimap.AddressesFromString(req.Cc),
+		Bcc:     vmimap.AddressesFromString(req.Bcc),
+	}, mail.Header{})
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+	emailstr, err := BuildRawEmail2(vmimap.Email{
+		Headers: headers,
+		Body: vmimap.EmailBody{
+			Parts: []vmimap.BodyPart{{ContentType: "text/plain", Body: req.Body}},
+		},
+	})
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+	fmt.Println("======SendEmail--")
+	fmt.Println(emailstr)
+	fmt.Println("====== END SendEmail--")
+
+	opts := LoadDkimKey()
+	if opts == nil {
+		wasmx.Revert([]byte("no dkim keys"))
+	}
+
 	for _, to := range req.To {
-		err := sendEmailInternal(req.From, to, emailstr, MailServerDomain)
+		prepped, err := prepareEmailSend(*opts, emailstr, req.From)
+		if err != nil {
+			wasmx.Revert([]byte(err.Error()))
+		}
+		err = sendEmailInternal(req.From, to, prepped, MailServerDomain, DefaultNetworkType)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
 	fmt.Println("---sending err--", errs)
+	return errs
 }
 
 func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
@@ -192,7 +271,7 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 	// fmt.Println("=====================")
 
 	// email = BuildForwardHeaders(email, req.From, req.To, req.Cc, req.Bcc, req.Options, req.Timestamp)
-	emailstr, err := BuildRawEmail2(email, true)
+	emailstr, err := BuildRawEmail2(email)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
