@@ -72,21 +72,32 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
 
+	tlsPath := "/etc/letsencrypt/live/"
+
 	// Prepare the VerifyDKIM request
 	msg := &EmailChainCalldata{
 		StartServer: &StartServerRequest{
+			SignOptions: SignOptions{
+				Domain:         "provable.dev",
+				Selector:       "dmail",
+				PrivateKeyType: "rsa",
+				PrivateKey:     []byte(testPrivateKeyPEM),
+				Identifier:     "",
+			},
 			Smtp: vmsmtp.ServerConfig{
 				Network: "tcp4",
 				Domain:  "dmail.provable.dev",
 				TlsConfig: &vmsmtp.TlsConfig{
-					TLSCertFile: "/etc/letsencrypt/live/dmail.provable.dev/fullchain.pem",
-					TLSKeyFile:  "/etc/letsencrypt/live/dmail.provable.dev/privkey.pem",
+					TLSCertFile: tlsPath + "dmail.provable.dev/fullchain.pem",
+					TLSKeyFile:  tlsPath + "dmail.provable.dev/privkey.pem",
+					ServerName:  "dmail.provable.dev",
 				},
 			},
 			Imap: vmimap.ServerConfig{
 				TlsConfig: &vmimap.TlsConfig{
-					TLSCertFile: "/etc/letsencrypt/live/dmail.provable.dev/fullchain.pem",
-					TLSKeyFile:  "/etc/letsencrypt/live/dmail.provable.dev/privkey.pem",
+					TLSCertFile: tlsPath + "dmail.provable.dev/fullchain.pem",
+					TLSKeyFile:  tlsPath + "dmail.provable.dev/privkey.pem",
+					ServerName:  "dmail.provable.dev",
 				},
 				Network: "tcp4",
 			},
@@ -94,17 +105,23 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)
-
-	// Execute the VerifyDKIM message
 	res := appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("--DKIM result--", string(res.Data))
-	// resp := &vmsmtp.ServerStartResponse{}
-	// err = appA.DecodeExecuteResponse(res, resp)
+
+	// // Prepare the VerifyDKIM request
+	// msg = &EmailChainCalldata{
+	// 	SendEmail: &BuildAndSendMailRequest{
+	// 		From: "test@dmail.provable.dev",
+	// 		// To:      []string{"seth.one.info@gmail.com"},
+	// 		To:      []string{"test@mail.provable.dev"},
+	// 		Subject: "this is a subject",
+	// 		Body:    []byte(`hei hei hei`),
+	// 		Date:    time.Now(),
+	// 	},
+	// }
+	// data, err = json.Marshal(msg)
 	// suite.Require().NoError(err)
-	// suite.Require().Equal(resp.Error, "")
-	// suite.Require().Greater(len(resp.Response), 0)
-	// suite.Require().NoError(resp.Response[0].Err)
-	// suite.Require().Equal("pass", string(resp.Response[0].Status), "DKIM result not pass")
+	// res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	// fmt.Println("--send email--", string(res.Data))
 
 	suite.T().Log("Running websrv... Press Ctrl+C to exit")
 

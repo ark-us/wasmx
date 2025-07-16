@@ -34,6 +34,7 @@ const HOST_WASMX_ENV_IMAP_EXPORT = "wasmx_imap_"
 const HOST_WASMX_ENV_IMAP = "imap"
 
 const ENTRY_POINT_IMAP = "imap_update"
+const ENTRY_POINT_IMAP_SERVER = "imap_server_request"
 
 type ContextKey string
 

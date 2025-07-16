@@ -6,7 +6,10 @@ import (
 )
 
 func WithImapEmptyContext(ctx context.Context) context.Context {
-	vctx := &ImapContext{DbConnections: map[string]*ImapOpenConnection{}}
+	vctx := &ImapContext{
+		DbConnections:     map[string]*ImapOpenConnection{},
+		ServerConnections: map[string]*ServerConnection{},
+	}
 	return context.WithValue(ctx, ImapContextKey, vctx)
 }
 

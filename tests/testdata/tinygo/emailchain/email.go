@@ -103,7 +103,8 @@ func SerializeEnvelope(envelope *vmimap.Envelope, hdr mail.Header) mail.Header {
 	if len(envelope.InReplyTo) > 0 {
 		hdr.Set(vmimap.HEADER_IN_REPLY_TO, vmimap.SerializeMessageIds(envelope.InReplyTo))
 	}
-	hdr.Set(vmimap.HEADER_DATE, time.Now().UTC().Format(time.RFC1123Z))
+	hdr.Set(vmimap.HEADER_DATE, envelope.Date.UTC().Format(time.RFC1123Z))
+	// hdr.Set(vmimap.HEADER_DATE, time.Now().UTC().Format(time.RFC1123Z))
 	return hdr
 }
 
@@ -147,6 +148,7 @@ func BuildRawEmail2(e vmimap.Email) (string, error) {
 			fmt.Fprintf(&b, "%s: %s\r\n", h.Key, h.Value)
 		}
 	}
+	fmt.Fprintf(&b, "Content-Type: %s\r\n", e.Body.ContentType)
 	b.WriteString("\r\n") // end of headers
 
 	// Determine boundary from headers
@@ -163,14 +165,21 @@ func BuildRawEmail2(e vmimap.Email) (string, error) {
 	// }
 
 	// Write body parts
-	for _, bp := range bodyParts {
-		fmt.Fprintf(&b, "--%s\r\n", boundary)
-		fmt.Fprintf(&b, "Content-Type: %s\r\n\r\n", bp.ContentType)
-		b.Write(bp.Body)
-		// if !strings.HasSuffix(string(bp.Body), "\r\n") {
-		// 	b.WriteString("\r\n")
-		// }
+	if !strings.Contains(e.Body.ContentType, "multipart") {
+		if len(bodyParts) > 0 {
+			b.Write(bodyParts[0].Body)
+		}
 		b.WriteString("\r\n")
+	} else {
+		for _, bp := range bodyParts {
+			fmt.Fprintf(&b, "--%s\r\n", boundary)
+			fmt.Fprintf(&b, "Content-Type: %s\r\n\r\n", bp.ContentType)
+			b.Write(bp.Body)
+			// if !strings.HasSuffix(string(bp.Body), "\r\n") {
+			// 	b.WriteString("\r\n")
+			// }
+			b.WriteString("\r\n")
+		}
 	}
 
 	for _, att := range attachments {
@@ -193,16 +202,20 @@ func prepareEmailSend(
 	opts SignOptions,
 	emailstr string,
 	from string,
+	date time.Time,
 ) (string, error) {
 	parts := strings.Split(from, "@")
 	fromUsername := parts[0]
-	date := time.Now().UTC().Format(time.RFC1123Z)
-	emailstr = fmt.Sprintf("Date: %s\r\n", date) + emailstr
-	emailstr, err := signDkim(opts, emailstr, fromUsername)
+	messageId, err := GenerateMessageID(opts.Selector+"."+opts.Domain, date)
+	if err != nil {
+		return "", err
+	}
+	prepped := fmt.Sprintf("Message-ID: <%s>\r\n", messageId) + emailstr
+	prepped, err = signDkim(opts, prepped, fromUsername)
 	if err != nil {
 		return "", fmt.Errorf("signDkim: %s", err.Error())
 	}
-	return emailstr, nil
+	return prepped, nil
 }
 
 func signDkim(opts SignOptions, emailstr string, username string) (string, error) {

@@ -57,15 +57,9 @@ type backend struct {
 	ctx *Context
 }
 
-//	func (*backend) Login(_ *smtp.ConnectionState, _, _ string) (smtp.Session, error) {
-//		return &Session{}, nil // we don’t require AUTH to receive
-//	}
-//
-//	func (*backend) AnonymousLogin(_ *smtp.ConnectionState) (smtp.Session, error) {
-//		return &Session{}, nil
-//	}
 func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
-	fmt.Println("--backend.NewSession--", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
+	// TODO implement reject policy
+	// conn.Reject()
 	return &Session{ctx: b.ctx}, nil
 }
 
@@ -77,7 +71,6 @@ type Session struct {
 }
 
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
-	fmt.Println("--Session.Mail--", from, opts)
 	if opts != nil {
 		fmt.Println("--Session.Mail opts--", opts.EnvelopeID, opts.Auth)
 	}

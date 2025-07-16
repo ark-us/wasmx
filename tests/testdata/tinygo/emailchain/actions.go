@@ -25,38 +25,45 @@ const PortSmtpDirectAddr = "25"
 const PortSmtpClientStartTls = "587"
 const PortSmtpClientTls = "465"
 const PortImapClientTls = "993"
-const PortImapClient = "143"
+const PortImapClientStartTls = "143"
 const DefaultNetworkType = "tcp4"
+const FolderInbox = "INBOX"
+const FolderSent = "SENT"
 
 func StartServer(req *StartServerRequest) {
-	err := StoreDkimKey(req.Options)
+	err := StoreDkimKey(req.SignOptions)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
+	smtpCfg := requiredSmtpDefaults(req.Smtp)
 
 	// SMTP 25
-	req.Smtp.Addr = fmt.Sprintf("%s:%s", req.Smtp.Domain, PortSmtpDirectAddr)
+	// smtpCfg.Addr = fmt.Sprintf("%s:%s", smtpCfg.Domain, PortSmtpDirectAddr)
+	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpDirectAddr)
 	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
 		ConnectionId: PortSmtpDirectAddr,
-		ServerConfig: req.Smtp,
+		ServerConfig: requiredSmtpDefaults(smtpCfg),
 	})
 	if resp.Error != "" {
 		wasmx.Revert([]byte(resp.Error))
 	}
 
-	// SMTP 587
-	req.Smtp.Addr = fmt.Sprintf("%s:%s", req.Smtp.Domain, PortSmtpClientStartTls)
+	// SMTP
+	// smtpCfg.Addr = fmt.Sprintf("%s:%s", smtpCfg.Domain, PortSmtpClientTls)
+	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpClientTls)
 	resp = vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
-		ConnectionId: PortSmtpClientStartTls,
-		ServerConfig: req.Smtp,
+		ConnectionId: PortSmtpClientTls,
+		ServerConfig: smtpCfg,
 	})
 	if resp.Error != "" {
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		wasmx.Revert([]byte(resp.Error))
 	}
 
-	// IMAP 993
-	req.Imap.Addr = PortImapClientTls // fmt.Sprintf("%s:%s", req.Imap.Domain, PortImapClientTls)
+	// IMAP
+	// req.Imap.Addr = fmt.Sprintf("%s:%s", req.Imap.Domain, PortImapClientTls)
+	req.Imap.Addr = fmt.Sprintf("%s:%s", "", PortImapClientTls)
+	req.Imap.StartTLS = false
 	resp2 := vmimap.ServerStart(&vmimap.ServerStartRequest{
 		ConnectionId: PortImapClientTls,
 		ServerConfig: req.Imap,
@@ -64,6 +71,19 @@ func StartServer(req *StartServerRequest) {
 	if resp2.Error != "" {
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
+		wasmx.Revert([]byte(resp2.Error))
+	}
+
+	req.Imap.Addr = fmt.Sprintf("%s:%s", "", PortImapClientStartTls)
+	req.Imap.StartTLS = true
+	resp2 = vmimap.ServerStart(&vmimap.ServerStartRequest{
+		ConnectionId: PortImapClientStartTls,
+		ServerConfig: req.Imap,
+	})
+	if resp2.Error != "" {
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
+		vmimap.ServerClose(&vmimap.ServerCloseRequest{ConnectionId: PortImapClientTls})
 		wasmx.Revert([]byte(resp2.Error))
 	}
 }
@@ -74,7 +94,7 @@ func IncomingEmail(req *IncomingEmailRequest) {
 		wasmx.Revert([]byte(err.Error()))
 	}
 	for _, to := range req.To {
-		err = StoreEmail(MailServerDomain, req.From[0], to, req.EmailRaw, ConnectionId)
+		err = StoreEmail(to, req.From, req.EmailRaw, ConnectionId, FolderInbox)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -94,6 +114,7 @@ func SendEmail(req *BuildAndSendMailRequest) []string {
 		To:      vmimap.AddressesFromString(req.To),
 		Cc:      vmimap.AddressesFromString(req.Cc),
 		Bcc:     vmimap.AddressesFromString(req.Bcc),
+		Date:    req.Date,
 	}, mail.Header{})
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
@@ -101,29 +122,37 @@ func SendEmail(req *BuildAndSendMailRequest) []string {
 	emailstr, err := BuildRawEmail2(vmimap.Email{
 		Headers: headers,
 		Body: vmimap.EmailBody{
-			Parts: []vmimap.BodyPart{{ContentType: "text/plain", Body: req.Body}},
+			ContentType: "text/plain",
+			Parts:       []vmimap.BodyPart{{ContentType: "text/plain", Body: req.Body}},
 		},
 	})
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	fmt.Println("======SendEmail--")
-	fmt.Println(emailstr)
-	fmt.Println("====== END SendEmail--")
+
+	err = ConnectSql(ConnectionId)
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
 
 	opts := LoadDkimKey()
 	if opts == nil {
 		wasmx.Revert([]byte("no dkim keys"))
 	}
-
 	for _, to := range req.To {
-		prepped, err := prepareEmailSend(*opts, emailstr, req.From)
+		prepped, err := prepareEmailSend(*opts, emailstr, req.From, req.Date)
 		if err != nil {
-			wasmx.Revert([]byte(err.Error()))
+			errs = append(errs, err.Error())
+			continue
 		}
 		err = sendEmailInternal(req.From, to, prepped, MailServerDomain, DefaultNetworkType)
 		if err != nil {
 			errs = append(errs, err.Error())
+			continue
+		}
+
+		err = StoreEmail(req.From, []string{}, []byte(prepped), ConnectionId, FolderSent)
+		if err != nil {
 		}
 	}
 	fmt.Println("---sending err--", errs)
@@ -293,6 +322,19 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 		fmt.Println("---forwarded--")
 	}
 	return resp
+}
+
+func requiredSmtpDefaults(cfg vmsmtp.ServerConfig) vmsmtp.ServerConfig {
+	cfg.AllowInsecureAuth = false
+	// cfg.MaxLineLength
+	// cfg.ReadTimeout = 10 * time.Second
+	// cfg.WriteTimeout = 10 * time.Second
+	// cfg.MaxMessageBytes = 10 << 20 // 10 MiB
+	cfg.MaxRecipients = 100
+	cfg.EnableSMTPUTF8 = false
+	// TODO eventually this should be true
+	cfg.EnableREQUIRETLS = false
+	return cfg
 }
 
 // func BuildForwardHeaders(email vmimap.Email, from vmimap.Address, to []vmimap.Address, cc []vmimap.Address, bcc []vmimap.Address, opts SignOptions, timestamp time.Time) vmimap.Email {

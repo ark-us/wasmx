@@ -34,8 +34,9 @@ type BodyPart struct {
 }
 
 type EmailBody struct {
-	Boundary string     `json:"boundary,omitempty"`
-	Parts    []BodyPart `json:"parts"`
+	ContentType string     `json:"content_type"`
+	Boundary    string     `json:"boundary,omitempty"`
+	Parts       []BodyPart `json:"parts"`
 }
 
 type Email struct {

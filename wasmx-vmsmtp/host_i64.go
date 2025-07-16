@@ -9,7 +9,7 @@ func BuildWasmxSmtpVM_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (inter
 	context := &Context{Context: ctx_}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("ClientConnect", ClientConnect, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("ClientConnect", ClientConnect, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Quit", Quit, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Extension", Extension, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),

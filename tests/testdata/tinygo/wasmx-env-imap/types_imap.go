@@ -2,6 +2,7 @@ package imap
 
 import (
 	"fmt"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -130,6 +131,31 @@ func AddressesFromString(accounts []string) []Address {
 		addrs = append(addrs, AddressFromString(v, ""))
 	}
 	return addrs
+}
+
+func ParseEmailAddresses(input string) ([]Address, error) {
+	addrList, err := mail.ParseAddressList(input)
+	if err != nil {
+		return nil, err
+	}
+	var result []Address
+	for _, addr := range addrList {
+		local, domain := SplitAddress(addr.Address)
+		result = append(result, Address{
+			Name:    addr.Name,
+			Mailbox: local,
+			Host:    domain,
+		})
+	}
+	return result, nil
+}
+
+func SplitAddress(full string) (local, domain string) {
+	parts := strings.SplitN(full, "@", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return full, ""
 }
 
 func ToAddresses(addresses []Address) []string {

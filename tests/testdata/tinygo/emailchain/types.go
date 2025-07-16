@@ -30,6 +30,7 @@ type Calldata struct {
 	StartServer   *StartServerRequest      `json:"StartServer,omitempty"`
 	IncomingEmail *IncomingEmailRequest    `json:"IncomingEmail,omitempty"`
 	RoleChanged   *wasmx.RolesChangedHook  `json:"RoleChanged,omitempty"`
+	ReentryCalldataServer
 }
 
 type ReentryCalldata struct {
@@ -49,9 +50,9 @@ type ConnectRequest struct {
 }
 
 type StartServerRequest struct {
-	Options SignOptions         `json:"options"`
-	Smtp    vmsmtp.ServerConfig `json:"smtp"`
-	Imap    vmimap.ServerConfig `json:"imap"`
+	SignOptions SignOptions         `json:"options"`
+	Smtp        vmsmtp.ServerConfig `json:"smtp"`
+	Imap        vmimap.ServerConfig `json:"imap"`
 }
 
 type CloseRequest struct {
@@ -59,13 +60,13 @@ type CloseRequest struct {
 }
 
 type BuildAndSendMailRequest struct {
-	Id      string   `json:"id"`
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Cc      []string `json:"cc"`
-	Bcc     []string `json:"bcc"`
-	Subject string   `json:"subject"`
-	Body    []byte   `json:"body"`
+	From    string    `json:"from"`
+	To      []string  `json:"to"`
+	Cc      []string  `json:"cc"`
+	Bcc     []string  `json:"bcc"`
+	Subject string    `json:"subject"`
+	Body    []byte    `json:"body"`
+	Date    time.Time `json:"date"`
 }
 
 type SignOptions struct {
@@ -397,19 +398,22 @@ const (
 )
 
 type EmailWrite struct {
-	Owner        string `json:"owner"`         // Email owner address
-	Folder       string `json:"folder"`        // IMAP folder
-	UID          int64  `json:"uid"`           // Unique UID per (owner, folder)
-	SeqNum       int64  `json:"seq_num"`       // Sequence number within folder
-	MessageID    string `json:"message_id"`    // Email Message-ID
-	Subject      string `json:"subject"`       // Email subject
-	InternalDate int64  `json:"internal_date"` // UNIX timestamp (IMAP INTERNALDATE)
-	Flags        string `json:"flags"`         // Flags like "\Seen \Answered" as space-separated text
-	RawEmail     []byte `json:"raw_email"`     // Full RFC5322 email body
-	Size         int64  `json:"size"`          // Size in bytes (matches RFC822.SIZE)
-	Headers      string `json:"headers"`       // Optional: flattened text of all headers (for search)
-	Body         string `json:"body"`          // Optional: plain body text (for search)
-	Bh           string `json:"bh"`
+	Owner        string          `json:"owner"`         // Email owner address
+	Folder       string          `json:"folder"`        // IMAP folder
+	UID          int64           `json:"uid"`           // Unique UID per (owner, folder)
+	SeqNum       int64           `json:"seq_num"`       // Sequence number within folder
+	MessageID    string          `json:"message_id"`    // Email Message-ID
+	Subject      string          `json:"subject"`       // Email subject
+	InternalDate time.Time       `json:"internal_date"` // UNIX timestamp (IMAP INTERNALDATE)
+	Flags        string          `json:"flags"`         // Flags like "\Seen \Answered" as space-separated text
+	RawEmail     []byte          `json:"raw_email"`     // Full RFC5322 email body
+	Size         int64           `json:"size"`          // Size in bytes (matches RFC822.SIZE)
+	Headers      string          `json:"headers"`       // Optional: flattened text of all headers (for search)
+	Body         string          `json:"body"`          // Optional: plain body text (for search)
+	Bh           string          `json:"bh"`
+	Envelope     vmimap.Envelope `json:"envelope"`
+	// From string `json:"from"`
+	// To string `json:"to"`
 }
 
 type EmailRead struct {

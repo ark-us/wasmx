@@ -141,8 +141,9 @@ type BodyPart struct {
 }
 
 type EmailBody struct {
-	Boundary string     `json:"boundary,omitempty"`
-	Parts    []BodyPart `json:"parts"`
+	ContentType string     `json:"content_type"`
+	Boundary    string     `json:"boundary,omitempty"`
+	Parts       []BodyPart `json:"parts"`
 }
 
 type Email struct {
@@ -302,7 +303,8 @@ type ServerConfig struct {
 	TlsConfig *TlsConfig `json:"tls_config"`
 	Addr      string     `json:"address"`
 	// The type of network, "tcp", "tcp4", or "unix".
-	Network string `json:"network"`
+	Network  string `json:"network"`
+	StartTLS bool   `json:"start_tls"`
 }
 
 type ServerStartRequest struct {

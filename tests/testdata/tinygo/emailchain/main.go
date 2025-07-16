@@ -72,12 +72,16 @@ func main() {
 		// roleChanged(calld.RoleChanged);
 		InitializeTables(ConnectionId)
 	} else {
+		handled := ImapServerRequest(calld)
+		if handled {
+			return
+		}
 		wasmx.Revert([]byte(`invalid function call data: ` + string(databz)))
 	}
 	wasmx.SetFinishData(response)
 }
 
-//go:wasm-module emailprover
+//go:wasm-module emailchain
 //export smtp_update
 func SmtpUpdate() {
 	databz := wasmx.GetCallData()
@@ -90,3 +94,107 @@ func SmtpUpdate() {
 		IncomingEmail(calld.IncomingEmail)
 	}
 }
+
+func ImapServerRequest(calld *Calldata) bool {
+	// var res interface{}
+	var res []byte
+	var err error
+
+	switch {
+	case calld.Login != nil:
+		res, err = HandleLogin(calld.Login)
+	case calld.Logout != nil:
+		res, err = HandleLogout(calld.Logout)
+	case calld.Create != nil:
+		res, err = HandleCreate(calld.Create)
+	case calld.Delete != nil:
+		res, err = HandleDelete(calld.Delete)
+	case calld.Rename != nil:
+		res, err = HandleRename(calld.Rename)
+	case calld.Select != nil:
+		res, err = HandleSelect(calld.Select)
+	case calld.List != nil:
+		res, err = HandleList(calld.List)
+	case calld.Status != nil:
+		res, err = HandleStatus(calld.Status)
+	case calld.Append != nil:
+		res, err = HandleAppend(calld.Append)
+	case calld.Expunge != nil:
+		res, err = HandleExpunge(calld.Expunge)
+	case calld.Search != nil:
+		res, err = HandleSearch(calld.Search)
+	case calld.Fetch != nil:
+		res, err = HandleFetch(calld.Fetch)
+	case calld.Store != nil:
+		res, err = HandleStore(calld.Store)
+	case calld.Copy != nil:
+		res, err = HandleCopy(calld.Copy)
+	default:
+		return false
+	}
+
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+	// response, err := json.Marshal(res)
+	// if err != nil {
+	// 	wasmx.Revert([]byte(err.Error()))
+	// }
+	wasmx.SetFinishData(res)
+	return true
+}
+
+// //go:wasm-module emailchain
+// //export imap_server_request
+// func ImapServerRequest() {
+// 	fmt.Println("---ImapServerRequest----!!!!!!")
+// 	databz := wasmx.GetCallData()
+// 	calld := &ReentryCalldataServer{}
+// 	err := json.Unmarshal(databz, calld)
+// 	if err != nil {
+// 		wasmx.Revert([]byte(err.Error()))
+// 	}
+// 	var res interface{}
+
+// 	switch {
+// 	case calld.Login != nil:
+// 		res, err = HandleLogin(calld.Login)
+// 	case calld.Logout != nil:
+// 		res, err = HandleLogout(calld.Logout)
+// 	case calld.Create != nil:
+// 		res, err = HandleCreate(calld.Create)
+// 	case calld.Delete != nil:
+// 		res, err = HandleDelete(calld.Delete)
+// 	case calld.Rename != nil:
+// 		res, err = HandleRename(calld.Rename)
+// 	case calld.Select != nil:
+// 		res, err = HandleSelect(calld.Select)
+// 	case calld.List != nil:
+// 		res, err = HandleList(calld.List)
+// 	case calld.Status != nil:
+// 		res, err = HandleStatus(calld.Status)
+// 	case calld.Append != nil:
+// 		res, err = HandleAppend(calld.Append)
+// 	case calld.Expunge != nil:
+// 		res, err = HandleExpunge(calld.Expunge)
+// 	case calld.Search != nil:
+// 		res, err = HandleSearch(calld.Search)
+// 	case calld.Fetch != nil:
+// 		res, err = HandleFetch(calld.Fetch)
+// 	case calld.Store != nil:
+// 		res, err = HandleStore(calld.Store)
+// 	case calld.Copy != nil:
+// 		res, err = HandleCopy(calld.Copy)
+// 	default:
+// 		wasmx.Revert([]byte("unknown or missing reentry call"))
+// 	}
+
+// 	if err != nil {
+// 		wasmx.Revert([]byte(err.Error()))
+// 	}
+// 	response, err := json.Marshal(res)
+// 	if err != nil {
+// 		wasmx.Revert([]byte(err.Error()))
+// 	}
+// 	wasmx.SetFinishData(response)
+// }

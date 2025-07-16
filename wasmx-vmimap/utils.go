@@ -198,8 +198,13 @@ func extractEmailParts(logger log.Logger, mr *mail.Reader, msg *imapclient.Fetch
 	var attachments []Attachment
 
 	// Check for multipart boundary
-	if contentType, params, err := mr.Header.ContentType(); err == nil && strings.HasPrefix(contentType, "multipart/") {
-		emailBody.Boundary = params["boundary"]
+	if contentType, params, err := mr.Header.ContentType(); err == nil {
+		emailBody.ContentType = contentType
+		if strings.HasPrefix(contentType, "multipart/") {
+			emailBody.Boundary = params["boundary"]
+		}
+	} else {
+		emailBody.ContentType = "text/plain" // fallback
 	}
 
 	// Iterate through each part of the message.

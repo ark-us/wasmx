@@ -32,13 +32,14 @@ import (
 )
 
 type BuildAndSendMailRequest struct {
-	Id      string   `json:"id"`
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Cc      []string `json:"cc"`
-	Bcc     []string `json:"bcc"`
-	Subject string   `json:"subject"`
-	Body    []byte   `json:"body"`
+	Id      string    `json:"id"`
+	From    string    `json:"from"`
+	To      []string  `json:"to"`
+	Cc      []string  `json:"cc"`
+	Bcc     []string  `json:"bcc"`
+	Subject string    `json:"subject"`
+	Body    []byte    `json:"body"`
+	Date    time.Time `json:"date"`
 }
 
 type CalldataTestSmptTinygo struct {
@@ -227,11 +228,13 @@ type EmailChainCalldata struct {
 	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
 	StartServer         *StartServerRequest      `json:"StartServer,omitempty"`
 	IncomingEmail       *vmsmtp.Session          `json:"IncomingEmail,omitempty"`
+	SendEmail           *BuildAndSendMailRequest `json:"SendEmail,omitempty"`
 }
 
 type StartServerRequest struct {
-	Smtp vmsmtp.ServerConfig `json:"smtp"`
-	Imap vmimap.ServerConfig `json:"imap"`
+	SignOptions SignOptions         `json:"options"`
+	Smtp        vmsmtp.ServerConfig `json:"smtp"`
+	Imap        vmimap.ServerConfig `json:"imap"`
 }
 
 type ConnectionSimpleRequest struct {

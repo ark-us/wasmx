@@ -31,7 +31,7 @@ func connectSmtpClient(
 	}
 	dialer := &net.Dialer{}
 	var conn net.Conn
-	if cfg == nil {
+	if cfg == nil || startTls {
 		conn, err = dialer.DialContext(ctx, networkType, serverUrl)
 	} else {
 		tlsDialer := tls.Dialer{
@@ -46,11 +46,11 @@ func connectSmtpClient(
 
 	if startTls {
 		sclient, err = gosmtp.NewClientStartTLS(conn, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
+		}
 	} else {
 		sclient = gosmtp.NewClient(conn)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
 	}
 	if auth != nil {
 		authClient := getAuthClient(*auth)

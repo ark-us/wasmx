@@ -11,15 +11,14 @@ require (
 	github.com/loredanacirstea/wasmx-env-imap v0.0.0
 	github.com/loredanacirstea/wasmx-env-smtp v0.0.0
 	github.com/loredanacirstea/wasmx-env-sql v0.0.0
-	golang.org/x/crypto v0.39.0
+	golang.org/x/crypto v0.40.0
 )
 
 require (
-	cosmossdk.io/math v1.3.0 // indirect
+	cosmossdk.io/math v1.5.3 // indirect
 	github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
-	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 )
 
 replace github.com/loredanacirstea/wasmx-env-sql => ../wasmx-env-sql
