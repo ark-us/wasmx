@@ -1,7 +1,5 @@
 package imap
 
-import "fmt"
-
-var (
-	ErrMailboxAlreadyExists = fmt.Errorf("already exists")
+const (
+	ErrMailboxAlreadyExists = "Mailbox already exists"
 )

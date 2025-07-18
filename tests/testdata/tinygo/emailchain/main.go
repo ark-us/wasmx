@@ -106,12 +106,13 @@ func SmtpUpdate() {
 }
 
 type Response struct {
-	Error string `json:"error"`
-	Data  []byte `json:"data"`
+	ImapError *vmimap.Error `json:"imap_error"`
+	Error     string        `json:"error"`
+	Data      []byte        `json:"data"`
 }
 
-func prepareResponse(data []byte, err error) []byte {
-	resp := &Response{Data: data}
+func prepareResponse(data []byte, ierr *vmimap.Error, err error) []byte {
+	resp := &Response{Data: data, ImapError: ierr}
 	if err != nil {
 		resp.Error = err.Error()
 	}
@@ -126,46 +127,46 @@ func ImapServerRequest(calld *Calldata) bool {
 	switch {
 	case calld.Login != nil:
 		data, err := HandleLogin(calld.Login)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Logout != nil:
 		data, err := HandleLogout(calld.Logout)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Create != nil:
-		data, err := HandleCreate(calld.Create)
-		res = prepareResponse(data, err)
+		data, ierr, err := HandleCreate(calld.Create)
+		res = prepareResponse(data, ierr, err)
 	case calld.Delete != nil:
 		data, err := HandleDelete(calld.Delete)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Rename != nil:
 		data, err := HandleRename(calld.Rename)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Select != nil:
 		data, err := HandleSelect(calld.Select)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.List != nil:
 		data, err := HandleList(calld.List)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Status != nil:
 		data, err := HandleStatus(calld.Status)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Append != nil:
 		data, err := HandleAppend(calld.Append)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Expunge != nil:
 		data, err := HandleExpunge(calld.Expunge)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Search != nil:
 		data, err := HandleSearch(calld.Search)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Fetch != nil:
 		data, err := HandleFetch(calld.Fetch)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Store != nil:
 		data, err := HandleStore(calld.Store)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Copy != nil:
 		data, err := HandleCopy(calld.Copy)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	default:
 		return false
 	}
@@ -178,10 +179,10 @@ func SmtpServerRequest(calld *Calldata) bool {
 	switch {
 	case calld.Login != nil:
 		data, err := HandleSmtpLogin(calld.Login)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	case calld.Logout != nil:
 		data, err := HandleSmtpLogout(calld.Logout)
-		res = prepareResponse(data, err)
+		res = prepareResponse(data, nil, err)
 	default:
 		return false
 	}

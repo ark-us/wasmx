@@ -83,3 +83,6 @@ func GetAttrs(folder string) []imap.MailboxAttr {
 	}
 	return attrs
 }
+
+func PtrUint32(v uint32) *uint32 { return &v }
+func PtrInt64(v int64) *int64    { return &v }

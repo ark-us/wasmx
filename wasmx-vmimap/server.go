@@ -38,23 +38,27 @@ type Session struct {
 }
 
 type Response struct {
-	Error string `json:"error"`
-	Data  []byte `json:"data"`
+	ImapError *imap.Error `json:"imap_error"`
+	Error     string      `json:"error"`
+	Data      []byte      `json:"data"`
 }
 
-func parseResponse(bz []byte, err error) ([]byte, error) {
+func parseResponse(bz []byte, err error) ([]byte, *imap.Error, error) {
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	resp := &Response{}
+	fmt.Println("--parseResponse resp--", string(bz))
 	err = json.Unmarshal(bz, resp)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	fmt.Println("--parseResponse resp.Error--", resp.Error)
+	fmt.Println("--parseResponse resp.Error--", resp.ImapError)
 	if resp.Error != "" {
-		return nil, fmt.Errorf(resp.Error)
+		return nil, resp.ImapError, fmt.Errorf(resp.Error)
 	}
-	return resp.Data, nil
+	return resp.Data, resp.ImapError, nil
 }
 
 func (s *Session) Close() error {
@@ -64,7 +68,7 @@ func (s *Session) Close() error {
 		Logout: &LogoutRequest{Username: s.username},
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
-	_, err = parseResponse(resp, err)
+	_, _, err = parseResponse(resp, err)
 	if err != nil {
 		return err
 	}
@@ -80,10 +84,11 @@ func (s *Session) Login(username, password string) error {
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
 	fmt.Println("-imap.Session.Login HandleServerReentry--", err)
-	_, err = parseResponse(resp, err)
+	_, _, err = parseResponse(resp, err)
 	fmt.Println("-imap.Session.Login parseResponse--", err)
 	if err != nil {
-		return err
+		s.ctx.Ctx.Logger().Debug("imap server login error", "username", username, "error", err.Error())
+		return imapserver.ErrAuthFailed
 	}
 	return nil
 }
@@ -97,7 +102,7 @@ func (s *Session) Select(mailbox string, options *imap.SelectOptions) (*imap.Sel
 		Select: &SelectRequest{Username: s.username, Mailbox: mailbox},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	fmt.Println("-imap.Session.Select respbz--", err, string(res))
 	if err != nil {
 		return nil, err
@@ -116,8 +121,20 @@ func (s *Session) Create(mailbox string, options *imap.CreateOptions) error {
 		Create: &CreateRequest{Username: s.username, Mailbox: mailbox, Options: options},
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
-	_, err = parseResponse(resp, err)
+	_, ierr, err := parseResponse(resp, err)
 	fmt.Println("-imap.Session.Create err--", err)
+	fmt.Println("-imap.Session.Create err--", ierr)
+
+	if ierr != nil {
+		return ierr
+	}
+
+	// return &imap.Error{
+	// 		Type: imap.StatusResponseTypeNo,
+	// 		Code: imap.ResponseCodeAlreadyExists,
+	// 		Text: "Mailbox already exists",
+	// 	}
+
 	if err != nil {
 		return err
 	}
@@ -129,7 +146,7 @@ func (s *Session) Delete(mailbox string) error {
 		Delete: &DeleteRequest{Username: s.username, Mailbox: mailbox},
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
-	_, err = parseResponse(resp, err)
+	_, _, err = parseResponse(resp, err)
 	if err != nil {
 		return err
 	}
@@ -141,7 +158,7 @@ func (s *Session) Rename(mailbox, newName string) error {
 		Rename: &RenameRequest{Username: s.username, Mailbox: mailbox},
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
-	_, err = parseResponse(resp, err)
+	_, _, err = parseResponse(resp, err)
 	if err != nil {
 		return err
 	}
@@ -167,7 +184,7 @@ func (s *Session) List(w *imapserver.ListWriter, ref string, patterns []string, 
 		},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	fmt.Println("-imap.Session.List ListData--", err, string(res))
 	if err != nil {
 		return err
@@ -191,7 +208,7 @@ func (s *Session) Status(mailbox string, options *imap.StatusOptions) (*imap.Sta
 		Status: &StatusRequest{Username: s.username, Mailbox: mailbox, Options: options},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	fmt.Println("-imap.Session.Status respbz--", err, string(res))
 	if err != nil {
 		return nil, err
@@ -221,7 +238,7 @@ func (s *Session) Append(mailbox string, r imap.LiteralReader, options *imap.App
 		},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	fmt.Println("-imap.Session.Append respbz--", err, string(res))
 	if err != nil {
 		return nil, err
@@ -261,7 +278,7 @@ func (s *Session) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) error 
 		Expunge: &ExpungeRequest{Username: s.username, Uids: uids},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	if err != nil {
 		return err
 	}
@@ -294,7 +311,7 @@ func (s *Session) Search(kind imapserver.NumKind, criteria *imap.SearchCriteria,
 		},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	fmt.Println("-imap.Session.Search respbz--", err, string(res))
 	if err != nil {
 		return nil, err
@@ -311,15 +328,6 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 	fmt.Println("-imap.Session.Fetch--", numSet, options)
 	bz, _ := json.Marshal(options)
 	fmt.Println("-imap.Session.Fetch.options--", string(bz))
-	// options.UID = true
-	// options.Flags = true
-	// options.Envelope = true
-	// options.InternalDate = true
-	// options.RFC822Size = true
-	// options.BodySection = []*imap.FetchItemBodySection{
-	// 	&imap.FetchItemBodySection{},
-	// }
-
 	uidSet, seqSet := fromNumSet(numSet)
 	msg := &ReentryCalldataServer{
 		Fetch: &FetchRequest{
@@ -331,7 +339,7 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 		},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	fmt.Println("-imap.Session.Fetch--", err, string(res))
 	if err != nil {
 		return err
@@ -400,7 +408,7 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 			if len(section.Part) == 0 && len(section.HeaderFields) == 0 && len(section.HeaderFieldsNot) == 0 {
 				writer := msg.WriteBodySection(section, int64(len(m.RawEmail)))
 				// _, err := writer.Write(m.RawEmail)
-				_, err := writer.Write([]byte(m.Body))
+				_, err := writer.Write([]byte(m.RawEmail))
 				writer.Close()
 				if err != nil {
 					return err
@@ -443,7 +451,7 @@ func (s *Session) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *im
 		},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	if err != nil {
 		return err
 	}
@@ -482,7 +490,7 @@ func (s *Session) Copy(numSet imap.NumSet, dest string) (*imap.CopyData, error) 
 		},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
-	res, err = parseResponse(res, err)
+	res, _, err = parseResponse(res, err)
 	if err != nil {
 		return nil, err
 	}

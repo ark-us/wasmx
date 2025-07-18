@@ -34,18 +34,21 @@ func HandleLogout(req *LogoutRequest) ([]byte, error) {
 	return nil, nil
 }
 
-func HandleCreate(req *CreateRequest) ([]byte, error) {
+func HandleCreate(req *CreateRequest) ([]byte, *vmimap.Error, error) {
 	fmt.Println("--HandleCreate--", req.Username, req.Mailbox)
 
 	exists, err := checkFolderExists(ConnectionId, req.Username, req.Mailbox)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if exists {
-		// TODO always return {Error,Data}
-		// return nil, vmimap.ErrMailboxAlreadyExists
-		return nil, nil
+		// return nil, err
+		return nil, &vmimap.Error{
+			Type: vmimap.StatusResponseTypeNo,
+			Code: vmimap.ResponseCodeAlreadyExists,
+			Text: vmimap.ErrMailboxAlreadyExists,
+		}, nil
 	}
 	// Insert initial folder state for the user if not exists
 	query := `
@@ -59,7 +62,7 @@ func HandleCreate(req *CreateRequest) ([]byte, error) {
 		{Type: "text", Value: req.Mailbox},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create: param marshal error: %s", err.Error())
+		return nil, nil, fmt.Errorf("create: param marshal error: %s", err.Error())
 	}
 
 	res := sql.Execute(&sql.SqlExecuteRequest{
@@ -69,10 +72,10 @@ func HandleCreate(req *CreateRequest) ([]byte, error) {
 	})
 
 	if res.Error != "" {
-		return nil, fmt.Errorf("create: execute error: %s", res.Error)
+		return nil, nil, fmt.Errorf("create: execute error: %s", res.Error)
 	}
 
-	return []byte(`{}`), nil
+	return []byte(`{}`), nil, nil
 }
 
 func HandleDelete(req *DeleteRequest) ([]byte, error) {
@@ -87,29 +90,12 @@ func HandleRename(req *RenameRequest) ([]byte, error) {
 
 func HandleSelect(req *SelectRequest) ([]byte, error) {
 	fmt.Println("--HandleSelect--")
-	q := `SELECT COUNT(*) AS num_messages FROM emails WHERE owner = ? AND folder = ?`
-	params, err := paramsMarshal([]sql.SqlQueryParam{
-		{Type: "text", Value: req.Username},
-		{Type: "text", Value: req.Mailbox},
-	})
+	val, err := GetNumMessages(req.Username, req.Mailbox)
 	if err != nil {
-		return nil, fmt.Errorf("select: params marshal error: %s", err.Error())
-	}
-	res := sql.Query(&sql.SqlQueryRequest{
-		Id:     ConnectionId,
-		Query:  q,
-		Params: params,
-	})
-	fmt.Println("--Query resp--", string(res.Data))
-	var result []struct {
-		NumMessages int `json:"num_messages"`
-	}
-	err = json.Unmarshal(res.Data, &result)
-	if err != nil {
-		return nil, fmt.Errorf("select: result unmarshal error: %s", err.Error())
+		return nil, err
 	}
 	sel := &imap.SelectData{
-		NumMessages: uint32(result[0].NumMessages),
+		NumMessages: uint32(val),
 	}
 	bz, err := json.Marshal(sel)
 	if err != nil {
@@ -138,17 +124,15 @@ func HandleList(req *ListRequest) ([]byte, error) {
 	}
 	var out []imap.ListData
 	for _, f := range folders {
-		lastUid := uint32(f.LastUid)
 		attrs := GetAttrs(f.Folder)
+		status, err := GetFolderStatus(req.Username, f.Folder, &f)
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, imap.ListData{
 			Attrs:   attrs,
 			Mailbox: f.Folder,
-			Status: &imap.StatusData{
-				Mailbox:     f.Folder,
-				NumMessages: &lastUid,
-				UIDNext:     imap.UID(lastUid + 1),
-				UIDValidity: f.UidValidity,
-			},
+			Status:  status,
 		})
 	}
 	bz, err := json.Marshal(out)
@@ -159,48 +143,9 @@ func HandleList(req *ListRequest) ([]byte, error) {
 }
 
 func HandleStatus(req *StatusRequest) ([]byte, error) {
-	q := `SELECT COUNT(*) as messages FROM emails WHERE owner = ? AND folder = ?`
-	params, err := paramsMarshal([]sql.SqlQueryParam{
-		{Type: "text", Value: req.Username},
-		{Type: "text", Value: req.Mailbox},
-	})
+	status, err := GetFolderStatus(req.Username, req.Mailbox, nil)
 	if err != nil {
 		return nil, err
-	}
-	res := sql.Query(&sql.SqlQueryRequest{
-		Id:     ConnectionId,
-		Query:  q,
-		Params: params,
-	})
-	var result []struct {
-		Messages int `json:"messages"`
-	}
-	err = json.Unmarshal(res.Data, &result)
-	if err != nil {
-		return nil, err
-	}
-	v := uint32(result[0].Messages)
-
-	res = sql.Query(&sql.SqlQueryRequest{
-		Id:     ConnectionId,
-		Query:  ExecGetFolder,
-		Params: params,
-	})
-	fres := []FolderState{}
-	err = json.Unmarshal(res.Data, &fres)
-	if err != nil {
-		return nil, err
-	}
-	if len(fres) == 0 {
-		return nil, fmt.Errorf("folder not found")
-	}
-	f := fres[0]
-	lastUid := uint32(f.LastUid)
-	status := &imap.StatusData{
-		Mailbox:     req.Mailbox,
-		NumMessages: &v,
-		UIDNext:     imap.UID(lastUid + 1),
-		UIDValidity: f.UidValidity,
 	}
 	bz, err := json.Marshal(status)
 	if err != nil {
@@ -684,4 +629,73 @@ func resolveUIDRanges(owner string, folder string, ranges []Range) ([]Range, err
 	}
 
 	return out, nil
+}
+
+func GetNumMessages(username string, mailbox string) (int, error) {
+	q := `SELECT COUNT(*) as messages FROM emails WHERE owner = ? AND folder = ?`
+	params, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: username},
+		{Type: "text", Value: mailbox},
+	})
+	if err != nil {
+		return 0, err
+	}
+	res := sql.Query(&sql.SqlQueryRequest{
+		Id:     ConnectionId,
+		Query:  q,
+		Params: params,
+	})
+	var result []struct {
+		Messages int `json:"messages"`
+	}
+	err = json.Unmarshal(res.Data, &result)
+	if err != nil {
+		return 0, err
+	}
+	return result[0].Messages, nil
+}
+
+func GetFolderStatus(username string, mailbox string, folderState *FolderState) (*imap.StatusData, error) {
+	val, err := GetNumMessages(username, mailbox)
+	if err != nil {
+		return nil, err
+	}
+	v := uint32(val)
+
+	if folderState == nil {
+		params, err := paramsMarshal([]sql.SqlQueryParam{
+			{Type: "text", Value: username},
+			{Type: "text", Value: mailbox},
+		})
+		if err != nil {
+			return nil, err
+		}
+		res := sql.Query(&sql.SqlQueryRequest{
+			Id:     ConnectionId,
+			Query:  ExecGetFolder,
+			Params: params,
+		})
+		fres := []FolderState{}
+		err = json.Unmarshal(res.Data, &fres)
+		if err != nil {
+			return nil, err
+		}
+		if len(fres) == 0 {
+			return nil, fmt.Errorf("folder not found")
+		}
+		folderState = &fres[0]
+	}
+	lastUid := uint32(folderState.LastUid)
+	return &imap.StatusData{
+		Mailbox:        mailbox,
+		NumMessages:    &v,
+		UIDNext:        imap.UID(lastUid + 1),
+		UIDValidity:    folderState.UidValidity,
+		NumUnseen:      PtrUint32(uint32(0)),
+		NumDeleted:     PtrUint32(uint32(0)),
+		Size:           PtrInt64(int64(0)),
+		AppendLimit:    PtrUint32(uint32(0)),
+		DeletedStorage: PtrInt64(int64(0)),
+		HighestModSeq:  uint64(0),
+	}, nil
 }
