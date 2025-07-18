@@ -221,7 +221,8 @@ type StatusData struct {
 
 	AppendLimit    *uint32
 	DeletedStorage *int64
-	HighestModSeq  uint64
+	// Last modification sequence number (change tracker)
+	HighestModSeq uint64
 }
 type ListData struct {
 	Attrs   []MailboxAttr

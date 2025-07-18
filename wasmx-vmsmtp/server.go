@@ -7,59 +7,24 @@ import (
 	"log"
 	"time"
 
+	"github.com/emersion/go-sasl"
+
 	smtp "github.com/emersion/go-smtp"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 )
 
-type TlsConfig struct {
-	ServerName  string `json:"server_name"`
-	TLSCertFile string `json:"tls_cert_file"`
-	TLSKeyFile  string `json:"tls_key_file"`
-}
-
-type ServerConfig struct {
-	// The type of network, "tcp", "tcp4", or "unix".
-	Network string `json:"network"`
-	// TCP or Unix address to listen on.
-	Addr      string     `json:"address"` // ":25"
-	TlsConfig *TlsConfig `json:"tls_config"`
-
-	// Enable LMTP mode, as defined in RFC 2033.
-	LMTP bool `json:"lmtp"`
-
-	Domain            string        `json:"domain"`
-	MaxRecipients     int           `json:"max_recipients"`
-	MaxMessageBytes   int64         `json:"max_message_bytes"`
-	MaxLineLength     int           `json:"max_line_length"`
-	AllowInsecureAuth bool          `json:"allow_insecure_auth"`
-	ReadTimeout       time.Duration `json:"read_timeout"`
-	WriteTimeout      time.Duration `json:"write_timeout"`
-
-	// Advertise SMTPUTF8 (RFC 6531) capability.
-	EnableSMTPUTF8 bool `json:"enable_smtp_utf8"`
-	// Advertise REQUIRETLS (RFC 8689) capability.
-	EnableREQUIRETLS bool `json:"enable_require_tls"`
-	// Advertise BINARYMIME (RFC 3030) capability.
-	EnableBINARYMIME bool `json:"enable_binary_mime"`
-	// Advertise DSN (RFC 3461) capability.
-	EnableDSN bool `json:"enable_dsn"`
-	// Advertise RRVS (RFC 7293) capability.
-	EnableRRVS bool `json:"enable_rrvs"`
-	// Advertise DELIVERBY (RFC 2852) capability.
-	// EnableDELIVERBY bool `json:"enable_deliver_by"`
-
-	// The minimum time (seconds precision) a client may specify in BY=.
-	// Only used if DELIVERBY is enabled.
-	// MinimumDeliverByTime time.Duration `json:"minimum_deliver_by_time"`
-}
-
 type backend struct {
-	ctx *Context
+	ctx  *Context
+	auth bool
 }
 
 func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 	// TODO implement reject policy
 	// conn.Reject()
+	fmt.Println("--smtpbackend.NewSession--", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
+	if b.auth {
+		return &AuthSession{Session: Session{ctx: b.ctx}}, nil
+	}
 	return &Session{ctx: b.ctx}, nil
 }
 
@@ -70,7 +35,12 @@ type Session struct {
 	EmailRaw []byte   `json:"email_raw"`
 }
 
+type AuthSession struct {
+	Session
+}
+
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
+	fmt.Println("--smtp.Session.Mail--", from, opts)
 	if opts != nil {
 		fmt.Println("--Session.Mail opts--", opts.EnvelopeID, opts.Auth)
 	}
@@ -100,8 +70,38 @@ func (s *Session) Logout() error {
 	return nil
 }
 
+// support AuthSession
+// Implement AuthMechanisms
+func (s *AuthSession) AuthMechanisms() []string {
+	fmt.Println("--smtp.AuthMechanisms--")
+	return []string{"PLAIN"}
+}
+
+// Implement Auth
+func (s *AuthSession) Auth(mech string) (sasl.Server, error) {
+	fmt.Println("--smtp.Auth--", mech)
+	switch mech {
+	case sasl.Plain:
+		return sasl.NewPlainServer(func(identity, username, password string) error {
+			msg := &ReentryCalldata{
+				Login: &LoginRequest{Username: username, Password: password},
+			}
+			_, err := s.ctx.HandleServerReentry(msg)
+			if err != nil {
+				return fmt.Errorf("invalid credentials: %w", err)
+			}
+			return nil
+		}), nil
+	case sasl.OAuthBearer:
+		// TODO implement me
+		return nil, fmt.Errorf("unsupported auth mechanism")
+	default:
+		return nil, fmt.Errorf("unsupported auth mechanism")
+	}
+}
+
 func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
-	s := smtp.NewServer(&backend{ctx: ctx})
+	s := smtp.NewServer(&backend{ctx: ctx, auth: cfg.EnableAuth})
 	s.Network = "tcp"
 	s.Addr = ":25"
 	s.ReadTimeout = 10 * time.Second
@@ -145,6 +145,8 @@ func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
 	// s.EnableDELIVERBY = cfg.EnableDELIVERBY
 	// s.MinimumDeliverByTime = cfg.MinimumDeliverByTime
 
+	fmt.Println("--NewServer AllowInsecureAuth--", cfg.AllowInsecureAuth)
+
 	startfn := s.ListenAndServe
 
 	tlsCfg, err := getTlsConfig(cfg.TlsConfig)
@@ -153,7 +155,10 @@ func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
 	}
 	if tlsCfg != nil {
 		s.TLSConfig = tlsCfg
-		startfn = s.ListenAndServeTLS
+		fmt.Println("---Smtp.StartTLS--", cfg.StartTLS)
+		if !cfg.StartTLS {
+			startfn = s.ListenAndServeTLS
+		}
 	}
 
 	log.Printf("SMTP server listening on %s (%s)", s.Addr, s.Network)
@@ -205,10 +210,6 @@ func startGoRoutine(
 	}
 }
 
-type ReentryCalldata struct {
-	IncomingEmail *Session `json:"IncomingEmail"`
-}
-
 func (ctx *Context) HandleIncomingEmail(s Session) {
 	msg := &ReentryCalldata{
 		IncomingEmail: &s}
@@ -231,4 +232,38 @@ func (ctx *Context) HandleIncomingEmail(s Session) {
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error())
 	}
+}
+
+func (ctx *Context) HandleServerReentry(msg *ReentryCalldata) ([]byte, error) {
+	msgbz, err := json.Marshal(msg)
+	if err != nil {
+		ctx.Ctx.Logger().Error("cannot marshal reentry request", "error", err.Error())
+		return nil, err
+	}
+
+	contractAddress := ctx.Env.Contract.Address
+
+	fmt.Println("--smtp.HandleServerReentry msgbz---", string(msgbz))
+
+	msgtosend := &networktypes.MsgReentry{
+		Sender:     contractAddress.String(),
+		Contract:   contractAddress.String(),
+		EntryPoint: ENTRY_POINT_SMTP_SERVER,
+		Msg:        msgbz,
+	}
+	_, resp, err := ctx.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	fmt.Println("--HandleServerReentry resp---", err, string(resp))
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
+		return nil, err
+	}
+
+	var rres networktypes.MsgReentryResponse
+	err = rres.Unmarshal(resp)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("--HandleServerReentry resp2---", string(rres.Data))
+
+	return rres.Data, nil
 }

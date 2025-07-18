@@ -7,6 +7,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"time"
+
+	"github.com/loredanacirstea/emailchain/imap"
 )
 
 func ToPrivateKey(keyType string, pk []byte) crypto.Signer {
@@ -59,4 +61,25 @@ func ParseEmailDate(value string) (time.Time, error) {
 		}
 	}
 	return time.Time{}, fmt.Errorf("could not parse date: %q", value)
+}
+
+func GetAttrs(folder string) []imap.MailboxAttr {
+	attrs := []imap.MailboxAttr{}
+	switch folder {
+	case FolderInbox:
+		attrs = []imap.MailboxAttr{"\\Inbox"}
+	case FolderSent:
+		attrs = []imap.MailboxAttr{"\\Sent"}
+	case FolderArchive:
+		attrs = []imap.MailboxAttr{"\\Archive"}
+	case FolderDraft:
+		attrs = []imap.MailboxAttr{"\\Draft"}
+	case FolderJunk:
+		attrs = []imap.MailboxAttr{"\\Junk"}
+	case FolderSpam:
+		attrs = []imap.MailboxAttr{"\\Spam"}
+	case FolderTrash:
+		attrs = []imap.MailboxAttr{"\\Trash"}
+	}
+	return attrs
 }

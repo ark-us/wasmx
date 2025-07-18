@@ -186,9 +186,11 @@ type ServerConfig struct {
 	// The type of network, "tcp" or "unix".
 	Network string `json:"network"`
 	// TCP or Unix address to listen on.
-	Addr        string `json:"address"` // ":25"
-	TLSCertFile string `json:"tls_cert_file"`
-	TLSKeyFile  string `json:"tls_key_file"`
+	Addr string `json:"address"` // ":25"
+
+	StartTLS   bool       `json:"start_tls"`
+	EnableAuth bool       `json:"enable_auth"`
+	TlsConfig  *TlsConfig `json:"tls_config"`
 
 	// Enable LMTP mode, as defined in RFC 2033.
 	LMTP bool `json:"lmtp"`

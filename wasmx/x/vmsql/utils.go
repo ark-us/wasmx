@@ -3,6 +3,7 @@ package vmsql
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 )
 
 func RowsToJSON(rows *sql.Rows) ([]byte, error) {
@@ -10,7 +11,7 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("--cols--", cols)
 	results := []map[string]interface{}{}
 
 	for rows.Next() {
@@ -30,6 +31,7 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 		for i, col := range cols {
 			val := columnValues[i]
 			rowMap[col] = val
+			fmt.Println("--col--", col, val)
 		}
 
 		results = append(results, rowMap)
@@ -38,6 +40,7 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	fmt.Println("--results--", results)
 
 	return json.Marshal(results)
 }

@@ -24,10 +24,11 @@ const DefTableOwners = `CREATE TABLE owners (
 );`
 
 const DefTableFolders = `CREATE TABLE folder_state (
+	uid_validity INTEGER PRIMARY KEY AUTOINCREMENT,
     owner TEXT NOT NULL,
     folder TEXT NOT NULL,
     last_uid INTEGER NOT NULL DEFAULT 1,
-    PRIMARY KEY (owner, folder)
+    UNIQUE (owner, folder)
 );`
 
 // -- Table: emails (each email is one row, per folder/owner)
@@ -37,15 +38,15 @@ const DefTableEmails = `CREATE TABLE emails (
     folder TEXT NOT NULL,
     uid INTEGER NOT NULL,
     seq_num INTEGER NOT NULL,
-    message_id TEXT,
-    subject TEXT,
+    message_id TEXT NOT NULL,
+    subject TEXT NOT NULL DEFAULT '',
     internal_date INTEGER NOT NULL,
-    flags TEXT,
+    flags TEXT NOT NULL DEFAULT '',
     raw_email BLOB NOT NULL,
     size INTEGER NOT NULL,
-    headers TEXT,
-    body TEXT,
-	bh VARCHAR,
+    headers TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+	bh VARCHAR NOT NULL,
 	envelope TEXT,
     UNIQUE (owner, folder, uid),
 	UNIQUE (owner, folder, seq_num)
@@ -64,6 +65,10 @@ ON CONFLICT(owner, folder)
 DO UPDATE SET last_uid = last_uid + 1;`
 const ExecGetUid = `SELECT last_uid FROM folder_state
 WHERE owner = ? AND folder = ?`
+const ExecGetFolder = `SELECT * FROM folder_state
+WHERE owner = ? AND folder = ?`
+const ExecGetFolders = `SELECT * FROM folder_state
+WHERE owner = ?`
 const ExecGetSeq = `SELECT COALESCE(MAX(seq_num), 0) + 1 AS next_seq_num
 FROM emails
 WHERE owner = ? AND folder = ?;`
@@ -129,6 +134,29 @@ func InitializeTables(connId string) {
 	}
 }
 
+func checkFolderExists(connId, username, folder string) (bool, error) {
+	q := `SELECT 1 FROM folder_state WHERE owner = ? AND folder = ? LIMIT 1`
+	paramsbz, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: username},
+		{Type: "text", Value: folder},
+	})
+	qresp := sql.Query(&sql.SqlQueryRequest{
+		Id:     connId,
+		Query:  q,
+		Params: paramsbz,
+	})
+	if qresp.Error != "" {
+		return false, err
+	}
+	// [{"1":1}]
+	resp := []map[string]int64{}
+	err = json.Unmarshal(qresp.Data, &resp)
+	if err != nil {
+		return false, err
+	}
+	return len(resp) > 0, nil
+}
+
 func StoreEmail(owner string, mailfrom []string, emailRaw []byte, connId string, folder string) error {
 	email, err := extractEmail(emailRaw)
 	if err != nil {
@@ -139,7 +167,6 @@ func StoreEmail(owner string, mailfrom []string, emailRaw []byte, connId string,
 	} else {
 		email.Envelope.Sender = email.Envelope.From
 	}
-
 	paramsbz, err := paramsMarshal([]sql.SqlQueryParam{
 		{Type: "text", Value: owner},  // owner
 		{Type: "text", Value: folder}, // folder
@@ -199,7 +226,7 @@ func StoreEmail(owner string, mailfrom []string, emailRaw []byte, connId string,
 		{Type: "text", Value: email.Bh},
 		{Type: "text", Value: email.Body},
 		{Type: "text", Value: string(envbz)},
-		{Type: "text", Value: string(email.RawEmail)},
+		{Type: "blob", Value: email.RawEmail},
 		{Type: "text", Value: len(email.RawEmail)},
 		// {Type: "text", Value: "INBOX"}, // size
 		// {Type: "text", Value: "INBOX"}, // headers
@@ -254,12 +281,15 @@ func extractEmail(raw []byte) (*EmailWrite, error) {
 			envelope.Subject = subject
 		case "date":
 			v := h.GetValueTrimmed()
+			fmt.Println("--date---", v)
 			t, err := ParseEmailDate(v)
+			fmt.Println("--date2---", err, t)
 			if err != nil {
 				fmt.Println("tinygo.emailchain.extractEmail.Date", err)
 			}
 			timestamp = t
 			envelope.Date = timestamp
+			fmt.Println("--date2---", timestamp)
 		case "message-id":
 			v := h.GetValueTrimmed()
 			messageId = strings.Trim(v, "<>")

@@ -218,6 +218,7 @@ func (suite *KeeperTestSuite) TestEmailTinyGoSmtp() {
 }
 
 type EmailChainCalldata struct {
+	CreateAccount       *CreateAccountRequest    `json:"CreateAccount,omitempty"`
 	ConnectWithPassword *ConnectionSimpleRequest `json:"ConnectWithPassword,omitempty"`
 	ConnectOAuth2       *ConnectionOauth2Request `json:"ConnectOAuth2,omitempty"`
 	Close               *CloseRequest            `json:"Close,omitempty"`
@@ -229,6 +230,11 @@ type EmailChainCalldata struct {
 	StartServer         *StartServerRequest      `json:"StartServer,omitempty"`
 	IncomingEmail       *vmsmtp.Session          `json:"IncomingEmail,omitempty"`
 	SendEmail           *BuildAndSendMailRequest `json:"SendEmail,omitempty"`
+}
+
+type CreateAccountRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type StartServerRequest struct {

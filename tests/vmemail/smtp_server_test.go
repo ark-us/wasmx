@@ -72,7 +72,9 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
 
+	// tlsPath := "~/dev/letsencrypt/"
 	tlsPath := "/etc/letsencrypt/live/"
+	// tlsPath := "/Users/loredanamini4/dev/letsencrypt/"
 
 	// Prepare the VerifyDKIM request
 	msg := &EmailChainCalldata{
@@ -106,6 +108,18 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)
 	res := appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	fmt.Println("--start server--", string(res.Data))
+
+	// create test account
+	msg = &EmailChainCalldata{
+		CreateAccount: &CreateAccountRequest{
+			Username: "test@dmail.provable.dev",
+			Password: "123456",
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 
 	// // Prepare the VerifyDKIM request
 	// msg = &EmailChainCalldata{

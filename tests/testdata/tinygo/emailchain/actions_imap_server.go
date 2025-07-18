@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -36,8 +35,44 @@ func HandleLogout(req *LogoutRequest) ([]byte, error) {
 }
 
 func HandleCreate(req *CreateRequest) ([]byte, error) {
-	// TODO: requires tracking created mailboxes in a separate table
-	return nil, nil
+	fmt.Println("--HandleCreate--", req.Username, req.Mailbox)
+
+	exists, err := checkFolderExists(ConnectionId, req.Username, req.Mailbox)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		// TODO always return {Error,Data}
+		// return nil, vmimap.ErrMailboxAlreadyExists
+		return nil, nil
+	}
+	// Insert initial folder state for the user if not exists
+	query := `
+		INSERT INTO folder_state (owner, folder, last_uid)
+		VALUES (?, ?, 0)
+		ON CONFLICT(owner, folder) DO NOTHING;
+	`
+
+	params, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: req.Username},
+		{Type: "text", Value: req.Mailbox},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create: param marshal error: %s", err.Error())
+	}
+
+	res := sql.Execute(&sql.SqlExecuteRequest{
+		Id:     ConnectionId,
+		Query:  query,
+		Params: params,
+	})
+
+	if res.Error != "" {
+		return nil, fmt.Errorf("create: execute error: %s", res.Error)
+	}
+
+	return []byte(`{}`), nil
 }
 
 func HandleDelete(req *DeleteRequest) ([]byte, error) {
@@ -85,7 +120,6 @@ func HandleSelect(req *SelectRequest) ([]byte, error) {
 }
 
 func HandleList(req *ListRequest) ([]byte, error) {
-	q := `SELECT DISTINCT folder FROM emails WHERE owner = ?`
 	params, err := paramsMarshal([]sql.SqlQueryParam{
 		{Type: "text", Value: req.Username},
 	})
@@ -94,19 +128,28 @@ func HandleList(req *ListRequest) ([]byte, error) {
 	}
 	res := sql.Query(&sql.SqlQueryRequest{
 		Id:     ConnectionId,
-		Query:  q,
+		Query:  ExecGetFolders,
 		Params: params,
 	})
-	var folders []struct {
-		Folder string `json:"folder"`
-	}
+	folders := []FolderState{}
 	err = json.Unmarshal(res.Data, &folders)
 	if err != nil {
 		return nil, err
 	}
-	var out []string
+	var out []imap.ListData
 	for _, f := range folders {
-		out = append(out, f.Folder)
+		lastUid := uint32(f.LastUid)
+		attrs := GetAttrs(f.Folder)
+		out = append(out, imap.ListData{
+			Attrs:   attrs,
+			Mailbox: f.Folder,
+			Status: &imap.StatusData{
+				Mailbox:     f.Folder,
+				NumMessages: &lastUid,
+				UIDNext:     imap.UID(lastUid + 1),
+				UIDValidity: f.UidValidity,
+			},
+		})
 	}
 	bz, err := json.Marshal(out)
 	if err != nil {
@@ -137,8 +180,27 @@ func HandleStatus(req *StatusRequest) ([]byte, error) {
 		return nil, err
 	}
 	v := uint32(result[0].Messages)
+
+	res = sql.Query(&sql.SqlQueryRequest{
+		Id:     ConnectionId,
+		Query:  ExecGetFolder,
+		Params: params,
+	})
+	fres := []FolderState{}
+	err = json.Unmarshal(res.Data, &fres)
+	if err != nil {
+		return nil, err
+	}
+	if len(fres) == 0 {
+		return nil, fmt.Errorf("folder not found")
+	}
+	f := fres[0]
+	lastUid := uint32(f.LastUid)
 	status := &imap.StatusData{
+		Mailbox:     req.Mailbox,
 		NumMessages: &v,
+		UIDNext:     imap.UID(lastUid + 1),
+		UIDValidity: f.UidValidity,
 	}
 	bz, err := json.Marshal(status)
 	if err != nil {
@@ -388,18 +450,22 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 	// var emails []EmailWrite
 	fmt.Println("--tinygo.HandleFetch--", string(resp.Data))
 	if err := json.Unmarshal(resp.Data, &emails); err != nil {
+		fmt.Println("--tinygo.HandleFetch unmarshal--", err)
 		return nil, err
 	}
 
 	results := make([]map[string]interface{}, 0, len(emails))
 	for _, e := range emails {
+		fmt.Println("--tinygo.HandleFetch email--", e)
 		flags := []string{}
 		if e.Flags != "" {
 			flags = strings.Split(e.Flags, " ")
 		}
 		t := time.Unix(0, e.InternalDate*int64(time.Millisecond)).UTC()
 		envelope := vmimap.Envelope{}
+		fmt.Println("--tinygo.HandleFetch envelope--", e.Envelope)
 		err = json.Unmarshal([]byte(e.Envelope), &envelope)
+		fmt.Println("--tinygo.HandleFetch envelope unmarshal err--", err)
 		if err != nil {
 			return nil, err
 		}
@@ -411,8 +477,9 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 			"rfc822size":    e.Size,
 			"body":          e.Body,
 			"envelope":      envelope,
-			"raw_email":     base64.StdEncoding.EncodeToString(e.RawEmail),
+			"raw_email":     e.RawEmail,
 		})
+		fmt.Println("--tinygo.HandleFetch results--", results)
 	}
 	fmt.Println("--tinygo.HandleFetch results--", len(results))
 	return json.Marshal(results)
@@ -527,7 +594,7 @@ func HandleCopy(req *CopyRequest) ([]byte, error) {
 			{Type: "integer", Value: email.InternalDate.Unix()},
 			{Type: "text", Value: email.Bh},
 			{Type: "text", Value: email.Body},
-			{Type: "text", Value: string(email.RawEmail)},
+			{Type: "blob", Value: email.RawEmail},
 			{Type: "text", Value: email.Size},
 		})
 		if err != nil {

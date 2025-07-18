@@ -832,6 +832,7 @@ wasmx.setReturnData(res || new ArrayBuffer(0));
 }
 
 func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+	fmt.Println("-ExecuteWasiWrap-", funcName)
 	// if funcName == "execute" || funcName == "query" {
 	// 	funcName = "main"
 	// }

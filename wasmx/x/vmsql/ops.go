@@ -18,6 +18,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("---sql.Connect--", string(requestbz))
 	var req SqlConnectionRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -46,7 +47,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 			return prepareResponse(rnh, response)
 		}
 	}
-
+	fmt.Println("---sql.Connect--", req.Driver, req.Connection)
 	// TODO req.Connection - should we restrict this path and make it relative to our DataDirectory? or introduce a list of allowed directories that WASMX can modify and make sure the path is within these directories.
 	db, err := sql.Open(req.Driver, req.Connection)
 	if err != nil {
@@ -199,6 +200,7 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	}
 
 	qparams := parseSqlQueryParams(reqparams)
+	fmt.Println("--sql.Execute--", req.Query, qparams)
 	res, err := db.OpenSavepointTx.ExecContext(ctx.Ctx, req.Query, qparams...)
 	if err != nil {
 		response.Error = err.Error()
@@ -340,6 +342,7 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	}
 
 	qparams := parseSqlQueryParams(reqparams)
+	fmt.Println("--sql.Query--", req.Query, qparams)
 	rows, err := db.OpenSavepointTx.QueryContext(ctx.Ctx, req.Query, qparams...)
 	if err != nil {
 		response.Error = err.Error()
@@ -353,6 +356,7 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	}
 
 	resp, err := RowsToJSON(rows)
+	fmt.Println("--RowsToJSON err--", err, string(resp))
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -366,6 +370,7 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--prepareResponse--", string(responsebz))
 	return rnh.AllocateWriteMem(responsebz)
 }
 

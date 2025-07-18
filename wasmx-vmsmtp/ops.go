@@ -254,11 +254,13 @@ func Noop(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 
 func Hello(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
+	fmt.Println("====-Hello----")
 	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
 	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("====-Hello----", string(requestbz))
 	var req SmtpHelloRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -278,6 +280,7 @@ func Hello(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		return prepareResponse(rnh, response)
 	}
 	err = conn.Client.Hello(req.LocalName)
+	fmt.Println("==HELLO==", req.Id, "--", req.LocalName, err)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -396,6 +399,7 @@ func SendMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("==SendMail==", req.Id)
 
 	response := &SmtpSendMailResponse{Error: ""}
 	connId := buildConnectionId(req.Id, ctx)
@@ -449,6 +453,7 @@ func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--SMTP.ServerStart--", string(requestbz))
 	var req ServerStartRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {

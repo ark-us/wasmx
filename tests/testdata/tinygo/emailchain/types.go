@@ -20,6 +20,7 @@ const ConnectionId = "emailchain"
 type Calldata struct {
 	Connect       *ConnectRequest          `json:"Connect,omitempty"`
 	Close         *CloseRequest            `json:"Close,omitempty"`
+	CreateAccount *CreateAccountRequest    `json:"CreateAccount,omitempty"`
 	SendEmail     *BuildAndSendMailRequest `json:"SendEmail,omitempty"`
 	BuildAndSend  *BuildAndSendMailRequest `json:"BuildAndSend,omitempty"`
 	VerifyDKIM    *VerifyDKIMRequest       `json:"VerifyDKIM,omitempty"`
@@ -31,6 +32,11 @@ type Calldata struct {
 	IncomingEmail *IncomingEmailRequest    `json:"IncomingEmail,omitempty"`
 	RoleChanged   *wasmx.RolesChangedHook  `json:"RoleChanged,omitempty"`
 	ReentryCalldataServer
+}
+
+type CreateAccountRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type ReentryCalldata struct {

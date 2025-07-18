@@ -247,6 +247,9 @@ func sendEmailInternal(
 	mailServerDomain string,
 	networkType string, // tcp, tcp4
 ) error {
+	fmt.Println("======SendEmail--")
+	fmt.Println(emailstr)
+	fmt.Println("====== END SendEmail--")
 	var err error
 	at := strings.LastIndex(to, "@")
 	if at == -1 {
@@ -284,6 +287,7 @@ func sendEmailInternal(
 			continue
 		}
 		hresp := vmsmtp.Hello(&vmsmtp.SmtpHelloRequest{Id: mxHost, LocalName: mailServerDomain})
+		fmt.Println("--tinygo.Hello hresp----", hresp)
 		if hresp.Error != "" {
 			log.Printf("EHLO/HELO failed: %v", err)
 			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})

@@ -13,6 +13,7 @@ import (
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/dns"
 	"github.com/loredanacirstea/mailverif/utils"
+	sql "github.com/loredanacirstea/wasmx-env-sql"
 
 	"github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
@@ -29,6 +30,11 @@ const PortImapClientStartTls = "143"
 const DefaultNetworkType = "tcp4"
 const FolderInbox = "INBOX"
 const FolderSent = "SENT"
+const FolderDraft = "DRAFTS"
+const FolderTrash = "TRASH"
+const FolderJunk = "JUNK"
+const FolderSpam = "SPAM"
+const FolderArchive = "ARCHIVE"
 
 func StartServer(req *StartServerRequest) {
 	err := StoreDkimKey(req.SignOptions)
@@ -40,6 +46,8 @@ func StartServer(req *StartServerRequest) {
 	// SMTP 25
 	// smtpCfg.Addr = fmt.Sprintf("%s:%s", smtpCfg.Domain, PortSmtpDirectAddr)
 	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpDirectAddr)
+	smtpCfg.StartTLS = true
+	smtpCfg.EnableAuth = false
 	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
 		ConnectionId: PortSmtpDirectAddr,
 		ServerConfig: requiredSmtpDefaults(smtpCfg),
@@ -51,12 +59,28 @@ func StartServer(req *StartServerRequest) {
 	// SMTP
 	// smtpCfg.Addr = fmt.Sprintf("%s:%s", smtpCfg.Domain, PortSmtpClientTls)
 	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpClientTls)
+	smtpCfg.StartTLS = false
+	smtpCfg.EnableAuth = true
 	resp = vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
 		ConnectionId: PortSmtpClientTls,
 		ServerConfig: smtpCfg,
 	})
 	if resp.Error != "" {
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		wasmx.Revert([]byte(resp.Error))
+	}
+
+	// SMTP
+	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpClientStartTls)
+	smtpCfg.StartTLS = true
+	smtpCfg.EnableAuth = true
+	resp = vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
+		ConnectionId: PortSmtpClientStartTls,
+		ServerConfig: smtpCfg,
+	})
+	if resp.Error != "" {
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		wasmx.Revert([]byte(resp.Error))
 	}
 
@@ -69,7 +93,9 @@ func StartServer(req *StartServerRequest) {
 		ServerConfig: req.Imap,
 	})
 	if resp2.Error != "" {
+		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
 		wasmx.Revert([]byte(resp2.Error))
 	}
@@ -81,10 +107,63 @@ func StartServer(req *StartServerRequest) {
 		ServerConfig: req.Imap,
 	})
 	if resp2.Error != "" {
+		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
+		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
 		vmimap.ServerClose(&vmimap.ServerCloseRequest{ConnectionId: PortImapClientTls})
 		wasmx.Revert([]byte(resp2.Error))
+	}
+}
+
+func CreateAccount(req *CreateAccountRequest) {
+	fmt.Println("--CreateAccount--", req.Username)
+
+	err := ConnectSql(ConnectionId)
+	if err != nil {
+		wasmx.Revert([]byte("CreateAccount: DB connection failed: " + err.Error()))
+	}
+
+	// Insert into owners table
+	params, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: req.Username},
+	})
+	if err != nil {
+		wasmx.Revert([]byte("CreateAccount: marshal error: " + err.Error()))
+	}
+	res := sql.Execute(&sql.SqlExecuteRequest{
+		Id:     ConnectionId,
+		Query:  `INSERT OR IGNORE INTO owners (address) VALUES (?)`,
+		Params: params,
+	})
+	if res.Error != "" {
+		wasmx.Revert([]byte("CreateAccount: insert owner failed: " + res.Error))
+	}
+
+	// TODO: Store req.Password securely (e.g., add password column to owners)
+
+	// Create default folders: INBOX, SENT
+	defaultFolders := []string{FolderInbox, FolderSent, FolderArchive, FolderDraft, FolderJunk, FolderSpam, FolderTrash}
+	for i, folder := range defaultFolders {
+		uidv := uint32(100 + i)
+		params, err := paramsMarshal([]sql.SqlQueryParam{
+			{Type: "text", Value: req.Username},
+			{Type: "text", Value: folder},
+			{Type: "integer", Value: uidv},
+		})
+		if err != nil {
+			wasmx.Revert([]byte("CreateAccount: param marshal failed: " + err.Error()))
+		}
+		res := sql.Execute(&sql.SqlExecuteRequest{
+			Id: ConnectionId,
+			Query: `INSERT INTO folder_state (owner, folder, last_uid)
+			         VALUES (?, ?, 0)
+			         ON CONFLICT(owner, folder) DO NOTHING`,
+			Params: params,
+		})
+		if res.Error != "" {
+			wasmx.Revert([]byte("CreateAccount: create folder failed: " + res.Error))
+		}
 	}
 }
 
@@ -139,20 +218,24 @@ func SendEmail(req *BuildAndSendMailRequest) []string {
 	if opts == nil {
 		wasmx.Revert([]byte("no dkim keys"))
 	}
+	fmt.Println("---SEND EMAIL-----", req.To)
 	for _, to := range req.To {
 		prepped, err := prepareEmailSend(*opts, emailstr, req.From, req.Date)
 		if err != nil {
 			errs = append(errs, err.Error())
+			fmt.Println("---prepareEmailSend err-----", err)
 			continue
 		}
 		err = sendEmailInternal(req.From, to, prepped, MailServerDomain, DefaultNetworkType)
 		if err != nil {
 			errs = append(errs, err.Error())
+			fmt.Println("---sendEmailInternal err-----", err)
 			continue
 		}
 
 		err = StoreEmail(req.From, []string{}, []byte(prepped), ConnectionId, FolderSent)
 		if err != nil {
+			fmt.Println("--StoreEmail--", err)
 		}
 	}
 	fmt.Println("---sending err--", errs)

@@ -299,6 +299,7 @@ func buildSearchCriteria(filters FetchFilter) (*imap.SearchCriteria, error) {
 }
 
 func getTlsConfig(cfg *TlsConfig) (*tls.Config, error) {
+	fmt.Println("--tlsCfg--", cfg)
 	if cfg == nil {
 		return nil, nil
 	}
@@ -313,5 +314,6 @@ func getTlsConfig(cfg *TlsConfig) (*tls.Config, error) {
 	if cfg.ServerName != "" {
 		config.ServerName = cfg.ServerName
 	}
+	fmt.Println("--tls.Config--", config.ServerName)
 	return config, nil
 }

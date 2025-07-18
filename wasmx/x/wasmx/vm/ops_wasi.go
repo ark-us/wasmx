@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -915,11 +916,13 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		start := len(content) - int(totalWritten)
 		newcontent := content[start:]
 		ctx.c.Logger(ctx.c.Ctx).Error(string(newcontent))
+		fmt.Println("--stderr--", string(newcontent))
 	}
 	if openF.path == "stdout" {
 		start := len(content) - int(totalWritten)
 		newcontent := content[start:]
 		LoggerExtended(ctx.c).Debug(string(newcontent))
+		fmt.Println("--stdout--", string(newcontent))
 	}
 
 	returns[0] = int32(0)
