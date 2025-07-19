@@ -203,15 +203,19 @@ func prepareEmailSend(
 	emailstr string,
 	from string,
 	date time.Time,
+	generateMessageId bool,
 ) (string, error) {
 	parts := strings.Split(from, "@")
 	fromUsername := parts[0]
-	messageId, err := GenerateMessageID(opts.Selector+"."+opts.Domain, date)
-	if err != nil {
-		return "", err
+	prepped := emailstr
+	if generateMessageId {
+		messageId, err := GenerateMessageID(opts.Selector+"."+opts.Domain, date)
+		if err != nil {
+			return "", err
+		}
+		prepped = fmt.Sprintf("Message-ID: <%s>\r\n", messageId) + emailstr
 	}
-	prepped := fmt.Sprintf("Message-ID: <%s>\r\n", messageId) + emailstr
-	prepped, err = signDkim(opts, prepped, fromUsername)
+	prepped, err := signDkim(opts, prepped, fromUsername)
 	if err != nil {
 		return "", fmt.Errorf("signDkim: %s", err.Error())
 	}

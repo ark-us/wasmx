@@ -393,7 +393,6 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 		RawEmail     []byte `json:"raw_email"`
 	}
 	// var emails []EmailWrite
-	fmt.Println("--tinygo.HandleFetch--", string(resp.Data))
 	if err := json.Unmarshal(resp.Data, &emails); err != nil {
 		fmt.Println("--tinygo.HandleFetch unmarshal--", err)
 		return nil, err
@@ -401,7 +400,6 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 
 	results := make([]map[string]interface{}, 0, len(emails))
 	for _, e := range emails {
-		fmt.Println("--tinygo.HandleFetch email--", e)
 		flags := []string{}
 		if e.Flags != "" {
 			flags = strings.Split(e.Flags, " ")
@@ -424,9 +422,7 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 			"envelope":      envelope,
 			"raw_email":     e.RawEmail,
 		})
-		fmt.Println("--tinygo.HandleFetch results--", results)
 	}
-	fmt.Println("--tinygo.HandleFetch results--", len(results))
 	return json.Marshal(results)
 }
 

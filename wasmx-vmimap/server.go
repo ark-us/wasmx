@@ -48,7 +48,6 @@ func parseResponse(bz []byte, err error) ([]byte, *imap.Error, error) {
 		return nil, nil, err
 	}
 	resp := &Response{}
-	fmt.Println("--parseResponse resp--", string(bz))
 	err = json.Unmarshal(bz, resp)
 	if err != nil {
 		return nil, nil, err
@@ -340,7 +339,7 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.Fetch--", err, string(res))
+	fmt.Println("-imap.Session.Fetch err--")
 	if err != nil {
 		return err
 	}
@@ -361,9 +360,6 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 
 	// Write each fetched message
 	for _, m := range messages {
-		fmt.Println("-imap.Session.Fetch message--", m)
-		fmt.Println("-imap.Session.Fetch message envelope--", m.Envelope)
-
 		msg := w.CreateMessage(m.SeqNum)
 		// msg.WriteBinarySection()
 		// msg.WriteBinarySectionSize()
@@ -636,8 +632,8 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldataServer) ([]byte, err
 		Msg:        msgbz,
 	}
 	_, resp, err := ctx.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
-	fmt.Println("--HandleServerReentry resp---", err, string(resp))
 	if err != nil {
+		fmt.Println("--HandleServerReentry resp---", err, string(resp))
 		ctx.Ctx.Logger().Error(err.Error())
 		return nil, err
 	}
@@ -647,7 +643,7 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldataServer) ([]byte, err
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--HandleServerReentry resp2---", string(rres.Data))
+	// fmt.Println("--HandleServerReentry resp2---", string(rres.Data))
 
 	return rres.Data, nil
 }

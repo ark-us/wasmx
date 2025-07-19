@@ -44,9 +44,10 @@ type ReentryCalldata struct {
 }
 
 type IncomingEmailRequest struct {
-	From     []string `json:"from"`
-	To       []string `json:"to"`
-	EmailRaw []byte   `json:"email_raw"`
+	ConnectionId string
+	From         []string `json:"from"`
+	To           []string `json:"to"`
+	EmailRaw     []byte   `json:"email_raw"`
 }
 
 type ConnectRequest struct {

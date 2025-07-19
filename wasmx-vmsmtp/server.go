@@ -14,25 +14,28 @@ import (
 )
 
 type backend struct {
-	ctx  *Context
-	auth bool
+	ctx          *Context
+	auth         bool
+	connectionId string
 }
 
 func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 	// TODO implement reject policy
 	// conn.Reject()
 	fmt.Println("--smtpbackend.NewSession--", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
+	sess := Session{ctx: b.ctx, ConnectionId: b.connectionId}
 	if b.auth {
-		return &AuthSession{Session: Session{ctx: b.ctx}}, nil
+		return &AuthSession{Session: sess}, nil
 	}
-	return &Session{ctx: b.ctx}, nil
+	return &sess, nil
 }
 
 type Session struct {
-	ctx      *Context
-	From     []string `json:"from"`
-	To       []string `json:"to"`
-	EmailRaw []byte   `json:"email_raw"`
+	ConnectionId string
+	ctx          *Context
+	From         []string `json:"from"`
+	To           []string `json:"to"`
+	EmailRaw     []byte   `json:"email_raw"`
 }
 
 type AuthSession struct {
@@ -48,7 +51,7 @@ func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
 	return nil
 }
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
-	fmt.Println("--Session.Rcpt--", to, opts)
+	fmt.Println("--smtp.Session.Rcpt--", to, opts)
 	if opts != nil {
 		fmt.Println("--Session.Rcpt opts--", opts.OriginalRecipient, opts.OriginalRecipientType, opts.Notify)
 	}
@@ -62,10 +65,10 @@ func (s *Session) Data(r io.Reader) error {
 	return nil
 }
 func (*Session) Reset() {
-	fmt.Println("--Session.Reset--")
+	fmt.Println("--smtp.Session.Reset--")
 }
 func (s *Session) Logout() error {
-	fmt.Println("--Session.Logout--")
+	fmt.Println("--smtp.Session.Logout--")
 	s.ctx.HandleIncomingEmail(*s)
 	return nil
 }
@@ -100,8 +103,8 @@ func (s *AuthSession) Auth(mech string) (sasl.Server, error) {
 	}
 }
 
-func NewServer(cfg ServerConfig, ctx *Context) (*smtp.Server, error) {
-	s := smtp.NewServer(&backend{ctx: ctx, auth: cfg.EnableAuth})
+func NewServer(cfg ServerConfig, ctx *Context, connectionId string) (*smtp.Server, error) {
+	s := smtp.NewServer(&backend{ctx: ctx, auth: cfg.EnableAuth, connectionId: connectionId})
 	s.Network = "tcp"
 	s.Addr = ":25"
 	s.ReadTimeout = 10 * time.Second
@@ -211,6 +214,7 @@ func startGoRoutine(
 }
 
 func (ctx *Context) HandleIncomingEmail(s Session) {
+	fmt.Println("--smtp.HandleIncomingEmail--")
 	msg := &ReentryCalldata{
 		IncomingEmail: &s}
 
@@ -235,6 +239,7 @@ func (ctx *Context) HandleIncomingEmail(s Session) {
 }
 
 func (ctx *Context) HandleServerReentry(msg *ReentryCalldata) ([]byte, error) {
+	fmt.Println("--smtp.HandleServerReentry--")
 	msgbz, err := json.Marshal(msg)
 	if err != nil {
 		ctx.Ctx.Logger().Error("cannot marshal reentry request", "error", err.Error())
@@ -252,7 +257,7 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldata) ([]byte, error) {
 		Msg:        msgbz,
 	}
 	_, resp, err := ctx.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
-	fmt.Println("--HandleServerReentry resp---", err, string(resp))
+	fmt.Println("--smtp.HandleServerReentry resp---", err, string(resp))
 	if err != nil {
 		ctx.Ctx.Logger().Error(err.Error())
 		return nil, err
@@ -263,7 +268,7 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldata) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--HandleServerReentry resp2---", string(rres.Data))
+	fmt.Println("--smtp.HandleServerReentry resp2---", string(rres.Data))
 
 	return rres.Data, nil
 }

@@ -144,8 +144,14 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	return prepareResponse(rnh, response)
 }
 
-func closeConnection(vctx *SmtpContext, conn *SmtpOpenConnection, connId string) error {
-	err := conn.Client.Quit()
+func closeConnection(vctx *SmtpContext, conn *SmtpOpenConnection, connId string) (err error) {
+	// for closing channel errors when already closed
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("closing connection: %v", r)
+		}
+	}()
+	err = conn.Client.Quit()
 	if err != nil {
 		err = conn.Client.Close()
 	}
@@ -474,7 +480,7 @@ func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		response.Error = "already started"
 		return prepareResponse(rnh, response)
 	}
-	s, err := NewServer(req.ServerConfig, ctx)
+	s, err := NewServer(req.ServerConfig, ctx, req.ConnectionId)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)

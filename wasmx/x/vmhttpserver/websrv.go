@@ -103,6 +103,8 @@ func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, 
 		EntryPoint: ENTRY_POINT_HTTP_SERVER,
 		Msg:        httpReqBz,
 	}
+	// TODO use action executor directly to eliminate race conditions
+	// TODO use action executor for all reentries
 	_, resp, err := k.coreHandler.ExecuteCosmosMsg(msg)
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "http server incoming request execution failed")

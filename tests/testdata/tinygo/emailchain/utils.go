@@ -1,14 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"crypto"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/loredanacirstea/emailchain/imap"
+	"github.com/loredanacirstea/mailverif/dkim"
+	"github.com/loredanacirstea/mailverif/utils"
 )
 
 func ToPrivateKey(keyType string, pk []byte) crypto.Signer {
@@ -86,3 +91,19 @@ func GetAttrs(folder string) []imap.MailboxAttr {
 
 func PtrUint32(v uint32) *uint32 { return &v }
 func PtrInt64(v int64) *int64    { return &v }
+
+func extractHeaders(raw []byte, headers []string) ([]string, error) {
+	msg := strings.NewReader(string(raw))
+	hdrs, _, err := utils.ParseHeaders(bufio.NewReader(&utils.AtReader{R: msg}))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", dkim.ErrHeaderMalformed, err)
+	}
+	values := make([]string, len(headers))
+	for _, h := range hdrs {
+		ndx := slices.Index(headers, h.Key)
+		if ndx > -1 {
+			values[ndx] = h.GetValueTrimmed()
+		}
+	}
+	return values, nil
+}

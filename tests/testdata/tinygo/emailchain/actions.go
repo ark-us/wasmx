@@ -168,16 +168,66 @@ func CreateAccount(req *CreateAccountRequest) {
 }
 
 func IncomingEmail(req *IncomingEmailRequest) {
+	if len(req.From) == 0 {
+		wasmx.Revert([]byte("incoming email: empty from"))
+	}
 	err := ConnectSql(ConnectionId)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	for _, to := range req.To {
-		err = StoreEmail(to, req.From, req.EmailRaw, ConnectionId, FolderInbox)
+
+	if req.ConnectionId == PortSmtpDirectAddr {
+		for _, to := range req.To {
+			err = StoreEmail(to, req.From, req.EmailRaw, ConnectionId, FolderInbox)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	} else {
+		// this is an email sent by an email client to our smtp server
+		errs := SendRawEmail(req.From[0], req.To, req.EmailRaw)
+		if err != nil {
+			fmt.Println(errs)
+		}
+		err = StoreEmail(req.From[0], []string{}, req.EmailRaw, ConnectionId, FolderSent)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
+
+}
+
+func SendRawEmail(from string, tos []string, emailRaw []byte) []error {
+	errs := []error{}
+	opts := LoadDkimKey()
+	if opts == nil {
+		errs = append(errs, fmt.Errorf("no dkim keys"))
+		return errs
+	}
+	for _, to := range tos {
+		vals, err := extractHeaders(emailRaw, []string{vmimap.HEADER_MESSAGE_ID})
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		generateMessageId := len(vals) == 0
+		prepped, err := prepareEmailSend(*opts, string(emailRaw), from, time.Now(), generateMessageId)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		err = sendEmailInternal(from, to, prepped, MailServerDomain, DefaultNetworkType)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		err = StoreEmail(from, []string{}, []byte(prepped), ConnectionId, FolderSent)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
 }
 
 func SendEmail(req *BuildAndSendMailRequest) []string {
@@ -220,7 +270,7 @@ func SendEmail(req *BuildAndSendMailRequest) []string {
 	}
 	fmt.Println("---SEND EMAIL-----", req.To)
 	for _, to := range req.To {
-		prepped, err := prepareEmailSend(*opts, emailstr, req.From, req.Date)
+		prepped, err := prepareEmailSend(*opts, emailstr, req.From, req.Date, true)
 		if err != nil {
 			errs = append(errs, err.Error())
 			fmt.Println("---prepareEmailSend err-----", err)

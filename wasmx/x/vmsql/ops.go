@@ -356,7 +356,6 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	}
 
 	resp, err := RowsToJSON(rows)
-	fmt.Println("--RowsToJSON err--", err, string(resp))
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -370,7 +369,7 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--prepareResponse--", string(responsebz))
+	// fmt.Println("--prepareResponse--", string(responsebz))
 	return rnh.AllocateWriteMem(responsebz)
 }
 
