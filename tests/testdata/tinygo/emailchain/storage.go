@@ -276,10 +276,10 @@ func extractEmail(raw []byte) (*EmailWrite, error) {
 	timestamp := time.Now()
 	for _, h := range hdrs {
 		switch h.LKey {
-		case "subject":
+		case imap.HEADER_LOW_SUBJECT:
 			subject = h.GetValueTrimmed()
 			envelope.Subject = subject
-		case "date":
+		case imap.HEADER_LOW_DATE:
 			v := h.GetValueTrimmed()
 			fmt.Println("--date---", v)
 			t, err := ParseEmailDate(v)
@@ -290,49 +290,60 @@ func extractEmail(raw []byte) (*EmailWrite, error) {
 			timestamp = t
 			envelope.Date = timestamp
 			fmt.Println("--date2---", timestamp)
-		case "message-id":
+		case imap.HEADER_LOW_MESSAGE_ID:
 			v := h.GetValueTrimmed()
 			messageId = strings.Trim(v, "<>")
 			envelope.MessageID = messageId
-		case "dkim-signature":
+		case imap.HEADER_LOW_DKIM_SIGNATURE:
 			parts := strings.Split(string(h.GetValueTrimmed()), "; ")
 			for _, p := range parts {
 				if p[0:3] == "bh=" {
 					bh = p[3:]
 				}
 			}
-		case "from":
+		case imap.HEADER_LOW_FROM:
 			valuestr := h.GetValueTrimmed()
 			v, err := imap.ParseEmailAddresses(valuestr)
 			if err != nil {
 				return nil, err
 			}
 			envelope.From = v
-		case "to":
+		case imap.HEADER_LOW_TO:
 			valuestr := h.GetValueTrimmed()
 			v, err := imap.ParseEmailAddresses(valuestr)
 			if err != nil {
 				return nil, err
 			}
 			envelope.To = v
-		case "cc":
+		case imap.HEADER_LOW_CC:
 			valuestr := h.GetValueTrimmed()
 			v, err := imap.ParseEmailAddresses(valuestr)
 			if err != nil {
 				return nil, err
 			}
 			envelope.Cc = v
-		case "bcc":
+		case imap.HEADER_LOW_BCC:
 			valuestr := h.GetValueTrimmed()
 			v, err := imap.ParseEmailAddresses(valuestr)
 			if err != nil {
 				return nil, err
 			}
 			envelope.Bcc = v
-		case "inreplyto":
+		case imap.HEADER_LOW_IN_REPLY_TO:
 			v := h.GetValueTrimmed()
-			messageId = strings.Trim(v, "<>")
-			envelope.InReplyTo = []string{messageId}
+			fmt.Println("--HEADER_LOW_IN_REPLY_TO--", v)
+			inReplyTo := strings.Trim(v, "<>")
+			envelope.InReplyTo = []string{inReplyTo}
+			fmt.Println("--envelope.InReplyTo--", envelope.InReplyTo)
+		case imap.HEADER_LOW_REPLY_TO:
+			valuestr := h.GetValueTrimmed()
+			fmt.Println("--HEADER_LOW_REPLY_TO--", valuestr)
+			v, err := imap.ParseEmailAddresses(valuestr)
+			if err != nil {
+				return nil, err
+			}
+			envelope.ReplyTo = v
+			fmt.Println("--envelope.ReplyTo--", envelope.ReplyTo)
 		default:
 			continue
 		}

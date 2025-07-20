@@ -215,6 +215,9 @@ func startGoRoutine(
 
 func (ctx *Context) HandleIncomingEmail(s Session) {
 	fmt.Println("--smtp.HandleIncomingEmail--")
+	if s.From == nil || s.To == nil || s.EmailRaw == nil {
+		return
+	}
 	msg := &ReentryCalldata{
 		IncomingEmail: &s}
 

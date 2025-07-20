@@ -408,8 +408,8 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 		envelope := vmimap.Envelope{}
 		fmt.Println("--tinygo.HandleFetch envelope--", e.Envelope)
 		err = json.Unmarshal([]byte(e.Envelope), &envelope)
-		fmt.Println("--tinygo.HandleFetch envelope unmarshal err--", err)
 		if err != nil {
+			fmt.Println("--tinygo.HandleFetch envelope unmarshal err--", err)
 			return nil, err
 		}
 		results = append(results, map[string]interface{}{
