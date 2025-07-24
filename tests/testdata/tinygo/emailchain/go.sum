@@ -4,8 +4,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/emersion/go-message v0.18.2 h1:rl55SQdjd9oJcIoQNhubD2Acs1E6IzlZISRTK7x/Lpg=
 github.com/emersion/go-message v0.18.2/go.mod h1:XpJyL70LwRvq2a8rVbHXikPgKj8+aI0kGdHlg16ibYA=
-github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47 h1:lhSfmzJsHaNhFH/Qd/bvQVaTUKSvj5rGKeGJkhdAuB0=
-github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47/go.mod h1:ZnRIO4pInpWQvxheA0j6XUEs6oqnkDAKx9v3bdJuU5s=
+github.com/loredanacirstea/mailverif v0.0.0-20250724095230-4fa78649a536 h1:l0AIs0SstZgtmm5e05qwIDodAA+AOxpY2MxIyXXOzHo=
+github.com/loredanacirstea/mailverif v0.0.0-20250724095230-4fa78649a536/go.mod h1:ZnRIO4pInpWQvxheA0j6XUEs6oqnkDAKx9v3bdJuU5s=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=

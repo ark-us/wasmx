@@ -66,7 +66,7 @@ func forward(value string, addrs []string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.Call(address, nil, calldata, big.NewInt(1000000))
+	success, data := wasmx.Call(wasmx.Bech32String(address), nil, calldata, big.NewInt(1000000))
 	if !success {
 		panic("[go] call failed")
 	}
@@ -82,7 +82,7 @@ func forwardGet(addrs []string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.CallStatic(address, calldata, big.NewInt(1000000))
+	success, data := wasmx.CallStatic(wasmx.Bech32String(address), calldata, big.NewInt(1000000))
 	if !success {
 		panic("[go] call_static failed")
 	}

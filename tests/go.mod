@@ -370,8 +370,6 @@ replace github.com/loredanacirstea/wasmx-vmsmtp => ../wasmx-vmsmtp
 
 // replace github.com/loredanacirstea/wasmx-utils => ./testdata/tinygo/wasmx-utils
 
-require github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47
-
-// github.com/loredanacirstea/mailverif@a372606d8d4716e5cf2cc71979c378d9aacaa1da
+// github.com/loredanacirstea/mailverif@4fa78649a536433052c17efd4e391d2b69f490ec
 // replace github.com/loredanacirstea/mailverif => ../../mailverif
-replace github.com/loredanacirstea/mailverif => github.com/loredanacirstea/mailverif v0.0.0-20250702112238-a372606d8d47
+require github.com/loredanacirstea/mailverif v0.0.0-20250724095230-4fa78649a536

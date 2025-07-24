@@ -20,11 +20,8 @@ func main() {
 	}
 	response := []byte{}
 
-	if calld.ConnectWithPassword != nil {
-		resp := vmimap.ConnectWithPassword(calld.ConnectWithPassword)
-		response, err = json.Marshal(&resp)
-	} else if calld.ConnectOAuth2 != nil {
-		resp := vmimap.ConnectOAuth2(calld.ConnectOAuth2)
+	if calld.Connect != nil {
+		resp := vmimap.Connect(calld.Connect)
 		response, err = json.Marshal(&resp)
 	} else if calld.Close != nil {
 		resp := vmimap.Close(calld.Close)

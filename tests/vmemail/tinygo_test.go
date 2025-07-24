@@ -487,18 +487,16 @@ func ARCSignAndVerify(t *testing.T, options *SignOptions, emailStr string, mailf
 		BodyRelaxed:   options.BodyRelaxed,
 	}
 	selectors := []dkim.Selector{sel}
-	r := strings.NewReader(emailStr)
-	headers, err := arc.Sign(logger, &DNSResolver{}, domain, selectors, false, r, mailfrom, ip, mailServerDomain, false, false, now, pubk)
+	headers, err := arc.Sign(logger, &DNSResolver{}, domain, selectors, false, []byte(emailStr), mailfrom, ip, false, false, now, pubk)
 	require.NoError(t, err, "Expected no error while signing mail")
 	slices.Reverse(headers)
 	signedEmail := dkimUtils.SerializeHeaders(headers) + emailStr
-	r = strings.NewReader(signedEmail)
 
 	fmt.Println("=======ARCSigned")
 	fmt.Println(signedEmail)
 	fmt.Println("=======END ARCSigned")
 
-	resARC, err := arc.Verify(logger, &DNSResolver{}, false, r, false, true, now, pubk)
+	resARC, err := arc.Verify(logger, &DNSResolver{}, false, []byte(signedEmail), false, true, now, pubk)
 	require.NoError(t, err)
 	return signedEmail, resARC
 }
@@ -754,8 +752,7 @@ var timeNow = func() time.Time {
 func verifyEmail(emailText string, pubk *dkim.Record) ([]dkim.Result, *arc.ArcResult, error) {
 	fmt.Println("--DKIM verify--")
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	r := strings.NewReader(emailText)
-	results, err := dkim.Verify2(logger, &DNSResolver{}, false, dkim.DefaultPolicy, r, false, true, timeNow, pubk)
+	results, err := dkim.Verify2(logger, &DNSResolver{}, false, dkim.DefaultPolicy, []byte(emailText), false, false, true, timeNow, pubk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -763,7 +760,7 @@ func verifyEmail(emailText string, pubk *dkim.Record) ([]dkim.Result, *arc.ArcRe
 	fmt.Println("--DKIM verify END--")
 
 	fmt.Println("--ARC verify--")
-	resARC, err := arc.Verify(logger, &DNSResolver{}, false, r, false, true, now, pubk)
+	resARC, err := arc.Verify(logger, &DNSResolver{}, false, []byte(emailText), false, true, now, pubk)
 	if err != nil {
 		return nil, nil, err
 	}

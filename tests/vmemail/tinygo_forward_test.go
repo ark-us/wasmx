@@ -70,7 +70,6 @@ func TestEmailTinyGoVerifyDKIM(t *testing.T) {
 		Pubkey:    testPrivateKey.PublicKey.N.Bytes(),
 	}
 
-	r := strings.NewReader(mailString)
 	now := func() time.Time {
 		return time.Unix(424242, 0)
 	}
@@ -86,7 +85,7 @@ func TestEmailTinyGoVerifyDKIM(t *testing.T) {
 		Domain:     dnsMox.Domain{ASCII: "football"},
 	}
 	selectors := []dkimMox.Selector{sel}
-	header, err := dkimMox.Sign2(logger, identif, domain, selectors, false, r, now)
+	header, err := dkimMox.Sign2(logger, identif, domain, selectors, false, []byte(mailString), now)
 	require.NoError(t, err)
 
 	newemailstr := utilsMox.SerializeHeaders(header) + mailString
