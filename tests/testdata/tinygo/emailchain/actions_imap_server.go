@@ -7,11 +7,15 @@ import (
 	"time"
 
 	imap "github.com/loredanacirstea/emailchain/imap"
+	"github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	sql "github.com/loredanacirstea/wasmx-env-sql"
 )
 
 func HandleLogin(req *LoginRequest) ([]byte, error) {
+	if req.Password != "123456" {
+		wasmx.Revert([]byte(`unauthorized`))
+	}
 	// err := ConnectSql(ConnectionId)
 	// if err != nil {
 	// 	return nil, err
@@ -331,73 +335,13 @@ type Range struct {
 }
 
 func HandleFetch(req *FetchRequest) ([]byte, error) {
-	if len(req.UidSet) == 0 && len(req.SeqSet) == 0 {
-		return json.Marshal([]interface{}{}) // empty result
-	}
-	field := "uid"
-	ranges := make([]Range, 0)
-	if len(req.UidSet) > 0 {
-		for _, v := range req.UidSet {
-			ranges = append(ranges, Range{Start: int(v.Start), Stop: int(v.Stop)})
-		}
-	} else {
-		field = "seq_num"
-		for _, v := range req.SeqSet {
-			ranges = append(ranges, Range{Start: int(v.Start), Stop: int(v.Stop)})
-		}
-	}
-	rangeClause, rangeParams, err := buildRangeClause(req.Username, req.Mailbox, field, ranges)
+	emails, err := GetEmails(req)
 	if err != nil {
 		return nil, err
 	}
-
-	params := []sql.SqlQueryParam{
-		{Type: "text", Value: req.Username},
+	if len(emails) == 0 {
+		return json.Marshal([]interface{}{})
 	}
-	params = append(params, rangeParams...)
-
-	if len(rangeClause) > 0 {
-		rangeClause = fmt.Sprintf(`AND (%s)`, rangeClause)
-	}
-
-	query := fmt.Sprintf(`
-		SELECT seq_num, uid, flags, internal_date, size, body, subject, envelope, raw_email
-		FROM emails
-		WHERE owner = ? %s
-		ORDER BY %s ASC;
-	`, rangeClause, field)
-
-	pbz, err := paramsMarshal(params)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := sql.Query(&sql.SqlQueryRequest{
-		Id:     ConnectionId,
-		Query:  query,
-		Params: pbz,
-	})
-	if resp.Error != "" {
-		return nil, fmt.Errorf(resp.Error)
-	}
-
-	var emails []struct {
-		SeqNum       int    `json:"seq_num"`
-		UID          int    `json:"uid"`
-		Flags        string `json:"flags"`
-		InternalDate int64  `json:"internal_date"`
-		Size         int    `json:"size"`
-		Body         string `json:"body"`
-		Subject      string `json:"subject"`
-		Envelope     string `json:"envelope"`
-		RawEmail     []byte `json:"raw_email"`
-	}
-	// var emails []EmailWrite
-	if err := json.Unmarshal(resp.Data, &emails); err != nil {
-		fmt.Println("--tinygo.HandleFetch unmarshal--", err)
-		return nil, err
-	}
-
 	results := make([]map[string]interface{}, 0, len(emails))
 	for _, e := range emails {
 		flags := []string{}
@@ -532,7 +476,7 @@ func HandleCopy(req *CopyRequest) ([]byte, error) {
 			{Type: "integer", Value: seq},
 			{Type: "text", Value: email.MessageID},
 			{Type: "text", Value: email.Subject},
-			{Type: "integer", Value: email.InternalDate.Unix()},
+			{Type: "integer", Value: email.InternalDate},
 			{Type: "text", Value: email.Bh},
 			{Type: "text", Value: email.Body},
 			{Type: "blob", Value: email.RawEmail},
@@ -694,4 +638,63 @@ func GetFolderStatus(username string, mailbox string, folderState *FolderState) 
 		DeletedStorage: PtrInt64(int64(0)),
 		HighestModSeq:  uint64(0),
 	}, nil
+}
+
+func GetEmails(req *FetchRequest) ([]EmailRead, error) {
+	if len(req.UidSet) == 0 && len(req.SeqSet) == 0 {
+		return nil, nil
+	}
+	field := "uid"
+	ranges := make([]Range, 0)
+	if len(req.UidSet) > 0 {
+		for _, v := range req.UidSet {
+			ranges = append(ranges, Range{Start: int(v.Start), Stop: int(v.Stop)})
+		}
+	} else {
+		field = "seq_num"
+		for _, v := range req.SeqSet {
+			ranges = append(ranges, Range{Start: int(v.Start), Stop: int(v.Stop)})
+		}
+	}
+	rangeClause, rangeParams, err := buildRangeClause(req.Username, req.Mailbox, field, ranges)
+	if err != nil {
+		return nil, err
+	}
+
+	params := []sql.SqlQueryParam{
+		{Type: "text", Value: req.Username},
+	}
+	params = append(params, rangeParams...)
+
+	if len(rangeClause) > 0 {
+		rangeClause = fmt.Sprintf(`AND (%s)`, rangeClause)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT *
+		FROM emails
+		WHERE owner = ? %s
+		ORDER BY %s ASC;
+	`, rangeClause, field)
+
+	pbz, err := paramsMarshal(params)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := sql.Query(&sql.SqlQueryRequest{
+		Id:     ConnectionId,
+		Query:  query,
+		Params: pbz,
+	})
+	if resp.Error != "" {
+		return nil, fmt.Errorf(resp.Error)
+	}
+
+	var emails []EmailRead
+	if err := json.Unmarshal(resp.Data, &emails); err != nil {
+		fmt.Println("--tinygo.HandleFetch unmarshal--", err)
+		return nil, err
+	}
+	return emails, nil
 }

@@ -151,12 +151,14 @@ func closeConnection(vctx *SmtpContext, conn *SmtpOpenConnection, connId string)
 			err = fmt.Errorf("closing connection: %v", r)
 		}
 	}()
+	// first remove the connection from the mapping, so another
+	// connection can be started even before closing the client ends
+	vctx.DeleteConnection(connId)
 	err = conn.Client.Quit()
 	if err != nil {
 		err = conn.Client.Close()
 	}
 	close(conn.Closed) // signal closing the database
-	vctx.DeleteConnection(connId)
 	return err
 }
 

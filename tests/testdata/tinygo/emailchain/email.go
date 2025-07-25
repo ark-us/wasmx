@@ -209,7 +209,7 @@ func prepareEmailSend(
 	fromUsername := parts[0]
 	prepped := emailstr
 	if generateMessageId {
-		messageId, err := GenerateMessageID(opts.Selector+"."+opts.Domain, date)
+		messageId, err := BuildMessageID(opts, date)
 		if err != nil {
 			return "", err
 		}
@@ -224,7 +224,6 @@ func prepareEmailSend(
 
 func signDkim(opts SignOptions, emailstr string, username string) (string, error) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	r := strings.NewReader(emailstr)
 	identif := utils.Localpart(username)
 	domain := dns.Domain{ASCII: opts.Domain}
 	key := ToPrivateKey(opts.PrivateKeyType, opts.PrivateKey)
@@ -237,7 +236,7 @@ func signDkim(opts SignOptions, emailstr string, username string) (string, error
 		BodyRelaxed:   true,
 	}
 	selectors := []dkim.Selector{sel}
-	header, err := dkim.Sign2(logger, identif, domain, selectors, false, r, time.Now)
+	header, err := dkim.Sign2(logger, identif, domain, selectors, false, []byte(emailstr), time.Now)
 	if err != nil {
 		return "", fmt.Errorf("dkim.Sign2: %s", err.Error())
 	}
@@ -287,13 +286,13 @@ func sendEmailInternal(
 			TlsConfig:   tlsConfig,
 		})
 		if connResp.Error != "" {
-			log.Printf("Failed to connect to %s: %v", addr, err)
+			log.Printf("Failed to connect to %s: %v", addr, connResp.Error)
 			continue
 		}
 		hresp := vmsmtp.Hello(&vmsmtp.SmtpHelloRequest{Id: mxHost, LocalName: mailServerDomain})
 		fmt.Println("--tinygo.Hello hresp----", hresp)
 		if hresp.Error != "" {
-			log.Printf("EHLO/HELO failed: %v", err)
+			log.Printf("EHLO/HELO failed: %v", hresp.Error)
 			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
 			continue
 		}
@@ -305,9 +304,9 @@ func sendEmailInternal(
 			Email: []byte(emailstr),
 		})
 		if sendresp.Error != "" {
-			log.Println("Email send failed: ", err)
+			log.Println("Email send failed: ", sendresp.Error)
 			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
-			return err
+			return fmt.Errorf(sendresp.Error)
 		}
 		vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
 		log.Println("Email sent successfully to", to)

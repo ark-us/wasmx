@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,6 +16,8 @@ import (
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+
+	imap "github.com/emersion/go-imap/v2"
 
 	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
 	"github.com/loredanacirstea/mythos-tests/vmemail/testdata"
@@ -80,8 +83,8 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	msg := &EmailChainCalldata{
 		StartServer: &StartServerRequest{
 			SignOptions: SignOptions{
-				Domain:         "provable.dev",
-				Selector:       "dmail",
+				Domain:         "dmail.provable.dev",
+				Selector:       "2025a",
 				PrivateKeyType: "rsa",
 				PrivateKey:     []byte(testPrivateKeyPEM),
 				Identifier:     "",
@@ -110,7 +113,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	res := appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 	fmt.Println("--start server--", string(res.Data))
 
-	// create test account
+	// create test account1
 	msg = &EmailChainCalldata{
 		CreateAccount: &CreateAccountRequest{
 			Username: "test@dmail.provable.dev",
@@ -120,6 +123,87 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
 	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	fmt.Println("--create test account1--", string(res.Data))
+
+	// create test account2
+	msg = &EmailChainCalldata{
+		CreateAccount: &CreateAccountRequest{
+			Username: "test2@dmail.provable.dev",
+			Password: "123456",
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	fmt.Println("--create test account2--", string(res.Data))
+
+	// create test account3
+	msg = &EmailChainCalldata{
+		CreateAccount: &CreateAccountRequest{
+			Username: "test3@dmail.provable.dev",
+			Password: "123456",
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	fmt.Println("--create test account3--", string(res.Data))
+
+	// send email from account1 to account2
+	msg = &EmailChainCalldata{
+		SendEmail: &BuildAndSendMailRequest{
+			From:    "test@dmail.provable.dev",
+			To:      []string{"test2@dmail.provable.dev"},
+			Subject: "this is an email",
+			Body:    []byte(`a first email`),
+			Date:    time.Now(),
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	fmt.Println("--send email test -> test2--", string(res.Data))
+
+	// wait for email to be received
+	time.Sleep(time.Second * 3)
+
+	// forward email from account2 to account3
+	msg = &EmailChainCalldata{
+		ForwardEmail: &ForwardEmailRequest{
+			From:              AddressFromString("test2@dmail.provable.dev", "Test2 Test2"),
+			To:                []imap.Address{AddressFromString("test3@dmail.provable.dev", "Test3 Test3")},
+			Folder:            "INBOX",
+			Uid:               1,
+			Timestamp:         time.Now(),
+			AdditionalSubject: "this is an email",
+			SendEmail:         true,
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 958152876, nil)
+	fmt.Println("--send email test2 -> test3--", string(res.Data))
+
+	// wait for email to be received
+	time.Sleep(time.Second * 3)
+
+	// forward email from account3 to account1
+	msg = &EmailChainCalldata{
+		ForwardEmail: &ForwardEmailRequest{
+			From: AddressFromString("test3@dmail.provable.dev", "Test3 Test3"),
+			// To:                []imap.Address{AddressFromString("test@dmail.provable.dev", "Test Test")},
+			To:                []imap.Address{AddressFromString("seth.one.info@gmail.com", "Seth Info")},
+			Folder:            "INBOX",
+			Uid:               1,
+			Timestamp:         time.Now(),
+			AdditionalSubject: "addl subject 2",
+			SendEmail:         true,
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 958152876, nil)
+	fmt.Println("--send email test3 -> test--", string(res.Data))
 
 	// // Prepare the VerifyDKIM request
 	// msg = &EmailChainCalldata{

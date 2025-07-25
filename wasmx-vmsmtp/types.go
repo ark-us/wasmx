@@ -74,7 +74,7 @@ func (p *SmtpContext) SetConnection(id string, conn *SmtpOpenConnection) error {
 	defer p.mtx.Unlock()
 	_, found := p.DbConnections[id]
 	if found {
-		return fmt.Errorf("cannot overwrite SMTP connection: %s", id)
+		return fmt.Errorf("cannot overwrite SMTP client connection: %s", id)
 	}
 	p.DbConnections[id] = conn
 	return nil
@@ -98,7 +98,7 @@ func (p *SmtpContext) SetServerConnection(id string, conn *SmtpServerConnection)
 	defer p.mtx.Unlock()
 	_, found := p.ServerConnections[id]
 	if found {
-		return fmt.Errorf("cannot overwrite SMTP connection: %s", id)
+		return fmt.Errorf("cannot overwrite SMTP server connection: %s", id)
 	}
 	p.ServerConnections[id] = conn
 	return nil

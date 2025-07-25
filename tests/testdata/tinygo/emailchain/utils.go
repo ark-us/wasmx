@@ -36,6 +36,10 @@ func ToPrivateKey(keyType string, pk []byte) crypto.Signer {
 	return signer
 }
 
+func BuildMessageID(opts SignOptions, date time.Time) (string, error) {
+	return GenerateMessageID(opts.Selector+"."+opts.Domain, date)
+}
+
 // GenerateMessageID generates a unique RFC 5322-compliant Message-ID.
 // Example: e4cfd38a7bce4fda9a2a4cc21f24a3b2@yourdomain.com
 func GenerateMessageID(domain string, date time.Time) (string, error) {

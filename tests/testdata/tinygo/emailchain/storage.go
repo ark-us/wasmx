@@ -49,13 +49,13 @@ const DefTableEmails = `CREATE TABLE emails (
 	bh VARCHAR NOT NULL,
 	envelope TEXT,
     UNIQUE (owner, folder, uid),
-	UNIQUE (owner, folder, seq_num)
+	UNIQUE (owner, folder, seq_num),
+	UNIQUE (owner, message_id)
 );`
 
 // -- Indexes for fast search and UID operations
 const DefIndexes1 = `CREATE UNIQUE INDEX idx_emails_owner_folder_uid ON emails(owner, folder, uid);`
 const DefIndexes2 = `CREATE INDEX idx_emails_owner_folder_seq_num ON emails(owner, folder, seq_num);`
-const DefIndexes3 = `CREATE UNIQUE INDEX idx_emails_message_id ON emails(message_id);`
 const DefIndexes4 = `CREATE INDEX idx_emails_subject ON emails(owner,subject);`
 const DefIndexes5 = `CREATE INDEX idx_emails_internal_date ON emails(internal_date);`
 
@@ -72,6 +72,10 @@ WHERE owner = ?`
 const ExecGetSeq = `SELECT COALESCE(MAX(seq_num), 0) + 1 AS next_seq_num
 FROM emails
 WHERE owner = ? AND folder = ?;`
+const ExecGetEmailByUid = `SELECT * FROM emails
+WHERE owner = ? AND folder = ? AND uid = ?`
+const ExecGetEmailByMessageId = `SELECT * FROM emails
+WHERE owner = ? AND folder = ? AND message_id = ?`
 const ExecInsertEmail = `INSERT INTO emails (
 	owner, folder, uid, seq_num, message_id, subject, internal_date, bh, body, envelope, raw_email, size
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -112,10 +116,6 @@ func InitializeTables(connId string) {
 			},
 			{
 				Query:  DefIndexes2,
-				Params: sql.Params{},
-			},
-			{
-				Query:  DefIndexes3,
 				Params: sql.Params{},
 			},
 			{
@@ -259,7 +259,7 @@ func paramsMarshal(params []sql.SqlQueryParam) ([][]byte, error) {
 	return res, nil
 }
 
-func extractEmail(raw []byte) (*EmailWrite, error) {
+func extractEmail(raw []byte) (*Email, error) {
 	envelope := imap.Envelope{}
 	msg := strings.NewReader(string(raw))
 	hdrs, bodyOffset, err := utils.ParseHeaders(bufio.NewReader(&utils.AtReader{R: msg}))
@@ -348,7 +348,7 @@ func extractEmail(raw []byte) (*EmailWrite, error) {
 			continue
 		}
 	}
-	return &EmailWrite{
+	return &Email{
 		Subject:      subject,
 		InternalDate: timestamp,
 		RawEmail:     raw,

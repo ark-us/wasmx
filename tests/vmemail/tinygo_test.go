@@ -364,15 +364,16 @@ type SignARCResponse struct {
 }
 
 type ForwardEmailRequest struct {
-	ConnectionId string         `json:"connection_id"`
-	Folder       string         `json:"folder"`
-	Uid          uint32         `json:"uid"`
-	MessageId    string         `json:"message_id"`
-	From         imap.Address   `json:"from"`
-	To           []imap.Address `json:"to"`
-	Options      SignOptions    `json:"options"`
-	Timestamp    time.Time      `json:"timestamp"`
-	SendEmail    bool           `json:"send_email"`
+	ConnectionId      string         `json:"connection_id"`
+	Folder            string         `json:"folder"`
+	Uid               uint32         `json:"uid"`
+	MessageId         string         `json:"message_id"`
+	AdditionalSubject string         `json:"additional_subject"`
+	From              imap.Address   `json:"from"`
+	To                []imap.Address `json:"to"`
+	Options           SignOptions    `json:"options"`
+	Timestamp         time.Time      `json:"timestamp"`
+	SendEmail         bool           `json:"send_email"`
 }
 
 type ForwardEmailResponse struct {
@@ -382,6 +383,19 @@ type ForwardEmailResponse struct {
 
 var now = func() time.Time {
 	return time.Unix(424242, 0)
+}
+
+func AddressFromString(account string, name string) imap.Address {
+	parts := strings.Split(account, "@")
+	return imap.Address{Name: name, Mailbox: parts[0], Host: parts[1]}
+}
+
+func AddressesFromString(accounts []string) []imap.Address {
+	addrs := []imap.Address{}
+	for _, v := range accounts {
+		addrs = append(addrs, AddressFromString(v, ""))
+	}
+	return addrs
 }
 
 func TestSignARCSync1(t *testing.T) {

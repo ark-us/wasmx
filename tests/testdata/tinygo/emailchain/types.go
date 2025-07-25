@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"time"
 
 	"fmt"
@@ -170,17 +171,18 @@ type VerifyARCResponse struct {
 }
 
 type ForwardEmailRequest struct {
-	ConnectionId string           `json:"connection_id"`
-	Folder       string           `json:"folder"`
-	Uid          uint32           `json:"uid"`
-	MessageId    string           `json:"message_id"`
-	From         vmimap.Address   `json:"from"`
-	To           []vmimap.Address `json:"to"`
-	Cc           []vmimap.Address `json:"cc"`
-	Bcc          []vmimap.Address `json:"bcc"`
-	Options      SignOptions      `json:"options"`
-	Timestamp    time.Time        `json:"timestamp"`
-	SendEmail    bool             `json:"send_email"`
+	ConnectionId      string           `json:"connection_id"`
+	Folder            string           `json:"folder"`
+	Uid               uint32           `json:"uid"`
+	MessageId         string           `json:"message_id"`
+	AdditionalSubject string           `json:"additional_subject"`
+	From              vmimap.Address   `json:"from"`
+	To                []vmimap.Address `json:"to"`
+	Cc                []vmimap.Address `json:"cc"`
+	Bcc               []vmimap.Address `json:"bcc"`
+	Options           SignOptions      `json:"options"`
+	Timestamp         time.Time        `json:"timestamp"`
+	SendEmail         bool             `json:"send_email"`
 }
 
 type ForwardEmailResponse struct {
@@ -404,7 +406,7 @@ const (
 	HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE     = "Provable-Forward-Chain-Signature"
 )
 
-type EmailWrite struct {
+type Email struct {
 	Owner        string          `json:"owner"`         // Email owner address
 	Folder       string          `json:"folder"`        // IMAP folder
 	UID          int64           `json:"uid"`           // Unique UID per (owner, folder)
@@ -423,7 +425,51 @@ type EmailWrite struct {
 	// To string `json:"to"`
 }
 
+type EmailWrite struct {
+	Owner        string `json:"owner"`         // Email owner address
+	Folder       string `json:"folder"`        // IMAP folder
+	UID          int64  `json:"uid"`           // Unique UID per (owner, folder)
+	SeqNum       int64  `json:"seq_num"`       // Sequence number within folder
+	MessageID    string `json:"message_id"`    // Email Message-ID
+	Subject      string `json:"subject"`       // Email subject
+	InternalDate int64  `json:"internal_date"` // UNIX timestamp (IMAP INTERNALDATE)
+	Flags        string `json:"flags"`         // Flags like "\Seen \Answered" as space-separated text
+	RawEmail     []byte `json:"raw_email"`     // Full RFC5322 email body
+	Size         int64  `json:"size"`          // Size in bytes (matches RFC822.SIZE)
+	Headers      string `json:"headers"`       // Optional: flattened text of all headers (for search)
+	Body         string `json:"body"`          // Optional: plain body text (for search)
+	Bh           string `json:"bh"`
+	Envelope     string `json:"envelope"`
+	// From string `json:"from"`
+	// To string `json:"to"`
+}
+
 type EmailRead struct {
 	ID int64 `json:"id"` // AUTOINCREMENT primary key
 	EmailWrite
+}
+
+func (v EmailRead) ToEmail() (*Email, error) {
+	envelope := vmimap.Envelope{}
+	err := json.Unmarshal([]byte(v.Envelope), &envelope)
+	if err != nil {
+		return nil, err
+	}
+	t := time.Unix(0, v.InternalDate*int64(time.Millisecond)).UTC()
+	return &Email{
+		Owner:        v.Owner,
+		Folder:       v.Folder,
+		UID:          v.UID,
+		SeqNum:       v.SeqNum,
+		MessageID:    v.MessageID,
+		Subject:      v.Subject,
+		InternalDate: t,
+		Flags:        v.Flags,
+		RawEmail:     v.RawEmail,
+		Size:         v.Size,
+		Headers:      v.Headers,
+		Body:         v.Body,
+		Bh:           v.Bh,
+		Envelope:     envelope,
+	}, nil
 }
