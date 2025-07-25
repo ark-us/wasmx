@@ -288,7 +288,6 @@ func Hello(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		return prepareResponse(rnh, response)
 	}
 	err = conn.Client.Hello(req.LocalName)
-	fmt.Println("==HELLO==", req.Id, "--", req.LocalName, err)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -424,7 +423,6 @@ func SendMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	fmt.Println("=====================")
 
 	err = conn.Client.SendMail(req.From, req.To, msgreader)
-	fmt.Println("--SendMail--", err)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)

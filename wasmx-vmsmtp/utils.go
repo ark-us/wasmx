@@ -5,8 +5,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -201,4 +203,30 @@ func refreshToken(goCtx context.Context, refreshToken string, oauthConfig *oauth
 	}
 
 	return newToken.AccessToken
+}
+
+func isPrivateIP(ip string) bool {
+	parsed := net.ParseIP(ip)
+	privateRanges := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	for _, cidr := range privateRanges {
+		_, network, _ := net.ParseCIDR(cidr)
+		if network.Contains(parsed) {
+			return true
+		}
+	}
+	return false
+}
+
+func getPublicIP() (string, error) {
+	resp, err := http.Get("https://api.ipify.org?format=text")
+	if err != nil {
+		return "", fmt.Errorf("failed to get public IP: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bz, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read public IP response: %w", err)
+	}
+	return strings.TrimSpace(string(bz)), nil
 }

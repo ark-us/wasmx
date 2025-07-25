@@ -17,9 +17,8 @@ func Instantiate() {
 }
 
 func main() {
-	fmt.Println("---main----!!!!!!")
 	databz := wasmx.GetCallData()
-	fmt.Println("---databz----!!!!!!", string(databz))
+	// fmt.Println("---databz----!!!!!!", string(databz))
 	calld := &Calldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
@@ -66,6 +65,9 @@ func main() {
 		CreateAccount(calld.CreateAccount)
 	} else if calld.SendEmail != nil {
 		resp := SendEmail(calld.SendEmail)
+		response, _ = json.Marshal(&resp)
+	} else if calld.BuildAndSend != nil {
+		resp := BuildAndSend(calld.BuildAndSend)
 		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
 		StartServer(calld.StartServer)

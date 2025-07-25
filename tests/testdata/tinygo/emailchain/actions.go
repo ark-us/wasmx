@@ -184,8 +184,39 @@ func IncomingEmail(req *IncomingEmailRequest) {
 	}
 
 	if req.ConnectionId == PortSmtpDirectAddr {
+		// reject emails without messageId/date
+		// reject emails with unregistered sender
 		for _, to := range req.To {
-			err = StoreEmail(to, req.From, req.EmailRaw, ConnectionId, FolderInbox)
+			owners, err := GetAccount(to)
+			if err != nil {
+				wasmx.Revert([]byte(err.Error()))
+				return
+			}
+			if len(owners) == 0 {
+				wasmx.Revert([]byte("invalid account"))
+				return
+			}
+		}
+		email, err := extractEmail(req.EmailRaw)
+		if err != nil {
+			wasmx.Revert([]byte(err.Error()))
+			return
+		}
+		// TODO validate
+		if email.MessageID == "" {
+			wasmx.Revert([]byte("invalid MessageID"))
+			return
+		}
+		if email.InternalDate.UTC().Unix() == 0 {
+			wasmx.Revert([]byte("empty date"))
+			return
+		}
+		// if this a forwarded email, we do a check and add a header with the result
+		timestamp := time.Unix(req.Timestamp, 0).UTC()
+		emailraw := ApplyForwardCheck(req.EmailRaw, timestamp)
+		// TODO get ipfrom from Received headers added by MTAs (Gmail, etc.)
+		for _, to := range req.To {
+			err = StoreEmail(to, req.From, emailraw, req.IpFrom, ConnectionId, FolderInbox)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -204,7 +235,7 @@ func IncomingEmail(req *IncomingEmailRequest) {
 				folder = FolderDraft
 			}
 		}
-		err = StoreEmail(req.From[0], []string{}, req.EmailRaw, ConnectionId, folder)
+		err = StoreEmail(req.From[0], []string{}, req.EmailRaw, "", ConnectionId, folder)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -232,7 +263,7 @@ func SendRawEmail(from string, tos []string, emailRaw []byte, opts SignOptions) 
 			continue
 		}
 
-		err = StoreEmail(from, []string{}, []byte(prepped), ConnectionId, FolderSent)
+		err = StoreEmail(from, []string{}, []byte(prepped), "", ConnectionId, FolderSent)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -240,7 +271,35 @@ func SendRawEmail(from string, tos []string, emailRaw []byte, opts SignOptions) 
 	return errs
 }
 
-func SendEmail(req *BuildAndSendMailRequest) []string {
+func SendEmail(req *SendMailRequest) []string {
+	errs := []string{}
+	err := ConnectSql(ConnectionId)
+	if err != nil {
+		wasmx.Revert([]byte(err.Error()))
+	}
+
+	opts := LoadDkimKey()
+	if opts == nil {
+		wasmx.Revert([]byte("no dkim keys"))
+	}
+	fmt.Println("---SEND EMAIL-----", req.To)
+	for _, to := range req.To {
+		err = sendEmailInternal(req.From.ToAddress(), to.ToAddress(), string(req.EmailRaw), MailServerDomain, DefaultNetworkType)
+		if err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+
+		err = StoreEmail(req.From.ToString(), []string{}, req.EmailRaw, "", ConnectionId, FolderSent)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	fmt.Println("---sending err--", errs)
+	return errs
+}
+
+func BuildAndSend(req *BuildAndSendMailRequest) []string {
 	errs := []string{}
 	// from, err := mail.ParseAddress(req.From)
 	// if err != nil {
@@ -293,7 +352,7 @@ func SendEmail(req *BuildAndSendMailRequest) []string {
 			continue
 		}
 
-		err = StoreEmail(req.From, []string{}, []byte(prepped), ConnectionId, FolderSent)
+		err = StoreEmail(req.From, []string{}, []byte(prepped), "", ConnectionId, FolderSent)
 		if err != nil {
 			fmt.Println("--StoreEmail--", err)
 		}
@@ -464,9 +523,18 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 		BodyRelaxed:   opts.BodyRelaxed,
 	}
 	selectors := []dkim.Selector{sel}
+	dkimSel := dkim.Selector{
+		Hash:          "sha256",
+		PrivateKey:    key,
+		Domain:        dns.Domain{ASCII: opts.Selector},
+		HeaderRelaxed: opts.HeaderRelaxed,
+		BodyRelaxed:   opts.BodyRelaxed,
+		Headers:       strings.Split("From,To,Cc,Bcc,Reply-To,Subject,Date", ","),
+		SealHeaders:   true,
+	}
 	mailfrom := email.Envelope.From[0].ToAddress()
 	timestamp := req.Timestamp
-	ipfrom := "" // TODO
+	ipfrom := email.IpFrom
 	subjectAddl := req.AdditionalSubject
 	from := &mail.Address{Name: req.From.Name, Address: req.From.ToAddress()}
 	to := make([]*mail.Address, len(req.To))
@@ -498,7 +566,7 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 	}
 
 	// also add dkim signature for this instance
-	dkimHeaders, err := dkim.Sign(logger, utils.Localpart(req.From.Mailbox), domain, selectors, false, header, bufio.NewReader(bytes.NewReader(bodyBytes)), timeNow)
+	dkimHeaders, err := dkim.Sign(logger, utils.Localpart(req.From.Mailbox), domain, []dkim.Selector{dkimSel}, false, header, bufio.NewReader(bytes.NewReader(bodyBytes)), timeNow)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
@@ -519,12 +587,10 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 				errs = append(errs, err.Error())
 			}
 		}
-		fmt.Println("---forwarding errs--", errs)
 		if len(errs) > 0 {
 			folder = FolderDraft
 		}
-		fmt.Println("---forwarded--")
-		err = StoreEmail(req.From.ToAddress(), []string{}, []byte(emailstr), ConnectionId, folder)
+		err = StoreEmail(req.From.ToAddress(), []string{}, []byte(emailstr), "", ConnectionId, folder)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
@@ -545,4 +611,34 @@ func requiredSmtpDefaults(cfg vmsmtp.ServerConfig) vmsmtp.ServerConfig {
 	// TODO eventually this should be true
 	cfg.EnableREQUIRETLS = false
 	return cfg
+}
+
+func ApplyForwardCheck(emailraw []byte, timestamp time.Time) []byte {
+	resolver := NewDNSResolver()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	timeNow := func() time.Time {
+		return timestamp
+	}
+
+	res, err := forward.Verify(logger, resolver, false, emailraw, false, false, timeNow, nil)
+	if err != nil {
+		fmt.Println("forward verify: ", err)
+		return emailraw
+	}
+	if res.Result.Err == forward.ErrMsgNotSigned {
+		return emailraw
+	}
+
+	status := string(res.Result.Status)
+	if res.Result.Err != nil {
+		status += fmt.Sprintf(" (%s)", res.Result.Err.Error())
+	}
+	// add header
+	HEADER_FORWARD_CHECK := "Provable-Forward-Check"
+	header := utils.Header{
+		Key:   HEADER_FORWARD_CHECK,
+		Value: []byte(fmt.Sprintf(` %s%s`, status, utils.CRLF)),
+	}
+	header.RebuildRaw()
+	return append(header.Raw, emailraw...)
 }

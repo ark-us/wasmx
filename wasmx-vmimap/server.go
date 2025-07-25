@@ -504,6 +504,7 @@ type backend struct {
 	ctx *Context
 }
 
+// TODO forward requesting IP to contract, so it may implement IP blocks
 func (b *backend) NewSession(conn *imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
 	fmt.Println("--imap.backend.NewSession--", conn.NetConn().LocalAddr(), conn.NetConn().RemoteAddr())
 	// PreAuth is true if session already exists and user is authenticated

@@ -48,6 +48,7 @@ const DefTableEmails = `CREATE TABLE emails (
     body TEXT NOT NULL DEFAULT '',
 	bh VARCHAR NOT NULL,
 	envelope TEXT,
+	ipfrom VARCHAR,
     UNIQUE (owner, folder, uid),
 	UNIQUE (owner, folder, seq_num),
 	UNIQUE (owner, message_id)
@@ -77,8 +78,9 @@ WHERE owner = ? AND folder = ? AND uid = ?`
 const ExecGetEmailByMessageId = `SELECT * FROM emails
 WHERE owner = ? AND folder = ? AND message_id = ?`
 const ExecInsertEmail = `INSERT INTO emails (
-	owner, folder, uid, seq_num, message_id, subject, internal_date, bh, body, envelope, raw_email, size
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	owner, folder, uid, seq_num, message_id, subject, internal_date, bh, body, envelope, raw_email, size, ipfrom
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+const ExecGetOwner = `SELECT * FROM owners WHERE address = ?`
 
 // flags, size, headers,
 
@@ -157,7 +159,7 @@ func checkFolderExists(connId, username, folder string) (bool, error) {
 	return len(resp) > 0, nil
 }
 
-func StoreEmail(owner string, mailfrom []string, emailRaw []byte, connId string, folder string) error {
+func StoreEmail(owner string, mailfrom []string, emailRaw []byte, ipfrom string, connId string, folder string) error {
 	email, err := extractEmail(emailRaw)
 	if err != nil {
 		return err
@@ -210,6 +212,7 @@ func StoreEmail(owner string, mailfrom []string, emailRaw []byte, connId string,
 	email.UID = int64(uid)
 	email.SeqNum = int64(seq)
 	email.Owner = owner
+	email.IpFrom = ipfrom
 	envbz, err := json.Marshal(&email.Envelope)
 	if err != nil {
 		return err
@@ -227,7 +230,8 @@ func StoreEmail(owner string, mailfrom []string, emailRaw []byte, connId string,
 		{Type: "text", Value: email.Body},
 		{Type: "text", Value: string(envbz)},
 		{Type: "blob", Value: email.RawEmail},
-		{Type: "text", Value: len(email.RawEmail)},
+		{Type: "integer", Value: len(email.RawEmail)},
+		{Type: "text", Value: email.IpFrom},
 		// {Type: "text", Value: "INBOX"}, // size
 		// {Type: "text", Value: "INBOX"}, // headers
 		// {Type: "text", Value: email.Flags},
@@ -281,15 +285,12 @@ func extractEmail(raw []byte) (*Email, error) {
 			envelope.Subject = subject
 		case imap.HEADER_LOW_DATE:
 			v := h.GetValueTrimmed()
-			fmt.Println("--date---", v)
 			t, err := ParseEmailDate(v)
-			fmt.Println("--date2---", err, t)
 			if err != nil {
 				fmt.Println("tinygo.emailchain.extractEmail.Date", err)
 			}
 			timestamp = t
 			envelope.Date = timestamp
-			fmt.Println("--date2---", timestamp)
 		case imap.HEADER_LOW_MESSAGE_ID:
 			v := h.GetValueTrimmed()
 			messageId = strings.Trim(v, "<>")
@@ -357,4 +358,31 @@ func extractEmail(raw []byte) (*Email, error) {
 		MessageID:    messageId,
 		Envelope:     envelope,
 	}, nil
+}
+
+func GetAccount(username string) ([]OwnerRead, error) {
+	err := ConnectSql(ConnectionId)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccount: DB connection failed: " + err.Error())
+	}
+	params, err := paramsMarshal([]sql.SqlQueryParam{
+		{Type: "text", Value: username},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetAccount: marshal error: " + err.Error())
+	}
+	qresp := sql.Query(&sql.SqlQueryRequest{
+		Id:     ConnectionId,
+		Query:  ExecGetOwner,
+		Params: params,
+	})
+	if qresp.Error != "" {
+		return nil, fmt.Errorf("GetAccount: failed: " + qresp.Error)
+	}
+	resp := []OwnerRead{}
+	err = json.Unmarshal(qresp.Data, &resp)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccount: unmarshal failed: " + qresp.Error)
+	}
+	return resp, nil
 }

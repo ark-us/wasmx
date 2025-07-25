@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-sasl"
@@ -20,10 +22,37 @@ type backend struct {
 }
 
 func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
-	// TODO implement reject policy
+	// TODO implement reject policy by contract
 	// conn.Reject()
-	fmt.Println("--smtpbackend.NewSession--", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
-	sess := Session{ctx: b.ctx, ConnectionId: b.connectionId}
+	fmt.Println("smtpbackend.NewSession", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
+
+	c := conn.Conn()
+	fmt.Println("smtpbackend.NewSession RemoteAddr", c.RemoteAddr().Network(), c.RemoteAddr().String())
+	// fmt.Println("--smtpbackend.NewSession Conn.LocalAddr--", c.LocalAddr(), c.LocalAddr().Network(), c.LocalAddr().String())
+
+	remoteAddr := c.RemoteAddr().String() // e.g. "203.0.113.42:52783"
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		fmt.Println("could not parse remote IP:", err)
+		host = remoteAddr // fallback
+	}
+	fmt.Println("smtpbackend.NewSession Remote IP", host)
+
+	// TODO this hould be handled by contract
+	if isPrivateIP(host) {
+		// Your real public IP
+		publicIP, err := getPublicIP()
+		if err == nil {
+			host = publicIP
+		}
+	}
+
+	sess := Session{
+		ctx:          b.ctx,
+		ConnectionId: b.connectionId,
+		IpFrom:       host,
+		conn:         conn,
+	}
 	if b.auth {
 		return &AuthSession{Session: sess}, nil
 	}
@@ -32,10 +61,13 @@ func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 
 type Session struct {
 	ConnectionId string
-	ctx          *Context
+	IpFrom       string   `json:"ipfrom"`
 	From         []string `json:"from"`
 	To           []string `json:"to"`
 	EmailRaw     []byte   `json:"email_raw"`
+	Timestamp    int64    `json:"timestamp"`
+	ctx          *Context
+	conn         *smtp.Conn
 }
 
 type AuthSession struct {
@@ -51,6 +83,7 @@ func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
 	return nil
 }
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
+	// TODO reject invalid emails early here
 	fmt.Println("--smtp.Session.Rcpt--", to, opts)
 	if opts != nil {
 		fmt.Println("--Session.Rcpt opts--", opts.OriginalRecipient, opts.OriginalRecipientType, opts.Notify)
@@ -148,8 +181,6 @@ func NewServer(cfg ServerConfig, ctx *Context, connectionId string) (*smtp.Serve
 	// s.EnableDELIVERBY = cfg.EnableDELIVERBY
 	// s.MinimumDeliverByTime = cfg.MinimumDeliverByTime
 
-	fmt.Println("--NewServer AllowInsecureAuth--", cfg.AllowInsecureAuth)
-
 	startfn := s.ListenAndServe
 
 	tlsCfg, err := getTlsConfig(cfg.TlsConfig)
@@ -158,7 +189,6 @@ func NewServer(cfg ServerConfig, ctx *Context, connectionId string) (*smtp.Serve
 	}
 	if tlsCfg != nil {
 		s.TLSConfig = tlsCfg
-		fmt.Println("---Smtp.StartTLS--", cfg.StartTLS)
 		if !cfg.StartTLS {
 			startfn = s.ListenAndServeTLS
 		}
@@ -218,6 +248,7 @@ func (ctx *Context) HandleIncomingEmail(s Session) {
 	if s.From == nil || s.To == nil || s.EmailRaw == nil {
 		return
 	}
+	s.Timestamp = time.Now().UTC().Unix()
 	msg := &ReentryCalldata{
 		IncomingEmail: &s}
 
@@ -237,7 +268,8 @@ func (ctx *Context) HandleIncomingEmail(s Session) {
 	}
 	_, _, err = ctx.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error())
+		ctx.Ctx.Logger().Error("handle incoming email error", "err", err.Error(), "ipfrom", s.IpFrom, "from", strings.Join(s.From, ","), "to", strings.Join(s.To, ","))
+		s.conn.Reject()
 	}
 }
 

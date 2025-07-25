@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
@@ -110,8 +112,10 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)
-	res := appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("--start server--", string(res.Data))
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
+	fmt.Println("started email server")
+
+	var res *abci.ExecTxResult
 
 	// create test account1
 	msg = &EmailChainCalldata{
@@ -122,8 +126,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("--create test account1--", string(res.Data))
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 
 	// create test account2
 	msg = &EmailChainCalldata{
@@ -134,8 +137,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("--create test account2--", string(res.Data))
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 
 	// create test account3
 	msg = &EmailChainCalldata{
@@ -146,12 +148,11 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("--create test account3--", string(res.Data))
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 
 	// send email from account1 to account2
 	msg = &EmailChainCalldata{
-		SendEmail: &BuildAndSendMailRequest{
+		BuildAndSend: &BuildAndSendMailRequest{
 			From:    "test@dmail.provable.dev",
 			To:      []string{"test2@dmail.provable.dev"},
 			Subject: "this is an email",
@@ -161,8 +162,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	}
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
-	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("--send email test -> test2--", string(res.Data))
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 
 	// wait for email to be received
 	time.Sleep(time.Second * 3)
@@ -182,12 +182,15 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
 	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 958152876, nil)
-	fmt.Println("--send email test2 -> test3--", string(res.Data))
+	resc := &ForwardEmailResponse{}
+	err = appA.DecodeExecuteResponse(res, resc)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resc.Error)
 
 	// wait for email to be received
 	time.Sleep(time.Second * 3)
 
-	// forward email from account3 to account1
+	// forward email from account3 to gmail
 	msg = &EmailChainCalldata{
 		ForwardEmail: &ForwardEmailRequest{
 			From: AddressFromString("test3@dmail.provable.dev", "Test3 Test3"),
@@ -203,11 +206,52 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	data, err = json.Marshal(msg)
 	suite.Require().NoError(err)
 	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 958152876, nil)
-	fmt.Println("--send email test3 -> test--", string(res.Data))
+	resc = &ForwardEmailResponse{}
+	err = appA.DecodeExecuteResponse(res, resc)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resc.Error)
+
+	// wait for email to be received
+	time.Sleep(time.Second * 3)
+
+	// forward fake email from account3 to account1
+	msg = &EmailChainCalldata{
+		ForwardEmail: &ForwardEmailRequest{
+			From:              AddressFromString("test3@dmail.provable.dev", "Test3 Test3"),
+			To:                []imap.Address{AddressFromString("test@dmail.provable.dev", "Test Test")},
+			Folder:            "INBOX",
+			Uid:               1,
+			Timestamp:         time.Now(),
+			AdditionalSubject: "fake forward",
+			SendEmail:         false,
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	res = appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 958152876, nil)
+	resc = &ForwardEmailResponse{}
+	err = appA.DecodeExecuteResponse(res, resc)
+	suite.Require().NoError(err)
+	suite.Require().Equal("", resc.Error)
+
+	emailraw := strings.Replace(resc.EmailRaw, "a first email", "a first email [modified]", 1)
+
+	// send email from account1 to account2
+	msg = &EmailChainCalldata{
+		SendEmail: &SendMailRequest{
+			From:     AddressFromString("test3@dmail.provable.dev", "Test3 Test3"),
+			To:       []imap.Address{AddressFromString("test@dmail.provable.dev", "Test Test")},
+			EmailRaw: []byte(emailraw),
+			Date:     time.Now(),
+		},
+	}
+	data, err = json.Marshal(msg)
+	suite.Require().NoError(err)
+	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 
 	// // Prepare the VerifyDKIM request
 	// msg = &EmailChainCalldata{
-	// 	SendEmail: &BuildAndSendMailRequest{
+	// 	BuildAndSend: &BuildAndSendMailRequest{
 	// 		From: "test@dmail.provable.dev",
 	// 		// To:      []string{"seth.one.info@gmail.com"},
 	// 		To:      []string{"test@mail.provable.dev"},

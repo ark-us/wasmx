@@ -273,7 +273,7 @@ func sendEmailInternal(
 		mxHost := strings.TrimSuffix(mx.Host, ".")
 		addr := fmt.Sprintf("%s:25", mxHost)
 
-		log.Printf("Trying to send to %s...", addr)
+		fmt.Println("Trying to send to %s...", addr)
 
 		tlsConfig := &vmsmtp.TlsConfig{
 			ServerName: mxHost,
@@ -290,7 +290,6 @@ func sendEmailInternal(
 			continue
 		}
 		hresp := vmsmtp.Hello(&vmsmtp.SmtpHelloRequest{Id: mxHost, LocalName: mailServerDomain})
-		fmt.Println("--tinygo.Hello hresp----", hresp)
 		if hresp.Error != "" {
 			log.Printf("EHLO/HELO failed: %v", hresp.Error)
 			vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
@@ -309,7 +308,7 @@ func sendEmailInternal(
 			return fmt.Errorf(sendresp.Error)
 		}
 		vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
-		log.Println("Email sent successfully to", to)
+		fmt.Println("Email sent successfully to", to)
 		return nil
 	}
 	return fmt.Errorf("could not deliver email to any MX server for %s", toDomain)

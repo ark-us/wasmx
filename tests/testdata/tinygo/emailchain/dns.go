@@ -40,8 +40,6 @@ type DNSResponse struct {
 
 // LookupTXT performs a TXT record lookup using DNS-over-HTTPS
 func (r *DNSResolver) LookupTXT(name string) ([]string, dnsMox.Result, error) {
-	fmt.Println("--LookupTXT name-qqqqq-", name)
-	fmt.Println("--LookupTXT r-qqqqqqq-", r)
 	// return nil, dnsMox.Result{}, fmt.Errorf("just fail")
 	// Construct DoH query URL
 	url := fmt.Sprintf("%s?name=%s&type=TXT", r.DoHURL, name)

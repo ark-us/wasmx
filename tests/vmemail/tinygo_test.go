@@ -31,6 +31,13 @@ import (
 	dkimUtils "github.com/loredanacirstea/mailverif/utils"
 )
 
+type SendMailRequest struct {
+	From     imap.Address   `json:"from"`
+	To       []imap.Address `json:"to"`
+	EmailRaw []byte         `json:"email_raw"`
+	Date     time.Time      `json:"date"`
+}
+
 type BuildAndSendMailRequest struct {
 	Id      string    `json:"id"`
 	From    string    `json:"from"`
@@ -229,7 +236,8 @@ type EmailChainCalldata struct {
 	ForwardEmail        *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
 	StartServer         *StartServerRequest      `json:"StartServer,omitempty"`
 	IncomingEmail       *vmsmtp.Session          `json:"IncomingEmail,omitempty"`
-	SendEmail           *BuildAndSendMailRequest `json:"SendEmail,omitempty"`
+	BuildAndSend        *BuildAndSendMailRequest `json:"BuildAndSend,omitempty"`
+	SendEmail           *SendMailRequest         `json:"SendEmail,omitempty"`
 }
 
 type CreateAccountRequest struct {

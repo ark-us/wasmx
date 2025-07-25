@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/loredanacirstea/wasmx-env"
+	imap "github.com/loredanacirstea/wasmx-env-imap"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 
@@ -22,7 +23,7 @@ type Calldata struct {
 	Connect       *ConnectRequest          `json:"Connect,omitempty"`
 	Close         *CloseRequest            `json:"Close,omitempty"`
 	CreateAccount *CreateAccountRequest    `json:"CreateAccount,omitempty"`
-	SendEmail     *BuildAndSendMailRequest `json:"SendEmail,omitempty"`
+	SendEmail     *SendMailRequest         `json:"SendEmail,omitempty"`
 	BuildAndSend  *BuildAndSendMailRequest `json:"BuildAndSend,omitempty"`
 	VerifyDKIM    *VerifyDKIMRequest       `json:"VerifyDKIM,omitempty"`
 	VerifyARC     *VerifyDKIMRequest       `json:"VerifyARC,omitempty"`
@@ -46,9 +47,11 @@ type ReentryCalldata struct {
 
 type IncomingEmailRequest struct {
 	ConnectionId string
+	IpFrom       string   `json:"ipfrom"`
 	From         []string `json:"from"`
 	To           []string `json:"to"`
 	EmailRaw     []byte   `json:"email_raw"`
+	Timestamp    int64    `json:"timestamp"`
 }
 
 type ConnectRequest struct {
@@ -65,6 +68,13 @@ type StartServerRequest struct {
 
 type CloseRequest struct {
 	Id string `json:"id"`
+}
+
+type SendMailRequest struct {
+	From     imap.Address   `json:"from"`
+	To       []imap.Address `json:"to"`
+	EmailRaw []byte         `json:"email_raw"`
+	Date     time.Time      `json:"date"`
 }
 
 type BuildAndSendMailRequest struct {
@@ -421,6 +431,7 @@ type Email struct {
 	Body         string          `json:"body"`          // Optional: plain body text (for search)
 	Bh           string          `json:"bh"`
 	Envelope     vmimap.Envelope `json:"envelope"`
+	IpFrom       string          `json:"ipfrom"`
 	// From string `json:"from"`
 	// To string `json:"to"`
 }
@@ -440,6 +451,7 @@ type EmailWrite struct {
 	Body         string `json:"body"`          // Optional: plain body text (for search)
 	Bh           string `json:"bh"`
 	Envelope     string `json:"envelope"`
+	IpFrom       string `json:"ipfrom"`
 	// From string `json:"from"`
 	// To string `json:"to"`
 }
@@ -471,5 +483,11 @@ func (v EmailRead) ToEmail() (*Email, error) {
 		Body:         v.Body,
 		Bh:           v.Bh,
 		Envelope:     envelope,
+		IpFrom:       v.IpFrom,
 	}, nil
+}
+
+type OwnerRead struct {
+	Id      int64  `json:"id"`
+	Address string `json:"address"`
 }

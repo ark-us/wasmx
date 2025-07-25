@@ -159,7 +159,7 @@ func HandleStatus(req *StatusRequest) ([]byte, error) {
 }
 
 func HandleAppend(req *AppendRequest) ([]byte, error) {
-	err := StoreEmail(req.Username, []string{}, req.EmailRaw, ConnectionId, req.Mailbox)
+	err := StoreEmail(req.Username, []string{}, req.EmailRaw, "", ConnectionId, req.Mailbox)
 	if err != nil {
 		return nil, err
 	}
