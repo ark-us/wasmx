@@ -39,7 +39,6 @@ func HandleLogout(req *LogoutRequest) ([]byte, error) {
 }
 
 func HandleCreate(req *CreateRequest) ([]byte, *vmimap.Error, error) {
-	fmt.Println("--HandleCreate--", req.Username, req.Mailbox)
 
 	exists, err := checkFolderExists(ConnectionId, req.Username, req.Mailbox)
 	if err != nil {
@@ -105,7 +104,6 @@ func HandleSelect(req *SelectRequest) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("select: result marshal error: %s", err.Error())
 	}
-	fmt.Println("--SelectData resp--", string(bz))
 	return bz, nil
 }
 
@@ -348,19 +346,18 @@ func HandleFetch(req *FetchRequest) ([]byte, error) {
 		if e.Flags != "" {
 			flags = strings.Split(e.Flags, " ")
 		}
-		t := time.Unix(0, e.InternalDate*int64(time.Millisecond)).UTC()
 		envelope := vmimap.Envelope{}
-		fmt.Println("--tinygo.HandleFetch envelope--", e.Envelope)
 		err = json.Unmarshal([]byte(e.Envelope), &envelope)
 		if err != nil {
 			fmt.Println("--tinygo.HandleFetch envelope unmarshal err--", err)
 			return nil, err
 		}
+		// t := time.Unix(0, e.InternalDate*int64(time.Millisecond)).UTC()
 		results = append(results, map[string]interface{}{
 			"seq_num":       e.SeqNum,
 			"uid":           e.UID,
 			"flags":         flags,
-			"internal_date": t.Format(time.RFC1123Z),
+			"internal_date": envelope.Date.Format(time.RFC1123Z),
 			"rfc822size":    e.Size,
 			"body":          e.Body,
 			"envelope":      envelope,
@@ -503,7 +500,6 @@ func HandleCopy(req *CopyRequest) ([]byte, error) {
 }
 
 func buildRangeClause(username, mailbox, column string, ranges []Range) (string, []sql.SqlQueryParam, error) {
-	fmt.Println("--buildRangeClause--", username, mailbox, column, ranges)
 	var clauses []string
 	var params []sql.SqlQueryParam
 	var err error
@@ -512,7 +508,6 @@ func buildRangeClause(username, mailbox, column string, ranges []Range) (string,
 	if err != nil {
 		return "", nil, err
 	}
-	fmt.Println("--buildRangeClause.ranges--", ranges)
 	if len(ranges) == 0 {
 		return "", nil, nil
 	}
@@ -663,6 +658,7 @@ func GetEmails(req *FetchRequest) ([]EmailRead, error) {
 
 	params := []sql.SqlQueryParam{
 		{Type: "text", Value: req.Username},
+		{Type: "text", Value: req.Mailbox},
 	}
 	params = append(params, rangeParams...)
 
@@ -673,7 +669,7 @@ func GetEmails(req *FetchRequest) ([]EmailRead, error) {
 	query := fmt.Sprintf(`
 		SELECT *
 		FROM emails
-		WHERE owner = ? %s
+		WHERE owner = ? AND folder = ? %s
 		ORDER BY %s ASC;
 	`, rangeClause, field)
 

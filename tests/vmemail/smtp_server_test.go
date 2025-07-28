@@ -155,8 +155,8 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 		BuildAndSend: &BuildAndSendMailRequest{
 			From:    "test@dmail.provable.dev",
 			To:      []string{"test2@dmail.provable.dev"},
-			Subject: "this is an email",
-			Body:    []byte(`a first email`),
+			Subject: "what a day!",
+			Body:    []byte(`Just demoed a provable forwarding protocol today!`),
 			Date:    time.Now(),
 		},
 	}
@@ -175,7 +175,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 			Folder:            "INBOX",
 			Uid:               1,
 			Timestamp:         time.Now(),
-			AdditionalSubject: "this is an email",
+			AdditionalSubject: "whoop!",
 			SendEmail:         true,
 		},
 	}
@@ -199,7 +199,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 			Folder:            "INBOX",
 			Uid:               1,
 			Timestamp:         time.Now(),
-			AdditionalSubject: "addl subject 2",
+			AdditionalSubject: "not bad!",
 			SendEmail:         true,
 		},
 	}
@@ -234,7 +234,7 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 	suite.Require().NoError(err)
 	suite.Require().Equal("", resc.Error)
 
-	emailraw := strings.Replace(resc.EmailRaw, "a first email", "a first email [modified]", 1)
+	emailraw := strings.Replace(resc.EmailRaw, "provable forwarding protocol", "provable forwarding protocol [modified]", 1)
 
 	// send email from account1 to account2
 	msg = &EmailChainCalldata{

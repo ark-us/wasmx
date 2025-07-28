@@ -27,7 +27,6 @@ func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 	fmt.Println("smtpbackend.NewSession", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
 
 	c := conn.Conn()
-	fmt.Println("smtpbackend.NewSession RemoteAddr", c.RemoteAddr().Network(), c.RemoteAddr().String())
 	// fmt.Println("--smtpbackend.NewSession Conn.LocalAddr--", c.LocalAddr(), c.LocalAddr().Network(), c.LocalAddr().String())
 
 	remoteAddr := c.RemoteAddr().String() // e.g. "203.0.113.42:52783"
@@ -36,7 +35,6 @@ func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 		fmt.Println("could not parse remote IP:", err)
 		host = remoteAddr // fallback
 	}
-	fmt.Println("smtpbackend.NewSession Remote IP", host)
 
 	// TODO this hould be handled by contract
 	if isPrivateIP(host) {
@@ -75,33 +73,26 @@ type AuthSession struct {
 }
 
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
-	fmt.Println("--smtp.Session.Mail--", from, opts)
 	if opts != nil {
-		fmt.Println("--Session.Mail opts--", opts.EnvelopeID, opts.Auth)
 	}
 	s.From = append(s.From, from)
 	return nil
 }
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	// TODO reject invalid emails early here
-	fmt.Println("--smtp.Session.Rcpt--", to, opts)
 	if opts != nil {
-		fmt.Println("--Session.Rcpt opts--", opts.OriginalRecipient, opts.OriginalRecipientType, opts.Notify)
 	}
 	s.To = append(s.To, to)
 	return nil
 }
 func (s *Session) Data(r io.Reader) error {
 	msg, _ := io.ReadAll(r)
-	log.Printf("=== New message ===\n%s\n", msg) // write to journald/syslog
 	s.EmailRaw = msg
 	return nil
 }
 func (*Session) Reset() {
-	fmt.Println("--smtp.Session.Reset--")
 }
 func (s *Session) Logout() error {
-	fmt.Println("--smtp.Session.Logout--")
 	s.ctx.HandleIncomingEmail(*s)
 	return nil
 }
@@ -109,7 +100,6 @@ func (s *Session) Logout() error {
 // support AuthSession
 // Implement AuthMechanisms
 func (s *AuthSession) AuthMechanisms() []string {
-	fmt.Println("--smtp.AuthMechanisms--")
 	return []string{"PLAIN"}
 }
 
@@ -244,7 +234,6 @@ func startGoRoutine(
 }
 
 func (ctx *Context) HandleIncomingEmail(s Session) {
-	fmt.Println("--smtp.HandleIncomingEmail--")
 	if s.From == nil || s.To == nil || s.EmailRaw == nil {
 		return
 	}

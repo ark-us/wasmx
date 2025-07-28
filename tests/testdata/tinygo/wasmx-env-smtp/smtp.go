@@ -5,7 +5,6 @@ import "C"
 
 import (
 	"encoding/json"
-	"fmt"
 
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
@@ -137,12 +136,10 @@ func Noop(req *SmtpNoopRequest) SmtpNoopResponse {
 }
 
 func Hello(req *SmtpHelloRequest) SmtpHelloResponse {
-	fmt.Println("--tinygo.Hello----")
 	reqbz, err := json.Marshal(req)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("--tinygo.Hello----", string(reqbz))
 	reqPtr := utils.BytesToPackedPtr(reqbz)
 	ptr := Hello_(reqPtr)
 	bz := utils.PackedPtrToBytes(ptr)

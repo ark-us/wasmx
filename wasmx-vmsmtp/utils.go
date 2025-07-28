@@ -31,35 +31,31 @@ func connectSmtpClient(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--connectSmtpClient--", serverUrl, startTls, networkType, tlsConfig)
 	dialer := &net.Dialer{}
 	var conn net.Conn
 	if cfg == nil || startTls {
 		conn, err = dialer.DialContext(ctx, networkType, serverUrl)
-		fmt.Println("--connectSmtpClient dialer--", err)
 	} else {
 		tlsDialer := tls.Dialer{
 			NetDialer: dialer,
 			Config:    cfg,
 		}
 		conn, err = tlsDialer.Dial(networkType, serverUrl)
-		fmt.Println("--connectSmtpClient tlsDialer--", err)
 	}
 	if err != nil {
+		fmt.Println("--connectSmtpClient dial err--", err)
 		return nil, err
 	}
 
 	if startTls {
 		sclient, err = gosmtp.NewClientStartTLS(conn, cfg)
-		fmt.Println("--connectSmtpClient NewClientStartTLS--", err)
 		if err != nil {
+			fmt.Println("--connectSmtpClient NewClientStartTLS--", err)
 			return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
 		}
 	} else {
 		sclient = gosmtp.NewClient(conn)
-		fmt.Println("--connectSmtpClient NewClient--")
 	}
-	fmt.Println("--connectSmtpClient auth--", auth)
 	if auth != nil {
 		authClient := getAuthClient(*auth)
 		if err = sclient.Auth(authClient); err != nil {

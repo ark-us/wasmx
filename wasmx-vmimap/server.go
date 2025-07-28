@@ -52,8 +52,6 @@ func parseResponse(bz []byte, err error) ([]byte, *imap.Error, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("--parseResponse resp.Error--", resp.Error)
-	fmt.Println("--parseResponse resp.Error--", resp.ImapError)
 	if resp.Error != "" {
 		return nil, resp.ImapError, fmt.Errorf(resp.Error)
 	}
@@ -61,7 +59,6 @@ func parseResponse(bz []byte, err error) ([]byte, *imap.Error, error) {
 }
 
 func (s *Session) Close() error {
-	fmt.Println("-imap.Session.Close--")
 
 	msg := &ReentryCalldataServer{
 		Logout: &LogoutRequest{Username: s.username},
@@ -82,9 +79,11 @@ func (s *Session) Login(username, password string) error {
 		Login: &LoginRequest{Username: s.username, Password: password},
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
-	fmt.Println("-imap.Session.Login HandleServerReentry--", err)
+	if err != nil {
+		s.ctx.Ctx.Logger().Debug("imap server login error", "username", username, "error", err.Error())
+		return imapserver.ErrAuthFailed
+	}
 	_, _, err = parseResponse(resp, err)
-	fmt.Println("-imap.Session.Login parseResponse--", err)
 	if err != nil {
 		s.ctx.Ctx.Logger().Debug("imap server login error", "username", username, "error", err.Error())
 		return imapserver.ErrAuthFailed
@@ -94,7 +93,6 @@ func (s *Session) Login(username, password string) error {
 
 // Authenticated state
 func (s *Session) Select(mailbox string, options *imap.SelectOptions) (*imap.SelectData, error) {
-	fmt.Println("-imap.Session.Select--", mailbox, options)
 	s.mailbox = mailbox
 	s.selectOptions = options
 	msg := &ReentryCalldataServer{
@@ -102,7 +100,6 @@ func (s *Session) Select(mailbox string, options *imap.SelectOptions) (*imap.Sel
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.Select respbz--", err, string(res))
 	if err != nil {
 		return nil, err
 	}
@@ -111,18 +108,14 @@ func (s *Session) Select(mailbox string, options *imap.SelectOptions) (*imap.Sel
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-imap.Session.Select resp--", resp)
 	return resp, nil
 }
 func (s *Session) Create(mailbox string, options *imap.CreateOptions) error {
-	fmt.Println("-imap.Session.Create--", mailbox, options)
 	msg := &ReentryCalldataServer{
 		Create: &CreateRequest{Username: s.username, Mailbox: mailbox, Options: options},
 	}
 	resp, err := s.ctx.HandleServerReentry(msg)
 	_, ierr, err := parseResponse(resp, err)
-	fmt.Println("-imap.Session.Create err--", err)
-	fmt.Println("-imap.Session.Create err--", ierr)
 
 	if ierr != nil {
 		return ierr
@@ -140,7 +133,6 @@ func (s *Session) Create(mailbox string, options *imap.CreateOptions) error {
 	return nil
 }
 func (s *Session) Delete(mailbox string) error {
-	fmt.Println("-imap.Session.Delete--", mailbox)
 	msg := &ReentryCalldataServer{
 		Delete: &DeleteRequest{Username: s.username, Mailbox: mailbox},
 	}
@@ -152,7 +144,6 @@ func (s *Session) Delete(mailbox string) error {
 	return nil
 }
 func (s *Session) Rename(mailbox, newName string) error {
-	fmt.Println("-imap.Session.Rename--", mailbox, newName)
 	msg := &ReentryCalldataServer{
 		Rename: &RenameRequest{Username: s.username, Mailbox: mailbox},
 	}
@@ -174,7 +165,6 @@ func (s *Session) Unsubscribe(mailbox string) error {
 
 // Lists visible mailboxes
 func (s *Session) List(w *imapserver.ListWriter, ref string, patterns []string, options *imap.ListOptions) error {
-	fmt.Println("-imap.Session.List--", ref, patterns, options)
 	msg := &ReentryCalldataServer{
 		List: &ListRequest{
 			Username: s.username,
@@ -184,7 +174,6 @@ func (s *Session) List(w *imapserver.ListWriter, ref string, patterns []string, 
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.List ListData--", err, string(res))
 	if err != nil {
 		return err
 	}
@@ -202,13 +191,11 @@ func (s *Session) List(w *imapserver.ListWriter, ref string, patterns []string, 
 	return nil
 }
 func (s *Session) Status(mailbox string, options *imap.StatusOptions) (*imap.StatusData, error) {
-	fmt.Println("-imap.Session.Status--", mailbox, options)
 	msg := &ReentryCalldataServer{
 		Status: &StatusRequest{Username: s.username, Mailbox: mailbox, Options: options},
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.Status respbz--", err, string(res))
 	if err != nil {
 		return nil, err
 	}
@@ -217,13 +204,11 @@ func (s *Session) Status(mailbox string, options *imap.StatusOptions) (*imap.Sta
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-imap.Session.Status resp--", resp)
 	return resp, nil
 }
 
 // Adds a new message to a mailbox (e.g., saving a sent message). r is the raw MIME.
 func (s *Session) Append(mailbox string, r imap.LiteralReader, options *imap.AppendOptions) (*imap.AppendData, error) {
-	fmt.Println("-imap.Session.Append--", mailbox, options)
 	emailRaw, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -238,7 +223,6 @@ func (s *Session) Append(mailbox string, r imap.LiteralReader, options *imap.App
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.Append respbz--", err, string(res))
 	if err != nil {
 		return nil, err
 	}
@@ -252,19 +236,16 @@ func (s *Session) Append(mailbox string, r imap.LiteralReader, options *imap.App
 
 // Used for push-like update checks (like for IDLE). If you support updates or notifications, hook in here.
 func (s *Session) Poll(w *imapserver.UpdateWriter, allowExpunge bool) error {
-	fmt.Println("-imap.Session.Poll NOT IMPLEMENTED--", allowExpunge)
 	return nil
 }
 
 // Long-lived command where client waits for updates. You must write mailbox changes using w.Write(...) if anything changes while idle.
 func (s *Session) Idle(w *imapserver.UpdateWriter, stop <-chan struct{}) error {
-	fmt.Println("-imap.Session.Idle NOT IMPLEMENTED--")
 	return nil
 }
 
 // Deselect current mailbox; ends "selected" state.
 func (s *Session) Unselect() error {
-	fmt.Println("-imap.Session.Unselect--")
 	s.mailbox = ""
 	s.selectOptions = nil
 	return nil
@@ -272,7 +253,6 @@ func (s *Session) Unselect() error {
 
 // Permanently deletes messages marked as \Deleted. Often called automatically after Store sets \Deleted.
 func (s *Session) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) error {
-	fmt.Println("-imap.Session.Expunge--", uids)
 	msg := &ReentryCalldataServer{
 		Expunge: &ExpungeRequest{Username: s.username, Uids: uids},
 	}
@@ -299,7 +279,6 @@ func (s *Session) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) error 
 	return nil
 }
 func (s *Session) Search(kind imapserver.NumKind, criteria *imap.SearchCriteria, options *imap.SearchOptions) (*imap.SearchData, error) {
-	fmt.Println("-imap.Session.Search--", kind, criteria, options)
 	msg := &ReentryCalldataServer{
 		Search: &SearchRequest{
 			Username: s.username,
@@ -311,7 +290,6 @@ func (s *Session) Search(kind imapserver.NumKind, criteria *imap.SearchCriteria,
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.Search respbz--", err, string(res))
 	if err != nil {
 		return nil, err
 	}
@@ -320,13 +298,9 @@ func (s *Session) Search(kind imapserver.NumKind, criteria *imap.SearchCriteria,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("-imap.Session.Search resp--")
 	return resp, nil
 }
 func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error {
-	fmt.Println("-imap.Session.Fetch--", numSet, options)
-	bz, _ := json.Marshal(options)
-	fmt.Println("-imap.Session.Fetch.options--", string(bz))
 	uidSet, seqSet := fromNumSet(numSet)
 	msg := &ReentryCalldataServer{
 		Fetch: &FetchRequest{
@@ -339,7 +313,6 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 	}
 	res, err := s.ctx.HandleServerReentry(msg)
 	res, _, err = parseResponse(res, err)
-	fmt.Println("-imap.Session.Fetch err--")
 	if err != nil {
 		return err
 	}
@@ -354,7 +327,6 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 		RawEmail     []byte        `json:"raw_email"`
 	}
 	if err := json.Unmarshal(res, &messages); err != nil {
-		fmt.Println("-imap.Session.Fetch unmarshal err--", err)
 		return err
 	}
 
@@ -372,11 +344,9 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 		// msg.WriteUID()
 
 		if options.UID {
-			fmt.Println("--options.UID--", imap.UID(m.UID))
 			msg.WriteUID(imap.UID(m.UID))
 		}
 		if options.Flags {
-			fmt.Println("--options.Flags--", m.Flags)
 			msg.WriteFlags(m.Flags)
 		}
 		if options.InternalDate {
@@ -384,22 +354,17 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 			if err != nil {
 				fmt.Println("vmimap.Fetch.InternalDate", err)
 			}
-			fmt.Println("--options.InternalDate--", t)
 			msg.WriteInternalDate(t)
 		}
 		if options.RFC822Size {
-			fmt.Println("--options.RFC822Size--", m.RFC822Size)
 			msg.WriteRFC822Size(m.RFC822Size)
 		}
 		if options.Envelope {
-			fmt.Println("--options.Envelope--", m.Envelope)
 			msg.WriteEnvelope(&m.Envelope)
 		}
-		fmt.Println("-options.BodySection-", len(options.BodySection))
 
 		// Write requested body sections
 		for _, section := range options.BodySection {
-			fmt.Println("-section-", section)
 
 			if len(section.Part) == 0 && len(section.HeaderFields) == 0 && len(section.HeaderFieldsNot) == 0 {
 				writer := msg.WriteBodySection(section, int64(len(m.RawEmail)))
@@ -428,13 +393,11 @@ func (s *Session) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *
 		}
 		// break
 	}
-	fmt.Println("--Fetch END--")
 	return nil
 }
 
 // Sets or unsets flags (e.g., \Seen, \Deleted) on messages.
 func (s *Session) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
-	fmt.Println("-imap.Session.Store--", numSet, flags, options)
 	uidSet, seqSet := fromNumSet(numSet)
 	msg := &ReentryCalldataServer{
 		Store: &StoreRequest{
@@ -474,7 +437,6 @@ func (s *Session) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *im
 
 // Copies messages to another mailbox. Used for archiving or moving to Sent.
 func (s *Session) Copy(numSet imap.NumSet, dest string) (*imap.CopyData, error) {
-	fmt.Println("-imap.Session.Copy--", numSet, dest)
 	uidSet, seqSet := fromNumSet(numSet)
 	msg := &ReentryCalldataServer{
 		Copy: &CopyRequest{
@@ -624,7 +586,6 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldataServer) ([]byte, err
 
 	contractAddress := ctx.Env.Contract.Address
 
-	fmt.Println("--HandleServerReentry msgbz---", string(msgbz))
 
 	msgtosend := &networktypes.MsgReentry{
 		Sender:     contractAddress.String(),
@@ -634,7 +595,6 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldataServer) ([]byte, err
 	}
 	_, resp, err := ctx.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
-		fmt.Println("--HandleServerReentry resp---", err, string(resp))
 		ctx.Ctx.Logger().Error(err.Error())
 		return nil, err
 	}

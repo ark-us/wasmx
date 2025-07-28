@@ -174,7 +174,6 @@ func CreateAccount(req *CreateAccountRequest) {
 }
 
 func IncomingEmail(req *IncomingEmailRequest) {
-	fmt.Println("--INCOMING EMAIL")
 	if len(req.From) == 0 {
 		wasmx.Revert([]byte("incoming email: empty from"))
 	}
@@ -282,7 +281,6 @@ func SendEmail(req *SendMailRequest) []string {
 	if opts == nil {
 		wasmx.Revert([]byte("no dkim keys"))
 	}
-	fmt.Println("---SEND EMAIL-----", req.To)
 	for _, to := range req.To {
 		err = sendEmailInternal(req.From.ToAddress(), to.ToAddress(), string(req.EmailRaw), MailServerDomain, DefaultNetworkType)
 		if err != nil {
@@ -295,7 +293,6 @@ func SendEmail(req *SendMailRequest) []string {
 			errs = append(errs, err.Error())
 		}
 	}
-	fmt.Println("---sending err--", errs)
 	return errs
 }
 
@@ -337,7 +334,6 @@ func BuildAndSend(req *BuildAndSendMailRequest) []string {
 	if opts == nil {
 		wasmx.Revert([]byte("no dkim keys"))
 	}
-	fmt.Println("---SEND EMAIL-----", req.To)
 	for _, to := range req.To {
 		prepped, err := prepareEmailSend(*opts, emailstr, req.From, req.Date, true)
 		if err != nil {
@@ -355,9 +351,9 @@ func BuildAndSend(req *BuildAndSendMailRequest) []string {
 		err = StoreEmail(req.From, []string{}, []byte(prepped), "", ConnectionId, FolderSent)
 		if err != nil {
 			fmt.Println("--StoreEmail--", err)
+			errs = append(errs, err.Error())
 		}
 	}
-	fmt.Println("---sending err--", errs)
 	return errs
 }
 
@@ -379,7 +375,6 @@ func VerifyDKIM(req *VerifyDKIMRequest) VerifyDKIMResponse {
 }
 
 func SignDKIM(req *SignDKIMRequest) SignDKIMResponse {
-	fmt.Println("--SignDKIM--")
 	resp := SignDKIMResponse{Error: ""}
 	now := func() time.Time {
 		return req.Timestamp
@@ -436,7 +431,6 @@ func SignARC(req *SignARCRequest) SignARCResponse {
 }
 
 func VerifyARC(req *VerifyDKIMRequest) VerifyARCResponse {
-	fmt.Println("--VerifyARC--")
 	resp := VerifyARCResponse{Error: ""}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	resolver := NewDNSResolver()
@@ -498,9 +492,6 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 		return resp
 	}
 
-	fmt.Println("=================foundEmail")
-	fmt.Println(string(email.RawEmail))
-	fmt.Println("=====================")
 
 	opts := LoadDkimKey()
 	if opts == nil {
