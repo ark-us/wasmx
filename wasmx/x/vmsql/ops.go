@@ -46,7 +46,6 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 			return prepareResponse(rnh, response)
 		}
 	}
-
 	// TODO req.Connection - should we restrict this path and make it relative to our DataDirectory? or introduce a list of allowed directories that WASMX can modify and make sure the path is within these directories.
 	db, err := sql.Open(req.Driver, req.Connection)
 	if err != nil {
@@ -366,6 +365,7 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println("--prepareResponse--", string(responsebz))
 	return rnh.AllocateWriteMem(responsebz)
 }
 

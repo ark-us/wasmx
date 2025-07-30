@@ -8,7 +8,9 @@ import (
 
 	imap "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
+	"github.com/emersion/go-imap/v2/imapserver"
 
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
@@ -32,6 +34,7 @@ const HOST_WASMX_ENV_IMAP_EXPORT = "wasmx_imap_"
 const HOST_WASMX_ENV_IMAP = "imap"
 
 const ENTRY_POINT_IMAP = "imap_update"
+const ENTRY_POINT_IMAP_SERVER = "imap_server_request"
 
 type ContextKey string
 
@@ -50,8 +53,7 @@ type IMAPListener struct {
 type ImapOpenConnection struct {
 	mtx             sync.Mutex
 	GoContextParent context.Context
-	Username        string
-	ImapServerUrl   string             `json:"imap_server_url"`
+	Info            ImapConnectionRequest
 	Client          *imapclient.Client // no mailbox/folder selected
 	Closed          chan struct{}
 	listeners       map[string]*IMAPListener // mailbox/folder => listener
@@ -82,9 +84,16 @@ func (p *ImapOpenConnection) DeleteListener(folder string) {
 	delete(p.listeners, folder)
 }
 
+type ServerConnection struct {
+	GoContextParent context.Context
+	Server          *imapserver.Server
+	ContractAddress mcodec.AccAddressPrefixed
+}
+
 type ImapContext struct {
-	mtx           sync.Mutex
-	DbConnections map[string]*ImapOpenConnection
+	mtx               sync.Mutex
+	DbConnections     map[string]*ImapOpenConnection
+	ServerConnections map[string]*ServerConnection
 }
 
 func (p *ImapContext) GetConnection(id string) (*ImapOpenConnection, bool) {
@@ -111,18 +120,48 @@ func (p *ImapContext) DeleteConnection(id string) {
 	delete(p.DbConnections, id)
 }
 
-type ImapConnectionSimpleRequest struct {
-	Id            string `json:"id"`
-	ImapServerUrl string `json:"imap_server_url"`
-	Username      string `json:"username"`
-	Password      string `json:"password"`
+func (p *ImapContext) GetServerConnection(id string) (*ServerConnection, bool) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	db, found := p.ServerConnections[id]
+	return db, found
 }
 
-type ImapConnectionOauth2Request struct {
-	Id            string `json:"id"`
-	ImapServerUrl string `json:"imap_server_url"`
-	Username      string `json:"username"`
-	AccessToken   string `json:"access_token"`
+func (p *ImapContext) SetServerConnection(id string, conn *ServerConnection) error {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	_, found := p.ServerConnections[id]
+	if found {
+		return fmt.Errorf("cannot overwrite IMAP connection: %s", id)
+	}
+	p.ServerConnections[id] = conn
+	return nil
+}
+
+func (p *ImapContext) DeleteServerConnection(id string) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	delete(p.ServerConnections, id)
+}
+
+type ConnectionAuthType string
+
+const (
+	ConnectionAuthTypePassword ConnectionAuthType = "password"
+	ConnectionAuthTypeOAuth2   ConnectionAuthType = "oauth2"
+)
+
+type ConnectionAuth struct {
+	AuthType ConnectionAuthType `json:"auth_type"` // "password", "oauth2"
+	Username string             `json:"username"`
+	Password string             `json:"password"`
+	Identity string             `json:"identity"`
+}
+
+type ImapConnectionRequest struct {
+	Id            string         `json:"id"`
+	ImapServerUrl string         `json:"imap_server_url"`
+	Auth          ConnectionAuth `json:"auth"`
 }
 
 type ImapConnectionResponse struct {
@@ -237,6 +276,23 @@ type ReentryCalldata struct {
 	IncomingEmail *MsgIncomingEmail `json:"IncomingEmail"`
 	Expunge       *MsgExpunge       `json:"Expunge"`
 	Metadata      *MsgMetadata      `json:"IncominMetadatagEmail"`
+}
+
+type ServerStartRequest struct {
+	ConnectionId string       `json:"connection_id"`
+	ServerConfig ServerConfig `json:"server_config"`
+}
+
+type ServerStartResponse struct {
+	Error string `json:"error"`
+}
+
+type ServerCloseRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
+
+type ServerCloseResponse struct {
+	Error string `json:"error"`
 }
 
 func (c *Context) HandleIncomingEmail(owner string, folder string, uid uint32, seq uint32) {

@@ -254,3 +254,63 @@ func InstantiateTable(
 	suite.Require().NoError(err)
 	suite.Require().Equal("", resssc.Error)
 }
+
+func ParamsMarshal(params []vmsql.SqlQueryParam) ([][]byte, error) {
+	res := vmsql.Params{}
+	for _, param := range params {
+		paramsbz, err := json.Marshal(&param)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, paramsbz)
+	}
+	return res, nil
+}
+
+type KV struct {
+	Key   []byte `json:"key"`
+	Value []byte `json:"value"`
+}
+
+type KVString struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+func ParseQueryResponse(qres []byte) ([]byte, error) {
+	qresp := &vmsql.SqlQueryResponse{}
+	err := json.Unmarshal(qres, qresp)
+	if err != nil {
+		return nil, err
+	}
+	if qresp.Error != "" {
+		return nil, fmt.Errorf(qresp.Error)
+	}
+	return qresp.Data, nil
+}
+
+func ParseQueryToRows(qres []byte) ([]KV, error) {
+	data, err := ParseQueryResponse(qres)
+	if err != nil {
+		return nil, err
+	}
+	rows := []KV{}
+	err = json.Unmarshal(data, &rows)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func ParseQueryToRowsStr(qres []byte) ([]KVString, error) {
+	data, err := ParseQueryResponse(qres)
+	if err != nil {
+		return nil, err
+	}
+	rows := []KVString{}
+	err = json.Unmarshal(data, &rows)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}

@@ -12,18 +12,19 @@ tinygo version 0.37.0 darwin/arm64 (using go version go1.23.2 and LLVM version 1
 - with WASI
 ```sh
 
-tinygo build -o add.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi ./add
+tinygo build -o add.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add
 
-cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
-cd forward && GOWORK=off tinygo build -o ../forward.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd forward && GOWORK=off tinygo build -o ../forward.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
-cd imaptest && GOWORK=off tinygo build -o ../imaptest.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd imaptest && GOWORK=off tinygo build -o ../imaptest.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
-cd smtptest && GOWORK=off tinygo build -o ../smtptest.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd smtptest && GOWORK=off tinygo build -o ../smtptest.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
-cd emailchain && GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd emailchain && GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
+cd mailsrv && GOWORK=off tinygo build -o ../mailsrv.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
 ```
 
@@ -42,7 +43,7 @@ tinygo build -o test.wasm -no-debug -panic=trap -scheduler=none -gc=leaking exam
 
 -no-debug
 -scheduler=none
--panic=trap
+-panic=trap # any unimplemented feature or panic results in unreachable without error
 -gc=leaking
 -opt=s
 -opt=2

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi .)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(dig:*)",
+      "Bash(GOWORK=off tinygo build -o tests/testdata/tinygo/emailchain.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi tests/testdata/tinygo/emailchain)",
+      "Bash(GOWORK=off tinygo build -o emailchain.wasm -no-debug -panic=trap -scheduler=none -gc=leaking -target=wasi ./emailchain)",
+      "Bash(ls:*)",
+      "Bash(go test:*)"
+    ],
+    "deny": []
+  }
+}

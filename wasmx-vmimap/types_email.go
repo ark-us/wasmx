@@ -17,22 +17,40 @@ type UserInfo struct {
 }
 
 type Attachment struct {
-	Filename    string
-	ContentType string
-	Data        []byte
+	Filename    string `json:"filename"`
+	ContentType string `json:"content_type"`
+	Data        []byte `json:"data"`
+}
+
+type Header struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	Raw   []byte `json:"raw"`
+}
+
+type BodyPart struct {
+	ContentType string `json:"content_type"`
+	Body        []byte `json:"body"`
+}
+
+type EmailBody struct {
+	ContentType string     `json:"content_type"`
+	Boundary    string     `json:"boundary,omitempty"`
+	Parts       []BodyPart `json:"parts"`
 }
 
 type Email struct {
-	UID          imap.UID            `json:"uid"`          // Unique identifier
-	Flags        []imap.Flag         `json:"flags"`        // Flags like \Seen, \Answered
-	InternalDate time.Time           `json:"internalDate"` // Date received by server
-	RFC822Size   int64               `json:"rfc822Size"`   // Size in bytes
-	Envelope     *imap.Envelope      `json:"envelope"`     // Header fields (From, To, Subject, etc.)
-	Header       map[string][]string `json:"header"`       // Parsed headers (future use)
-	Body         string              `json:"body"`         // Body content (if separated)
-	Attachments  []Attachment        `json:"attachments"`
-	Raw          string              `json:"raw"` // Entire email as a string
-	Bh           string              `json:"bh"`  // extracted body hash
+	UID          imap.UID       `json:"uid"`          // Unique identifier
+	Flags        []imap.Flag    `json:"flags"`        // Flags like \Seen, \Answered
+	InternalDate time.Time      `json:"internalDate"` // Date received by server
+	RFC822Size   int64          `json:"rfc822Size"`   // Size in bytes
+	Envelope     *imap.Envelope `json:"envelope"`     // Header fields (From, To, Subject, etc.)
+	// topmost headers are last
+	Headers     []Header     `json:"headers"`
+	Body        EmailBody    `json:"body"`
+	Attachments []Attachment `json:"attachments"`
+	Raw         string       `json:"raw"` // Entire email as a string
+	Bh          string       `json:"bh"`  // extracted body hash
 
 	// BodyStructure *imap.BodyStructure `json:"bodyStructure"` // MIME structure
 	// BodySection       []imap.FetchBodySectionBuffer

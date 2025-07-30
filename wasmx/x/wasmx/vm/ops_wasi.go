@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -910,12 +911,18 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	if err := wasimem.WriteUint32Le(mem, nwrittenPtr, uint32(totalWritten)); err != nil {
 		return nil, err
 	}
-
+	// content contains all the logs
 	if openF.path == "stderr" {
-		ctx.c.Logger(ctx.c.Ctx).Error(string(content))
+		start := len(content) - int(totalWritten)
+		newcontent := content[start:]
+		ctx.c.Logger(ctx.c.Ctx).Error(string(newcontent))
+		fmt.Println("--stderr--", string(newcontent))
 	}
 	if openF.path == "stdout" {
-		LoggerExtended(ctx.c).Debug(string(content))
+		start := len(content) - int(totalWritten)
+		newcontent := content[start:]
+		LoggerExtended(ctx.c).Debug(string(newcontent))
+		fmt.Println("--stdout--", string(newcontent))
 	}
 
 	returns[0] = int32(0)

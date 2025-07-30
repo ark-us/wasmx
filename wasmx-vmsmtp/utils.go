@@ -3,8 +3,12 @@ package vmsmtp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -15,39 +19,79 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func connectToSMTP(serverUrlStartTls string, serverUrlTls string, username, password string) (sclient *gosmtp.Client, err error) {
-	if serverUrlStartTls != "" {
-		sclient, err = gosmtp.DialStartTLS(serverUrlStartTls, nil)
+func connectSmtpClient(
+	ctx context.Context,
+	serverUrl string,
+	startTls bool,
+	networkType string,
+	auth *ConnectionAuth,
+	tlsConfig *TlsConfig,
+) (sclient *gosmtp.Client, err error) {
+	cfg, err := getTlsConfig(tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	dialer := &net.Dialer{}
+	var conn net.Conn
+	if cfg == nil || startTls {
+		conn, err = dialer.DialContext(ctx, networkType, serverUrl)
 	} else {
-		sclient, err = gosmtp.DialTLS(serverUrlTls, nil)
+		tlsDialer := tls.Dialer{
+			NetDialer: dialer,
+			Config:    cfg,
+		}
+		conn, err = tlsDialer.Dial(networkType, serverUrl)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
+		fmt.Println("--connectSmtpClient dial err--", err)
+		return nil, err
 	}
 
-	// Authenticate using go-sasl PLAIN mechanism
-	auth := sasl.NewPlainClient("", username, password)
-	if err = sclient.Auth(auth); err != nil {
-		return nil, fmt.Errorf("authentication failed: %v", err)
+	if startTls {
+		sclient, err = gosmtp.NewClientStartTLS(conn, cfg)
+		if err != nil {
+			fmt.Println("--connectSmtpClient NewClientStartTLS--", err)
+			return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
+		}
+	} else {
+		sclient = gosmtp.NewClient(conn)
+	}
+	if auth != nil {
+		authClient := getAuthClient(*auth)
+		if err = sclient.Auth(authClient); err != nil {
+			fmt.Println("--connectSmtpClient auth err--", err)
+			return nil, fmt.Errorf("authentication failed: %v", err)
+		}
 	}
 	return sclient, nil
 }
 
-func connectToSMTPOauth2(serverUrlStartTls string, serverUrlTls string, username string, accessToken string) (sclient *gosmtp.Client, err error) {
-	if serverUrlStartTls != "" {
-		sclient, err = gosmtp.DialStartTLS(serverUrlStartTls, nil)
-	} else {
-		sclient, err = gosmtp.DialTLS(serverUrlTls, nil)
+func getTlsConfig(cfg *TlsConfig) (*tls.Config, error) {
+	if cfg == nil {
+		return nil, nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to SMTP: %v", err)
+	config := &tls.Config{InsecureSkipVerify: false}
+	if cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("loading TLS cert: %v", err)
+		}
+		config.Certificates = []tls.Certificate{cert}
 	}
+	if cfg.ServerName != "" {
+		config.ServerName = cfg.ServerName
+	}
+	return config, nil
+}
 
-	xauth := &OAuth2Authenticator{username: username, accessToken: accessToken}
-	if err = sclient.Auth(xauth); err != nil {
-		return nil, fmt.Errorf("authentication failed: %v", err)
+func getAuthClient(auth ConnectionAuth) sasl.Client {
+	switch auth.AuthType {
+	case "password":
+		return sasl.NewPlainClient(auth.Identity, auth.Username, auth.Password)
+	case "oauth2":
+		return &OAuth2Authenticator{username: auth.Username, accessToken: auth.Password}
 	}
-	return sclient, nil
+	return nil
 }
 
 // BuildRawEmail builds a full MIME email from an Email struct.
@@ -155,4 +199,30 @@ func refreshToken(goCtx context.Context, refreshToken string, oauthConfig *oauth
 	}
 
 	return newToken.AccessToken
+}
+
+func isPrivateIP(ip string) bool {
+	parsed := net.ParseIP(ip)
+	privateRanges := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	for _, cidr := range privateRanges {
+		_, network, _ := net.ParseCIDR(cidr)
+		if network.Contains(parsed) {
+			return true
+		}
+	}
+	return false
+}
+
+func getPublicIP() (string, error) {
+	resp, err := http.Get("https://api.ipify.org?format=text")
+	if err != nil {
+		return "", fmt.Errorf("failed to get public IP: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bz, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read public IP response: %w", err)
+	}
+	return strings.TrimSpace(string(bz)), nil
 }

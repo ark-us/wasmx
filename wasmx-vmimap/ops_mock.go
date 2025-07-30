@@ -4,16 +4,9 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func ConnectWithPasswordMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func ConnectMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
-	ctx.Ctx.Logger().Info("* ConnectWithPasswordMock: %s", ctx.ContractInfo.Address.String())
-	response := &ImapConnectionResponse{Error: ""}
-	return prepareResponse(rnh, response)
-}
-
-func ConnectOAuth2Mock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	ctx.Ctx.Logger().Info("* ConnectOAuth2Mock: %s", ctx.ContractInfo.Address.String())
+	ctx.Ctx.Logger().Info("* ConnectMock: %s", ctx.ContractInfo.Address.String())
 	response := &ImapConnectionResponse{Error: ""}
 	return prepareResponse(rnh, response)
 }
@@ -64,5 +57,19 @@ func ListMailboxesMock(_context interface{}, rnh memc.RuntimeHandler, params []i
 	ctx := _context.(*Context)
 	ctx.Ctx.Logger().Info("* ListMailboxesMock: %s", ctx.ContractInfo.Address.String())
 	response := &ListMailboxesResponse{Mailboxes: []string{}}
+	return prepareResponse(rnh, response)
+}
+
+func ServerStartMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerStartMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerStartResponse{Error: ""}
+	return prepareResponse(rnh, response)
+}
+
+func ServerCloseMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	ctx.Ctx.Logger().Info("* ServerCloseMock: %s", ctx.ContractInfo.Address.String())
+	response := &ServerCloseResponse{Error: ""}
 	return prepareResponse(rnh, response)
 }

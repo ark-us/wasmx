@@ -22,16 +22,8 @@
             "args": ["start"],
             // "buildFlags": "-tags e2e",
             "env": {
-                "WASMEDGE_DIR": "/Users/user/.wasmedge",
-                "DYLD_LIBRARY_PATH": "/Users/user/.wasmedge/lib",
-                "LD_LIBRARY_PATH": "/Users/user/.wasmedge/lib",
-                "LIBRARY_PATH": "/Users/user/.wasmedge/lib",
-                "WASMEDGE_LIB_DIR": "/Users/user/.wasmedge/lib",
-                "C_INCLUDE_PATH": "/Users/user/.wasmedge/include",
-                "CPLUS_INCLUDE_PATH": "/Users/user/.wasmedge/include",
-                "CGO_LDFLAGS": "-Wl,-rpath,/Users/user/.wasmedge/lib",
                 "GOROOT": "/usr/local/go",
-                "GOPATH": "/Users/user/go",
+                "GOPATH": "/Users/loredanamini4/go",
             }
         }
     ]

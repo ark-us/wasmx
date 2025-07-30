@@ -59,6 +59,8 @@ func InstantiateSmtpVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler
 }
 
 func Setup() {
+	// types.AdditionalEntryPointMap[ENTRY_POINT_SMTP] = true
+
 	vmtypes.DependenciesMap[HOST_WASMX_ENV_SMTP_EXPORT] = true
 	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_SMTP_i32_VER1, InstantiateSmtpVM_i32)
 	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_SMTP_i32_VER1] = true

@@ -6,8 +6,10 @@ import (
 	sdkmath "cosmossdk.io/math"
 )
 
+type Bech32String string
+
 type SimpleCallRequestRaw struct {
-	To       string       `json:"to"`
+	To       Bech32String `json:"to"`
 	Value    *sdkmath.Int `json:"value"`
 	GasLimit *big.Int     `json:"gasLimit"`
 	Calldata []byte       `json:"calldata"`

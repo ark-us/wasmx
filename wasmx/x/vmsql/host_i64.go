@@ -10,16 +10,16 @@ func BuildWasmxSqlVM_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interf
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
 		// Connect(req) -> resp
-		vm.BuildFn("Connect", Connect, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Ping", Ping, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Execute", Execute, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("BatchAtomic", BatchAtomic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Query", Query, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Connect", Connect, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("Ping", Ping, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("Execute", Execute, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("BatchAtomic", BatchAtomic, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("Query", Query, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		// TODO
-		// vm.BuildFn("SetOptions", SetOptions, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		// vm.BuildFn("QueryRow", QueryRow, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		// vm.BuildFn("Stats", Stats, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		// vm.BuildFn("SetOptions", SetOptions, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		// vm.BuildFn("QueryRow", QueryRow, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		// vm.BuildFn("Stats", Stats, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "sql", context, fndefs)

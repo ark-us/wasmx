@@ -8,6 +8,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 	gosmtp "github.com/emersion/go-smtp"
 
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 )
 
@@ -29,6 +30,9 @@ const HOST_WASMX_ENV_SMTP_EXPORT = "wasmx_smtp_"
 
 const HOST_WASMX_ENV_SMTP = "smtp"
 
+const ENTRY_POINT_SMTP = "smtp_update"
+const ENTRY_POINT_SMTP_SERVER = "smtp_server_request"
+
 type ContextKey string
 
 const SmtpContextKey ContextKey = "smtp-context"
@@ -38,19 +42,24 @@ type Context struct {
 }
 
 type SmtpOpenConnection struct {
-	mtx                   sync.Mutex
-	GoContextParent       context.Context
-	Username              string
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Client                *gosmtp.Client
-	Closed                chan struct{}
-	GetClient             func() (*gosmtp.Client, error)
+	mtx             sync.Mutex
+	GoContextParent context.Context
+	Info            SmtpConnectionRequest
+	Client          *gosmtp.Client
+	Closed          chan struct{}
+	GetClient       func() (*gosmtp.Client, error)
+}
+
+type SmtpServerConnection struct {
+	GoContextParent context.Context
+	Server          *gosmtp.Server
+	ContractAddress mcodec.AccAddressPrefixed
 }
 
 type SmtpContext struct {
-	mtx           sync.Mutex
-	DbConnections map[string]*SmtpOpenConnection
+	mtx               sync.Mutex
+	DbConnections     map[string]*SmtpOpenConnection
+	ServerConnections map[string]*SmtpServerConnection
 }
 
 func (p *SmtpContext) GetConnection(id string) (*SmtpOpenConnection, bool) {
@@ -65,7 +74,7 @@ func (p *SmtpContext) SetConnection(id string, conn *SmtpOpenConnection) error {
 	defer p.mtx.Unlock()
 	_, found := p.DbConnections[id]
 	if found {
-		return fmt.Errorf("cannot overwrite SMTP connection: %s", id)
+		return fmt.Errorf("cannot overwrite SMTP client connection: %s", id)
 	}
 	p.DbConnections[id] = conn
 	return nil
@@ -77,20 +86,51 @@ func (p *SmtpContext) DeleteConnection(id string) {
 	delete(p.DbConnections, id)
 }
 
-type SmtpConnectionSimpleRequest struct {
-	Id                    string `json:"id"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	Password              string `json:"password"`
+func (p *SmtpContext) GetServerConnection(id string) (*SmtpServerConnection, bool) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	db, found := p.ServerConnections[id]
+	return db, found
 }
 
-type SmtpConnectionOauth2Request struct {
-	Id                    string `json:"id"`
-	SmtpServerUrlSTARTTLS string `json:"smtp_server_url_starttls"`
-	SmtpServerUrlTLS      string `json:"smtp_server_url_tls"`
-	Username              string `json:"username"`
-	AccessToken           string `json:"access_token"`
+func (p *SmtpContext) SetServerConnection(id string, conn *SmtpServerConnection) error {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	_, found := p.ServerConnections[id]
+	if found {
+		return fmt.Errorf("cannot overwrite SMTP server connection: %s", id)
+	}
+	p.ServerConnections[id] = conn
+	return nil
+}
+
+func (p *SmtpContext) DeleteServerConnection(id string) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	delete(p.ServerConnections, id)
+}
+
+type ConnectionAuthType string
+
+const (
+	ConnectionAuthTypePassword ConnectionAuthType = "password"
+	ConnectionAuthTypeOAuth2   ConnectionAuthType = "oauth2"
+)
+
+type ConnectionAuth struct {
+	AuthType ConnectionAuthType `json:"auth_type"` // "password", "oauth2"
+	Username string             `json:"username"`
+	Password string             `json:"password"`
+	Identity string             `json:"identity"`
+}
+
+type SmtpConnectionRequest struct {
+	Id          string          `json:"id"`
+	ServerUrl   string          `json:"server_url"`
+	StartTLS    bool            `json:"start_tls"`
+	NetworkType string          `json:"network_type"` // "tcp", "tcp4", "udp"
+	Auth        *ConnectionAuth `json:"auth"`
+	TlsConfig   *TlsConfig      `json:"tls_config"`
 }
 
 type SmtpConnectionResponse struct {
@@ -138,6 +178,15 @@ type SmtpNoopRequest struct {
 }
 
 type SmtpNoopResponse struct {
+	Error string `json:"error"`
+}
+
+type SmtpHelloRequest struct {
+	Id        string `json:"id"`
+	LocalName string `json:"local_name"`
+}
+
+type SmtpHelloResponse struct {
 	Error string `json:"error"`
 }
 
@@ -192,4 +241,29 @@ type SmtpBuildMailRequest struct {
 type SmtpBuildMailResponse struct {
 	Error string `json:"error"`
 	Data  []byte `json:"data"`
+}
+
+type ServerStartRequest struct {
+	ConnectionId string       `json:"connection_id"`
+	ServerConfig ServerConfig `json:"server_config"`
+}
+
+type ServerStartResponse struct {
+	Error string `json:"error"`
+}
+
+type ServerCloseRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
+
+type ServerCloseResponse struct {
+	Error string `json:"error"`
+}
+
+type ServerShutdownRequest struct {
+	ConnectionId string `json:"connection_id"`
+}
+
+type ServerShutdownResponse struct {
+	Error string `json:"error"`
 }

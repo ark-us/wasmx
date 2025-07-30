@@ -10,7 +10,6 @@ func RowsToJSON(rows *sql.Rows) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	results := []map[string]interface{}{}
 
 	for rows.Next() {

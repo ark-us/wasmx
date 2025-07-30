@@ -59,6 +59,9 @@ func InstantiateImapVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler
 }
 
 func Setup() {
+	// types.AdditionalEntryPointMap[ENTRY_POINT_IMAP] = true
+	// types.AdditionalEntryPointMap[ENTRY_POINT_IMAP_SERVER] = true
+
 	vmtypes.DependenciesMap[HOST_WASMX_ENV_IMAP_EXPORT] = true
 
 	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_IMAP_i32_VER1, InstantiateImapVM_i32)

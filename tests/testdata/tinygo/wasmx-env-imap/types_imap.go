@@ -1,6 +1,8 @@
 package imap
 
 import (
+	"fmt"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -106,9 +108,82 @@ type Address struct {
 	Host    string
 }
 
+func (a Address) ToString() string {
+	addr := a.ToAddress()
+	if a.Name == "" {
+		return addr
+	}
+	return fmt.Sprintf("%s <%s>", a.Name, addr)
+}
+
+func (a Address) ToAddress() string {
+	return fmt.Sprintf("%s@%s", a.Mailbox, a.Host)
+}
+
 func AddressFromString(account string, name string) Address {
 	parts := strings.Split(account, "@")
 	return Address{name, parts[0], parts[1]}
+}
+
+func AddressesFromString(accounts []string) []Address {
+	addrs := []Address{}
+	for _, v := range accounts {
+		addrs = append(addrs, AddressFromString(v, ""))
+	}
+	return addrs
+}
+
+func ParseEmailAddresses(input string) ([]Address, error) {
+	addrList, err := mail.ParseAddressList(input)
+	if err != nil {
+		return nil, err
+	}
+	var result []Address
+	for _, addr := range addrList {
+		local, domain := SplitAddress(addr.Address)
+		result = append(result, Address{
+			Name:    addr.Name,
+			Mailbox: local,
+			Host:    domain,
+		})
+	}
+	return result, nil
+}
+
+func SplitAddress(full string) (local, domain string) {
+	parts := strings.SplitN(full, "@", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return full, ""
+}
+
+func ToAddresses(addresses []Address) []string {
+	addrs := make([]string, len(addresses))
+	for i, addr := range addresses {
+		addrs[i] = addr.ToAddress()
+	}
+	return addrs
+}
+
+func SerializeAddresses(addresses []Address) string {
+	addrs := make([]string, len(addresses))
+	for i, addr := range addresses {
+		addrs[i] = addr.ToString()
+	}
+	return strings.Join(addrs, ", ")
+}
+
+func SerializeMessageId(messageIds string) string {
+	return fmt.Sprintf("<%s>", messageIds)
+}
+
+func SerializeMessageIds(messageIds []string) string {
+	ids := make([]string, len(messageIds))
+	for i, id := range messageIds {
+		ids[i] = SerializeMessageId(id)
+	}
+	return strings.Join(ids, " ")
 }
 
 type Envelope struct {

@@ -19,14 +19,13 @@ import (
 )
 
 type Calldata struct {
-	ConnectWithPassword *vmimap.ImapConnectionSimpleRequest `json:"ConnectWithPassword"`
-	ConnectOAuth2       *vmimap.ImapConnectionOauth2Request `json:"ConnectOAuth2"`
-	Close               *vmimap.ImapCloseRequest            `json:"Close"`
-	Count               *vmimap.ImapCountRequest            `json:"Count"`
-	ListMailboxes       *vmimap.ListMailboxesRequest        `json:"ListMailboxes"`
-	Fetch               *vmimap.ImapFetchRequest            `json:"Fetch"`
-	Listen              *vmimap.ImapListenRequest           `json:"Listen"`
-	CreateFolder        *vmimap.ImapCreateFolderRequest     `json:"CreateFolder"`
+	Connect       *vmimap.ImapConnectionRequest   `json:"ConnectWithPassword"`
+	Close         *vmimap.ImapCloseRequest        `json:"Close"`
+	Count         *vmimap.ImapCountRequest        `json:"Count"`
+	ListMailboxes *vmimap.ListMailboxesRequest    `json:"ListMailboxes"`
+	Fetch         *vmimap.ImapFetchRequest        `json:"Fetch"`
+	Listen        *vmimap.ImapListenRequest       `json:"Listen"`
+	CreateFolder  *vmimap.ImapCreateFolderRequest `json:"CreateFolder"`
 }
 
 func (suite *KeeperTestSuite) TestImap() {
@@ -45,11 +44,14 @@ func (suite *KeeperTestSuite) TestImap() {
 	utils.RegisterRole(suite, appA, "someemailrole", contractAddress, sender)
 
 	msg := &Calldata{
-		ConnectWithPassword: &vmimap.ImapConnectionSimpleRequest{
+		Connect: &vmimap.ImapConnectionRequest{
 			Id:            "conn1",
 			ImapServerUrl: "mail.mail.provable.dev:993",
-			Username:      suite.emailUsername,
-			Password:      suite.emailPassword,
+			Auth: vmimap.ConnectionAuth{
+				AuthType: vmimap.ConnectionAuthTypePassword,
+				Username: suite.emailUsername,
+				Password: suite.emailPassword,
+			},
 		}}
 	data, err := json.Marshal(msg)
 	suite.Require().NoError(err)

@@ -48,6 +48,9 @@ func Revert_(dataPtr int64)
 //go:wasmimport wasmx call
 func Call_(reqPtr int64) int64
 
+//go:wasmimport wasmx getChainId
+func GetChainId_() int64
+
 //go:wasmimport wasmx getBlockHash
 func GetBlockHash_(blockNumber int64) int64
 
@@ -130,6 +133,10 @@ func Revert(data []byte) {
 	Revert_(BytesToPackedPtr(data))
 }
 
+func GetChainId() string {
+	return string(PackedPtrToBytes(GetChainId_()))
+}
+
 func Bech32StringToBytes(addrBech32 string) []byte {
 	ptr := Bech32StringToBytes_(StringToPackedPtr(addrBech32))
 	return PackedPtrToBytes(ptr)
@@ -141,7 +148,7 @@ func Bech32BytesToString(addr []byte) string {
 	return string(data)
 }
 
-func CallInternal(addrBech32 string, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool) (bool, []byte) {
+func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool) (bool, []byte) {
 	req := &SimpleCallRequestRaw{
 		To:       addrBech32,
 		Value:    value,
@@ -166,11 +173,11 @@ func CallInternal(addrBech32 string, value *sdkmath.Int, calldata []byte, gasLim
 	return calld.Success == 0, calld.Data
 }
 
-func Call(addrBech32 string, value *sdkmath.Int, calldata []byte, gasLimit *big.Int) (bool, []byte) {
+func Call(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int) (bool, []byte) {
 	return CallInternal(addrBech32, value, calldata, gasLimit, false)
 }
 
-func CallStatic(addrBech32 string, calldata []byte, gasLimit *big.Int) (bool, []byte) {
+func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int) (bool, []byte) {
 	return CallInternal(addrBech32, nil, calldata, gasLimit, false)
 }
 

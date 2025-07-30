@@ -9,8 +9,7 @@ func BuildWasmxImapVM_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (inter
 	context := &Context{Context: ctx_}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("ConnectWithPassword", ConnectWithPassword, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
-		vm.BuildFn("ConnectOAuth2", ConnectOAuth2, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("Connect", Connect, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Close", Close, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Listen", Listen, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Count", Count, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
@@ -18,6 +17,8 @@ func BuildWasmxImapVM_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (inter
 		vm.BuildFn("ListMailboxes", ListMailboxes, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("Fetch", Fetch, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("CreateFolder", CreateFolder, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ServerStart", ServerStart, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("ServerClose", ServerClose, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 
 		// TODO
 		// Move

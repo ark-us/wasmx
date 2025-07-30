@@ -1,17 +1,493 @@
 package main
 
 import (
+	"encoding/json"
+	"time"
+
+	"fmt"
+
+	"golang.org/x/crypto/ed25519"
+
+	"github.com/loredanacirstea/wasmx-env"
+	imap "github.com/loredanacirstea/wasmx-env-imap"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+
+	"github.com/loredanacirstea/mailverif/arc"
+	"github.com/loredanacirstea/mailverif/dkim"
 )
 
+const ConnectionId = "emailchain"
+
 type Calldata struct {
-	ConnectWithPassword *vmimap.ImapConnectionSimpleRequest `json:"ConnectWithPassword,omitempty"`
-	ConnectOAuth2       *vmimap.ImapConnectionOauth2Request `json:"ConnectOAuth2,omitempty"`
-	Close               *vmimap.ImapCloseRequest            `json:"Close,omitempty"`
-	Listen              *vmimap.ImapListenRequest           `json:"Listen,omitempty"`
-	Count               *vmimap.ImapCountRequest            `json:"Count,omitempty"`
-	UIDSearch           *vmimap.ImapUIDSearchRequest        `json:"UIDSearch,omitempty"`
-	Fetch               *vmimap.ImapFetchRequest            `json:"Fetch,omitempty"`
-	ListMailboxes       *vmimap.ListMailboxesRequest        `json:"ListMailboxes,omitempty"`
-	CreateFolder        *vmimap.ImapCreateFolderRequest     `json:"CreateFolder,omitempty"`
+	Connect       *ConnectRequest          `json:"Connect,omitempty"`
+	Close         *CloseRequest            `json:"Close,omitempty"`
+	CreateAccount *CreateAccountRequest    `json:"CreateAccount,omitempty"`
+	SendEmail     *SendMailRequest         `json:"SendEmail,omitempty"`
+	BuildAndSend  *BuildAndSendMailRequest `json:"BuildAndSend,omitempty"`
+	VerifyDKIM    *VerifyDKIMRequest       `json:"VerifyDKIM,omitempty"`
+	VerifyARC     *VerifyDKIMRequest       `json:"VerifyARC,omitempty"`
+	SignDKIM      *SignDKIMRequest         `json:"SignDKIM,omitempty"`
+	SignARC       *SignARCRequest          `json:"SignARC,omitempty"`
+	ForwardEmail  *ForwardEmailRequest     `json:"ForwardEmail,omitempty"`
+	StartServer   *StartServerRequest      `json:"StartServer,omitempty"`
+	IncomingEmail *IncomingEmailRequest    `json:"IncomingEmail,omitempty"`
+	RoleChanged   *wasmx.RolesChangedHook  `json:"RoleChanged,omitempty"`
+	ReentryCalldataServer
+}
+
+type CreateAccountRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type ReentryCalldata struct {
+	IncomingEmail *IncomingEmailRequest `json:"IncomingEmail"`
+}
+
+type IncomingEmailRequest struct {
+	ConnectionId string
+	IpFrom       string   `json:"ipfrom"`
+	From         []string `json:"from"`
+	To           []string `json:"to"`
+	EmailRaw     []byte   `json:"email_raw"`
+	Timestamp    int64    `json:"timestamp"`
+}
+
+type ConnectRequest struct {
+	Id            string `json:"id"`
+	ImapServerUrl string `json:"imap_server_url"`
+	SmtpRequest   vmsmtp.SmtpConnectionRequest
+}
+
+type StartServerRequest struct {
+	SignOptions SignOptions         `json:"options"`
+	Smtp        vmsmtp.ServerConfig `json:"smtp"`
+	Imap        vmimap.ServerConfig `json:"imap"`
+}
+
+type CloseRequest struct {
+	Id string `json:"id"`
+}
+
+type SendMailRequest struct {
+	From     imap.Address   `json:"from"`
+	To       []imap.Address `json:"to"`
+	EmailRaw []byte         `json:"email_raw"`
+	Date     time.Time      `json:"date"`
+}
+
+type BuildAndSendMailRequest struct {
+	From    string    `json:"from"`
+	To      []string  `json:"to"`
+	Cc      []string  `json:"cc"`
+	Bcc     []string  `json:"bcc"`
+	Subject string    `json:"subject"`
+	Body    []byte    `json:"body"`
+	Date    time.Time `json:"date"`
+}
+
+type SignOptions struct {
+	// The SDID claiming responsibility for an introduction of a message into the
+	// mail stream. Hence, the SDID value is used to form the query for the public
+	// key. The SDID MUST correspond to a valid DNS name under which the DKIM key
+	// record is published.
+	//
+	// This can't be empty.
+	Domain string `json:"domain"`
+	// The selector subdividing the namespace for the domain.
+	//
+	// This can't be empty.
+	Selector string `json:"selector"`
+	// The Agent or User Identifier (AUID) on behalf of which the SDID is taking
+	// responsibility.
+	//
+	// This is optional.
+	Identifier string `json:"identifier"`
+
+	// The key used to sign the message.
+	//
+	// Supported Signer.Public() values are *rsa.PublicKey and
+	// ed25519.PublicKey.
+	PrivateKeyType string `json:"private_key_type"` // "rsa" or "ed25519"
+	PrivateKey     []byte `json:"private_key"`
+
+	// The hash algorithm used to sign the message. If zero, a default hash will
+	// be chosen.
+	//
+	// The only supported hash algorithm is crypto.SHA256.
+	Hash uint `json:"hash"`
+
+	// Header and body canonicalization algorithms.
+	//
+	// If empty, CanonicalizationSimple is used.
+	HeaderRelaxed bool `json:"header_relaxed"`
+	BodyRelaxed   bool `json:"body_relaxed"`
+
+	// A list of header fields to include in the signature. If nil, all headers
+	// will be included. If not nil, "From" MUST be in the list.
+	//
+	// See RFC 6376 section 5.4.1 for recommended header fields.
+	HeaderKeys []string `json:"header_keys"`
+
+	// The expiration time. A zero value means no expiration.
+	Expiration time.Time `json:"expiration"`
+
+	// A list of query methods used to retrieve the public key.
+	//
+	// If nil, it is implicitly defined as QueryMethodDNSTXT.
+	// QueryMethods []dkimS.QueryMethod `json:"query_methods"`
+}
+
+type SignDKIMRequest struct {
+	EmailRaw  string      `json:"email_raw"`
+	Options   SignOptions `json:"options"`
+	Timestamp time.Time   `json:"timestamp"`
+}
+
+type SignARCRequest struct {
+	MailFrom         string      `json:"mailfrom"`
+	IP               string      `json:"ip"`
+	MailServerDomain string      `json:"mailServerDomain"`
+	EmailRaw         string      `json:"email_raw"`
+	Options          SignOptions `json:"options"`
+	Timestamp        time.Time   `json:"timestamp"`
+}
+
+type SignDKIMResponse struct {
+	Error  string `json:"error"`
+	Header string `json:"header"`
+}
+
+type SignARCResponse struct {
+	Error  string `json:"error"`
+	Header string `json:"header"`
+}
+
+type VerifyDKIMRequest struct {
+	EmailRaw  string       `json:"email_raw"`
+	PublicKey *dkim.Record `json:"public_key,omitempty"`
+	Timestamp time.Time    `json:"timestamp"`
+}
+
+type VerifyDKIMResponse struct {
+	Error    string        `json:"error"`
+	Response []dkim.Result `json:"response"`
+}
+
+type VerifyARCResponse struct {
+	Error    string         `json:"error"`
+	Response *arc.ArcResult `json:"response"`
+}
+
+type ForwardEmailRequest struct {
+	ConnectionId      string           `json:"connection_id"`
+	Folder            string           `json:"folder"`
+	Uid               uint32           `json:"uid"`
+	MessageId         string           `json:"message_id"`
+	AdditionalSubject string           `json:"additional_subject"`
+	From              vmimap.Address   `json:"from"`
+	To                []vmimap.Address `json:"to"`
+	Cc                []vmimap.Address `json:"cc"`
+	Bcc               []vmimap.Address `json:"bcc"`
+	Options           SignOptions      `json:"options"`
+	Timestamp         time.Time        `json:"timestamp"`
+	SendEmail         bool             `json:"send_email"`
+}
+
+type ForwardEmailResponse struct {
+	Error    string `json:"error"`
+	EmailRaw string `json:"email_raw"`
+}
+
+type Signature struct {
+	Header         string            `json:"header"`                  // Header of the signature
+	Raw            string            `json:"raw"`                     // Raw value of the signature
+	AlgorithmID    string            `json:"algorithmId"`             // 3 (SHA1) or 5 (SHA256)
+	Hash           []byte            `json:"hash"`                    // 'h' tag value
+	BodyHash       []byte            `json:"bodyHash"`                // 'bh' tag value
+	RelaxedHeader  bool              `json:"relaxedHeader"`           // header canonicalization algorithm
+	RelaxedBody    bool              `json:"relaxedBody"`             // body canonicalization algorithm
+	SignerDomain   string            `json:"signerDomain"`            // 'd' tag value
+	Headers        []string          `json:"headers"`                 // parsed 'h' tag value
+	UserIdentifier string            `json:"userId"`                  // 'i' tag value
+	ArcInstance    int               `json:"arcInstance"`             // 'i' tag value (only in arc headers)
+	Length         int64             `json:"length"`                  // 'l' tag value
+	Selector       string            `json:"selector"`                // 's' tag value
+	Timestamp      time.Time         `json:"ts"`                      // 't' tag value as time.Time
+	Expiration     time.Time         `json:"exp"`                     // 'x' tag value as time.Time
+	CopiedHeaders  map[string]string `json:"copiedHeaders,omitempty"` // parsed 'z' tag value
+
+	// Arc related fields
+	ArcCV string `json:"arcCv"` // 'cv' tag, chain validation value for arc seal
+	Spf   string `json:"spf"`   // spf value for ARC-Authentication-Results
+	Dmarc string `json:"dmarc"` // dmarc value for ARC-Authentication-Results
+	Dkim  string `json:"dkim"`  // dkim value for ARC-Authentication-Results
+}
+
+// type Result struct {
+// 	Order     int                     `json:"order"`
+// 	Code      string                  `json:"code"`
+// 	Error     *dkim.VerificationError `json:"error,omitempty"`
+// 	Signature *Signature              `json:"signature,omitempty"`
+// 	Key       *dkim.PublicKey         `json:"key,omitempty"`
+// 	Timestamp time.Time               `json:"timestamp"`
+// }
+
+// func (v Result) String() string {
+// 	vbz, err := json.Marshal(&v)
+// 	if err == nil {
+// 		return string(vbz)
+// 	}
+// 	errstr := ""
+// 	signature := ""
+// 	key := ""
+// 	if v.Error != nil {
+// 		if v.Error.Err != nil {
+// 			errstr = v.Error.Err.Error()
+// 		} else {
+// 			errstr = v.Error.Explanation
+// 		}
+// 	}
+// 	return fmt.Sprintf(`order:%d code:%s error:%s signature:%s key:%s timestamp:%s`, v.Order, v.Code, errstr, signature, key, v.Timestamp.UTC().String())
+// }
+
+// func (v *Signature) FromLib(val *dkim.Signature) {
+// 	fmt.Println("--Signature.FromLib--")
+// 	fmt.Println("--Signature.FromLib val.AlgorithmID--", val.AlgorithmID)
+// 	hashbz, err := val.AlgorithmID.MarshalText()
+// 	fmt.Println("--Signature.FromLib2--")
+// 	fmt.Println("--Signature.FromLib3--", err, string(hashbz))
+// 	if err != nil {
+// 		panic("cannot marshal AlgorithmID: " + err.Error())
+// 	}
+// 	v.Header = val.Header
+// 	v.Raw = val.Raw
+// 	v.AlgorithmID = string(hashbz)
+// 	v.Hash = val.Hash
+// 	v.BodyHash = val.BodyHash
+// 	v.RelaxedHeader = val.RelaxedHeader
+// 	v.RelaxedBody = val.RelaxedBody
+// 	v.SignerDomain = val.SignerDomain
+// 	v.Headers = val.Headers
+// 	v.UserIdentifier = val.UserIdentifier
+// 	v.ArcInstance = val.ArcInstance
+// 	v.Length = val.Length
+// 	v.Selector = val.Selector
+// 	v.Timestamp = val.Timestamp
+// 	v.Expiration = val.Expiration
+// 	v.CopiedHeaders = val.CopiedHeaders
+// 	v.ArcCV = val.ArcCV.String()
+// 	v.Dmarc = val.Dmarc.String()
+// 	v.Dkim = val.Dkim.String()
+// }
+
+// func (v *Result) FromLib(val *dkim.Result) {
+// 	fmt.Println("--Result.FromLib--")
+// 	v.Order = val.Order
+// 	v.Code = val.Code.String()
+// 	v.Error = val.Error
+// 	fmt.Println("--Result.FromLib val.Signature--", val.Signature)
+// 	if val.Signature != nil {
+// 		v.Signature = &Signature{}
+// 		v.Signature.FromLib(val.Signature)
+// 		fmt.Println("--Result.FromLib v.Signature--", v.Signature)
+// 	}
+// 	v.Key = val.Key
+// 	v.Timestamp = val.Timestamp
+// }
+
+// func (v *Result) FromLibArcResult(val *dkim.ArcResult) {
+// 	fmt.Println("--Result.FromLibArcResult--")
+// 	v.Order = val.Order
+// 	v.Code = val.Code.String()
+// 	v.Error = val.Error
+// 	fmt.Println("--Result.FromLibArcResult val.Signature--", val.Signature)
+// 	if val.Signature != nil {
+// 		fmt.Println("--val.Signature not nil--")
+// 		v.Signature = &Signature{}
+// 		v.Signature.FromLib(val.Signature)
+// 		fmt.Println("--Result.FromLibArcResult v.Signature--", v.Signature)
+// 	}
+// 	fmt.Println("--Result.FromLibArcResult post val.Signature--")
+// 	fmt.Println("--Result.FromLibArcResult val.Key--", val.Key)
+// 	if val.Key != nil {
+// 		v.Key = val.Key
+// 	}
+// 	fmt.Println("--Result.FromLibArcResult val.Timestamp--", val.Timestamp)
+// 	v.Timestamp = val.Timestamp
+// 	fmt.Println("--Result.FromLibArcResult post val.Timestamp--")
+// }
+
+// func ResultArrFromLib(vv []*dkim.Result) []Result {
+// 	r := make([]Result, 0)
+// 	for _, v := range vv {
+// 		if v != nil {
+// 			val := &Result{}
+// 			val.FromLib(v)
+// 			r = append(r, *val)
+// 		}
+// 	}
+// 	return r
+// }
+
+// func (v *ArcResult) FromLib(val *dkim.ArcResult) {
+// 	fmt.Println("--ArcResult.FromLib0--", val)
+// 	r := &Result{}
+// 	r.FromLibArcResult(val)
+// 	fmt.Println("--ArcResult.FromLib Result--")
+// 	fmt.Println("--ArcResult.FromLib Result2--", r)
+// 	v.Result = *r
+// 	fmt.Println("--ArcResult.FromLib v.Result--", v.Result)
+// 	chain := make([]ArcSetResult, len(val.Chain))
+// 	fmt.Println("--ArcResult.FromLib chain--", chain)
+// 	for i, res := range val.Chain {
+// 		fmt.Println("--ArcResult.FromLib i,res--", i, res)
+// 		chain[i] = ArcSetResult{
+// 			Instance: res.Instance,
+// 			Spf:      res.Spf.String(),
+// 			Dkim:     res.Dkim.String(),
+// 			Dmarc:    res.Dmarc.String(),
+// 			AMSValid: res.AMSValid,
+// 			ASValid:  res.ASValid,
+// 			CV:       res.CV.String(),
+// 		}
+// 	}
+// 	fmt.Println("--ArcResult.FromLib chain--", chain)
+// 	v.Chain = chain
+// }
+
+func loadPrivateKey(keyBytes []byte) (ed25519.PrivateKey, error) {
+	if len(keyBytes) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf("invalid key length: got %d, want %d", len(keyBytes), ed25519.PrivateKeySize)
+	}
+	return ed25519.PrivateKey(keyBytes), nil
+}
+
+// func hashStringToLib(hashstr string) crypto.Hash {
+// 	switch hashstr {
+// 	case "MD4":
+// 		return crypto.MD4
+// 	case "MD5":
+// 		return crypto.MD5
+// 	case "SHA-1":
+// 		return crypto.SHA1
+// 	case "SHA-224":
+// 		return crypto.SHA224
+// 	case "SHA-256":
+// 		return crypto.SHA256
+// 	case "SHA-384":
+// 		return crypto.SHA384
+// 	case "SHA-512":
+// 		return crypto.SHA512
+// 	case "MD5+SHA1":
+// 		return crypto.MD5SHA1
+// 	case "RIPEMD-160":
+// 		return crypto.RIPEMD160
+// 	case "SHA3-224":
+// 		return crypto.SHA3_224
+// 	case "SHA3-256":
+// 		return crypto.SHA3_256
+// 	case "SHA3-384":
+// 		return crypto.SHA3_384
+// 	case "SHA3-512":
+// 		return crypto.SHA3_512
+// 	case "SHA-512/224":
+// 		return crypto.SHA512_224
+// 	case "SHA-512/256":
+// 		return crypto.SHA512_256
+// 	case "BLAKE2s-256":
+// 		return crypto.BLAKE2s_256
+// 	case "BLAKE2b-256":
+// 		return crypto.BLAKE2b_256
+// 	case "BLAKE2b-384":
+// 		return crypto.BLAKE2b_384
+// 	case "BLAKE2b-512":
+// 		return crypto.BLAKE2b_512
+// 	default:
+// 		return 100
+// 	}
+// }
+
+const (
+	HEADER_PROVABLE_DNS_REGISTRY                = "Provable-DNS-Registry"
+	HEADER_PROVABLE_EMAIL_REGISTRY              = "Provable-Email-Registry"
+	HEADER_PROVABLE_FORWARD_ORIGIN_DKIM_CONTEXT = "Provable-Forward-Origin-DKIM-Context"
+	HEADER_PROVABLE_FORWARD_CHAIN_SIGNATURE     = "Provable-Forward-Chain-Signature"
+)
+
+type Email struct {
+	Owner        string          `json:"owner"`         // Email owner address
+	Folder       string          `json:"folder"`        // IMAP folder
+	UID          int64           `json:"uid"`           // Unique UID per (owner, folder)
+	SeqNum       int64           `json:"seq_num"`       // Sequence number within folder
+	MessageID    string          `json:"message_id"`    // Email Message-ID
+	Subject      string          `json:"subject"`       // Email subject
+	InternalDate time.Time       `json:"internal_date"` // UNIX timestamp (IMAP INTERNALDATE)
+	Flags        string          `json:"flags"`         // Flags like "\Seen \Answered" as space-separated text
+	RawEmail     []byte          `json:"raw_email"`     // Full RFC5322 email body
+	Size         int64           `json:"size"`          // Size in bytes (matches RFC822.SIZE)
+	Headers      string          `json:"headers"`       // Optional: flattened text of all headers (for search)
+	Body         string          `json:"body"`          // Optional: plain body text (for search)
+	Bh           string          `json:"bh"`
+	Envelope     vmimap.Envelope `json:"envelope"`
+	IpFrom       string          `json:"ipfrom"`
+	// From string `json:"from"`
+	// To string `json:"to"`
+}
+
+type EmailWrite struct {
+	Owner        string `json:"owner"`         // Email owner address
+	Folder       string `json:"folder"`        // IMAP folder
+	UID          int64  `json:"uid"`           // Unique UID per (owner, folder)
+	SeqNum       int64  `json:"seq_num"`       // Sequence number within folder
+	MessageID    string `json:"message_id"`    // Email Message-ID
+	Subject      string `json:"subject"`       // Email subject
+	InternalDate int64  `json:"internal_date"` // UNIX timestamp (IMAP INTERNALDATE)
+	Flags        string `json:"flags"`         // Flags like "\Seen \Answered" as space-separated text
+	RawEmail     []byte `json:"raw_email"`     // Full RFC5322 email body
+	Size         int64  `json:"size"`          // Size in bytes (matches RFC822.SIZE)
+	Headers      string `json:"headers"`       // Optional: flattened text of all headers (for search)
+	Body         string `json:"body"`          // Optional: plain body text (for search)
+	Bh           string `json:"bh"`
+	Envelope     string `json:"envelope"`
+	IpFrom       string `json:"ipfrom"`
+	// From string `json:"from"`
+	// To string `json:"to"`
+}
+
+type EmailRead struct {
+	ID int64 `json:"id"` // AUTOINCREMENT primary key
+	EmailWrite
+}
+
+func (v EmailRead) ToEmail() (*Email, error) {
+	envelope := vmimap.Envelope{}
+	err := json.Unmarshal([]byte(v.Envelope), &envelope)
+	if err != nil {
+		return nil, err
+	}
+	t := time.Unix(0, v.InternalDate*int64(time.Millisecond)).UTC()
+	return &Email{
+		Owner:        v.Owner,
+		Folder:       v.Folder,
+		UID:          v.UID,
+		SeqNum:       v.SeqNum,
+		MessageID:    v.MessageID,
+		Subject:      v.Subject,
+		InternalDate: t,
+		Flags:        v.Flags,
+		RawEmail:     v.RawEmail,
+		Size:         v.Size,
+		Headers:      v.Headers,
+		Body:         v.Body,
+		Bh:           v.Bh,
+		Envelope:     envelope,
+		IpFrom:       v.IpFrom,
+	}, nil
+}
+
+type OwnerRead struct {
+	Id      int64  `json:"id"`
+	Address string `json:"address"`
 }

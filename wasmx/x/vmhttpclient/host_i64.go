@@ -9,7 +9,7 @@ func BuildWasmxHttpClient_i64(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (i
 	context := &Context{Context: ctx_}
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
-		vm.BuildFn("Request", Request, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("Request", Request, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "httpclient", context, fndefs)

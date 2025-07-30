@@ -1,8 +1,8 @@
 module github.com/loredanacirstea/mythos-tests
 
-go 1.23.0
+go 1.24
 
-toolchain go1.23.2
+toolchain go1.24.4
 
 require (
 	cosmossdk.io/errors v1.0.1 // indirect
@@ -22,7 +22,7 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 // indirect
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/grpc v1.63.2 // indirect
@@ -55,8 +55,8 @@ require (
 	github.com/rs/cors v1.10.0 // indirect
 	github.com/rs/zerolog v1.32.0 // indirect
 	github.com/spf13/viper v1.18.2 // indirect
-	golang.org/x/net v0.24.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/sync v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/protobuf v1.33.0
 	sigs.k8s.io/yaml v1.4.0 // indirect
@@ -137,6 +137,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
@@ -256,7 +257,7 @@ require (
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
 	github.com/zondax/ledger-go v0.14.3 // indirect
-	go.etcd.io/bbolt v1.3.8 // indirect
+	go.etcd.io/bbolt v1.3.11 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
@@ -268,14 +269,13 @@ require (
 	go.uber.org/mock v0.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.19.0 // indirect
-	golang.org/x/term v0.19.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.20.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/api v0.162.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
@@ -337,8 +337,39 @@ require (
 	github.com/loredanacirstea/wasmx-vmsmtp v0.0.0
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/onsi/gomega v1.27.10
+	golang.org/x/oauth2 v0.30.0
 )
 
 replace github.com/loredanacirstea/wasmx-vmimap => ../wasmx-vmimap
 
 replace github.com/loredanacirstea/wasmx-vmsmtp => ../wasmx-vmsmtp
+
+// replace github.com/emersion/go-msgauth => ../../go-msgauth
+
+// require github.com/loredanacirstea/emailchain v0.0.0
+
+// replace github.com/loredanacirstea/emailchain => ./testdata/tinygo/emailchain
+
+// require github.com/loredanacirstea/wasmx-env v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env => ./testdata/tinygo/wasmx-env
+
+// require github.com/loredanacirstea/wasmx-env-imap v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env-imap => ./testdata/tinygo/wasmx-env-imap
+
+// require github.com/loredanacirstea/wasmx-env-smtp v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env-smtp => ./testdata/tinygo/wasmx-env-smtp
+
+// require github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-env-httpclient => ./testdata/tinygo/wasmx-env-httpclient
+
+// require github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
+
+// replace github.com/loredanacirstea/wasmx-utils => ./testdata/tinygo/wasmx-utils
+
+// github.com/loredanacirstea/mailverif@188e4581f4a628b77101bf8708f8bbb99821b23c
+// replace github.com/loredanacirstea/mailverif => ../../mailverif
+require github.com/loredanacirstea/mailverif v0.0.0-20250725161918-188e4581f4a6

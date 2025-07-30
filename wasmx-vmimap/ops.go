@@ -12,14 +12,14 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
 	requestbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
 		return nil, err
 	}
-	var req ImapConnectionSimpleRequest
+	var req ImapConnectionRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 
 	conn, found := vctx.GetConnection(connId)
 	if found {
-		if conn.ImapServerUrl == req.ImapServerUrl {
+		if conn.Info.ImapServerUrl == req.ImapServerUrl {
 			err := conn.Client.Noop().Wait()
 			if err == nil {
 				return prepareResponse(rnh, response)
@@ -49,61 +49,14 @@ func ConnectWithPassword(_context interface{}, rnh memc.RuntimeHandler, params [
 	}
 
 	getClient := func(opts *imapclient.Options) (*imapclient.Client, error) {
-		c, err := connectToIMAP(req.ImapServerUrl, req.Username, req.Password, opts)
+		c, err := connectToIMAP(req.ImapServerUrl, req.Auth, opts)
 		if err != nil {
 			return nil, err
 		}
 		return c, nil
 	}
 
-	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.ImapServerUrl)
-}
-
-func ConnectOAuth2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
-	ctx := _context.(*Context)
-	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
-	requestbz, err := rnh.ReadMemFromPtr(keyptr)
-	if err != nil {
-		return nil, err
-	}
-	var req ImapConnectionOauth2Request
-	err = json.Unmarshal(requestbz, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	vctx, err := GetImapContext(ctx.Context.GoContextParent)
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ImapConnectionResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
-
-	conn, found := vctx.GetConnection(connId)
-	if found {
-		if conn.ImapServerUrl == req.ImapServerUrl {
-			err := conn.Client.Noop().Wait()
-			if err == nil {
-				return prepareResponse(rnh, response)
-			} else {
-				_ = closeConnection(vctx, conn, connId)
-			}
-		} else {
-			response.Error = "connection id already in use"
-			return prepareResponse(rnh, response)
-		}
-	}
-
-	getClient := func(opts *imapclient.Options) (*imapclient.Client, error) {
-		c, err := connectToIMAPOauth2(req.ImapServerUrl, req.Username, req.AccessToken, opts)
-		if err != nil {
-			return nil, err
-		}
-		return c, nil
-	}
-
-	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req.Username, req.ImapServerUrl)
+	return connectCommon(ctx, rnh, vctx, getClient, response, connId, req)
 }
 
 func connectCommon(
@@ -113,8 +66,7 @@ func connectCommon(
 	getClient func(opts *imapclient.Options) (*imapclient.Client, error),
 	response *ImapConnectionResponse,
 	connId string,
-	username string,
-	imapServerUrl string,
+	info ImapConnectionRequest,
 ) ([]interface{}, error) {
 	client, err := getClient(nil)
 	if err != nil {
@@ -144,8 +96,7 @@ func connectCommon(
 
 	conn := &ImapOpenConnection{
 		GoContextParent: ctx.GoContextParent,
-		Username:        username,
-		ImapServerUrl:   imapServerUrl,
+		Info:            info,
 		Client:          client,
 		Closed:          closedChannel,
 		GetClient:       getClient,
@@ -228,7 +179,7 @@ func Listen(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 		return prepareResponse(rnh, response)
 	}
 
-	dataHandler := callbackMailboxChange(ctx, req.Folder, connId, conn.Username)
+	dataHandler := callbackMailboxChange(ctx, req.Folder, connId, conn.Info.Auth.Username)
 	err = conn.StartListener(ctx.GoContextParent, req.Folder, dataHandler)
 	if err != nil {
 		response.Error = err.Error()
@@ -311,7 +262,7 @@ func UIDSearch(_context interface{}, rnh memc.RuntimeHandler, params []interface
 		return prepareResponse(rnh, response)
 	}
 
-	numset, count, err := fetchEmailIds(conn.Client, folder, conn.Username, *req.FetchFilter)
+	numset, count, err := fetchEmailIds(conn.Client, folder, conn.Info.Auth.Username, *req.FetchFilter)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -390,7 +341,7 @@ func Fetch(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 		emails = append(emails, e...)
 	}
 	if req.FetchFilter != nil {
-		numset, count, err := fetchEmailIds(conn.Client, folder, conn.Username, *req.FetchFilter)
+		numset, count, err := fetchEmailIds(conn.Client, folder, conn.Info.Auth.Username, *req.FetchFilter)
 		if err != nil {
 			response.Error = err.Error()
 			return prepareResponse(rnh, response)
@@ -482,6 +433,76 @@ func CreateFolder(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
+	}
+	return prepareResponse(rnh, response)
+}
+
+func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerStartResponse{Error: ""}
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req ServerStartRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	if req.ConnectionId == "" {
+		response.Error = "imap server connection id empty"
+		return prepareResponse(rnh, response)
+	}
+	connId := buildConnectionId(req.ConnectionId, ctx)
+	_, ok := vctx.GetServerConnection(connId)
+	if ok {
+		response.Error = "already started"
+		return prepareResponse(rnh, response)
+	}
+	s, err := NewServer(req.ServerConfig, ctx)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+	vctx.SetServerConnection(connId, &ServerConnection{
+		Server:          s,
+		GoContextParent: ctx.GoContextParent,
+		ContractAddress: ctx.ContractInfo.Address,
+	})
+	return prepareResponse(rnh, response)
+}
+
+func ServerClose(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	response := &ServerCloseResponse{Error: ""}
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req ServerCloseRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	vctx, err := GetImapContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return nil, err
+	}
+	connId := buildConnectionId(req.ConnectionId, ctx)
+	conn, ok := vctx.GetServerConnection(connId)
+	if ok {
+		vctx.DeleteServerConnection(connId)
+		err = conn.Server.Close()
+		if err != nil {
+			response.Error = err.Error()
+			return prepareResponse(rnh, response)
+		}
 	}
 	return prepareResponse(rnh, response)
 }
