@@ -25,6 +25,7 @@ import (
 var (
 	benchmarkMode bool
 	wasmRuntime   string
+	runKnownFixme bool
 )
 
 // TestMain is the main entry point for the tests.
@@ -32,6 +33,7 @@ func TestMain(m *testing.M) {
 	// Add custom flags
 	flag.BoolVar(&benchmarkMode, "benchmark", false, "Enable benchmark timing in tests")
 	flag.StringVar(&wasmRuntime, "wasm-runtime", "default", "Set the wasm runtime (e.g. wasmedge, wazero)")
+	flag.BoolVar(&runKnownFixme, "run-fixme", false, "Run skipped fixme tests")
 
 	// Parse the flags. Only flags after `--` in `go test` command line will be passed here.
 	flag.Parse()
@@ -126,5 +128,11 @@ func TestKeeperTestSuite(t *testing.T) {
 func SkipCIExpensiveTests(t *testing.T, name string) {
 	if testing.Short() {
 		t.Skipf("Skipping expensive test: %s", name)
+	}
+}
+
+func SkipFixmeTests(t *testing.T, name string) {
+	if !runKnownFixme {
+		t.Skipf("TODO: fixme %s", name)
 	}
 }

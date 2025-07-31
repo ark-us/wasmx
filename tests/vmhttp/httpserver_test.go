@@ -28,6 +28,7 @@ type CalldataTestHttpServer struct {
 }
 
 func (suite *KeeperTestSuite) TestHttpServer() {
+	SkipRunServerTests(suite.T(), "TestHttpServer")
 	wasmbin := testdata.WasmxTestHttp
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
@@ -133,6 +134,7 @@ func (suite *KeeperTestSuite) TestHttpServer() {
 }
 
 func (suite *KeeperTestSuite) TestHttpServerRegistry() {
+	SkipRunServerTests(suite.T(), "TestHttpServerRegistry")
 	wasmbin := testdata.WasmxTestHttp
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

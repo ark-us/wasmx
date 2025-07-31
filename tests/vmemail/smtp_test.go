@@ -30,6 +30,7 @@ type CalldataTestSmpt struct {
 }
 
 func (suite *KeeperTestSuite) TestSmtp() {
+	SkipNoPasswordTests(suite.T(), "TestSmtp")
 	wasmbin := testdata.WasmxTestSmtp
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

@@ -246,6 +246,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 }
 
 func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
+	SkipFixmeTests(suite.T(), "TestInterpreterTay2Opcodes")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 

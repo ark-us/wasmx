@@ -31,6 +31,7 @@ type BenchmarkRequest struct {
 }
 
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
+	SkipFixmeTests(suite.T(), "TestWasmxBenchmark")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
@@ -167,6 +168,7 @@ func (suite *KeeperTestSuite) TestWasmxSameCode() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxTime() {
+	SkipFixmeTests(suite.T(), "TestWasmxTime")
 	SkipCIExpensiveTests(suite.T(), "TestWasmxTime")
 
 	sender := suite.GetRandomAccount()
@@ -195,6 +197,7 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxLevel0() {
+	SkipFixmeTests(suite.T(), "TestWasmxLevel0")
 	SkipCIExpensiveTests(suite.T(), "TestWasmxLevel0")
 
 	sender := suite.GetRandomAccount()

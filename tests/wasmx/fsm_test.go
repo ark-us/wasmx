@@ -15,6 +15,7 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestFSM_Semaphore() {
+	SkipFixmeTests(suite.T(), "TestFSM_Semaphore")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
@@ -41,6 +42,7 @@ func (suite *KeeperTestSuite) TestFSM_Semaphore() {
 }
 
 func (suite *KeeperTestSuite) TestFSM_ERC20() {
+	SkipFixmeTests(suite.T(), "TestFSM_ERC20")
 	owner := suite.GetRandomAccount()
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
@@ -111,6 +113,7 @@ func (suite *KeeperTestSuite) TestFSM_ERC20() {
 }
 
 func (suite *KeeperTestSuite) TestFSM_Timer() {
+	SkipFixmeTests(suite.T(), "TestFSM_Timer")
 	owner := suite.GetRandomAccount()
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()

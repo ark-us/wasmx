@@ -26,6 +26,7 @@ import (
 
 var (
 	wasmRuntime string
+	runServer   bool
 )
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 // TestMain is the main entry point for the tests.
 func TestMain(m *testing.M) {
 	flag.StringVar(&wasmRuntime, "wasm-runtime", "default", "Set the wasm runtime (e.g. wasmedge, wazero)")
+	flag.BoolVar(&runServer, "run-server", false, "Run server")
 
 	// Parse the flags. Only flags after `--` in `go test` command line will be passed here.
 	flag.Parse()
@@ -94,4 +96,10 @@ func TestKeeperTestSuite(t *testing.T) {
 func (suite *KeeperTestSuite) parseQueryResponse(qres []byte, qresp interface{}) {
 	err := json.Unmarshal(qres, qresp)
 	suite.Require().NoError(err)
+}
+
+func SkipRunServerTests(t *testing.T, name string) {
+	if !runServer {
+		t.Skipf("Skip run server test %s", name)
+	}
 }

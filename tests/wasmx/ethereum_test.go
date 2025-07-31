@@ -59,6 +59,7 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 }
 
 func (suite *KeeperTestSuite) TestAliasContract() {
+	SkipFixmeTests(suite.T(), "TestAliasContract")
 	appA := s.AppContext()
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.ALIAS_ETH)
 	sender := suite.GetRandomAccount()

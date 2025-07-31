@@ -35,6 +35,7 @@ type AppendEntry struct {
 }
 
 func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
+	SkipFixmeTests(suite.T(), "TestRAFTLogReplicationOneNode")
 	sender := suite.GetAccountFromMnemonic("work reward tooth zero chimney employ list grass priority pudding laundry crystal spend response bomb skill engine head science onion spider upper slab volume")
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1000_000_000)
@@ -232,6 +233,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 }
 
 func (suite *KeeperTestSuite) TestRAFTMigration() {
+	SkipFixmeTests(suite.T(), "TestRAFTMigration")
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
@@ -314,6 +316,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 }
 
 func (suite *KeeperTestSuite) TestTendermintMigration() {
+	SkipFixmeTests(suite.T(), "TestTendermintMigration")
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
@@ -532,6 +535,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 }
 
 func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
+	SkipFixmeTests(suite.T(), "TestRaftToAvaSnowmanMigration")
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)

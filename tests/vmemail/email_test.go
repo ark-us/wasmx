@@ -110,6 +110,7 @@ type CalldataEmailProver struct {
 }
 
 func (suite *KeeperTestSuite) TestEmail() {
+	SkipNoPasswordTests(suite.T(), "TestEmail")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 

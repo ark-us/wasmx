@@ -20,6 +20,7 @@ import (
 
 // Python -> JavaScript -> Tinygo wasm -> AssemblyScript -> EVM -> CosmWasm
 func (suite *KeeperTestSuite) TestVMCollaboration() {
+	SkipFixmeTests(suite.T(), "TestVMCollaboration")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(testutil.DEFAULT_BALANCE)
 

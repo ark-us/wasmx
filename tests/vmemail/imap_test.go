@@ -29,6 +29,7 @@ type Calldata struct {
 }
 
 func (suite *KeeperTestSuite) TestImap() {
+	SkipNoPasswordTests(suite.T(), "TestImap")
 	wasmbin := testdata.WasmxTestImap
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

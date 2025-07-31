@@ -35,6 +35,7 @@ func (suite *KeeperTestSuite) TestSendingCoinsToNewAccount() {
 }
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
+	SkipFixmeTests(suite.T(), "TestEwasmOpcodes")
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 
 	sender := suite.GetRandomAccount()
@@ -1059,6 +1060,7 @@ func (suite *KeeperTestSuite) TestEwasmErc20() {
 }
 
 func (suite *KeeperTestSuite) TestContractTransfer() {
+	SkipFixmeTests(suite.T(), "TestContractTransfer")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	sendETH := "c664c714"

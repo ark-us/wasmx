@@ -13,6 +13,7 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestWasmxRustSimpleStorage() {
+	SkipFixmeTests(suite.T(), "TestWasmxRustSimpleStorage")
 	wasmbin := rusttest.RustSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)

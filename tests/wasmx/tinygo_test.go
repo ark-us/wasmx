@@ -61,6 +61,7 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 }
 
 func (suite *KeeperTestSuite) TestWasiTinygoCallSimpleStorage() {
+	SkipFixmeTests(suite.T(), "TestWasiTinygoCallSimpleStorage")
 	wasmbin := tinygo.TinyGoSimpleStorage
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)

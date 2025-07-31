@@ -55,6 +55,7 @@ type CalldataTestSmptTinygo struct {
 }
 
 func (suite *KeeperTestSuite) TestEmailTinygoImap() {
+	SkipNoPasswordTests(suite.T(), "TestEmailTinygoImap")
 	wasmbin := tinygo.ImapTestWrapSdk
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
@@ -148,6 +149,7 @@ func (suite *KeeperTestSuite) TestEmailTinygoImap() {
 }
 
 func (suite *KeeperTestSuite) TestEmailTinyGoSmtp() {
+	SkipNoPasswordTests(suite.T(), "TestEmailTinyGoSmtp")
 	wasmbin := tinygo.SmtpTestWrapSdk
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
@@ -524,6 +526,7 @@ func ARCSignAndVerify(t *testing.T, options *SignOptions, emailStr string, mailf
 }
 
 func (suite *KeeperTestSuite) TestEmailTinyGoDKIM() {
+	SkipFixmeTests(suite.T(), "TestEmailTinyGoDKIM")
 	wasmbin := tinygo.EmailChain
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

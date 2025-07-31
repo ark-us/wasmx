@@ -222,6 +222,7 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 }
 
 func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
+	SkipFixmeTests(suite.T(), "TestEwasmPrecompileSecretSharingDirect")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 

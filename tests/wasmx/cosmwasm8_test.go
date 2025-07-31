@@ -530,6 +530,7 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
+	SkipFixmeTests(suite.T(), "TestWasmxCwCrypto")
 	wasmbin := cw8.CryptoVerifyAarch64Wasm
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)

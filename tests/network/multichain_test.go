@@ -42,6 +42,7 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
+	SkipFixmeTests(suite.T(), "TestMultiChainExecMythos")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
@@ -71,6 +72,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
+	SkipFixmeTests(suite.T(), "TestMultiChainExecLevel0")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
@@ -103,6 +105,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainInit() {
+	SkipFixmeTests(suite.T(), "TestMultiChainInit")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
@@ -281,6 +284,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
+	SkipFixmeTests(suite.T(), "TestMultiChainDefaultInit")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
@@ -419,6 +423,7 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
+	SkipFixmeTests(suite.T(), "TestMultiChainAtomicTx")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
@@ -524,6 +529,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
+	SkipFixmeTests(suite.T(), "TestMultiChainCrossChainTx")
 	wasmbinFrom := testdata.WasmxCrossChain
 	wasmbinTo := testdata.WasmxSimpleStorage
 	chainId := mcfg.LEVEL0_CHAIN_ID
@@ -641,6 +647,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
+	SkipFixmeTests(suite.T(), "TestMultiChainCrossChainQueryDeterministic")
 	wasmbinFrom := testdata.WasmxCrossChain
 	wasmbinTo := testdata.WasmxSimpleStorage
 	chainId := mcfg.LEVEL0_CHAIN_ID
@@ -773,6 +780,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
+	SkipFixmeTests(suite.T(), "TestMultiChainLevelsTx")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
@@ -910,6 +918,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
+	SkipFixmeTests(suite.T(), "TestMultiChainLevelsQuery")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)

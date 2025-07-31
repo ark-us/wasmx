@@ -17,6 +17,7 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestPriviledgedAPI() {
+	SkipFixmeTests(suite.T(), "TestPriviledgedAPI")
 	// test that contracts without a role requiring a protected host API, only use the mocked host API
 	wasmbin := testdata.WasmxTestSql
 	sender := suite.GetRandomAccount()

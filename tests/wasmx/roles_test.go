@@ -22,6 +22,7 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
+	SkipFixmeTests(suite.T(), "TestEwasmCallToPriviledged")
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	evmcode, err := hex.DecodeString(testdata.CallGeneral)

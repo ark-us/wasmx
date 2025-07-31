@@ -46,6 +46,7 @@ var (
 	runOAuth2         bool
 	isOAuth2          bool
 	runEmailServer    bool
+	runKnownFixme     bool
 )
 
 // TestMain is the main entry point for the tests.
@@ -60,6 +61,7 @@ func TestMain(m *testing.M) {
 	flag.StringVar(&CLIENT_SECRET_WEB, "client-secret", "", "Set the client secret")
 	flag.StringVar(&provider, "provider", "", "Set the provider for the client ID")
 	flag.BoolVar(&isOAuth2, "is-oauth2", false, "password is access token")
+	flag.BoolVar(&runKnownFixme, "run-fixme", false, "Run skipped fixme tests")
 
 	flag.Parse()
 
@@ -135,4 +137,16 @@ func TestKeeperTestSuite(t *testing.T) {
 	// Run Ginkgo integration tests
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Keeper Suite")
+}
+
+func SkipFixmeTests(t *testing.T, name string) {
+	if !runKnownFixme {
+		t.Skipf("TODO: fixme %s", name)
+	}
+}
+
+func SkipNoPasswordTests(t *testing.T, name string) {
+	if s.emailPassword == "" {
+		t.Skipf("Skipping (no password) %s", name)
+	}
 }

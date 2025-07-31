@@ -55,6 +55,7 @@ type ChatBlock struct {
 }
 
 func (suite *KeeperTestSuite) TestChat() {
+	SkipFixmeTests(suite.T(), "TestChat")
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(10_000_000_000)

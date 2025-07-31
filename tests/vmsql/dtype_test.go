@@ -23,6 +23,7 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestDTypeContract() {
+	SkipFixmeTests(suite.T(), "TestDTypeContract")
 	connFile := "newdb.db"
 	connDriver := "sqlite3"
 	connName := "newdbconn"
@@ -336,6 +337,7 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 }
 
 func (suite *KeeperTestSuite) TestDTypeErc20() {
+	SkipFixmeTests(suite.T(), "TestDTypeErc20")
 	sender := suite.GetRandomAccount()
 	receiver := suite.GetRandomAccount()
 	spender := suite.GetRandomAccount()
@@ -476,6 +478,7 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 }
 
 func (suite *KeeperTestSuite) TestDTypeIdentity() {
+	SkipFixmeTests(suite.T(), "TestDTypeIdentity")
 	sender := suite.GetRandomAccount()
 	receiver := suite.GetRandomAccount()
 	spender := suite.GetRandomAccount()

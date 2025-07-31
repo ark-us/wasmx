@@ -161,6 +161,7 @@ func TestEmailTinyGoVerifyDKIM(t *testing.T) {
 // }
 
 func (suite *KeeperTestSuite) TestEmailTinyGoForwardCustom() {
+	SkipNoPasswordTests(suite.T(), "TestEmailTinyGoForwardCustom")
 	wasmbin := tinygo.EmailChain
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
