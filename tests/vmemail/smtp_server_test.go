@@ -62,6 +62,9 @@ func (suite *KeeperTestSuite) TestIncomingEmail() {
 }
 
 func (suite *KeeperTestSuite) TestEmailSmtpServer() {
+	if !suite.runEmailServer {
+		suite.T().Skipf("Skipping email server test: TestEmailSmtpServer")
+	}
 	wasmbin := tinygo.EmailChain
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

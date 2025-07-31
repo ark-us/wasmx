@@ -81,7 +81,7 @@ func wrapStore(address string, key string, value string) {
 	if err != nil {
 		panic(err)
 	}
-	success, _ := wasmx.Call(address, nil, calld, big.NewInt(50000000))
+	success, _ := wasmx.Call(wasmx.Bech32String(address), nil, calld, big.NewInt(50000000))
 	if !success {
 		panic("call failed")
 	}
@@ -95,7 +95,7 @@ func wrapLoad(address string, key string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.CallStatic(address, calld, big.NewInt(50000000))
+	success, data := wasmx.CallStatic(wasmx.Bech32String(address), calld, big.NewInt(50000000))
 	if !success {
 		panic("call failed")
 	}

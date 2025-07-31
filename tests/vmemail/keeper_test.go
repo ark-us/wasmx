@@ -45,6 +45,7 @@ var (
 	provider          string = "google"
 	runOAuth2         bool
 	isOAuth2          bool
+	runEmailServer    bool
 )
 
 // TestMain is the main entry point for the tests.
@@ -54,6 +55,7 @@ func TestMain(m *testing.M) {
 	flag.StringVar(&emailPassword, "email-password", "", "Set the email account password for tests")
 	flag.BoolVar(&runListen, "run-listen", false, "Run email listen test")
 	flag.BoolVar(&runOAuth2, "run-oauth2", false, "Run email oauth2 test")
+	flag.BoolVar(&runEmailServer, "run-email-server", false, "Run email server")
 	flag.StringVar(&CLIENT_ID_WEB, "client-id", "", "Set the client ID")
 	flag.StringVar(&CLIENT_SECRET_WEB, "client-secret", "", "Set the client secret")
 	flag.StringVar(&provider, "provider", "", "Set the provider for the client ID")
@@ -71,6 +73,7 @@ type KeeperTestSuite struct {
 	emailPassword     string
 	runListen         bool
 	runOAuth2         bool
+	runEmailServer    bool
 	CLIENT_ID_WEB     string
 	CLIENT_SECRET_WEB string
 	provider          string
@@ -122,6 +125,7 @@ func TestKeeperTestSuite(t *testing.T) {
 	s.emailPassword = emailPassword
 	s.runListen = runListen
 	s.runOAuth2 = runOAuth2
+	s.runEmailServer = runEmailServer
 	s.CLIENT_ID_WEB = CLIENT_ID_WEB
 	s.CLIENT_SECRET_WEB = CLIENT_SECRET_WEB
 	s.provider = provider

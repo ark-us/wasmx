@@ -132,7 +132,7 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 	var returnData []byte
 
 	// Send funds
-	if req.Value.BigInt().BitLen() > 0 {
+	if req.Value != nil && req.Value.BigInt().BitLen() > 0 {
 		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value.BigInt()))))
 	}
 	if err != nil {
@@ -147,10 +147,14 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 			if gasLimit == nil {
 				// TODO: gas remaining!!
 			}
+			var value *big.Int = nil
+			if req.Value != nil {
+				value = req.Value.BigInt()
+			}
 			req := vmtypes.CallRequestCommon{
 				To:           to,
 				From:         ctx.Env.Contract.Address,
-				Value:        req.Value.BigInt(),
+				Value:        value,
 				GasLimit:     gasLimit,
 				Calldata:     req.Calldata,
 				Bytecode:     contractInfo.Bytecode,
