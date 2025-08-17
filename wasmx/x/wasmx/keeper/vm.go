@@ -37,7 +37,6 @@ func NewVM(
 	goContextParent context.Context,
 	dataDir string,
 	sourcesDir string,
-	memoryLimit uint32,
 	printDebug bool,
 	cacheSize uint32,
 	app types.Application,

@@ -29,10 +29,6 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-// contractMemoryLimit is the memory limit of each contract execution (in MiB)
-// constant value so all nodes run with the same limit.
-const contractMemoryLimit = 32
-
 type (
 	Keeper struct {
 		cdc                   codec.Codec
@@ -143,7 +139,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, contractMemoryLimit, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
+	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
 	if err != nil {
 		panic(err)
 	}
