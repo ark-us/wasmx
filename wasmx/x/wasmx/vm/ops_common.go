@@ -276,11 +276,12 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	}
 	_, err := newctx.Execute()
 	var success int32
+	returnData := newctx.ReturnData
 	// Returns 0 on success, 1 on failure and 2 on revert
 	if err != nil {
 		success = int32(2)
 		// note, just log the error here, because it may contain non-deterministic data added by the WASM runtime
-		newctx.Logger(newctx.Ctx).Debug(err.Error())
+		newctx.Logger(newctx.Ctx).Debug(err.Error(), "data", string(newctx.ReturnData))
 	} else {
 		success = int32(0)
 		if !req.IsQuery {
@@ -293,11 +294,12 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	if appWithHooksEnabled {
 		err2 := appWithHooks.EndSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery, err)
 		if err2 != nil {
+			newctx.Logger(newctx.Ctx).Debug("EndSubCall error: "+err2.Error(), "data", string(newctx.ReturnData))
 			errmsg := fmt.Sprintf("BeginSubCall error: %s", err2.Error())
 			return int32(1), []byte(errmsg)
 		}
 	}
-	return success, newctx.ReturnData
+	return success, returnData
 }
 
 // we only need to forward ContractInfo for nested calls
