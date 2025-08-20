@@ -6,7 +6,7 @@ import "C"
 import (
 	"encoding/json"
 
-	utils "github.com/loredanacirstea/wasmx-utils"
+	utils "github.com/loredanacirstea/wasmx-env-utils"
 )
 
 //go:wasm-module imap
