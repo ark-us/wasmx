@@ -23,7 +23,7 @@
             // "buildFlags": "-tags e2e",
             "env": {
                 "GOROOT": "/usr/local/go",
-                "GOPATH": "/Users/loredanamini4/go",
+                "GOPATH": "/Users/user/go",
             }
         }
     ]

@@ -91,7 +91,7 @@ type EnvContractInfo struct {
 type BlockInfo struct {
 	// block height this transaction is executed
 	Height uint64 `json:"height"`
-	// time in nanoseconds since unix epoch. Uses string to ensure JavaScript compatibility.
+	// time in nanoseconds since unix epoch.
 	Timestamp uint64                    `json:"timestamp"`
 	GasLimit  uint64                    `json:"gasLimit"`
 	Hash      []byte                    `json:"hash"`

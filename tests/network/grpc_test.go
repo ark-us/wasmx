@@ -431,7 +431,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	})
 	suite.Require().NoError(err)
 
-	tendermintInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"roundTimeout","value":10000}],"initialState":"uninitialized"}}`)}
+	tendermintInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"currentTerm","value":"0"},{"key":"max_tx_bytes","value":"65536"},{"key":"currentNodeId","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"roundTimeout","value":"10000"}],"initialState":"uninitialized"}}`)}
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_TENDERMINT)
 
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM, wasmxtypes.BuildDep(wasmxtypes.ADDR_CONSENSUS_TENDERMINT_LIBRARY, wasmxtypes.ROLE_LIBRARY)})
@@ -573,7 +573,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	})
 	suite.Require().NoError(err)
 
-	avaInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"rounds","value":"3"},{"key":"sampleSize","value":3},{"key":"betaThreshold","value":3},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":"2"}],"initialState":"uninitialized"}}`)}
+	avaInitMsg := wasmxtypes.WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"rounds","value":"3"},{"key":"sampleSize","value":"3"},{"key":"betaThreshold","value":"3"},{"key":"roundsCounter","value":"0"},{"key":"alphaThreshold","value":"2"}],"initialState":"uninitialized"}}`)}
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_AVA_SNOWMAN)
 
 	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM, wasmxtypes.BuildDep(wasmxtypes.ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, wasmxtypes.ROLE_LIBRARY)})

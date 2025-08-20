@@ -340,6 +340,7 @@ func asConsoleDebug(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	return returns, nil
 }
 
+// TODO - move this only for non-deterministic contracts
 func asDateNow(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
 	returns[0] = float64(time.Now().UTC().UnixMilli())

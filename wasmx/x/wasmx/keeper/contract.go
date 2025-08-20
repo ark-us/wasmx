@@ -535,7 +535,7 @@ func (k *Keeper) instantiateInternal(
 	ctx.GasMeter().ConsumeGas(instanceCosts, "Loading wasm module: instantiate")
 
 	if k.HasContractInfo(ctx, contractAddress) {
-		return mcodec.AccAddressPrefixed{}, nil, types.ErrDuplicate.Wrap("instance with this contract address already exists")
+		return mcodec.AccAddressPrefixed{}, nil, types.ErrDuplicate.Wrapf("instance with this contract address already exists: %s", contractAddress.String())
 	}
 
 	// deposit initial contract funds

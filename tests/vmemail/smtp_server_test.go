@@ -82,7 +82,6 @@ func (suite *KeeperTestSuite) TestEmailSmtpServer() {
 
 	// tlsPath := "~/dev/letsencrypt/"
 	tlsPath := "/etc/letsencrypt/live/"
-	// tlsPath := "/Users/loredanamini4/dev/letsencrypt/"
 
 	// Prepare the VerifyDKIM request
 	msg := &EmailChainCalldata{
