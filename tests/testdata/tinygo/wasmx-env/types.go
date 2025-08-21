@@ -117,3 +117,7 @@ type BlockInfo struct {
 	Hash      []byte       `json:"hash"`
 	Proposer  Bech32String `json:"proposer"`
 }
+
+type WasmxExecutionMessage struct {
+	Data []byte `json:"data"`
+}
