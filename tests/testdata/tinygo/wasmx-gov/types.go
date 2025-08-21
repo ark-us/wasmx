@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"math/big"
 
+	wasmx "github.com/loredanacirstea/wasmx-env"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
-
-// Basic aliases
-type Bech32String string
 
 // Vote options
 type VoteOption int32
@@ -110,7 +108,7 @@ type WeightedVoteOption struct {
 // Vote
 type Vote struct {
 	ProposalID utils.StringUint64   `json:"proposal_id"`
-	Voter      Bech32String         `json:"voter"`
+	Voter      wasmx.Bech32String   `json:"voter"`
 	Options    []WeightedVoteOption `json:"options"`
 	Metadata   string               `json:"metadata"`
 }
@@ -137,7 +135,7 @@ type Proposal struct {
 	Metadata         string             `json:"metadata"`
 	Title            string             `json:"title"`
 	Summary          string             `json:"summary"`
-	Proposer         Bech32String       `json:"proposer"`
+	Proposer         wasmx.Bech32String `json:"proposer"`
 	Expedited        bool               `json:"expedited"`
 	FailedReason     string             `json:"failed_reason"`
 }
@@ -152,7 +150,7 @@ type Params struct {
 	VetoThreshold              string             `json:"veto_threshold"`
 	MinInitialDepositRatio     string             `json:"min_initial_deposit_ratio"`
 	ProposalCancelRatio        string             `json:"proposal_cancel_ratio"`
-	ProposalCancelDest         Bech32String       `json:"proposal_cancel_dest"`
+	ProposalCancelDest         wasmx.Bech32String `json:"proposal_cancel_dest"`
 	ExpeditedVotingPeriod      utils.StringUint64 `json:"expedited_voting_period"`
 	ExpeditedThreshold         string             `json:"expedited_threshold"`
 	ExpeditedMinDeposit        []Coin             `json:"expedited_min_deposit"`
@@ -165,7 +163,7 @@ type Params struct {
 // Deposits
 type Deposit struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Depositor  Bech32String       `json:"depositor"`
+	Depositor  wasmx.Bech32String `json:"depositor"`
 	Amount     []Coin             `json:"amount"`
 }
 
@@ -181,13 +179,13 @@ type GenesisState struct {
 
 // Messages and responses
 type MsgSubmitProposal struct {
-	Messages       []string     `json:"messages"`
-	InitialDeposit []Coin       `json:"initial_deposit"`
-	Proposer       Bech32String `json:"proposer"`
-	Metadata       string       `json:"metadata"`
-	Title          string       `json:"title"`
-	Summary        string       `json:"summary"`
-	Expedited      bool         `json:"expedited"`
+	Messages       []string           `json:"messages"`
+	InitialDeposit []Coin             `json:"initial_deposit"`
+	Proposer       wasmx.Bech32String `json:"proposer"`
+	Metadata       string             `json:"metadata"`
+	Title          string             `json:"title"`
+	Summary        string             `json:"summary"`
+	Expedited      bool               `json:"expedited"`
 }
 
 type MsgSubmitProposalResponse struct {
@@ -196,7 +194,7 @@ type MsgSubmitProposalResponse struct {
 
 type MsgVote struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Voter      Bech32String       `json:"voter"`
+	Voter      wasmx.Bech32String `json:"voter"`
 	Option     string             `json:"option"`
 	Metadata   string             `json:"metadata"`
 }
@@ -205,14 +203,14 @@ type MsgVoteResponse struct{}
 
 type MsgVoteWeighted struct {
 	ProposalID utils.StringUint64   `json:"proposal_id"`
-	Voter      Bech32String         `json:"voter"`
+	Voter      wasmx.Bech32String   `json:"voter"`
 	Option     []WeightedVoteOption `json:"option"`
 	Metadata   string               `json:"metadata"`
 }
 
 type MsgDeposit struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Depositor  Bech32String       `json:"depositor"`
+	Depositor  wasmx.Bech32String `json:"depositor"`
 	Amount     []Coin             `json:"amount"`
 }
 
@@ -244,10 +242,10 @@ type QueryProposalResponse struct {
 }
 
 type QueryProposalsRequest struct {
-	ProposalStatus string       `json:"proposal_status"`
-	Voter          Bech32String `json:"voter"`
-	Depositor      Bech32String `json:"depositor"`
-	Pagination     PageRequest  `json:"pagination"`
+	ProposalStatus string             `json:"proposal_status"`
+	Voter          wasmx.Bech32String `json:"voter"`
+	Depositor      wasmx.Bech32String `json:"depositor"`
+	Pagination     PageRequest        `json:"pagination"`
 }
 
 type QueryProposalsResponse struct {
@@ -257,7 +255,7 @@ type QueryProposalsResponse struct {
 
 type QueryVoteRequest struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Voter      Bech32String       `json:"voter"`
+	Voter      wasmx.Bech32String `json:"voter"`
 }
 
 type QueryVotesRequest struct {
@@ -275,7 +273,7 @@ type QueryParamsResponse struct {
 
 type QueryDepositRequest struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Depositor  Bech32String       `json:"depositor"`
+	Depositor  wasmx.Bech32String `json:"depositor"`
 }
 
 type QueryDepositsRequest struct {

@@ -1,31 +1,47 @@
 package wasmx
 
-// SDK mirrors basic call helpers from the AS SDK.
 type SDK struct {
-    RoleOrAddress    Bech32String
-    CallerModuleName string
+	RoleOrAddress       Bech32String
+	CallerModuleName    string
+	Revert              func(message string)
+	LoggerInfo          func(msg string, parts []string)
+	LoggerError         func(msg string, parts []string)
+	LoggerDebug         func(msg string, parts []string)
+	LoggerDebugExtended func(msg string, parts []string)
 }
 
-func NewSDK(callerModuleName string) *SDK {
-    return &SDK{CallerModuleName: callerModuleName}
+func NewSDK(
+	callerModuleName string,
+	revert func(message string),
+	loggerInfo func(msg string, parts []string),
+	loggerError func(msg string, parts []string),
+	loggerDebug func(msg string, parts []string),
+	loggerDebugExtended func(msg string, parts []string),
+) *SDK {
+	return &SDK{
+		CallerModuleName:    callerModuleName,
+		Revert:              revert,
+		LoggerInfo:          loggerInfo,
+		LoggerError:         loggerError,
+		LoggerDebug:         loggerDebug,
+		LoggerDebugExtended: loggerDebugExtended,
+	}
 }
 
-func (s *SDK) Call(calld string, isQuery bool) CallResponse {
-    // delegate to utils.CallContract for consistent behavior
-    return CallContract(s.RoleOrAddress, calld, isQuery, s.CallerModuleName)
+func (s *SDK) Query(calld string) (bool, []byte) {
+	return CallStatic(s.RoleOrAddress, []byte(calld), bigInt(DEFAULT_GAS_TX), s.CallerModuleName)
+}
+func (s *SDK) Execute(calld string) (bool, []byte) {
+	return Call(s.RoleOrAddress, nil, []byte(calld), bigInt(DEFAULT_GAS_TX), s.CallerModuleName)
 }
 
-func (s *SDK) Query(calld string) CallResponse { return s.Call(calld, true) }
-func (s *SDK) Execute(calld string) CallResponse { return s.Call(calld, false) }
-
-func (s *SDK) callSafe(calld string, isQuery bool) string {
-    resp := s.Call(calld, isQuery)
-    if resp.Success > 0 {
-        Revert([]byte("call to " + string(s.RoleOrAddress) + " failed: " + resp.Data))
-    }
-    return resp.Data
+func (s *SDK) CallSafe(calld string, isQuery bool) []byte {
+	ok, data := CallInternal(s.RoleOrAddress, nil, []byte(calld), bigInt(DEFAULT_GAS_TX), isQuery, s.CallerModuleName)
+	if !ok {
+		s.Revert("call to " + string(s.RoleOrAddress) + " failed: " + string(data))
+	}
+	return data
 }
 
-func (s *SDK) QuerySafe(calld string) string { return s.callSafe(calld, true) }
-func (s *SDK) ExecuteSafe(calld string) string { return s.callSafe(calld, false) }
-
+func (s *SDK) QuerySafe(calld string) []byte   { return s.CallSafe(calld, true) }
+func (s *SDK) ExecuteSafe(calld string) []byte { return s.CallSafe(calld, false) }

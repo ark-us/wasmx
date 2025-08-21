@@ -1,6 +1,9 @@
 package main
 
-import utils "github.com/loredanacirstea/wasmx-utils"
+import (
+	wasmx "github.com/loredanacirstea/wasmx-env"
+	utils "github.com/loredanacirstea/wasmx-utils"
+)
 
 // Defaults for gov module (mirrors AssemblyScript defaults.ts)
 
@@ -36,7 +39,7 @@ func GetDefaultParams(defaultBondDenom string) Params {
 		VetoThreshold:              DefaultVetoThreshold,
 		MinInitialDepositRatio:     MinInitialDepositRatio,
 		ProposalCancelRatio:        ProposalCancelRatio,
-		ProposalCancelDest:         Bech32String(ProposalCancelDest),
+		ProposalCancelDest:         wasmx.Bech32String(ProposalCancelDest),
 		ExpeditedVotingPeriod:      utils.StringUint64(DefaultVotingExpedited),
 		ExpeditedThreshold:         ExpeditedThreshold,
 		ExpeditedMinDeposit:        []Coin{expeditedMin},

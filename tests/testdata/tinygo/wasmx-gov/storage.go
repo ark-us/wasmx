@@ -30,11 +30,11 @@ const (
 	PROPOSAL_ACTIVE_VOTING_KEY  = "proposal_active_voting"
 )
 
-func getProposalVoterKey(proposalID uint64, voter Bech32String) string {
+func getProposalVoterKey(proposalID uint64, voter wasmx.Bech32String) string {
 	return PROPOSAL_VOTER_KEY + u64toa(proposalID) + SPLIT + string(voter)
 }
 
-func getProposalDepositorKey(proposalID uint64, depositor Bech32String) string {
+func getProposalDepositorKey(proposalID uint64, depositor wasmx.Bech32String) string {
 	return PROPOSAL_DEPOSITOR_KEY + u64toa(proposalID) + SPLIT + string(depositor)
 }
 
@@ -326,4 +326,51 @@ func sstore(key, value string) {
 func sload(key string) string {
 	bz := wasmx.StorageLoad([]byte(key))
 	return string(bz)
+}
+
+// Exported functions for use by other modules like wasmx-gov-continuous
+
+// GetProposalIdLast returns the last proposal ID
+func GetProposalIdLast() uint64 {
+	return getProposalIdLast()
+}
+
+// SetProposalIdLast sets the last proposal ID
+func SetProposalIdLast(id int64) {
+	setProposalIdLast(id)
+}
+
+// GetProposalIdFirst returns the first proposal ID
+func GetProposalIdFirst() uint64 {
+	return getProposalIdFirst()
+}
+
+// SetProposalIdFirst sets the first proposal ID
+func SetProposalIdFirst(id int64) {
+	setProposalIdFirst(id)
+}
+
+// GetProposalIdCount returns the proposal count
+func GetProposalIdCount() int64 {
+	return getProposalIdCount()
+}
+
+// SetProposalIdCount sets the proposal count
+func SetProposalIdCount(count int64) {
+	setProposalIdCount(count)
+}
+
+// GetProposalVoteKey returns the storage key for a proposal vote
+func GetProposalVoteKey(proposalID, voteID uint64) string {
+	return getProposalVoteKey(proposalID, voteID)
+}
+
+// GetProposalVoteCount returns the vote count for a proposal
+func GetProposalVoteCount(proposalID uint64) uint64 {
+	return getProposalVoteCount(proposalID)
+}
+
+// SetProposalVoteCount sets the vote count for a proposal
+func SetProposalVoteCount(proposalID uint64, count uint64) {
+	setProposalVoteCount(proposalID, count)
 }

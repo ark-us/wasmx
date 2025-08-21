@@ -21,107 +21,54 @@ func truncate(s string, n int) string {
 func itoa(i int) string      { return strconv.FormatInt(int64(i), 10) }
 func u64toa(i uint64) string { return strconv.FormatUint(i, 10) }
 
-func LoggerInfo(msg string, parts []string)          { wasmx.LoggerInfo("gov: "+msg, parts) }
-func LoggerError(msg string, parts []string)         { wasmx.LoggerError("gov: "+msg, parts) }
-func LoggerDebug(msg string, parts []string)         { wasmx.LoggerDebug("gov: "+msg, parts) }
-func LoggerDebugExtended(msg string, parts []string) { wasmx.LoggerDebugExtended("gov: "+msg, parts) }
-
-func Revert(message string) { wasmx.Revert([]byte(message)) }
-
-// decimalCount returns the count of non-trailing decimal digits in string like "0.5000"
-func decimalCount(val string) int {
-	dot := -1
-	for i := 0; i < len(val); i++ {
-		if val[i] == '.' {
-			dot = i
-			break
-		}
-	}
-	if dot < 0 {
-		return 0
-	}
-	dec := val[dot+1:]
-	// strip trailing zeros
-	j := len(dec)
-	for j > 0 && dec[j-1] == '0' {
-		j--
-	}
-	if j == 0 {
-		return 0
-	}
-	return j
+func LoggerInfo(msg string, parts []string) {
+	wasmx.LoggerInfo(MODULE_NAME, msg, parts)
 }
 
-// strToScaledInt converts a decimal string to an integer scaled by 10^dec
-func strToScaledInt(val string, dec int) Big {
-	// e.g., val="0.5", dec=1 -> 5
-	if dec == 0 {
-		// integer-like
-		return NewBigFromString(val)
+func LoggerError(msg string, parts []string) {
+	wasmx.LoggerError(MODULE_NAME, msg, parts)
+}
+
+func LoggerDebug(msg string, parts []string) {
+	wasmx.LoggerDebug(MODULE_NAME, msg, parts)
+}
+
+func LoggerDebugExtended(msg string, parts []string) {
+	wasmx.LoggerDebugExtended(MODULE_NAME, msg, parts)
+}
+
+func Revert(message string) {
+	wasmx.Revert([]byte(message))
+}
+
+// parseDecimalToBig converts a decimal string to a scaled Big integer using Go's superior decimal parsing
+// This replaces the manual string parsing that was necessary in AssemblyScript
+func parseDecimalToBig(val string, scale int) Big {
+	// Use Go's big.Rat for accurate decimal parsing
+	rat := new(big.Rat)
+	if _, ok := rat.SetString(val); !ok {
+		// fallback to zero for invalid strings
+		return NewBigZero()
 	}
-	// Remove dot, keep dec digits
-	out := make([]byte, 0, len(val))
-	seen := false
-	after := 0
-	for i := 0; i < len(val); i++ {
-		c := val[i]
-		if c == '.' {
-			seen = true
-			continue
-		}
-		out = append(out, c)
-		if seen {
-			after++
-		}
-	}
-	// pad with zeros if fewer decimals than dec
-	for after < dec {
-		out = append(out, '0')
-		after++
-	}
-	// trim to dec digits after dot originally
-	if after > dec {
-		out = out[:len(out)-(after-dec)]
-	}
-	// remove leading zeros
-	k := 0
-	for k < len(out)-1 && out[k] == '0' {
-		k++
-	}
-	s := string(out[k:])
-	if s == "" {
-		s = "0"
-	}
-	return NewBigFromString(s)
+	
+	// Scale by 10^scale to convert to integer
+	scaler := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(scale)), nil))
+	scaled := new(big.Rat).Mul(rat, scaler)
+	
+	// Convert to integer (truncating any remaining fractional part)
+	result := new(big.Int).Div(scaled.Num(), scaled.Denom())
+	return Big{Int: result}
 }
 
 // Helpers for bank/contract calls
 const defaultGasLimit = int64(50_000_000)
 
-func callBank(calldata string, isQuery bool) ResponseBz {
-	var ok bool
-	var data []byte
-	if isQuery {
-		ok, data = wasmx.CallStatic(wasmx.Bech32String("bank"), []byte(calldata), big.NewInt(defaultGasLimit))
-	} else {
-		ok, data = wasmx.Call(wasmx.Bech32String("bank"), nil, []byte(calldata), big.NewInt(defaultGasLimit))
-	}
-	return ResponseBz{Success: ok, Data: data}
-}
-
-func callContract(addr Bech32String, calldata string, isQuery bool) ResponseBz {
-	var ok bool
-	var data []byte
-	if isQuery {
-		ok, data = wasmx.CallStatic(wasmx.Bech32String(addr), []byte(calldata), big.NewInt(defaultGasLimit))
-	} else {
-		ok, data = wasmx.Call(wasmx.Bech32String(addr), nil, []byte(calldata), big.NewInt(defaultGasLimit))
-	}
-	return ResponseBz{Success: ok, Data: data}
+func callBank(calldata string, isQuery bool) (bool, []byte) {
+	return wasmx.CallInternal(wasmx.Bech32String(wasmx.ROLE_BANK), nil, []byte(calldata), big.NewInt(defaultGasLimit), isQuery, MODULE_NAME)
 }
 
 // Bank/Stake helpers
-func bankSendCoinFromAccountToModule(from Bech32String, to Bech32String, coins []Coin) {
+func bankSendCoinFromAccountToModule(from wasmx.Bech32String, to wasmx.Bech32String, coins []Coin) {
 	// {"SendCoinsFromAccountToModule": { ... banktypes.MsgSend ... }}
 	// We only need the envelope; the host will route the message
 	// Construct minimal MsgSend: {"from_address":"...","to_address":"...","amount":[{"denom":"...","amount":"..."}]}
@@ -136,13 +83,13 @@ func bankSendCoinFromAccountToModule(from Bech32String, to Bech32String, coins [
 	payload.Send.To = string(to)
 	payload.Send.Amount = coins
 	bz, _ := json.Marshal(&payload)
-	resp := callBank(string(bz), false)
-	if !resp.Success {
+	ok, _ := callBank(string(bz), false)
+	if !ok {
 		Revert("could not transfer coins by bank")
 	}
 }
 
-func getTokenAddress(denom string) Bech32String {
+func getTokenAddress(denom string) wasmx.Bech32String {
 	// {"GetAddressByDenom":{"denom":"..."}}
 	payload := struct {
 		Req struct {
@@ -151,21 +98,21 @@ func getTokenAddress(denom string) Bech32String {
 	}{}
 	payload.Req.Denom = denom
 	bz, _ := json.Marshal(&payload)
-	resp := callBank(string(bz), true)
-	if !resp.Success {
+	ok, resp := callBank(string(bz), true)
+	if !ok {
 		Revert("could not get staking token address")
 	}
 	var out struct {
 		Address string `json:"address"`
 	}
-	_ = json.Unmarshal(resp.Data, &out)
+	_ = json.Unmarshal(resp, &out)
 	if out.Address == "" {
 		Revert("could not find staking token address: " + denom)
 	}
-	return Bech32String(out.Address)
+	return wasmx.Bech32String(out.Address)
 }
 
-func callGetStake(tokenAddress Bech32String, delegator Bech32String) Big {
+func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String) Big {
 	// {"balanceOf":{"owner":"..."}}
 	payload := struct {
 		Q struct {
@@ -174,14 +121,14 @@ func callGetStake(tokenAddress Bech32String, delegator Bech32String) Big {
 	}{}
 	payload.Q.Owner = string(delegator)
 	bz, _ := json.Marshal(&payload)
-	resp := callContract(tokenAddress, string(bz), true)
-	if !resp.Success {
+	ok, resp := wasmx.CallSimple(tokenAddress, bz, true, MODULE_NAME)
+	if !ok {
 		Revert("delegation not found")
 	}
 	var out struct {
 		Balance Coin `json:"balance"`
 	}
-	_ = json.Unmarshal(resp.Data, &out)
+	_ = json.Unmarshal(resp, &out)
 	return out.Balance.Amount
 }
 
@@ -192,14 +139,14 @@ func callGetTotalStake() Big {
 		Q struct{} `json:"totalSupply"`
 	}{}
 	bz, _ := json.Marshal(&payload)
-	resp := callContract(tokenAddress, string(bz), true)
-	if !resp.Success {
+	ok, resp := wasmx.CallSimple(tokenAddress, bz, true, MODULE_NAME)
+	if !ok {
 		Revert("delegation not found")
 	}
 	var out struct {
 		Supply Coin `json:"supply"`
 	}
-	_ = json.Unmarshal(resp.Data, &out)
+	_ = json.Unmarshal(resp, &out)
 	return out.Supply.Amount
 }
 
@@ -220,7 +167,7 @@ func executeProposal(p Proposal) Response {
 }
 
 // Wrapper to match AS getStake signature
-func getStake(voter Bech32String) Big {
+func getStake(voter wasmx.Bech32String) Big {
 	params := getParams()
 	addr := getTokenAddress(params.MinDeposit[0].Denom)
 	return callGetStake(addr, voter)

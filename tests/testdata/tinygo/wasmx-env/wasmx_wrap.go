@@ -6,6 +6,7 @@ import "C"
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -42,6 +43,12 @@ func Finish(data []byte) {
 
 func Revert(data []byte) {
 	Revert_(utils.BytesToPackedPtr(data))
+}
+
+func RevertWithModule(module string, msg string) {
+	LoggerError(module, "revert", []string{"message", msg})
+	msg = fmt.Sprintf(`%s: %s`, module, msg)
+	Revert_(utils.BytesToPackedPtr([]byte(msg)))
 }
 
 func GetChainId() string {
@@ -81,7 +88,9 @@ func Bech32BytesToString(addr []byte) string {
 	return string(data)
 }
 
-func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool) (bool, []byte) {
+func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool, moduleName string) (bool, []byte) {
+	LoggerDebugExtended(moduleName+":wasmx_env", "call", []string{"to", string(addrBech32), "calldata", string(calldata), "is_query", fmt.Sprintf("%t", isQuery)})
+
 	req := &SimpleCallRequestRaw{
 		To:       addrBech32,
 		Value:    value,
@@ -106,12 +115,16 @@ func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, 
 	return calld.Success == 0, calld.Data
 }
 
-func Call(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int) (bool, []byte) {
-	return CallInternal(addrBech32, value, calldata, gasLimit, false)
+func Call(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, moduleName string) (bool, []byte) {
+	return CallInternal(addrBech32, value, calldata, gasLimit, false, moduleName)
 }
 
-func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int) (bool, []byte) {
-	return CallInternal(addrBech32, nil, calldata, gasLimit, false)
+func CallSimple(addrBech32 Bech32String, calldata []byte, isQuery bool, moduleName string) (bool, []byte) {
+	return CallInternal(addrBech32, nil, calldata, bigInt(DEFAULT_GAS_TX), isQuery, moduleName)
+}
+
+func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int, moduleName string) (bool, []byte) {
+	return CallInternal(addrBech32, nil, calldata, gasLimit, false, moduleName)
 }
 
 // log a message to the console using _log.
@@ -125,19 +138,23 @@ func EmitCosmosEvents(events []Event) {
 	EmitCosmosEvents_(utils.BytesToPackedPtr(bz))
 }
 
-func LoggerInfo(msg string, parts []string) {
+func LoggerInfo(module string, msg string, parts []string) {
+	msg = fmt.Sprintf(`%s: %s`, module, msg)
 	LoggerInfo_(LoggerDataToPackedPtr(msg, parts))
 }
 
-func LoggerError(msg string, parts []string) {
+func LoggerError(module string, msg string, parts []string) {
+	msg = fmt.Sprintf(`%s: %s`, module, msg)
 	LoggerError_(LoggerDataToPackedPtr(msg, parts))
 }
 
-func LoggerDebug(msg string, parts []string) {
+func LoggerDebug(module string, msg string, parts []string) {
+	msg = fmt.Sprintf(`%s: %s`, module, msg)
 	LoggerDebug_(LoggerDataToPackedPtr(msg, parts))
 }
 
-func LoggerDebugExtended(msg string, parts []string) {
+func LoggerDebugExtended(module string, msg string, parts []string) {
+	msg = fmt.Sprintf(`%s: %s`, module, msg)
 	LoggerDebugExtended_(LoggerDataToPackedPtr(msg, parts))
 }
 
@@ -155,6 +172,27 @@ func StorageDelete(key string) { StorageDelete_(utils.StringToPackedPtr(key)) }
 func StorageDeleteRangeReq(r StorageDeleteRange) {
 	bz, _ := json.Marshal(&r)
 	StorageDeleteRange_(utils.BytesToPackedPtr(bz))
+}
+
+// Storage helper functions to match AS versions
+func SStore(key, value string) {
+	StorageStore([]byte(key), []byte(value))
+}
+
+func SLoad(key string) string {
+	return string(StorageLoad([]byte(key)))
+}
+
+func SDelete(key string) {
+	StorageDelete(key)
+}
+
+func SDeleteRange(keyStart, keyEnd string) {
+	req := StorageDeleteRange{
+		StartKey: base64.StdEncoding.EncodeToString([]byte(keyStart)),
+		EndKey:   base64.StdEncoding.EncodeToString([]byte(keyEnd)),
+	}
+	StorageDeleteRangeReq(req)
 }
 
 func StorageLoadRangeReq(r StorageRange) []string {
@@ -182,26 +220,42 @@ func GetAccount(addr Bech32String) Account {
 	return acc
 }
 
-func ExecuteCosmosMsg(msg string) CallResponse {
+func ExecuteCosmosMsg(msg string, moduleName ...string) CallResponse {
+	module := ""
+	if len(moduleName) > 0 {
+		module = moduleName[0]
+	}
+	LoggerDebugExtended(module+":wasmx_env", "executeCosmosMsg", []string{"msg", msg})
 	out := utils.PackedPtrToBytes(ExecuteCosmosMsg_(utils.StringToPackedPtr(msg)))
+	LoggerDebugExtended(module+":wasmx_env", "executeCosmosMsg", []string{"response", string(out)})
 	var resp CallResponse
 	_ = json.Unmarshal(out, &resp)
 	return resp
 }
 
-func CreateAccount(req CreateAccountRequest) Bech32String {
+func CreateAccount(req CreateAccountRequest, moduleName ...string) Bech32String {
 	// Msg is json string, must be base64-encoded like AS SDK
 	req.Msg = base64.StdEncoding.EncodeToString([]byte(req.Msg))
 	bz, _ := json.Marshal(&req)
+	module := ""
+	if len(moduleName) > 0 {
+		module = moduleName[0]
+	}
+	LoggerDebugExtended(module+":wasmx_env", "createAccount", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(CreateAccount_(utils.BytesToPackedPtr(bz)))
 	var resp CreateAccountResponse
 	_ = json.Unmarshal(out, &resp)
 	return resp.Address
 }
 
-func Create2Account(req Create2AccountRequest) Bech32String {
+func Create2Account(req Create2AccountRequest, moduleName ...string) Bech32String {
 	req.Msg = base64.StdEncoding.EncodeToString([]byte(req.Msg))
 	bz, _ := json.Marshal(&req)
+	module := ""
+	if len(moduleName) > 0 {
+		module = moduleName[0]
+	}
+	LoggerDebugExtended(module+":wasmx_env", "create2Account", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(CreateAccount2_(utils.BytesToPackedPtr(bz)))
 	var resp Create2AccountResponse
 	_ = json.Unmarshal(out, &resp)
@@ -267,6 +321,23 @@ func DecodeCosmosTxToJson(data []byte) []byte {
 }
 func VerifyCosmosTx(encoded []byte) []byte {
 	return utils.PackedPtrToBytes(VerifyCosmosTx_(utils.BytesToPackedPtr(encoded)))
+}
+
+// VerifyCosmosTxFromBase64 verifies a cosmos transaction from base64-encoded data
+func VerifyCosmosTxFromBase64(encodedTx string) VerifyCosmosTxResponse {
+	data, _ := base64.StdEncoding.DecodeString(encodedTx)
+	result := VerifyCosmosTx(data)
+	var resp VerifyCosmosTxResponse
+	_ = json.Unmarshal(result, &resp)
+	return resp
+}
+
+// DecodeCosmosTxFromBytes decodes a cosmos transaction from bytes to JSON
+func DecodeCosmosTxFromBytes(data []byte) SignedTransaction {
+	result := DecodeCosmosTxToJson(data)
+	var tx SignedTransaction
+	_ = json.Unmarshal(result, &tx)
+	return tx
 }
 
 func GetTimestamp() time.Time {

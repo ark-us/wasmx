@@ -156,9 +156,9 @@ func EndBlock(req MsgEndBlock) []byte {
 		removeActiveVotingProposal(uint64(p.ID))
 
 		totalStake := callGetTotalStake()
-		dec := decimalCount(params.Quorum)
-		quorumInt := strToScaledInt(params.Quorum, dec)
-		quorumAmount := totalStake.Mul(quorumInt).Div(NewBigPow10(dec))
+		// Use 18 decimal places for precise percentage calculations
+		quorumInt := parseDecimalToBig(params.Quorum, 18)
+		quorumAmount := totalStake.Mul(quorumInt).Div(NewBigPow10(18))
 
 		voted := new(Big)
 		voted.Int = new(big.Int).Add(p.FinalTallyResult.YesCount.Int, p.FinalTallyResult.NoCount.Int)
@@ -176,9 +176,8 @@ func EndBlock(req MsgEndBlock) []byte {
 		}
 
 		// no_with_veto
-		decVeto := decimalCount(params.VetoThreshold)
-		thresholdVeto := strToScaledInt(params.VetoThreshold, decVeto)
-		thresholdVetoAmt := voted.Mul(thresholdVeto).Div(NewBigPow10(decVeto))
+		thresholdVeto := parseDecimalToBig(params.VetoThreshold, 18)
+		thresholdVetoAmt := voted.Mul(thresholdVeto).Div(NewBigPow10(18))
 		LoggerDebug("proposal veto threshold", []string{"id", u64toa(uint64(p.ID)), "veto_count", p.FinalTallyResult.NoWithVetoCount.String(), "threshold", thresholdVetoAmt.String()})
 		if p.FinalTallyResult.NoWithVetoCount.Cmp(thresholdVetoAmt) >= 0 {
 			p.FailedReason = "vetoed"
@@ -189,9 +188,8 @@ func EndBlock(req MsgEndBlock) []byte {
 		}
 
 		// yes threshold
-		decThr := decimalCount(params.Threshold)
-		thr := strToScaledInt(params.Threshold, decThr)
-		thrAmt := voted.Mul(thr).Div(NewBigPow10(decThr))
+		thr := parseDecimalToBig(params.Threshold, 18)
+		thrAmt := voted.Mul(thr).Div(NewBigPow10(18))
 		LoggerDebug("proposal yes threshold", []string{"id", u64toa(uint64(p.ID)), "yes_count", p.FinalTallyResult.YesCount.String(), "threshold", thrAmt.String()})
 		if p.FinalTallyResult.YesCount.Cmp(thrAmt) < 0 {
 			p.FailedReason = "not enough yes votes"
@@ -340,9 +338,8 @@ func VoteWeighted(req MsgVoteWeighted) []byte {
 
 	stake := getStake(req.Voter)
 	for _, opt := range req.Option {
-		dec := decimalCount(opt.Weight)
-		weightInt := strToScaledInt(opt.Weight, dec)
-		amount := stake.Mul(weightInt).Div(NewBigPow10(dec))
+		weightInt := parseDecimalToBig(opt.Weight, 18)
+		amount := stake.Mul(weightInt).Div(NewBigPow10(18))
 		switch opt.Option {
 		case VOTE_OPTION_YES:
 			proposal.FinalTallyResult.YesCount = proposal.FinalTallyResult.YesCount.Add(amount)

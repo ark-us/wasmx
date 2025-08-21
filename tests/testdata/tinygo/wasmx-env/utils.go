@@ -34,36 +34,21 @@ func ToUpperCase(str string) string {
 	return string(b)
 }
 
-// CallContract mirrors the AS helper; returns decoded data string.
-func CallContract(addr Bech32String, calldata string, isQuery bool, moduleName string) CallResponse {
-	var ok bool
-	var data []byte
-	if isQuery {
-		ok, data = CallStatic(addr, []byte(calldata), bigInt(DEFAULT_GAS_TX))
-	} else {
-		ok, data = Call(addr, nil, []byte(calldata), bigInt(DEFAULT_GAS_TX))
-	}
-	if ok {
-		return CallResponse{Success: 0, Data: string(data)}
-	}
-	return CallResponse{Success: 1, Data: string(data)}
-}
-
 // QueryRoleContract queries the roles module.
-func QueryRoleContract(calldata string, moduleName string) CallResponse {
-	return CallContract(Bech32String(ROLE_ROLES), calldata, true, moduleName)
+func QueryRoleContract(calldata string, moduleName string) (bool, []byte) {
+	return CallStatic(Bech32String(ROLE_ROLES), []byte(calldata), bigInt(DEFAULT_GAS_TX), moduleName)
 }
 
 // GetRoleName returns the role name for an address, or empty string.
 func GetRoleName(moduleName string, addr Bech32String) string {
 	calldata := fmt.Sprintf("{\"GetRoleNameByAddress\":{\"address\":\"%s\"}}", addr)
-	resp := QueryRoleContract(calldata, moduleName)
-	if resp.Success > 0 {
-		msg := "role name by address failed: " + resp.Data
-		LoggerDebug(moduleName, []string{"revert", "err", msg, "module", moduleName})
+	ok, data := QueryRoleContract(calldata, moduleName)
+	if !ok {
+		msg := "role name by address failed: " + string(data)
+		LoggerDebug(moduleName, "revert", []string{"err", msg, "module", moduleName})
 		Revert([]byte(msg))
 	}
-	return resp.Data
+	return string(data)
 }
 
 // CallerHasRole returns true if caller has any role under moduleName.
@@ -107,7 +92,7 @@ func OnlyRole(moduleName string, roleName string, message string) {
 		return
 	}
 	msg := fmt.Sprintf("unauthorized caller: %s, expected role %s: %s", caller, roleName, message)
-	LoggerDebug(moduleName, []string{"revert", "err", msg, "module", moduleName})
+	LoggerDebug(moduleName, "revert", []string{"err", msg, "module", moduleName})
 	Revert([]byte(msg))
 }
 
@@ -125,7 +110,7 @@ func OnlyInternal(moduleName string, message string) {
 		return
 	}
 	msg := fmt.Sprintf("%s: unauthorized caller: %s: %s", moduleName, caller, message)
-	LoggerDebug(moduleName, []string{"revert", "err", msg, "module", moduleName})
+	LoggerDebug(moduleName, "revert", []string{"err", msg, "module", moduleName})
 	Revert([]byte(msg))
 }
 
