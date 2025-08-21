@@ -61,8 +61,8 @@ func (*MockApiCtx) StartChainApis(
 }
 
 func CreateMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, homeDir string, getDB func(dbpath string) dbm.DB) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
-	// level := "x/wasmx:debug,*:info"
-	level := "error"
+	level := "x/wasmx:debug,*:info"
+	// level := "error"
 	filter, _ := ParseLogLevel(level)
 	logger := log.NewLogger(
 		os.Stderr,

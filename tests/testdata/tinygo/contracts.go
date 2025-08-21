@@ -22,4 +22,7 @@ var (
 
 	//go:embed emailchain.wasm
 	EmailChain []byte
+
+	//go:embed wasmx_gov.wasm
+	TinyGoGov []byte
 )

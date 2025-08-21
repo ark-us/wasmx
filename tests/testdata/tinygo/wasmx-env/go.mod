@@ -1,6 +1,6 @@
 module github.com/loredanacirstea/wasmx-env
 
-go 1.21
+go 1.24
 
 require cosmossdk.io/math v1.3.0
 

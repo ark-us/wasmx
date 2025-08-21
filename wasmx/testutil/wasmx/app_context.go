@@ -793,6 +793,8 @@ func (s *AppContext) SubmitGovProposal(
 	return resp
 }
 
+const GovContinuous = false
+
 func (s *AppContext) PassGovProposal(
 	valAccount,
 	sender simulation.Account,
@@ -809,32 +811,37 @@ func (s *AppContext) PassGovProposal(
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
 
-	// voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
+	var voteMsg sdk.Msg
+	if !GovContinuous {
+		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
+		s.S.Require().NoError(err)
+		voteMsg = &govtypes1.MsgVote{
+			ProposalId: proposalId,
+			Voter:      valstr,
+			Option:     govtypes1.OptionYes,
+			Metadata:   "votemetadata",
+		}
+	} else {
+		govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
+		s.S.Require().NoError(err)
+		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
+		s.S.Require().NoError(err)
 
-	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
-	valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
-	s.S.Require().NoError(err)
-
-	s.S.Require().NoError(err)
-	msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valstr))
-	msg11 := types.WasmxExecutionMessage{Data: msg1}
-	msgbz, err := json.Marshal(msg11)
-	s.S.Require().NoError(err)
-	voteMsg := &types.MsgExecuteContract{
-		Sender:   valstr,
-		Contract: govAddr.String(),
-		Msg:      msgbz,
+		msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valstr))
+		msg11 := types.WasmxExecutionMessage{Data: msg1}
+		msgbz, err := json.Marshal(msg11)
+		s.S.Require().NoError(err)
+		voteMsg = &types.MsgExecuteContract{
+			Sender:   valstr,
+			Contract: govAddr.String(),
+			Msg:      msgbz,
+		}
 	}
 
 	resp, err = s.DeliverTx(valAccount, voteMsg)
 	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
-
-	// resp, err = s.DeliverTx(valAccount, voteMsg)
-	// s.S.Require().NoError(err)
-	// s.S.Require().True(resp.IsOK(), resp.GetEvents())
-	// s.S.Commit()
 
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
 	s.S.Require().NoError(err)

@@ -62,20 +62,8 @@ func CreateAccount_(dataPtr int64) int64
 //go:wasmimport wasmx createAccount2
 func CreateAccount2_(dataPtr int64) int64
 
-//go:wasmimport wasmx sendCosmosMsg
-func SendCosmosMsg_(dataPtr int64) int64
-
-//go:wasmimport wasmx sendCosmosQuery
-func SendCosmosQuery_(dataPtr int64) int64
-
 //go:wasmimport wasmx getGasLeft
 func GetGasLeft_() int64
-
-//go:wasmimport wasmx addr_canonicalize
-func Bech32StringToBytes_(dataPtr int64) int64
-
-//go:wasmimport wasmx addr_humanize
-func Bech32BytesToString_(dataPtr int64) int64
 
 //go:wasmimport wasmx log
 func Log_(ptr int64)
@@ -91,3 +79,83 @@ func LoggerDebug_(ptr int64)
 
 //go:wasmimport wasmx LoggerDebugExtended
 func LoggerDebugExtended_(ptr int64)
+
+// missing host APIs mirrored from AssemblyScript sdk
+
+//go:wasmimport wasmx getEnv
+func GetEnv_() int64
+
+//go:wasmimport wasmx getCaller
+func GetCaller_() int64
+
+//go:wasmimport wasmx getAddress
+func GetAddress_() int64
+
+//go:wasmimport wasmx getCurrentBlock
+func GetCurrentBlock_() int64
+
+//go:wasmimport wasmx storageDelete
+func StorageDelete_(keyPtr int64)
+
+//go:wasmimport wasmx storageDeleteRange
+func StorageDeleteRange_(reqPtr int64)
+
+//go:wasmimport wasmx storageLoadRange
+func StorageLoadRange_(reqPtr int64) int64
+
+//go:wasmimport wasmx storageLoadRangePairs
+func StorageLoadRangePairs_(reqPtr int64) int64
+
+//go:wasmimport wasmx getFinishData
+func GetFinishData_() int64
+
+//go:wasmimport wasmx emitCosmosEvents
+func EmitCosmosEvents_(ptr int64)
+
+//go:wasmimport wasmx sha256
+func Sha256_(ptr int64) int64
+
+//go:wasmimport wasmx MerkleHash
+func MerkleHash_(ptr int64) int64
+
+//go:wasmimport wasmx ed25519Sign
+func Ed25519Sign_(privPtr int64, msgPtr int64) int64
+
+//go:wasmimport wasmx ed25519Verify
+func Ed25519Verify_(pubPtr int64, sigPtr int64, msgPtr int64) int64
+
+//go:wasmimport wasmx ed25519PubToHex
+func Ed25519PubToHex_(pubPtr int64) int64
+
+//go:wasmimport wasmx validate_bech32_address
+func ValidateBech32Address_(ptr int64) int64
+
+//go:wasmimport wasmx addr_canonicalize
+func Bech32StringToBytes_(dataPtr int64) int64
+
+//go:wasmimport wasmx addr_humanize
+func Bech32BytesToString_(dataPtr int64) int64
+
+//go:wasmimport wasmx addr_equivalent
+func AddrEquivalent_(addr1 int64, addr2 int64) int64
+
+//go:wasmimport wasmx addr_humanize_mc
+func AddrHumanizeMC_(addrPtr int64, prefixPtr int64) int64
+
+//go:wasmimport wasmx addr_canonicalize_mc
+func AddrCanonicalizeMC_(strPtr int64) int64
+
+//go:wasmimport wasmx getAddressByRole
+func GetAddressByRole_(rolePtr int64) int64
+
+//go:wasmimport wasmx getRoleByAddress
+func GetRoleByAddress_(addrPtr int64) int64
+
+//go:wasmimport wasmx executeCosmosMsg
+func ExecuteCosmosMsg_(ptr int64) int64
+
+//go:wasmimport wasmx decodeCosmosTxToJson
+func DecodeCosmosTxToJson_(ptr int64) int64
+
+//go:wasmimport wasmx verifyCosmosTx
+func VerifyCosmosTx_(ptr int64) int64
