@@ -793,8 +793,6 @@ func (s *AppContext) SubmitGovProposal(
 	return resp
 }
 
-const GovContinuous = false
-
 func (s *AppContext) PassGovProposal(
 	valAccount,
 	sender simulation.Account,
@@ -810,9 +808,8 @@ func (s *AppContext) PassGovProposal(
 	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
-
 	var voteMsg sdk.Msg
-	if !GovContinuous {
+	if !s.Chain.GovernanceContinuous {
 		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
 		s.S.Require().NoError(err)
 		voteMsg = &govtypes1.MsgVote{
@@ -836,6 +833,12 @@ func (s *AppContext) PassGovProposal(
 			Contract: govAddr.String(),
 			Msg:      msgbz,
 		}
+
+		// vote two times, so we pass the threshold
+		resp, err = s.DeliverTx(valAccount, voteMsg)
+		s.S.Require().NoError(err)
+		s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
+		s.S.Commit()
 	}
 
 	resp, err = s.DeliverTx(valAccount, voteMsg)

@@ -2,6 +2,7 @@ package gov
 
 import (
 	"encoding/json"
+	"strconv"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	gov "github.com/loredanacirstea/wasmx-gov/gov"
@@ -54,6 +55,58 @@ func addProposalVote(proposalID uint64, vote DepositVote) uint64 {
 	gov.SetProposalVoteCount(proposalID, voteID+1)
 	return voteID
 }
+
+// Deposits (reuse base gov keys; types are from base gov)
+func getProposalDeposit(proposalID, depositID uint64) (*gov.Deposit, bool) {
+	key := PROPOSAL_DEPOSIT_KEY + utils.U64toa(proposalID) + SPLIT + utils.U64toa(depositID)
+	value := sload(key)
+	if value == "" {
+		return nil, false
+	}
+	var d gov.Deposit
+	if err := json.Unmarshal([]byte(value), &d); err != nil {
+		return nil, false
+	}
+	return &d, true
+}
+
+func setProposalDeposit(proposalID, depositID uint64, d gov.Deposit) {
+	key := PROPOSAL_DEPOSIT_KEY + utils.U64toa(proposalID) + SPLIT + utils.U64toa(depositID)
+	data, _ := json.Marshal(d)
+	sstore(key, string(data))
+}
+
+func getProposalDepositCount(proposalID uint64) uint64 {
+	key := PROPOSAL_DEPOSIT_COUNT_KEY + utils.U64toa(proposalID)
+	v := sload(key)
+	if v == "" {
+		return 0
+	}
+	n, _ := strconv.ParseUint(v, 10, 64)
+	return n
+}
+
+func setProposalDepositCount(proposalID, count uint64) {
+	key := PROPOSAL_DEPOSIT_COUNT_KEY + utils.U64toa(proposalID)
+	sstore(key, utils.U64toa(count))
+}
+
+func addProposalDeposit(proposalID uint64, d gov.Deposit) uint64 {
+	id := getProposalDepositCount(proposalID)
+	setProposalDeposit(proposalID, id, d)
+	setProposalDepositCount(proposalID, id+1)
+	return id
+}
+
+// // removeProposalDeposits deletes all deposits for a proposal and resets the counter
+// func removeProposalDeposits(proposalID uint64) {
+// 	count := getProposalDepositCount(proposalID)
+// 	for i := uint64(0); i < count; i++ {
+// 		key := PROPOSAL_DEPOSIT_KEY + utils.U64toa(proposalID) + SPLIT + utils.U64toa(i)
+// 		sstore(key, "")
+// 	}
+// 	setProposalDepositCount(proposalID, 0)
+// }
 
 // Proposal storage functions (using base gov keys and functions where possible)
 func getProposal(id uint64) (*Proposal, bool) {
