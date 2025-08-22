@@ -1,4 +1,4 @@
-package main
+package gov
 
 import (
 	"encoding/base64"
@@ -10,90 +10,6 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
-
-//go:wasm-module wasmx-gov
-//export instantiate
-func Instantiate() {
-	// no-op; params must be set via InitGenesis
-}
-
-func main() {
-	databz := wasmx.GetCallData()
-	calld := &Calldata{}
-	if err := json.Unmarshal(databz, calld); err != nil {
-		wasmx.Revert([]byte("invalid call data: " + err.Error()))
-	}
-
-	// public operations
-	switch {
-	case calld.SubmitProposal != nil:
-		res := SubmitProposal(*calld.SubmitProposal)
-		wasmx.SetFinishData(res)
-		return
-	case calld.VoteWeighted != nil:
-		res := VoteWeighted(*calld.VoteWeighted)
-		wasmx.SetFinishData(res)
-		return
-	case calld.Vote != nil:
-		res := DoVote(*calld.Vote)
-		wasmx.SetFinishData(res)
-		return
-	case calld.Deposit != nil:
-		res := DoDeposit(*calld.Deposit)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetProposal != nil:
-		res := GetProposal(*calld.GetProposal)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetProposals != nil:
-		res := GetProposals(*calld.GetProposals)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetTallyResult != nil:
-		res := GetTallyResult(*calld.GetTallyResult)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetParams != nil:
-		res := GetParams(*calld.GetParams)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetVote != nil:
-		res := GetVote(*calld.GetVote)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetVotes != nil:
-		res := GetVotes(*calld.GetVotes)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetDeposit != nil:
-		res := GetDeposit(*calld.GetDeposit)
-		wasmx.SetFinishData(res)
-		return
-	case calld.GetDeposits != nil:
-		res := GetDeposits(*calld.GetDeposits)
-		wasmx.SetFinishData(res)
-		return
-	}
-
-	// internal operations
-	switch {
-	case calld.EndBlock != nil:
-		wasmx.OnlyInternal(MODULE_NAME, "EndBlock")
-		res := EndBlock(*calld.EndBlock)
-		wasmx.SetFinishData(res)
-		return
-	case calld.InitGenesis != nil:
-		wasmx.OnlyInternal(MODULE_NAME, "InitGenesis")
-		res := InitGenesis(*calld.InitGenesis)
-		wasmx.SetFinishData(res)
-		return
-	}
-
-	wasmx.Revert(append([]byte("invalid function call data: "), databz...))
-}
-
-// Handlers
 
 func InitGenesis(req GenesisState) []byte {
 	LoggerInfo("initiating genesis", nil)
@@ -467,27 +383,3 @@ func GetVote(_ QueryVoteRequest) []byte         { return []byte{} }
 func GetVotes(_ QueryVotesRequest) []byte       { return []byte{} }
 func GetDeposit(_ QueryDepositRequest) []byte   { return []byte{} }
 func GetDeposits(_ QueryDepositsRequest) []byte { return []byte{} }
-
-// Exported hook wrappers for direct host calls, similar to emailchain's extra exports
-//
-//go:wasm-module wasmx-gov
-//export end_block
-func EndBlockExport() {
-	databz := wasmx.GetCallData()
-	req := MsgEndBlock{}
-	if err := json.Unmarshal(databz, &req); err != nil {
-		wasmx.Revert([]byte(err.Error()))
-	}
-	wasmx.SetFinishData(EndBlock(req))
-}
-
-//go:wasm-module wasmx-gov
-//export init_genesis
-func InitGenesisExport() {
-	databz := wasmx.GetCallData()
-	req := GenesisState{}
-	if err := json.Unmarshal(databz, &req); err != nil {
-		wasmx.Revert([]byte(err.Error()))
-	}
-	wasmx.SetFinishData(InitGenesis(req))
-}

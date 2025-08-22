@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
+	gov "github.com/loredanacirstea/wasmx-gov-continuous/gov"
 )
 
 //go:wasm-module wasmx-gov-continuous
@@ -12,76 +13,76 @@ func Instantiate() {
 	// Initialize with default params if needed
 	databz := wasmx.GetCallData()
 	if len(databz) > 0 {
-		var params Params
+		var params gov.Params
 		if err := json.Unmarshal(databz, &params); err == nil {
-			setParams(params)
+			gov.SetParams(params)
 		}
 	}
 }
 
 func main() {
 	databz := wasmx.GetCallData()
-	calldata := &CallData{}
+	calldata := &gov.CallData{}
 	if err := json.Unmarshal(databz, calldata); err != nil {
-		wasmx.Revert([]byte("invalid call data: " + err.Error()))
+		gov.Revert("invalid call data: " + err.Error() + ": " + string(databz))
 	}
 
 	// Public operations
 	switch {
 	case calldata.SubmitProposal != nil:
-		res := SubmitProposal(*calldata.SubmitProposal)
+		res := gov.SubmitProposal(*calldata.SubmitProposal)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.SubmitProposalExtended != nil:
-		res := SubmitProposalExtended(*calldata.SubmitProposalExtended)
+		res := gov.SubmitProposalExtended(*calldata.SubmitProposalExtended)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.AddProposalOption != nil:
-		res := AddProposalOption(*calldata.AddProposalOption)
+		res := gov.AddProposalOption(*calldata.AddProposalOption)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.VoteWeighted != nil:
-		res := VoteWeighted(*calldata.VoteWeighted)
+		res := gov.VoteWeighted(*calldata.VoteWeighted)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.Vote != nil:
-		res := DoVote(*calldata.Vote)
+		res := gov.DoVote(*calldata.Vote)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.Deposit != nil:
-		res := DoDeposit(*calldata.Deposit)
+		res := gov.DoDeposit(*calldata.Deposit)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.DepositVote != nil:
-		res := DoDepositVote(*calldata.DepositVote)
+		res := gov.DoDepositVote(*calldata.DepositVote)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetProposal != nil:
-		res := GetProposal(*calldata.GetProposal)
+		res := gov.GetProposal(*calldata.GetProposal)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetProposals != nil:
-		res := GetProposals(*calldata.GetProposals)
+		res := gov.GetProposals(*calldata.GetProposals)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetProposalsExtended != nil:
-		res := GetProposalsExtended(*calldata.GetProposalsExtended)
+		res := gov.GetProposalsExtended(*calldata.GetProposalsExtended)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetProposalExtended != nil:
-		res := GetProposalExtended(*calldata.GetProposalExtended)
+		res := gov.GetProposalExtended(*calldata.GetProposalExtended)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetTallyResult != nil:
-		res := GetTallyResult(*calldata.GetTallyResult)
+		res := gov.GetTallyResult(*calldata.GetTallyResult)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetNextWinnerThreshold != nil:
-		res := GetNextWinnerThreshold(*calldata.GetNextWinnerThreshold)
+		res := gov.GetNextWinnerThreshold(*calldata.GetNextWinnerThreshold)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetParams != nil:
-		res := GetParams(*calldata.GetParams)
+		res := gov.GetParams()
 		wasmx.SetFinishData(res)
 		return
 	}
@@ -89,30 +90,18 @@ func main() {
 	// Internal operations
 	switch {
 	case calldata.EndBlock != nil:
-		wasmx.OnlyInternal(MODULE_NAME, "EndBlock")
-		res := EndBlock(*calldata.EndBlock)
+		wasmx.OnlyInternal(gov.MODULE_NAME, "EndBlock")
+		res := gov.EndBlock(*calldata.EndBlock)
 		wasmx.SetFinishData(res)
 		return
 	case calldata.InitGenesis != nil:
-		wasmx.OnlyInternal(MODULE_NAME, "InitGenesis")
-		res := InitGenesis(*calldata.InitGenesis)
+		wasmx.OnlyInternal(gov.MODULE_NAME, "InitGenesis")
+		res := gov.InitGenesis(*calldata.InitGenesis)
 		wasmx.SetFinishData(res)
 		return
 	}
 
 	wasmx.Revert(append([]byte("invalid function call data: "), databz...))
-}
-
-// GetParams returns the module parameters
-func GetParams(req QueryParamsRequest) []byte {
-	params := getParams()
-	resp := struct {
-		Params Params `json:"params"`
-	}{
-		Params: params,
-	}
-	result, _ := json.Marshal(resp)
-	return result
 }
 
 // Exported hook wrappers for direct host calls
@@ -121,20 +110,20 @@ func GetParams(req QueryParamsRequest) []byte {
 //export end_block
 func EndBlockExport() {
 	databz := wasmx.GetCallData()
-	req := MsgEndBlock{}
+	req := gov.MsgEndBlock{}
 	if err := json.Unmarshal(databz, &req); err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	wasmx.SetFinishData(EndBlock(req))
+	wasmx.SetFinishData(gov.EndBlock(req))
 }
 
 //go:wasm-module wasmx-gov-continuous
 //export init_genesis
 func InitGenesisExport() {
 	databz := wasmx.GetCallData()
-	req := MsgInitGenesis{}
+	req := gov.MsgInitGenesis{}
 	if err := json.Unmarshal(databz, &req); err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	wasmx.SetFinishData(InitGenesis(req))
+	wasmx.SetFinishData(gov.InitGenesis(req))
 }

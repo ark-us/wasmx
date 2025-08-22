@@ -1,4 +1,4 @@
-package main
+package gov
 
 import (
 	wasmx "github.com/loredanacirstea/wasmx-env"

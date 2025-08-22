@@ -1,4 +1,4 @@
-package main
+package gov
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
-	gov "github.com/loredanacirstea/wasmx-gov"
+	gov "github.com/loredanacirstea/wasmx-gov/gov"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
@@ -23,7 +23,7 @@ func InitGenesis(req MsgInitGenesis) []byte {
 	gov.SetProposalIdCount(int64(len(req.Proposals)))
 
 	// Set local params
-	setParams(req.Params)
+	SetParams(req.Params)
 
 	// Store proposals
 	for _, proposal := range req.Proposals {
@@ -407,12 +407,12 @@ func GetNextWinnerThreshold(req QueryNextWinnerThreshold) []byte {
 	weight := NewBigZero()
 	params := getParams()
 	normalizedWeights := normalizeTally(*proposal, params)
-	
+
 	if len(normalizedWeights) > 0 {
 		// Find max weight index
 		index := getMaxFromArray(normalizedWeights)
 		highestWeight := normalizedWeights[index]
-		
+
 		// Calculate threshold: highestWeight * proposal.x / proposal.y
 		weight = new(big.Int).Mul(highestWeight, NewBigFromUint64(proposal.X))
 		weight = new(big.Int).Div(weight, NewBigFromUint64(proposal.Y))
@@ -422,6 +422,18 @@ func GetNextWinnerThreshold(req QueryNextWinnerThreshold) []byte {
 		Weight: weight,
 	}
 
+	result, _ := json.Marshal(resp)
+	return result
+}
+
+// GetParams returns the module parameters
+func GetParams() []byte {
+	params := getParams()
+	resp := struct {
+		Params Params `json:"params"`
+	}{
+		Params: params,
+	}
 	result, _ := json.Marshal(resp)
 	return result
 }
@@ -443,12 +455,12 @@ func normalizeTally(proposal Proposal, params Params) []*big.Int {
 func normalizeOptionTally(option ProposalOption, params Params) *big.Int {
 	// Get CAL coefficient from params
 	calCoef := NewBigFromUint64(params.Coefs[CAL])
-	
+
 	// Calculate: amount + arbitration_amount * cAL
 	result := new(big.Int).Set(option.Amount)
 	arbitrationWeight := new(big.Int).Mul(option.ArbitrationAmount, calCoef)
 	result = new(big.Int).Add(result, arbitrationWeight)
-	
+
 	return result
 }
 
@@ -472,7 +484,7 @@ func getMaxFromArrayExcept(arr []*big.Int, excludePos int) int {
 			return 0
 		}
 	}
-	
+
 	for i := 0; i < len(arr); i++ {
 		if i != excludePos && arr[i].Cmp(arr[index]) > 0 {
 			index = i

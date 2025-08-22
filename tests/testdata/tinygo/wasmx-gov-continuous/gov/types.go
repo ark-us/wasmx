@@ -1,4 +1,4 @@
-package main
+package gov
 
 import (
 	"math/big"
@@ -230,7 +230,7 @@ type CallData struct {
 	GetProposals   *QueryProposalsRequest   `json:"GetProposals"`
 	GetVote        *QueryVoteRequest        `json:"GetVote"`
 	GetVotes       *QueryVotesRequest       `json:"GetVotes"`
-	GetParams      *QueryParamsRequest      `json:"GetParams"`
+	GetParams      *MsgEmpty                `json:"GetParams"`
 	GetDeposit     *QueryDepositRequest     `json:"GetDeposit"`
 	GetDeposits    *QueryDepositsRequest    `json:"GetDeposits"`
 	GetTallyResult *QueryTallyResultRequest `json:"GetTallyResult"`

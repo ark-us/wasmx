@@ -1,10 +1,10 @@
-package main
+package gov
 
 import (
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
-	gov "github.com/loredanacirstea/wasmx-gov"
+	gov "github.com/loredanacirstea/wasmx-gov/gov"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
@@ -111,7 +111,7 @@ func getParamsInternal() string {
 	return sload(PARAM_LOCAL_KEY)
 }
 
-func setParams(params Params) {
+func SetParams(params Params) {
 	data, _ := json.Marshal(params)
 	sstore(PARAM_LOCAL_KEY, string(data))
 }

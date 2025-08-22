@@ -12,9 +12,9 @@ tinygo version 0.37.0 darwin/arm64 (using go version go1.23.2 and LLVM version 1
 - with WASI
 ```sh
 
-cd wasmx-gov && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/35.gov_0.0.1.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd wasmx-gov && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/35.gov_0.0.1.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
 
-cd wasmx-gov-continuous && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/37.gov_cont_0.0.1.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd wasmx-gov-continuous && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/37.gov_cont_0.0.1.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
 
 tinygo build -o add.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add
 

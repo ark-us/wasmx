@@ -1,4 +1,4 @@
-package main
+package gov
 
 import (
 	"math/big"
@@ -23,7 +23,7 @@ func LoggerDebugExtended(msg string, parts []string) {
 }
 
 func Revert(message string) {
-	wasmx.Revert([]byte(message))
+	wasmx.RevertWithModule(MODULE_NAME, message)
 }
 
 // Big integer utilities

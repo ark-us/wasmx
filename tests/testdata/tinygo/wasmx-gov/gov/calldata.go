@@ -1,4 +1,4 @@
-package main
+package gov
 
 type MsgEmpty struct{}
 

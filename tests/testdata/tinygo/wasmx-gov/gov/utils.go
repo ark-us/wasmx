@@ -1,4 +1,4 @@
-package main
+package gov
 
 import (
 	"encoding/base64"
@@ -38,7 +38,7 @@ func LoggerDebugExtended(msg string, parts []string) {
 }
 
 func Revert(message string) {
-	wasmx.Revert([]byte(message))
+	wasmx.RevertWithModule(MODULE_NAME, message)
 }
 
 // parseDecimalToBig converts a decimal string to a scaled Big integer using Go's superior decimal parsing
@@ -50,11 +50,11 @@ func parseDecimalToBig(val string, scale int) Big {
 		// fallback to zero for invalid strings
 		return NewBigZero()
 	}
-	
+
 	// Scale by 10^scale to convert to integer
 	scaler := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(scale)), nil))
 	scaled := new(big.Rat).Mul(rat, scaler)
-	
+
 	// Convert to integer (truncating any remaining fractional part)
 	result := new(big.Int).Div(scaled.Num(), scaled.Denom())
 	return Big{Int: result}
