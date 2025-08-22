@@ -1,10 +1,14 @@
 package gov
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
+
+	sdkmath "cosmossdk.io/math"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	gov "github.com/loredanacirstea/wasmx-gov/gov"
@@ -21,9 +25,7 @@ func InitGenesis(req MsgInitGenesis) []byte {
 	gov.SetProposalIdFirst(int64(req.StartingProposalID))
 	gov.SetProposalIdLast(int64(req.StartingProposalID) + int64(len(req.Proposals)) - 1)
 	gov.SetProposalIdCount(int64(len(req.Proposals)))
-
-	// Set local params
-	SetParams(req.Params)
+	gov.SetParams(req.Params)
 
 	// Store proposals
 	for _, proposal := range req.Proposals {
@@ -116,11 +118,11 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 	// For now, we'll assume the transfer is handled externally
 
 	var proposalCoin wasmx.Coin
-	arbitrationAmount := NewBigZero()
+	arbitrationAmount := sdkmath.ZeroInt()
 
 	for _, deposit := range req.InitialDeposit {
 		if deposit.Denom == localParams.ArbitrationDenom {
-			arbitrationAmount = NewBigFromString(string(deposit.Amount.String()))
+			arbitrationAmount = *deposit.Amount
 		} else {
 			proposalCoin = deposit
 		}
@@ -130,9 +132,9 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 	firstOption := ProposalOption{
 		Proposer:          req.Proposer,
 		Messages:          req.Messages,
-		Amount:            NewBigFromString(string(proposalCoin.Amount.String())),
-		ArbitrationAmount: arbitrationAmount,
-		Weight:            NewBigFromString(string(proposalCoin.Amount.String())),
+		Amount:            proposalCoin.Amount,
+		ArbitrationAmount: &arbitrationAmount,
+		Weight:            proposalCoin.Amount,
 		Title:             req.OptionTitle,
 		Summary:           req.OptionSummary,
 		Metadata:          req.OptionMetadata,
@@ -170,8 +172,8 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 		ProposalID:        utils.StringUint64(proposalID),
 		OptionID:          0, // First option
 		Voter:             req.Proposer,
-		Amount:            NewBigFromString(string(proposalCoin.Amount.String())),
-		ArbitrationAmount: arbitrationAmount,
+		Amount:            proposalCoin.Amount,
+		ArbitrationAmount: &arbitrationAmount,
 		Metadata:          "",
 	}
 	addProposalVote(proposalID, initialVote)
@@ -185,6 +187,8 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 		},
 	}
 	wasmx.EmitCosmosEvents([]wasmx.Event{ev})
+
+	tryExecuteProposal(&proposal)
 
 	resp := struct {
 		ProposalID utils.StringUint64 `json:"proposal_id"`
@@ -200,7 +204,7 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 func AddProposalOption(req MsgAddProposalOption) []byte {
 	proposal, exists := getProposal(uint64(req.ProposalID))
 	if !exists {
-		Revert("proposal not found: " + string(req.ProposalID))
+		Revert("proposal not found: " + req.ProposalID.ToString())
 	}
 
 	if proposal.Status != PROPOSAL_STATUS_VOTING_PERIOD {
@@ -210,7 +214,7 @@ func AddProposalOption(req MsgAddProposalOption) []byte {
 	// Validate option deposit
 	localParams := getParams()
 	optionRegisterAmount := NewBigFromUint64(localParams.Coefs[OptionRegisterAmount])
-	if req.Option.Amount.Cmp(optionRegisterAmount) < 0 {
+	if req.Option.Amount.BigInt().Cmp(optionRegisterAmount) < 0 {
 		Revert("insufficient option registration amount")
 	}
 
@@ -223,10 +227,12 @@ func AddProposalOption(req MsgAddProposalOption) []byte {
 		Type: EventTypeAddProposalOption,
 		Attributes: []wasmx.EventAttribute{
 			{Key: AttributeKeyOptionID, Value: utils.Itoa(len(proposal.Options) - 1), Index: true},
-			{Key: "proposal_id", Value: string(req.ProposalID), Index: true},
+			{Key: "proposal_id", Value: req.ProposalID.ToString(), Index: true},
 		},
 	}
 	wasmx.EmitCosmosEvents([]wasmx.Event{ev})
+
+	tryExecuteProposal(proposal)
 
 	return []byte{}
 }
@@ -241,14 +247,14 @@ func VoteWeighted(req MsgVoteWeighted) []byte {
 // DoVote handles voting logic
 func DoVote(req MsgVote) []byte {
 	// TODO: Implement continuous voting logic
-	LoggerDebug("vote", []string{"proposal_id", string(req.ProposalID), "option", req.Option})
+	LoggerDebug("vote", []string{"proposal_id", req.ProposalID.ToString(), "option", req.Option})
 	return []byte{}
 }
 
 // DoDeposit handles deposit logic for continuous voting
 func DoDeposit(req MsgDeposit) []byte {
 	// TODO: Implement deposit logic for continuous voting
-	LoggerDebug("deposit", []string{"proposal_id", string(req.ProposalID)})
+	LoggerDebug("deposit", []string{"proposal_id", req.ProposalID.ToString()})
 	return []byte{}
 }
 
@@ -256,7 +262,7 @@ func DoDeposit(req MsgDeposit) []byte {
 func DoDepositVote(req DepositVote) []byte {
 	proposal, exists := getProposal(uint64(req.ProposalID))
 	if !exists {
-		Revert("proposal not found: " + string(req.ProposalID))
+		Revert("proposal not found: " + req.ProposalID.ToString())
 	}
 
 	if proposal.Status != PROPOSAL_STATUS_VOTING_PERIOD {
@@ -272,10 +278,8 @@ func DoDepositVote(req DepositVote) []byte {
 	addProposalVote(uint64(req.ProposalID), req)
 
 	// Update proposal option weight
-	proposal.Options[req.OptionID].Weight = new(big.Int).Add(
-		proposal.Options[req.OptionID].Weight,
-		req.Amount,
-	)
+	weight := proposal.Options[req.OptionID].Weight.Add(*req.Amount)
+	proposal.Options[req.OptionID].Weight = &weight
 
 	// TODO: Update vote status and check for winner changes
 	// This would involve complex continuous voting calculations
@@ -287,11 +291,13 @@ func DoDepositVote(req DepositVote) []byte {
 		Type: "proposal_vote",
 		Attributes: []wasmx.EventAttribute{
 			{Key: "voter", Value: string(req.Voter), Index: true},
-			{Key: "proposal_id", Value: string(req.ProposalID), Index: true},
+			{Key: "proposal_id", Value: req.ProposalID.ToString(), Index: true},
 			{Key: "option_id", Value: utils.Itoa(int(req.OptionID)), Index: true},
 		},
 	}
 	wasmx.EmitCosmosEvents([]wasmx.Event{ev})
+
+	tryExecuteProposal(proposal)
 
 	return []byte{}
 }
@@ -301,16 +307,12 @@ func DoDepositVote(req DepositVote) []byte {
 // GetProposal returns a single proposal
 func GetProposal(req QueryProposalRequest) []byte {
 	proposal, exists := getProposal(uint64(req.ProposalID))
-	if !exists {
+	if !exists || proposal == nil {
 		return []byte("{\"proposal\":null}")
 	}
 
-	resp := struct {
-		Proposal *Proposal `json:"proposal"`
-	}{
-		Proposal: proposal,
-	}
-
+	govprop := proposalToExternal(*proposal)
+	resp := &gov.QueryProposalResponse{Proposal: &govprop}
 	result, _ := json.Marshal(resp)
 	return result
 }
@@ -367,9 +369,9 @@ func GetTallyResult(req QueryTallyResultRequest) []byte {
 	}
 
 	// Calculate tally from options
-	totalVotes := NewBigZero()
+	totalVotes := sdkmath.ZeroInt()
 	for _, option := range proposal.Options {
-		totalVotes = new(big.Int).Add(totalVotes, option.Weight)
+		totalVotes = totalVotes.Add(*option.Weight)
 	}
 
 	resp := struct {
@@ -401,10 +403,10 @@ func GetTallyResult(req QueryTallyResultRequest) []byte {
 func GetNextWinnerThreshold(req QueryNextWinnerThreshold) []byte {
 	proposal, exists := getProposal(uint64(req.ProposalID))
 	if !exists {
-		Revert("proposal not found: " + string(req.ProposalID))
+		Revert("proposal not found: " + req.ProposalID.ToString())
 	}
 
-	weight := NewBigZero()
+	weight := sdkmath.ZeroInt()
 	params := getParams()
 	normalizedWeights := normalizeTally(*proposal, params)
 
@@ -414,12 +416,12 @@ func GetNextWinnerThreshold(req QueryNextWinnerThreshold) []byte {
 		highestWeight := normalizedWeights[index]
 
 		// Calculate threshold: highestWeight * proposal.x / proposal.y
-		weight = new(big.Int).Mul(highestWeight, NewBigFromUint64(proposal.X))
-		weight = new(big.Int).Div(weight, NewBigFromUint64(proposal.Y))
+		weight = highestWeight.Mul(sdkmath.NewIntFromUint64(proposal.X))
+		weight = weight.Quo(sdkmath.NewIntFromUint64(proposal.Y))
 	}
 
 	resp := QueryNextWinnerThresholdResponse{
-		Weight: weight,
+		Weight: &weight,
 	}
 
 	result, _ := json.Marshal(resp)
@@ -441,8 +443,8 @@ func GetParams() []byte {
 // Helper functions for continuous voting calculations
 
 // normalizeTally calculates normalized weights for all proposal options
-func normalizeTally(proposal Proposal, params Params) []*big.Int {
-	tally := make([]*big.Int, len(proposal.Options))
+func normalizeTally(proposal Proposal, params Params) []sdkmath.Int {
+	tally := make([]sdkmath.Int, len(proposal.Options))
 	for i, option := range proposal.Options {
 		weight := normalizeOptionTally(option, params)
 		tally[i] = weight
@@ -452,23 +454,22 @@ func normalizeTally(proposal Proposal, params Params) []*big.Int {
 
 // normalizeOptionTally calculates normalized weight for a single option
 // Formula: option.amount + option.arbitration_amount * params.coefs[CAL]
-func normalizeOptionTally(option ProposalOption, params Params) *big.Int {
+func normalizeOptionTally(option ProposalOption, params Params) sdkmath.Int {
+	// TODO
+	// _WL + _AL * tasks[taskid].amount * coefs[uint256(Coefs.cAL)] / (10 ** decimals);
 	// Get CAL coefficient from params
-	calCoef := NewBigFromUint64(params.Coefs[CAL])
+	calCoef := sdkmath.NewIntFromUint64(params.Coefs[CAL])
 
 	// Calculate: amount + arbitration_amount * cAL
-	result := new(big.Int).Set(option.Amount)
-	arbitrationWeight := new(big.Int).Mul(option.ArbitrationAmount, calCoef)
-	result = new(big.Int).Add(result, arbitrationWeight)
-
-	return result
+	arbitrationWeight := option.ArbitrationAmount.Mul(calCoef)
+	return option.Amount.Add(arbitrationWeight)
 }
 
 // getMaxFromArray finds the index of the maximum value in a big.Int array
-func getMaxFromArray(arr []*big.Int) int {
+func getMaxFromArray(arr []sdkmath.Int) int {
 	index := 0
 	for i := 1; i < len(arr); i++ {
-		if arr[i].Cmp(arr[index]) > 0 {
+		if arr[i].BigInt().Cmp(arr[index].BigInt()) > 0 {
 			index = i
 		}
 	}
@@ -476,7 +477,7 @@ func getMaxFromArray(arr []*big.Int) int {
 }
 
 // getMaxFromArrayExcept finds the index of the maximum value excluding a specific position
-func getMaxFromArrayExcept(arr []*big.Int, excludePos int) int {
+func getMaxFromArrayExcept(arr []*sdkmath.Int, excludePos int) int {
 	index := 0
 	if index == excludePos {
 		index = 1
@@ -486,9 +487,136 @@ func getMaxFromArrayExcept(arr []*big.Int, excludePos int) int {
 	}
 
 	for i := 0; i < len(arr); i++ {
-		if i != excludePos && arr[i].Cmp(arr[index]) > 0 {
+		if i != excludePos && arr[i].BigInt().Cmp(arr[index].BigInt()) > 0 {
 			index = i
 		}
 	}
 	return index
+}
+
+func proposalToExternal(proposal Proposal) gov.Proposal {
+	localparams := getParams()
+	depositA := sdkmath.NewInt(0)
+	deposit := wasmx.Coin{Denom: proposal.Denom, Amount: &depositA}
+
+	arbCoinA := sdkmath.NewInt(0)
+	arbCoin := wasmx.Coin{Denom: localparams.ArbitrationDenom, Amount: &arbCoinA}
+
+	// i := 1 to mirror the AssemblyScript loop
+	for i := 1; i < len(proposal.Options); i++ {
+		opt := proposal.Options[i]
+		depositA := deposit.Amount.Add(*opt.Amount)
+		deposit = wasmx.NewCoin(deposit.Denom, depositA)
+		arbCoinA := arbCoin.Amount.Add(*opt.ArbitrationAmount)
+		arbCoin = wasmx.NewCoin(arbCoin.Denom, arbCoinA)
+	}
+
+	govprop := gov.Proposal{
+		ID:               proposal.ID,
+		Messages:         proposal.Options[proposal.Winner].Messages, // ensure type matches gov.Proposal
+		Status:           gov.ProposalStatus(proposal.Status),
+		FinalTallyResult: tallyToExternal(proposal, localparams),
+		SubmitTime:       proposal.SubmitTime,
+		DepositEndTime:   proposal.DepositEndTime,
+		TotalDeposit:     []wasmx.Coin{deposit, arbCoin},
+		VotingStartTime:  proposal.VotingStartTime,
+		VotingEndTime:    proposal.VotingEndTime,
+		Metadata:         proposal.Metadata,
+		Title:            proposal.Title,
+		Summary:          proposal.Summary,
+		Proposer:         proposal.Proposer,
+		// Expedited / IsExpedited: false, // if your gov.Proposal has this bool field
+		FailedReason: proposal.FailedReason,
+	}
+
+	return govprop
+}
+
+func tallyToExternal(proposal Proposal, localparams Params) gov.TallyResult {
+	yes := normalizeOptionTally(proposal.Options[proposal.VoteStatus.Xi], localparams)
+
+	no := normalizeOptionTally(proposal.Options[proposal.VoteStatus.Yi], localparams)
+
+	abstaincount := sdkmath.ZeroInt()
+	noveto := sdkmath.ZeroInt()
+
+	return gov.TallyResult{
+		YesCount:        &yes,
+		AbstainCount:    &abstaincount,
+		NoCount:         &no,
+		NoWithVetoCount: &noveto,
+	}
+}
+
+// tryExecuteProposal attempts to execute a proposal if conditions are met
+func tryExecuteProposal(proposal *Proposal) {
+	LoggerDebug("try execute proposal", []string{"proposal_id", utils.U64toa(uint64(proposal.ID)), "changed", fmt.Sprintf("%t", proposal.VoteStatus.Changed)})
+	if !proposal.VoteStatus.Changed {
+		return
+	}
+
+	params := getParams()
+	normalizedWeights := normalizeTally(*proposal, params)
+	weightsStr := make([]string, len(normalizedWeights))
+	for i, weight := range normalizedWeights {
+		weightsStr[i] = weight.String()
+	}
+
+	// Emit proposal outcome event
+	ev := wasmx.Event{
+		Type: EventTypeProposalOutcome,
+		Attributes: []wasmx.EventAttribute{
+			{Key: gov.AttributeKeyProposalID, Value: utils.U64toa(uint64(proposal.ID)), Index: true},
+			{Key: AttributeKeyOptionID, Value: utils.Itoa(int(proposal.Winner)), Index: true},
+			{Key: AttributeKeyOptionWeights, Value: strings.Join(weightsStr, ","), Index: true},
+		},
+	}
+	wasmx.EmitCosmosEvents([]wasmx.Event{ev})
+
+	result := executeProposal(*proposal)
+	if result != nil {
+		LoggerInfo("execute proposal", []string{
+			"success", fmt.Sprintf("%t", result.Success),
+			"proposal_id", utils.U64toa(uint64(proposal.ID)),
+			"winner", utils.Itoa(int(proposal.Winner)),
+			"data", result.Data,
+		})
+
+		if !result.Success {
+			proposal.FailedReason = result.Data
+		} else {
+			proposal.FailedReason = ""
+			// TODO: when we have a better initial threshold
+			// proposal.Status = PROPOSAL_STATUS_PASSED
+
+			// Emit execution success event
+			execEv := wasmx.Event{
+				Type: EventTypeExecuteProposal,
+				Attributes: []wasmx.EventAttribute{
+					{Key: gov.AttributeKeyProposalID, Value: utils.U64toa(uint64(proposal.ID)), Index: true},
+					{Key: gov.AttributeKeyOption, Value: utils.Itoa(int(proposal.Winner)), Index: true},
+				},
+			}
+			wasmx.EmitCosmosEvents([]wasmx.Event{execEv})
+		}
+		setProposal(uint64(proposal.ID), *proposal)
+	}
+}
+
+// executeProposal executes the messages in the winning proposal option
+func executeProposal(proposal Proposal) *gov.Response {
+	messages := proposal.Options[proposal.Winner].Messages
+	for _, msg := range messages {
+		// Decode base64 message
+		msgBytes, err := base64.StdEncoding.DecodeString(msg)
+		if err != nil {
+			return &gov.Response{Success: false, Data: "invalid message encoding"}
+		}
+
+		response := wasmx.ExecuteCosmosMsg(string(msgBytes))
+		if response.Success > 0 {
+			return &gov.Response{Success: false, Data: response.Data}
+		}
+	}
+	return &gov.Response{Success: true, Data: ""}
 }

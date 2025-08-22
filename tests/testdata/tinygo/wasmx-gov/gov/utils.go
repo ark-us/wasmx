@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"strconv"
 
+	sdkmath "cosmossdk.io/math"
+
 	wasmx "github.com/loredanacirstea/wasmx-env"
 )
 
@@ -41,14 +43,14 @@ func Revert(message string) {
 	wasmx.RevertWithModule(MODULE_NAME, message)
 }
 
-// parseDecimalToBig converts a decimal string to a scaled Big integer using Go's superior decimal parsing
+// parseDecimalToSdkInt converts a decimal string to a scaled sdkmath.Int using Go's superior decimal parsing
 // This replaces the manual string parsing that was necessary in AssemblyScript
-func parseDecimalToBig(val string, scale int) Big {
+func parseDecimalToSdkInt(val string, scale int) sdkmath.Int {
 	// Use Go's big.Rat for accurate decimal parsing
 	rat := new(big.Rat)
 	if _, ok := rat.SetString(val); !ok {
 		// fallback to zero for invalid strings
-		return NewBigZero()
+		return sdkmath.ZeroInt()
 	}
 
 	// Scale by 10^scale to convert to integer
@@ -57,7 +59,19 @@ func parseDecimalToBig(val string, scale int) Big {
 
 	// Convert to integer (truncating any remaining fractional part)
 	result := new(big.Int).Div(scaled.Num(), scaled.Denom())
-	return Big{Int: result}
+	return sdkmath.NewIntFromBigInt(result)
+}
+
+// Helper functions for sdkmath.Int operations
+func NewSdkIntZero() sdkmath.Int {
+	return sdkmath.ZeroInt()
+}
+
+func NewSdkIntPow10(exp int) sdkmath.Int {
+	base := big.NewInt(10)
+	exponent := big.NewInt(int64(exp))
+	result := new(big.Int).Exp(base, exponent, nil)
+	return sdkmath.NewIntFromBigInt(result)
 }
 
 // Helpers for bank/contract calls
@@ -68,15 +82,15 @@ func callBank(calldata string, isQuery bool) (bool, []byte) {
 }
 
 // Bank/Stake helpers
-func bankSendCoinFromAccountToModule(from wasmx.Bech32String, to wasmx.Bech32String, coins []Coin) {
+func bankSendCoinFromAccountToModule(from wasmx.Bech32String, to wasmx.Bech32String, coins []wasmx.Coin) {
 	// {"SendCoinsFromAccountToModule": { ... banktypes.MsgSend ... }}
 	// We only need the envelope; the host will route the message
 	// Construct minimal MsgSend: {"from_address":"...","to_address":"...","amount":[{"denom":"...","amount":"..."}]}
 	payload := struct {
 		Send struct {
-			From   string `json:"from_address"`
-			To     string `json:"to_address"`
-			Amount []Coin `json:"amount"`
+			From   string       `json:"from_address"`
+			To     string       `json:"to_address"`
+			Amount []wasmx.Coin `json:"amount"`
 		} `json:"SendCoinsFromAccountToModule"`
 	}{}
 	payload.Send.From = string(from)
@@ -112,7 +126,7 @@ func getTokenAddress(denom string) wasmx.Bech32String {
 	return wasmx.Bech32String(out.Address)
 }
 
-func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String) Big {
+func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String) *sdkmath.Int {
 	// {"balanceOf":{"owner":"..."}}
 	payload := struct {
 		Q struct {
@@ -126,13 +140,13 @@ func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String)
 		Revert("delegation not found")
 	}
 	var out struct {
-		Balance Coin `json:"balance"`
+		Balance wasmx.Coin `json:"balance"`
 	}
 	_ = json.Unmarshal(resp, &out)
 	return out.Balance.Amount
 }
 
-func callGetTotalStake() Big {
+func callGetTotalStake() *sdkmath.Int {
 	params := getParams()
 	tokenAddress := getTokenAddress(params.MinDeposit[0].Denom)
 	payload := struct {
@@ -144,7 +158,7 @@ func callGetTotalStake() Big {
 		Revert("delegation not found")
 	}
 	var out struct {
-		Supply Coin `json:"supply"`
+		Supply wasmx.Coin `json:"supply"`
 	}
 	_ = json.Unmarshal(resp, &out)
 	return out.Supply.Amount
@@ -167,7 +181,7 @@ func executeProposal(p Proposal) Response {
 }
 
 // Wrapper to match AS getStake signature
-func getStake(voter wasmx.Bech32String) Big {
+func getStake(voter wasmx.Bech32String) *sdkmath.Int {
 	params := getParams()
 	addr := getTokenAddress(params.MinDeposit[0].Denom)
 	return callGetStake(addr, voter)

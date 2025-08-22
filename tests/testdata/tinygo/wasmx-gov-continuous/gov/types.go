@@ -1,9 +1,10 @@
 package gov
 
 import (
-	"math/big"
+	sdkmath "cosmossdk.io/math"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
+	gov "github.com/loredanacirstea/wasmx-gov/gov"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
@@ -44,20 +45,20 @@ type ProposalVoteStatus struct {
 }
 
 type ProposalVoteStatusExtended struct {
-	Status VoteStatus `json:"status"`
-	Xi     uint32     `json:"xi"` // the option index with the highest weight at current time
-	Yi     uint32     `json:"yi"` // the option index with the second highest weight
-	X      *big.Int   `json:"x"`  // the highest amount
-	Y      *big.Int   `json:"y"`  // the second highest amount
+	Status VoteStatus   `json:"status"`
+	Xi     uint32       `json:"xi"` // the option index with the highest weight at current time
+	Yi     uint32       `json:"yi"` // the option index with the second highest weight
+	X      *sdkmath.Int `json:"x"`  // the highest amount
+	Y      *sdkmath.Int `json:"y"`  // the second highest amount
 }
 
 // ProposalOption represents an option in a continuous voting proposal
 type ProposalOption struct {
 	Proposer          wasmx.Bech32String `json:"proposer"`
 	Messages          []string           `json:"messages"` // base64 encoded messages
-	Amount            *big.Int           `json:"amount"`
-	ArbitrationAmount *big.Int           `json:"arbitration_amount"`
-	Weight            *big.Int           `json:"weight"`
+	Amount            *sdkmath.Int       `json:"amount"`
+	ArbitrationAmount *sdkmath.Int       `json:"arbitration_amount"`
+	Weight            *sdkmath.Int       `json:"weight"`
 	Title             string             `json:"title"`
 	Summary           string             `json:"summary"`
 	Metadata          string             `json:"metadata"`
@@ -89,8 +90,8 @@ type Proposal struct {
 
 // CoefProposal for coefficient proposals
 type CoefProposal struct {
-	Key   *big.Int `json:"key"`
-	Value *big.Int `json:"value"`
+	Key   *sdkmath.Int `json:"key"`
+	Value *sdkmath.Int `json:"value"`
 }
 
 // DepositVote represents a deposit vote in continuous voting
@@ -98,8 +99,8 @@ type DepositVote struct {
 	ProposalID        utils.StringUint64 `json:"proposal_id"`
 	OptionID          int32              `json:"option_id"`
 	Voter             wasmx.Bech32String `json:"voter"`
-	Amount            *big.Int           `json:"amount"`
-	ArbitrationAmount *big.Int           `json:"arbitration_amount"`
+	Amount            *sdkmath.Int       `json:"amount"`
+	ArbitrationAmount *sdkmath.Int       `json:"arbitration_amount"`
 	Metadata          string             `json:"metadata"`
 }
 
@@ -116,10 +117,10 @@ type Params struct {
 // MsgInitGenesis for genesis initialization
 type MsgInitGenesis struct {
 	StartingProposalID utils.StringUint64 `json:"starting_proposal_id"`
-	Deposits           []Deposit          `json:"deposits"` // from gov
+	Deposits           []gov.Deposit      `json:"deposits"` // from gov
 	Votes              []DepositVote      `json:"votes"`    // continuous voting specific
 	Proposals          []Proposal         `json:"proposals"`
-	Params             Params             `json:"params"` // from gov (extended)
+	Params             gov.Params         `json:"params"` // from gov (extended)
 	Constitution       string             `json:"constitution"`
 }
 
@@ -155,7 +156,7 @@ type QueryNextWinnerThreshold struct {
 }
 
 type QueryNextWinnerThresholdResponse struct {
-	Weight *big.Int `json:"weight"`
+	Weight *sdkmath.Int `json:"weight"`
 }
 
 type QueryProposalExtendedResponse struct {
@@ -165,18 +166,6 @@ type QueryProposalExtendedResponse struct {
 type QueryProposalsExtendedResponse struct {
 	Proposals  []Proposal   `json:"proposals"`
 	Pagination PageResponse `json:"pagination"`
-}
-
-// Re-export types from base gov and wasmx-env that we need
-type Coin = wasmx.Coin
-type Bech32String = wasmx.Bech32String
-type Base64String = wasmx.Base64String
-
-// Base gov types (simplified, we'll import what we need)
-type Deposit struct {
-	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Depositor  Bech32String       `json:"depositor"`
-	Amount     []Coin             `json:"amount"`
 }
 
 type PageResponse struct {
@@ -230,7 +219,7 @@ type CallData struct {
 	GetProposals   *QueryProposalsRequest   `json:"GetProposals"`
 	GetVote        *QueryVoteRequest        `json:"GetVote"`
 	GetVotes       *QueryVotesRequest       `json:"GetVotes"`
-	GetParams      *MsgEmpty                `json:"GetParams"`
+	GetParams      *gov.QueryParamsRequest  `json:"GetParams"`
 	GetDeposit     *QueryDepositRequest     `json:"GetDeposit"`
 	GetDeposits    *QueryDepositsRequest    `json:"GetDeposits"`
 	GetTallyResult *QueryTallyResultRequest `json:"GetTallyResult"`
@@ -245,33 +234,33 @@ type MsgEmpty struct{}
 
 // Re-export types we need from base gov (these should be imported from wasmx-gov)
 type MsgSubmitProposal struct {
-	Messages       []string     `json:"messages"`
-	InitialDeposit []Coin       `json:"initial_deposit"`
-	Proposer       Bech32String `json:"proposer"`
-	Metadata       string       `json:"metadata"`
-	Title          string       `json:"title"`
-	Summary        string       `json:"summary"`
-	Expedited      bool         `json:"expedited"`
+	Messages       []string           `json:"messages"`
+	InitialDeposit []wasmx.Coin       `json:"initial_deposit"`
+	Proposer       wasmx.Bech32String `json:"proposer"`
+	Metadata       string             `json:"metadata"`
+	Title          string             `json:"title"`
+	Summary        string             `json:"summary"`
+	Expedited      bool               `json:"expedited"`
 }
 
 type MsgVote struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Voter      Bech32String       `json:"voter"`
+	Voter      wasmx.Bech32String `json:"voter"`
 	Option     string             `json:"option"`
 	Metadata   string             `json:"metadata"`
 }
 
 type MsgVoteWeighted struct {
 	ProposalID utils.StringUint64   `json:"proposal_id"`
-	Voter      Bech32String         `json:"voter"`
+	Voter      wasmx.Bech32String   `json:"voter"`
 	Option     []WeightedVoteOption `json:"option"`
 	Metadata   string               `json:"metadata"`
 }
 
 type MsgDeposit struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Depositor  Bech32String       `json:"depositor"`
-	Amount     []Coin             `json:"amount"`
+	Depositor  wasmx.Bech32String `json:"depositor"`
+	Amount     []wasmx.Coin       `json:"amount"`
 }
 
 type MsgEndBlock struct {
@@ -289,15 +278,15 @@ type QueryProposalRequest struct {
 }
 
 type QueryProposalsRequest struct {
-	ProposalStatus string       `json:"proposal_status"`
-	Voter          Bech32String `json:"voter"`
-	Depositor      Bech32String `json:"depositor"`
-	Pagination     PageRequest  `json:"pagination"`
+	ProposalStatus string             `json:"proposal_status"`
+	Voter          wasmx.Bech32String `json:"voter"`
+	Depositor      wasmx.Bech32String `json:"depositor"`
+	Pagination     PageRequest        `json:"pagination"`
 }
 
 type QueryVoteRequest struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Voter      Bech32String       `json:"voter"`
+	Voter      wasmx.Bech32String `json:"voter"`
 }
 
 type QueryVotesRequest struct {
@@ -311,7 +300,7 @@ type QueryParamsRequest struct {
 
 type QueryDepositRequest struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
-	Depositor  Bech32String       `json:"depositor"`
+	Depositor  wasmx.Bech32String `json:"depositor"`
 }
 
 type QueryDepositsRequest struct {

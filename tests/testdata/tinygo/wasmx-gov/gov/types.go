@@ -1,8 +1,7 @@
 package gov
 
 import (
-	"encoding/json"
-	"math/big"
+	sdkmath "cosmossdk.io/math"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	utils "github.com/loredanacirstea/wasmx-utils"
@@ -47,58 +46,6 @@ const (
 	PROPOSAL_STATUS_FAILED         ProposalStatus = 5
 )
 
-// Big represents a big integer serialized as string in JSON
-type Big struct{ Int *big.Int }
-
-func NewBigZero() Big { return Big{Int: new(big.Int)} }
-func NewBigFromString(s string) Big {
-	z := new(big.Int)
-	_ = z.UnmarshalText([]byte(s))
-	return Big{Int: z}
-}
-func (b Big) String() string {
-	if b.Int == nil {
-		return "0"
-	}
-	return b.Int.String()
-}
-func (b Big) MarshalJSON() ([]byte, error) {
-	if b.Int == nil {
-		return json.Marshal("0")
-	}
-	return json.Marshal(b.Int.String())
-}
-func (b *Big) UnmarshalJSON(d []byte) error {
-	var s string
-	if err := json.Unmarshal(d, &s); err != nil {
-		return err
-	}
-	if b.Int == nil {
-		b.Int = new(big.Int)
-	}
-	_, ok := b.Int.SetString(s, 10)
-	if !ok {
-		b.Int.SetInt64(0)
-	}
-	return nil
-}
-func (b Big) Add(o Big) Big  { r := new(big.Int).Add(b.Int, o.Int); return Big{Int: r} }
-func (b Big) Mul(o Big) Big  { r := new(big.Int).Mul(b.Int, o.Int); return Big{Int: r} }
-func (b Big) Div(b2 Big) Big { r := new(big.Int).Div(b.Int, b2.Int); return Big{Int: r} }
-func (b Big) Cmp(o Big) int  { return b.Int.Cmp(o.Int) }
-
-// Helpers to build scaled integers
-func NewBigPow10(dec int) Big {
-	r := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(dec)), nil)
-	return Big{Int: r}
-}
-
-// Coin
-type Coin struct {
-	Denom  string `json:"denom"`
-	Amount Big    `json:"amount"`
-}
-
 // WeightedVoteOption
 type WeightedVoteOption struct {
 	Option VoteOption `json:"option"`
@@ -115,10 +62,10 @@ type Vote struct {
 
 // TallyResult
 type TallyResult struct {
-	YesCount        Big `json:"yes_count"`
-	AbstainCount    Big `json:"abstain_count"`
-	NoCount         Big `json:"no_count"`
-	NoWithVetoCount Big `json:"no_with_veto_count"`
+	YesCount        *sdkmath.Int `json:"yes_count"`
+	AbstainCount    *sdkmath.Int `json:"abstain_count"`
+	NoCount         *sdkmath.Int `json:"no_count"`
+	NoWithVetoCount *sdkmath.Int `json:"no_with_veto_count"`
 }
 
 // Proposal
@@ -129,7 +76,7 @@ type Proposal struct {
 	FinalTallyResult TallyResult        `json:"final_tally_result"`
 	SubmitTime       string             `json:"submit_time"`
 	DepositEndTime   string             `json:"deposit_end_time"`
-	TotalDeposit     []Coin             `json:"total_deposit"`
+	TotalDeposit     []wasmx.Coin       `json:"total_deposit"`
 	VotingStartTime  string             `json:"voting_start_time"`
 	VotingEndTime    string             `json:"voting_end_time"`
 	Metadata         string             `json:"metadata"`
@@ -142,7 +89,7 @@ type Proposal struct {
 
 // Params
 type Params struct {
-	MinDeposit                 []Coin             `json:"min_deposit"`
+	MinDeposit                 []wasmx.Coin       `json:"min_deposit"`
 	MaxDepositPeriod           utils.StringUint64 `json:"max_deposit_period"`
 	VotingPeriod               utils.StringUint64 `json:"voting_period"`
 	Quorum                     string             `json:"quorum"`
@@ -153,7 +100,7 @@ type Params struct {
 	ProposalCancelDest         wasmx.Bech32String `json:"proposal_cancel_dest"`
 	ExpeditedVotingPeriod      utils.StringUint64 `json:"expedited_voting_period"`
 	ExpeditedThreshold         string             `json:"expedited_threshold"`
-	ExpeditedMinDeposit        []Coin             `json:"expedited_min_deposit"`
+	ExpeditedMinDeposit        []wasmx.Coin       `json:"expedited_min_deposit"`
 	BurnVoteQuorum             bool               `json:"burn_vote_quorum"`
 	BurnProposalDepositPrevote bool               `json:"burn_proposal_deposit_prevote"`
 	BurnVoteVeto               bool               `json:"burn_vote_veto"`
@@ -164,7 +111,7 @@ type Params struct {
 type Deposit struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
 	Depositor  wasmx.Bech32String `json:"depositor"`
-	Amount     []Coin             `json:"amount"`
+	Amount     []wasmx.Coin       `json:"amount"`
 }
 
 // Genesis
@@ -180,7 +127,7 @@ type GenesisState struct {
 // Messages and responses
 type MsgSubmitProposal struct {
 	Messages       []string           `json:"messages"`
-	InitialDeposit []Coin             `json:"initial_deposit"`
+	InitialDeposit []wasmx.Coin       `json:"initial_deposit"`
 	Proposer       wasmx.Bech32String `json:"proposer"`
 	Metadata       string             `json:"metadata"`
 	Title          string             `json:"title"`
@@ -211,7 +158,7 @@ type MsgVoteWeighted struct {
 type MsgDeposit struct {
 	ProposalID utils.StringUint64 `json:"proposal_id"`
 	Depositor  wasmx.Bech32String `json:"depositor"`
-	Amount     []Coin             `json:"amount"`
+	Amount     []wasmx.Coin       `json:"amount"`
 }
 
 type MsgDepositResponse struct{}

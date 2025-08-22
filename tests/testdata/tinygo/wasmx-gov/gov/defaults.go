@@ -1,6 +1,8 @@
 package gov
 
 import (
+	sdkmath "cosmossdk.io/math"
+
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
@@ -28,10 +30,15 @@ const (
 )
 
 func GetDefaultParams(defaultBondDenom string) Params {
-	min := Coin{Denom: defaultBondDenom, Amount: NewBigFromString(DefaultMinDepositTokens)}
-	expeditedMin := Coin{Denom: defaultBondDenom, Amount: NewBigFromString(DefaultMinDepositTokens).Mul(NewBigFromString("5"))}
+	amount, ok := sdkmath.NewIntFromString(DefaultMinDepositTokens)
+	if !ok {
+		panic("DefaultMinDepositTokens could not be parsed")
+	}
+	min := wasmx.Coin{Denom: defaultBondDenom, Amount: &amount}
+	expeditedAmount := amount.Mul(sdkmath.NewInt(int64(5)))
+	expeditedMin := wasmx.Coin{Denom: defaultBondDenom, Amount: &expeditedAmount}
 	return Params{
-		MinDeposit:                 []Coin{min},
+		MinDeposit:                 []wasmx.Coin{min},
 		MaxDepositPeriod:           utils.StringUint64(DefaultDepositPeriod),
 		VotingPeriod:               utils.StringUint64(DefaultVotingPeriod),
 		Quorum:                     DefaultQuorum,
@@ -42,7 +49,7 @@ func GetDefaultParams(defaultBondDenom string) Params {
 		ProposalCancelDest:         wasmx.Bech32String(ProposalCancelDest),
 		ExpeditedVotingPeriod:      utils.StringUint64(DefaultVotingExpedited),
 		ExpeditedThreshold:         ExpeditedThreshold,
-		ExpeditedMinDeposit:        []Coin{expeditedMin},
+		ExpeditedMinDeposit:        []wasmx.Coin{expeditedMin},
 		BurnVoteQuorum:             BurnVoteQuorum,
 		BurnProposalDepositPrevote: BurnProposalDepositPrevote,
 		BurnVoteVeto:               BurnVoteVeto,

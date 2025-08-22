@@ -7,7 +7,7 @@ import (
 )
 
 // getCallDataWrap parses the call data into our CallData structure
-func getCallDataWrap() (*CallData, error) {
+func GetCallDataWrap() (*CallData, error) {
 	callDataRaw := wasmx.GetCallData()
 	var callData CallData
 	err := json.Unmarshal(callDataRaw, &callData)
@@ -18,7 +18,7 @@ func getCallDataWrap() (*CallData, error) {
 }
 
 // getCallDataInitialize parses initialization parameters
-func getCallDataInitialize() (*Params, error) {
+func GetCallDataInitialize() (*Params, error) {
 	callDataRaw := wasmx.GetCallData()
 	var params Params
 	err := json.Unmarshal(callDataRaw, &params)

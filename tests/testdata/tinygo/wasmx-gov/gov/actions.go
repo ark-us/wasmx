@@ -3,7 +3,6 @@ package gov
 import (
 	"encoding/base64"
 	"encoding/json"
-	"math/big"
 	"strings"
 	"time"
 
@@ -73,17 +72,16 @@ func EndBlock(req MsgEndBlock) []byte {
 
 		totalStake := callGetTotalStake()
 		// Use 18 decimal places for precise percentage calculations
-		quorumInt := parseDecimalToBig(params.Quorum, 18)
-		quorumAmount := totalStake.Mul(quorumInt).Div(NewBigPow10(18))
+		quorumInt := parseDecimalToSdkInt(params.Quorum, 18)
+		quorumAmount := totalStake.Mul(quorumInt).Quo(NewSdkIntPow10(18))
 
-		voted := new(Big)
-		voted.Int = new(big.Int).Add(p.FinalTallyResult.YesCount.Int, p.FinalTallyResult.NoCount.Int)
-		voted.Int = voted.Int.Add(voted.Int, p.FinalTallyResult.AbstainCount.Int)
-		voted.Int = voted.Int.Add(voted.Int, p.FinalTallyResult.NoWithVetoCount.Int)
+		voted := p.FinalTallyResult.YesCount.Add(*p.FinalTallyResult.NoCount)
+		voted = voted.Add(*p.FinalTallyResult.AbstainCount)
+		voted = voted.Add(*p.FinalTallyResult.NoWithVetoCount)
 
 		LoggerDebug("proposal quorum", []string{"id", u64toa(uint64(p.ID)), "total_stake", totalStake.String(), "quorum", quorumAmount.String(), "voted_state", voted.String()})
 
-		if voted.Cmp(quorumAmount) < 0 {
+		if voted.LT(quorumAmount) {
 			p.FailedReason = "lack of quorum"
 			p.Status = PROPOSAL_STATUS_REJECTED
 			setProposal(uint64(p.ID), p)
@@ -92,10 +90,10 @@ func EndBlock(req MsgEndBlock) []byte {
 		}
 
 		// no_with_veto
-		thresholdVeto := parseDecimalToBig(params.VetoThreshold, 18)
-		thresholdVetoAmt := voted.Mul(thresholdVeto).Div(NewBigPow10(18))
+		thresholdVeto := parseDecimalToSdkInt(params.VetoThreshold, 18)
+		thresholdVetoAmt := voted.Mul(thresholdVeto).Quo(NewSdkIntPow10(18))
 		LoggerDebug("proposal veto threshold", []string{"id", u64toa(uint64(p.ID)), "veto_count", p.FinalTallyResult.NoWithVetoCount.String(), "threshold", thresholdVetoAmt.String()})
-		if p.FinalTallyResult.NoWithVetoCount.Cmp(thresholdVetoAmt) >= 0 {
+		if p.FinalTallyResult.NoWithVetoCount.GTE(thresholdVetoAmt) {
 			p.FailedReason = "vetoed"
 			p.Status = PROPOSAL_STATUS_REJECTED
 			setProposal(uint64(p.ID), p)
@@ -104,10 +102,10 @@ func EndBlock(req MsgEndBlock) []byte {
 		}
 
 		// yes threshold
-		thr := parseDecimalToBig(params.Threshold, 18)
-		thrAmt := voted.Mul(thr).Div(NewBigPow10(18))
+		thr := parseDecimalToSdkInt(params.Threshold, 18)
+		thrAmt := voted.Mul(thr).Quo(NewSdkIntPow10(18))
 		LoggerDebug("proposal yes threshold", []string{"id", u64toa(uint64(p.ID)), "yes_count", p.FinalTallyResult.YesCount.String(), "threshold", thrAmt.String()})
-		if p.FinalTallyResult.YesCount.Cmp(thrAmt) < 0 {
+		if p.FinalTallyResult.YesCount.LT(thrAmt) {
 			p.FailedReason = "not enough yes votes"
 			p.Status = PROPOSAL_STATUS_REJECTED
 			setProposal(uint64(p.ID), p)
@@ -139,7 +137,8 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 	depositEnd := now.Add(time.Duration(params.MaxDepositPeriod) * time.Millisecond)
 	deposit := req.InitialDeposit
 	if len(deposit) == 0 {
-		deposit = []Coin{{Denom: params.MinDeposit[0].Denom, Amount: NewBigZero()}}
+		amount := NewSdkIntZero()
+		deposit = []wasmx.Coin{{Denom: params.MinDeposit[0].Denom, Amount: &amount}}
 	}
 	if deposit[0].Denom != params.MinDeposit[0].Denom {
 		Revert("invalid denom; expected " + params.MinDeposit[0].Denom + ", got " + deposit[0].Denom)
@@ -149,11 +148,15 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 	if len(metadata) > MaxMetadataLen {
 		metadata = metadata[:MaxMetadataLen]
 	}
+	yescount := NewSdkIntZero()
+	abstain := NewSdkIntZero()
+	nocount := NewSdkIntZero()
+	noveto := NewSdkIntZero()
 	proposal := Proposal{
 		ID:               0,
 		Messages:         req.Messages,
 		Status:           PROPOSAL_STATUS_DEPOSIT_PERIOD,
-		FinalTallyResult: TallyResult{YesCount: NewBigZero(), AbstainCount: NewBigZero(), NoCount: NewBigZero(), NoWithVetoCount: NewBigZero()},
+		FinalTallyResult: TallyResult{YesCount: &yescount, AbstainCount: &abstain, NoCount: &nocount, NoWithVetoCount: &noveto},
 		SubmitTime:       now.Format(time.RFC3339Nano),
 		DepositEndTime:   depositEnd.Format(time.RFC3339Nano),
 		TotalDeposit:     deposit,
@@ -167,7 +170,7 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 		FailedReason:     "",
 	}
 	// promote to voting if initial deposit >= min deposit
-	if deposit[0].Amount.Cmp(params.MinDeposit[0].Amount) > 0 {
+	if deposit[0].Amount.BigInt().Cmp(params.MinDeposit[0].Amount.BigInt()) > 0 {
 		proposal.Status = PROPOSAL_STATUS_VOTING_PERIOD
 		vs := now
 		ve := vs.Add(time.Duration(params.VotingPeriod) * time.Millisecond)
@@ -217,13 +220,17 @@ func DoVote(req MsgVote) []byte {
 	stake := getStake(req.Voter)
 	switch optionID {
 	case VOTE_OPTION_YES:
-		proposal.FinalTallyResult.YesCount = proposal.FinalTallyResult.YesCount.Add(stake)
+		amount := proposal.FinalTallyResult.YesCount.Add(*stake)
+		proposal.FinalTallyResult.YesCount = &amount
 	case VOTE_OPTION_ABSTAIN:
-		proposal.FinalTallyResult.AbstainCount = proposal.FinalTallyResult.AbstainCount.Add(stake)
+		amount := proposal.FinalTallyResult.AbstainCount.Add(*stake)
+		proposal.FinalTallyResult.AbstainCount = &amount
 	case VOTE_OPTION_NO:
-		proposal.FinalTallyResult.NoCount = proposal.FinalTallyResult.NoCount.Add(stake)
+		amount := proposal.FinalTallyResult.NoCount.Add(*stake)
+		proposal.FinalTallyResult.NoCount = &amount
 	case VOTE_OPTION_NO_WITH_VETO:
-		proposal.FinalTallyResult.NoWithVetoCount = proposal.FinalTallyResult.NoWithVetoCount.Add(stake)
+		amount := proposal.FinalTallyResult.NoWithVetoCount.Add(*stake)
+		proposal.FinalTallyResult.NoWithVetoCount = &amount
 	}
 	setProposal(uint64(proposal.ID), proposal)
 	// Emit vote event
@@ -254,17 +261,21 @@ func VoteWeighted(req MsgVoteWeighted) []byte {
 
 	stake := getStake(req.Voter)
 	for _, opt := range req.Option {
-		weightInt := parseDecimalToBig(opt.Weight, 18)
-		amount := stake.Mul(weightInt).Div(NewBigPow10(18))
+		weightInt := parseDecimalToSdkInt(opt.Weight, 18)
+		amount := stake.Mul(weightInt).Quo(NewSdkIntPow10(18))
 		switch opt.Option {
 		case VOTE_OPTION_YES:
-			proposal.FinalTallyResult.YesCount = proposal.FinalTallyResult.YesCount.Add(amount)
+			amount := proposal.FinalTallyResult.YesCount.Add(amount)
+			proposal.FinalTallyResult.YesCount = &amount
 		case VOTE_OPTION_ABSTAIN:
-			proposal.FinalTallyResult.AbstainCount = proposal.FinalTallyResult.AbstainCount.Add(amount)
+			amount := proposal.FinalTallyResult.AbstainCount.Add(amount)
+			proposal.FinalTallyResult.AbstainCount = &amount
 		case VOTE_OPTION_NO:
-			proposal.FinalTallyResult.NoCount = proposal.FinalTallyResult.NoCount.Add(amount)
+			amount := proposal.FinalTallyResult.NoCount.Add(amount)
+			proposal.FinalTallyResult.NoCount = &amount
 		case VOTE_OPTION_NO_WITH_VETO:
-			proposal.FinalTallyResult.NoWithVetoCount = proposal.FinalTallyResult.NoWithVetoCount.Add(amount)
+			amount := proposal.FinalTallyResult.NoWithVetoCount.Add(amount)
+			proposal.FinalTallyResult.NoWithVetoCount = &amount
 		}
 	}
 	setProposal(uint64(proposal.ID), proposal)
@@ -301,7 +312,8 @@ func DoDeposit(req MsgDeposit) []byte {
 		found := false
 		for i := range proposal.TotalDeposit {
 			if proposal.TotalDeposit[i].Denom == c.Denom {
-				proposal.TotalDeposit[i].Amount = proposal.TotalDeposit[i].Amount.Add(c.Amount)
+				amount := proposal.TotalDeposit[i].Amount.Add(*c.Amount)
+				proposal.TotalDeposit[i].Amount = &amount
 				found = true
 				break
 			}
@@ -312,7 +324,7 @@ func DoDeposit(req MsgDeposit) []byte {
 	}
 
 	params := getParams()
-	if proposal.TotalDeposit[0].Amount.Cmp(params.MinDeposit[0].Amount) > 0 {
+	if proposal.TotalDeposit[0].Amount.BigInt().Cmp(params.MinDeposit[0].Amount.BigInt()) > 0 {
 		proposal.Status = PROPOSAL_STATUS_VOTING_PERIOD
 		vs := wasmx.GetTimestamp().UTC()
 		proposal.VotingStartTime = vs.Format(time.RFC3339Nano)

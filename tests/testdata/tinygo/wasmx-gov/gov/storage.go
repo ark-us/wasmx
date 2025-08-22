@@ -374,3 +374,7 @@ func GetProposalVoteCount(proposalID uint64) uint64 {
 func SetProposalVoteCount(proposalID uint64, count uint64) {
 	setProposalVoteCount(proposalID, count)
 }
+
+func SetParams(params Params) {
+	setParams(params)
+}

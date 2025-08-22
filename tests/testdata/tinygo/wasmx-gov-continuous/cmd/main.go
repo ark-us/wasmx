@@ -5,6 +5,7 @@ import (
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
 	gov "github.com/loredanacirstea/wasmx-gov-continuous/gov"
+	gov1 "github.com/loredanacirstea/wasmx-gov/gov"
 )
 
 //go:wasm-module wasmx-gov-continuous
@@ -12,12 +13,12 @@ import (
 func Instantiate() {
 	// Initialize with default params if needed
 	databz := wasmx.GetCallData()
-	if len(databz) > 0 {
-		var params gov.Params
-		if err := json.Unmarshal(databz, &params); err == nil {
-			gov.SetParams(params)
-		}
+	var params gov.Params
+	err := json.Unmarshal(databz, &params)
+	if err != nil {
+		gov.Revert("invalid initiate with params: " + err.Error() + ": " + string(databz))
 	}
+	gov.SetParams(params)
 }
 
 func main() {
@@ -82,7 +83,7 @@ func main() {
 		wasmx.SetFinishData(res)
 		return
 	case calldata.GetParams != nil:
-		res := gov.GetParams()
+		res := gov1.GetParams(*calldata.GetParams)
 		wasmx.SetFinishData(res)
 		return
 	}

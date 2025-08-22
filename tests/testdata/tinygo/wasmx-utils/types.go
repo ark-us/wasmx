@@ -8,6 +8,10 @@ import (
 
 type StringUint64 uint64
 
+func (s StringUint64) ToString() string {
+	return strconv.FormatUint(uint64(s), 10)
+}
+
 // MarshalJSON makes it encode as a JSON string
 func (s StringUint64) MarshalJSON() ([]byte, error) {
 	return json.Marshal(strconv.FormatUint(uint64(s), 10))
