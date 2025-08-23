@@ -24,6 +24,8 @@ func BuildWasmxCoreEnvi64(context *Context, rnh memc.RuntimeHandler) (interface{
 		vm.BuildFn("storageDeleteGlobal", coreWasmxStorageDeleteGlobal, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
 		vm.BuildFn("storageHasGlobal", coreWasmxStorageHasGlobal, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageResetGlobal", coreWasmxStorageResetGlobal, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+
+		vm.BuildFn("UpdateSystemCache", coreUpdateSystemCache, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmxcore", context, fndefs)
