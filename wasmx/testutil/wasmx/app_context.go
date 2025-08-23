@@ -787,6 +787,7 @@ func (s *AppContext) SubmitGovProposal(
 	s.S.Require().NoError(err)
 	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
+	s.S.Require().NotNil(proposal.Proposal)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
 
 	s.S.Commit()
