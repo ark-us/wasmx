@@ -149,7 +149,7 @@ func (s *KeeperTestSuite2) TestRAFTP2PMigration() {
 
 	newConsensusStr := newConsensus.String()
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensusStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensusStr))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	proposal := &wasmxtypes.MsgExecuteContract{

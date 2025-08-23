@@ -104,7 +104,7 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	newAddressStr := newAddress.String()
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STAKING, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STAKING, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -119,7 +119,7 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newAddressStr, role.Addresses[0])
+	s.Require().Equal(newAddressStr, role.Addresses[role.Primary])
 	s.Require().Equal(types.ROLE_STAKING, role.Role)
 	s.Require().Equal(newlabel, role.Labels[0])
 
@@ -188,7 +188,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	newAddressStr := newAddress.String()
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_ROLES, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_ROLES, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -256,7 +256,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 

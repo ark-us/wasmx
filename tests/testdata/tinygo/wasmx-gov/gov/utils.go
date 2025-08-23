@@ -172,7 +172,7 @@ func executeProposal(p Proposal) Response {
 		if err != nil {
 			return Response{Success: false, Data: "invalid message encoding"}
 		}
-		data := wasmx.ExecuteCosmosMsg(string(msgbz))
+		data := wasmx.ExecuteCosmosMsg(string(msgbz), MODULE_NAME)
 		if data.Success > 0 {
 			return Response{Success: false, Data: data.Data}
 		}

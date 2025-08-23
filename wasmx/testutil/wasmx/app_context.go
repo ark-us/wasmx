@@ -855,7 +855,9 @@ func (s *AppContext) PassGovProposal(
 	// check proposal passed
 	proposal, err = s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
-	// s.S.Require().Equal(govtypes1.StatusPassed, proposal.Proposal.Status, "gov proposal does not have status passed")
+	if !s.Chain.GovernanceContinuous {
+		s.S.Require().Equal(govtypes1.StatusPassed, proposal.Proposal.Status, "gov proposal does not have status passed")
+	}
 }
 
 func (s *AppContext) ParseProposal(proposal govtypes1.Proposal) ([]sdk.Msg, error) {

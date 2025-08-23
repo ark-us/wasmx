@@ -892,7 +892,7 @@ func executeProposal(proposal Proposal) *gov.Response {
 			return &gov.Response{Success: false, Data: "invalid message encoding"}
 		}
 
-		response := wasmx.ExecuteCosmosMsg(string(msgBytes))
+		response := wasmx.ExecuteCosmosMsg(string(msgBytes), MODULE_NAME)
 		if response.Success > 0 {
 			return &gov.Response{Success: false, Data: response.Data}
 		}
