@@ -9,7 +9,6 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	mcodec "github.com/loredanacirstea/wasmx/codec"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -511,10 +510,6 @@ type GlobalStorageResetResponse struct {
 	Error string `json:"error"`
 }
 
-type UpdateSystemCacheRequest struct {
-	CodeRegistryAddress mcodec.AccAddressPrefixed `json:"code_registry_address"`
-}
-
 type UpdateSystemCacheResponse struct {
 	Error string `json:"error"`
 }
@@ -644,12 +639,12 @@ func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params
 	if err != nil {
 		return nil, err
 	}
-	var req UpdateSystemCacheRequest
+	var req types.SystemBootstrap
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		return nil, err
 	}
-	err = ctx.CosmosHandler.UpdateSystemCache(ctx.Ctx, req.CodeRegistryAddress)
+	err = ctx.CosmosHandler.UpdateSystemCache(ctx.Ctx, &req)
 	if err != nil {
 		// TODO maybe we should shut down the system here, if the cache was not updated correctly
 		resp.Error = err.Error()

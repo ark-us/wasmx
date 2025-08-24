@@ -204,6 +204,14 @@ func (h *WasmxCosmosHandler) FinalizeBlockResultHandler(ctx sdk.Context, resp *a
 	return h.Keeper.FinalizeBlockResultHandler(ctx, resp)
 }
 
+func (h *WasmxCosmosHandler) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) error {
+	return h.Keeper.UpdateSystemCache(ctx, req)
+}
+
+func (h *WasmxCosmosHandler) EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error {
+	return h.Keeper.EndBlockResultHandler(ctx, resp)
+}
+
 func (h *WasmxCosmosHandler) WithNewAddress(addr mcodec.AccAddressPrefixed) types.WasmxCosmosHandler {
 	return h.Keeper.NewCosmosHandler(h.Ctx, addr)
 }

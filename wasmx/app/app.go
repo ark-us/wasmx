@@ -1205,7 +1205,13 @@ func (app *App) EndBlocker(ctx sdk.Context, metadata []byte) (sdk.EndBlock, erro
 			return sdk.EndBlock{}, fmt.Errorf("EndBlock wasmx call failed: %s", err.Error())
 		}
 	}
-	return app.mm.EndBlock(ctx)
+	wasmxEvents := ctx.EventManager().ABCIEvents()
+	// we need to keep these events for host.EndBlock return to contract
+	res, err := app.mm.EndBlock(ctx)
+	// app.mm.EndBlock starts a new event manager
+	// so we need to add our contract events from running the EndBlock hook
+	res.Events = append(wasmxEvents, res.Events...)
+	return res, err
 }
 
 func (app *App) BeginTransaction(ctx context.Context, txmode sdk.ExecMode, txBytes []byte) error {

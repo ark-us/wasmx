@@ -12,11 +12,11 @@ type SystemBootstrapContextKey string
 const SystemBootstrapKey SystemBootstrapContextKey = "SystemBootstrapData"
 
 type SystemBootstrap struct {
-	RoleAddress              mcodec.AccAddressPrefixed
-	CodeRegistryAddress      mcodec.AccAddressPrefixed
-	CodeRegistryId           uint64
-	CodeRegistryCodeInfo     *CodeInfo
-	CodeRegistryContractInfo *ContractInfo
+	RoleAddress              mcodec.AccAddressPrefixed `json:"role_address"`
+	CodeRegistryAddress      mcodec.AccAddressPrefixed `json:"code_registry_address"`
+	CodeRegistryId           uint64                    `json:"code_registry_id"`
+	CodeRegistryCodeInfo     *CodeInfo                 `json:"code_registry_code_info"`
+	CodeRegistryContractInfo *ContractInfo             `json:"code_registry_contract_info"`
 }
 
 func NewSystemBootstrapData(roleAddress string, scAddress string, scCodeId uint64, scCodeInfo CodeInfoPB, scContractInfo ContractInfoPB) *SystemBootstrapData {

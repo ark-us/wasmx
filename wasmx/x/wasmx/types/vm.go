@@ -152,6 +152,8 @@ type WasmxCosmosHandler interface {
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
 	GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) string
 	FinalizeBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error
+	UpdateSystemCache(ctx sdk.Context, req *SystemBootstrap) error
+	EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error
 	JSONCodec() codec.JSONCodec
 	GetAlias(addr mcodec.AccAddressPrefixed) (mcodec.AccAddressPrefixed, bool)
 	Codec() codec.Codec
