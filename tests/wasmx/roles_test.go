@@ -134,7 +134,6 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 }
 
 func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
-	suite.T().Skip("TestRolesContractUpgradeCache")
 	// test upgrading roles contract
 	// test storage migration or instantiation with other values
 	// test upgrade cache
@@ -178,7 +177,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	var roles2 types.RolesGenesis
 	err = json.Unmarshal(newrolesbz, &roles2)
 	s.Require().NoError(err)
-	s.Require().Equal(len(roles.Roles), len(roles2.Roles))
+	s.Require().Equal(1, len(roles2.Roles))
 
 	newlabel := types.ROLES_v001 + "2"
 
@@ -197,13 +196,14 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 		Contract: rolesAddr.String(),
 		Msg:      msgbz,
 	}
-	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "Register roles contract", title, description, false)
 
 	cached, err := appA.App.WasmxKeeper.GetSystemBootstrapData(appA.Context())
 	s.Require().NoError(err)
 	s.Require().NotNil(cached)
 	s.Require().Equal(newAddress.String(), cached.RoleAddress)
 
+	newlabel = "roles_rolesv0.0.1" // label set by contract
 	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newAddress)
 	s.Require().Equal(newlabel, resp)
 
