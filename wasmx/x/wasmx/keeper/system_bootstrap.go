@@ -132,7 +132,6 @@ func (k *Keeper) EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinal
 					contractAddrStr = attr.Value
 				}
 			}
-			fmt.Println("--EndBlockResultHandler.role--", role)
 			// upgrade cache for roles, contract registry
 
 			// format errors should never happen, but we error
