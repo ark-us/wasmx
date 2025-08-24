@@ -104,7 +104,7 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	newAddressStr := newAddress.String()
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STAKING, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STAKING, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -119,7 +119,7 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 	s.Require().Equal(newlabel, resp)
 
 	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
-	s.Require().Equal(newAddressStr, role.Addresses[0])
+	s.Require().Equal(newAddressStr, role.Addresses[role.Primary])
 	s.Require().Equal(types.ROLE_STAKING, role.Role)
 	s.Require().Equal(newlabel, role.Labels[0])
 
@@ -188,7 +188,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	newAddressStr := newAddress.String()
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_ROLES, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_ROLES, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -218,7 +218,6 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 }
 
 func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
-	suite.T().Skip("TestContractsRegistryUpgradeCache")
 	// test upgrade contracts registry
 	// test data migration
 	// test upgrade cache
@@ -239,7 +238,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.STORAGE_CONTRACTS_v001)
 	codeId := appA.StoreCode(sender, wasmbin, nil)
-	newAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "newregistry", nil)
+	newAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte(`{"code_infos":[],"contract_infos":[]}`)}, "newregistry", nil)
 
 	newlabel := types.STORAGE_CONTRACTS_v001 + "2"
 
@@ -256,7 +255,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":0}}`, types.ROLE_STORAGE_CONTRACTS, newlabel, newAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 
@@ -275,13 +274,28 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 	s.Require().Equal(newlabel, role.Labels[0])
 	s.Require().Equal(types.ROLE_STORAGE_CONTRACTS, role.Role)
 
+	// check cached code & contract info
 	cached, err := appA.App.WasmxKeeper.GetSystemBootstrapData(appA.Context())
 	s.Require().NoError(err)
 	s.Require().NotNil(cached)
 	s.Require().Equal(newAddress.String(), cached.CodeRegistryAddress)
 	s.Require().NotNil(cached.CodeRegistryCodeInfo)
 	s.Require().NotNil(cached.CodeRegistryContractInfo)
+
 	s.Require().True(bytes.Equal(codeInfo.CodeHash, cached.CodeRegistryCodeInfo.CodeHash))
-	s.Require().Equal(codeInfo, cached.CodeRegistryCodeInfo)
-	s.Require().Equal(contractInfo, cached.CodeRegistryContractInfo)
+	s.Require().True(bytes.Equal([]byte(codeInfo.CodeHash), cached.CodeRegistryCodeInfo.CodeHash))
+	s.Require().Equal([]string(codeInfo.Deps), cached.CodeRegistryCodeInfo.Deps)
+	s.Require().True(bytes.Equal([]byte(codeInfo.InterpretedBytecodeDeployment), cached.CodeRegistryCodeInfo.InterpretedBytecodeDeployment))
+	s.Require().True(bytes.Equal([]byte(codeInfo.InterpretedBytecodeRuntime), cached.CodeRegistryCodeInfo.InterpretedBytecodeRuntime))
+	s.Require().Equal(codeInfo.MeteringOff, cached.CodeRegistryCodeInfo.MeteringOff)
+	s.Require().Equal(codeInfo.Pinned, cached.CodeRegistryCodeInfo.Pinned)
+	s.Require().True(bytes.Equal([]byte(codeInfo.RuntimeHash), cached.CodeRegistryCodeInfo.RuntimeHash))
+	s.Require().Equal(codeInfo.Creator, cached.CodeRegistryCodeInfo.Creator)
+
+	s.Require().Equal(contractInfo.CodeId, cached.CodeRegistryContractInfo.CodeId)
+	s.Require().Equal(contractInfo.Creator, cached.CodeRegistryContractInfo.Creator)
+	s.Require().True(bytes.Equal([]byte(contractInfo.InitMessage), []byte(cached.CodeRegistryContractInfo.InitMessage)))
+	s.Require().Equal(contractInfo.Label, cached.CodeRegistryContractInfo.Label)
+	s.Require().Equal(contractInfo.Provenance, cached.CodeRegistryContractInfo.Provenance)
+	s.Require().Equal(contractInfo.StorageType, cached.CodeRegistryContractInfo.StorageType)
 }

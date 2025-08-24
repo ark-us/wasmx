@@ -51,7 +51,7 @@ func (suite *KeeperTestSuite) TestUpgradeInterpreterEVM() {
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 
-	msg := []byte(fmt.Sprintf(`{"SetContractForRole":{"role":"interpreter","label":"%s","contract_address":"%s","action_type":1}}`, newlabel, interpreterAddressStr))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"interpreter","label":"%s","contract_address":"%s","action_type":1}}`, newlabel, interpreterAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 

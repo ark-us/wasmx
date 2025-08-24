@@ -327,6 +327,7 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *types.GovMsg) ([]sdk.Msg, error) {
 		if err != nil {
 			return nil, errorsmod.Wrap(err, "vote option")
 		}
+		// TODO replace NewMsgVote with v1.MsgVote and prefixed address!
 		m := v1.NewMsgVote(sender, msg.Vote.ProposalId, voteOption, "")
 		return []sdk.Msg{m}, nil
 	case msg.VoteWeighted != nil:
@@ -342,6 +343,7 @@ func EncodeGovMsg(sender sdk.AccAddress, msg *types.GovMsg) ([]sdk.Msg, error) {
 			}
 			opts[i] = &v1.WeightedVoteOption{Option: voteOption, Weight: weight.String()}
 		}
+		// TODO replace NewMsgVote with v1.MsgVote and prefixed address!
 		m := v1.NewMsgVoteWeighted(sender, msg.VoteWeighted.ProposalId, opts, "")
 		return []sdk.Msg{m}, nil
 

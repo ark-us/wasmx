@@ -95,61 +95,88 @@ func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 	return data
 }
 
-func (k *Keeper) FinalizeBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error {
-	// TODO (security) check contract address has correct role!!!
-	for _, txr := range resp.TxResults {
-		for _, ev := range txr.GetEvents() {
-			// [{"type":"register_role","attributes":[{"key":"role","value":"storage_contracts","index":true},{"key":"label","value":"storage_contracts_0.0.1","index":true},{"key":"contract_address","value":"mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrpq5kw64","index":true}]}]
-			if ev.Type == types.EventTypeRegisterRole {
-				var role string
-				var contractAddrStr string
-				for _, attr := range ev.Attributes {
-					if attr.Key == types.AttributeKeyRole {
-						role = attr.Value
-					}
-					if attr.Key == types.AttributeKeyContractAddress {
-						contractAddrStr = attr.Value
-					}
-				}
-				// upgrade cache for roles, contract registry
+func (k *Keeper) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) error {
+	cache := k.GetSystemBootstrap(ctx)
 
-				// format errors should never happen, but we error
-				cache := k.GetSystemBootstrap(ctx)
-				changed := false
-				if role == types.ROLE_ROLES {
-					addr, err := k.accBech32Codec.StringToAccAddressPrefixed(contractAddrStr)
-					if err != nil {
-						return sdkerr.Wrapf(err, "roles upgrade invalid address %s", contractAddrStr)
-					}
-					cache.RoleAddress = addr
-					changed = true
+	cache.CodeRegistryAddress = req.CodeRegistryAddress
+	cache.CodeRegistryCodeInfo = req.CodeRegistryCodeInfo
+	cache.CodeRegistryContractInfo = req.CodeRegistryContractInfo
+	err := k.SetSystemBootstrap(ctx, cache)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (k *Keeper) FinalizeBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error {
+	return nil
+}
+
+func (k *Keeper) EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error {
+	evs := resp.Events
+	for _, txr := range resp.TxResults {
+		evs = append(evs, txr.GetEvents()...)
+	}
+
+	// TODO (security) check contract address has correct role!!!
+	for _, ev := range evs {
+		// [{"type":"register_role","attributes":[{"key":"role","value":"storage_contracts","index":true},{"key":"label","value":"storage_contracts_0.0.1","index":true},{"key":"contract_address","value":"mythos1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrpq5kw64","index":true}]}]
+		if ev.Type == types.EventTypeRegisterRole {
+			var role string
+			var contractAddrStr string
+			for _, attr := range ev.Attributes {
+				if attr.Key == types.AttributeKeyRole {
+					role = attr.Value
 				}
-				if role == types.ROLE_STORAGE_CONTRACTS {
-					addr, err := k.accBech32Codec.StringToAccAddressPrefixed(contractAddrStr)
-					if err != nil {
-						return sdkerr.Wrapf(err, "contract registry upgrade invalid address %s", contractAddrStr)
-					}
-					cache.CodeRegistryAddress = addr
-					changed = true
-					// get code & contract info for address
-					contractInfo, codeInfo, _, err := k.ContractInstance(ctx, cache.CodeRegistryAddress)
-					if err != nil {
-						return sdkerr.Wrapf(err, "contract registry code info upgrade not found %s", contractAddrStr)
-					}
-					if codeInfo == nil || contractInfo == nil {
-						return fmt.Errorf("contract registry code info upgrade not found %s", contractAddrStr)
-					}
-					cache.CodeRegistryCodeInfo = codeInfo
-					cache.CodeRegistryContractInfo = contractInfo
+				if attr.Key == types.AttributeKeyContractAddress {
+					contractAddrStr = attr.Value
 				}
-				if changed {
-					err := k.SetSystemBootstrap(ctx, cache)
-					if err != nil {
-						return err
-					}
+			}
+			// upgrade cache for roles, contract registry
+
+			// format errors should never happen, but we error
+			cache := k.GetSystemBootstrap(ctx)
+			changed := false
+			if role == types.ROLE_ROLES {
+				addr, err := k.accBech32Codec.StringToAccAddressPrefixed(contractAddrStr)
+				if err != nil {
+					return sdkerr.Wrapf(err, "roles upgrade invalid address %s", contractAddrStr)
+				}
+				cache.RoleAddress = addr
+				changed = true
+			}
+			if role == types.ROLE_STORAGE_CONTRACTS {
+				addr, err := k.accBech32Codec.StringToAccAddressPrefixed(contractAddrStr)
+				if err != nil {
+					return sdkerr.Wrapf(err, "contract registry upgrade invalid address %s", contractAddrStr)
+				}
+				err = k.UpdateSystemCacheCodes(ctx, cache, addr)
+				if err != nil {
+					return err
+				}
+			}
+			if changed {
+				err := k.SetSystemBootstrap(ctx, cache)
+				if err != nil {
+					return err
 				}
 			}
 		}
 	}
+	return nil
+}
+
+func (k *Keeper) UpdateSystemCacheCodes(ctx sdk.Context, cache *types.SystemBootstrap, addr mcodec.AccAddressPrefixed) error {
+	cache.CodeRegistryAddress = addr
+	// get code & contract info for address
+	contractInfo, codeInfo, _, err := k.ContractInstance(ctx, cache.CodeRegistryAddress)
+	if err != nil {
+		return sdkerr.Wrapf(err, "contract registry code info upgrade not found %s", addr.String())
+	}
+	if codeInfo == nil || contractInfo == nil {
+		return fmt.Errorf("contract registry code info upgrade not found %s", addr.String())
+	}
+	cache.CodeRegistryCodeInfo = codeInfo
+	cache.CodeRegistryContractInfo = contractInfo
 	return nil
 }

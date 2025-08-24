@@ -35,7 +35,6 @@ func (suite *KeeperTestSuite) TestSendingCoinsToNewAccount() {
 }
 
 func (suite *KeeperTestSuite) TestEwasmOpcodes() {
-	SkipFixmeTests(suite.T(), "TestEwasmOpcodes")
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 
 	sender := suite.GetRandomAccount()
@@ -112,7 +111,6 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	// "91a8c7a1": "blockhash_(uint256)",
 	blockhashhex := "91a8c7a1"
 	// "57296d07": "gas_()",
-	gashex := "57296d07"
 	// "0dfe3b3d": "gaslimit_()",
 	gaslimithex := "0dfe3b3d"
 	// "dd5d9040": "gasprice_()",
@@ -370,10 +368,6 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	s.Require().NoError(err)
 	s.Require().Equal(qres, hex.EncodeToString(codeInfo.CodeHash))
 
-	calld = gashex
-	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b97531c", qres)
-
 	calld = codesizehex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000001f41", qres)
@@ -388,6 +382,36 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(basefeehex)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", qres)
+
+	// TODO it should work here too
+	// gashex := "57296d07"
+	// calld = gashex
+	// qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	// s.Require().Equal("000000000000000000000000000000000000000000000000000000003b97531c", qres)
+}
+
+func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
+	SkipFixmeTests(suite.T(), "TestEwasmOpcodesGas")
+
+	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
+
+	sender := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	evmcode, err := hex.DecodeString(testdata.OpcodesAll)
+	s.Require().NoError(err)
+
+	appA := s.AppContext()
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "allopcodes", nil)
+
+	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	suite.Commit()
+
+	calld := "57296d07"
+	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b97531c", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {

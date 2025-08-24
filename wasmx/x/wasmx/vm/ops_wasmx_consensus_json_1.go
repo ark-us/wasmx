@@ -176,7 +176,7 @@ func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		oe.Reset()
 	}
 
-	// hooks for finalize block result, e.g. system cache hooks
+	// hooks for finalize block result
 	err = ctx.CosmosHandler.FinalizeBlockResultHandler(ctx.Ctx, resp)
 	if err != nil {
 		return nil, err
@@ -242,9 +242,16 @@ func EndBlock(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	resp, err := ctx.GetApplication().EndBlock(metadata)
 	errmsg := ""
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "EndBlock")
 		errmsg = err.Error()
 	}
+
+	// hooks for finalize block result, e.g. system cache hooks
+	err = ctx.CosmosHandler.EndBlockResultHandler(ctx.Ctx, resp)
+	if err != nil {
+		return nil, err
+	}
+
 	respbz, err := json.Marshal(resp)
 	if err != nil {
 		return nil, err

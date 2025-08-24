@@ -1,0 +1,45 @@
+package wasmx
+
+// Module name constants
+const (
+    MODULE_COSMOSMOD  = "cosmosmod"
+    MODULE_GOV        = "gov"
+    MODULE_DISTRIBUTION = "distribution"
+    MODULE_AUTHZ      = "authz"
+    MODULE_CAPABILITY = "capability"
+    MODULE_CIRCUIT    = "circuit"
+    MODULE_CONSENSUS  = "consensus"
+    MODULE_CRISIS     = "crisis"
+    MODULE_EVIDENCE   = "evidence"
+    MODULE_GENUTIL    = "genutil"
+    MODULE_GROUP      = "group"
+    MODULE_MINT       = "mint"
+    MODULE_NETWORK    = "network"
+    MODULE_TRANSFER   = "transfer"
+    MODULE_UPGRADE    = "upgrade"
+    MODULE_WASMX      = "wasmx"
+    MODULE_WEBSRV     = "websrv"
+)
+
+// Well-known addresses
+const (
+    ADDR_FEE_COLLECTOR    = "f1829676db577682e944fc3493d451b67ff3e29f"
+    GOCORE_ADDR_MINT      = "dc6f17bbec824fff8f86587966b2047db6ab7367"
+    GOCORE_ADDR_GOV       = "7b5fe22b5446f7c62ea27b8bd71cef94e03f3df2"
+    GOCORE_ADDR_DISTRIBUTION = "93354845030274cd4bf1686abd60ab28ec52e1a7"
+    GOCORE_ADDR_WASMX     = "1d47fb365312446e2c62ef0e85f757af3c123f88"
+    ADDR_BOOTSTRAP_ACCOUNT = "1111111111111111111111111111111111111111"
+)
+
+var GOCORE_MODULE_ADDRESSES = map[string]string{
+    GOCORE_ADDR_MINT:         MODULE_MINT,
+    GOCORE_ADDR_GOV:          MODULE_GOV,
+    GOCORE_ADDR_DISTRIBUTION: MODULE_DISTRIBUTION,
+    GOCORE_ADDR_WASMX:        MODULE_WASMX,
+    // 32-byte padded variants
+    "000000000000000000000000" + GOCORE_ADDR_MINT:         MODULE_MINT,
+    "000000000000000000000000" + GOCORE_ADDR_GOV:          MODULE_GOV,
+    "000000000000000000000000" + GOCORE_ADDR_DISTRIBUTION: MODULE_DISTRIBUTION,
+    "000000000000000000000000" + GOCORE_ADDR_WASMX:        MODULE_WASMX,
+}
+

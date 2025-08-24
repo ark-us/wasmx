@@ -37,6 +37,9 @@ func (k KeeperGov) Proposal(ctx sdk.Context, req *govtypes.QueryProposalRequest)
 	if err != nil {
 		return nil, err
 	}
+	if internalResp.Proposal == nil {
+		return &govtypes.QueryProposalResponse{Proposal: nil}, nil
+	}
 	proposal, err := types.CosmosProposalFromInternal(k.JSONCodec(), *internalResp.Proposal)
 	if err != nil {
 		return nil, err

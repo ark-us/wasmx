@@ -3,16 +3,6 @@ package wasmx
 // #include <stdlib.h>
 import "C"
 
-import (
-	"bytes"
-	"encoding/json"
-	"math/big"
-	"reflect"
-	"unsafe"
-
-	sdkmath "cosmossdk.io/math"
-)
-
 // tinygo does not support multi value return
 // so we need to pack (*uint8, uint32) into a int64
 
@@ -72,20 +62,8 @@ func CreateAccount_(dataPtr int64) int64
 //go:wasmimport wasmx createAccount2
 func CreateAccount2_(dataPtr int64) int64
 
-//go:wasmimport wasmx sendCosmosMsg
-func SendCosmosMsg_(dataPtr int64) int64
-
-//go:wasmimport wasmx sendCosmosQuery
-func SendCosmosQuery_(dataPtr int64) int64
-
 //go:wasmimport wasmx getGasLeft
 func GetGasLeft_() int64
-
-//go:wasmimport wasmx addr_canonicalize
-func Bech32StringToBytes_(dataPtr int64) int64
-
-//go:wasmimport wasmx addr_humanize
-func Bech32BytesToString_(dataPtr int64) int64
 
 //go:wasmimport wasmx log
 func Log_(ptr int64)
@@ -102,181 +80,82 @@ func LoggerDebug_(ptr int64)
 //go:wasmimport wasmx LoggerDebugExtended
 func LoggerDebugExtended_(ptr int64)
 
-func StorageStore(key, value []byte) {
-	Log([]byte("storagestore"), [][32]byte{})
-	StorageStore_(BytesToPackedPtr(key), BytesToPackedPtr(value))
-}
+// missing host APIs mirrored from AssemblyScript sdk
 
-func StorageLoad(key []byte) []byte {
-	packed := StorageLoad_(BytesToPackedPtr(key))
-	return PackedPtrToBytes(packed)
-}
+//go:wasmimport wasmx getEnv
+func GetEnv_() int64
 
-func GetCallData() []byte {
-	packed := GetCallData_()
-	return PackedPtrToBytes(packed)
-}
+//go:wasmimport wasmx getCaller
+func GetCaller_() int64
 
-func SetFinishData(data []byte) {
-	SetFinishData_(BytesToPackedPtr(data))
-}
+//go:wasmimport wasmx getAddress
+func GetAddress_() int64
 
-func SetReturnData(data []byte) {
-	SetReturnData_(BytesToPackedPtr(data))
-}
+//go:wasmimport wasmx getCurrentBlock
+func GetCurrentBlock_() int64
 
-func Finish(data []byte) {
-	Finish_(BytesToPackedPtr(data))
-}
+//go:wasmimport wasmx storageDelete
+func StorageDelete_(keyPtr int64)
 
-func Revert(data []byte) {
-	Revert_(BytesToPackedPtr(data))
-}
+//go:wasmimport wasmx storageDeleteRange
+func StorageDeleteRange_(reqPtr int64)
 
-func GetChainId() string {
-	return string(PackedPtrToBytes(GetChainId_()))
-}
+//go:wasmimport wasmx storageLoadRange
+func StorageLoadRange_(reqPtr int64) int64
 
-func Bech32StringToBytes(addrBech32 string) []byte {
-	ptr := Bech32StringToBytes_(StringToPackedPtr(addrBech32))
-	return PackedPtrToBytes(ptr)
-}
+//go:wasmimport wasmx storageLoadRangePairs
+func StorageLoadRangePairs_(reqPtr int64) int64
 
-func Bech32BytesToString(addr []byte) string {
-	packed := Bech32BytesToString_(BytesToPackedPtr(PaddLeftTo32(addr)))
-	data := PackedPtrToBytes(packed)
-	return string(data)
-}
+//go:wasmimport wasmx getFinishData
+func GetFinishData_() int64
 
-func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int, isQuery bool) (bool, []byte) {
-	req := &SimpleCallRequestRaw{
-		To:       addrBech32,
-		Value:    value,
-		GasLimit: gasLimit,
-		Calldata: calldata,
-		IsQuery:  isQuery,
-	}
+//go:wasmimport wasmx emitCosmosEvents
+func EmitCosmosEvents_(ptr int64)
 
-	reqbz, err := json.Marshal(req)
-	if err != nil {
-		Revert([]byte(err.Error()))
-	}
-	ptr := BytesToPackedPtr(reqbz)
-	packed := Call_(ptr)
-	res := PackedPtrToBytes(packed)
+//go:wasmimport wasmx sha256
+func Sha256_(ptr int64) int64
 
-	var calld CallResult
-	err = json.Unmarshal(res, &calld)
-	if err != nil {
-		Revert([]byte("Cannot decode json: " + err.Error()))
-	}
-	return calld.Success == 0, calld.Data
-}
+//go:wasmimport wasmx MerkleHash
+func MerkleHash_(ptr int64) int64
 
-func Call(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit *big.Int) (bool, []byte) {
-	return CallInternal(addrBech32, value, calldata, gasLimit, false)
-}
+//go:wasmimport wasmx ed25519Sign
+func Ed25519Sign_(privPtr int64, msgPtr int64) int64
 
-func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int) (bool, []byte) {
-	return CallInternal(addrBech32, nil, calldata, gasLimit, false)
-}
+//go:wasmimport wasmx ed25519Verify
+func Ed25519Verify_(pubPtr int64, sigPtr int64, msgPtr int64) int64
 
-type WasmxLog struct {
-	Data   []byte
-	Topics [][32]byte
-}
+//go:wasmimport wasmx ed25519PubToHex
+func Ed25519PubToHex_(pubPtr int64) int64
 
-// log a message to the console using _log.
-func Log(data []byte, topics [][32]byte) {
-	encoded, _ := json.Marshal(WasmxLog{Data: data, Topics: topics})
-	Log_(BytesToPackedPtr(encoded))
-}
+//go:wasmimport wasmx validate_bech32_address
+func ValidateBech32Address_(ptr int64) int64
 
-func LoggerInfo(msg string, parts []string) {
-	LoggerInfo_(LoggerDataToPackedPtr(msg, parts))
-}
+//go:wasmimport wasmx addr_canonicalize
+func Bech32StringToBytes_(dataPtr int64) int64
 
-func LoggerError(msg string, parts []string) {
-	LoggerError_(LoggerDataToPackedPtr(msg, parts))
-}
+//go:wasmimport wasmx addr_humanize
+func Bech32BytesToString_(dataPtr int64) int64
 
-func LoggerDebug(msg string, parts []string) {
-	LoggerDebug_(LoggerDataToPackedPtr(msg, parts))
-}
+//go:wasmimport wasmx addr_equivalent
+func AddrEquivalent_(addr1 int64, addr2 int64) int64
 
-func LoggerDebugExtended(msg string, parts []string) {
-	LoggerDebugExtended_(LoggerDataToPackedPtr(msg, parts))
-}
+//go:wasmimport wasmx addr_humanize_mc
+func AddrHumanizeMC_(addrPtr int64, prefixPtr int64) int64
 
-func LoggerDataToPackedPtr(msg string, parts []string) int64 {
-	databz, err := json.Marshal(&LoggerLog{Msg: msg, Parts: parts})
-	if err != nil {
-		Revert([]byte("cannot marshal LoggerLog" + err.Error()))
-	}
-	return BytesToPackedPtr(databz)
-}
+//go:wasmimport wasmx addr_canonicalize_mc
+func AddrCanonicalizeMC_(strPtr int64) int64
 
-func PaddLeftTo32(data []byte) []byte {
-	length := len(data)
-	if length >= 32 {
-		return data
-	}
-	data = append(bytes.Repeat([]byte{0}, 32-length), data...)
-	return data
-}
+//go:wasmimport wasmx getAddressByRole
+func GetAddressByRole_(rolePtr int64) int64
 
-func PtrToString(ptr *uint8, size uint32) string {
-	// return string(PtrToBytes(ptr, size))
-	return unsafe.String(ptr, size)
-}
+//go:wasmimport wasmx getRoleByAddress
+func GetRoleByAddress_(addrPtr int64) int64
 
-func StringToPtr(s string) (*uint8, uint32) {
-	size := C.ulong(len(s))
-	ptr := unsafe.Pointer(C.malloc(size))
-	copy(unsafe.Slice((*byte)(ptr), size), s)
-	return (*uint8)(ptr), uint32(size)
-}
+//go:wasmimport wasmx executeCosmosMsg
+func ExecuteCosmosMsg_(ptr int64) int64
 
-func StringToPackedPtr(s string) int64 {
-	ptr, len := StringToPtr(s)
-	return PackPtr(ptr, len)
-}
+//go:wasmimport wasmx decodeCosmosTxToJson
+func DecodeCosmosTxToJson_(ptr int64) int64
 
-func BytesToPackedPtr(data []byte) int64 {
-	ptr, len := BytesToPtr(data)
-	return PackPtr(ptr, len)
-}
-
-func BytesToPtr(data []byte) (*uint8, uint32) {
-	size := C.ulong(len(data))
-	ptr := unsafe.Pointer(C.malloc(size))
-	copy(unsafe.Slice((*byte)(ptr), size), data)
-	return (*uint8)(ptr), uint32(size)
-}
-
-func PtrToBytes(ptr *uint8, size uint32) []byte {
-	bz := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: uintptr(unsafe.Pointer(ptr)),
-		Len:  int(size),
-		Cap:  int(size),
-	}))
-	out := make([]byte, size)
-	copy(out, bz)
-	return out
-}
-
-func SplitPtr(packed int64) (*uint8, uint32) {
-	ptr := uint32(packed >> 32)
-	size := uint32(packed & 0xffffffff)
-	return (*uint8)(unsafe.Pointer(uintptr(ptr))), size
-}
-
-func PackPtr(ptr *uint8, size uint32) int64 {
-	offset := uint32(uintptr(unsafe.Pointer(ptr))) // convert pointer to memory offset
-	return (int64(offset) << 32) | int64(size)
-}
-
-func PackedPtrToBytes(ptr int64) []byte {
-	dataPtr, dataLen := SplitPtr(ptr)
-	return PtrToBytes(dataPtr, dataLen)
-}
+//go:wasmimport wasmx verifyCosmosTx
+func VerifyCosmosTx_(ptr int64) int64

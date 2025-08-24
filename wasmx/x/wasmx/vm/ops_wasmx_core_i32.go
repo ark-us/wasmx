@@ -510,6 +510,10 @@ type GlobalStorageResetResponse struct {
 	Error string `json:"error"`
 }
 
+type UpdateSystemCacheResponse struct {
+	Error string `json:"error"`
+}
+
 func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
@@ -627,6 +631,31 @@ func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, 
 	return rnh.AllocateWriteMem(responsebz)
 }
 
+func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	resp := UpdateSystemCacheResponse{Error: ""}
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req types.SystemBootstrap
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	err = ctx.CosmosHandler.UpdateSystemCache(ctx.Ctx, &req)
+	if err != nil {
+		// TODO maybe we should shut down the system here, if the cache was not updated correctly
+		resp.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}
+
 func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
 	vm := rnh.GetVm()
 	fndefs := []memc.IFn{
@@ -648,6 +677,8 @@ func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{
 		vm.BuildFn("storageDeleteGlobal", coreWasmxStorageDeleteGlobal, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("storageHasGlobal", coreWasmxStorageHasGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("storageResetGlobal", coreWasmxStorageResetGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+
+		vm.BuildFn("updateSystemCache", coreUpdateSystemCache, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmxcore", context, fndefs)

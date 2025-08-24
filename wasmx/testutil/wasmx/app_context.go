@@ -787,6 +787,7 @@ func (s *AppContext) SubmitGovProposal(
 	s.S.Require().NoError(err)
 	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
+	s.S.Require().NotNil(proposal.Proposal)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
 
 	s.S.Commit()
@@ -808,33 +809,43 @@ func (s *AppContext) PassGovProposal(
 	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
+	var voteMsg sdk.Msg
+	if !s.Chain.GovernanceContinuous {
+		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
+		s.S.Require().NoError(err)
+		voteMsg = &govtypes1.MsgVote{
+			ProposalId: proposalId,
+			Voter:      valstr,
+			Option:     govtypes1.OptionYes,
+			Metadata:   "votemetadata",
+		}
+	} else {
+		govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
+		s.S.Require().NoError(err)
+		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
+		s.S.Require().NoError(err)
 
-	// voteMsg := govtypes1.NewMsgVote(valAccount.Address, proposalId, govtypes1.OptionYes, "votemetadata")
+		msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valstr))
+		msg11 := types.WasmxExecutionMessage{Data: msg1}
+		msgbz, err := json.Marshal(msg11)
+		s.S.Require().NoError(err)
+		voteMsg = &types.MsgExecuteContract{
+			Sender:   valstr,
+			Contract: govAddr.String(),
+			Msg:      msgbz,
+		}
 
-	govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
-	valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
-	s.S.Require().NoError(err)
-
-	s.S.Require().NoError(err)
-	msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valstr))
-	msg11 := types.WasmxExecutionMessage{Data: msg1}
-	msgbz, err := json.Marshal(msg11)
-	s.S.Require().NoError(err)
-	voteMsg := &types.MsgExecuteContract{
-		Sender:   valstr,
-		Contract: govAddr.String(),
-		Msg:      msgbz,
+		// vote two times, so we pass the threshold
+		resp, err = s.DeliverTx(valAccount, voteMsg)
+		s.S.Require().NoError(err)
+		s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
+		s.S.Commit()
 	}
 
 	resp, err = s.DeliverTx(valAccount, voteMsg)
 	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
-
-	// resp, err = s.DeliverTx(valAccount, voteMsg)
-	// s.S.Require().NoError(err)
-	// s.S.Require().True(resp.IsOK(), resp.GetEvents())
-	// s.S.Commit()
 
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
 	s.S.Require().NoError(err)
@@ -845,7 +856,9 @@ func (s *AppContext) PassGovProposal(
 	// check proposal passed
 	proposal, err = s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
-	// s.S.Require().Equal(govtypes1.StatusPassed, proposal.Proposal.Status, "gov proposal does not have status passed")
+	if !s.Chain.GovernanceContinuous {
+		s.S.Require().Equal(govtypes1.StatusPassed, proposal.Proposal.Status, "gov proposal does not have status passed")
+	}
 }
 
 func (s *AppContext) ParseProposal(proposal govtypes1.Proposal) ([]sdk.Msg, error) {
