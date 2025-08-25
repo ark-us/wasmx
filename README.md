@@ -1,5 +1,11 @@
 # The System
 
+```
+cd mythos-wazero
+make build
+make install
+```
+
 ## dev
 
 ```

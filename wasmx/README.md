@@ -2,6 +2,8 @@
 
 ## prerequisites
 
+* only if you want to use wasmedge; otherwise, default is wazero (no additional dependencies)
+
 ```
 curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- -v 0.13.4
 ```
@@ -13,7 +15,7 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=1 --keyring-backend=test --minimum-gas-prices="1000amyt" --nocors --libp2p --min-level-validators 2
 
 # same machine validators
-mythosd testnet init-files --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors  --libp2p --min-level-validators=2 --enable-eid=false
+mythosd testnet init-files --chain-id=mythos_7000-14 --network.initial-chains=level0,mythos --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
 
 # level subchains
 mythosd testnet init-files --network.initial-chains=level0 --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false

@@ -10,8 +10,10 @@ import (
 	simulation "github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	"github.com/ethereum/go-ethereum/common"
 
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	precompiles "github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
@@ -25,13 +27,17 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
+	receiver := common.HexToAddress(types.ADDR_GOV_CONT)
+	receiverAcc := types.AccAddressFromEvm(receiver)
+	govAddress := appA.BytesToAccAddressPrefixed(receiverAcc.Bytes()).String()
+
 	senderAddrStr, err := appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
 
 	msg := []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":[],"proposer":"%s","initial_deposit":[{"denom":"amyt","amount":"0x100000"}],"metadata":"metadata","title":"title","summary":"summary","expedited":false}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
-		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Contract: govAddress,
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -45,7 +51,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
-		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Contract: govAddress,
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -76,7 +82,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	msg = []byte(fmt.Sprintf(`{"AddProposalOption":{"proposal_id":1,"option":{"messages":[],"proposer":"%s","amount":"0x100000","arbitrationAmount":"0x0","metadata":"metadata","title":"title","summary":"summary"}}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
-		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Contract: govAddress,
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
@@ -91,7 +97,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"0x400000","arbitrationAmount":"0x0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
-		Contract: wasmxtypes.ROLE_GOVERNANCE,
+		Contract: govAddress,
 		Msg:      msg,
 	})
 	suite.Require().NoError(err)
