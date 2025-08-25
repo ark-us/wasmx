@@ -626,9 +626,18 @@ func normalizeOptionTally(option ProposalOption, params Params) sdkmath.Int {
 	// Get CAL coefficient from params
 	calCoef := sdkmath.NewIntFromUint64(params.Coefs[CAL])
 
+	arb := sdkmath.ZeroInt()
+	if option.ArbitrationAmount != nil {
+		arb = *option.ArbitrationAmount
+	}
+	amount := sdkmath.ZeroInt()
+	if option.Amount != nil {
+		amount = *option.Amount
+	}
+
 	// Calculate: amount + arbitration_amount * cAL
-	arbitrationWeight := option.ArbitrationAmount.Mul(calCoef)
-	return option.Amount.Add(arbitrationWeight)
+	arbitrationWeight := arb.Mul(calCoef)
+	return amount.Add(arbitrationWeight)
 }
 
 // getMaxFromArray finds the index of the maximum value in a big.Int array

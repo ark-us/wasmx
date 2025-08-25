@@ -159,6 +159,9 @@ func (k KeeperGov) TallyResult(ctx sdk.Context, req *govtypes.QueryTallyResultRe
 	if err != nil {
 		return nil, err
 	}
+	if internalResp.Tally == nil {
+		return &govtypes.QueryTallyResultResponse{Tally: nil}, nil
+	}
 	tally, err := types.CosmosTallyFromInternal(internalResp.Tally)
 	if err != nil {
 		return nil, err
