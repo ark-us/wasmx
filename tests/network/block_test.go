@@ -15,6 +15,7 @@ import (
 	mcfg "github.com/loredanacirstea/wasmx/config"
 
 	testdata "github.com/loredanacirstea/mythos-tests/network/testdata/wasmx"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	networkserver "github.com/loredanacirstea/wasmx/x/network/server"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
@@ -25,7 +26,7 @@ func (suite *KeeperTestSuite) TestBlockHeader() {
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),

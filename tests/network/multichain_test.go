@@ -105,7 +105,6 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainInit() {
-	SkipFixmeTests(suite.T(), "TestMultiChainInit")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)

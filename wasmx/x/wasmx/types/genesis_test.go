@@ -12,6 +12,7 @@ import (
 	"github.com/cometbft/cometbft/libs/rand"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
@@ -30,7 +31,7 @@ func TestGenesisState_Validate(t *testing.T) {
 	}{
 		{
 			desc:     "default is valid",
-			genState: types.DefaultGenesisState(addrCodec, bootstrapAccount, feeCollector, mintAddress, 1, false, "{}"),
+			genState: types.DefaultGenesisState(addrCodec, bootstrapAccount, feeCollector, mintAddress, 1, false, "{}", mcfg.BondBaseDenom),
 			valid:    true,
 		},
 		{

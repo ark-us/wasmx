@@ -65,8 +65,17 @@ func (suite *KeeperTestSuite) SetupSuite() {
 		suite.WasmVmMeta = wazero.WazeroVmMeta{}
 		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
 	}
+}
 
+func (suite *KeeperTestSuite) TearDownSuite() {
+}
+
+func (suite *KeeperTestSuite) SetupTest() {
 	suite.SetupChains()
+}
+
+func (suite *KeeperTestSuite) TearDownTest() {
+	suite.TearDownChains()
 }
 
 // TestKeeperTestSuite runs all the tests within this package.

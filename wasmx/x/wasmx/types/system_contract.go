@@ -4,6 +4,7 @@ import (
 	bytes "bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	sdkerr "cosmossdk.io/errors"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -1108,6 +1109,8 @@ func ValidateNonZeroAddress(address string) error {
 func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string) ([]SystemContract, error) {
 	// Map to store roles and their corresponding RoleJSON objects
 	roleMap := make(map[string]*RoleJSON)
+	// ensure same order
+	order := []string{}
 
 	// First pass: Collect roles with Primary: true
 	for _, precompile := range precompiles {
@@ -1116,6 +1119,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 
 			// Initialize a RoleJSON entry if it doesn't exist
 			if _, exists := roleMap[role]; !exists {
+				order = append(order, role)
 				roleMap[role] = &RoleJSON{
 					Role:        role,
 					StorageType: int32(precompile.StorageType),
@@ -1142,7 +1146,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 			if entry, exists := roleMap[role]; exists {
 				// Check if the contract has already been added
 				prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
-				if !contains(entry.Addresses, prefixedAddr.String()) {
+				if !slices.Contains(entry.Addresses, prefixedAddr.String()) {
 					entry.Multiple = true
 					entry.Labels = append(entry.Labels, precompile.Role.Label)
 					entry.Addresses = append(entry.Addresses, prefixedAddr.String())
@@ -1153,6 +1157,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 
 	// add denom role
 	if _, exists := roleMap[ROLE_DENOM]; !exists {
+		order = append(order, ROLE_DENOM)
 		roleMap[ROLE_DENOM] = &RoleJSON{
 			Role:        ROLE_DENOM,
 			StorageType: int32(ContractStorageType_CoreConsensus),
@@ -1164,6 +1169,7 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 	}
 
 	if _, exists := roleMap[FEE_COLLECTOR]; !exists {
+		order = append(order, FEE_COLLECTOR)
 		feeCollector, _ := accBech32Codec.BytesToString(authtypes.NewModuleAddress(FEE_COLLECTOR))
 		roleMap[FEE_COLLECTOR] = &RoleJSON{
 			Role:        FEE_COLLECTOR,
@@ -1176,9 +1182,12 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 	}
 
 	// Prepare the RolesGenesis message
-	roles := make([]RoleJSON, 0, len(roleMap))
-	for _, roleJSON := range roleMap {
-		roles = append(roles, *roleJSON)
+	if len(order) != len(roleMap) {
+		return nil, fmt.Errorf("role map length mismatch")
+	}
+	roles := make([]RoleJSON, 0, len(order))
+	for _, roleName := range order {
+		roles = append(roles, *roleMap[roleName])
 	}
 
 	// IndividualMigration - a list of roles that handle their own role migration for action type Replace
@@ -1201,14 +1210,4 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 	}
 
 	return precompiles, nil
-}
-
-// Helper function to check if a slice contains a string
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

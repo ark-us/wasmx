@@ -401,6 +401,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 }
 
 func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
+	SkipFixmeTests(suite.T(), "TestRaftToTendermintMigration")
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)

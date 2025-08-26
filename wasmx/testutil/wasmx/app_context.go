@@ -160,8 +160,8 @@ func (s *AppContext) RegisterInterTxAccount(endpoint *ibcgotesting.Endpoint, own
 }
 
 var DEFAULT_GAS_PRICE = "10amyt"
-var DEFAULT_GAS_LIMIT = uint64(100_000_000)
-var DEFAULT_BALANCE = int64(10_000_000_000)
+var DEFAULT_GAS_LIMIT = uint64(1000_000_000)
+var DEFAULT_BALANCE = int64(100_000_000_000)
 
 func (s *AppContext) PrepareCosmosSdkTxBuilder(msgs []sdk.Msg, gasLimit *uint64, gasPrice *string, memo string) client.TxBuilder {
 	txConfig := s.App.TxConfig()
