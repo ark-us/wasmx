@@ -62,10 +62,10 @@ type Vote struct {
 
 // TallyResult
 type TallyResult struct {
-	YesCount        *sdkmath.Int `json:"yes_count"`
-	AbstainCount    *sdkmath.Int `json:"abstain_count"`
-	NoCount         *sdkmath.Int `json:"no_count"`
-	NoWithVetoCount *sdkmath.Int `json:"no_with_veto_count"`
+	YesCount        sdkmath.Int `json:"yes_count"`
+	AbstainCount    sdkmath.Int `json:"abstain_count"`
+	NoCount         sdkmath.Int `json:"no_count"`
+	NoWithVetoCount sdkmath.Int `json:"no_with_veto_count"`
 }
 
 // Proposal

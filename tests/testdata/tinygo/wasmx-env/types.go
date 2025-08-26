@@ -182,12 +182,12 @@ type WasmxLog struct {
 
 // Coins
 type Coin struct {
-	Denom  string       `json:"denom"`
-	Amount *sdkmath.Int `json:"amount"`
+	Denom  string      `json:"denom"`
+	Amount sdkmath.Int `json:"amount"`
 }
 
 func NewCoin(denom string, amount sdkmath.Int) Coin {
-	return Coin{Denom: denom, Amount: &amount}
+	return Coin{Denom: denom, Amount: amount}
 }
 
 type DecCoin struct {

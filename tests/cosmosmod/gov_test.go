@@ -34,6 +34,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	senderAddrStr, err := appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
 
+	// 0x100000
 	msg := []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":[],"proposer":"%s","initial_deposit":[{"denom":"amyt","amount":"1048576"}],"metadata":"metadata","title":"title","summary":"summary","expedited":false}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
@@ -48,7 +49,8 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"1048576","arbitrationAmount":"0","metadata":"metadata"}}`, senderAddrStr))
+	// 0x100000
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"1048576","arbitration_amount":"0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,
@@ -80,7 +82,8 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
 
-	msg = []byte(fmt.Sprintf(`{"AddProposalOption":{"proposal_id":1,"option":{"messages":[],"proposer":"%s","amount":"1048576","arbitrationAmount":"0","metadata":"metadata","title":"title","summary":"summary"}}}`, senderAddrStr))
+	// 0x100000
+	msg = []byte(fmt.Sprintf(`{"AddProposalOption":{"proposal_id":1,"option":{"messages":[],"proposer":"%s","amount":"1048576","arbitration_amount":"0","metadata":"metadata","title":"title","summary":"summary"}}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,
@@ -95,7 +98,8 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 	senderAddrStr, err = appA.AddressCodec().BytesToString(sender.Address)
 	suite.Require().NoError(err)
 
-	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"4194304","arbitrationAmount":"0","metadata":"metadata"}}`, senderAddrStr))
+	// 0x400000
+	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"4194304","arbitration_amount":"0","metadata":"metadata"}}`, senderAddrStr))
 	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,

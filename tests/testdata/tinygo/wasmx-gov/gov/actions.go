@@ -75,9 +75,9 @@ func EndBlock(req MsgEndBlock) []byte {
 		quorumInt := parseDecimalToSdkInt(params.Quorum, 18)
 		quorumAmount := totalStake.Mul(quorumInt).Quo(NewSdkIntPow10(18))
 
-		voted := p.FinalTallyResult.YesCount.Add(*p.FinalTallyResult.NoCount)
-		voted = voted.Add(*p.FinalTallyResult.AbstainCount)
-		voted = voted.Add(*p.FinalTallyResult.NoWithVetoCount)
+		voted := p.FinalTallyResult.YesCount.Add(p.FinalTallyResult.NoCount)
+		voted = voted.Add(p.FinalTallyResult.AbstainCount)
+		voted = voted.Add(p.FinalTallyResult.NoWithVetoCount)
 
 		LoggerDebug("proposal quorum", []string{"id", u64toa(uint64(p.ID)), "total_stake", totalStake.String(), "quorum", quorumAmount.String(), "voted_state", voted.String()})
 
@@ -138,7 +138,7 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 	deposit := req.InitialDeposit
 	if len(deposit) == 0 {
 		amount := NewSdkIntZero()
-		deposit = []wasmx.Coin{{Denom: params.MinDeposit[0].Denom, Amount: &amount}}
+		deposit = []wasmx.Coin{{Denom: params.MinDeposit[0].Denom, Amount: amount}}
 	}
 	if deposit[0].Denom != params.MinDeposit[0].Denom {
 		Revert("invalid denom; expected " + params.MinDeposit[0].Denom + ", got " + deposit[0].Denom)
@@ -156,7 +156,7 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 		ID:               0,
 		Messages:         req.Messages,
 		Status:           PROPOSAL_STATUS_DEPOSIT_PERIOD,
-		FinalTallyResult: TallyResult{YesCount: &yescount, AbstainCount: &abstain, NoCount: &nocount, NoWithVetoCount: &noveto},
+		FinalTallyResult: TallyResult{YesCount: yescount, AbstainCount: abstain, NoCount: nocount, NoWithVetoCount: noveto},
 		SubmitTime:       now.Format(time.RFC3339Nano),
 		DepositEndTime:   depositEnd.Format(time.RFC3339Nano),
 		TotalDeposit:     deposit,
@@ -220,17 +220,17 @@ func DoVote(req MsgVote) []byte {
 	stake := getStake(req.Voter)
 	switch optionID {
 	case VOTE_OPTION_YES:
-		amount := proposal.FinalTallyResult.YesCount.Add(*stake)
-		proposal.FinalTallyResult.YesCount = &amount
+		amount := proposal.FinalTallyResult.YesCount.Add(stake)
+		proposal.FinalTallyResult.YesCount = amount
 	case VOTE_OPTION_ABSTAIN:
-		amount := proposal.FinalTallyResult.AbstainCount.Add(*stake)
-		proposal.FinalTallyResult.AbstainCount = &amount
+		amount := proposal.FinalTallyResult.AbstainCount.Add(stake)
+		proposal.FinalTallyResult.AbstainCount = amount
 	case VOTE_OPTION_NO:
-		amount := proposal.FinalTallyResult.NoCount.Add(*stake)
-		proposal.FinalTallyResult.NoCount = &amount
+		amount := proposal.FinalTallyResult.NoCount.Add(stake)
+		proposal.FinalTallyResult.NoCount = amount
 	case VOTE_OPTION_NO_WITH_VETO:
-		amount := proposal.FinalTallyResult.NoWithVetoCount.Add(*stake)
-		proposal.FinalTallyResult.NoWithVetoCount = &amount
+		amount := proposal.FinalTallyResult.NoWithVetoCount.Add(stake)
+		proposal.FinalTallyResult.NoWithVetoCount = amount
 	}
 	setProposal(uint64(proposal.ID), proposal)
 	// Emit vote event
@@ -266,16 +266,16 @@ func VoteWeighted(req MsgVoteWeighted) []byte {
 		switch opt.Option {
 		case VOTE_OPTION_YES:
 			amount := proposal.FinalTallyResult.YesCount.Add(amount)
-			proposal.FinalTallyResult.YesCount = &amount
+			proposal.FinalTallyResult.YesCount = amount
 		case VOTE_OPTION_ABSTAIN:
 			amount := proposal.FinalTallyResult.AbstainCount.Add(amount)
-			proposal.FinalTallyResult.AbstainCount = &amount
+			proposal.FinalTallyResult.AbstainCount = amount
 		case VOTE_OPTION_NO:
 			amount := proposal.FinalTallyResult.NoCount.Add(amount)
-			proposal.FinalTallyResult.NoCount = &amount
+			proposal.FinalTallyResult.NoCount = amount
 		case VOTE_OPTION_NO_WITH_VETO:
 			amount := proposal.FinalTallyResult.NoWithVetoCount.Add(amount)
-			proposal.FinalTallyResult.NoWithVetoCount = &amount
+			proposal.FinalTallyResult.NoWithVetoCount = amount
 		}
 	}
 	setProposal(uint64(proposal.ID), proposal)
@@ -312,8 +312,8 @@ func DoDeposit(req MsgDeposit) []byte {
 		found := false
 		for i := range proposal.TotalDeposit {
 			if proposal.TotalDeposit[i].Denom == c.Denom {
-				amount := proposal.TotalDeposit[i].Amount.Add(*c.Amount)
-				proposal.TotalDeposit[i].Amount = &amount
+				amount := proposal.TotalDeposit[i].Amount.Add(c.Amount)
+				proposal.TotalDeposit[i].Amount = amount
 				found = true
 				break
 			}

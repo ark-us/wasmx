@@ -127,7 +127,7 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 
 	for _, deposit := range req.InitialDeposit {
 		if deposit.Denom == localParams.ArbitrationDenom {
-			arbitrationAmount = *deposit.Amount
+			arbitrationAmount = deposit.Amount
 		} else {
 			proposalCoin = deposit
 		}
@@ -139,8 +139,8 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 		Proposer:          req.Proposer,
 		Messages:          req.Messages,
 		Amount:            proposalCoin.Amount,
-		ArbitrationAmount: &arbitrationAmount,
-		Weight:            &w,
+		ArbitrationAmount: arbitrationAmount,
+		Weight:            w,
 		Title:             req.OptionTitle,
 		Summary:           req.OptionSummary,
 		Metadata:          req.OptionMetadata,
@@ -192,7 +192,7 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 		OptionID:          int32(OPTION_ID_START),
 		Voter:             req.Proposer,
 		Amount:            proposalCoin.Amount,
-		ArbitrationAmount: &arbitrationAmount,
+		ArbitrationAmount: arbitrationAmount,
 		Metadata:          firstOption.Metadata,
 	}
 	addProposalVote(proposalID, initialVote)
@@ -254,10 +254,6 @@ func AddProposalOption(req MsgAddProposalOption) []byte {
 	// lock funds for the new option (proposal denom + arbitration denom)
 	// ensure non-nil arbitration amount
 	arbAmt := req.Option.ArbitrationAmount
-	if arbAmt == nil {
-		z := sdkmath.NewInt(0)
-		arbAmt = &z
-	}
 	deposit := []wasmx.Coin{
 		{Denom: proposal.Denom, Amount: req.Option.Amount},
 		{Denom: localParams.ArbitrationDenom, Amount: arbAmt},
@@ -344,10 +340,6 @@ func DoDepositVote(req DepositVote) []byte {
 	// lock funds for this deposit vote
 	localParams := getParams()
 	arb := req.ArbitrationAmount
-	if arb == nil {
-		z := sdkmath.NewInt(0)
-		arb = &z
-	}
 	deposit := []wasmx.Coin{
 		{Denom: proposal.Denom, Amount: req.Amount},
 		{Denom: localParams.ArbitrationDenom, Amount: arb},
@@ -359,12 +351,8 @@ func DoDepositVote(req DepositVote) []byte {
 
 	// Update proposal option deposit amounts
 	opt := proposal.Options[req.OptionID]
-	amt := opt.Amount.Add(*req.Amount)
-	opt.Amount = &amt
-	if req.ArbitrationAmount != nil {
-		arb := opt.ArbitrationAmount.Add(*req.ArbitrationAmount)
-		opt.ArbitrationAmount = &arb
-	}
+	opt.Amount = opt.Amount.Add(req.Amount)
+	opt.ArbitrationAmount = opt.ArbitrationAmount.Add(req.ArbitrationAmount)
 	proposal.Options[req.OptionID] = opt
 
 	// Recompute vote status and winner
@@ -533,35 +521,9 @@ func GetTallyResult(req QueryTallyResultRequest) []byte {
 	if !exists {
 		return []byte("{\"tally\":null}")
 	}
-
-	// Calculate tally from options
-	totalVotes := sdkmath.ZeroInt()
-	for _, option := range proposal.Options {
-		totalVotes = totalVotes.Add(*option.Weight)
-	}
-
-	resp := struct {
-		Tally struct {
-			YesCount        string `json:"yes_count"`
-			AbstainCount    string `json:"abstain_count"`
-			NoCount         string `json:"no_count"`
-			NoWithVetoCount string `json:"no_with_veto_count"`
-		} `json:"tally"`
-	}{
-		Tally: struct {
-			YesCount        string `json:"yes_count"`
-			AbstainCount    string `json:"abstain_count"`
-			NoCount         string `json:"no_count"`
-			NoWithVetoCount string `json:"no_with_veto_count"`
-		}{
-			YesCount:        totalVotes.String(),
-			AbstainCount:    "0",
-			NoCount:         "0",
-			NoWithVetoCount: "0",
-		},
-	}
-
-	result, _ := json.Marshal(resp)
+	localparams := getParams()
+	tally := tallyToExternal(*proposal, localparams)
+	result, _ := json.Marshal(&gov.QueryTallyResultResponse{Tally: tally})
 	return result
 }
 
@@ -587,7 +549,7 @@ func GetNextWinnerThreshold(req QueryNextWinnerThreshold) []byte {
 	}
 
 	resp := QueryNextWinnerThresholdResponse{
-		Weight: &weight,
+		Weight: weight,
 	}
 
 	result, _ := json.Marshal(resp)
@@ -625,19 +587,9 @@ func normalizeOptionTally(option ProposalOption, params Params) sdkmath.Int {
 	// _WL + _AL * tasks[taskid].amount * coefs[uint256(Coefs.cAL)] / (10 ** decimals);
 	// Get CAL coefficient from params
 	calCoef := sdkmath.NewIntFromUint64(params.Coefs[CAL])
-
-	arb := sdkmath.ZeroInt()
-	if option.ArbitrationAmount != nil {
-		arb = *option.ArbitrationAmount
-	}
-	amount := sdkmath.ZeroInt()
-	if option.Amount != nil {
-		amount = *option.Amount
-	}
-
 	// Calculate: amount + arbitration_amount * cAL
-	arbitrationWeight := arb.Mul(calCoef)
-	return amount.Add(arbitrationWeight)
+	arbitrationWeight := option.ArbitrationAmount.Mul(calCoef)
+	return option.Amount.Add(arbitrationWeight)
 }
 
 // getMaxFromArray finds the index of the maximum value in a big.Int array
@@ -676,9 +628,9 @@ func defaultProposalOptions() []ProposalOption {
 	statusQuo := ProposalOption{
 		Proposer:          thisaddr,
 		Messages:          []string{},
-		Amount:            &zero,
-		ArbitrationAmount: &zero,
-		Weight:            &zero,
+		Amount:            zero,
+		ArbitrationAmount: zero,
+		Weight:            zero,
 		Title:             "status quo",
 		Summary:           "The outcome of this proposal is the current status quo",
 		Metadata:          "",
@@ -686,9 +638,9 @@ func defaultProposalOptions() []ProposalOption {
 	unenforceable := ProposalOption{
 		Proposer:          thisaddr,
 		Messages:          []string{},
-		Amount:            &zero,
-		ArbitrationAmount: &zero,
-		Weight:            &zero,
+		Amount:            zero,
+		ArbitrationAmount: zero,
+		Weight:            zero,
 		Title:             "unenforceable",
 		Summary:           "This proposal is unenforceable for reasons including but not limited to: being unclear, too broad, already covered by previous proposals, illegal.",
 		Metadata:          "",
@@ -704,7 +656,7 @@ func setProposalVoteStatus(proposal Proposal, params Params) Proposal {
 	normalizedWeights := normalizeTally(proposal, params)
 	for i := range normalizedWeights {
 		w := normalizedWeights[i]
-		proposal.Options[i].Weight = &w
+		proposal.Options[i].Weight = w
 	}
 
 	next := getProposalVoteStatus(proposal, params, normalizedWeights)
@@ -785,17 +737,17 @@ func getVoteStatus(x sdkmath.Int, y sdkmath.Int, p Proposal, params Params) Vote
 func proposalToExternal(proposal Proposal) gov.Proposal {
 	localparams := getParams()
 	depositA := sdkmath.NewInt(0)
-	deposit := wasmx.Coin{Denom: proposal.Denom, Amount: &depositA}
+	deposit := wasmx.Coin{Denom: proposal.Denom, Amount: depositA}
 
 	arbCoinA := sdkmath.NewInt(0)
-	arbCoin := wasmx.Coin{Denom: localparams.ArbitrationDenom, Amount: &arbCoinA}
+	arbCoin := wasmx.Coin{Denom: localparams.ArbitrationDenom, Amount: arbCoinA}
 
 	// i := 1 to mirror the AssemblyScript loop
 	for i := 1; i < len(proposal.Options); i++ {
 		opt := proposal.Options[i]
-		depositA := deposit.Amount.Add(*opt.Amount)
+		depositA := deposit.Amount.Add(opt.Amount)
 		deposit = wasmx.NewCoin(deposit.Denom, depositA)
-		arbCoinA := arbCoin.Amount.Add(*opt.ArbitrationAmount)
+		arbCoinA := arbCoin.Amount.Add(opt.ArbitrationAmount)
 		arbCoin = wasmx.NewCoin(arbCoin.Denom, arbCoinA)
 	}
 
@@ -829,10 +781,10 @@ func tallyToExternal(proposal Proposal, localparams Params) gov.TallyResult {
 	noveto := sdkmath.ZeroInt()
 
 	return gov.TallyResult{
-		YesCount:        &yes,
-		AbstainCount:    &abstaincount,
-		NoCount:         &no,
-		NoWithVetoCount: &noveto,
+		YesCount:        yes,
+		AbstainCount:    abstaincount,
+		NoCount:         no,
+		NoWithVetoCount: noveto,
 	}
 }
 

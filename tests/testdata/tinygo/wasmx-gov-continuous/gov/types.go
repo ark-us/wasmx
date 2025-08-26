@@ -45,20 +45,20 @@ type ProposalVoteStatus struct {
 }
 
 type ProposalVoteStatusExtended struct {
-	Status VoteStatus   `json:"status"`
-	Xi     uint32       `json:"xi"` // the option index with the highest weight at current time
-	Yi     uint32       `json:"yi"` // the option index with the second highest weight
-	X      *sdkmath.Int `json:"x"`  // the highest amount
-	Y      *sdkmath.Int `json:"y"`  // the second highest amount
+	Status VoteStatus  `json:"status"`
+	Xi     uint32      `json:"xi"` // the option index with the highest weight at current time
+	Yi     uint32      `json:"yi"` // the option index with the second highest weight
+	X      sdkmath.Int `json:"x"`  // the highest amount
+	Y      sdkmath.Int `json:"y"`  // the second highest amount
 }
 
 // ProposalOption represents an option in a continuous voting proposal
 type ProposalOption struct {
 	Proposer          wasmx.Bech32String `json:"proposer"`
 	Messages          []string           `json:"messages"` // base64 encoded messages
-	Amount            *sdkmath.Int       `json:"amount"`
-	ArbitrationAmount *sdkmath.Int       `json:"arbitration_amount"`
-	Weight            *sdkmath.Int       `json:"weight"`
+	Amount            sdkmath.Int        `json:"amount"`
+	ArbitrationAmount sdkmath.Int        `json:"arbitration_amount"`
+	Weight            sdkmath.Int        `json:"weight"`
 	Title             string             `json:"title"`
 	Summary           string             `json:"summary"`
 	Metadata          string             `json:"metadata"`
@@ -90,8 +90,8 @@ type Proposal struct {
 
 // CoefProposal for coefficient proposals
 type CoefProposal struct {
-	Key   *sdkmath.Int `json:"key"`
-	Value *sdkmath.Int `json:"value"`
+	Key   sdkmath.Int `json:"key"`
+	Value sdkmath.Int `json:"value"`
 }
 
 // DepositVote represents a deposit vote in continuous voting
@@ -99,8 +99,8 @@ type DepositVote struct {
 	ProposalID        utils.StringUint64 `json:"proposal_id"`
 	OptionID          int32              `json:"option_id"`
 	Voter             wasmx.Bech32String `json:"voter"`
-	Amount            *sdkmath.Int       `json:"amount"`
-	ArbitrationAmount *sdkmath.Int       `json:"arbitration_amount"`
+	Amount            sdkmath.Int        `json:"amount"`
+	ArbitrationAmount sdkmath.Int        `json:"arbitration_amount"`
 	Metadata          string             `json:"metadata"`
 }
 
@@ -156,7 +156,7 @@ type QueryNextWinnerThreshold struct {
 }
 
 type QueryNextWinnerThresholdResponse struct {
-	Weight *sdkmath.Int `json:"weight"`
+	Weight sdkmath.Int `json:"weight"`
 }
 
 type QueryProposalExtendedResponse struct {

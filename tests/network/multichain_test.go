@@ -58,7 +58,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 	bankAddressStr := appA.MustAccAddressToString(bankAddress)
 	newaccStr := appA.MustAccAddressToString(newacc.Address)
 
-	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
+	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
 	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
 
 	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
@@ -91,7 +91,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 	bankAddressStr := appA.MustAccAddressToString(bankAddress)
 	newaccStr := appA.MustAccAddressToString(newacc.Address)
 
-	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
+	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
 	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
 
 	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
@@ -477,7 +477,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 
 	// compose tx on level0
 	suite.SetCurrentChain(chainId)
-	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, appA.MustAccAddressToString(sender.Address), appA.MustAccAddressToString(newacc.Address), config.BaseDenom)
+	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, appA.MustAccAddressToString(sender.Address), appA.MustAccAddressToString(newacc.Address), config.BaseDenom)
 	txbuilder1 := suite.prepareMultiChainSubExec(appA, []byte(msg), sender, bankAddress, chainId, 0, 2)
 	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
 	s.Require().NoError(err)
@@ -487,7 +487,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	subchainapp := suite.AppContext()
 	subchain2 := suite.GetChain(subChainId2)
 
-	msg = fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"0x1000"}]}}`, subchainapp.MustAccAddressToString(sender.Address), subchainapp.MustAccAddressToString(newacc.Address), subChainCfg2.BaseDenom)
+	msg = fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, subchainapp.MustAccAddressToString(sender.Address), subchainapp.MustAccAddressToString(newacc.Address), subChainCfg2.BaseDenom)
 	txbuilder2 := suite.prepareMultiChainSubExec(subchainapp, []byte(msg), sender, bankAddress, subChainId2, 1, 2)
 	txbz2, err := subchainapp.App.TxConfig().TxEncoder()(txbuilder2.GetTx())
 	s.Require().NoError(err)

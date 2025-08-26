@@ -825,7 +825,7 @@ func (s *AppContext) PassGovProposal(
 		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
 		s.S.Require().NoError(err)
 
-		msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"0x10000","arbitrationAmount":"0x00","metadata":"votemetadata"}}`, proposalId, valstr))
+		msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"65536","arbitration_amount":"0","metadata":"votemetadata"}}`, proposalId, valstr))
 		msg11 := types.WasmxExecutionMessage{Data: msg1}
 		msgbz, err := json.Marshal(msg11)
 		s.S.Require().NoError(err)

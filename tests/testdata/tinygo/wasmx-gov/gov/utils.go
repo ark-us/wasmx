@@ -126,7 +126,7 @@ func getTokenAddress(denom string) wasmx.Bech32String {
 	return wasmx.Bech32String(out.Address)
 }
 
-func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String) *sdkmath.Int {
+func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String) sdkmath.Int {
 	// {"balanceOf":{"owner":"..."}}
 	payload := struct {
 		Q struct {
@@ -146,7 +146,7 @@ func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String)
 	return out.Balance.Amount
 }
 
-func callGetTotalStake() *sdkmath.Int {
+func callGetTotalStake() sdkmath.Int {
 	params := getParams()
 	tokenAddress := getTokenAddress(params.MinDeposit[0].Denom)
 	payload := struct {
@@ -181,7 +181,7 @@ func executeProposal(p Proposal) Response {
 }
 
 // Wrapper to match AS getStake signature
-func getStake(voter wasmx.Bech32String) *sdkmath.Int {
+func getStake(voter wasmx.Bech32String) sdkmath.Int {
 	params := getParams()
 	addr := getTokenAddress(params.MinDeposit[0].Denom)
 	return callGetStake(addr, voter)

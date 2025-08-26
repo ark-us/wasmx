@@ -34,9 +34,9 @@ func GetDefaultParams(defaultBondDenom string) Params {
 	if !ok {
 		panic("DefaultMinDepositTokens could not be parsed")
 	}
-	min := wasmx.Coin{Denom: defaultBondDenom, Amount: &amount}
+	min := wasmx.Coin{Denom: defaultBondDenom, Amount: amount}
 	expeditedAmount := amount.Mul(sdkmath.NewInt(int64(5)))
-	expeditedMin := wasmx.Coin{Denom: defaultBondDenom, Amount: &expeditedAmount}
+	expeditedMin := wasmx.Coin{Denom: defaultBondDenom, Amount: expeditedAmount}
 	return Params{
 		MinDeposit:                 []wasmx.Coin{min},
 		MaxDepositPeriod:           utils.StringUint64(DefaultDepositPeriod),
