@@ -324,9 +324,10 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_STAKING && npm run asbuild
     cd $WASMX_BANK && npm run asbuild
     cd $WASMX_ERC20 && npm run asbuild
-    cd $WASMX_DERC20 && npm run asbuild
     cd $WASMX_ERC20_ROLLUP && npm run asbuild
-    # we use the tinygo govs
+    ### derc20 has its own branch with an old json-as version!
+    # cd $WASMX_DERC20 && npm run asbuild
+    ### we use the tinygo govs
     # cd $WASMX_GOV && npm run asbuild
     # cd $WASMX_GOV_CONTINUOUS && npm run asbuild
     cd $WASMX_HOOKS && npm run asbuild
@@ -366,9 +367,10 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_STAKING/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/30.staking_0.0.1.wasm
     mv -f $WASMX_BANK/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/31.bank_0.0.1.wasm
     mv -f $WASMX_ERC20/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/32.erc20json_0.0.1.wasm
-    mv -f $WASMX_DERC20/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/33.derc20json_0.0.1.wasm
+    ### derc20 has its own branch with old json-as version!
+    # mv -f $WASMX_DERC20/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/33.derc20json_0.0.1.wasm
     mv -f $WASMX_HOOKS/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/34.hooks_0.0.1.wasm
-    # we use the tinygo govs
+    ### we use the tinygo govs
     # mv -f $WASMX_GOV/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/35.gov_0.0.1.wasm
     # mv -f $WASMX_GOV_CONTINUOUS/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/37.gov_cont_0.0.1.wasm
     mv -f $WASMX_RAFT_P2P/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/36.raftp2p_library.wasm
