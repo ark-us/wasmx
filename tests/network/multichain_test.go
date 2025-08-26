@@ -36,19 +36,21 @@ import (
 
 	// networkserver "github.com/loredanacirstea/wasmx/x/network/server"
 	testdata "github.com/loredanacirstea/mythos-tests/network/testdata/wasmx"
+	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	precompiles "github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
 
+const DEFAULT_BALANCE = int64(100_000_000_000)
+
 func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
-	SkipFixmeTests(suite.T(), "TestMultiChainExecMythos")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
 	sender := suite.GetRandomAccount()
 	newacc := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
@@ -67,12 +69,12 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 	balance := &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(res, balance)
 	s.Require().NoError(err)
-	s.Require().Equal(sdk.NewCoin(denom, sdkmath.NewInt(0x1000)), *balance.Balance)
+	s.Require().Equal(denom, balance.Balance.Denom)
+	s.Require().Equal(uint64(0x1000), balance.Balance.Amount.Uint64())
 	// TODO try again query client - this time with conn.defer() in the test
 }
 
 func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
-	SkipFixmeTests(suite.T(), "TestMultiChainExecLevel0")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
@@ -80,7 +82,7 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 
 	sender := suite.GetRandomAccount()
 	newacc := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(1000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
@@ -100,7 +102,8 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 	balance := &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(res, balance)
 	s.Require().NoError(err)
-	s.Require().Equal(sdk.NewCoin(denom, sdkmath.NewInt(0x1000)), *balance.Balance)
+	s.Require().Equal(denom, balance.Balance.Denom)
+	s.Require().Equal(uint64(0x1000), balance.Balance.Amount.Uint64())
 	// TODO try again query client - this time with conn.defer() in the test
 }
 
@@ -109,7 +112,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -283,12 +286,11 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
-	SkipFixmeTests(suite.T(), "TestMultiChainDefaultInit")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -422,14 +424,13 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
-	SkipFixmeTests(suite.T(), "TestMultiChainAtomicTx")
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -528,7 +529,6 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
-	SkipFixmeTests(suite.T(), "TestMultiChainCrossChainTx")
 	wasmbinFrom := testdata.WasmxCrossChain
 	wasmbinTo := testdata.WasmxSimpleStorage
 	chainId := mcfg.LEVEL0_CHAIN_ID
@@ -537,7 +537,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -646,7 +646,6 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
-	SkipFixmeTests(suite.T(), "TestMultiChainCrossChainQueryDeterministic")
 	wasmbinFrom := testdata.WasmxCrossChain
 	wasmbinTo := testdata.WasmxSimpleStorage
 	chainId := mcfg.LEVEL0_CHAIN_ID
@@ -655,7 +654,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -779,12 +778,11 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
-	SkipFixmeTests(suite.T(), "TestMultiChainLevelsTx")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -917,12 +915,11 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
-	SkipFixmeTests(suite.T(), "TestMultiChainLevelsQuery")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -1073,7 +1070,7 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 	sender := simulation.Account{
 		PrivKey: chain.SenderPrivKey,
 		PubKey:  chain.SenderAccount.GetPubKey(),
@@ -1334,7 +1331,7 @@ func (suite *KeeperTestSuite) broadcastMultiChainExec(msg []byte, sender simulat
 	appA := s.AppContext()
 	multimsg := suite.composeMultiChainTx(msg, sender, contractAddress, chainId)
 	// initializing chains is expensive ~6mil
-	gasLimit := uint64(30000000)
+	gasLimit := ut.DEFAULT_GAS_LIMIT
 	resp, err := appA.BroadcastTxAsync(sender, []sdk.Msg{multimsg}, &gasLimit, nil, "")
 	if err != nil {
 		return nil, err

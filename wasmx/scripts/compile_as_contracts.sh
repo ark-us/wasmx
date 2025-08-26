@@ -350,7 +350,7 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_METAREGISTRY && npm run asbuild
     cd $WASMX_CODES_REGISTRY && npm run asbuild
     cd $WASMX_DTYPE && npm run asbuild
-    cd $WASMX_EMAIL && npm run asbuild
+    # cd $WASMX_EMAIL && npm run asbuild
     cd $WASMX_HTTP_REGISTRY && npm run asbuild
     cd $WASMX_ERC20_DTYPE && npm run asbuild
     cd $WASMX_TESTS_IMAP && npm run asbuild
@@ -391,7 +391,7 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_LEVEL0_ONDEMAND/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/51.level0_ondemand_0.0.1.wasm
     mv -f $WASMX_CODES_REGISTRY/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/61.wasmx_codes_registry_0.0.1.wasm
     mv -f $WASMX_DTYPE/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/62.wasmx_dtype_0.0.1.wasm
-    mv -f $WASMX_EMAIL/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/63.wasmx_email_0.0.1.wasm
+    # mv -f $WASMX_EMAIL/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/63.wasmx_email_0.0.1.wasm
     mv -f $WASMX_HTTP_REGISTRY/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/64.wasmx_httpserver_registry_0.0.1.wasm
 
     # tests

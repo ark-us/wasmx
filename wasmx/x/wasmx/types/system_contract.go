@@ -96,7 +96,7 @@ func StarterPrecompiles() SystemContracts {
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        &SystemContractRole{Role: ROLE_STORAGE_CONTRACTS, Label: ROLE_STORAGE_CONTRACTS, Primary: true},
+			Role:        &SystemContractRole{Role: ROLE_STORAGE_CONTRACTS, Label: STORAGE_CONTRACTS_v001, Primary: true},
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
