@@ -129,8 +129,6 @@ func (suite *KeeperTestSuite) TestStakingCreateValidatorFailDuplicate() {
 }
 
 func (suite *KeeperTestSuite) TestStakingCreateValidatorFailDuplicateConsAddress() {
-	// TODO
-	suite.T().Skip("TODO: TestStakingCreateValidatorFailDuplicateConsAddress")
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
@@ -213,19 +211,19 @@ func (s *KeeperTestSuite2) TestStakingJailValidator() {
 	evs := appA.GetSdkEventsByType(res.GetEvents(), "message")
 	s.Require().GreaterOrEqual(len(evs), 1, "missing message events")
 	msgname := "/cosmos.staking.v1beta1.MsgCreateValidator"
-	found := false
 	validAddr := ""
 	for _, ev := range evs {
+		found := false
 		for _, attr := range ev.Attributes {
 			if attr.Key == "action" && attr.Value == msgname {
 				found = true
 			}
-			if attr.Key == "sender" {
+			if found && attr.Key == "sender" {
 				validAddr = attr.Value
 			}
 		}
 	}
-	s.Require().True(found)
+	s.Require().True(len(validAddr) > 0, "missing MsgCreateValidator event message")
 	s.Require().Equal(valAddr.String(), validAddr)
 
 	evs = appA.GetSdkEventsByType(res.GetEvents(), "create_validator")

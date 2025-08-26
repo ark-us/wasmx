@@ -17,10 +17,10 @@ func NewGenesisState(params Params, systemContracts []SystemContract, bootstrapA
 
 // DefaultGenesisState sets default evm genesis state with empty accounts and
 // default params and chain config values.
-func DefaultGenesisState(accBech32Codec mcodec.AccBech32Codec, bootstrapAccountBech32 string, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) *GenesisState {
+func DefaultGenesisState(accBech32Codec mcodec.AccBech32Codec, bootstrapAccountBech32 string, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string, bondBaseDenom string) *GenesisState {
 	return &GenesisState{
 		Params:                  DefaultParams(),
-		SystemContracts:         DefaultSystemContracts(accBech32Codec, feeCollectorBech32, mintBech32, minValidatorCount, enableEIDCheck, initialPortValues),
+		SystemContracts:         DefaultSystemContracts(accBech32Codec, feeCollectorBech32, mintBech32, minValidatorCount, enableEIDCheck, initialPortValues, bondBaseDenom),
 		BootstrapAccountAddress: bootstrapAccountBech32,
 	}
 }

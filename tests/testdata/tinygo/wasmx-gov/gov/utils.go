@@ -147,8 +147,8 @@ func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String)
 }
 
 func callGetTotalStake() sdkmath.Int {
-	params := getParams()
-	tokenAddress := getTokenAddress(params.MinDeposit[0].Denom)
+	denom := GetVotingDenom()
+	tokenAddress := getTokenAddress(denom)
 	payload := struct {
 		Q struct{} `json:"totalSupply"`
 	}{}
@@ -182,7 +182,6 @@ func executeProposal(p Proposal) Response {
 
 // Wrapper to match AS getStake signature
 func getStake(voter wasmx.Bech32String) sdkmath.Int {
-	params := getParams()
-	addr := getTokenAddress(params.MinDeposit[0].Denom)
+	addr := getTokenAddress(GetVotingDenom())
 	return callGetStake(addr, voter)
 }

@@ -132,6 +132,11 @@ func EndBlock(req MsgEndBlock) []byte {
 
 func SubmitProposal(req MsgSubmitProposal) []byte {
 	LoggerDebug("submit proposal", []string{"title", req.Title})
+
+	// TODO
+	// Loop through all messages and confirm they are valid and the gov module account
+	// is the only signer
+
 	params := getParams()
 	now := wasmx.GetTimestamp().UTC()
 	depositEnd := now.Add(time.Duration(params.MaxDepositPeriod) * time.Millisecond)

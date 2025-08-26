@@ -28,6 +28,7 @@ const (
 	PROPOSAL_DEPOSITOR_KEY      = "proposal_depositer."
 	PROPOSAL_ACTIVE_DEPOSIT_KEY = "proposal_active_deposit"
 	PROPOSAL_ACTIVE_VOTING_KEY  = "proposal_active_voting"
+	BOND_BASE_DENOM             = "bond_base_denom"
 )
 
 func getProposalVoterKey(proposalID uint64, voter wasmx.Bech32String) string {
@@ -316,6 +317,14 @@ func getParams() Params {
 func setParams(p Params) {
 	bz, _ := json.Marshal(p)
 	sstore(PARAM_KEY, string(bz))
+}
+
+func GetVotingDenom() string {
+	return sload(BOND_BASE_DENOM)
+}
+
+func SetVotingDenom(denom string) {
+	sstore(BOND_BASE_DENOM, denom)
 }
 
 // storage helpers (string-based)

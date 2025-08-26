@@ -18,7 +18,7 @@ func (suite *KeeperTestSuite) TestAaaCoreIterateCodeInfos() {
 		count += 1
 		return false
 	})
-	syscontracts := wasmxtypes.DefaultSystemContracts(appA.AccBech32Codec(), "", "", 2, false, "")
+	syscontracts := wasmxtypes.DefaultSystemContracts(appA.AccBech32Codec(), "", "", 2, false, "", mcfg.BondBaseDenom)
 	suite.Require().Equal(len(syscontracts), count)
 }
 
@@ -26,7 +26,7 @@ func (suite *KeeperTestSuite) TestAaaCoreIterateContractInfos() {
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 	appA := s.AppContext()
 
-	syscontracts := wasmxtypes.DefaultSystemContracts(appA.AccBech32Codec(), "", "", 2, false, "")
+	syscontracts := wasmxtypes.DefaultSystemContracts(appA.AccBech32Codec(), "", "", 2, false, "", mcfg.BondBaseDenom)
 	syslen := len(syscontracts)
 	count := 0
 

@@ -372,7 +372,7 @@ func EIDPrecompiles() SystemContracts {
 	}
 }
 
-func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContracts {
+func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string, bondBaseDenom string) SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
 	if err != nil {
@@ -385,11 +385,16 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 		panic("CosmosPrecompiles: cannot marshal bankInitMsg message")
 	}
 
-	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
-	// govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
-	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
+	govInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"bond_base_denom":"%s"}`, bondBaseDenom))})
 	if err != nil {
-		panic("CosmosPrecompiles: cannot marshal govInitMsg message")
+		panic("CosmosPrecompiles: cannot marshal govContInitMsg message")
+	}
+
+	// govContInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":["0x100000","0x3","0x64","0x7d0","0x5dc","0xa","0x4","0x8","0x2710","0x5fb","0x3e8"],"defaultX":1425,"defaultY":1000}`)})
+	// govContInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[],"defaultX":1425,"defaultY":1000}`)})
+	govContInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"arbitrationDenom":"aarb","coefs":[1048576, 3, 100, 2000, 1500, 10, 4, 8, 10000, 1531, 1000],"defaultX":1531,"defaultY":1000}`)})
+	if err != nil {
+		panic("CosmosPrecompiles: cannot marshal govContInitMsg message")
 	}
 
 	return []SystemContract{
@@ -456,7 +461,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 		{
 			Address:     ADDR_GOV,
 			Label:       GOV_v001,
-			InitMessage: initMsg,
+			InitMessage: govInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
 			Role: &SystemContractRole{
@@ -470,7 +475,7 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string) SystemContr
 		{
 			Address:     ADDR_GOV_CONT,
 			Label:       GOV_CONT_v001,
-			InitMessage: govInitMsg,
+			InitMessage: govContInitMsg,
 			Pinned:      true,
 			MeteringOff: true,
 			Role: &SystemContractRole{
@@ -849,7 +854,7 @@ func SpecialPrecompiles() SystemContracts {
 	}
 }
 
-func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
+func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string, bondBaseDenom string) SystemContracts {
 
 	precompiles := StarterPrecompiles()
 	precompiles = append(precompiles, SimplePrecompiles()...)
@@ -857,7 +862,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	precompiles = append(precompiles, BasePrecompiles()...)
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, HookPrecompiles()...)
-	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
+	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32, bondBaseDenom)...)
 
 	erc20CodeId := int32(0)
 	derc20CodeId := int32(0)
@@ -893,7 +898,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	return precompiles
 }
 
-func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string) SystemContracts {
+func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string, bondBaseDenom string) SystemContracts {
 	// DEFAULT_HOOKS_NONC
 	hooksNonC := []Hook{
 		{
@@ -958,7 +963,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	precompiles = append(precompiles, BasePrecompiles()...)
 	precompiles = append(precompiles, EIDPrecompiles()...)
 	precompiles = append(precompiles, hooksPrecompiles...)
-	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32)...)
+	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32, bondBaseDenom)...)
 
 	erc20CodeId := int32(0)
 	derc20CodeId := int32(0)

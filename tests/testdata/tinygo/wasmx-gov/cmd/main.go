@@ -10,7 +10,12 @@ import (
 //go:wasm-module wasmx-gov
 //export instantiate
 func Instantiate() {
-	// no-op; params must be set via InitGenesis
+	databz := wasmx.GetCallData()
+	calld := &gov.MsgInitialize{}
+	if err := json.Unmarshal(databz, calld); err != nil {
+		gov.Revert("invalid call data: " + err.Error() + ": " + string(databz))
+	}
+	gov.SetVotingDenom(calld.BondBaseDenom)
 }
 
 func main() {

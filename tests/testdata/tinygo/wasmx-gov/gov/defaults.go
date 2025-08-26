@@ -29,14 +29,14 @@ const (
 	MinDepositRatio                       = "0.010000000000000000"
 )
 
-func GetDefaultParams(defaultBondDenom string) Params {
+func GetDefaultParams(deposit_denom string) Params {
 	amount, ok := sdkmath.NewIntFromString(DefaultMinDepositTokens)
 	if !ok {
 		panic("DefaultMinDepositTokens could not be parsed")
 	}
-	min := wasmx.Coin{Denom: defaultBondDenom, Amount: amount}
+	min := wasmx.Coin{Denom: deposit_denom, Amount: amount}
 	expeditedAmount := amount.Mul(sdkmath.NewInt(int64(5)))
-	expeditedMin := wasmx.Coin{Denom: defaultBondDenom, Amount: expeditedAmount}
+	expeditedMin := wasmx.Coin{Denom: deposit_denom, Amount: expeditedAmount}
 	return Params{
 		MinDeposit:                 []wasmx.Coin{min},
 		MaxDepositPeriod:           utils.StringUint64(DefaultDepositPeriod),
@@ -58,7 +58,7 @@ func GetDefaultParams(defaultBondDenom string) Params {
 }
 
 func GetDefaultGenesis(baseDenom string, defaultBondDenom string, rewardsBaseDenom string) GenesisState {
-	params := GetDefaultParams(defaultBondDenom)
+	params := GetDefaultParams(baseDenom)
 	return GenesisState{
 		StartingProposalID: utils.StringUint64(DefaultStartingProposalID),
 		Deposits:           []Deposit{},

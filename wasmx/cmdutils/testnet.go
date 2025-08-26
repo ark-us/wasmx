@@ -977,7 +977,7 @@ func initGenFiles(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}", mcfg.BondBaseDenom)
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
@@ -1036,7 +1036,7 @@ func initGenFilesLevel0(
 
 	var wasmxGenState wasmxtypes.GenesisState
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}")
+	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}", chaincfg.BondBaseDenom)
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 

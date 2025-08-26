@@ -133,7 +133,7 @@ func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet,
 	bankGenesis.Supply = totalSupply
 	bankGenesis.Balances = balances
 
-	govGenesis := cosmosmodtypes.DefaultGovGenesisState()
+	govGenesis := cosmosmodtypes.DefaultGovGenesisState(chaincfg.BaseDenom)
 	govGenesis.Params.MinDeposit = sdk.NewCoins(sdk.NewCoin(chaincfg.BaseDenom, sdkmath.NewInt(1_000_000_000)))
 	votingPeriod := time.Millisecond * 500
 	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
@@ -166,7 +166,7 @@ func BuildGenesisData(wasmVmMeta memc.IWasmVmMeta, valSet *tmtypes.ValidatorSet,
 		return app, nil, err
 	}
 
-	wasmxGenesis := wasmxtypes.DefaultGenesisState(addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 1, false, "{}")
+	wasmxGenesis := wasmxtypes.DefaultGenesisState(addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 1, false, "{}", chaincfg.BondBaseDenom)
 	wasmxGenesis.CompiledFolderPath = compiledCacheDir
 	genesisState[wasmxtypes.ModuleName] = app.AppCodec().MustMarshalJSON(wasmxGenesis)
 

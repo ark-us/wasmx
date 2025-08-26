@@ -124,9 +124,10 @@ func DefaultStakingGenesisState(baseDenom string) *StakingGenesisState {
 }
 
 func DefaultBankDenoms(accBech32Codec mcodec.AccBech32Codec, denomUnit string, baseDenomUnit uint32) []DenomDeploymentInfo {
+	bondBaseDenom := fmt.Sprintf("as%s", denomUnit)
 	erc20jsonCodeId := -1
 	derc20jsonCodeId := -1
-	for i, sysc := range wasmxtypes.DefaultSystemContracts(accBech32Codec, "", "", 1, false, "{}") {
+	for i, sysc := range wasmxtypes.DefaultSystemContracts(accBech32Codec, "", "", 1, false, "{}", bondBaseDenom) {
 		if sysc.Label == wasmxtypes.ERC20_v001 {
 			erc20jsonCodeId = i + 1
 		} else if sysc.Label == wasmxtypes.DERC20_v001 {
@@ -176,22 +177,21 @@ func DefaultBankDenoms(accBech32Codec mcodec.AccBech32Codec, denomUnit string, b
 						Aliases:  []string{},
 					},
 					{
-						Denom:    fmt.Sprintf("as%s", denomUnit),
+						Denom:    bondBaseDenom,
 						Exponent: 1,
 						Aliases:  []string{},
 					},
 				},
-				Base:    fmt.Sprintf("as%s", denomUnit),
+				Base:    bondBaseDenom,
 				Display: strings.ToUpper(fmt.Sprintf("s%s", denomUnit)),
 				Name:    strings.ToUpper(fmt.Sprintf("s%s", denomUnit)),
 				Symbol:  fmt.Sprintf("s%s", denomUnit),
 				URI:     "",
 				URIHash: "",
 			},
-			CodeId:  uint64(derc20jsonCodeId),
-			Admins:  []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
-			Minters: []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
-			// this is the gas token
+			CodeId:    uint64(derc20jsonCodeId),
+			Admins:    []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
+			Minters:   []string{wasmxtypes.ROLE_STAKING, wasmxtypes.ROLE_BANK},
 			BaseDenom: fmt.Sprintf("a%s", denomUnit),
 		},
 		{
@@ -257,8 +257,11 @@ func DefaultBankGenesisState(accBech32Codec mcodec.AccBech32Codec, denomUnit str
 }
 
 // DefaultGovGenesisState returns a default bank module genesis state.
-func DefaultGovGenesisState() *GovGenesisState {
-	govstate := govtypes1.DefaultGenesisState()
+func DefaultGovGenesisState(depositDenom string) *GovGenesisState {
+	govstate := govtypes1.NewGenesisState(
+		govtypes1.DefaultStartingProposalID,
+		DefaultGovParams(depositDenom),
+	)
 	return &GovGenesisState{
 		StartingProposalId: govstate.StartingProposalId,
 		Deposits:           govstate.Deposits,
@@ -307,7 +310,7 @@ func DefaultGenesisState(accBech32Codec mcodec.AccBech32Codec, denomUnit string,
 	return &GenesisState{
 		Staking:  *DefaultStakingGenesisState(baseDenom),
 		Bank:     *DefaultBankGenesisState(accBech32Codec, denomUnit, baseDenomUnit),
-		Gov:      *DefaultGovGenesisState(),
+		Gov:      *DefaultGovGenesisState(baseDenom),
 		Auth:     *DefaultAuthGenesisState(),
 		Slashing: *DefaultSlashingGenesisState(),
 	}

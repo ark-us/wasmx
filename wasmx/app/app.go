@@ -612,7 +612,7 @@ func NewApp(
 	app.WasmxKeeper.SetAccountKeeper(app.AccountKeeper)
 	app.WasmxKeeper.SetBankKeeper(app.BankKeeper)
 	app.WasmxKeeper.SetContractHandlerMap()
-	wasmxModule := wasmxmodule.NewAppModule(wasmVmMeta, appCodec, appCodec, app.WasmxKeeper, NewAppCreator)
+	wasmxModule := wasmxmodule.NewAppModule(wasmVmMeta, appCodec, appCodec, app.WasmxKeeper, NewAppCreator, chainCfg.BondBaseDenom)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(
 		runtime.NewKVStoreService(keys[authzStoreKey]),

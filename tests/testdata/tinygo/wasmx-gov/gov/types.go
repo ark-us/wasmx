@@ -87,6 +87,10 @@ type Proposal struct {
 	FailedReason     string             `json:"failed_reason"`
 }
 
+type MsgInitialize struct {
+	BondBaseDenom string `json:"bond_base_denom"`
+}
+
 // Params
 type Params struct {
 	MinDeposit                 []wasmx.Coin       `json:"min_deposit"`

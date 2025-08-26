@@ -73,7 +73,7 @@ func (a AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 
 // DefaultGenesis returns a default GenesisState for the module, marshalled to json.RawMessage. The default GenesisState need to be defined by the module developer and is primarily used for testing
 func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(types.DefaultGenesisState(a.addrCodec.(mcodec.AccBech32Codec), mcfg.DenomUnit, mcfg.BaseDenomUnit, mcfg.Name))
+	return cdc.MustMarshalJSON(types.DefaultGenesisState(a.addrCodec.(mcodec.AccBech32Codec), mcfg.DenomUnit, mcfg.BaseDenomUnit, mcfg.BaseDenom))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form

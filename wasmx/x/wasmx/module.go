@@ -41,15 +41,16 @@ var (
 
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
-	wasmVmMeta memc.IWasmVmMeta
-	cdc        codec.BinaryCodec
-	ccdc       codec.Codec
-	addrCodec  cdcaddress.Codec
-	appCreator multichain.NewAppCreator
+	wasmVmMeta    memc.IWasmVmMeta
+	cdc           codec.BinaryCodec
+	ccdc          codec.Codec
+	addrCodec     cdcaddress.Codec
+	appCreator    multichain.NewAppCreator
+	bondBaseDenom string
 }
 
-func NewAppModuleBasic(wasmVmMeta memc.IWasmVmMeta, cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec, appCreator multichain.NewAppCreator) AppModuleBasic {
-	return AppModuleBasic{wasmVmMeta: wasmVmMeta, cdc: cdc, ccdc: ccdc, addrCodec: addrCodec, appCreator: appCreator}
+func NewAppModuleBasic(wasmVmMeta memc.IWasmVmMeta, cdc codec.BinaryCodec, ccdc codec.Codec, addrCodec cdcaddress.Codec, appCreator multichain.NewAppCreator, bondBaseDenom string) AppModuleBasic {
+	return AppModuleBasic{wasmVmMeta: wasmVmMeta, cdc: cdc, ccdc: ccdc, addrCodec: addrCodec, appCreator: appCreator, bondBaseDenom: bondBaseDenom}
 }
 
 // Name returns the name of the module as a string
@@ -73,7 +74,7 @@ func (a AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	mintAddress, _ := a.addrCodec.BytesToString(authtypes.NewModuleAddress("mint"))
 	bootstrapAccount, _ := a.addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
 
-	return cdc.MustMarshalJSON(types.DefaultGenesisState(a.addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 3, false, "{}"))
+	return cdc.MustMarshalJSON(types.DefaultGenesisState(a.addrCodec.(mcodec.AccBech32Codec), bootstrapAccount, feeCollector, mintAddress, 3, false, "{}", a.bondBaseDenom))
 }
 
 // ValidateGenesis used to validate the GenesisState, given in its json.RawMessage form
@@ -117,9 +118,10 @@ func NewAppModule(
 	ccdc codec.Codec,
 	keeper keeper.Keeper,
 	appCreator multichain.NewAppCreator,
+	bondBaseDenom string,
 ) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(wasmVmMeta, cdc, ccdc, keeper.AddressCodec(), appCreator),
+		AppModuleBasic: NewAppModuleBasic(wasmVmMeta, cdc, ccdc, keeper.AddressCodec(), appCreator, bondBaseDenom),
 		keeper:         keeper,
 	}
 }

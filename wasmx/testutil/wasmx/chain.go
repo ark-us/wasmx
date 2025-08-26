@@ -280,7 +280,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 		require.NoError(t, err)
 		mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
 		require.NoError(t, err)
-		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec, feeCollectorBech32, mintAddressBech32, 1, false, "{}")
+		wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec, feeCollectorBech32, mintAddressBech32, 1, false, "{}", chaincfg.BondBaseDenom)
 	}
 
 	if suite.SystemContractsModify != nil {

@@ -8,6 +8,7 @@ import (
 
 	codec "github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
@@ -173,4 +174,26 @@ func CosmosParamsToInternal(params *govtypes.Params) *GovParams {
 		BurnVoteVeto:               params.BurnVoteVeto,
 		MinDepositRatio:            params.MinDepositRatio,
 	}
+}
+
+// DefaultGovParams returns the default governance params
+func DefaultGovParams(depositDenom string) govtypes.Params {
+	return govtypes.NewParams(
+		sdk.NewCoins(sdk.NewCoin(depositDenom, govtypes.DefaultMinDepositTokens)),
+		sdk.NewCoins(sdk.NewCoin(depositDenom, govtypes.DefaultMinExpeditedDepositTokens)),
+		govtypes.DefaultPeriod,
+		govtypes.DefaultPeriod,
+		govtypes.DefaultExpeditedPeriod,
+		govtypes.DefaultQuorum.String(),
+		govtypes.DefaultThreshold.String(),
+		govtypes.DefaultExpeditedThreshold.String(),
+		govtypes.DefaultVetoThreshold.String(),
+		govtypes.DefaultMinInitialDepositRatio.String(),
+		govtypes.DefaultProposalCancelRatio.String(),
+		govtypes.DefaultProposalCancelDestAddress,
+		govtypes.DefaultBurnProposalPrevote,
+		govtypes.DefaultBurnVoteQuorom,
+		govtypes.DefaultBurnVoteVeto,
+		govtypes.DefaultMinDepositRatio.String(),
+	)
 }

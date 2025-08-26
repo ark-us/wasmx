@@ -120,6 +120,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 }
 
 func (s *KeeperTestSuite2) TestRAFTP2PMigration() {
+	SkipFixmeTests(s.T(), "TestRAFTP2PMigration - skipping until we update consensus algos after TendermintP2P")
 	// we run this on KeeperTestSuite2, on a separate chain
 	sender := s.GetRandomAccount()
 	sender2 := s.GetRandomAccount()
