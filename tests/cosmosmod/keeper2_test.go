@@ -41,16 +41,15 @@ func (suite *KeeperTestSuite2) SetupSuite() {
 		suite.WasmVmMeta = wazero.WazeroVmMeta{}
 		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
 	}
-
-	suite.SetupChains()
 }
 
 func (suite *KeeperTestSuite2) TearDownSuite() {
-	suite.TearDownChains()
 }
 
 func (suite *KeeperTestSuite2) SetupTest() {
+	suite.SetupChains()
 }
 
 func (suite *KeeperTestSuite2) TearDownTest() {
+	suite.TearDownChains()
 }

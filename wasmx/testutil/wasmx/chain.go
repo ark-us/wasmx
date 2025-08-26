@@ -652,6 +652,8 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 		lastInterval = "0"
 	}
 
+	prevBlock := suite.App().LastBlockHeight()
+
 	app := suite.TestChain.App
 	cb := func(blockDelay, currentState, lastInterval string) func(goctx context.Context) (any, error) {
 		return func(goctx context.Context) (any, error) {
@@ -682,6 +684,9 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 		}
 	}
 	lastBlock := suite.App().LastBlockHeight()
+	if prevBlock >= lastBlock {
+		return nil, fmt.Errorf("chain has not advanced")
+	}
 	res, _, _, err := suite.GetBlock(suite.TestChain.GetContext(), lastBlock)
 	if err != nil {
 		return nil, err
