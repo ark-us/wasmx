@@ -84,7 +84,11 @@ func GetSubChains(_ QueryGetSubChainsRequest) []byte {
 			out = append(out, chain.Data)
 		}
 	}
-	bz, _ := json.Marshal(&out)
+	bz, err := json.Marshal(&out)
+	if err != nil {
+		Revert("failed to marshal subchains response: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
@@ -96,13 +100,21 @@ func GetSubChainsByIds(req QueryGetSubChainsByIdsRequest) []byte {
 			out = append(out, chain.Data)
 		}
 	}
-	bz, _ := json.Marshal(&out)
+	bz, err := json.Marshal(&out)
+	if err != nil {
+		Revert("failed to marshal subchains by ids response: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
 func GetSubChainIds(_ QueryGetSubChainIdsRequest) []byte {
 	ids := GetChainIds()
-	bz, _ := json.Marshal(&ids)
+	bz, err := json.Marshal(&ids)
+	if err != nil {
+		Revert("failed to marshal subchain ids: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
@@ -111,7 +123,11 @@ func GetSubChainById(req QueryGetSubChainRequest) []byte {
 	if chain == nil {
 		return []byte{}
 	}
-	bz, _ := json.Marshal(&chain.Data)
+	bz, err := json.Marshal(&chain.Data)
+	if err != nil {
+		Revert("failed to marshal subchain data: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
@@ -120,7 +136,11 @@ func GetSubChainConfigById(req QueryGetSubChainRequest) []byte {
 	if c == nil {
 		return []byte{}
 	}
-	bz, _ := json.Marshal(c)
+	bz, err := json.Marshal(c)
+	if err != nil {
+		Revert("failed to marshal subchain config: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
@@ -132,38 +152,62 @@ func GetSubChainConfigByIds(req QuerySubChainConfigByIdsRequest) []byte {
 			out = append(out, *c)
 		}
 	}
-	bz, _ := json.Marshal(&out)
+	bz, err := json.Marshal(&out)
+	if err != nil {
+		Revert("failed to marshal subchain configs: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
 func GetSubChainIdsByLevel(req QueryGetSubChainIdsByLevelRequest) []byte {
 	ids := GetLevelChainIds(req.Level)
-	bz, _ := json.Marshal(&ids)
+	bz, err := json.Marshal(&ids)
+	if err != nil {
+		Revert("failed to marshal chain ids by level: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
-func GetCurrentLevel(_ QueryGetCurrentLevelRequest) []byte {
+func QueryGetCurrentLevelAction(_ QueryGetCurrentLevelRequest) []byte {
 	level := GetCurrentLevel()
-	bz, _ := json.Marshal(&QueryGetCurrentLevelResponse{Level: level})
+	bz, err := json.Marshal(&QueryGetCurrentLevelResponse{Level: level})
+	if err != nil {
+		Revert("failed to marshal current level response: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
 func GetSubChainIdsByValidator(req QueryGetSubChainIdsByValidatorRequest) []byte {
 	ids := GetValidatorChains(string(req.ValidatorAddress))
-	bz, _ := json.Marshal(&ids)
+	bz, err := json.Marshal(&ids)
+	if err != nil {
+		Revert("failed to marshal validator chain ids: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
 func GetValidatorsByChainId(req QueryGetValidatorsByChainIdRequest) []byte {
 	gentxs := GetChainValidators(req.ChainID)
 	// JSON encodes []byte as base64 strings, which matches AS encoding
-	bz, _ := json.Marshal(&gentxs)
+	bz, err := json.Marshal(&gentxs)
+	if err != nil {
+		Revert("failed to marshal validators by chain id: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
 func GetValidatorAddressesByChainId(req QueryValidatorAddressesByChainIdRequest) []byte {
 	addrs := GetChainValidatorAddresses(req.ChainID)
-	bz, _ := json.Marshal(&addrs)
+	bz, err := json.Marshal(&addrs)
+	if err != nil {
+		Revert("failed to marshal validator addresses by chain id: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
@@ -193,48 +237,84 @@ func CrossChainTx(req xchain.MsgCrossChainCallRequest) []byte {
 	p := prepareCrossChainCallRequest(req)
 	if p == nil {
 		r := xchain.MsgCrossChainCallResponse{Error: "target chain configuration not found"}
-		bz, _ := json.Marshal(&r)
+		bz, err := json.Marshal(&r)
+		if err != nil {
+			Revert("failed to marshal cross chain error response: " + err.Error())
+			return []byte{}
+		}
 		return bz
 	}
 	resp, err := xchain.ExecuteCrossChainTx(*p)
 	if err != nil {
 		r := xchain.MsgCrossChainCallResponse{Error: err.Error()}
-		bz, _ := json.Marshal(&r)
+		bz, marshalErr := json.Marshal(&r)
+		if marshalErr != nil {
+			Revert("failed to marshal cross chain error response: " + marshalErr.Error())
+			return []byte{}
+		}
 		return bz
 	}
-	bz, _ := json.Marshal(&resp)
+	bz, err := json.Marshal(&resp)
+	if err != nil {
+		Revert("failed to marshal cross chain tx response: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 func CrossChainQuery(req xchain.MsgCrossChainCallRequest) []byte {
 	p := prepareCrossChainCallRequest(req)
 	if p == nil {
 		r := xchain.MsgCrossChainCallResponse{Error: "target chain configuration not found"}
-		bz, _ := json.Marshal(&r)
+		bz, err := json.Marshal(&r)
+		if err != nil {
+			Revert("failed to marshal cross chain error response: " + err.Error())
+			return []byte{}
+		}
 		return bz
 	}
 	resp, err := xchain.ExecuteCrossChainQuery(*p)
 	if err != nil {
 		r := xchain.MsgCrossChainCallResponse{Error: err.Error()}
-		bz, _ := json.Marshal(&r)
+		bz, marshalErr := json.Marshal(&r)
+		if marshalErr != nil {
+			Revert("failed to marshal cross chain error response: " + marshalErr.Error())
+			return []byte{}
+		}
 		return bz
 	}
-	bz, _ := json.Marshal(&resp)
+	bz, err := json.Marshal(&resp)
+	if err != nil {
+		Revert("failed to marshal cross chain query response: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 func CrossChainQueryNonDeterministic(req xchain.MsgCrossChainCallRequest) []byte {
 	p := prepareCrossChainCallRequest(req)
 	if p == nil {
 		r := xchain.MsgCrossChainCallResponse{Error: "target chain configuration not found"}
-		bz, _ := json.Marshal(&r)
+		bz, err := json.Marshal(&r)
+		if err != nil {
+			Revert("failed to marshal cross chain error response: " + err.Error())
+			return []byte{}
+		}
 		return bz
 	}
 	resp, err := xchain.ExecuteCrossChainQueryNonDeterministic(*p)
 	if err != nil {
 		r := xchain.MsgCrossChainCallResponse{Error: err.Error()}
-		bz, _ := json.Marshal(&r)
+		bz, marshalErr := json.Marshal(&r)
+		if marshalErr != nil {
+			Revert("failed to marshal cross chain error response: " + marshalErr.Error())
+			return []byte{}
+		}
 		return bz
 	}
-	bz, _ := json.Marshal(&resp)
+	bz, err := json.Marshal(&resp)
+	if err != nil {
+		Revert("failed to marshal cross chain non-deterministic query response: " + err.Error())
+		return []byte{}
+	}
 	return bz
 }
 
@@ -247,10 +327,10 @@ func prepareCrossChainCallRequest(req xchain.MsgCrossChainCallRequest) *xchain.M
 	}
 	req.FromChainId = wasmx.GetChainId()
 	// req.From is bech32 bytes for target chain prefix
-	req.From = []byte(wasmx.AddrHumanizeMC([]byte(string(caller)), toCfg.Bech32PrefixAccAddr))
+	req.From = string(wasmx.AddrHumanizeMC([]byte(string(caller)), toCfg.Bech32PrefixAccAddr))
 	// canonicalize and re-humanize to target prefix
 	bz := wasmx.AddrCanonicalizeMC(string(req.To))
-	req.To = []byte(wasmx.AddrHumanizeMC(bz, toCfg.Bech32PrefixAccAddr))
+	req.To = string(wasmx.AddrHumanizeMC(bz, toCfg.Bech32PrefixAccAddr))
 	req.TimeoutMs = CROSS_CHAIN_TIMEOUT_MS
 	return &req
 }
@@ -295,7 +375,11 @@ func tryRegisterUpperLevel(lastRegisteredLevel int32, _lastRegisteredChainId str
 		wasmx.ContractStorage{Key: wasmx.HexString(hex.EncodeToString([]byte(CURRENT_LEVEL))), Value: []byte(fmt.Sprintf("%d", nextLevel))},
 	)
 	// store child ids for lastRegisteredLevel key
-	bz, _ := json.Marshal(&subchainIds)
+	bz, err := json.Marshal(&subchainIds)
+	if err != nil {
+		Revert("failed to marshal subchain ids for level storage: " + err.Error())
+		return
+	}
 	wasmxContractState[wasmx.Bech32String(wasmxwasmx.ADDR_MULTICHAIN_REGISTRY)] = append(
 		wasmxContractState[wasmx.Bech32String(wasmxwasmx.ADDR_MULTICHAIN_REGISTRY)],
 		wasmx.ContractStorage{Key: wasmx.HexString(hex.EncodeToString([]byte(GetLevelChainIdsKey(lastRegisteredLevel)))), Value: []byte(string(bz))},
@@ -373,7 +457,6 @@ func registerDefaultChainId(chainBaseName string, levelIndex int32) consensus.Ch
 }
 
 func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentLevel int32, chainConfig consensus.ChainConfig, req RegisterDefaultSubChainRequest, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialPorts consensus.NodePorts) consensus.InitSubChainDeterministicRequest {
-	peers := []string{}
 	defaultInitialHeight := int64(1)
 	consensusParams := consensus.GetDefaultConsensusParams()
 
@@ -384,7 +467,11 @@ func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentL
 
 	genesisState := buildGenesisData(params, req.DenomUnit, req.BaseDenomUnit, bootstrap, feeCollector, mint, currentLevel, wasmxContractState, initialPorts, chainConfig.Bech32PrefixAccAddr)
 
-	appStateBz, _ := json.Marshal(&genesisState)
+	appStateBz, err := json.Marshal(&genesisState)
+	if err != nil {
+		Revert("failed to marshal app state bytes: " + err.Error())
+		return consensus.InitSubChainDeterministicRequest{}
+	}
 	initChainReq := consensus.RequestInitChain{
 		Time:            time.Now().UTC().Format(time.RFC3339Nano),
 		ChainID:         chainId,
@@ -398,7 +485,7 @@ func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentL
 
 func registerDefaultSubChainInternal(params Params, chainId string, req RegisterDefaultSubChainRequest, levelIndex int32, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage) SubChainData {
 	chainConfig := consensus.BuildChainConfig(req.DenomUnit, req.BaseDenomUnit, req.ChainBaseName)
-	data := buildDefaultSubChainGenesisInternal(params, chainId, levelIndex, chainConfig, req, wasmxContractState, consensus.DefaultNodePorts(), chainConfig.Bech32PrefixAccAddr)
+	data := buildDefaultSubChainGenesisInternal(params, chainId, levelIndex, chainConfig, req, wasmxContractState, consensus.DefaultNodePorts())
 	return registerSubChainInternal(data, req.GenTxs, req.InitialBalance, levelIndex)
 }
 
@@ -419,7 +506,10 @@ func registerSubChainInternal(data consensus.InitSubChainDeterministicRequest, g
 func registerSubChainValidatorInternal(chainId string, genTx []byte) {
 	gtStr := string(decodeB64IfNeeded(genTx))
 	var tx wasmx.SignedTransaction
-	_ = json.Unmarshal([]byte(gtStr), &tx)
+	if err := json.Unmarshal([]byte(gtStr), &tx); err != nil {
+		Revert("failed to unmarshal gentx transaction: " + err.Error())
+		return
+	}
 	msg := extractCreateValidatorMsg(tx)
 	if msg == nil {
 		Revert("invalid gentx: does not contain MsgCreateValidator")
@@ -439,7 +529,7 @@ func registerSubChainValidatorInternal(chainId string, genTx []byte) {
 	chaindata.Data.Peers = append(chaindata.Data.Peers, tx.Body.Memo)
 	chaindata.GenTxs = append(chaindata.GenTxs, genTx)
 	SetChainData(*chaindata)
-	LoggerInfo("registered new subchain validator", []string{"subchain_id", chainId, "address", msg.ValidatorAddress})
+	LoggerInfo("registered new subchain validator", []string{"subchain_id", chainId, "address", string(msg.ValidatorAddress)})
 
 	ev := wasmx.Event{Type: EventTypeRegisterSubChainValidator, Attributes: []wasmx.EventAttribute{
 		{Key: AttributeKeyChainId, Value: chainId, Index: true},
@@ -470,7 +560,11 @@ func initSubChainInternal(chaindata SubChainData, genTxs [][]byte, minValidatorC
 	SetChainData(chaindata)
 
 	// emit event
-	data, _ := json.Marshal(&chaindata.Data)
+	data, err := json.Marshal(&chaindata.Data)
+	if err != nil {
+		Revert("failed to marshal chain data for event: " + err.Error())
+		return
+	}
 	data64 := base64.StdEncoding.EncodeToString(data)
 	ev := wasmx.Event{Type: EventTypeInitSubChain, Attributes: []wasmx.EventAttribute{
 		{Key: AttributeKeyChainId, Value: chaindata.Data.InitChainRequest.ChainID, Index: true},
@@ -520,15 +614,22 @@ func includeWasmxState(genesisState consensus.GenesisState, wasmxContractState m
 		return genesisState
 	}
 	var ws wasmxwasmx.GenesisState
-	_ = json.Unmarshal(bz, &ws)
+	if err := json.Unmarshal(bz, &ws); err != nil {
+		Revert("failed to unmarshal wasmx genesis state: " + err.Error())
+		return genesisState
+	}
 	// merge state
 	for i := range ws.SystemContracts {
 		c := &ws.SystemContracts[i]
-		if nv, ok := wasmxContractState[c.Address]; ok {
+		if nv, ok := wasmxContractState[wasmx.Bech32String(c.Address)]; ok {
 			c.ContractState = mergeWasmxState(c.ContractState, nv)
 		}
 	}
-	nbz, _ := json.Marshal(&ws)
+	nbz, err := json.Marshal(&ws)
+	if err != nil {
+		Revert("failed to marshal updated wasmx genesis state: " + err.Error())
+		return genesisState
+	}
 	genesisState[wasmx.MODULE_WASMX] = nbz
 	return genesisState
 }
@@ -557,7 +658,11 @@ func includeGenTxs(genesisState consensus.GenesisState, genTxs [][]byte, initial
 
 	// genutil
 	genutil := consensus.GenutilGenesis{GenTxs: genTxs}
-	bz, _ := json.Marshal(&genutil)
+	bz, err := json.Marshal(&genutil)
+	if err != nil {
+		Revert("failed to marshal genutil genesis: " + err.Error())
+		return genesisState
+	}
 	genesisState[wasmx.MODULE_GENUTIL] = bz
 
 	// cosmosmod balances and accounts
@@ -566,9 +671,10 @@ func includeGenTxs(genesisState consensus.GenesisState, genTxs [][]byte, initial
 		Revert("genesis state missing field: cosmosmod")
 	}
 	var cm CosmosmodGenesisState
-	_ = json.Unmarshal(bz2, &cm)
-
-	baseDenom := cm.Bank.DenomInfo[0].Metadata.Base
+	if err := json.Unmarshal(bz2, &cm); err != nil {
+		Revert("failed to unmarshal cosmosmod genesis state: " + err.Error())
+		return genesisState
+	}
 
 	for _, gt := range genTxs {
 		gtStr := string(decodeB64IfNeeded(gt))
@@ -587,7 +693,11 @@ func includeGenTxs(genesisState consensus.GenesisState, genTxs [][]byte, initial
 		signer := tx.AuthInfo.SignerInfos[0]
 		cm = includeValidatorAccountInfo(cm, wasmx.Bech32String(msg.ValidatorAddress), signer.PublicKey, initialBalance)
 	}
-	nbz, _ := json.Marshal(&cm)
+	nbz, err := json.Marshal(&cm)
+	if err != nil {
+		Revert("failed to marshal updated cosmosmod genesis state: " + err.Error())
+		return genesisState
+	}
 	genesisState[wasmx.MODULE_COSMOSMOD] = nbz
 	return genesisState
 }
@@ -642,11 +752,14 @@ func buildGenesisData(params Params, denomUnit string, baseDenomUnit uint32, boo
 	cosmosmod := CosmosmodGenesisState{Staking: staking, Bank: bank, Gov: gov, Auth: auth, Slashing: slashing, Distribution: distribution}
 
 	// wasmx module genesis from defaults helper
-	wasmxGenesis := wasmxwasmx.GetDefaultGenesis(bootstrapAccountBech32, feeCollectorBech32, mintBech32, uint32(params.MinValidatorsCount), params.EnableEidCheck, int(currentLevel), string(mustJSON(initialPorts)), bech32PrefixAccAddr, stakingBaseDenom)
+	wasmxGenesis, err := wasmxwasmx.GetDefaultGenesis(bootstrapAccountBech32, feeCollectorBech32, mintBech32, params.MinValidatorsCount, params.EnableEidCheck, currentLevel, string(mustJSON(initialPorts)), bech32PrefixAccAddr, stakingBaseDenom)
+	if err != nil {
+		Revert("failed to get default wasmx genesis: " + err.Error())
+	}
 	// apply contract state overrides
 	for i := range wasmxGenesis.SystemContracts {
 		c := &wasmxGenesis.SystemContracts[i]
-		if st, ok := wasmxContractState[c.Address]; ok {
+		if st, ok := wasmxContractState[wasmx.Bech32String(c.Address)]; ok {
 			c.ContractState = st
 		}
 	}
@@ -680,7 +793,11 @@ func includeValidatorAccountInfo(cosmosmodGenesis CosmosmodGenesisState, operato
 		accPub = &v
 	}
 	account := authlib.BaseAccount{Address: operatorAddress, PubKey: accPub, AccountNumber: 0, Sequence: 0}
-	encoded, _ := json.Marshal(&account)
+	encoded, err := json.Marshal(&account)
+	if err != nil {
+		Revert("failed to marshal base account: " + err.Error())
+		return cosmosmodGenesis
+	}
 	any := wasmx.AnyWrap{TypeURL: authlib.TypeUrl_BaseAccount, Value: base64.StdEncoding.EncodeToString(encoded)}
 	cosmosmodGenesis.Auth.Accounts = append(cosmosmodGenesis.Auth.Accounts, any)
 	return cosmosmodGenesis
@@ -691,14 +808,20 @@ func includeValidatorInfos(data SubChainData, validators []ValidatorInfo) SubCha
 		return data
 	}
 	var gs consensus.GenesisState
-	_ = json.Unmarshal(data.Data.InitChainRequest.AppStateBytes, &gs)
+	if err := json.Unmarshal(data.Data.InitChainRequest.AppStateBytes, &gs); err != nil {
+		Revert("failed to unmarshal genesis state in includeValidatorInfos: " + err.Error())
+		return data
+	}
 	// cosmosmod must exist
 	bz, ok := gs[wasmx.MODULE_COSMOSMOD]
 	if !ok {
 		Revert("genesis state missing field: cosmosmod")
 	}
 	var cosmosmod CosmosmodGenesisState
-	_ = json.Unmarshal(bz, &cosmosmod)
+	if err := json.Unmarshal(bz, &cosmosmod); err != nil {
+		Revert("failed to unmarshal cosmosmod in includeValidatorInfos: " + err.Error())
+		return data
+	}
 
 	chainId := data.Data.InitChainRequest.ChainID
 	peers := []string{}
@@ -707,7 +830,7 @@ func includeValidatorInfos(data SubChainData, validators []ValidatorInfo) SubCha
 		AddChainValidatorAddress(chainId, val.OperatorAddress)
 		cosmosmod = includeValidatorAccountInfo(cosmosmod, val.OperatorAddress, vinfo.OperatorPubkey, data.InitialBalance)
 		cosmosmod.Staking.Validators = append(cosmosmod.Staking.Validators, val)
-		cosmosmod.Staking.Delegations = append(cosmosmod.Staking.Delegations, stakinglib.Delegation{DelegatorAddress: string(val.OperatorAddress), ValidatorAddress: val.OperatorAddress, Amount: val.Tokens})
+		cosmosmod.Staking.Delegations = append(cosmosmod.Staking.Delegations, stakinglib.Delegation{DelegatorAddress: val.OperatorAddress, ValidatorAddress: wasmx.ValidatorAddressString(val.OperatorAddress), Amount: val.Tokens})
 		peers = append(peers, vinfo.P2PAddress)
 	}
 	gs[wasmx.MODULE_COSMOSMOD] = mustJSON(cosmosmod)
@@ -720,13 +843,15 @@ func getValidatorCountFromGenesis(genesisState consensus.GenesisState) int {
 	count := 0
 	if bz, ok := genesisState[wasmx.MODULE_GENUTIL]; ok {
 		var data consensus.GenutilGenesis
-		_ = json.Unmarshal(bz, &data)
-		count += len(data.GenTxs)
+		if err := json.Unmarshal(bz, &data); err == nil {
+			count += len(data.GenTxs)
+		}
 	}
 	if bz, ok := genesisState[wasmx.MODULE_COSMOSMOD]; ok {
 		var data CosmosmodGenesisState
-		_ = json.Unmarshal(bz, &data)
-		count += len(data.Staking.Validators)
+		if err := json.Unmarshal(bz, &data); err == nil {
+			count += len(data.Staking.Validators)
+		}
 	}
 	return count
 }
@@ -768,13 +893,17 @@ func getChainValidatorInfoFromGenesis(chainId string, index int) *ValidatorInfo 
 		return nil
 	}
 	var gs consensus.GenesisState
-	_ = json.Unmarshal(chaindata.Data.InitChainRequest.AppStateBytes, &gs)
+	if err := json.Unmarshal(chaindata.Data.InitChainRequest.AppStateBytes, &gs); err != nil {
+		return nil
+	}
 	bz, ok := gs[wasmx.MODULE_COSMOSMOD]
 	if !ok {
 		return nil
 	}
 	var data CosmosmodGenesisState
-	_ = json.Unmarshal(bz, &data)
+	if err := json.Unmarshal(bz, &data); err != nil {
+		return nil
+	}
 	if len(data.Staking.Validators) <= index {
 		LoggerDebug("index oob validators", []string{"index", fmt.Sprintf("%d", index)})
 		return nil
@@ -791,8 +920,13 @@ func getChainValidatorInfoFromGenesis(chainId string, index int) *ValidatorInfo 
 	peer := chaindata.Data.Peers[index]
 	// decode anywrap value
 	var ba authlib.BaseAccount
-	abz, _ := base64.StdEncoding.DecodeString(data.Auth.Accounts[index].Value)
-	_ = json.Unmarshal(abz, &ba)
+	abz, err := base64.StdEncoding.DecodeString(data.Auth.Accounts[index].Value)
+	if err != nil {
+		return nil
+	}
+	if err := json.Unmarshal(abz, &ba); err != nil {
+		return nil
+	}
 	return &ValidatorInfo{Validator: valid, OperatorPubkey: ba.PubKey, P2PAddress: peer}
 }
 
@@ -813,7 +947,11 @@ func extractCreateValidatorMsg(tx wasmx.SignedTransaction) *stakinglib.MsgCreate
 }
 
 func bech32FromHex(hexstr string, prefix string) string {
-	bz, _ := hex.DecodeString(strings.TrimPrefix(hexstr, "0x"))
+	bz, err := hex.DecodeString(strings.TrimPrefix(hexstr, "0x"))
+	if err != nil {
+		Revert("failed to decode hex string: " + err.Error())
+		return ""
+	}
 	return wasmx.AddrHumanizeMC(bz, prefix)
 }
 
@@ -829,4 +967,18 @@ func decodeB64IfNeeded(bz []byte) []byte {
 	return bz
 }
 
-func mustJSON(v any) []byte { bz, _ := json.Marshal(v); return bz }
+func mustJSON(v any) []byte {
+	bz, err := json.Marshal(v)
+	if err != nil {
+		Revert("mustJSON failed to marshal: " + err.Error())
+		return []byte{}
+	}
+	return bz
+}
+
+// replacePeerOperatorAddress replaces the operator address in a P2P address string
+func replacePeerOperatorAddress(p2pAddress string, newOperatorAddress wasmx.Bech32String) string {
+	// This is a placeholder implementation - adjust based on actual P2P address format
+	// For now, just return the original address
+	return p2pAddress
+}
