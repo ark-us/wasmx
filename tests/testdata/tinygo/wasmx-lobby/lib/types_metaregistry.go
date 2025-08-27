@@ -1,7 +1,7 @@
 package lib
 
 import (
-	consensus "github.com/loredanacirstea/wasmx-consensus"
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
 )
 
 const CROSS_CHAIN_TIMEOUT_MS = 120000 // 2 min

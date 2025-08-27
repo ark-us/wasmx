@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	sdkmath "cosmossdk.io/math"
-	wasmx "github.com/loredanacirstea/wasmx-env"
-	"github.com/loredanacirstea/wasmx-utils"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
 const MODULE_NAME = "bank"

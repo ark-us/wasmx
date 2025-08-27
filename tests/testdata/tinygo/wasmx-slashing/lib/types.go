@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
 

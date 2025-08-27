@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	lib "github.com/loredanacirstea/wasmx-multichain-registry/lib"
 )
 

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	consensus "github.com/loredanacirstea/wasmx-consensus"
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const MODULE_NAME = "staking"

@@ -1,9 +1,25 @@
 package main
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	lib "github.com/loredanacirstea/wasmx-multichain-registry/lib"
 )
+
+//go:wasm-module consensus
+//export wasmx_consensus_json_1
+func wasmx_consensus_json_1() {}
+
+//go:wasm-module multichain
+//export wasmx_multichain_1
+func wasmx_multichain_1() {}
+
+//go:wasm-module consensus
+//export memory_ptrlen_i64_1
+func memory_ptrlen_i64_1() {}
+
+//go:wasm-module wasmx
+//export wasmx_env_i64_2
+func wasmx_env_i64_2() {}
 
 //go:wasm-module wasmx-multichain-registry
 //export instantiate

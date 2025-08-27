@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 //go:wasm-module smtptest

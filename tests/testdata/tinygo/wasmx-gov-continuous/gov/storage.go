@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	gov "github.com/loredanacirstea/wasmx-gov/gov"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )

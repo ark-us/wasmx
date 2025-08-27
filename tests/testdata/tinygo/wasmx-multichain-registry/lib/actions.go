@@ -9,17 +9,20 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	xchain "github.com/loredanacirstea/wasmx-env-crosschain/lib"
+	mc "github.com/loredanacirstea/wasmx-env-multichain/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	wasmxwasmx "github.com/loredanacirstea/wasmx-wasmx"
+
 	authlib "github.com/loredanacirstea/wasmx-auth/lib"
 	banklib "github.com/loredanacirstea/wasmx-bank/lib"
-	consensus "github.com/loredanacirstea/wasmx-consensus"
 	distributionlib "github.com/loredanacirstea/wasmx-distribution/lib"
-	wasmx "github.com/loredanacirstea/wasmx-env"
-	xchain "github.com/loredanacirstea/wasmx-env-crosschain"
 	envutils "github.com/loredanacirstea/wasmx-env-utils"
 	govmod "github.com/loredanacirstea/wasmx-gov/gov"
 	slashinglib "github.com/loredanacirstea/wasmx-slashing/lib"
 	stakinglib "github.com/loredanacirstea/wasmx-staking/lib"
-	wasmxwasmx "github.com/loredanacirstea/wasmx-wasmx"
 )
 
 // External entrypoints — return []byte to mirror AS ArrayBuffer
@@ -77,7 +80,7 @@ func RemoveSubChain(req RemoveSubChainRequest) []byte {
 // Queries
 func GetSubChains(_ QueryGetSubChainsRequest) []byte {
 	ids := GetChainIds()
-	out := []consensus.InitSubChainDeterministicRequest{}
+	out := []mc.InitSubChainDeterministicRequest{}
 	for _, id := range ids {
 		chain := GetChainData(id)
 		if chain != nil && chain.Initialized {
@@ -93,7 +96,7 @@ func GetSubChains(_ QueryGetSubChainsRequest) []byte {
 }
 
 func GetSubChainsByIds(req QueryGetSubChainsByIdsRequest) []byte {
-	out := []consensus.InitSubChainDeterministicRequest{}
+	out := []mc.InitSubChainDeterministicRequest{}
 	for _, id := range req.Ids {
 		chain := GetChainData(id)
 		if chain != nil && chain.Initialized {
@@ -145,7 +148,7 @@ func GetSubChainConfigById(req QueryGetSubChainRequest) []byte {
 }
 
 func GetSubChainConfigByIds(req QuerySubChainConfigByIdsRequest) []byte {
-	out := []consensus.ChainConfig{}
+	out := []mc.ChainConfig{}
 	for _, id := range req.Ids {
 		c := subChainConfigById(id)
 		if c != nil {
@@ -340,7 +343,7 @@ func convertAddress(sourceAddr wasmx.Bech32String, prefix string) string {
 	return wasmx.AddrHumanizeMC(bz, prefix)
 }
 
-func subChainConfigById(chainId string) *consensus.ChainConfig {
+func subChainConfigById(chainId string) *mc.ChainConfig {
 	cd := GetChainData(chainId)
 	if cd == nil {
 		return nil
@@ -434,7 +437,7 @@ func tryRegisterUpperLevel(lastRegisteredLevel int32, _lastRegisteredChainId str
 	LoggerInfo("initialized subchain", []string{"subchain_level", fmt.Sprintf("%d", nextLevel), "subchain_id", newChainId.Full})
 }
 
-func registerDefaultSubChainLevel(params Params, chainId consensus.ChainId, levelIndex int32, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialBalance sdkmath.Int) SubChainData {
+func registerDefaultSubChainLevel(params Params, chainId mc.ChainId, levelIndex int32, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialBalance sdkmath.Int) SubChainData {
 	denomUnit := fmt.Sprintf("lvl%d", levelIndex)
 	req := RegisterDefaultSubChainRequest{DenomUnit: denomUnit, BaseDenomUnit: 18, ChainBaseName: chainId.BaseName, LevelIndex: uint32(levelIndex), InitialBalance: initialBalance, GenTxs: [][]byte{}}
 	return registerDefaultSubChainInternal(params, chainId.Full, req, levelIndex, wasmxContractState)
@@ -444,21 +447,21 @@ func getChainBaseNameSubChainLevel(levelIndex int32) string {
 	return fmt.Sprintf("level%d", levelIndex)
 }
 
-func registerDefaultChainIdSubChainLevel(levelIndex int32) consensus.ChainId {
+func registerDefaultChainIdSubChainLevel(levelIndex int32) mc.ChainId {
 	base := getChainBaseNameSubChainLevel(levelIndex)
 	return registerDefaultChainId(base, levelIndex)
 }
 
-func registerDefaultChainId(chainBaseName string, levelIndex int32) consensus.ChainId {
+func registerDefaultChainId(chainBaseName string, levelIndex int32) mc.ChainId {
 	// start at 1 to leave space for level0 ids
 	chainIndex := GetChainIdLast() + 1
 	SetChainIdLast(chainIndex)
-	return consensus.ChainId{Full: consensus.ChainIdToString(chainBaseName, uint32(levelIndex), int64(chainIndex), 1), BaseName: chainBaseName, Level: uint32(levelIndex), EvmID: chainIndex, ForkIndex: 1}
+	return mc.ChainId{Full: mc.ChainIdToString(chainBaseName, uint32(levelIndex), int64(chainIndex), 1), BaseName: chainBaseName, Level: uint32(levelIndex), EvmID: chainIndex, ForkIndex: 1}
 }
 
-func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentLevel int32, chainConfig consensus.ChainConfig, req RegisterDefaultSubChainRequest, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialPorts consensus.NodePorts) consensus.InitSubChainDeterministicRequest {
+func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentLevel int32, chainConfig mc.ChainConfig, req RegisterDefaultSubChainRequest, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialPorts mc.NodePorts) mc.InitSubChainDeterministicRequest {
 	defaultInitialHeight := int64(1)
-	consensusParams := consensus.GetDefaultConsensusParams()
+	consensusParams := mc.GetDefaultConsensusParams()
 
 	// derive special addresses for this chain
 	bootstrap := bech32FromHex(wasmx.ADDR_BOOTSTRAP_ACCOUNT, chainConfig.Bech32PrefixAccAddr)
@@ -470,9 +473,9 @@ func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentL
 	appStateBz, err := json.Marshal(&genesisState)
 	if err != nil {
 		Revert("failed to marshal app state bytes: " + err.Error())
-		return consensus.InitSubChainDeterministicRequest{}
+		return mc.InitSubChainDeterministicRequest{}
 	}
-	initChainReq := consensus.RequestInitChain{
+	initChainReq := mc.RequestInitChain{
 		Time:            time.Now().UTC().Format(time.RFC3339Nano),
 		ChainID:         chainId,
 		ConsensusParams: consensusParams,
@@ -480,16 +483,16 @@ func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentL
 		AppStateBytes:   appStateBz,
 		InitialHeight:   defaultInitialHeight,
 	}
-	return consensus.InitSubChainDeterministicRequest{InitChainRequest: initChainReq, ChainConfig: chainConfig}
+	return mc.InitSubChainDeterministicRequest{InitChainRequest: initChainReq, ChainConfig: chainConfig}
 }
 
 func registerDefaultSubChainInternal(params Params, chainId string, req RegisterDefaultSubChainRequest, levelIndex int32, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage) SubChainData {
-	chainConfig := consensus.BuildChainConfig(req.DenomUnit, req.BaseDenomUnit, req.ChainBaseName)
-	data := buildDefaultSubChainGenesisInternal(params, chainId, levelIndex, chainConfig, req, wasmxContractState, consensus.DefaultNodePorts())
+	chainConfig := mc.BuildChainConfig(req.DenomUnit, req.BaseDenomUnit, req.ChainBaseName)
+	data := buildDefaultSubChainGenesisInternal(params, chainId, levelIndex, chainConfig, req, wasmxContractState, mc.DefaultNodePorts())
 	return registerSubChainInternal(data, req.GenTxs, req.InitialBalance, levelIndex)
 }
 
-func registerSubChainInternal(data consensus.InitSubChainDeterministicRequest, genTxs [][]byte, initialBalance sdkmath.Int, levelIndex int32) SubChainData {
+func registerSubChainInternal(data mc.InitSubChainDeterministicRequest, genTxs [][]byte, initialBalance sdkmath.Int, levelIndex int32) SubChainData {
 	chainId := data.InitChainRequest.ChainID
 	AddChainId(chainId)
 	chaindata := SubChainData{Data: data, GenTxs: genTxs, InitialBalance: initialBalance, Level: levelIndex, WasmxContractState: map[wasmx.Bech32String][]wasmx.ContractStorage{}}
@@ -586,7 +589,7 @@ func initSubChainPrepareData(chaindata SubChainData, genTxs [][]byte, minValidat
 	chaindata.Data.InitChainRequest.Time = time.Now().UTC().Format(time.RFC3339Nano)
 
 	// work on a local genesis map copy
-	var genesisState consensus.GenesisState
+	var genesisState mc.GenesisState
 	if err := json.Unmarshal(chaindata.Data.InitChainRequest.AppStateBytes, &genesisState); err != nil {
 		Revert("invalid app_state_bytes: " + err.Error())
 	}
@@ -606,7 +609,7 @@ func initSubChainPrepareData(chaindata SubChainData, genTxs [][]byte, minValidat
 	return chaindata
 }
 
-func includeWasmxState(genesisState consensus.GenesisState, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage) consensus.GenesisState {
+func includeWasmxState(genesisState mc.GenesisState, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage) mc.GenesisState {
 	// update wasmx state
 	bz, ok := genesisState[wasmx.MODULE_WASMX]
 	if !ok {
@@ -651,13 +654,13 @@ func mergeWasmxState(oldstate []wasmx.ContractStorage, newstate []wasmx.Contract
 	return oldstate
 }
 
-func includeGenTxs(genesisState consensus.GenesisState, genTxs [][]byte, initialBalance sdkmath.Int) consensus.GenesisState {
+func includeGenTxs(genesisState mc.GenesisState, genTxs [][]byte, initialBalance sdkmath.Int) mc.GenesisState {
 	if len(genTxs) == 0 {
 		return genesisState
 	}
 
 	// genutil
-	genutil := consensus.GenutilGenesis{GenTxs: genTxs}
+	genutil := mc.GenutilGenesis{GenTxs: genTxs}
 	bz, err := json.Marshal(&genutil)
 	if err != nil {
 		Revert("failed to marshal genutil genesis: " + err.Error())
@@ -733,7 +736,7 @@ func isEIDActive(addr wasmx.Bech32String) bool {
 }
 
 // buildGenesisData assembles a minimal viable genesis state map
-func buildGenesisData(params Params, denomUnit string, baseDenomUnit uint32, bootstrapAccountBech32 string, feeCollectorBech32 string, mintBech32 string, currentLevel int32, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialPorts consensus.NodePorts, bech32PrefixAccAddr string) consensus.GenesisState {
+func buildGenesisData(params Params, denomUnit string, baseDenomUnit uint32, bootstrapAccountBech32 string, feeCollectorBech32 string, mintBech32 string, currentLevel int32, wasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage, initialPorts mc.NodePorts, bech32PrefixAccAddr string) mc.GenesisState {
 	// Bank: set three base denoms
 	gasBaseDenom := "a" + denomUnit
 	stakingBaseDenom := "as" + denomUnit
@@ -764,13 +767,13 @@ func buildGenesisData(params Params, denomUnit string, baseDenomUnit uint32, boo
 		}
 	}
 
-	gen := consensus.GenesisState{}
+	gen := mc.GenesisState{}
 	gen[wasmx.MODULE_COSMOSMOD] = mustJSON(cosmosmod)
 	gen[wasmx.MODULE_AUTHZ] = wasmx.GetDefaultAuthzGenesis()
 	gen[wasmx.MODULE_CIRCUIT] = wasmx.GetDefaultCircuitGenesis()
 	gen[wasmx.MODULE_CRISIS] = wasmx.GetDefaultCrisisGenesis(stakingBaseDenom)
 	gen[wasmx.MODULE_EVIDENCE] = wasmx.GetDefaultEvidenceGenesis()
-	gen[wasmx.MODULE_GENUTIL] = mustJSON(consensus.GenutilGenesis{GenTxs: [][]byte{}})
+	gen[wasmx.MODULE_GENUTIL] = mustJSON(mc.GenutilGenesis{GenTxs: [][]byte{}})
 	gen[wasmx.MODULE_GROUP] = wasmx.GetDefaultGroupGenesis()
 	gen[wasmx.MODULE_MINT] = wasmx.GetDefaultMintGenesis(gasBaseDenom)
 	gen[wasmx.MODULE_NETWORK] = wasmx.GetDefaultNetworkGenesis()
@@ -807,7 +810,7 @@ func includeValidatorInfos(data SubChainData, validators []ValidatorInfo) SubCha
 	if len(validators) == 0 {
 		return data
 	}
-	var gs consensus.GenesisState
+	var gs mc.GenesisState
 	if err := json.Unmarshal(data.Data.InitChainRequest.AppStateBytes, &gs); err != nil {
 		Revert("failed to unmarshal genesis state in includeValidatorInfos: " + err.Error())
 		return data
@@ -839,10 +842,10 @@ func includeValidatorInfos(data SubChainData, validators []ValidatorInfo) SubCha
 	return data
 }
 
-func getValidatorCountFromGenesis(genesisState consensus.GenesisState) int {
+func getValidatorCountFromGenesis(genesisState mc.GenesisState) int {
 	count := 0
 	if bz, ok := genesisState[wasmx.MODULE_GENUTIL]; ok {
-		var data consensus.GenutilGenesis
+		var data mc.GenutilGenesis
 		if err := json.Unmarshal(bz, &data); err == nil {
 			count += len(data.GenTxs)
 		}
@@ -892,7 +895,7 @@ func getChainValidatorInfoFromGenesis(chainId string, index int) *ValidatorInfo 
 	if chaindata == nil {
 		return nil
 	}
-	var gs consensus.GenesisState
+	var gs mc.GenesisState
 	if err := json.Unmarshal(chaindata.Data.InitChainRequest.AppStateBytes, &gs); err != nil {
 		return nil
 	}

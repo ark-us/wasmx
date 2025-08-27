@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 //go:wasm-module imaptest

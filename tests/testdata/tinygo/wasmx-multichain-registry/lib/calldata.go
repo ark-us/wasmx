@@ -3,8 +3,8 @@ package lib
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
-	xchain "github.com/loredanacirstea/wasmx-env-crosschain"
+	xchain "github.com/loredanacirstea/wasmx-env-crosschain/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 type CallData struct {

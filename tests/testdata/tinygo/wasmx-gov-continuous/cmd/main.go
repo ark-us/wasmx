@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	gov "github.com/loredanacirstea/wasmx-gov-continuous/gov"
 	gov1 "github.com/loredanacirstea/wasmx-gov/gov"
 )

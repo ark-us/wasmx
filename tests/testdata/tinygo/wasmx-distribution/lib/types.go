@@ -1,7 +1,7 @@
 package lib
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const MODULE_NAME = "distribution"

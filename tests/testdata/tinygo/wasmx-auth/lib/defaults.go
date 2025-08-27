@@ -1,7 +1,7 @@
 package lib
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // Defaults for auth module (converted from AS defaults.ts)

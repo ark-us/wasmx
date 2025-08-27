@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 //go:wasm-module simplestorage

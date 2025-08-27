@@ -12,9 +12,9 @@ import (
 
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/utils"
-	wasmx "github.com/loredanacirstea/wasmx-env"
 	imap "github.com/loredanacirstea/wasmx-env-imap"
 	sql "github.com/loredanacirstea/wasmx-env-sql"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // -- Table: owners (users/accounts)

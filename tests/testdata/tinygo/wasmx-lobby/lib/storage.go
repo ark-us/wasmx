@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	sdkmath "cosmossdk.io/math"
-	consensus "github.com/loredanacirstea/wasmx-consensus"
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const TEMP_NEW_CHAIN_REQUESTS = "newchain_requests"
@@ -32,14 +32,14 @@ func AddNewChainRequest(data MsgNewChainRequest) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Check if already exists
 	for _, r := range req {
 		if r.Validator.ConsensusPublicKey == data.Validator.ConsensusPublicKey {
 			return nil // already exists
 		}
 	}
-	
+
 	req = append(req, data)
 	return SetNewChainRequests(req)
 }
@@ -184,33 +184,33 @@ func GetParams() (Params, error) {
 	if err != nil {
 		return Params{}, err
 	}
-	
+
 	minValidatorCount, err := GetMinValidatorsCount()
 	if err != nil {
 		return Params{}, err
 	}
-	
+
 	erc20CodeIdStr := wasmx.GetContextValue(KEY_ERC20_CODE_ID)
 	erc20CodeId, err := strconv.ParseUint(erc20CodeIdStr, 10, 64)
 	if err != nil {
 		return Params{}, err
 	}
-	
+
 	derc20CodeIdStr := wasmx.GetContextValue(KEY_DERC20_CODE_ID)
 	derc20CodeId, err := strconv.ParseUint(derc20CodeIdStr, 10, 64)
 	if err != nil {
 		return Params{}, err
 	}
-	
+
 	initialBalanceStr := wasmx.GetContextValue(KEY_INITIAL_BALANCE)
 	initialBalance, ok := sdkmath.NewIntFromString(initialBalanceStr)
 	if !ok {
 		return Params{}, err
 	}
-	
+
 	enableEidCheckStr := wasmx.GetContextValue(KEY_ENABLE_EID_CHECK)
 	enableEidCheck := enableEidCheckStr == "true"
-	
+
 	return Params{
 		CurrentLevel:        currentLevel,
 		MinValidatorsCount:  minValidatorCount,

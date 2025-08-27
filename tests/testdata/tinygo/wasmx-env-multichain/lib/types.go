@@ -4,7 +4,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
+
+const MODULE_NAME = "wasmx_multichain"
 
 const START_EVM_ID = 1000
 
@@ -28,6 +33,35 @@ type InitSubChainDeterministicRequest struct {
 	InitChainRequest RequestInitChain `json:"init_chain_request"`
 	ChainConfig      ChainConfig      `json:"chain_config"`
 	Peers            []string         `json:"peers"`
+}
+
+type RequestInitChain struct {
+	Time            string                      `json:"time"`
+	ChainID         string                      `json:"chain_id"`
+	ConsensusParams consensus.ConsensusParams   `json:"consensus_params"`
+	Validators      []consensus.ValidatorUpdate `json:"validators"`
+	AppStateBytes   []byte                      `json:"app_state_bytes"`
+	InitialHeight   int64                       `json:"initial_height"`
+}
+
+type ResponseInitChain struct {
+	ConsensusParams consensus.ConsensusParams   `json:"consensus_params"`
+	Validators      []consensus.ValidatorUpdate `json:"validators"`
+	AppHash         []byte                      `json:"app_hash"`
+}
+
+type InitChainSetup struct {
+	ChainID          string                    `json:"chain_id"`
+	Version          consensus.Version         `json:"version"`
+	ConsensusParams  consensus.ConsensusParams `json:"consensus_params"`
+	AppHash          []byte                    `json:"app_hash"`
+	LastResultsHash  []byte                    `json:"last_results_hash"`
+	ValidatorAddress wasmx.HexString           `json:"validator_address"`
+	ValidatorPrivkey []byte                    `json:"validator_privkey"`
+	ValidatorPubkey  []byte                    `json:"validator_pubkey"`
+	Peers            []string                  `json:"peers"`
+	NodeIndex        int32                     `json:"node_index"`
+	InitialPorts     NodePorts                 `json:"initial_ports"`
 }
 
 type GenesisState map[string][]byte

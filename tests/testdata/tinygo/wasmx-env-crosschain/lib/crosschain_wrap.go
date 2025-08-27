@@ -3,8 +3,8 @@ package crosschain
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
 	utils "github.com/loredanacirstea/wasmx-env-utils"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const loggerModule = "crosschain"

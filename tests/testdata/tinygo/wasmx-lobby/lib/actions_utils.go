@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 func SignMessage(validatorPrivkey string, msgstr string) (string, error) {

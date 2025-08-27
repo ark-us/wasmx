@@ -2,7 +2,7 @@ package lib
 
 import (
 	sdkmath "cosmossdk.io/math"
-	consensus "github.com/loredanacirstea/wasmx-consensus"
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	registrylib "github.com/loredanacirstea/wasmx-multichain-registry/lib"
 )
 

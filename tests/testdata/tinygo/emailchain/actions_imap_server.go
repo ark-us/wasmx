@@ -7,9 +7,9 @@ import (
 	"time"
 
 	imap "github.com/loredanacirstea/emailchain/imap"
-	"github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	sql "github.com/loredanacirstea/wasmx-env-sql"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 func HandleLogin(req *LoginRequest) ([]byte, error) {

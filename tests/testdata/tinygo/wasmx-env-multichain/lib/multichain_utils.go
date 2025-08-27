@@ -3,7 +3,8 @@ package consensus
 import (
 	"strconv"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 func GetLeaderChain(chainIds []string) string {
@@ -59,20 +60,20 @@ func BuildChainConfig(denomUnit string, baseDenomUnit uint32, chainBaseName stri
 	}
 }
 
-func GetDefaultConsensusParams() ConsensusParams {
-	block := BlockParams{
+func GetDefaultConsensusParams() consensus.ConsensusParams {
+	block := consensus.BlockParams{
 		MaxBytes: 22020096,
 		MaxGas:   30000000,
 	}
-	evidence := EvidenceParams{
+	evidence := consensus.EvidenceParams{
 		MaxAgeNumBlocks: 100000,
 		MaxAgeDuration:  172800000000000,
 		MaxBytes:        1048576,
 	}
-	validator := ValidatorParams{PubKeyTypes: []string{"ed25519"}}
-	version := VersionParams{App: 0}
-	abci := ABCIParams{VoteExtensionsEnableHeight: 0}
-	return ConsensusParams{Block: block, Evidence: evidence, Validator: validator, Version: version, ABCI: abci}
+	validator := consensus.ValidatorParams{PubKeyTypes: []string{"ed25519"}}
+	version := consensus.VersionParams{App: 0}
+	abci := consensus.ABCIParams{VoteExtensionsEnableHeight: 0}
+	return consensus.ConsensusParams{Block: block, Evidence: evidence, Validator: validator, Version: version, ABCI: abci}
 }
 
 // Helpers to create events

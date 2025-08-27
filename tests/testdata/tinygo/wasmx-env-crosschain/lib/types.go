@@ -1,7 +1,7 @@
 package crosschain
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // Cross-chain types moved from wasmx-env

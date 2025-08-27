@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"slices"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // Addresses

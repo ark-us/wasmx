@@ -1,7 +1,8 @@
 package consensus
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 type CreatedValidator struct {
@@ -23,7 +24,7 @@ const (
 )
 
 // DefaultFinalizeResponseEventsParse filters successful tx results and extracts consensus-related events.
-func DefaultFinalizeResponseEventsParse(txResults []ExecTxResult) FinalizedCoreEventsInfo {
+func DefaultFinalizeResponseEventsParse(txResults []consensus.ExecTxResult) FinalizedCoreEventsInfo {
 	roleConsensus := false
 	consensusContract := ""
 	consensusLabel := ""
@@ -31,7 +32,7 @@ func DefaultFinalizeResponseEventsParse(txResults []ExecTxResult) FinalizedCoreE
 	initChainRequests := [][]byte{}
 
 	for x := 0; x < len(txResults); x++ {
-		if txResults[x].Code != uint32(CodeTypeOk) {
+		if txResults[x].Code != uint32(consensus.CodeTypeOk) {
 			continue
 		}
 		evs := txResults[x].Events

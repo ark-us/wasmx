@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	lib "github.com/loredanacirstea/wasmx-auth/lib"
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 //go:wasm-module wasmx-auth

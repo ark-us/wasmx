@@ -4,20 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
 	utils "github.com/loredanacirstea/wasmx-env-utils"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
-
-const loggerModule = "wasmx_consensus"
 
 func CheckTx(req RequestCheckTx) (ResponseCheckTx, error) {
 	bz, err := json.Marshal(&req)
 	if err != nil {
 		return ResponseCheckTx{}, err
 	}
-	wasmx.LoggerDebugExtended(loggerModule, "CheckTx", []string{"request", string(bz)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "CheckTx", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(CheckTx_(utils.BytesToPackedPtr(bz)))
-	wasmx.LoggerDebugExtended(loggerModule, "CheckTx", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "CheckTx", []string{"response", string(out)})
 	var resp ResponseCheckTx
 	if err := json.Unmarshal(out, &resp); err != nil {
 		return ResponseCheckTx{}, err
@@ -30,9 +28,9 @@ func PrepareProposal(req RequestPrepareProposal) (ResponsePrepareProposal, error
 	if err != nil {
 		return ResponsePrepareProposal{}, err
 	}
-	wasmx.LoggerDebugExtended(loggerModule, "PrepareProposal", []string{"request", string(bz)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "PrepareProposal", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(PrepareProposal_(utils.BytesToPackedPtr(bz)))
-	wasmx.LoggerDebugExtended(loggerModule, "PrepareProposal", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "PrepareProposal", []string{"response", string(out)})
 	var resp ResponsePrepareProposal
 	if err := json.Unmarshal(out, &resp); err != nil {
 		return ResponsePrepareProposal{}, err
@@ -45,9 +43,9 @@ func ProcessProposal(req RequestProcessProposal) (ResponseProcessProposal, error
 	if err != nil {
 		return ResponseProcessProposal{}, err
 	}
-	wasmx.LoggerDebugExtended(loggerModule, "ProcessProposal", []string{"request", string(bz)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "ProcessProposal", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(ProcessProposal_(utils.BytesToPackedPtr(bz)))
-	wasmx.LoggerDebugExtended(loggerModule, "ProcessProposal", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "ProcessProposal", []string{"response", string(out)})
 	var resp ResponseProcessProposal
 	if err := json.Unmarshal(out, &resp); err != nil {
 		return ResponseProcessProposal{}, err
@@ -64,9 +62,9 @@ func OptimisticExecution(req RequestProcessProposal, resp ResponseProcessProposa
 	if err != nil {
 		return ResponseOptimisticExecution{}, err
 	}
-	wasmx.LoggerDebugExtended(loggerModule, "OptimisticExecution", []string{"request", string(reqbz), "resp", string(respbz)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "OptimisticExecution", []string{"request", string(reqbz), "resp", string(respbz)})
 	out := utils.PackedPtrToBytes(OptimisticExecution_(utils.BytesToPackedPtr(reqbz), utils.BytesToPackedPtr(respbz)))
-	wasmx.LoggerDebugExtended(loggerModule, "OptimisticExecution", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "OptimisticExecution", []string{"response", string(out)})
 	var r ResponseOptimisticExecution
 	if err := json.Unmarshal(out, &r); err != nil {
 		return ResponseOptimisticExecution{}, err
@@ -79,9 +77,9 @@ func FinalizeBlock(req WrapRequestFinalizeBlock) (ResponseFinalizeBlockWrap, err
 	if err != nil {
 		return ResponseFinalizeBlockWrap{}, err
 	}
-	wasmx.LoggerDebugExtended(loggerModule, "FinalizeBlock", []string{"request", string(bz)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "FinalizeBlock", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(FinalizeBlock_(utils.BytesToPackedPtr(bz)))
-	wasmx.LoggerDebugExtended(loggerModule, "FinalizeBlock", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "FinalizeBlock", []string{"response", string(out)})
 	var wrap ResponseWrap
 	if err := json.Unmarshal(out, &wrap); err != nil {
 		return ResponseFinalizeBlockWrap{}, err
@@ -103,9 +101,9 @@ func BeginBlock(req RequestFinalizeBlock) (ResponseBeginBlockWrap, error) {
 	if err != nil {
 		return ResponseBeginBlockWrap{}, err
 	}
-	wasmx.LoggerDebugExtended(loggerModule, "BeginBlock", []string{"request", string(bz)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "BeginBlock", []string{"request", string(bz)})
 	out := utils.PackedPtrToBytes(BeginBlock_(utils.BytesToPackedPtr(bz)))
-	wasmx.LoggerDebugExtended(loggerModule, "BeginBlock", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "BeginBlock", []string{"response", string(out)})
 	var wrap ResponseWrap
 	if err := json.Unmarshal(out, &wrap); err != nil {
 		return ResponseBeginBlockWrap{}, err
@@ -122,9 +120,9 @@ func BeginBlock(req RequestFinalizeBlock) (ResponseBeginBlockWrap, error) {
 }
 
 func EndBlock(metadata string) (ResponseFinalizeBlockWrap, error) {
-	wasmx.LoggerDebugExtended(loggerModule, "EndBlock", []string{"metadata", metadata})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "EndBlock", []string{"metadata", metadata})
 	out := utils.PackedPtrToBytes(EndBlock_(utils.StringToPackedPtr(metadata)))
-	wasmx.LoggerDebugExtended(loggerModule, "EndBlock", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "EndBlock", []string{"response", string(out)})
 	var wrap ResponseWrap
 	if err := json.Unmarshal(out, &wrap); err != nil {
 		return ResponseFinalizeBlockWrap{}, err
@@ -141,9 +139,9 @@ func EndBlock(metadata string) (ResponseFinalizeBlockWrap, error) {
 }
 
 func Commit() (ResponseCommit, error) {
-	wasmx.LoggerDebugExtended(loggerModule, "Commit", nil)
+	wasmx.LoggerDebugExtended(MODULE_NAME, "Commit", nil)
 	out := utils.PackedPtrToBytes(Commit_())
-	wasmx.LoggerDebugExtended(loggerModule, "Commit", []string{"response", string(out)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "Commit", []string{"response", string(out)})
 	var resp ResponseCommit
 	if err := json.Unmarshal(out, &resp); err != nil {
 		return ResponseCommit{}, err
@@ -152,12 +150,12 @@ func Commit() (ResponseCommit, error) {
 }
 
 func RollbackToVersion(height int64) error {
-	wasmx.LoggerDebugExtended(loggerModule, "RollbackToVersion", []string{"height", fmt.Sprintf("%d", height)})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "RollbackToVersion", []string{"height", fmt.Sprintf("%d", height)})
 	out := utils.PackedPtrToBytes(RollbackToVersion_(height))
 	errStr := string(out)
-	wasmx.LoggerDebugExtended(loggerModule, "RollbackToVersion", []string{"err", errStr})
+	wasmx.LoggerDebugExtended(MODULE_NAME, "RollbackToVersion", []string{"err", errStr})
 	if errStr != "" {
-		return fmt.Errorf(errStr)
+		return fmt.Errorf("%s", errStr)
 	}
 	return nil
 }

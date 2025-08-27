@@ -21,9 +21,9 @@ import (
 
 	"github.com/loredanacirstea/emailchain/imap"
 
-	"github.com/loredanacirstea/wasmx-env"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // const ServerDomain = "provable.dev"
@@ -491,7 +491,6 @@ func ForwardEmail(req *ForwardEmailRequest) ForwardEmailResponse {
 		resp.Error = err.Error()
 		return resp
 	}
-
 
 	opts := LoadDkimKey()
 	if opts == nil {

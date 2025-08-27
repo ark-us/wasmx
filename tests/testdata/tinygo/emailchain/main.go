@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
 	_ "github.com/loredanacirstea/wasmx-env-httpclient"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 //go:wasm-module emailchain

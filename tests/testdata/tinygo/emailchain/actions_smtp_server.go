@@ -1,6 +1,8 @@
 package main
 
-import "github.com/loredanacirstea/wasmx-env"
+import (
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+)
 
 // TODO implement me
 func HandleSmtpLogin(req *LoginRequest) ([]byte, error) {

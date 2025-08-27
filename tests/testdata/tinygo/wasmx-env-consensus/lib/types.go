@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
+
+const MODULE_NAME = "wasmx_consensus"
 
 // Protocol/version constants
 const ABCISemVer = "2.0.0"
@@ -422,35 +424,6 @@ type TxResult struct {
 	Index  uint32       `json:"index"`
 	Tx     []byte       `json:"tx"`
 	Result ExecTxResult `json:"result"`
-}
-
-type RequestInitChain struct {
-	Time            string            `json:"time"`
-	ChainID         string            `json:"chain_id"`
-	ConsensusParams ConsensusParams   `json:"consensus_params"`
-	Validators      []ValidatorUpdate `json:"validators"`
-	AppStateBytes   []byte            `json:"app_state_bytes"`
-	InitialHeight   int64             `json:"initial_height"`
-}
-
-type ResponseInitChain struct {
-	ConsensusParams ConsensusParams   `json:"consensus_params"`
-	Validators      []ValidatorUpdate `json:"validators"`
-	AppHash         []byte            `json:"app_hash"`
-}
-
-type InitChainSetup struct {
-	ChainID          string          `json:"chain_id"`
-	Version          Version         `json:"version"`
-	ConsensusParams  ConsensusParams `json:"consensus_params"`
-	AppHash          []byte          `json:"app_hash"`
-	LastResultsHash  []byte          `json:"last_results_hash"`
-	ValidatorAddress wasmx.HexString `json:"validator_address"`
-	ValidatorPrivkey []byte          `json:"validator_privkey"`
-	ValidatorPubkey  []byte          `json:"validator_pubkey"`
-	Peers            []string        `json:"peers"`
-	NodeIndex        int32           `json:"node_index"`
-	InitialPorts     NodePorts       `json:"initial_ports"`
 }
 
 type RequestApplySnapshotChunk struct{}

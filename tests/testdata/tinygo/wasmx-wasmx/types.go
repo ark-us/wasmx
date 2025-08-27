@@ -1,7 +1,7 @@
 package wasmxwasmx
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // Params mirrors the empty AssemblyScript Params

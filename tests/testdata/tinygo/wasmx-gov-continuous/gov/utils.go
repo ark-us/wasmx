@@ -3,7 +3,7 @@ package gov
 import (
 	"math/big"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 func LoggerInfo(msg string, parts []string) {

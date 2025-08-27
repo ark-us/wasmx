@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	sdkmath "cosmossdk.io/math"
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const (

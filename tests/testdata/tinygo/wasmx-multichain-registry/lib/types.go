@@ -2,11 +2,13 @@ package lib
 
 import (
 	sdkmath "cosmossdk.io/math"
+
+	mc "github.com/loredanacirstea/wasmx-env-multichain/lib"
+
 	authlib "github.com/loredanacirstea/wasmx-auth/lib"
 	banklib "github.com/loredanacirstea/wasmx-bank/lib"
-	consensus "github.com/loredanacirstea/wasmx-consensus"
 	distributionlib "github.com/loredanacirstea/wasmx-distribution/lib"
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	govmod "github.com/loredanacirstea/wasmx-gov/gov"
 	slashinglib "github.com/loredanacirstea/wasmx-slashing/lib"
 	stakinglib "github.com/loredanacirstea/wasmx-staking/lib"
@@ -39,7 +41,7 @@ type Params struct {
 }
 
 type SubChainData struct {
-	Data               consensus.InitSubChainDeterministicRequest     `json:"data"`
+	Data               mc.InitSubChainDeterministicRequest            `json:"data"`
 	GenTxs             [][]byte                                       `json:"genTxs"` // base64-encoded JSON strings
 	WasmxContractState map[wasmx.Bech32String][]wasmx.ContractStorage `json:"wasmxContractState"`
 	InitialBalance     sdkmath.Int                                    `json:"initial_balance"`
@@ -105,9 +107,9 @@ type RegisterDefaultSubChainRequest struct {
 
 // Register subchain with full deterministic data
 type RegisterSubChainRequest struct {
-	Data           consensus.InitSubChainDeterministicRequest `json:"data"`
-	GenTxs         [][]byte                                   `json:"genTxs"`
-	InitialBalance sdkmath.Int                                `json:"initial_balance"`
+	Data           mc.InitSubChainDeterministicRequest `json:"data"`
+	GenTxs         [][]byte                            `json:"genTxs"`
+	InitialBalance sdkmath.Int                         `json:"initial_balance"`
 }
 
 type RemoveSubChainRequest struct {

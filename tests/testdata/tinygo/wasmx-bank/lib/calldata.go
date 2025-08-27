@@ -3,7 +3,7 @@ package lib
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // getCallDataWrap parses the call data into our CallData structure

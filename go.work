@@ -9,9 +9,10 @@ use (
 	./tests
 	./wasmx-vmimap
 	./wasmx-vmsmtp
-	./tests/testdata/tinygo/wasmx-consensus
-	./tests/testdata/tinygo/wasmx-multichain-registry
 	./tests/testdata/tinygo/wasmx-env
+	./tests/testdata/tinygo/wasmx-env-consensus
+	./tests/testdata/tinygo/wasmx-env-multichain
+	./tests/testdata/tinygo/wasmx-env-crosschain
 	./tests/testdata/tinygo/wasmx-env-httpclient
 	./tests/testdata/tinygo/wasmx-env-imap
 	./tests/testdata/tinygo/wasmx-env-smtp
@@ -23,6 +24,7 @@ use (
 	./tests/testdata/tinygo/wasmx-distribution
 	./tests/testdata/tinygo/wasmx-gov
 	./tests/testdata/tinygo/wasmx-gov-continuous
+	./tests/testdata/tinygo/wasmx-multichain-registry
 	./tests/testdata/tinygo/emailchain
 )
 

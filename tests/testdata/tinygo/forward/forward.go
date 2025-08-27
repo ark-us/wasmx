@@ -6,7 +6,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	wasmx "github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 //go:wasm-module forward
