@@ -263,7 +263,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 			Peers:            []string{},
 		},
 		GenTxs:         [][]byte{txjsonbz},
-		InitialBalance: initBalance.BigInt(),
+		InitialBalance: initBalance,
 	}
 	regreqBz, err := json.Marshal(regreq)
 	suite.Require().NoError(err)
@@ -314,7 +314,7 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}})
 	suite.Require().NoError(err)
 
@@ -453,7 +453,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}
 
 	// create level1
@@ -561,7 +561,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}
 	subChainId2, _ := suite.createLevel1(mcfg.LEVEL0_CHAIN_ID, reqlevel1)
 	suite.Require().Equal("ptestp_1_1001-1", subChainId2)
@@ -678,7 +678,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}
 	subChainId2, _ := suite.createLevel1(mcfg.LEVEL0_CHAIN_ID, reqlevel1)
 	suite.Require().Equal("ptestp_1_1001-1", subChainId2)
@@ -804,7 +804,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}
 	subChainId1, res := suite.createLevel1(chainId, reqlevel1)
 	suite.Require().Equal("ptestp_1_1001-1", subChainId1)
@@ -837,7 +837,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 		DenomUnit:      "qqq",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}
 	subChainId2, res := suite.createLevel1(chainId, reqlevel2)
 	suite.Require().Equal("qtestq_10002-1", subChainId2)
@@ -941,7 +941,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
-		InitialBalance: initialBalance.BigInt(),
+		InitialBalance: initialBalance,
 	}
 	subChainId1, res := suite.createLevel1(chainId, reqlevel1)
 	suite.Require().Equal("ptestp_1_1001-1", subChainId1)

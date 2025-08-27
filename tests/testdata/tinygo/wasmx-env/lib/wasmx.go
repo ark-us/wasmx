@@ -129,7 +129,7 @@ func Bech32StringToBytes_(dataPtr int64) int64
 func Bech32BytesToString_(dataPtr int64) int64
 
 //go:wasmimport wasmx addr_equivalent
-func AddrEquivalent_(addr1 int64, addr2 int64) int64
+func AddrEquivalent_(addr1 int64, addr2 int64) int32
 
 //go:wasmimport wasmx addr_humanize_mc
 func AddrHumanizeMC_(addrPtr int64, prefixPtr int64) int64

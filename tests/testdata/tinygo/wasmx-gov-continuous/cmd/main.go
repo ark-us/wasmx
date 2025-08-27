@@ -32,59 +32,59 @@ func main() {
 	switch {
 	case calldata.SubmitProposal != nil:
 		res := gov.SubmitProposal(*calldata.SubmitProposal)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.SubmitProposalExtended != nil:
 		res := gov.SubmitProposalExtended(*calldata.SubmitProposalExtended)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.AddProposalOption != nil:
 		res := gov.AddProposalOption(*calldata.AddProposalOption)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.VoteWeighted != nil:
 		res := gov.VoteWeighted(*calldata.VoteWeighted)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.Vote != nil:
 		res := gov.DoVote(*calldata.Vote)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.Deposit != nil:
 		res := gov.DoDeposit(*calldata.Deposit)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.DepositVote != nil:
 		res := gov.DoDepositVote(*calldata.DepositVote)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetProposal != nil:
 		res := gov.GetProposal(*calldata.GetProposal)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetProposals != nil:
 		res := gov.GetProposals(*calldata.GetProposals)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetProposalsExtended != nil:
 		res := gov.GetProposalsExtended(*calldata.GetProposalsExtended)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetProposalExtended != nil:
 		res := gov.GetProposalExtended(*calldata.GetProposalExtended)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetTallyResult != nil:
 		res := gov.GetTallyResult(*calldata.GetTallyResult)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetNextWinnerThreshold != nil:
 		res := gov.GetNextWinnerThreshold(*calldata.GetNextWinnerThreshold)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.GetParams != nil:
 		res := gov1.GetParams(*calldata.GetParams)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	}
 
@@ -93,12 +93,12 @@ func main() {
 	case calldata.EndBlock != nil:
 		wasmx.OnlyInternal(gov.MODULE_NAME, "EndBlock")
 		res := gov.EndBlock(*calldata.EndBlock)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calldata.InitGenesis != nil:
 		wasmx.OnlyInternal(gov.MODULE_NAME, "InitGenesis")
 		res := gov.InitGenesis(*calldata.InitGenesis)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	}
 
@@ -115,7 +115,7 @@ func EndBlockExport() {
 	if err := json.Unmarshal(databz, &req); err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	wasmx.SetFinishData(gov.EndBlock(req))
+	wasmx.Finish(gov.EndBlock(req))
 }
 
 //go:wasm-module wasmx-gov-continuous
@@ -126,5 +126,5 @@ func InitGenesisExport() {
 	if err := json.Unmarshal(databz, &req); err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	wasmx.SetFinishData(gov.InitGenesis(req))
+	wasmx.Finish(gov.InitGenesis(req))
 }

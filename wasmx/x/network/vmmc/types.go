@@ -10,6 +10,8 @@ import (
 )
 
 const HOST_WASMX_ENV_MULTICHAIN_VER1 = "wasmx_multichain_1"
+const HOST_WASMX_ENV_MULTICHAIN_VER1_i32 = "wasmx_multichain_json_i32_1"
+const HOST_WASMX_ENV_MULTICHAIN_VER1_i64 = "wasmx_multichain_json_i64_1"
 
 const HOST_WASMX_ENV_EXPORT = "wasmx_multichain_"
 

@@ -1,8 +1,6 @@
 package types
 
 import (
-	"math/big"
-
 	abci "github.com/cometbft/cometbft/abci/types"
 
 	sdkmath "cosmossdk.io/math"
@@ -21,15 +19,15 @@ type InitSubChainDeterministicRequest struct {
 type RegisterSubChainRequest struct {
 	Data           InitSubChainDeterministicRequest `json:"data"`
 	GenTxs         [][]byte                         `json:"genTxs"`
-	InitialBalance *big.Int                         `json:"initial_balance"`
+	InitialBalance sdkmath.Int                      `json:"initial_balance"`
 }
 
 type RegisterDefaultSubChainRequest struct {
-	ChainBaseName  string   `json:"chain_base_name"`
-	DenomUnit      string   `json:"denom_unit"`
-	Decimals       uint32   `json:"base_denom_unit"`
-	LevelIndex     uint32   `json:"level_index"`
-	InitialBalance *big.Int `json:"initial_balance"`
+	ChainBaseName  string      `json:"chain_base_name"`
+	DenomUnit      string      `json:"denom_unit"`
+	Decimals       uint32      `json:"base_denom_unit"`
+	LevelIndex     uint32      `json:"level_index"`
+	InitialBalance sdkmath.Int `json:"initial_balance"`
 }
 
 type RegisterSubChainValidatorRequest struct {

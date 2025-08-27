@@ -323,7 +323,7 @@ func toBech32(prefix, hexStr string) (string, error) {
 	}
 	bz, err := hex.DecodeString(s)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("invalid hex %s: %s", hexStr, err.Error())
 	}
 	return wasmx.AddrHumanizeMC(bz, prefix), nil
 }
@@ -403,7 +403,7 @@ func fillRoles(precompiles []wasmx.SystemContract, bech32PrefixAccAddr string, f
 
 	if _, exists := roleMap[wasmx.ROLE_FEE_COLLECTOR]; !exists {
 		order = append(order, wasmx.ROLE_FEE_COLLECTOR)
-		feeCollector, err := toBech32(bech32PrefixAccAddr, wasmx.ROLE_FEE_COLLECTOR)
+		feeCollector, err := toBech32(bech32PrefixAccAddr, wasmx.ADDR_FEE_COLLECTOR)
 		if err != nil {
 			return nil, fmt.Errorf("fillRoles failed: %s", err.Error())
 		}

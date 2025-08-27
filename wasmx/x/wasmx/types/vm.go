@@ -187,6 +187,8 @@ var WASMX_CORE_ENVi64_1 = "wasmx_env_core_i64_1"
 
 // only for core consensus
 var WASMX_CONSENSUS_JSON_1 = "wasmx_consensus_json_1"
+var WASMX_CONSENSUS_JSON_i32_1 = "wasmx_consensus_json_i32_1"
+var WASMX_CONSENSUS_JSON_i64_1 = "wasmx_consensus_json_i64_1"
 
 // non-deterministic system operations, only as queries
 var SYS_ENV_1 = "sys_env_1"
@@ -208,19 +210,21 @@ var CW_ENV_8 = "interface_version_8"
 var DEFAULT_SYS_DEP = EWASM_ENV_1
 
 var SUPPORTED_HOST_INTERFACES = map[string]bool{
-	WASMX_ENV_1:            true,
-	WASMX_ENV_2:            true,
-	WASMX_ENVi32_2:         true,
-	WASMX_ENVi64_2:         true,
-	WASMX_CORE_ENVi32_1:    true,
-	WASMX_CORE_ENVi64_1:    true,
-	EWASM_ENV_0:            true,
-	EWASM_ENV_1:            true,
-	CW_ENV_8:               true,
-	WASMX_CONSENSUS_JSON_1: true,
-	SYS_ENV_1:              true,
-	WASI_SNAPSHOT_PREVIEW1: true,
-	WASI_UNSTABLE:          true,
+	WASMX_ENV_1:                true,
+	WASMX_ENV_2:                true,
+	WASMX_ENVi32_2:             true,
+	WASMX_ENVi64_2:             true,
+	WASMX_CORE_ENVi32_1:        true,
+	WASMX_CORE_ENVi64_1:        true,
+	EWASM_ENV_0:                true,
+	EWASM_ENV_1:                true,
+	CW_ENV_8:                   true,
+	WASMX_CONSENSUS_JSON_1:     true,
+	WASMX_CONSENSUS_JSON_i32_1: true,
+	WASMX_CONSENSUS_JSON_i64_1: true,
+	SYS_ENV_1:                  true,
+	WASI_SNAPSHOT_PREVIEW1:     true,
+	WASI_UNSTABLE:              true,
 
 	WASMX_MEMORY_ASSEMBLYSCRIPT: true,
 	WASMX_MEMORY_DEFAULT:        true,
@@ -231,7 +235,9 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 }
 
 var PROTECTED_HOST_APIS = map[string]bool{
-	WASMX_CONSENSUS_JSON_1: true,
+	WASMX_CONSENSUS_JSON_1:     true,
+	WASMX_CONSENSUS_JSON_i32_1: true,
+	WASMX_CONSENSUS_JSON_i64_1: true,
 }
 
 var ROLE_EID_REGISTRY = "eid_registry"

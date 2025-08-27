@@ -18,6 +18,8 @@ import (
 )
 
 const HOST_WASMX_ENV_P2P_VER1 = "wasmx_p2p_1"
+const HOST_WASMX_ENV_P2P_VER1_i32 = "wasmx_p2p_json_i32_1"
+const HOST_WASMX_ENV_P2P_VER1_i64 = "wasmx_p2p_json_i64_1"
 
 const HOST_WASMX_ENV_P2P_EXPORT = "wasmx_p2p_"
 

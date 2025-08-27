@@ -430,37 +430,3 @@ func wasmxBlockCommitVoteBytes(_context interface{}, rnh memc.RuntimeHandler, pa
 	}
 	return rnh.AllocateWriteMem(bz)
 }
-
-func BuildWasmxConsensusJson1(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		vm.BuildFn("CheckTx", CheckTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("PrepareProposal", PrepareProposal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ProcessProposal", ProcessProposal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("OptimisticExecution", OptimisticExecution, []interface{}{vm.ValType_I32(), vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("FinalizeBlock", FinalizeBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("BeginBlock", BeginBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("EndBlock", EndBlock, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("Commit", Commit, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("RollbackToVersion", RollbackToVersion, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("HeaderHash", wasmxHeaderHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ValidatorsHash", wasmxValidatorsHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("ConsensusParamsHash", wasmxConsensusParamsHash, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("BlockCommitVoteBytes", wasmxBlockCommitVoteBytes, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-	}
-
-	// TODO
-	// // ApplySnapshotChunk(req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error)
-	// env.AddFunction("ApplySnapshotChunk", NewFunction(functype_i32_i32, ApplySnapshotChunk, context, 0))
-
-	// // LoadSnapshotChunk(req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error)
-	// env.AddFunction("LoadSnapshotChunk", NewFunction(functype_i32_i32, LoadSnapshotChunk, context, 0))
-
-	// // OfferSnapshot(req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error)
-	// env.AddFunction("OfferSnapshot", NewFunction(functype_i32_i32, OfferSnapshot, context, 0))
-
-	// // ListSnapshots(req *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error)
-	// env.AddFunction("ListSnapshots", NewFunction(functype_i32_i32, ListSnapshots, context, 0))
-
-	return vm.BuildModule(rnh, "consensus", context, fndefs)
-}

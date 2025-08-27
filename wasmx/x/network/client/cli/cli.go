@@ -324,7 +324,7 @@ $ %s tx multichain register-subchain mythos myt 18 1 "10000000000" --chain-id="l
 				DenomUnit:      args[1],
 				Decimals:       uint32(decimals),
 				LevelIndex:     uint32(levelIndex),
-				InitialBalance: initialBalance.BigInt(),
+				InitialBalance: math.NewIntFromBigInt(initialBalance.BigInt()),
 			}})
 			if err != nil {
 				return err

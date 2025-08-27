@@ -254,6 +254,7 @@ func wasmxSetFinishData(_context interface{}, rnh memc.RuntimeHandler, params []
 		return nil, err
 	}
 	ctx.FinishData = data
+	// ctx.ReturnData = data
 	returns := make([]interface{}, 0)
 	return returns, nil
 }

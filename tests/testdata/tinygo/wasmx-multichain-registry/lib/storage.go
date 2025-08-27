@@ -42,7 +42,10 @@ func GetValidatorChains(validatorAddress string) []string {
 		return []string{}
 	}
 	var out []string
-	_ = json.Unmarshal([]byte(value), &out)
+	err := json.Unmarshal([]byte(value), &out)
+	if err != nil {
+		Revert("cannot decode validator data: " + err.Error())
+	}
 	return out
 }
 
@@ -58,7 +61,10 @@ func AddValidatorChain(validatorAddress, chainId string) {
 }
 
 func SetValidatorChains(validatorAddress string, chainIds []string) {
-	bz, _ := json.Marshal(&chainIds)
+	bz, err := json.Marshal(&chainIds)
+	if err != nil {
+		Revert("cannot encode validator data: " + err.Error())
+	}
 	wasmx.SStore(GetValidatorChainIdsKey(validatorAddress), string(bz))
 }
 
@@ -78,7 +84,10 @@ func GetChainData(chainId string) *SubChainData {
 
 func SetChainData(data SubChainData) {
 	chainId := data.Data.InitChainRequest.ChainID
-	bz, _ := json.Marshal(&data)
+	bz, err := json.Marshal(&data)
+	if err != nil {
+		Revert("cannot encode chain data: " + err.Error())
+	}
 	wasmx.SStore(GetDataKey(chainId), string(bz))
 }
 
@@ -96,12 +105,18 @@ func GetChainValidators(chainId string) [][]byte {
 		return [][]byte{}
 	}
 	var out [][]byte
-	_ = json.Unmarshal([]byte(value), &out)
+	err := json.Unmarshal([]byte(value), &out)
+	if err != nil {
+		Revert("cannot decode chain validators: " + err.Error())
+	}
 	return out
 }
 
 func SetChainValidators(chainId string, genTxs [][]byte) {
-	bz, _ := json.Marshal(&genTxs)
+	bz, err := json.Marshal(&genTxs)
+	if err != nil {
+		Revert("cannot encode validators: " + err.Error())
+	}
 	wasmx.SStore(GetValidatorsKey(chainId), string(bz))
 }
 
@@ -122,12 +137,18 @@ func GetChainValidatorAddresses(chainId string) []wasmx.Bech32String {
 		return []wasmx.Bech32String{}
 	}
 	var out []wasmx.Bech32String
-	_ = json.Unmarshal([]byte(value), &out)
+	err := json.Unmarshal([]byte(value), &out)
+	if err != nil {
+		Revert("cannot decode validator addresses: " + err.Error())
+	}
 	return out
 }
 
 func SetChainValidatorAddresses(chainId string, addrs []wasmx.Bech32String) {
-	bz, _ := json.Marshal(&addrs)
+	bz, err := json.Marshal(&addrs)
+	if err != nil {
+		Revert("cannot encode validator addresses: " + err.Error())
+	}
 	wasmx.SStore(GetValidatorAddressesKey(chainId), string(bz))
 }
 
@@ -138,7 +159,10 @@ func GetLevelChainIds(levelIndex int32) []string {
 		return []string{}
 	}
 	var out []string
-	_ = json.Unmarshal([]byte(value), &out)
+	err := json.Unmarshal([]byte(value), &out)
+	if err != nil {
+		Revert("cannot decode level chain ids: " + err.Error())
+	}
 	return out
 }
 
@@ -158,7 +182,10 @@ func AddLevelChainId(levelIndex int32, chainId string) {
 }
 
 func SetLevelChainIds(levelIndex int32, chainIds []string) {
-	bz, _ := json.Marshal(&chainIds)
+	bz, err := json.Marshal(&chainIds)
+	if err != nil {
+		Revert("cannot encode level chain ids " + err.Error())
+	}
 	wasmx.SStore(GetLevelChainIdsKey(levelIndex), string(bz))
 }
 
@@ -171,7 +198,10 @@ func AddChainId(id string) {
 		}
 	}
 	ids = append(ids, id)
-	bz, _ := json.Marshal(&ids)
+	bz, err := json.Marshal(&ids)
+	if err != nil {
+		Revert("cannot encode chain ids: " + err.Error())
+	}
 	wasmx.SStore(CHAIN_IDS, string(bz))
 }
 
@@ -181,12 +211,18 @@ func GetChainIds() []string {
 		return []string{}
 	}
 	var out []string
-	_ = json.Unmarshal([]byte(value), &out)
+	err := json.Unmarshal([]byte(value), &out)
+	if err != nil {
+		Revert("cannot decode chain ids: " + err.Error())
+	}
 	return out
 }
 
 func SetChainIds(data []string) {
-	bz, _ := json.Marshal(&data)
+	bz, err := json.Marshal(&data)
+	if err != nil {
+		Revert("cannot encode chain ids: " + err.Error())
+	}
 	wasmx.SStore(CHAIN_IDS, string(bz))
 }
 
@@ -262,6 +298,9 @@ func GetParams() Params {
 }
 
 func SetParams(data Params) {
-	bz, _ := json.Marshal(&data)
+	bz, err := json.Marshal(&data)
+	if err != nil {
+		Revert("cannot encode param data: " + err.Error())
+	}
 	wasmx.SStore(PARAMS_KEY, string(bz))
 }

@@ -5,6 +5,8 @@ import (
 )
 
 const HOST_WASMX_ENV_CROSSCHAIN_VER1 = "wasmx_crosschain_1"
+const HOST_WASMX_ENV_CROSSCHAIN_VER1_i32 = "wasmx_crosschain_json_i32_1"
+const HOST_WASMX_ENV_CROSSCHAIN_VER1_i64 = "wasmx_crosschain_json_i64_1"
 
 const HOST_WASMX_ENV_CROSSCHAIN_EXPORT = "wasmx_crosschain_"
 

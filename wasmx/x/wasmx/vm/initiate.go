@@ -167,19 +167,6 @@ func InitiateWasmxCoreEnv(
 	return nil
 }
 
-func InstantiateWasmxConsensusJson(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	var err error
-	wasmx, err := BuildWasmxConsensusJson1(context, rnh)
-	if err != nil {
-		return err
-	}
-	err = rnh.GetVm().RegisterModule(wasmx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
 	err := rnh.GetVm().InstantiateWasm(dep.CodeFilePath, dep.AotFilePath, nil)
 	if err != nil {
@@ -271,7 +258,9 @@ func init() {
 	SystemDepHandler[types.EWASM_ENV_1] = InitiateEwasmTypeEnv
 	SystemDepHandler[types.CW_ENV_8] = InitiateCosmWasmEnv8
 	SystemDepHandler[types.ROLE_INTERPRETER] = InitiateInterpreter
-	SystemDepHandler[types.WASMX_CONSENSUS_JSON_1] = InstantiateWasmxConsensusJson
+	SystemDepHandler[types.WASMX_CONSENSUS_JSON_1] = InstantiateWasmxConsensusJson_i32
+	SystemDepHandler[types.WASMX_CONSENSUS_JSON_i32_1] = InstantiateWasmxConsensusJson_i32
+	SystemDepHandler[types.WASMX_CONSENSUS_JSON_i64_1] = InstantiateWasmxConsensusJson_i64
 
 	// language-specific imports
 	SystemDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = InitiateAssemblyScript

@@ -3,38 +3,23 @@ package vmmc
 import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
-	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
-
-func InstantiateWasmxMultiChainJson(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	wasmx, err := BuildWasmxMultichainJson1(context, rnh)
-	if err != nil {
-		return err
-	}
-	err = rnh.GetVm().RegisterModule(wasmx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func InstantiateWasmxMultiChainJsonMock(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
-	wasmx, err := BuildWasmxMultichainJson1Mock(context, rnh)
-	if err != nil {
-		return err
-	}
-	err = rnh.GetVm().RegisterModule(wasmx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 func Setup() {
 	vmtypes.DependenciesMap[HOST_WASMX_ENV_EXPORT] = true
-	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_MULTICHAIN_VER1, InstantiateWasmxMultiChainJson)
-	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_MULTICHAIN_VER1] = true
+	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_MULTICHAIN_VER1, InstantiateWasmxMultiChainJson_i32)
+	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_MULTICHAIN_VER1_i32, InstantiateWasmxMultiChainJson_i32)
+	vmtypes.SetSystemDepHandler(HOST_WASMX_ENV_MULTICHAIN_VER1_i64, InstantiateWasmxMultiChainJson_i64)
 
-	vmtypes.SetSystemDepHandlerMock(HOST_WASMX_ENV_MULTICHAIN_VER1, InstantiateWasmxMultiChainJsonMock)
+	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_MULTICHAIN_VER1] = true
+	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_MULTICHAIN_VER1_i32] = true
+	types.SUPPORTED_HOST_INTERFACES[HOST_WASMX_ENV_MULTICHAIN_VER1_i64] = true
+
+	vmtypes.SetSystemDepHandlerMock(HOST_WASMX_ENV_MULTICHAIN_VER1, InstantiateWasmxMultiChainJsonMock_i32)
+	vmtypes.SetSystemDepHandlerMock(HOST_WASMX_ENV_MULTICHAIN_VER1_i32, InstantiateWasmxMultiChainJsonMock_i32)
+	vmtypes.SetSystemDepHandlerMock(HOST_WASMX_ENV_MULTICHAIN_VER1_i64, InstantiateWasmxMultiChainJsonMock_i64)
+
 	types.PROTECTED_HOST_APIS[HOST_WASMX_ENV_MULTICHAIN_VER1] = true
+	types.PROTECTED_HOST_APIS[HOST_WASMX_ENV_MULTICHAIN_VER1_i32] = true
+	types.PROTECTED_HOST_APIS[HOST_WASMX_ENV_MULTICHAIN_VER1_i64] = true
 }

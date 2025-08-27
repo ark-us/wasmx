@@ -29,51 +29,51 @@ func main() {
 	switch {
 	case calld.SubmitProposal != nil:
 		res := gov.SubmitProposal(*calld.SubmitProposal)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.VoteWeighted != nil:
 		res := gov.VoteWeighted(*calld.VoteWeighted)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.Vote != nil:
 		res := gov.DoVote(*calld.Vote)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.Deposit != nil:
 		res := gov.DoDeposit(*calld.Deposit)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetProposal != nil:
 		res := gov.GetProposal(*calld.GetProposal)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetProposals != nil:
 		res := gov.GetProposals(*calld.GetProposals)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetTallyResult != nil:
 		res := gov.GetTallyResult(*calld.GetTallyResult)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetParams != nil:
 		res := gov.GetParams(*calld.GetParams)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetVote != nil:
 		res := gov.GetVote(*calld.GetVote)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetVotes != nil:
 		res := gov.GetVotes(*calld.GetVotes)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetDeposit != nil:
 		res := gov.GetDeposit(*calld.GetDeposit)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.GetDeposits != nil:
 		res := gov.GetDeposits(*calld.GetDeposits)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	}
 
@@ -82,12 +82,12 @@ func main() {
 	case calld.EndBlock != nil:
 		wasmx.OnlyInternal(gov.MODULE_NAME, "EndBlock")
 		res := gov.EndBlock(*calld.EndBlock)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case calld.InitGenesis != nil:
 		wasmx.OnlyInternal(gov.MODULE_NAME, "InitGenesis")
 		res := gov.InitGenesis(*calld.InitGenesis)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	}
 
@@ -104,7 +104,7 @@ func EndBlockExport() {
 	if err := json.Unmarshal(databz, &req); err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	wasmx.SetFinishData(gov.EndBlock(req))
+	wasmx.Finish(gov.EndBlock(req))
 }
 
 //go:wasm-module wasmx-gov
@@ -115,5 +115,5 @@ func InitGenesisExport() {
 	if err := json.Unmarshal(databz, &req); err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
-	wasmx.SetFinishData(gov.InitGenesis(req))
+	wasmx.Finish(gov.InitGenesis(req))
 }

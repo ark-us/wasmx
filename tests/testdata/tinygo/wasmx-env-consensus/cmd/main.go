@@ -1,8 +1,8 @@
 package cmd
 
 //go:wasm-module consensus
-//export wasmx_consensus_json_1
-func Wasmx_consensus_json_1() {}
+//export wasmx_consensus_json_i64_1
+func Wasmx_consensus_json_i64_1() {}
 
 //go:wasm-module wasmx
 //export memory_ptrlen_i64_1

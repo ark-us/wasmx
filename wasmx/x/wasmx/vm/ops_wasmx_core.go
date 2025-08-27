@@ -1,0 +1,657 @@
+package vm
+
+import (
+	"encoding/json"
+	"fmt"
+
+	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
+	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
+)
+
+type MigrateContractStateByStorageRequest struct {
+	ContractAddress   string                    `json:"contract_address"`
+	SourceStorageType types.ContractStorageType `json:"source_storage_type"`
+	TargetStorageType types.ContractStorageType `json:"target_storage_type"`
+}
+
+type MigrateContractStateByAddressRequest struct {
+	SourceContractAddress string                    `json:"source_contract_address"`
+	TargetContractAddress string                    `json:"target_contract_address"`
+	SourceStorageType     types.ContractStorageType `json:"source_storage_type"`
+	TargetStorageType     types.ContractStorageType `json:"target_storage_type"`
+}
+
+func migrateContractStateByStorageType(
+	ctx sdk.Context,
+	contractAddress sdk.AccAddress,
+	sourceStorage types.ContractStorageType,
+	targetStorage types.ContractStorageType,
+	getContractStore func(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store,
+) {
+	prefixStoreKey := types.GetContractStorePrefix(contractAddress)
+	prefixStoreSource := getContractStore(ctx, sourceStorage, prefixStoreKey)
+	prefixStoreTarget := getContractStore(ctx, targetStorage, prefixStoreKey)
+	iter := prefixStoreSource.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		prefixStoreTarget.Set(iter.Key(), iter.Value())
+		prefixStoreSource.Delete(iter.Key())
+	}
+}
+
+func migrateContractStateByAddress(
+	ctx sdk.Context,
+	sourceContractAddress sdk.AccAddress,
+	targetContractAddress sdk.AccAddress,
+	sourceStorageType types.ContractStorageType,
+	targetStorageType types.ContractStorageType,
+	getContractStore func(ctx sdk.Context, storageType types.ContractStorageType, prefixStoreKey []byte) prefix.Store,
+) {
+	prefixStoreKeySource := types.GetContractStorePrefix(sourceContractAddress)
+	prefixStoreKeyTarget := types.GetContractStorePrefix(targetContractAddress)
+	prefixStoreSource := getContractStore(ctx, sourceStorageType, prefixStoreKeySource)
+	prefixStoreTarget := getContractStore(ctx, targetStorageType, prefixStoreKeyTarget)
+	iter := prefixStoreSource.Iterator(nil, nil)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		prefixStoreTarget.Set(iter.Key(), iter.Value())
+		prefixStoreSource.Delete(iter.Key())
+	}
+}
+
+func coreMigrateContractStateByStorageType(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req MigrateContractStateByStorageRequest
+	err = json.Unmarshal(data, &req)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByStorageRequest cannot be unmarshalled")
+	}
+	addr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.ContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByStorageRequest cannot unmarshal contract address")
+	}
+
+	migrateContractStateByStorageType(ctx.Ctx, addr.Bytes(), req.SourceStorageType, req.TargetStorageType, ctx.GetCosmosHandler().ContractStore)
+
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreMigrateContractStateByAddress(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	data, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req MigrateContractStateByAddressRequest
+	err = json.Unmarshal(data, &req)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot be unmarshalled")
+	}
+	sourceAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.SourceContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot unmarshal source contract address")
+	}
+	targetAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.TargetContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("MigrateContractStateByAddressRequest cannot unmarshal target contract address")
+	}
+
+	migrateContractStateByAddress(ctx.Ctx, sourceAddr.Bytes(), targetAddr.Bytes(), req.SourceStorageType, req.TargetStorageType, ctx.GetCosmosHandler().ContractStore)
+
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+// call request -> call response
+func coreExternalCall(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	requestbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req vmtypes.CallRequest
+	err = json.Unmarshal(requestbz, &req)
+	if err != nil {
+		ctx.Ctx.Logger().Debug("unmarshalling CallRequest failed", "error", err)
+		return nil, err
+	}
+
+	var success int32
+	var returnData []byte
+
+	to := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.To)
+	from := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.From)
+	commonReq := req.ToCommon(from, to)
+
+	// Send funds
+	if req.Value.BitLen() > 0 {
+		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
+	}
+	if err != nil {
+		success = int32(2)
+	} else {
+		success, returnData = WasmxCall(ctx, commonReq)
+	}
+
+	response := vmtypes.CallResponse{
+		Success: uint8(success),
+		Data:    returnData,
+	}
+	responsebz, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}
+
+type GrpcRequest struct {
+	IpAddress string `json:"ip_address"`
+	Contract  []byte `json:"contract"`
+	Data      []byte `json:"data"` // should be []byte (base64 encoded)
+}
+
+type GrpcResponse struct {
+	Data  []byte `json:"data"`
+	Error string `json:"error"`
+}
+
+func coreWasmxGrpcRequest(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	databz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var data GrpcRequest
+	err = json.Unmarshal(databz, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	contractAddress := sdk.AccAddress(vmtypes.CleanupAddress(data.Contract))
+	contractAddressStr, err := ctx.CosmosHandler.AddressCodec().BytesToString(contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &networktypes.MsgGrpcSendRequest{
+		IpAddress: data.IpAddress,
+		Contract:  contractAddressStr,
+		Data:      []byte(data.Data),
+		Sender:    ctx.Env.Contract.Address.String(),
+	}
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+	errmsg := ""
+	if err != nil {
+		errmsg = err.Error()
+	} else {
+		ctx.Ctx.EventManager().EmitEvents(evs)
+	}
+	rres := networktypes.MsgGrpcSendRequestResponse{Data: make([]byte, 0)}
+	if res != nil {
+		err = rres.Unmarshal(res)
+		if err != nil {
+			return nil, err
+		}
+	}
+	resp := GrpcResponse{
+		Data:  rres.Data,
+		Error: errmsg,
+	}
+	respbz, err := json.Marshal(resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(respbz)
+}
+
+type StartTimeoutRequest struct {
+	Id       string `json:"id"`
+	Contract string `json:"contract"`
+	Delay    int64  `json:"delay"`
+	Args     []byte `json:"args"`
+}
+
+type CancelTimeoutRequest struct {
+	Id string `json:"id"`
+}
+
+type StartBackgroundProcessRequest struct {
+	Contract string `json:"contract"`
+	Args     []byte `json:"args"`
+}
+
+type StartBackgroundProcessResponse struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
+}
+
+type WriteToBackgroundProcessRequest struct {
+	Contract string `json:"contract"`
+	Data     []byte `json:"data"`
+	PtrFunc  string `json:"ptrFunc"`
+}
+
+type WriteToBackgroundProcessResponse struct {
+	Error string `json:"error"`
+}
+
+type ReadFromBackgroundProcessRequest struct {
+	Contract string `json:"contract"`
+	PtrFunc  string `json:"ptrFunc"`
+	LenFunc  string `json:"lenFunc"`
+}
+
+type ReadFromBackgroundProcessResponse struct {
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
+}
+
+// TODO move this to a restricted role
+// startTimeout(req: ArrayBuffer): i32
+func coreWasmxStartTimeout(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 0)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req StartTimeoutRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	msgtosend := &networktypes.MsgStartTimeoutRequest{
+		Id:       req.Id,
+		Sender:   ctx.Env.Contract.Address.String(),
+		Contract: req.Contract,
+		Delay:    req.Delay,
+		Args:     req.Args,
+	}
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
+		return nil, err
+	}
+	ctx.Ctx.EventManager().EmitEvents(evs)
+	var resp networktypes.MsgStartTimeoutResponse
+	err = resp.Unmarshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return returns, nil
+}
+
+// TODO move this to a restricted role
+func coreWasmxCancelTimeout(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 0)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req CancelTimeoutRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	msgtosend := &networktypes.MsgCancelTimeoutRequest{
+		Id:     req.Id,
+		Sender: ctx.Env.Contract.Address.String(),
+	}
+	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
+		return nil, err
+	}
+	ctx.Ctx.EventManager().EmitEvents(evs)
+	return returns, nil
+}
+
+// startBackgroundProcess(ArrayBuffer): ArrayBuffer
+func coreWasmxStartBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 0)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req StartBackgroundProcessRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	msgtosend := &networktypes.MsgStartBackgroundProcessRequest{
+		Sender:   ctx.Env.Contract.Address.String(), // TODO wasmx?
+		Contract: req.Contract,
+		Args:     req.Args,
+	}
+	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
+	if err != nil {
+		ctx.Ctx.Logger().Error(err.Error())
+		return nil, err
+	}
+	ctx.Ctx.EventManager().EmitEvents(evs)
+	var resp networktypes.MsgStartBackgroundProcessResponse
+	err = resp.Unmarshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return returns, nil
+}
+
+// writeToBackgroundProcess(ArrayBuffer): ArrayBuffer
+func coreWasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req WriteToBackgroundProcessRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	resp := WriteToBackgroundProcessResponse{
+		Error: "",
+	}
+
+	contractAddress, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.Contract)
+	if err != nil {
+		return nil, err
+	}
+
+	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
+	if err != nil {
+		resp.Error = err.Error()
+		ptr, err := prepareResponse(ctx, rnh, &resp)
+		if err != nil {
+			return nil, err
+		}
+		returns[0] = ptr
+		return returns, nil
+	}
+	proc, ok := procc.Processes[contractAddress.String()]
+	if !ok {
+		resp.Error = "process not existent"
+		ptr, err := prepareResponse(ctx, rnh, &resp)
+		if err != nil {
+			return nil, err
+		}
+		returns[0] = ptr
+		return returns, nil
+	}
+
+	vm := proc.RuntimeHandler.GetVm()
+	ptrGlobal := vm.FindGlobal(req.PtrFunc)
+	activeMemory, err := proc.RuntimeHandler.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = activeMemory.WriteRaw(ptrGlobal, req.Data)
+	if err != nil {
+		resp.Error = err.Error()
+	}
+
+	ptr, err := prepareResponse(ctx, rnh, &resp)
+	if err != nil {
+		return nil, err
+	}
+	returns[0] = ptr
+	return returns, nil
+}
+
+// readFromBackgroundProcess(ArrayBuffer): ArrayBuffer
+func coreWasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	returns := make([]interface{}, 1)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req ReadFromBackgroundProcessRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	resp := ReadFromBackgroundProcessResponse{
+		Data:  []byte{},
+		Error: "",
+	}
+
+	contractAddress, err := ctx.CosmosHandler.GetAddressOrRole(ctx.Ctx, req.Contract)
+	if err != nil {
+		return nil, err
+	}
+
+	procc, err := types.GetBackgroundProcesses(ctx.GoContextParent)
+	if err != nil {
+		resp.Error = err.Error()
+		ptr, err := prepareResponse(ctx, rnh, &resp)
+		if err != nil {
+			return nil, err
+		}
+		returns[0] = ptr
+		return returns, nil
+	}
+	proc, ok := procc.Processes[contractAddress.String()]
+	if !ok {
+		resp.Error = "process not existent"
+		ptr, err := prepareResponse(ctx, rnh, &resp)
+		if err != nil {
+			return nil, err
+		}
+		returns[0] = ptr
+		return returns, nil
+	}
+	vm := proc.RuntimeHandler.GetVm()
+	lengthGlobal := vm.FindGlobal(req.LenFunc)
+	ptrGlobal := vm.FindGlobal(req.PtrFunc)
+	activeMemory, err := proc.RuntimeHandler.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	byteArray, err := activeMemory.ReadRaw(ptrGlobal, lengthGlobal)
+	if err != nil {
+		resp.Error = err.Error()
+	} else {
+		resp.Data = byteArray
+	}
+	ptr, err := prepareResponse(ctx, rnh, &resp)
+	if err != nil {
+		return nil, err
+	}
+	returns[0] = ptr
+	return returns, nil
+}
+
+type GlobalStorageStoreRequest struct {
+	StoreKey string `json:"store_key"`
+	Key      []byte `json:"key"`
+	Value    []byte `json:"value"`
+}
+
+type GlobalStorageLoadRequest struct {
+	StoreKey string `json:"store_key"`
+	Key      []byte `json:"key"`
+}
+
+type GlobalStorageResetRequest struct {
+	StoreKey string `json:"store_key"`
+}
+
+type GlobalStorageResetResponse struct {
+	Error string `json:"error"`
+}
+
+type UpdateSystemCacheResponse struct {
+	Error string `json:"error"`
+}
+
+func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageStoreRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	store.Set(req.Key, req.Value)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreWasmxStorageLoadGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	data := store.Get(req.Key)
+	return rnh.AllocateWriteMem(data)
+}
+
+func coreWasmxStorageDeleteGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	store.Delete(req.Key)
+	returns := make([]interface{}, 0)
+	return returns, nil
+}
+
+func coreWasmxStorageHasGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageLoadRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	if req.Key == nil {
+		return make([]interface{}, 0), fmt.Errorf("storage key must not be nil")
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	haskey := store.Has(req.Key)
+	returns := make([]interface{}, 1)
+	returns[0] = int32(0)
+	if haskey {
+		returns[0] = int32(1)
+	}
+	return returns, nil
+}
+
+func coreWasmxStorageResetGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req GlobalStorageResetRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	storeKey := storetypes.NewKVStoreKey(req.StoreKey)
+	store := ctx.Ctx.KVStore(storeKey)
+	err = store.Reset()
+	resp := GlobalStorageResetResponse{Error: ""}
+	if err != nil {
+		resp.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}
+
+func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	resp := UpdateSystemCacheResponse{Error: ""}
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	var req types.SystemBootstrap
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		return nil, err
+	}
+	err = ctx.CosmosHandler.UpdateSystemCache(ctx.Ctx, &req)
+	if err != nil {
+		// TODO maybe we should shut down the system here, if the cache was not updated correctly
+		resp.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}

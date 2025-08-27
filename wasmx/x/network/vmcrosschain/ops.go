@@ -13,7 +13,6 @@ import (
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
-	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
@@ -322,18 +321,4 @@ func returnIsInExecutionResult(ctx *Context, rnh memc.RuntimeHandler, resp *MsgI
 		return nil, err
 	}
 	return rnh.AllocateWriteMem(respbz)
-}
-
-func BuildWasmxCrosschainJson1(ctx_ *vmtypes.Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	context := &Context{Context: ctx_}
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		vm.BuildFn("executeCrossChainTx", executeCrossChainTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("executeCrossChainQuery", executeCrossChainQuery, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("executeCrossChainQueryNonDeterministic", executeCrossChainQueryNonDeterministic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("executeCrossChainTxNonDeterministic", executeCrossChainTxNonDeterministic, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-		vm.BuildFn("isAtomicTxInExecution", isAtomicTxInExecution, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
-	}
-
-	return vm.BuildModule(rnh, HOST_WASMX_ENV_CROSSCHAIN, context, fndefs)
 }

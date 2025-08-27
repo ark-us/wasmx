@@ -476,7 +476,7 @@ func buildDefaultSubChainGenesisInternal(params Params, chainId string, currentL
 		return mc.InitSubChainDeterministicRequest{}
 	}
 	initChainReq := mc.RequestInitChain{
-		Time:            time.Now().UTC().Format(time.RFC3339Nano),
+		Time:            wasmx.GetTimestamp().UTC().Format(time.RFC3339Nano),
 		ChainID:         chainId,
 		ConsensusParams: consensusParams,
 		Validators:      []consensus.ValidatorUpdate{},
@@ -586,7 +586,7 @@ func initSubChainInternal(chaindata SubChainData, genTxs [][]byte, minValidatorC
 // validates minimum validator count, and marks it initialized. It does not persist or emit events.
 func initSubChainPrepareData(chaindata SubChainData, genTxs [][]byte, minValidatorCount int32) SubChainData {
 	// set timestamp
-	chaindata.Data.InitChainRequest.Time = time.Now().UTC().Format(time.RFC3339Nano)
+	chaindata.Data.InitChainRequest.Time = wasmx.GetTimestamp().UTC().Format(time.RFC3339Nano)
 
 	// work on a local genesis map copy
 	var genesisState mc.GenesisState
