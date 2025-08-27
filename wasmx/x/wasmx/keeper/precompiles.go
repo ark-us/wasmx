@@ -64,6 +64,8 @@ func (k *Keeper) BootstrapSystemContracts(
 		var err error
 		codeID := uint64(i + 1)
 
+		k.Logger(ctx).Debug("creating core contract", "label", contract.Label, "deps", contract.Deps, "address", contractAddress.String())
+
 		if contract.Native {
 			codeInfo = types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff)
 		} else {
@@ -80,7 +82,7 @@ func (k *Keeper) BootstrapSystemContracts(
 			contractInfo.StorageType = contract.StorageType
 		}
 
-		k.Logger(ctx).Debug("core contract", "label", contractInfo.Label, "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(codeInfo.CodeHash), "address", contractAddress.String())
+		k.Logger(ctx).Debug("core contract created", "label", contractInfo.Label, "deps", codeInfo.Deps, "code_id", codeID, "checksum", hex.EncodeToString(codeInfo.CodeHash), "address", contractAddress.String())
 
 		if contract.Role != nil && contract.Role.Role == types.ROLE_STORAGE_CONTRACTS {
 			registryAddress = contractAddress

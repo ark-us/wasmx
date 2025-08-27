@@ -22,6 +22,9 @@ func IsGzip(input []byte) bool {
 
 // IsWasm checks if the file contents are of wasm binary
 func IsWasm(input []byte) bool {
+	if len(input) < 4 {
+		return false
+	}
 	return bytes.Equal(input[:4], wasmIdent)
 }
 

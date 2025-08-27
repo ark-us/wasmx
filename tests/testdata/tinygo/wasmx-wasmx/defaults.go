@@ -103,7 +103,7 @@ const (
 	LEVEL0_LIBRARY                 = "level0_library"
 	LEVEL0_ONDEMAND_LIBRARY        = "level0_ondemand_library"
 	LOBBY_LIBRARY                  = "lobby_library"
-	INTERPRETER_EVM_SHANGHAI       = "interpreter_evm_shanghai"
+	INTERPRETER_EVM_SHANGHAI       = "interpreter_evm_shanghai_bz_1.0.0"
 	INTERPRETER_PYTHON             = "interpreter_python_utf8_0.2.0"
 	INTERPRETER_JS                 = "interpreter_javascript_utf8_0.1.0"
 	INTERPRETER_FSM                = "interpreter_state_machine_bz_0.1.0"
