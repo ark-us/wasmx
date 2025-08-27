@@ -5,9 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	wasmx "github.com/loredanacirstea/wasmx-env"
-	"github.com/loredanacirstea/wasmx-utils"
+	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
 const MODULE_NAME = "slashing"
@@ -53,21 +52,21 @@ var InfractionByEnum = map[Infraction]string{
 
 // GenesisState represents the slashing module's genesis state
 type GenesisState struct {
-	Params       Params                   `json:"params"`
-	SigningInfos []SigningInfo            `json:"signing_infos"`
-	MissedBlocks []ValidatorMissedBlocks  `json:"missed_blocks"`
+	Params       Params                  `json:"params"`
+	SigningInfos []SigningInfo           `json:"signing_infos"`
+	MissedBlocks []ValidatorMissedBlocks `json:"missed_blocks"`
 }
 
 // SigningInfo represents signing information for a validator
 type SigningInfo struct {
-	Address               wasmx.ConsensusAddressString `json:"address"` // e.g. mythosvalcons1....
-	ValidatorSigningInfo  ValidatorSigningInfo         `json:"validator_signing_info"`
+	Address              wasmx.ConsensusAddressString `json:"address"` // e.g. mythosvalcons1....
+	ValidatorSigningInfo ValidatorSigningInfo         `json:"validator_signing_info"`
 }
 
 // ValidatorSigningInfo represents detailed signing information for a validator
 type ValidatorSigningInfo struct {
-	Address             wasmx.ConsensusAddressString `json:"address"` // e.g. mythosvalcons1....
-	StartHeight         int64                        `json:"start_height"`          // Height at which validator was first a candidate OR was un-jailed
+	Address             wasmx.ConsensusAddressString `json:"address"`      // e.g. mythosvalcons1....
+	StartHeight         int64                        `json:"start_height"` // Height at which validator was first a candidate OR was un-jailed
 	IndexOffset         int64                        `json:"index_offset"`
 	JailedUntil         time.Time                    `json:"jailed_until"`
 	Tombstoned          bool                         `json:"tombstoned"`
@@ -122,12 +121,12 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &external); err != nil {
 		return err
 	}
-	
+
 	blocksWindow, err := strconv.ParseInt(external.SignedBlocksWindow, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	p.SignedBlocksWindow = blocksWindow
 	p.MinSignedPerWindow = external.MinSignedPerWindow
 	p.DowntimeJailDuration = external.DowntimeJailDuration

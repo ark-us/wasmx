@@ -112,42 +112,42 @@ type Metadata struct {
 
 // GenesisState represents the bank module's genesis state
 type GenesisState struct {
-	Params      Params                  `json:"params"`
-	Balances    []Balance               `json:"balances"`
-	Supply      []wasmx.Coin            `json:"supply"`
-	DenomInfo   []DenomDeploymentInfo   `json:"denom_info"`
-	SendEnabled []SendEnabled           `json:"send_enabled"`
+	Params      Params                `json:"params"`
+	Balances    []Balance             `json:"balances"`
+	Supply      []wasmx.Coin          `json:"supply"`
+	DenomInfo   []DenomDeploymentInfo `json:"denom_info"`
+	SendEnabled []SendEnabled         `json:"send_enabled"`
 }
 
 // DenomDeploymentInfoExternal is used for JSON serialization with string fields
 type DenomDeploymentInfoExternal struct {
-	Metadata   Metadata           `json:"metadata"`
-	CodeID     string             `json:"code_id"`
-	Admins     []string           `json:"admins"`
-	Minters    []string           `json:"minters"`
-	Contract   wasmx.Bech32String `json:"contract"`
-	BaseDenom  string             `json:"base_denom"`
+	Metadata  Metadata           `json:"metadata"`
+	CodeID    string             `json:"code_id"`
+	Admins    []string           `json:"admins"`
+	Minters   []string           `json:"minters"`
+	Contract  wasmx.Bech32String `json:"contract"`
+	BaseDenom string             `json:"base_denom"`
 }
 
 // DenomDeploymentInfo represents denomination deployment information
 type DenomDeploymentInfo struct {
-	Metadata   Metadata           `json:"metadata"`
-	CodeID     uint64             `json:"code_id"`
-	Admins     []string           `json:"admins"`
-	Minters    []string           `json:"minters"`
-	Contract   wasmx.Bech32String `json:"contract"`
-	BaseDenom  string             `json:"base_denom"`
+	Metadata  Metadata           `json:"metadata"`
+	CodeID    uint64             `json:"code_id"`
+	Admins    []string           `json:"admins"`
+	Minters   []string           `json:"minters"`
+	Contract  wasmx.Bech32String `json:"contract"`
+	BaseDenom string             `json:"base_denom"`
 }
 
 // MarshalJSON implements custom JSON marshaling for DenomDeploymentInfo
 func (ddi DenomDeploymentInfo) MarshalJSON() ([]byte, error) {
 	external := DenomDeploymentInfoExternal{
-		Metadata:   ddi.Metadata,
-		CodeID:     utils.U64toa(ddi.CodeID),
-		Admins:     ddi.Admins,
-		Minters:    ddi.Minters,
-		Contract:   ddi.Contract,
-		BaseDenom:  ddi.BaseDenom,
+		Metadata:  ddi.Metadata,
+		CodeID:    utils.U64toa(ddi.CodeID),
+		Admins:    ddi.Admins,
+		Minters:   ddi.Minters,
+		Contract:  ddi.Contract,
+		BaseDenom: ddi.BaseDenom,
 	}
 	return json.Marshal(external)
 }
@@ -158,12 +158,12 @@ func (ddi *DenomDeploymentInfo) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &external); err != nil {
 		return err
 	}
-	
+
 	codeID, err := strconv.ParseUint(external.CodeID, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	ddi.Metadata = external.Metadata
 	ddi.CodeID = codeID
 	ddi.Admins = external.Admins
@@ -201,9 +201,9 @@ type QueryBalanceResponse struct {
 }
 
 type QueryAllBalancesRequest struct {
-	Address       string            `json:"address"`
-	Pagination    wasmx.PageRequest `json:"pagination"`
-	ResolveDenom  bool              `json:"resolve_denom"`
+	Address      string            `json:"address"`
+	Pagination   wasmx.PageRequest `json:"pagination"`
+	ResolveDenom bool              `json:"resolve_denom"`
 }
 
 type QueryAllBalancesResponse struct {

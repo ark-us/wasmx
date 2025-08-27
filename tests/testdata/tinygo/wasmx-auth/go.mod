@@ -18,4 +18,3 @@ replace github.com/loredanacirstea/wasmx-env v0.0.0 => ../wasmx-env
 replace github.com/loredanacirstea/wasmx-env-utils v0.0.0 => ../wasmx-env-utils
 
 replace github.com/loredanacirstea/wasmx-utils v0.0.0 => ../wasmx-utils
-

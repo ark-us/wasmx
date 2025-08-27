@@ -68,13 +68,12 @@ func GetAddress() Bech32String {
 }
 
 func GetCurrentBlock() BlockInfo {
-	data := utils.PackedPtrToBytes(GetCurrentBlock_())
-	v := BlockInfo{}
-	err := json.Unmarshal(data, &v)
-	if err != nil {
-		panic(err)
-	}
-	return v
+    data := utils.PackedPtrToBytes(GetCurrentBlock_())
+    v := BlockInfo{}
+    if err := json.Unmarshal(data, &v); err != nil {
+        RevertWithModule("wasmx-env:GetCurrentBlock", err.Error())
+    }
+    return v
 }
 
 func Bech32StringToBytes(addrBech32 string) []byte {
@@ -101,7 +100,7 @@ func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, 
 
 	reqbz, err := json.Marshal(req)
 	if err != nil {
-		Revert([]byte(err.Error()))
+		RevertWithModule(moduleName+":CallInternal", err.Error())
 	}
 	ptr := utils.BytesToPackedPtr(reqbz)
 	packed := Call_(ptr)
@@ -129,13 +128,19 @@ func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int, mod
 
 // log a message to the console using _log.
 func Log(data []byte, topics [][32]byte) {
-	encoded, _ := json.Marshal(WasmxLog{Data: data, Topics: topics})
-	Log_(utils.BytesToPackedPtr(encoded))
+    encoded, err := json.Marshal(WasmxLog{Data: data, Topics: topics})
+    if err != nil {
+        RevertWithModule("wasmx-env:Log", err.Error())
+    }
+    Log_(utils.BytesToPackedPtr(encoded))
 }
 
 func EmitCosmosEvents(events []Event) {
-	bz, _ := json.Marshal(events)
-	EmitCosmosEvents_(utils.BytesToPackedPtr(bz))
+    bz, err := json.Marshal(events)
+    if err != nil {
+        RevertWithModule("wasmx-env:EmitCosmosEvents", err.Error())
+    }
+    EmitCosmosEvents_(utils.BytesToPackedPtr(bz))
 }
 
 func LoggerInfo(module string, msg string, parts []string) {
@@ -159,19 +164,22 @@ func LoggerDebugExtended(module string, msg string, parts []string) {
 }
 
 func LoggerDataToPackedPtr(msg string, parts []string) int64 {
-	databz, err := json.Marshal(&LoggerLog{Msg: msg, Parts: parts})
-	if err != nil {
-		Revert([]byte("cannot marshal LoggerLog" + err.Error()))
-	}
-	return utils.BytesToPackedPtr(databz)
+    databz, err := json.Marshal(&LoggerLog{Msg: msg, Parts: parts})
+    if err != nil {
+        RevertWithModule("wasmx-env:LoggerDataToPackedPtr", "cannot marshal LoggerLog: "+err.Error())
+    }
+    return utils.BytesToPackedPtr(databz)
 }
 
 // storage helpers
 func StorageDelete(key string) { StorageDelete_(utils.StringToPackedPtr(key)) }
 
 func StorageDeleteRangeReq(r StorageDeleteRange) {
-	bz, _ := json.Marshal(&r)
-	StorageDeleteRange_(utils.BytesToPackedPtr(bz))
+    bz, err := json.Marshal(&r)
+    if err != nil {
+        RevertWithModule("wasmx-env:StorageDeleteRangeReq", err.Error())
+    }
+    StorageDeleteRange_(utils.BytesToPackedPtr(bz))
 }
 
 // Storage helper functions to match AS versions
@@ -196,28 +204,40 @@ func SDeleteRange(keyStart, keyEnd string) {
 }
 
 func StorageLoadRangeReq(r StorageRange) []string {
-	bz, _ := json.Marshal(&r)
-	out := utils.PackedPtrToBytes(StorageLoadRange_(utils.BytesToPackedPtr(bz)))
-	var res []string
-	_ = json.Unmarshal(out, &res)
-	return res
+    bz, err := json.Marshal(&r)
+    if err != nil {
+        RevertWithModule("wasmx-env:StorageLoadRangeReq", err.Error())
+    }
+    out := utils.PackedPtrToBytes(StorageLoadRange_(utils.BytesToPackedPtr(bz)))
+    var res []string
+    if err := json.Unmarshal(out, &res); err != nil {
+        RevertWithModule("wasmx-env:StorageLoadRangeReq", err.Error())
+    }
+    return res
 }
 
 func StorageLoadRangePairsReq(r StorageRange) StoragePairs {
-	bz, _ := json.Marshal(&r)
-	out := utils.PackedPtrToBytes(StorageLoadRangePairs_(utils.BytesToPackedPtr(bz)))
-	var res StoragePairs
-	_ = json.Unmarshal(out, &res)
-	return res
+    bz, err := json.Marshal(&r)
+    if err != nil {
+        RevertWithModule("wasmx-env:StorageLoadRangePairsReq", err.Error())
+    }
+    out := utils.PackedPtrToBytes(StorageLoadRangePairs_(utils.BytesToPackedPtr(bz)))
+    var res StoragePairs
+    if err := json.Unmarshal(out, &res); err != nil {
+        RevertWithModule("wasmx-env:StorageLoadRangePairsReq", err.Error())
+    }
+    return res
 }
 
 func GetFinishData() []byte { return utils.PackedPtrToBytes(GetFinishData_()) }
 
 func GetAccount(addr Bech32String) Account {
-	bz := utils.PackedPtrToBytes(GetAccount_(utils.BytesToPackedPtr(Bech32StringToBytes(string(addr)))))
-	var acc Account
-	_ = json.Unmarshal(bz, &acc)
-	return acc
+    bz := utils.PackedPtrToBytes(GetAccount_(utils.BytesToPackedPtr(Bech32StringToBytes(string(addr)))))
+    var acc Account
+    if err := json.Unmarshal(bz, &acc); err != nil {
+        RevertWithModule("wasmx-env:GetAccount", err.Error())
+    }
+    return acc
 }
 
 func ExecuteCosmosMsg(msg string, moduleName ...string) CallResponse {
@@ -226,40 +246,71 @@ func ExecuteCosmosMsg(msg string, moduleName ...string) CallResponse {
 		module = moduleName[0]
 	}
 	LoggerDebugExtended(module+":wasmx_env", "executeCosmosMsg", []string{"msg", msg})
-	out := utils.PackedPtrToBytes(ExecuteCosmosMsg_(utils.StringToPackedPtr(msg)))
-	LoggerDebugExtended(module+":wasmx_env", "executeCosmosMsg", []string{"response", string(out)})
-	var resp CallResponse
-	_ = json.Unmarshal(out, &resp)
-	return resp
+    out := utils.PackedPtrToBytes(ExecuteCosmosMsg_(utils.StringToPackedPtr(msg)))
+    LoggerDebugExtended(module+":wasmx_env", "executeCosmosMsg", []string{"response", string(out)})
+    var resp CallResponse
+    if err := json.Unmarshal(out, &resp); err != nil {
+        RevertWithModule(module+":ExecuteCosmosMsg", err.Error())
+    }
+    return resp
+}
+
+// CallEvm mirrors AS callEvm: do not base64-encode calldata, send as-is
+func CallEvm(req CallRequest, moduleName ...string) CallResponse {
+	mod := ""
+	if len(moduleName) > 0 {
+		mod = moduleName[0]
+	}
+	LoggerDebugExtended(mod+":wasmx_env", "call", []string{"to", req.To, "calldata", req.Calldata})
+    bz, err := json.Marshal(&req)
+    if err != nil {
+        RevertWithModule(mod+":CallEvm", err.Error())
+    }
+    out := utils.PackedPtrToBytes(Call_(utils.BytesToPackedPtr(bz)))
+    var resp CallResponse
+    if err := json.Unmarshal(out, &resp); err != nil {
+        RevertWithModule(mod+":CallEvm", err.Error())
+    }
+    return resp
 }
 
 func CreateAccount(req CreateAccountRequest, moduleName ...string) Bech32String {
-	// Msg is json string, must be base64-encoded like AS SDK
-	req.Msg = base64.StdEncoding.EncodeToString([]byte(req.Msg))
-	bz, _ := json.Marshal(&req)
+    // Msg is json string, must be base64-encoded like AS SDK
+    req.Msg = base64.StdEncoding.EncodeToString([]byte(req.Msg))
+    bz, err := json.Marshal(&req)
+    if err != nil {
+        RevertWithModule("wasmx-env:CreateAccount", err.Error())
+    }
 	module := ""
 	if len(moduleName) > 0 {
 		module = moduleName[0]
 	}
 	LoggerDebugExtended(module+":wasmx_env", "createAccount", []string{"request", string(bz)})
-	out := utils.PackedPtrToBytes(CreateAccount_(utils.BytesToPackedPtr(bz)))
-	var resp CreateAccountResponse
-	_ = json.Unmarshal(out, &resp)
-	return resp.Address
+    out := utils.PackedPtrToBytes(CreateAccount_(utils.BytesToPackedPtr(bz)))
+    var resp CreateAccountResponse
+    if err := json.Unmarshal(out, &resp); err != nil {
+        RevertWithModule("wasmx-env:CreateAccount", err.Error())
+    }
+    return resp.Address
 }
 
 func Create2Account(req Create2AccountRequest, moduleName ...string) Bech32String {
-	req.Msg = base64.StdEncoding.EncodeToString([]byte(req.Msg))
-	bz, _ := json.Marshal(&req)
+    req.Msg = base64.StdEncoding.EncodeToString([]byte(req.Msg))
+    bz, err := json.Marshal(&req)
+    if err != nil {
+        RevertWithModule("wasmx-env:Create2Account", err.Error())
+    }
 	module := ""
 	if len(moduleName) > 0 {
 		module = moduleName[0]
 	}
 	LoggerDebugExtended(module+":wasmx_env", "create2Account", []string{"request", string(bz)})
-	out := utils.PackedPtrToBytes(CreateAccount2_(utils.BytesToPackedPtr(bz)))
-	var resp Create2AccountResponse
-	_ = json.Unmarshal(out, &resp)
-	return resp.Address
+    out := utils.PackedPtrToBytes(CreateAccount2_(utils.BytesToPackedPtr(bz)))
+    var resp Create2AccountResponse
+    if err := json.Unmarshal(out, &resp); err != nil {
+        RevertWithModule("wasmx-env:Create2Account", err.Error())
+    }
+    return resp.Address
 }
 
 // crypto
@@ -269,12 +320,15 @@ func Sha256(dataBase64 string) string {
 }
 
 func MerkleHashSlices(slices []string) string {
-	payload := struct {
-		Slices []string `json:"slices"`
-	}{Slices: slices}
-	bz, _ := json.Marshal(&payload)
-	out := utils.PackedPtrToBytes(MerkleHash_(utils.BytesToPackedPtr(bz)))
-	return base64.StdEncoding.EncodeToString(out)
+    payload := struct {
+        Slices []string `json:"slices"`
+    }{Slices: slices}
+    bz, err := json.Marshal(&payload)
+    if err != nil {
+        RevertWithModule("wasmx-env:MerkleHashSlices", err.Error())
+    }
+    out := utils.PackedPtrToBytes(MerkleHash_(utils.BytesToPackedPtr(bz)))
+    return base64.StdEncoding.EncodeToString(out)
 }
 
 func Ed25519Sign(privKey []byte, msg []byte) []byte {
@@ -325,19 +379,26 @@ func VerifyCosmosTx(encoded []byte) []byte {
 
 // VerifyCosmosTxFromBase64 verifies a cosmos transaction from base64-encoded data
 func VerifyCosmosTxFromBase64(encodedTx string) VerifyCosmosTxResponse {
-	data, _ := base64.StdEncoding.DecodeString(encodedTx)
-	result := VerifyCosmosTx(data)
-	var resp VerifyCosmosTxResponse
-	_ = json.Unmarshal(result, &resp)
-	return resp
+    data, err := base64.StdEncoding.DecodeString(encodedTx)
+    if err != nil {
+        RevertWithModule("wasmx-env:VerifyCosmosTxFromBase64", err.Error())
+    }
+    result := VerifyCosmosTx(data)
+    var resp VerifyCosmosTxResponse
+    if err := json.Unmarshal(result, &resp); err != nil {
+        RevertWithModule("wasmx-env:VerifyCosmosTxFromBase64", err.Error())
+    }
+    return resp
 }
 
 // DecodeCosmosTxFromBytes decodes a cosmos transaction from bytes to JSON
 func DecodeCosmosTxFromBytes(data []byte) SignedTransaction {
-	result := DecodeCosmosTxToJson(data)
-	var tx SignedTransaction
-	_ = json.Unmarshal(result, &tx)
-	return tx
+    result := DecodeCosmosTxToJson(data)
+    var tx SignedTransaction
+    if err := json.Unmarshal(result, &tx); err != nil {
+        RevertWithModule("wasmx-env:DecodeCosmosTxFromBytes", err.Error())
+    }
+    return tx
 }
 
 func GetTimestamp() time.Time {

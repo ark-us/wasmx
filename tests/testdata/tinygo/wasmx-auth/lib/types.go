@@ -16,26 +16,26 @@ const TypeUrl_ModuleAccount = "/mythos.cosmosmod.v1.ModuleAccount"
 
 // GenesisState represents the auth module's genesis state
 type GenesisState struct {
-	Params                 Params         `json:"params"`
-	Accounts               []wasmx.AnyWrap `json:"accounts"`
-	BaseAccountTypeurl     string         `json:"base_account_typeurl"`
-	ModuleAccountTypeurl   string         `json:"module_account_typeurl"`
+	Params               Params          `json:"params"`
+	Accounts             []wasmx.AnyWrap `json:"accounts"`
+	BaseAccountTypeurl   string          `json:"base_account_typeurl"`
+	ModuleAccountTypeurl string          `json:"module_account_typeurl"`
 }
 
 // BaseAccountExternal is used for JSON serialization with string fields
 type BaseAccountExternal struct {
-	Address       wasmx.Bech32String  `json:"address"`
-	PubKey        *wasmx.PublicKey    `json:"pub_key"`
-	AccountNumber string              `json:"account_number"`
-	Sequence      string              `json:"sequence"`
+	Address       wasmx.Bech32String `json:"address"`
+	PubKey        *wasmx.PublicKey   `json:"pub_key"`
+	AccountNumber string             `json:"account_number"`
+	Sequence      string             `json:"sequence"`
 }
 
 // BaseAccount represents a basic account
 type BaseAccount struct {
-	Address       wasmx.Bech32String  `json:"address"`
-	PubKey        *wasmx.PublicKey    `json:"pub_key"`
-	AccountNumber uint64              `json:"account_number"`
-	Sequence      uint64              `json:"sequence"`
+	Address       wasmx.Bech32String `json:"address"`
+	PubKey        *wasmx.PublicKey   `json:"pub_key"`
+	AccountNumber uint64             `json:"account_number"`
+	Sequence      uint64             `json:"sequence"`
 }
 
 // NewBaseAccount creates a new BaseAccount
@@ -65,17 +65,17 @@ func (ba *BaseAccount) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &external); err != nil {
 		return err
 	}
-	
+
 	accountNo, err := strconv.ParseUint(external.AccountNumber, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	seq, err := strconv.ParseUint(external.Sequence, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	ba.Address = external.Address
 	ba.PubKey = external.PubKey
 	ba.AccountNumber = accountNo
@@ -98,10 +98,10 @@ type ModuleCredential struct {
 
 // ParamsExternal is used for JSON serialization with string fields
 type ParamsExternal struct {
-	MaxMemoCharacters     string `json:"max_memo_characters"`
-	TxSigLimit            string `json:"tx_sig_limit"`
-	TxSizeCostPerByte     string `json:"tx_size_cost_per_byte"`
-	SigVerifyCostEd25519  string `json:"sig_verify_cost_ed25519"`
+	MaxMemoCharacters      string `json:"max_memo_characters"`
+	TxSigLimit             string `json:"tx_sig_limit"`
+	TxSizeCostPerByte      string `json:"tx_size_cost_per_byte"`
+	SigVerifyCostEd25519   string `json:"sig_verify_cost_ed25519"`
 	SigVerifyCostSecp256k1 string `json:"sig_verify_cost_secp256k1"`
 }
 
@@ -132,32 +132,32 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &external); err != nil {
 		return err
 	}
-	
+
 	mmc, err := strconv.ParseUint(external.MaxMemoCharacters, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	tsl, err := strconv.ParseUint(external.TxSigLimit, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	tscb, err := strconv.ParseUint(external.TxSizeCostPerByte, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	svced, err := strconv.ParseUint(external.SigVerifyCostEd25519, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	svcsecp, err := strconv.ParseUint(external.SigVerifyCostSecp256k1, 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	p.MaxMemoCharacters = mmc
 	p.TxSigLimit = tsl
 	p.TxSizeCostPerByte = tscb

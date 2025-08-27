@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -92,18 +91,6 @@ func FinalizeBlock(req WrapRequestFinalizeBlock) (ResponseFinalizeBlockWrap, err
 		// data is base64-encoded JSON in host response
 		var inner ResponseFinalizeBlock
 		if err := json.Unmarshal(wrap.Data, &inner); err != nil {
-			// Some hosts may send string base64; guard by decoding if needed
-			dec := wrap.Data
-			// try to decode if it looks like a string
-			var asString string
-			if err2 := json.Unmarshal(wrap.Data, &asString); err2 == nil {
-				if bz, err3 := base64.StdEncoding.DecodeString(asString); err3 == nil {
-					if err4 := json.Unmarshal(bz, &inner); err4 == nil {
-						resp.Data = &inner
-						return resp, nil
-					}
-				}
-			}
 			return ResponseFinalizeBlockWrap{}, fmt.Errorf("decode finalize block data: %w", err)
 		}
 		resp.Data = &inner
@@ -127,15 +114,6 @@ func BeginBlock(req RequestFinalizeBlock) (ResponseBeginBlockWrap, error) {
 	if wrap.Error == "" && len(wrap.Data) > 0 {
 		var inner ResponseBeginBlock
 		if err := json.Unmarshal(wrap.Data, &inner); err != nil {
-			var asString string
-			if err2 := json.Unmarshal(wrap.Data, &asString); err2 == nil {
-				if bz, err3 := base64.StdEncoding.DecodeString(asString); err3 == nil {
-					if err4 := json.Unmarshal(bz, &inner); err4 == nil {
-						resp.Data = &inner
-						return resp, nil
-					}
-				}
-			}
 			return ResponseBeginBlockWrap{}, fmt.Errorf("decode begin block data: %w", err)
 		}
 		resp.Data = &inner

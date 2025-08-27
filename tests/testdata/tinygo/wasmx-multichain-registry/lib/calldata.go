@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env"
+	xchain "github.com/loredanacirstea/wasmx-env-crosschain"
 )
 
 type CallData struct {
@@ -28,9 +29,9 @@ type CallData struct {
 	ConvertAddressByChainId        *QueryConvertAddressByChainIdRequest     `json:"ConvertAddressByChainId,omitempty"`
 
 	// crosschain
-	CrossChainTx                    *wasmx.MsgCrossChainCallRequest `json:"CrossChainTx,omitempty"`
-	CrossChainQuery                 *wasmx.MsgCrossChainCallRequest `json:"CrossChainQuery,omitempty"`
-	CrossChainQueryNonDeterministic *wasmx.MsgCrossChainCallRequest `json:"CrossChainQueryNonDeterministic,omitempty"`
+	CrossChainTx                    *xchain.MsgCrossChainCallRequest `json:"CrossChainTx,omitempty"`
+	CrossChainQuery                 *xchain.MsgCrossChainCallRequest `json:"CrossChainQuery,omitempty"`
+	CrossChainQueryNonDeterministic *xchain.MsgCrossChainCallRequest `json:"CrossChainQueryNonDeterministic,omitempty"`
 }
 
 func GetCallDataWrap() (CallData, error) {

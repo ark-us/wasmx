@@ -1,6 +1,8 @@
 module github.com/loredanacirstea/wasmx-env-smtp
 
-go 1.21
+go 1.24
+
+toolchain go1.24.4
 
 require github.com/loredanacirstea/wasmx-env-utils v0.0.0
 

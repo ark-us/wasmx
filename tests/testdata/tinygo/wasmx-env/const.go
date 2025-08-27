@@ -1,6 +1,5 @@
 package wasmx
 
 const (
-    DEFAULT_GAS_TX int64 = 30000000
+	DEFAULT_GAS_TX int64 = 30000000
 )
-
