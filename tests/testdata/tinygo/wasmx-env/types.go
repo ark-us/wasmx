@@ -8,7 +8,6 @@ import (
 
 // Type aliases
 type HexString string
-type Base64String string
 type ConsensusAddressString string
 type ValidatorAddressString string
 
@@ -82,7 +81,7 @@ type RoleChanged struct {
 type Role struct {
 	Role        string              `json:"role"`
 	StorageType ContractStorageType `json:"storage_type"`
-	Primary     int                 `json:"primary"`
+	Primary     int32               `json:"primary"`
 	Multiple    bool                `json:"multiple"`
 	Labels      []string            `json:"labels"`
 	Addresses   []string            `json:"addresses"`
@@ -226,7 +225,7 @@ type BlockInfo struct {
 }
 
 type WasmxExecutionMessage struct {
-	Data Base64String `json:"data"`
+	Data []byte `json:"data"`
 }
 
 type MerkleSlices struct {
@@ -256,20 +255,20 @@ const (
 
 // PublicKey types
 type Ed25519PubKey struct {
-	Key Base64String `json:"key"`
+	Key []byte `json:"key"`
 }
 
 type Secp256k1PubKey struct {
-	Key Base64String `json:"key"`
+	Key []byte `json:"key"`
 }
 
 type DefaultPubKey struct {
-	Key Base64String `json:"key"`
+	Key []byte `json:"key"`
 }
 
 type PublicKey struct {
-	TypeUrl string       `json:"type_url"`
-	Value   Base64String `json:"value"`
+	TypeUrl string `json:"type_url"`
+	Value   []byte `json:"value"`
 }
 
 // ModeInfo types
@@ -288,8 +287,8 @@ type ModeInfo struct {
 
 // Transaction types
 type TxMessage struct {
-	TypeUrl string       `json:"type_url"`
-	Value   Base64String `json:"value"`
+	TypeUrl string `json:"type_url"`
+	Value   []byte `json:"value"`
 }
 
 type TxBody struct {
@@ -325,9 +324,9 @@ type AuthInfo struct {
 }
 
 type SignedTransaction struct {
-	Body       TxBody         `json:"body"`
-	AuthInfo   AuthInfo       `json:"auth_info"`
-	Signatures []Base64String `json:"signatures"`
+	Body       TxBody   `json:"body"`
+	AuthInfo   AuthInfo `json:"auth_info"`
+	Signatures [][]byte `json:"signatures"`
 }
 
 // Pagination
@@ -351,25 +350,25 @@ type VerifyCosmosTxResponse struct {
 
 // Cross-chain types
 type MsgCrossChainCallRequest struct {
-	From         string       `json:"from"`
-	To           string       `json:"to"`
-	Msg          Base64String `json:"msg"`
-	Funds        []Coin       `json:"funds"`
-	Dependencies []string     `json:"dependencies"`
-	FromChainId  string       `json:"from_chain_id"`
-	ToChainId    string       `json:"to_chain_id"`
-	IsQuery      bool         `json:"is_query"`
-	TimeoutMs    uint64       `json:"timeout_ms"`
+	From         string   `json:"from"`
+	To           string   `json:"to"`
+	Msg          []byte   `json:"msg"`
+	Funds        []Coin   `json:"funds"`
+	Dependencies []string `json:"dependencies"`
+	FromChainId  string   `json:"from_chain_id"`
+	ToChainId    string   `json:"to_chain_id"`
+	IsQuery      bool     `json:"is_query"`
+	TimeoutMs    uint64   `json:"timeout_ms"`
 }
 
 type MsgCrossChainCallResponse struct {
-	Error string       `json:"error"`
-	Data  Base64String `json:"data"`
+	Error string `json:"error"`
+	Data  []byte `json:"data"`
 }
 
 type MsgIsAtomicTxInExecutionRequest struct {
-	SubChainId string       `json:"sub_chain_id"`
-	TxHash     Base64String `json:"tx_hash"`
+	SubChainId string `json:"sub_chain_id"`
+	TxHash     []byte `json:"tx_hash"`
 }
 
 type MsgIsAtomicTxInExecutionResponse struct {
@@ -383,45 +382,51 @@ type CodeOrigin struct {
 }
 
 type CodeMetadata struct {
-	Name       string       `json:"name"`
-	Categ      []string     `json:"categ"`
-	Icon       string       `json:"icon"`
-	Author     string       `json:"author"`
-	Site       string       `json:"site"`
-	Abi        Base64String `json:"abi"`
-	JsonSchema string       `json:"json_schema"`
-	Origin     *CodeOrigin  `json:"origin"`
+	Name       string      `json:"name"`
+	Categ      []string    `json:"categ"`
+	Icon       string      `json:"icon"`
+	Author     string      `json:"author"`
+	Site       string      `json:"site"`
+	Abi        []byte      `json:"abi"`
+	JsonSchema string      `json:"json_schema"`
+	Origin     *CodeOrigin `json:"origin"`
 }
 
 type ContractStorage struct {
-	Key   HexString    `json:"key"`
-	Value Base64String `json:"value"`
+	Key   HexString `json:"key"`
+	Value []byte    `json:"value"`
 }
 
 type CodeInfo struct {
-	CodeHash                      Base64String `json:"code_hash"`
+	CodeHash                      []byte       `json:"code_hash"`
 	Creator                       Bech32String `json:"creator"`
 	Deps                          []string     `json:"deps"`
 	Pinned                        bool         `json:"pinned"`
 	MeteringOff                   bool         `json:"metering_off"`
 	Metadata                      CodeMetadata `json:"metadata"`
-	InterpretedBytecodeDeployment Base64String `json:"interpreted_bytecode_deployment"`
-	InterpretedBytecodeRuntime    Base64String `json:"interpreted_bytecode_runtime"`
-	RuntimeHash                   Base64String `json:"runtime_hash"`
+	InterpretedBytecodeDeployment []byte       `json:"interpreted_bytecode_deployment"`
+	InterpretedBytecodeRuntime    []byte       `json:"interpreted_bytecode_runtime"`
+	RuntimeHash                   []byte       `json:"runtime_hash"`
 }
 
 type SystemContract struct {
-	Address       string            `json:"address"`
-	Label         string            `json:"label"`
-	StorageType   string            `json:"storage_type"`
-	InitMessage   Base64String      `json:"init_message"`
-	Pinned        bool              `json:"pinned"`
-	MeteringOff   bool              `json:"metering_off"`
-	Native        bool              `json:"native"`
-	Role          string            `json:"role"`
-	Deps          []string          `json:"deps"`
-	Metadata      CodeMetadata      `json:"metadata"`
-	ContractState []ContractStorage `json:"contract_state"`
+	Address       string              `json:"address"`
+	Label         string              `json:"label"`
+	StorageType   string              `json:"storage_type"`
+	InitMessage   []byte              `json:"init_message"`
+	Pinned        bool                `json:"pinned"`
+	MeteringOff   bool                `json:"metering_off"`
+	Native        bool                `json:"native"`
+	Role          *SystemContractRole `json:"role,omitempty"`
+	Deps          []string            `json:"deps"`
+	Metadata      CodeMetadata        `json:"metadata"`
+	ContractState []ContractStorage   `json:"contract_state"`
+}
+
+type SystemContractRole struct {
+	Role    string `json:"role"`
+	Label   string `json:"label"`
+	Primary bool   `json:"primary"`
 }
 
 type ContractInfo struct {
@@ -429,7 +434,7 @@ type ContractInfo struct {
 	Creator     Bech32String `json:"creator"`
 	Label       string       `json:"label"`
 	StorageType string       `json:"storage_type"`
-	InitMessage Base64String `json:"init_message"`
+	InitMessage []byte       `json:"init_message"`
 	Provenance  string       `json:"provenance"`
 	IbcPortId   string       `json:"ibc_port_id"`
 }

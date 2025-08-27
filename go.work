@@ -9,12 +9,21 @@ use (
 	./tests
 	./wasmx-vmimap
 	./wasmx-vmsmtp
-	./tests/testdata/tinygo/emailchain
+	./tests/testdata/tinygo/wasmx-consensus
+	./tests/testdata/tinygo/wasmx-multichain-registry
 	./tests/testdata/tinygo/wasmx-env
 	./tests/testdata/tinygo/wasmx-env-httpclient
 	./tests/testdata/tinygo/wasmx-env-imap
 	./tests/testdata/tinygo/wasmx-env-smtp
 	./tests/testdata/tinygo/wasmx-utils
+	./tests/testdata/tinygo/wasmx-auth
+	./tests/testdata/tinygo/wasmx-bank
+	./tests/testdata/tinygo/wasmx-staking
+	./tests/testdata/tinygo/wasmx-slashing
+	./tests/testdata/tinygo/wasmx-distribution
+	./tests/testdata/tinygo/wasmx-gov
+	./tests/testdata/tinygo/wasmx-gov-continuous
+	./tests/testdata/tinygo/emailchain
 )
 
 replace (
