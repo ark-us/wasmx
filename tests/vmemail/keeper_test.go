@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -95,15 +94,12 @@ func (suite *KeeperTestSuite) SetupSuite() {
 	switch wasmRuntime {
 	case "wasmedge":
 		// suite.WasmVmMeta = wasmedge.WasmEdgeVmMeta{}
-		// suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wasmedge")
+		// suite.CompiledCacheDir = ut.GetCompiledCacheDir(mydir, "wasmedge")
 		panic("wasmedge not activated")
-	case "wazero":
-		suite.WasmVmMeta = wazero.WazeroVmMeta{}
-		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
 	default:
 		// default runtime
 		suite.WasmVmMeta = wazero.WazeroVmMeta{}
-		suite.CompiledCacheDir = path.Join(mydir, "../", "codes_compiled", "wazero")
+		suite.CompiledCacheDir = ut.GetCompiledCacheDir(mydir, "wazero")
 	}
 
 	suite.SetupChains()

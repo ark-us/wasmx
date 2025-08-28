@@ -243,6 +243,7 @@ func (k *WasmxEngine) Cleanup() {
 
 func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFolderPath string, meteringOff bool) error {
 	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
+	// if we do not find a precompiled contract in our cache, we compile it here
 	if compiledFolderPath != "" {
 		compiledPath := k.build_path(compiledFolderPath, checksum)
 		err := copyFile(compiledPath, pinnedPath)

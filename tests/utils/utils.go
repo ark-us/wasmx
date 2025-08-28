@@ -2,6 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path"
+	"runtime"
 	"time"
 
 	"cosmossdk.io/math"
@@ -93,4 +97,18 @@ var wasmedgeCompiled = map[string]bool{
 	// wasmxtypes.CHAT_VERIFIER_v001:             true,
 	// wasmxtypes.HOOKS_v001:                     true,
 	// wasmxtypes.HOOKS_v001:                     true,
+}
+
+func GetCompiledCacheDir(rootdir string, wasmRuntime string) string {
+	path := path.Join(rootdir, "../", "codes_compiled", wasmRuntime, runtime.GOOS+"-"+runtime.GOARCH)
+	if dirExists(path) {
+		fmt.Println("tests use cached precompiles:", GetCompiledCacheDir)
+		return path
+	}
+	return ""
+}
+
+func dirExists(p string) bool {
+	info, err := os.Stat(p)
+	return err == nil && info.IsDir()
 }
