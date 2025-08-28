@@ -5,7 +5,7 @@ import (
 	lib "github.com/loredanacirstea/wasmx-multichain-registry/lib"
 )
 
-//go:wasm-module consensus
+//go:wasm-module wasmx
 //export memory_ptrlen_i64_1
 func Memory_ptrlen_i64_1() {}
 
