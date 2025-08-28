@@ -63,7 +63,7 @@ func BuildChainConfig(denomUnit string, baseDenomUnit uint32, chainBaseName stri
 func GetDefaultConsensusParams() consensus.ConsensusParams {
 	block := consensus.BlockParams{
 		MaxBytes: 22020096,
-		MaxGas:   30000000,
+		MaxGas:   3000000000,
 	}
 	evidence := consensus.EvidenceParams{
 		MaxAgeNumBlocks: 100000,

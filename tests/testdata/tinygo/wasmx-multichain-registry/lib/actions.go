@@ -239,7 +239,7 @@ func CrossChainTx(req xchain.MsgCrossChainCallRequest) []byte {
 	// Prepare addresses for chain prefixes
 	p := prepareCrossChainCallRequest(req)
 	if p == nil {
-		r := xchain.MsgCrossChainCallResponse{Error: "target chain configuration not found"}
+		r := xchain.MsgCrossChainCallResponse{Error: fmt.Sprintf("target chain configuration not found: %s", req.ToChainId)}
 		bz, err := json.Marshal(&r)
 		if err != nil {
 			Revert("failed to marshal cross chain error response: " + err.Error())
@@ -329,11 +329,11 @@ func prepareCrossChainCallRequest(req xchain.MsgCrossChainCallRequest) *xchain.M
 		return nil
 	}
 	req.FromChainId = wasmx.GetChainId()
-	// req.From is bech32 bytes for target chain prefix
-	req.From = string(wasmx.AddrHumanizeMC([]byte(string(caller)), toCfg.Bech32PrefixAccAddr))
+	// req.From is bech32 string in target chain prefix
+	req.From = wasmx.AddrHumanizeMC([]byte(string(caller)), toCfg.Bech32PrefixAccAddr)
 	// canonicalize and re-humanize to target prefix
-	bz := wasmx.AddrCanonicalizeMC(string(req.To))
-	req.To = string(wasmx.AddrHumanizeMC(bz, toCfg.Bech32PrefixAccAddr))
+	bz := wasmx.AddrCanonicalizeMC(req.To)
+	req.To = wasmx.AddrHumanizeMC(bz, toCfg.Bech32PrefixAccAddr)
 	req.TimeoutMs = CROSS_CHAIN_TIMEOUT_MS
 	return &req
 }
