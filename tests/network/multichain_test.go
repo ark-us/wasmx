@@ -59,8 +59,9 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
 	bankAddressStr := appA.MustAccAddressToString(bankAddress)
 	newaccStr := appA.MustAccAddressToString(newacc.Address)
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 
-	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
+	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, senderPrefixed.String(), newaccStr, config.BaseDenom)
 	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
 
 	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
