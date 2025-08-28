@@ -33,6 +33,8 @@ type Config struct {
 	JsonRpc jsonrpcconfig.JsonRpcConfig `mapstructure:"json-rpc"`
 	TLS     TLSConfig                   `mapstructure:"tls"`
 	Network networkconfig.NetworkConfig `mapstructure:"network"`
+	// should be false; we need this for testing
+	TestingModeDisableStateSync bool `mapstructure:"testing_mode_disable_statesync"`
 }
 
 // TLSConfig defines the certificate and matching private key for the server.
@@ -149,10 +151,11 @@ func GetConfig(v *viper.Viper) (Config, error) {
 	}
 
 	return Config{
-		Config:  cfg,
-		Websrv:  websrvConf,
-		JsonRpc: jsonRpcConf,
-		Network: networkConf,
+		Config:                      cfg,
+		Websrv:                      websrvConf,
+		JsonRpc:                     jsonRpcConf,
+		Network:                     networkConf,
+		TestingModeDisableStateSync: false,
 	}, nil
 }
 

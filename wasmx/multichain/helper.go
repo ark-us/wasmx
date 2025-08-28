@@ -15,9 +15,9 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/server"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 
+	mapi "github.com/loredanacirstea/wasmx/api"
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	mctx "github.com/loredanacirstea/wasmx/context"
 	menc "github.com/loredanacirstea/wasmx/encoding"
@@ -44,11 +44,15 @@ func (m DefaultAppOptions) Set(key string, value interface{}) {
 
 type MockApiCtx struct{}
 
+func (ac *MockApiCtx) SetMultiapp(app *mcfg.MultiChainApp) {
+	// ac.Multiapp = app
+}
+
 func (*MockApiCtx) BuildConfigs(
 	chainId string,
 	chainCfg *menc.ChainConfig,
 	ports mctx.NodePorts,
-) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
+) (mcfg.MythosApp, *sdkserver.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
 	return nil, nil, client.Context{}, nil, nil, nil, fmt.Errorf("ApiCtx.BuildConfigs not implemented")
 }
 
@@ -56,7 +60,7 @@ func (*MockApiCtx) StartChainApis(
 	chainId string,
 	chainCfg *menc.ChainConfig,
 	ports mctx.NodePorts,
-) (mcfg.MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
+) (mcfg.MythosApp, *sdkserver.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error) {
 	return nil, nil, client.Context{}, nil, nil, nil, fmt.Errorf("ApiCtx.StartChainApis not implemented")
 }
 
@@ -86,7 +90,20 @@ func CreateMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppC
 	appOpts.Set(sdkserver.FlagMinGasPrices, "")
 	appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 	g, goctx, _ := GetTestCtx(logger, true)
-	return appCreatorFactory(wasmVmMeta, logger, db, nil, appOpts, g, goctx, &MockApiCtx{})
+
+	srvCtx := sdkserver.NewDefaultContext()
+	srvCtx.Config.RootDir = homeDir
+	srvCfg := srvconfig.DefaultConfig()
+	srvCfg.TestingModeDisableStateSync = true
+	apictx := &mapi.APICtx{
+		GoRoutineGroup:  g,
+		GoContextParent: goctx,
+		SvrCtx:          srvCtx,
+		ClientCtx:       client.Context{},
+		SrvCfg:          *srvCfg,
+		TndCfg:          cmtcfg.DefaultConfig(),
+	}
+	return appCreatorFactory(wasmVmMeta, logger, db, nil, appOpts, g, goctx, apictx)
 }
 
 func CreateNoLoggerAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory NewAppCreator, homeDir string) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {

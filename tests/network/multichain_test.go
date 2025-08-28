@@ -275,11 +275,13 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	msg = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
 	res, err := suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
+
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
+	suite.Require().GreaterOrEqual(len(evs), 1)
+	evs = appA.GetEventsByAttribute(evs, "chain_id", subChainId)
 	suite.Require().Equal(1, len(evs))
 
 	// time.Sleep(time.Second * 3)
-
 	// test restarting the node by starting the parent chain
 	// err = networkserver.StartNode(appA.App, appA.App.Logger(), appA.App.GetNetworkKeeper())
 	// suite.Require().NoError(err)
@@ -417,7 +419,10 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	s.Require().NoError(err)
 	res, err := suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
+
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
+	suite.Require().GreaterOrEqual(len(evs), 1)
+	evs = appA.GetEventsByAttribute(evs, "chain_id", subChainId)
 	suite.Require().Equal(1, len(evs))
 
 	time.Sleep(time.Second * 3)
@@ -512,7 +517,8 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 		balance := &banktypes.QueryBalanceResponse{}
 		err = json.Unmarshal(qres, balance)
 		s.Require().NoError(err)
-		s.Require().Equal(sdk.NewCoin(config.BaseDenom, sdkmath.NewInt(0x1000)), *balance.Balance)
+		s.Require().Equal(config.BaseDenom, balance.Balance.Denom)
+		s.Require().Equal(int64(0x1000), balance.Balance.Amount.Int64())
 	}()
 
 	res, err := subchainapp.DeliverTxRaw(txbz)
@@ -525,7 +531,8 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	balance := &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(qres, balance)
 	s.Require().NoError(err)
-	s.Require().Equal(sdk.NewCoin(subChainCfg2.BaseDenom, sdkmath.NewInt(0x1000)), *balance.Balance)
+	s.Require().Equal(subChainCfg2.BaseDenom, balance.Balance.Denom)
+	s.Require().Equal(int64(0x1000), balance.Balance.Amount.Int64())
 }
 
 func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
@@ -812,6 +819,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 	// we expect 1 level2 was created
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
 	suite.Require().Equal(2, len(evs))
+
 	level2ChainId := appA.GetAttributeValueFromEvent(evs[1], "chain_id")
 	suite.Require().Equal("leveln_2_2001-1", level2ChainId)
 

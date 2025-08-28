@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 
+	mapi "github.com/loredanacirstea/wasmx/api"
 	mapp "github.com/loredanacirstea/wasmx/app"
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/multichain"
@@ -53,7 +54,7 @@ $ %s reset-chain --chain-id=level1_1_1002-1 --registry-chain-id=level0_1000-1
 			}
 			g, goctx := getCtx(serverCtx, true)
 
-			apictx := &APICtx{
+			apictx := &mapi.APICtx{
 				GoRoutineGroup:  g,
 				GoContextParent: goctx,
 				SvrCtx:          &sdkserver.Context{},

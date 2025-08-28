@@ -135,6 +135,12 @@ type MythosApp interface {
 	NonDeterministicGetNodePortsInitial() mctx.NodePorts
 	NonDeterministicSetNodePortsInitial(mctx.NodePorts)
 
+	// setters
+	SetServerConfig(srvconfig *srvconfig.Config)
+	SetTendermintConfig(tndcfg *cmtcfg.Config)
+	SetRpcClient(rpcClient client.CometRPC)
+	NonDeterministicSetNodePorts(ports mctx.NodePorts)
+
 	// debugging
 	Db() dbm.DB
 	DebugDb()

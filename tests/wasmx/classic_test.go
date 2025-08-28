@@ -824,8 +824,8 @@ func (suite *KeeperTestSuite) TestEwasmFibonacci() {
 	logs, err := appA.GetEwasmLogs(appA.AddressCodec(), res.GetEvents())
 	s.Require().NoError(err)
 	s.Require().Equal(7, len(logs))
-	s.Require().Equal(7, len(appA.GetEventsByAttribute(res.GetEvents(), "topic", "0x5566666666666666666666666666666666666666666666666666666666666677")))
-	logd := appA.GetEventsByAttribute(res.GetEvents(), "topic", "0x0000000000000000000000000000000000000000000000000000000000000005")
+	s.Require().Equal(7, len(appA.GetWasmxEventsByAttribute(res.GetEvents(), "topic", "0x5566666666666666666666666666666666666666666666666666666666666677")))
+	logd := appA.GetWasmxEventsByAttribute(res.GetEvents(), "topic", "0x0000000000000000000000000000000000000000000000000000000000000005")
 	s.Require().Equal(1, len(logd))
 
 	queryres = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, keybz)
@@ -870,7 +870,7 @@ func (suite *KeeperTestSuite) TestEwasmLogs() {
 	s.Require().NoError(err)
 	s.Require().Equal(5, len(ewasmlogs))
 
-	evs := appA.GetEventsByAttribute(res.GetEvents(), "data", "0x8888888888888888888888888888888888888888888888888888888888888888")
+	evs := appA.GetWasmxEventsByAttribute(res.GetEvents(), "data", "0x8888888888888888888888888888888888888888888888888888888888888888")
 	s.Require().Equal(5, len(evs))
 }
 

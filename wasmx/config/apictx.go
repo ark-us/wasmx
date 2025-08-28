@@ -23,4 +23,5 @@ type APICtxI interface {
 		chainCfg *menc.ChainConfig,
 		ports mctx.NodePorts,
 	) (MythosApp, *server.Context, client.Context, *srvconfig.Config, *cmtcfg.Config, client.CometRPC, error)
+	SetMultiapp(*MultiChainApp)
 }

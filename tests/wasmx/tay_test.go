@@ -213,7 +213,7 @@ func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 	eres := appA.ExecuteContract(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	evs := appA.GetWasmxEvents(eres.Events)
 	s.Require().GreaterOrEqual(len(evs), 1)
-	ev := appA.GetEventsByAttribute(evs, "type", "newevent")
+	ev := appA.GetWasmxEventsByAttribute(evs, "type", "newevent")
 	s.Require().Equal("0x62617274", appA.GetAttributeValueFromEvent(ev[0], "data"))
 
 	// and getFinishData

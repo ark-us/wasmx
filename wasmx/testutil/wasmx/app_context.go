@@ -986,6 +986,18 @@ func (s *AppContext) GetAttributeValueFromEvent(event abci.Event, attrkey string
 }
 
 func (s *AppContext) GetEventsByAttribute(events []abci.Event, attrkey string, attrvalue string) []abci.Event {
+	evs := make([]abci.Event, 0)
+	for _, ev := range events {
+		for _, attr := range ev.Attributes {
+			if attr.Key == attrkey && attr.Value == attrvalue {
+				evs = append(evs, ev)
+			}
+		}
+	}
+	return evs
+}
+
+func (s *AppContext) GetWasmxEventsByAttribute(events []abci.Event, attrkey string, attrvalue string) []abci.Event {
 	newevs := make([]abci.Event, 0)
 	evs := s.GetWasmxEvents(events)
 	for _, ev := range evs {
@@ -1000,7 +1012,7 @@ func (s *AppContext) GetEventsByAttribute(events []abci.Event, attrkey string, a
 
 func (s *AppContext) GetEwasmEvents(events []abci.Event) []abci.Event {
 	ewasmtype := "ewasm" // TODO LOG_TYPE_EWASM
-	return s.GetEventsByAttribute(events, "type", ewasmtype)
+	return s.GetWasmxEventsByAttribute(events, "type", ewasmtype)
 }
 
 func (s *AppContext) GetEwasmLogs(addressCodec address.Codec, events []abci.Event) ([]*ethtypes.Log, error) {

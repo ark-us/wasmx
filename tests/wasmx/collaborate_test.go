@@ -54,7 +54,7 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 	s.Require().Contains(string(resp.GetData()), expected)
 	evs := appA.GetWasmxEvents(resp.GetEvents())
 	s.Require().GreaterOrEqual(len(evs), 1)
-	wasmxevs := appA.GetEventsByAttribute(evs, "type", "wasmx")
+	wasmxevs := appA.GetWasmxEventsByAttribute(evs, "type", "wasmx")
 	s.Require().Equal(1, len(wasmxevs))
 	for _, attr := range wasmxevs[0].GetAttributes() {
 		if attr.Key == types.AttributeKeyDependency {

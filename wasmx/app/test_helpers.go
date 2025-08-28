@@ -145,7 +145,6 @@ func NewTestNetworkFixture(wasmVmMeta memc.IWasmVmMeta) func() network.TestFixtu
 			appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
 			appOpts.Set(flags.FlagChainID, chainId)
 			appOpts.Set(sdkserver.FlagMinGasPrices, gasPricesStr)
-			appOpts.Set(flags.FlagHome, val.GetCtx().Config.RootDir)
 			appOpts.Set(sdkserver.FlagPruning, val.GetAppConfig().Pruning)
 			// bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 

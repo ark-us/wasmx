@@ -105,5 +105,7 @@ func NewAppCreator(
 	bapps.SetAppCreator(appCreator)
 	bapps.SetAPICtx(apictx)
 
+	apictx.SetMultiapp(bapps)
+
 	return bapps, appCreator
 }

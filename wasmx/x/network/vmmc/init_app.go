@@ -102,7 +102,7 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 		return fmt.Errorf("cannot start node with empty request")
 	}
 	logger := ctx.Logger(ctx.Ctx)
-	logger.Info("starting subchain", "subchain_id", req.ChainId)
+	logger.Info("starting subchain", "subchain_id", req.ChainId, "module", "vmmc")
 	multichainapp, err := mcfg.GetMultiChainApp(ctx.GoContextParent)
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	}
 
 	// start API servers
-	_, _, _, _, _, _, err = multichainapp.APICtx.StartChainApis(req.ChainId, &req.ChainConfig, req.NodePorts)
+	_, _, _, msrvconfig, _, _, err := multichainapp.APICtx.StartChainApis(req.ChainId, &req.ChainConfig, req.NodePorts)
 	if err != nil {
 		return err
 	}
@@ -136,19 +136,20 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	if err != nil {
 		return err
 	}
-
-	InitializeStateSyncProvider(
-		ctx.GoContextParent,
-		ctx.GoRoutineGroup,
-		logger,
-		app.GetTendermintConfig(),
-		req.ChainId,
-		req.ChainConfig,
-		app,
-		app.GetRpcClient(),
-		mcfg.GetStateSyncProtocolId(req.ChainId),
-		fmt.Sprintf("%d", req.NodePorts.WasmxNetworkP2P),
-	)
+	if !msrvconfig.TestingModeDisableStateSync {
+		InitializeStateSyncProvider(
+			ctx.GoContextParent,
+			ctx.GoRoutineGroup,
+			logger,
+			app.GetTendermintConfig(),
+			req.ChainId,
+			req.ChainConfig,
+			app,
+			app.GetRpcClient(),
+			mcfg.GetStateSyncProtocolId(req.ChainId),
+			fmt.Sprintf("%d", req.NodePorts.WasmxNetworkP2P),
+		)
+	}
 
 	return nil
 }
