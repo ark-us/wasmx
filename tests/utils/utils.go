@@ -102,7 +102,7 @@ var wasmedgeCompiled = map[string]bool{
 func GetCompiledCacheDir(rootdir string, wasmRuntime string) string {
 	path := path.Join(rootdir, "../", "codes_compiled", wasmRuntime, runtime.GOOS+"-"+runtime.GOARCH)
 	if dirExists(path) {
-		fmt.Println("tests use cached precompiles:", GetCompiledCacheDir)
+		fmt.Println("tests use cached precompiles:", path)
 		return path
 	}
 	return ""
