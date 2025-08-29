@@ -453,8 +453,8 @@ func (b *Backend) RPCBlockFromTendermintBlock(
 	// }
 
 	// TODO
-	gasLimit := int64(20000000)
-	gasUsed := uint64(300000)
+	gasLimit := int64(wasmxtypes.DefaultBlockGasLimit)
+	gasUsed := uint64(30000000)
 
 	formattedBlock := rpctypes.FormatBlock(
 		block.Header, block.Size(),
