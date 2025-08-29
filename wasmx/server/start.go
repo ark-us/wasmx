@@ -555,7 +555,6 @@ func StartInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientC
 			}
 		}
 
-		fmt.Println("--msrvconfig.TestingModeDisableStateSync--", msrvconfig.TestingModeDisableStateSync)
 		if !strings.Contains(chainId, "level0") && !msrvconfig.TestingModeDisableStateSync {
 			ssfn := func(mythosapp *mapp.App, csvrCtx *server.Context, cmsrvconfig *srvconfig.Config, ctndcfg *cmtcfg.Config, chainId string, rpcClient client.CometRPC, privValidator *pvm.FilePV) func() {
 				return func() {
