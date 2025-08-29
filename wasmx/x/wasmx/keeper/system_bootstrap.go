@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -97,10 +98,29 @@ func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 
 func (k *Keeper) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) error {
 	cache := k.GetSystemBootstrap(ctx)
+	if req == nil {
+		return nil
+	}
+	if len(req.RoleAddress.Bytes()) > 0 {
+		cache.RoleAddress = req.RoleAddress
+	}
+	if len(req.CodeRegistryAddress.Bytes()) > 0 {
+		cache.CodeRegistryAddress = req.CodeRegistryAddress
+		cache.CodeRegistryId = req.CodeRegistryId
+		// if these are missing, we should just stop the node
+		// TODO test if this is the right approach
+		if req.CodeRegistryCodeInfo == nil {
+			k.Logger(ctx).Error("system cache update: tried to update code registry: missing code info", "contract_address", req.CodeRegistryAddress.String())
+			os.Exit(1)
+		}
+		if req.CodeRegistryContractInfo == nil {
+			k.Logger(ctx).Error("system cache update: tried to update code registry: missing contract info", "contract_address", req.CodeRegistryAddress.String())
+			os.Exit(1)
+		}
+		cache.CodeRegistryCodeInfo = req.CodeRegistryCodeInfo
+		cache.CodeRegistryContractInfo = req.CodeRegistryContractInfo
+	}
 
-	cache.CodeRegistryAddress = req.CodeRegistryAddress
-	cache.CodeRegistryCodeInfo = req.CodeRegistryCodeInfo
-	cache.CodeRegistryContractInfo = req.CodeRegistryContractInfo
 	err := k.SetSystemBootstrap(ctx, cache)
 	if err != nil {
 		return err
