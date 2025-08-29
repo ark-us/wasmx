@@ -9,3 +9,4 @@ event.json
 
 private.md
 .claude/
+tests/codes_compiled/

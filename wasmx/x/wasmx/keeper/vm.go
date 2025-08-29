@@ -251,7 +251,16 @@ func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFold
 			return nil
 		}
 	}
-	return k.pin_code(ctx, k.build_path(k.DataDir, checksum), pinnedPath, meteringOff)
+	err := k.pin_code(ctx, k.build_path(k.DataDir, checksum), pinnedPath, meteringOff)
+	if err != nil {
+		return err
+	}
+	// we cache this contract if cache exists
+	if compiledFolderPath != "" {
+		compiledPath := k.build_path(compiledFolderPath, checksum)
+		copyFile(pinnedPath, compiledPath)
+	}
+	return nil
 }
 
 func (k *WasmxEngine) Unpin(checksum types.Checksum) error {

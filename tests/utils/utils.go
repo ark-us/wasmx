@@ -105,7 +105,14 @@ func GetCompiledCacheDir(rootdir string, wasmRuntime string) string {
 		fmt.Println("tests use cached precompiles:", path)
 		return path
 	}
-	return ""
+
+	// Create the directory if it does not exist
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		fmt.Println("failed to create cache dir for precompiles:", err)
+		return ""
+	}
+	fmt.Println("tests created cached precompiles dir:", path)
+	return path
 }
 
 func dirExists(p string) bool {
