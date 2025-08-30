@@ -92,7 +92,6 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 	valid, err := appA.App.StakingKeeper.GetAllValidators(appA.Context())
 	s.Require().NoError(err)
 
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.STAKING_v001)
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 
@@ -110,7 +109,7 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 
 	proposal := &types.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: types.ROLE_ROLES,
 		Msg:      msgbz,
 	}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)

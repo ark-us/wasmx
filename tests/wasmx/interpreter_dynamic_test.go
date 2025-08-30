@@ -49,8 +49,6 @@ func (suite *KeeperTestSuite) TestUpgradeInterpreterEVM() {
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
 	interpreterAddressStr := interpreterAddress.String()
 
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
-
 	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"interpreter","label":"%s","contract_address":"%s","action_type":1}}`, newlabel, interpreterAddressStr))
 	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
@@ -60,7 +58,7 @@ func (suite *KeeperTestSuite) TestUpgradeInterpreterEVM() {
 
 	proposal := &types.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: types.ROLE_ROLES,
 		Msg:      msgbz,
 	}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)

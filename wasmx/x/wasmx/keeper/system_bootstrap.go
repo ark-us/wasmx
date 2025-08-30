@@ -103,8 +103,10 @@ func (k *Keeper) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) 
 	}
 	if len(req.RoleAddress.Bytes()) > 0 {
 		cache.RoleAddress = req.RoleAddress
+		k.Logger(ctx).Info("system cache updated roles", "contract_address", req.RoleAddress.String())
 	}
 	if len(req.CodeRegistryAddress.Bytes()) > 0 {
+		k.Logger(ctx).Info("system cache updated codes", "contract_address", req.CodeRegistryAddress.String())
 		cache.CodeRegistryAddress = req.CodeRegistryAddress
 		cache.CodeRegistryId = req.CodeRegistryId
 		// if these are missing, we should just stop the node

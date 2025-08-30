@@ -274,13 +274,12 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 
 	msgServer := wasmxkeeper.NewMsgServerImpl(&appA.App.WasmxKeeper)
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
 	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"consensus_raft_0.0.2","contract_address":"%s","action_type":0}}`, wasmxtypes.ROLE_CONSENSUS, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	_, err = msgServer.ExecuteContract(appA.Context(), &wasmxtypes.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: wasmxtypes.ROLE_ROLES,
 		Msg:      msgbz,
 	})
 
@@ -359,13 +358,12 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 	s.Require().NoError(err)
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
 	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"consensus_tendermint_0.0.2","contract_address":"%s","action_type":0}}`, wasmxtypes.ROLE_CONSENSUS, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	_, err = msgServer.ExecuteContract(appA.Context(), &wasmxtypes.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: wasmxtypes.ROLE_ROLES,
 		Msg:      msgbz,
 	})
 
@@ -444,13 +442,12 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	description := "Register consensus"
 	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
 	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	proposal := &wasmxtypes.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: wasmxtypes.ROLE_ROLES,
 		Msg:      msgbz,
 	}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
@@ -483,7 +480,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	s.Require().NoError(err)
 	_, err = msgServer.ExecuteContract(appA.Context(), &wasmxtypes.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: wasmxtypes.ROLE_ROLES,
 		Msg:      msgbz,
 	})
 
@@ -587,13 +584,12 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 
 	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
 	suite.Require().NoError(err)
-	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
 	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensus.String()))
 	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
 	s.Require().NoError(err)
 	proposal := &wasmxtypes.MsgExecuteContract{
 		Sender:   authority,
-		Contract: rolesAddr.String(),
+		Contract: wasmxtypes.ROLE_ROLES,
 		Msg:      msgbz,
 	}
 	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
