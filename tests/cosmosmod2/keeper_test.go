@@ -59,20 +59,18 @@ func (suite *KeeperTestSuite) SetupSuite() {
 		// default runtime
 		suite.WasmVmMeta = wazero.WazeroVmMeta{}
 		suite.CompiledCacheDir = ut.GetCompiledCacheDir(mydir, "wazero")
-		// suite.CompiledCacheDir = ut.GetCompiledCacheDir(mydir, "wazero")
 	}
-
-	suite.SetupChains()
 }
 
 func (suite *KeeperTestSuite) TearDownSuite() {
-	suite.TearDownChains()
 }
 
 func (suite *KeeperTestSuite) SetupTest() {
+	suite.SetupChains()
 }
 
 func (suite *KeeperTestSuite) TearDownTest() {
+	suite.TearDownChains()
 }
 
 // TestKeeperTestSuite runs all the tests within this package.

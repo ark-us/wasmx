@@ -647,18 +647,12 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	lastInterval := suite.GetLastInterval(suite.TestChain.GetContext())
 	currentState := suite.GetCurrentState(suite.TestChain.GetContext())
 	blockDelay := suite.GetBlockDelay(suite.TestChain.GetContext())
-
-	if lastInterval == "" {
-		lastInterval = "0"
-	}
-
 	prevBlock := suite.App().LastBlockHeight()
 
 	app := suite.TestChain.App
 	cb := func(blockDelay, currentState, lastInterval string) func(goctx context.Context) (any, error) {
 		return func(goctx context.Context) (any, error) {
 			msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
-
 			_, err := suite.TestChain.App.NetworkKeeper.ExecuteEntryPoint(suite.TestChain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
@@ -685,7 +679,25 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	}
 	lastBlock := suite.App().LastBlockHeight()
 	if prevBlock >= lastBlock {
-		return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", suite.TestChain.ChainId, lastBlock, prevBlock+1)
+		// in case a test just changed consensus to RAFT, we help the test move faster through all the protocols delays that happen when choosing the Leader
+		if strings.Contains(currentState, "RAFT") && !strings.Contains(currentState, "Leader") {
+			if strings.Contains(currentState, "initialized.prestart") {
+				// this state waits 500ms and then goes to "initialized.Follower"
+				time.Sleep(time.Second * 10)
+			}
+			currentState := suite.GetCurrentState(suite.TestChain.GetContext())
+			if strings.Contains(currentState, "initialized.Follower") {
+				// we need to get the node to Leader state faster
+				suite.raftToLeader()
+			}
+			currentState = suite.GetCurrentState(suite.TestChain.GetContext())
+			lastBlock := suite.App().LastBlockHeight()
+			if prevBlock >= lastBlock {
+				return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", suite.TestChain.ChainId, lastBlock, prevBlock+1)
+			}
+		} else {
+			return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", suite.TestChain.ChainId, lastBlock, prevBlock+1)
+		}
 	}
 	res, _, _, err := suite.GetBlock(suite.TestChain.GetContext(), lastBlock)
 	if err != nil {
@@ -728,7 +740,20 @@ func (suite *KeeperTestSuite) GetContextValue(ctx sdk.Context, key string, addr 
 
 func (suite *KeeperTestSuite) GetLastInterval(ctx sdk.Context) string {
 	key := types.GetLastIntervalIdKey()
-	return suite.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
+	value := suite.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
+	if value == "" {
+		value = "0"
+	}
+	return value
+}
+
+func (suite *KeeperTestSuite) GetLastIntervalIdByStateKey(ctx sdk.Context, state string, delay string) string {
+	key := types.GetLastIntervalIdByStateKey(state, delay)
+	value := suite.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
+	if value == "" {
+		value = "0"
+	}
+	return value
 }
 
 func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFinalizeBlock, *cmttypes.Header, *cmttypes.Commit, error) {
@@ -767,7 +792,8 @@ func (suite *KeeperTestSuite) raftToLeader() {
 	currentState := suite.GetCurrentState(suite.TestChain.GetContext())
 	// get consensus version
 	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "initialized.Follower") {
-		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, "1"))
+		lastInterval := suite.GetLastIntervalIdByStateKey(suite.TestChain.GetContext(), currentState, "electionTimeout")
+		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
 		_, err := suite.TestChain.App.NetworkKeeper.ExecuteEntryPoint(suite.TestChain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,
@@ -777,8 +803,14 @@ func (suite *KeeperTestSuite) raftToLeader() {
 
 		// raft p2p
 		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
+		if strings.Contains(currentState, "Follower") {
+			// we need some time for the protocol to arrive at Candidate state
+			time.Sleep(time.Second * 5)
+		}
+
+		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
 		if strings.Contains(currentState, "Candidate") {
-			lastInterval := suite.GetLastInterval(suite.TestChain.GetContext())
+			lastInterval := suite.GetLastIntervalIdByStateKey(suite.TestChain.GetContext(), currentState, "electionTimeout")
 			msg1 = []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
 			_, err = suite.TestChain.App.NetworkKeeper.ExecuteEntryPoint(suite.TestChain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,

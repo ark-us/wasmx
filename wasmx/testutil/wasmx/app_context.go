@@ -846,7 +846,6 @@ func (s *AppContext) PassGovProposal(
 	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
-
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
 	s.S.Require().NoError(err)
 	voteEnd := *params.Params.VotingPeriod //  + time.Hour

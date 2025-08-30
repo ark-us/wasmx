@@ -1,0 +1,99 @@
+package keeper_test
+
+import (
+	"encoding/json"
+	"fmt"
+
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	simulation "github.com/cosmos/cosmos-sdk/types/simulation"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
+	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
+	precompiles "github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
+)
+
+func (s *KeeperTestSuite) TestRAFTP2PMigration() {
+	// we run this on KeeperTestSuite2, on a separate chain
+	sender := s.GetRandomAccount()
+	sender2 := s.GetRandomAccount()
+	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	appA := s.AppContext()
+	valAccount := simulation.Account{
+		PrivKey: s.Chain().SenderPrivKey,
+		PubKey:  s.Chain().SenderPrivKey.PubKey(),
+		Address: s.Chain().SenderAccount.GetAddress(),
+	}
+
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+
+	msg1 := []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
+	qresp, err := s.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
+		Sender:   wasmxtypes.ROLE_CONSENSUS,
+		Contract: wasmxtypes.ROLE_CONSENSUS,
+		Msg:      msg1,
+	})
+	s.Require().NoError(err)
+	nodesInfo := appA.QueryDecode(qresp.Data)
+
+	// migrate contract
+	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), wasmxtypes.CONSENSUS_RAFTP2P)
+	raftInitMsg := `{"instantiate":{"context":[{"key":"log","value":""},{"key":"validatorNodesInfo","value":"[]"},{"key":"votedFor","value":"0"},{"key":"nextIndex","value":"[]"},{"key":"matchIndex","value":"[]"},{"key":"commitIndex","value":"0"},{"key":"currentTerm","value":"0"},{"key":"lastApplied","value":"0"},{"key":"blockTimeout","value":"heartbeatTimeout"},{"key":"max_tx_bytes","value":"65536"},{"key":"prevLogIndex","value":"0"},{"key":"currentNodeId","value":"0"},{"key":"electionReset","value":"0"},{"key":"max_block_gas","value":"20000000"},{"key":"electionTimeout","value":"0"},{"key":"maxElectionTime","value":"20000"},{"key":"minElectionTime","value":"10000"},{"key":"heartbeatTimeout","value":"5000"}],"initialState":"uninitialized"}}`
+	codeId := appA.StoreCode(sender, wasmbin, []string{wasmxtypes.INTERPRETER_FSM})
+	newConsensus := appA.InstantiateCode(sender, codeId, wasmxtypes.WasmxExecutionMessage{Data: []byte(raftInitMsg)}, "newconsensus", nil)
+
+	// Register contract role proposal
+	newlabel := wasmxtypes.CONSENSUS_RAFTP2P + "2"
+	title := "Register consensus"
+	description := "Register consensus"
+
+	authority, err := appA.AddressCodec().BytesToString(authtypes.NewModuleAddress(wasmxtypes.ROLE_GOVERNANCE))
+	s.Require().NoError(err)
+
+	newConsensusStr := newConsensus.String()
+	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_ROLES))
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"consensus","label":"%s","contract_address":"%s","action_type":0}}`, newlabel, newConsensusStr))
+	msgbz, err := json.Marshal(&wasmxtypes.WasmxExecutionMessage{Data: msg})
+	s.Require().NoError(err)
+	proposal := &wasmxtypes.MsgExecuteContract{
+		Sender:   authority,
+		Contract: rolesAddr.String(),
+		Msg:      msgbz,
+	}
+
+	appA.PassGovProposal(valAccount, sender, []sdk.Msg{proposal}, "", title, description, false)
+
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), newConsensus)
+	s.Require().Equal(newlabel, resp)
+
+	role := appA.App.WasmxKeeper.GetRoleByLabel(appA.Context(), newlabel)
+	s.Require().Equal(newConsensusStr, role.Addresses[0])
+	s.Require().Equal(newlabel, role.Labels[0])
+	s.Require().Equal("consensus", role.Role)
+
+	// check that the setup was done on the new contract
+
+	// Check each simulated node has the correct context:
+	msg1 = []byte(`{"getContextValue":{"key":"validatorNodesInfo"}}`)
+	qresp, err = s.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
+		Sender:   newConsensusStr,
+		Contract: newConsensusStr,
+		Msg:      msg1,
+	})
+	s.Require().NoError(err)
+	qrespbz := appA.QueryDecode(qresp.Data)
+	s.Require().Equal(string(qrespbz), string(nodesInfo))
+
+	msg1 = []byte(`{"getContextValue":{"key":"currentNodeId"}}`)
+	qresp, err = s.App().NetworkKeeper.QueryContract(appA.Context(), &networktypes.MsgQueryContract{
+		Sender:   newConsensusStr,
+		Contract: newConsensusStr,
+		Msg:      msg1,
+	})
+	s.Require().NoError(err)
+	qrespbz = appA.QueryDecode(qresp.Data)
+	s.Require().Equal(string(qrespbz), `0`)
+}
