@@ -197,7 +197,6 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 }
 
 func (suite *KeeperTestSuite) TestWasmxLevel0() {
-	SkipFixmeTests(suite.T(), "TestWasmxLevel0")
 	SkipCIExpensiveTests(suite.T(), "TestWasmxLevel0")
 
 	sender := suite.GetRandomAccount()
@@ -209,12 +208,13 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 
 	timeAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_TIME))
 	level0Address := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_LEVEL0))
+	hooksNonC := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_HOOKS_NONC))
 
 	// start time chain
 	msgexec := types.WasmxExecutionMessage{Data: []byte(`{"StartNode":{}}`)}
 	msgbz, err := json.Marshal(&msgexec)
 	suite.Require().NoError(err)
-	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, appA.BytesToAccAddressPrefixed(sender.Address), msgbz, nil, nil, false)
+	_, err = appA.App.WasmxKeeper.Execute(appA.Context(), timeAddress, hooksNonC, msgbz, nil, nil, false)
 	suite.Require().NoError(err)
 
 	time.Sleep(time.Second * 10)
@@ -235,7 +235,7 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 	tx := appA.PrepareCosmosTx(sender, []sdk.Msg{msg}, nil, nil, "")
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
-	data := fmt.Sprintf(`{"newTransaction":{"transaction":"%s"}}`, txstr)
+	data := fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr)
 	msgexec = types.WasmxExecutionMessage{Data: []byte(data)}
 	msgbz, err = json.Marshal(&msgexec)
 	suite.Require().NoError(err)

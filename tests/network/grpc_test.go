@@ -14,6 +14,7 @@ import (
 
 	// ibctesting "github.com/loredanacirstea/wasmx/testutil/ibc"
 
+	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxkeeper "github.com/loredanacirstea/wasmx/x/wasmx/keeper"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -316,6 +317,8 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 
 func (suite *KeeperTestSuite) TestTendermintMigration() {
 	SkipFixmeTests(suite.T(), "TestTendermintMigration")
+	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
+	suite.SetCurrentChain(chainId)
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
