@@ -685,7 +685,7 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	}
 	lastBlock := suite.App().LastBlockHeight()
 	if prevBlock >= lastBlock {
-		return nil, fmt.Errorf("chain has not advanced")
+		return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", suite.TestChain.ChainId, lastBlock, prevBlock+1)
 	}
 	res, _, _, err := suite.GetBlock(suite.TestChain.GetContext(), lastBlock)
 	if err != nil {
