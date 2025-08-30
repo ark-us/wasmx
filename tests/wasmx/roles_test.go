@@ -30,7 +30,6 @@ func (suite *KeeperTestSuite) TestEwasmCallToPriviledged() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	_, contractAddress1 := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "callgeneralwasm1", nil)
 
@@ -85,9 +84,7 @@ func (suite *KeeperTestSuite) TestUpgradeRolesStaking() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	valid, err := appA.App.StakingKeeper.GetAllValidators(appA.Context())
 	s.Require().NoError(err)
@@ -150,9 +147,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	rolesAddr := appA.AccBech32Codec().BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ROLES))
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.ROLES_v001)
@@ -231,9 +226,7 @@ func (suite *KeeperTestSuite) TestUpgradeCacheContractsRegistry() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.STORAGE_CONTRACTS_v001)
 	codeId := appA.StoreCode(sender, wasmbin, nil)

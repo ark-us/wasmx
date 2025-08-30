@@ -44,7 +44,6 @@ func (suite *KeeperTestSuite) TestKvWrapContract() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "kvtest", nil)
@@ -114,7 +113,6 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "kvtest", nil)
@@ -247,7 +245,6 @@ func (suite *KeeperTestSuite) TestNestedCalls() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "sqltest", nil)

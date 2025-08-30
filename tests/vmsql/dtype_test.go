@@ -38,7 +38,6 @@ func (suite *KeeperTestSuite) TestDTypeContract() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	contractAddress, err := utils.DeployDType(suite, appA, sender)
 	suite.Require().NoError(err)
@@ -346,15 +345,12 @@ func (suite *KeeperTestSuite) TestDTypeErc20() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	receiverPrefixed := appA.BytesToAccAddressPrefixed(receiver.Address)
 	appA.Faucet.Fund(appA.Context(), receiverPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	spenderPrefixed := appA.BytesToAccAddressPrefixed(spender.Address)
 	appA.Faucet.Fund(appA.Context(), spenderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	wasmbin := testdata.WasmxErc20DType
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -487,15 +483,12 @@ func (suite *KeeperTestSuite) TestDTypeIdentity() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	receiverPrefixed := appA.BytesToAccAddressPrefixed(receiver.Address)
 	appA.Faucet.Fund(appA.Context(), receiverPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	spenderPrefixed := appA.BytesToAccAddressPrefixed(spender.Address)
 	appA.Faucet.Fund(appA.Context(), spenderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	dtypeAddress, err := utils.DeployDType(suite, appA, sender)
 	suite.Require().NoError(err)

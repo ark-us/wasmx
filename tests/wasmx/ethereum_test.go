@@ -29,7 +29,6 @@ func (suite *KeeperTestSuite) TestSendEthTx() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
 	s.Require().NoError(err)
@@ -82,7 +81,6 @@ func (suite *KeeperTestSuite) TestAliasContract() {
 	// getRegisterMessage := "2f6da104"
 
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	aliasAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "alias", nil)
@@ -167,7 +165,6 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 
 	// We only fund sender
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	handler := alias.NewAliasHandler()
 	// Alias sender
@@ -178,14 +175,12 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	})
 	s.Require().NoError(err)
 	appA.ExecuteContract(sender, aliasEthAddr, *execMsg, nil, nil)
-	suite.Commit()
 
 	senderBalance := appA.App.BankKeeper.GetBalance(appA.Context(), sender.Address, appA.Chain.Config.BaseDenom)
 
 	// Send coins with tx signed by alias account
 	value := big.NewInt(100000)
 	appA.SendEthTx(priv, &receiverHex, []byte{}, value, 300000, nil, nil)
-	suite.Commit()
 
 	receiverBalance := appA.App.BankKeeper.GetBalance(appA.Context(), receiver.Address, appA.Chain.Config.BaseDenom)
 	s.Require().Equal(receiverBalance.Amount.BigInt(), value)
@@ -205,7 +200,6 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	s.Require().NoError(err)
 	_, contractAddress := appA.DeployEvm(sender, evmcode, types.WasmxExecutionMessage{Data: []byte{}}, nil, "MythosAliasTest", nil)
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	sendCoinsHex := "40dcae86"
 	// getBalanceHex := "f8b2cb4f"
@@ -237,7 +231,6 @@ func (suite *KeeperTestSuite) TestAliasedAccount() {
 	// })
 	// s.Require().NoError(err)
 	// appA.ExecuteContract(receiver, aliasEthAddr, *execMsg, nil, nil)
-	// suite.Commit()
 
 	// receiverEthBalance, err := appA.App.BankKeeper.Balance(appA.Context(), &banktypes.QueryBalanceRequest{Address: appA.MustAccAddressToString(receiverEth), Denom: appA.Chain.Config.BaseDenom})
 	// s.Require().NoError(err)

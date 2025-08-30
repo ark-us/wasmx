@@ -28,7 +28,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileIdentityDirect() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_IDENTITY))
 
@@ -46,7 +45,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverEthDirect() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ECRECOVERETH))
 
@@ -130,7 +128,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileEcrecoverDirect() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ECRECOVER))
 
@@ -163,7 +160,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileModexpDirect() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_MODEXP))
 
@@ -228,7 +224,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileSecretSharingDirect() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_SECRET_SHARING))
 

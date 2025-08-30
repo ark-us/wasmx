@@ -21,7 +21,6 @@ package keeper_test
 
 // 	appA := s.AppContext()
 // 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.denom, initBalance))
-// 	suite.Commit()
 
 // 	codeId := appA.StoreCode(sender, wasmbin)
 // 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "contract with interpreter")

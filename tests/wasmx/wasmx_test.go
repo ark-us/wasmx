@@ -37,7 +37,6 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "sys_proxy")
 
@@ -118,7 +117,6 @@ func (suite *KeeperTestSuite) TestWasmxSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
@@ -151,7 +149,6 @@ func (suite *KeeperTestSuite) TestWasmxSameCode() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
@@ -176,7 +173,6 @@ func (suite *KeeperTestSuite) TestWasmxTime() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.TIME_v001)
 
@@ -204,7 +200,6 @@ func (suite *KeeperTestSuite) TestWasmxLevel0() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	timeAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_TIME))
 	level0Address := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_LEVEL0))

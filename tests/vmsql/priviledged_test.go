@@ -26,7 +26,6 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	// test that a contract with a priviledged API, without the proper role is executed using the Mocked API
 	codeId := appA.StoreCode(sender, wasmbin, nil)

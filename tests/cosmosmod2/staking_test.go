@@ -85,7 +85,7 @@ func (s *KeeperTestSuite) TestStakingCreateValidator() {
 func (s *KeeperTestSuite) TestStakingJailValidator() {
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	s.SetCurrentChain(chainId)
-	// chain := suite.GetChain(chainId)
+	chain := s.GetChain(chainId)
 	sender := s.GetRandomAccount()
 	initBalance := sdkmath.NewInt(10_000_000_000)
 	appA := s.AppContext()
@@ -240,7 +240,7 @@ func (s *KeeperTestSuite) TestStakingJailValidator() {
 	s.Require().True(allvals[1].IsBonded())
 
 	lastBlockHeight = s.App().LastBlockHeight()
-	_, header, _, err := s.GetBlock(appA.Context(), lastBlockHeight)
+	_, header, _, err := chain.GetBlock(appA.Context(), lastBlockHeight)
 	s.Require().NoError(err)
 
 	info, err = appA.App.SlashingKeeper.SigningInfo(appA.Context(), &slashingtypes.QuerySigningInfoRequest{ConsAddress: consAddress})

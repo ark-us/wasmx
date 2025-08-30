@@ -86,7 +86,7 @@ type KeeperTestSuite struct {
 }
 
 type TestChain struct {
-	T       *testing.T
+	suite   *KeeperTestSuite
 	ChainId string
 	Config  menc.ChainConfig
 	ctx     sdk.Context
@@ -152,46 +152,32 @@ func (suite *KeeperTestSuite) Chain() TestChain {
 	return suite.TestChain
 }
 
-func (suite *KeeperTestSuite) GetApp(chain *ibcgotesting.TestChain) *app.App {
-	return suite.TestChain.App
+func (chain *TestChain) GetApp() *app.App {
+	return chain.App
 }
 
 func (suite *KeeperTestSuite) App() *app.App {
 	return suite.TestChain.App
 }
 
-func (suite *KeeperTestSuite) GetAppContext(chain TestChain) AppContext {
+func (suite *KeeperTestSuite) AppContext() AppContext {
+	return suite.GetAppContext(&suite.TestChain)
+}
+
+func (suite *KeeperTestSuite) GetAppContext(chain *TestChain) AppContext {
 	appContext := AppContext{
 		S:                   suite,
-		App:                 suite.App(),
+		App:                 chain.GetApp(),
 		Chain:               chain,
-		FinalizeBlockHandle: suite.FinalizeBlockFSM,
+		FinalizeBlockHandle: suite.FinalizeBlockFSM(chain),
 	}
-	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg(), app.GetCustomSigners())
+	encodingConfig := menc.MakeEncodingConfig(chain.GetApp().GetChainCfg(), app.GetCustomSigners())
 	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(chain.ChainId)
 
 	t := suite.T()
 	addrCodec, ok := encodingConfig.TxConfig.SigningContext().AddressCodec().(mcodec.AccBech32Codec)
 	suite.Require().True(ok)
-	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(1000_000_000_000)))
-
-	return appContext
-}
-
-func (suite *KeeperTestSuite) AppContext() AppContext {
-	appContext := AppContext{
-		S:                   suite,
-		App:                 suite.App(),
-		Chain:               suite.TestChain,
-		FinalizeBlockHandle: suite.FinalizeBlockFSM,
-	}
-	encodingConfig := menc.MakeEncodingConfig(suite.App().GetChainCfg(), app.GetCustomSigners())
-	appContext.ClientCtx = client.Context{}.WithTxConfig(encodingConfig.TxConfig).WithChainID(suite.TestChain.ChainId)
-	t := suite.T()
-	denom := appContext.Chain.Config.BaseDenom
-	addrCodec := encodingConfig.TxConfig.SigningContext().AddressCodec()
-	accBech32Codec := mcodec.MustUnwrapAccBech32Codec(addrCodec)
-	appContext.Faucet = NewTestFaucet(t, accBech32Codec, appContext.Context(), suite.App().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(denom, sdkmath.NewInt(100_000_000_000)))
+	appContext.Faucet = NewTestFaucet(t, addrCodec, appContext.Context(), chain.GetApp().BankKeeper, wasmxtypes.ModuleName, sdk.NewCoin(chain.Config.BaseDenom, sdkmath.NewInt(1000_000_000_000)))
 
 	return appContext
 }
@@ -326,7 +312,7 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	mapp, ok := testApp.(*app.App)
 	require.True(t, ok, "not app")
 	chain := TestChain{
-		T:                    suite.T(),
+		suite:                suite,
 		ChainId:              chainId,
 		Config:               *chaincfg,
 		App:                  mapp,
@@ -358,12 +344,11 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 	suite.TestChain = chain
 	suite.Chains[chainId] = &chain
 
-	err = suite.InitConsensusContract(resInit, pubKey.Address(), pubKey.Bytes(), privVal.PrivKey.Bytes(), valOperatorAddress)
+	err = chain.InitConsensusContract(resInit, pubKey.Address(), pubKey.Bytes(), privVal.PrivKey.Bytes(), valOperatorAddress)
 	require.NoError(t, err)
 }
 
-func (suite *KeeperTestSuite) SetupSubChainApp(mainChainId string, chainId string, chaincfg *menc.ChainConfig, index int32) {
-	t := suite.T()
+func (suite *KeeperTestSuite) SetupSubChainApp(mainChainId string, chainId string, chaincfg *menc.ChainConfig, index int32) *TestChain {
 	somechain := suite.GetChain(mainChainId)
 
 	multichainapp, err := somechain.App.GetMultiChainApp()
@@ -410,9 +395,9 @@ func (suite *KeeperTestSuite) SetupSubChainApp(mainChainId string, chainId strin
 	txConfig := testApp.GetTxConfig()
 
 	mapp, ok := testApp.(*app.App)
-	require.True(t, ok, "not app")
+	suite.Require().True(ok, "not app")
 	chain := TestChain{
-		T:             suite.T(),
+		suite:         suite,
 		ChainId:       chainId,
 		Config:        *chaincfg,
 		App:           mapp,
@@ -431,6 +416,7 @@ func (suite *KeeperTestSuite) SetupSubChainApp(mainChainId string, chainId strin
 
 	suite.TestChain = chain
 	suite.Chains[chainId] = &chain
+	return &chain
 }
 
 func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {
@@ -439,8 +425,8 @@ func (suite *KeeperTestSuite) SetCurrentChain(chainId string) {
 	suite.TestChain = *chain
 }
 
-func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress bytes.HexBytes, nodePubKey, nodePrivKey []byte, valOperatorAddress mcodec.AccAddressPrefixed) error {
-	res, err := suite.App().Info(types.RequestInfo)
+func (chain TestChain) InitConsensusContract(resInit *abci.ResponseInitChain, nodeAddress bytes.HexBytes, nodePubKey, nodePrivKey []byte, valOperatorAddress mcodec.AccAddressPrefixed) error {
+	res, err := chain.GetApp().Info(types.RequestInfo)
 	if err != nil {
 		return fmt.Errorf("error calling Info: %v", err)
 	}
@@ -457,7 +443,7 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 
 	cfgNetwork := networkconfig.DefaultNetworkConfigConfig()
 
-	currentState := suite.GetCurrentState(suite.TestChain.GetContext())
+	currentState := chain.GetCurrentState(chain.GetContext())
 
 	peers := []string{}
 	if !strings.Contains(currentState, "P2P") && !strings.Contains(currentState, "Level") {
@@ -466,11 +452,11 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		peers = []string{fmt.Sprintf(`%s@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWMWpac4Qp74N2SNkcYfbZf2AWHz7cjv69EM5kejbXwBZF`, valOperatorAddress.String())}
 	}
 	nodeindex, err := strconv.Atoi(cfgNetwork.Id)
-	suite.Require().NoError(err)
+	chain.suite.Require().NoError(err)
 	err = networkserver.InitConsensusContract(
-		suite.App(),
-		suite.App().Logger(),
-		suite.App().GetNetworkKeeper(),
+		chain.GetApp(),
+		chain.GetApp().Logger(),
+		chain.GetApp().GetNetworkKeeper(),
 		resInit.AppHash,
 		&consensusParams,
 		res.AppVersion,
@@ -485,13 +471,13 @@ func (suite *KeeperTestSuite) InitConsensusContract(resInit *abci.ResponseInitCh
 		return err
 	}
 	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	appA := suite.AppContext()
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	appA := chain.suite.GetAppContext(&chain)
+	_, err = chain.GetApp().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg,
 	})
-	suite.raftToLeader()
+	chain.raftToLeader()
 	return err
 }
 
@@ -500,9 +486,9 @@ func (suite *KeeperTestSuite) CommitNBlocks(chain *ibcgotesting.TestChain, n uin
 func (suite *KeeperTestSuite) Coordinator() *ibcgotesting.Coordinator {
 	return nil
 }
-func (suite *KeeperTestSuite) CommitNBlocks_(chain TestChain, n uint64) {
+func (suite *KeeperTestSuite) CommitNBlocks_(chain *TestChain, n uint64) {
 	for i := 0; i < int(n); i++ {
-		_, err := suite.CommitBlock()
+		_, err := chain.CommitBlock()
 		suite.Require().NoError(err)
 	}
 }
@@ -605,13 +591,13 @@ func NewGRPCServer(
 	return grpcSrv, nil
 }
 
-func (suite *KeeperTestSuite) AddToMempoolFSM(txs [][]byte) ([]*types.MsgExecuteContractResponse, error) {
-	app := suite.TestChain.App
+func (chain TestChain) AddToMempoolFSM(txs [][]byte) ([]*types.MsgExecuteContractResponse, error) {
+	app := chain.GetApp()
 	cb := func(goctx context.Context) (any, error) {
 		resps := make([]*types.MsgExecuteContractResponse, 0)
 		for _, tx := range txs {
 			msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"newTransaction","params":[{"key":"transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-			resp, err := suite.TestChain.App.NetworkKeeper.ExecuteContract(suite.TestChain.GetContext(), &types.MsgExecuteContract{
+			resp, err := chain.App.NetworkKeeper.ExecuteContract(chain.GetContext(), &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg,
@@ -633,21 +619,22 @@ func (suite *KeeperTestSuite) AddToMempoolFSM(txs [][]byte) ([]*types.MsgExecute
 	return resp.([]*types.MsgExecuteContractResponse), nil
 }
 
-func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
-	_, err := suite.AddToMempoolFSM(txs)
-	if err != nil {
-		suite.App().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
-		return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
+func (suite *KeeperTestSuite) FinalizeBlockFSM(chain *TestChain) func(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
+	return func(txs [][]byte) (*abci.ResponseFinalizeBlock, error) {
+		_, err := chain.AddToMempoolFSM(txs)
+		if err != nil {
+			chain.GetApp().Logger().Error(fmt.Sprintf("adding tx to mempool: %s", err.Error()))
+			return &abci.ResponseFinalizeBlock{TxResults: []*abci.ExecTxResult{{Code: 11, Log: err.Error()}}}, nil
+		}
+		return chain.CommitBlock()
 	}
-	return suite.CommitBlock()
 }
 
-func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
-	chain := suite.TestChain
-	app := suite.App()
-	lastInterval := suite.GetLastInterval(chain.GetContext())
-	currentState := suite.GetCurrentState(chain.GetContext())
-	blockDelay := suite.GetBlockDelay(chain.GetContext())
+func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
+	app := chain.GetApp()
+	lastInterval := chain.GetLastInterval(chain.GetContext())
+	currentState := chain.GetCurrentState(chain.GetContext())
+	blockDelay := chain.GetBlockDelay(chain.GetContext())
 	prevBlock := app.LastBlockHeight()
 
 	cb := func(blockDelay, currentState, lastInterval string) func(goctx context.Context) (any, error) {
@@ -670,8 +657,8 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	}
 
 	if strings.Contains(strings.ToLower(currentState), "ondemand") {
-		lastInterval = suite.GetLastInterval(chain.GetContext())
-		currentState = suite.GetCurrentState(chain.GetContext())
+		lastInterval = chain.GetLastInterval(chain.GetContext())
+		currentState = chain.GetCurrentState(chain.GetContext())
 		_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb("batchTimeout", currentState, lastInterval))
 		if err != nil {
 			return nil, err
@@ -685,10 +672,10 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 				// this state waits 500ms and then goes to "initialized.Follower"
 				time.Sleep(time.Second * 10)
 			}
-			currentState := suite.GetCurrentState(chain.GetContext())
+			currentState := chain.GetCurrentState(chain.GetContext())
 			if strings.Contains(currentState, "initialized.Follower") {
 				// we need to get the node to Leader state faster
-				suite.raftToLeader()
+				chain.raftToLeader()
 			}
 			lastBlock := app.LastBlockHeight()
 			if prevBlock >= lastBlock {
@@ -698,66 +685,66 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 			return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", chain.ChainId, lastBlock, prevBlock+1)
 		}
 	}
-	res, _, _, err := suite.GetBlock(chain.GetContext(), lastBlock)
+	res, _, _, err := chain.GetBlock(chain.GetContext(), lastBlock)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func (suite *KeeperTestSuite) GetBlockDelay(ctx sdk.Context) string {
-	return suite.GetContextValue(ctx, types.BLOCK_DELAY, wasmxtypes.ROLE_CONSENSUS)
+func (chain TestChain) GetBlockDelay(ctx sdk.Context) string {
+	return chain.GetContextValue(ctx, types.BLOCK_DELAY, wasmxtypes.ROLE_CONSENSUS)
 }
 
-func (suite *KeeperTestSuite) GetCurrentState(ctx sdk.Context) string {
+func (chain TestChain) GetCurrentState(ctx sdk.Context) string {
 	msg := []byte(`{"getCurrentState":{}}`)
-	resp, err := suite.TestChain.App.NetworkKeeper.QueryContract(ctx, &types.MsgQueryContract{
+	resp, err := chain.App.NetworkKeeper.QueryContract(ctx, &types.MsgQueryContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg,
 	})
-	suite.Require().NoError(err)
+	chain.suite.Require().NoError(err)
 	var contractResp wasmxtypes.ContractResponse
 	err = json.Unmarshal(resp.Data, &contractResp)
-	suite.Require().NoError(err)
+	chain.suite.Require().NoError(err)
 	return string(contractResp.Data)
 }
 
-func (suite *KeeperTestSuite) GetContextValue(ctx sdk.Context, key string, addr string) string {
+func (chain TestChain) GetContextValue(ctx sdk.Context, key string, addr string) string {
 	msg := []byte(fmt.Sprintf(`{"getContextValue":{"key":"%s"}}`, key))
-	resp, err := suite.TestChain.App.NetworkKeeper.QueryContract(ctx, &types.MsgQueryContract{
+	resp, err := chain.App.NetworkKeeper.QueryContract(ctx, &types.MsgQueryContract{
 		Sender:   addr,
 		Contract: addr,
 		Msg:      msg,
 	})
-	suite.Require().NoError(err)
+	chain.suite.Require().NoError(err)
 	var contractResp wasmxtypes.ContractResponse
 	err = json.Unmarshal(resp.Data, &contractResp)
-	suite.Require().NoError(err)
+	chain.suite.Require().NoError(err)
 	return string(contractResp.Data)
 }
 
-func (suite *KeeperTestSuite) GetLastInterval(ctx sdk.Context) string {
+func (chain TestChain) GetLastInterval(ctx sdk.Context) string {
 	key := types.GetLastIntervalIdKey()
-	value := suite.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
+	value := chain.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
 	if value == "" {
 		value = "0"
 	}
 	return value
 }
 
-func (suite *KeeperTestSuite) GetLastIntervalIdByStateKey(ctx sdk.Context, state string, delay string) string {
+func (chain TestChain) GetLastIntervalIdByStateKey(ctx sdk.Context, state string, delay string) string {
 	key := types.GetLastIntervalIdByStateKey(state, delay)
-	value := suite.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
+	value := chain.GetContextValue(ctx, key, wasmxtypes.ROLE_CONSENSUS)
 	if value == "" {
 		value = "0"
 	}
 	return value
 }
 
-func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFinalizeBlock, *cmttypes.Header, *cmttypes.Commit, error) {
+func (chain TestChain) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFinalizeBlock, *cmttypes.Header, *cmttypes.Commit, error) {
 	key := types.GetBlockKey(height)
-	data := suite.GetContextValue(ctx, key, wasmxtypes.ROLE_STORAGE)
+	data := chain.GetContextValue(ctx, key, wasmxtypes.ROLE_STORAGE)
 	if len(data) == 0 {
 		return nil, nil, nil, fmt.Errorf("tx block (%d) not found", height)
 	}
@@ -787,66 +774,66 @@ func (suite *KeeperTestSuite) GetBlock(ctx sdk.Context, height int64) (*abci.Res
 	return &blockResultData, &header, &lastCommit, nil
 }
 
-func (suite *KeeperTestSuite) raftToLeader() {
-	currentState := suite.GetCurrentState(suite.TestChain.GetContext())
+func (chain TestChain) raftToLeader() {
+	currentState := chain.GetCurrentState(chain.GetContext())
 	// get consensus version
 	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "initialized.Follower") {
-		lastInterval := suite.GetLastIntervalIdByStateKey(suite.TestChain.GetContext(), currentState, "electionTimeout")
+		lastInterval := chain.GetLastIntervalIdByStateKey(chain.GetContext(), currentState, "electionTimeout")
 		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
-		_, err := suite.TestChain.App.NetworkKeeper.ExecuteEntryPoint(suite.TestChain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+		_, err := chain.App.NetworkKeeper.ExecuteEntryPoint(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg1,
 		})
-		suite.Require().NoError(err)
+		chain.suite.Require().NoError(err)
 
 		// raft p2p
-		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
+		currentState = chain.GetCurrentState(chain.GetContext())
 		if strings.Contains(currentState, "Follower") {
 			// we need some time for the protocol to arrive at Candidate state
 			time.Sleep(time.Second * 5)
 		}
 
-		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
+		currentState = chain.GetCurrentState(chain.GetContext())
 		if strings.Contains(currentState, "Candidate") {
-			lastInterval := suite.GetLastIntervalIdByStateKey(suite.TestChain.GetContext(), currentState, "electionTimeout")
+			lastInterval := chain.GetLastIntervalIdByStateKey(chain.GetContext(), currentState, "electionTimeout")
 			msg1 = []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
-			_, err = suite.TestChain.App.NetworkKeeper.ExecuteEntryPoint(suite.TestChain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			_, err = chain.App.NetworkKeeper.ExecuteEntryPoint(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg1,
 			})
-			suite.Require().NoError(err)
+			chain.suite.Require().NoError(err)
 		}
-		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
-		suite.Require().Contains(currentState, "Leader")
+		currentState = chain.GetCurrentState(chain.GetContext())
+		chain.suite.Require().Contains(currentState, "Leader")
 	}
 }
 
-func (suite *KeeperTestSuite) commitBlock(res *abci.ResponseFinalizeBlock) {
-	_, err := suite.TestChain.App.Commit()
+func (suite *KeeperTestSuite) commitBlock(chain *TestChain, res *abci.ResponseFinalizeBlock) {
+	_, err := chain.App.Commit()
 	require.NoError(suite.T(), err)
 
 	// set the last header to the current header
 	// use nil trusted fields
-	suite.TestChain.LastHeader = suite.TestChain.CurrentTMClientHeader()
+	chain.LastHeader = chain.CurrentTMClientHeader()
 
 	// val set changes returned from previous block get applied to the next validators
 	// of this block. See tendermint spec for details.
-	suite.TestChain.Vals = suite.TestChain.NextVals
-	suite.TestChain.NextVals = ibcgotesting.ApplyValSetChanges(suite.T(), suite.TestChain.Vals, res.ValidatorUpdates)
+	chain.Vals = chain.NextVals
+	chain.NextVals = ibcgotesting.ApplyValSetChanges(suite.T(), chain.Vals, res.ValidatorUpdates)
 
 	// increment the current header
-	suite.TestChain.CurrentHeader = tmproto.Header{
-		ChainID: suite.TestChain.ChainId,
-		Height:  suite.TestChain.App.LastBlockHeight() + 1,
-		AppHash: suite.TestChain.App.LastCommitID().Hash,
+	chain.CurrentHeader = tmproto.Header{
+		ChainID: chain.ChainId,
+		Height:  chain.App.LastBlockHeight() + 1,
+		AppHash: chain.App.LastCommitID().Hash,
 		// NOTE: the time is increased by the coordinator to maintain time synchrony amongst
 		// chains.
-		Time:               suite.TestChain.CurrentHeader.Time,
-		ValidatorsHash:     suite.TestChain.Vals.Hash(),
-		NextValidatorsHash: suite.TestChain.NextVals.Hash(),
-		ProposerAddress:    suite.TestChain.CurrentHeader.ProposerAddress,
+		Time:               chain.CurrentHeader.Time,
+		ValidatorsHash:     chain.Vals.Hash(),
+		NextValidatorsHash: chain.NextVals.Hash(),
+		ProposerAddress:    chain.CurrentHeader.ProposerAddress,
 	}
 }
 
@@ -862,7 +849,7 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 		valSet      *tmproto.ValidatorSet
 		trustedVals *tmproto.ValidatorSet
 	)
-	require.NotNil(chain.T, cmtValSet)
+	chain.suite.NotNil(cmtValSet)
 
 	tmHeader := cmttypes.Header{
 		Version:            tmprotoversion.Consensus{Block: cmtversion.BlockProtocol, App: 2},
@@ -894,7 +881,7 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 	}
 
 	extCommit, err := cmttypes.MakeExtCommit(blockID, blockHeight, 1, voteSet, signerArr, timestamp, false)
-	require.NoError(chain.T, err)
+	chain.suite.Require().NoError(err)
 
 	signedHeader := &tmproto.SignedHeader{
 		Header: tmHeader.ToProto(),
@@ -903,12 +890,12 @@ func (chain *TestChain) CreateTMClientHeader(chainID string, blockHeight int64, 
 
 	if cmtValSet != nil { //nolint:staticcheck
 		valSet, err = cmtValSet.ToProto()
-		require.NoError(chain.T, err)
+		chain.suite.Require().NoError(err)
 	}
 
 	if tmTrustedVals != nil {
 		trustedVals, err = tmTrustedVals.ToProto()
-		require.NoError(chain.T, err)
+		chain.suite.Require().NoError(err)
 	}
 
 	// The trusted fields may be nil. They may be filled before relaying messages to a client.

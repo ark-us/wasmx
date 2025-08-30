@@ -26,7 +26,6 @@ func (suite *KeeperTestSuite) TestVMCollaboration() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	depsPy := []string{types.INTERPRETER_PYTHON}
 	depsJs := []string{types.INTERPRETER_JS}

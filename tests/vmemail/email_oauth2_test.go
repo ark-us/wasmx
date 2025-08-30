@@ -29,7 +29,6 @@ func (suite *KeeperTestSuite) TestEmailOauth2() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	_, err := utils.DeployDType(suite, appA, sender)
 	suite.Require().NoError(err)

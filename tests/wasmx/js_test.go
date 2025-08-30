@@ -25,7 +25,6 @@ func (suite *KeeperTestSuite) TestWasiJavyJsSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "jsSimpleStorage", nil)
@@ -40,7 +39,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
 	codeId := appA.StoreCode(sender, js.JsSimpleStorage, deps)
@@ -78,7 +76,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
 	codeId := appA.StoreCode(sender, js.JsSimpleStorage, deps)
@@ -105,7 +102,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallPySimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	depsJs := []string{types.INTERPRETER_JS}
 	depsPy := []string{types.INTERPRETER_PYTHON}
@@ -134,7 +130,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsCallEvmSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
 	s.Require().NoError(err)
@@ -167,7 +162,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterJsBlockchain() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_JS}
 	codeId := appA.StoreCode(sender, js.JsBlockchain, deps)

@@ -50,7 +50,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Direct() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.ADDR_MODEXP}
 	addressCurve := appA.BytesToAccAddressPrefixed(appA.Hex2bz("0000000000000000000000000000000000000020"))
@@ -154,7 +153,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384Test() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, testdata.Curve384TestWasm, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
@@ -246,7 +244,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong() {
 	appA := s.AppContext()
 
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, testdata.Curve384TestWasm, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
@@ -283,7 +280,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, testdata.Curve384TestWasm, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "curve384testbin", nil)
@@ -312,7 +308,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestInterpreted() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.Curve384Test)
 	s.Require().NoError(err)
@@ -401,7 +396,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileCurve384TestLong2Interpreted() 
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.Curve384Test)
 	s.Require().NoError(err)
@@ -479,7 +473,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistry() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	registryAddress := appA.BytesToAccAddressPrefixed(appA.Hex2bz(types.ADDR_SECP384R1_REGISTRY))
 
@@ -579,7 +572,6 @@ func (suite *KeeperTestSuite) TestEwasmPrecompileWalletRegistryInterpreted() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.WalletRegistry)
 	s.Require().NoError(err)

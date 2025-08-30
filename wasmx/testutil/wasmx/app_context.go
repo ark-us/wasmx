@@ -75,7 +75,7 @@ type AppContext struct {
 	S *KeeperTestSuite
 
 	App   *app.App
-	Chain TestChain
+	Chain *TestChain
 
 	// for generate test tx
 	ClientCtx client.Context
@@ -431,14 +431,18 @@ func (s *AppContext) FinalizeBlock(txs [][]byte) (*abci.ResponseFinalizeBlock, e
 
 func (s *AppContext) DeliverEthTx(priv cryptotypes.PrivKey, msg sdk.Msg, txFee sdk.Coins, gasLimit uint64) (*abci.ExecTxResult, error) {
 	bz, err := s.prepareEthTx(priv, msg, txFee, gasLimit)
-	s.S.Require().NoError(err)
+	if err != nil {
+		return nil, err
+	}
 	txs := [][]byte{}
 	txs = append(txs, bz)
 	res, err := s.FinalizeBlock(txs)
 	if err != nil {
 		return nil, err
 	}
-	s.S.Require().Equal(len(res.TxResults), 1)
+	if len(res.TxResults) != 1 {
+		return nil, fmt.Errorf("DeliverEthTx: tx results not 1: %d", len(res.TxResults))
+	}
 	return res.TxResults[0], nil
 }
 
@@ -483,8 +487,9 @@ func (s *AppContext) DeliverTxRaw(txbz []byte) (*abci.ExecTxResult, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	s.S.Require().Equal(1, len(res.TxResults))
+	if len(res.TxResults) != 1 {
+		return nil, fmt.Errorf("tx results not 1: %d", len(res.TxResults))
+	}
 	return res.TxResults[0], nil
 }
 
@@ -518,7 +523,7 @@ func (s *AppContext) BroadcastTxAsync(account simulation.Account, msgs []sdk.Msg
 	if err != nil {
 		return nil, err
 	}
-	commitres, err := s.S.CommitBlock()
+	commitres, err := s.Chain.CommitBlock()
 	if err != nil {
 		return nil, err
 	}

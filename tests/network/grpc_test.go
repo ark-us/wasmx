@@ -44,7 +44,6 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	_, err := appA.App.AccountKeeper.GetSequence(appA.Context(), sender.Address)
 	suite.Require().NoError(err)
@@ -248,9 +247,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	consensusBech32 := appA.MustAccAddressToString(consensusContract)
@@ -332,9 +329,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	consensusContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_TENDERMINT)
 	consensusBech32 := appA.MustAccAddressToString(consensusContract)
@@ -406,18 +401,17 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	chain := s.Chain()
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
 	valAccount := simulation.Account{
-		PrivKey: s.Chain().SenderPrivKey,
-		PubKey:  s.Chain().SenderPrivKey.PubKey(),
-		Address: s.Chain().SenderAccount.GetAddress(),
+		PrivKey: chain.SenderPrivKey,
+		PubKey:  chain.SenderPrivKey.PubKey(),
+		Address: chain.SenderAccount.GetAddress(),
 	}
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := appA.MustAccAddressToString(raftContract)
 
@@ -465,7 +459,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// check that the setup was done on the new contract
 	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
-	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
+	state := chain.GetContextValue(appA.Context(), stateKey, newConsensus.String())
 	fmt.Println("---state---", newConsensus.String(), stateKey, state)
 
 	// execute next block
@@ -540,18 +534,17 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	sender := suite.GetRandomAccount()
 	sender2 := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(1_000_000_000_000_000_000)
+	chain := s.Chain()
 	appA := s.AppContext()
 	denom := appA.Chain.Config.BaseDenom
 	valAccount := simulation.Account{
-		PrivKey: s.Chain().SenderPrivKey,
-		PubKey:  s.Chain().SenderPrivKey.PubKey(),
-		Address: s.Chain().SenderAccount.GetAddress(),
+		PrivKey: chain.SenderPrivKey,
+		PubKey:  chain.SenderPrivKey.PubKey(),
+		Address: chain.SenderAccount.GetAddress(),
 	}
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 	raftContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_CONSENSUS_RAFT)
 	raftContractBech32 := appA.MustAccAddressToString(raftContract)
 
@@ -607,7 +600,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 
 	// check that the setup was done on the new contract
 	stateKey := types.FSM_CONTEXT_KEY + types.STATE_KEY
-	state := suite.GetContextValue(appA.Context(), stateKey, newConsensus.String())
+	state := chain.GetContextValue(appA.Context(), stateKey, newConsensus.String())
 	fmt.Println("---state---", newConsensus.String(), stateKey, state)
 
 	time.Sleep(time.Second * 5)
@@ -673,7 +666,6 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // denom := appA.Chain.Config.BaseDenom
 // 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
 // 	appA.Faucet.Fund(appA.Context(), sender2.Address, sdk.NewCoin(denom, initBalance))
-// 	suite.Commit()
 
 // 	// ip1 := "tcp://localhost:8090"
 // 	// ip2 := "tcp://localhost:8091"
@@ -927,7 +919,6 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	appA := s.GetAppContext(suite.chainA)
 // denom := appA.Chain.Config.BaseDenom
 // 	appA.Faucet.Fund(appA.Context(), sender.Address, sdk.NewCoin(denom, initBalance))
-// 	suite.Commit()
 
 // 	// send tx
 // 	contractAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_IDENTITY)

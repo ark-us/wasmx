@@ -33,9 +33,7 @@ func (suite *KeeperTestSuite) TestUpgradeInterpreterEVM() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.INTERPRETER_EVM_SHANGHAI)
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -110,7 +108,6 @@ func (suite *KeeperTestSuite) TestWasmxDebug() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString(testdata.SimpleStorage)
 	s.Require().NoError(err)
@@ -134,7 +131,6 @@ func (suite *KeeperTestSuite) TestWasmxDebugPush16() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	evmcode, err := hex.DecodeString("6019600d60003960196000f3fe6fc84a6e6ec1e7f30f5c812eeba420f76960005260206000f3")
 	s.Require().NoError(err)

@@ -116,7 +116,6 @@ func (suite *KeeperTestSuite) TestEmail() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	_, err := utils.DeployDType(suite, appA, sender)
 	suite.Require().NoError(err)
@@ -180,7 +179,6 @@ func (suite *KeeperTestSuite) TestEmailListen() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	_, err := utils.DeployDType(suite, appA, sender)
 	suite.Require().NoError(err)

@@ -30,7 +30,6 @@ func (suite *KeeperTestSuite) TestInterpreterTaySimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
 	codeId := appA.StoreCode(sender, []byte(testdata.SimpleStorageTay), deps)
 
@@ -55,7 +54,6 @@ func (suite *KeeperTestSuite) TestInterpreterTayERC20() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
 	codeId := appA.StoreCode(sender, []byte(testdata.ERC20Tay), deps)
 
@@ -98,7 +96,6 @@ func (suite *KeeperTestSuite) TestInterpreterTayJson() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
 	codeId := appA.StoreCode(sender, []byte(testdata.JsonTestTay), deps)
 
@@ -137,7 +134,6 @@ func (suite *KeeperTestSuite) TestInterpreterTayOpcodes() {
 	appA := s.AppContext()
 	senderP := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderP, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
 	codeId := appA.StoreCode(sender, []byte(testdata.OpcodesTay), deps)
 
@@ -253,7 +249,6 @@ func (suite *KeeperTestSuite) TestInterpreterTay2Opcodes() {
 	appA := s.AppContext()
 	senderP := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderP, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
 	codeId := appA.StoreCode(sender, []byte(testdata.OpcodesTay2), deps)
 
@@ -417,7 +412,6 @@ func (suite *KeeperTestSuite) TestInterpreterTayU256() {
 	appA := s.AppContext()
 	senderP := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderP, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	deps := []string{types.INTERPRETER_TAY}
 	codeId := appA.StoreCode(sender, []byte(testdata.OpcodesTay), deps)
 

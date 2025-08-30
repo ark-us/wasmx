@@ -24,7 +24,6 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
@@ -63,7 +62,6 @@ func (suite *KeeperTestSuite) TestEwasm1SimpleStorageConstructor() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	initvalue := "0000000000000000000000000000000000000000000000000000000000000005"
@@ -85,7 +83,6 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
@@ -102,7 +99,6 @@ func (suite *KeeperTestSuite) TestEwasmCannotExecuteInternal() {
 	res, err := appA.DeliverTxWithOpts(sender, executeCodeMsg, "", 5500000, nil)
 	s.Require().NoError(err)
 	s.Require().False(res.IsOK(), res.GetLog())
-	suite.Commit()
 }
 
 func (suite *KeeperTestSuite) TestConstructorTestBin() {
@@ -115,13 +111,11 @@ func (suite *KeeperTestSuite) TestConstructorTestBin() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
 	calld := "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000597364666173666761736b736b646d6664736b6e766b6d6c2c76642c2e6777656c2e72336c742c6b34336f702c65726c3b2c2e663b3b2e6673643b6c2c666c6b6d6766646b6e736b6a61646e6b6c6d73646c76642c6c3b732c6600000000000000"
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, "callwasm", nil)
 	appA.Faucet.Fund(appA.Context(), contractAddress, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	res := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(fsig)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002163636861727365743d5554462d383e3c2f703e3c2f626f64793e3c2f68746d6c3e00000000000000000000000000000000000000000000000000000000000000", res)

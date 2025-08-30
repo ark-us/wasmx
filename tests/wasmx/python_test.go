@@ -22,8 +22,7 @@ import (
 
 // 	appA := s.AppContext()
 // 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-// 	suite.Commit()
-
+//
 // 	pyInterpreterAddress := types.AccAddressFromHex(types.ADDR_INTERPRETER_PYTHON)
 
 // 	data := []byte(`
@@ -43,7 +42,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
 	codeId := appA.StoreCode(sender, py.PySimpleStorage, deps)
@@ -71,7 +69,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonCallSimpleStorage() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
 	codeId := appA.StoreCode(sender, py.PySimpleStorage, deps)
@@ -98,7 +95,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonBlockchain() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
 	codeId := appA.StoreCode(sender, py.PyBlockchain, deps)
@@ -193,7 +189,6 @@ func (suite *KeeperTestSuite) TestWasiInterpreterPythonDemo1() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	deps := []string{types.INTERPRETER_PYTHON}
 	codeId := appA.StoreCode(sender, py.PyDemo, deps)

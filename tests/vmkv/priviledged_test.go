@@ -26,7 +26,6 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	// test that a contract with a priviledged API, without the proper role is executed using the Mocked API
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -68,7 +67,6 @@ func (suite *KeeperTestSuite) registerRole(rolename string, contractAddress mcod
 	}
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(500000)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	// register new role
 	msg := []byte(fmt.Sprintf(`{"SetRole":{"role":{"role":"%s","storage_type":0,"primary":0,"multiple":false,"labels":["%s"],"addresses":["%s"]}}}`, rolename, rolename, contractAddress))

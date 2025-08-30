@@ -79,7 +79,6 @@ func RegisterRole(suite KeeperTestSuiteInterface, appA wt.AppContext, rolename s
 	}
 	initBalance := sdkmath.NewInt(wt.DEFAULT_BALANCE).MulRaw(500000)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(valAccount.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	// register new role
 	msg := []byte(fmt.Sprintf(`{"SetRole":{"role":{"role":"%s","storage_type":0,"primary":0,"multiple":false,"labels":["%s"],"addresses":["%s"]}}}`, rolename, rolename, contractAddress))

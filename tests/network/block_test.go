@@ -37,7 +37,6 @@ func (suite *KeeperTestSuite) TestBlockHeader() {
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	codeIdTo := appA.StoreCode(sender, wasmbinTo, nil)
 	appA.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinTo", nil)

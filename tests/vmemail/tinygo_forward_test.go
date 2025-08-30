@@ -168,7 +168,6 @@ func (suite *KeeperTestSuite) TestEmailTinyGoForwardCustom() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 
 	// Store the emailchain contract and instantiate it
 	codeId := appA.StoreCode(sender, wasmbin, nil)

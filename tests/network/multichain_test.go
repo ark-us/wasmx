@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	anypb "google.golang.org/protobuf/types/known/anypb"
@@ -48,13 +49,13 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
+	chain := suite.GetChain(chainId)
 	sender := suite.GetRandomAccount()
 	newacc := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
 	bankAddressStr := appA.MustAccAddressToString(bankAddress)
@@ -62,10 +63,10 @@ func (suite *KeeperTestSuite) TestMultiChainExecMythos() {
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 
 	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, senderPrefixed.String(), newaccStr, config.BaseDenom)
-	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
+	suite.broadcastMultiChainExec(chain, []byte(msg), sender, bankAddress, chainId)
 
 	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
-	res := suite.queryMultiChainCall(appA.App, []byte(qmsg), sender, bankAddressStr, chainId)
+	res := suite.queryMultiChainCall(chain, appA.App, []byte(qmsg), sender, bankAddressStr, chainId)
 
 	balance := &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(res, balance)
@@ -79,26 +80,25 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
-	suite.SetCurrentChain(chainId)
+	chain := suite.GetChain(chainId)
 
 	sender := suite.GetRandomAccount()
 	newacc := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	bankAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_BANK)
 	bankAddressStr := appA.MustAccAddressToString(bankAddress)
 	newaccStr := appA.MustAccAddressToString(newacc.Address)
 
 	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, appA.MustAccAddressToString(sender.Address), newaccStr, config.BaseDenom)
-	suite.broadcastMultiChainExec([]byte(msg), sender, bankAddress, chainId)
+	suite.broadcastMultiChainExec(chain, []byte(msg), sender, bankAddress, chainId)
 
 	qmsg := fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, newaccStr, config.BaseDenom)
-	res := suite.queryMultiChainCall(appA.App, []byte(qmsg), sender, bankAddressStr, chainId)
+	res := suite.queryMultiChainCall(chain, appA.App, []byte(qmsg), sender, bankAddressStr, chainId)
 
 	balance := &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(res, balance)
@@ -110,7 +110,6 @@ func (suite *KeeperTestSuite) TestMultiChainExecLevel0() {
 
 func (suite *KeeperTestSuite) TestMultiChainInit() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -120,10 +119,9 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 
@@ -270,11 +268,11 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	suite.Require().NoError(err)
 	msg := fmt.Sprintf(`{"RegisterSubChain":%s}`, string(regreqBz))
 
-	_, err = suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
+	_, err = suite.broadcastMultiChainExec(chain, []byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
 	msg = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
-	res, err := suite.broadcastMultiChainExec([]byte(msg), sender, registryAddress, chainId)
+	res, err := suite.broadcastMultiChainExec(chain, []byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
@@ -290,7 +288,6 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 
 func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -300,11 +297,10 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -321,7 +317,7 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	}})
 	suite.Require().NoError(err)
 
-	_, err = suite.broadcastMultiChainExec(regreq, sender, registryAddress, chainId)
+	_, err = suite.broadcastMultiChainExec(chain, regreq, sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
 	// TODO expected subchainId
@@ -349,9 +345,9 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	suite.Require().NoError(err)
 
 	msg := []byte(fmt.Sprintf(`{"execute":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
-	txbz := suite.queryMultiChainCall(appA.App, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
+	txbz := suite.queryMultiChainCall(chain, appA.App, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
 	msg = []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
-	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddressStr, chainId)
+	chaincfgbz := suite.queryMultiChainCall(chain, appA.App, msg, sender, registryAddressStr, chainId)
 	suite.Require().NoError(err)
 
 	var subchainConfig menc.ChainConfig
@@ -412,13 +408,13 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	}})
 	s.Require().NoError(err)
 
-	_, err = suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	_, err = suite.broadcastMultiChainExec(chain, []byte(regreq), sender, registryAddress, chainId)
 	s.Require().NoError(err)
 	regreq, err = json.Marshal(&wasmxtypes.MultiChainRegistryCallData{InitSubChain: &wasmxtypes.InitSubChainRequest{
 		ChainId: subChainId,
 	}})
 	s.Require().NoError(err)
-	res, err := suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	res, err := suite.broadcastMultiChainExec(chain, []byte(regreq), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
@@ -433,7 +429,6 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	config, err := mcfg.GetChainConfig(chainId)
 	s.Require().NoError(err)
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -443,11 +438,10 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -468,7 +462,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 
 	// get config
 	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
-	subChainCfgBz2 := suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, subChainId2)
+	subChainCfgBz2 := suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, subChainId2)
 	suite.Require().NoError(err)
 	var subChainCfg2 menc.ChainConfig
 	err = json.Unmarshal(subChainCfgBz2, &subChainCfg2)
@@ -482,16 +476,14 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	bankAddressStr := appA.MustAccAddressToString(bankAddress)
 
 	// compose tx on level0
-	suite.SetCurrentChain(chainId)
 	msg := fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, appA.MustAccAddressToString(sender.Address), appA.MustAccAddressToString(newacc.Address), config.BaseDenom)
 	txbuilder1 := suite.prepareMultiChainSubExec(appA, []byte(msg), sender, bankAddress, chainId, 0, 2)
 	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
 	s.Require().NoError(err)
 
 	// compose tx on level1
-	suite.SetCurrentChain(subChainId2)
-	subchainapp := suite.AppContext()
 	subchain2 := suite.GetChain(subChainId2)
+	subchainapp := suite.GetAppContext(subchain2)
 
 	msg = fmt.Sprintf(`{"SendCoins":{"from_address":"%s","to_address":"%s","amount":[{"denom":"%s","amount":"4096"}]}}`, subchainapp.MustAccAddressToString(sender.Address), subchainapp.MustAccAddressToString(newacc.Address), subChainCfg2.BaseDenom)
 	txbuilder2 := suite.prepareMultiChainSubExec(subchainapp, []byte(msg), sender, bankAddress, subChainId2, 1, 2)
@@ -503,34 +495,75 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
 
+	var wg sync.WaitGroup
+	type result struct{ err error }
+	results := make(chan result, 2)
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
+		res, err := subchainapp.DeliverTxRaw(txbz)
+		if err != nil {
+			err = fmt.Errorf(
+				"subchainapp DeliverTxRaw error: %s, chain=%s log=%v events=%v",
+				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		} else if !res.IsOK() {
+			err = fmt.Errorf(
+				"subchainapp DeliverTxRaw not OK: chain=%s log=%v events=%v",
+				subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		}
+		results <- result{err: err}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		time.Sleep(time.Second * 3)
-		suite.SetCurrentChain(chainId)
 
 		// we use the same atomic txbz on any chain
 		res, err := appA.DeliverTxRaw(txbz)
-		s.Require().NoError(err)
-		s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+		if err != nil {
+			err = fmt.Errorf(
+				"appA DeliverTxRaw error: %s, chain=%s log=%v events=%v",
+				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		} else if !res.IsOK() {
+			err = fmt.Errorf(
+				"appA DeliverTxRaw not OK: chain=%s log=%v events=%v",
+				appA.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		}
+		results <- result{err: err}
 
-		suite.SetCurrentChain(chainId)
-		qmsg = []byte(fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, appA.MustAccAddressToString(newacc.Address), config.BaseDenom))
-		qres := suite.queryMultiChainCall(appA.App, qmsg, sender, bankAddressStr, chainId)
-		balance := &banktypes.QueryBalanceResponse{}
-		err = json.Unmarshal(qres, balance)
-		s.Require().NoError(err)
-		s.Require().Equal(config.BaseDenom, balance.Balance.Denom)
-		s.Require().Equal(int64(0x1000), balance.Balance.Amount.Int64())
 	}()
 
-	res, err := subchainapp.DeliverTxRaw(txbz)
-	s.Require().NoError(err)
-	s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+	// Collect both results (fail fast if any error)
+	for i := 0; i < 2; i++ {
+		select {
+		case r := <-results:
+			if r.err != nil {
+				s.Require().NoError(r.err)
+			}
+		}
+	}
 
-	suite.SetCurrentChain(subChainId2)
+	wg.Wait()
+
+	qmsg = []byte(fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, appA.MustAccAddressToString(newacc.Address), config.BaseDenom))
+	qres := suite.queryMultiChainCall(chain, appA.App, qmsg, sender, bankAddressStr, chainId)
+	balance := &banktypes.QueryBalanceResponse{}
+	err = json.Unmarshal(qres, balance)
+	s.Require().NoError(err)
+	s.Require().Equal(config.BaseDenom, balance.Balance.Denom)
+	s.Require().Equal(int64(0x1000), balance.Balance.Amount.Int64())
+
 	qmsg = []byte(fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, subchainapp.MustAccAddressToString(newacc.Address), subChainCfg2.BaseDenom))
 	bankAddressStr = subchainapp.MustAccAddressToString(bankAddress)
-	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, bankAddressStr, chainId)
-	balance := &banktypes.QueryBalanceResponse{}
+	qres = suite.queryMultiChainCall(subchain2, subchainapp.App, qmsg, sender, bankAddressStr, chainId)
+	balance = &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(qres, balance)
 	s.Require().NoError(err)
 	s.Require().Equal(subChainCfg2.BaseDenom, balance.Balance.Denom)
@@ -541,9 +574,6 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	wasmbinFrom := testdata.WasmxCrossChain
 	wasmbinTo := testdata.WasmxSimpleStorage
 	chainId := mcfg.LEVEL0_CHAIN_ID
-	// config, err := mcfg.GetChainConfig(chainId)
-	// s.Require().NoError(err)
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -553,11 +583,10 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -577,7 +606,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 
 	// get config
 	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
-	subChainCfgBz2 := suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, subChainId2)
+	subChainCfgBz2 := suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, subChainId2)
 	var subChainCfg2 menc.ChainConfig
 	err := json.Unmarshal(subChainCfgBz2, &subChainCfg2)
 	suite.Require().NoError(err)
@@ -588,14 +617,12 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	// run actual test
 
 	// deploy from contract on level0
-	suite.SetCurrentChain(chainId)
 	codeIdFrom := appA.StoreCode(sender, wasmbinFrom, nil)
 	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinFrom", nil)
 
 	// deploy to contract on level1
-	suite.SetCurrentChain(subChainId2)
-	subchainapp := suite.AppContext()
 	subchain2 := suite.GetChain(subChainId2)
+	subchainapp := suite.GetAppContext(subchain2)
 
 	codeIdTo := subchainapp.StoreCode(sender, wasmbinTo, nil)
 	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinTo", nil)
@@ -621,36 +648,74 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	data2 := []byte(fmt.Sprintf(`{"CrossChain":%s}`, string(crossreqbz)))
 
 	// we send this message on level0
-	suite.SetCurrentChain(chainId)
 	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 2)
 	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
 	s.Require().NoError(err)
 
 	// we send it first on level1
-	suite.SetCurrentChain(subChainId2)
 	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
 
+	var wg sync.WaitGroup
+	type result struct{ err error }
+	results := make(chan result, 2)
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
+		res, err := subchainapp.DeliverTxRaw(txbz)
+		if err != nil {
+			err = fmt.Errorf(
+				"subchainapp DeliverTxRaw error: %s, chain=%s log=%v events=%v",
+				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		} else if !res.IsOK() {
+			err = fmt.Errorf(
+				"subchainapp DeliverTxRaw not OK: chain=%s log=%v events=%v",
+				subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		}
+		results <- result{err: err}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		time.Sleep(time.Second * 3)
-		suite.SetCurrentChain(chainId)
 
 		// we use the same atomic txbz on any chain
 		res, err := appA.DeliverTxRaw(txbz)
-		s.Require().NoError(err)
-		s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+		if err != nil {
+			err = fmt.Errorf(
+				"appA DeliverTxRaw error: %s, chain=%s log=%v events=%v",
+				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		} else if !res.IsOK() {
+			err = fmt.Errorf(
+				"appA DeliverTxRaw not OK: chain=%s log=%v events=%v",
+				appA.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		}
+		results <- result{err: err}
 	}()
 
-	suite.SetCurrentChain(subChainId2)
-	res, err := subchainapp.DeliverTxRaw(txbz)
-	s.Require().NoError(err)
-	s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+	// Collect both results (fail fast if any error)
+	for i := 0; i < 2; i++ {
+		select {
+		case r := <-results:
+			if r.err != nil {
+				s.Require().NoError(r.err)
+			}
+		}
+	}
 
-	suite.SetCurrentChain(subChainId2)
+	wg.Wait()
+
 	qmsg = []byte(`{"get":{"key":"hello"}}`)
-	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, contractAddressTo.String(), subChainId2)
+	qres := suite.queryMultiChainCall(subchain2, subchainapp.App, qmsg, sender, contractAddressTo.String(), subChainId2)
 	suite.Require().Equal("sammy", string(qres))
 }
 
@@ -660,7 +725,6 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	chainId := mcfg.LEVEL0_CHAIN_ID
 	// config, err := mcfg.GetChainConfig(chainId)
 	// s.Require().NoError(err)
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -670,11 +734,10 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -694,7 +757,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 
 	// get config
 	qmsg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId2))
-	subChainCfgBz2 := suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, subChainId2)
+	subChainCfgBz2 := suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, subChainId2)
 	var subChainCfg2 menc.ChainConfig
 	err := json.Unmarshal(subChainCfgBz2, &subChainCfg2)
 	suite.Require().NoError(err)
@@ -705,14 +768,12 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	// run actual test
 
 	// deploy from contract on level0
-	suite.SetCurrentChain(chainId)
 	codeIdFrom := appA.StoreCode(sender, wasmbinFrom, nil)
 	contractAddressFrom := appA.InstantiateCode(sender, codeIdFrom, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinFrom", nil)
 
 	// deploy to contract on level1
-	suite.SetCurrentChain(subChainId2)
-	subchainapp := suite.AppContext()
 	subchain2 := suite.GetChain(subChainId2)
+	subchainapp := suite.GetAppContext(subchain2)
 
 	codeIdTo := subchainapp.StoreCode(sender, wasmbinTo, nil)
 	contractAddressTo := subchainapp.InstantiateCode(sender, codeIdTo, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"crosschain_contract":"%s"}`, wasmxtypes.ROLE_MULTICHAIN_REGISTRY))}, "wasmbinTo", nil)
@@ -742,34 +803,83 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	data2 := []byte(fmt.Sprintf(`{"CrossChainQuery":%s}`, string(crossreqbz)))
 
 	// we send this message on level0
-	suite.SetCurrentChain(chainId)
 	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 2)
 	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
 	s.Require().NoError(err)
 
 	// we send it first on level1
-	suite.SetCurrentChain(subChainId2)
-	subchainapp = suite.AppContext()
+	subchainapp = suite.GetAppContext(chain)
 	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
 	s.Require().NoError(err)
 
+	// we need to use a go routine because each transaction waits for the other to arrive
+	// and the chains stop until the atomic tx is done
+
+	var wg sync.WaitGroup
+	type result struct {
+		err error
+		res *abci.ExecTxResult
+	}
+	results := make(chan result, 2)
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
+		res, err := subchainapp.DeliverTxRaw(txbz)
+		if err != nil {
+			err = fmt.Errorf(
+				"subchainapp DeliverTxRaw error: %s, chain=%s log=%v events=%v",
+				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		} else if !res.IsOK() {
+			err = fmt.Errorf(
+				"subchainapp DeliverTxRaw not OK: chain=%s log=%v events=%v",
+				subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		}
+		results <- result{err: err, res: res}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		time.Sleep(time.Second * 3)
-		suite.SetCurrentChain(chainId)
 
 		// we use the same atomic txbz on any chain
 		res, err := appA.DeliverTxRaw(txbz)
-		s.Require().NoError(err)
-		s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+		if err != nil {
+			err = fmt.Errorf(
+				"appA DeliverTxRaw error: %s, chain=%s log=%v events=%v",
+				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		} else if !res.IsOK() {
+			err = fmt.Errorf(
+				"appA DeliverTxRaw not OK: chain=%s log=%v events=%v",
+				appA.App.ChainID(), res.GetLog(), res.GetEvents(),
+			)
+		}
+		results <- result{err: err}
 	}()
 
-	suite.SetCurrentChain(subChainId2)
-	subchainapp = suite.AppContext()
-	res, err := subchainapp.DeliverTxRaw(txbz)
-	s.Require().NoError(err)
-	s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
+	var res *abci.ExecTxResult
+
+	// Collect both results (fail fast if any error)
+	for i := 0; i < 2; i++ {
+		select {
+		case r := <-results:
+			if r.err != nil {
+				s.Require().NoError(r.err)
+			}
+			if r.res != nil {
+				res = r.res
+			}
+		}
+	}
+
+	wg.Wait()
 
 	txmsgdata, err := mcodec.TxMsgDataFromBz(res.Data)
 	s.Require().NoError(err)
@@ -782,16 +892,13 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	s.Require().Equal(1, len(atomicres.Results))
 	s.Require().Equal(abci.CodeTypeOK, atomicres.Results[0].Code)
 
-	suite.SetCurrentChain(subChainId2)
-	subchainapp = suite.AppContext()
 	qmsg = []byte(`{"get":{"key":"hello"}}`)
-	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, contractAddressTo.String(), subChainId2)
+	qres := suite.queryMultiChainCall(subchain2, subchainapp.App, qmsg, sender, contractAddressTo.String(), subChainId2)
 	suite.Require().Equal("brian", string(qres))
 }
 
 func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -801,11 +908,10 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -830,7 +936,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 
 	// check level1 has 3 chain
 	qmsg := []byte(`{"GetSubChainIdsByLevel":{"level":1}}`)
-	respbz := suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, chainId)
+	respbz := suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, chainId)
 	var chainIds []string
 	err := json.Unmarshal(respbz, &chainIds)
 	suite.Require().NoError(err)
@@ -838,7 +944,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 
 	// check level2 has 1 chain
 	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":2}}`)
-	respbz = suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, chainId)
+	respbz = suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, chainId)
 	var chainIds2 []string
 	err = json.Unmarshal(respbz, &chainIds2)
 	suite.Require().NoError(err)
@@ -866,14 +972,14 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 
 	// check level1 has 3 chain
 	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":1}}`)
-	respbz = suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, chainId)
+	respbz = suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, chainId)
 	err = json.Unmarshal(respbz, &chainIds)
 	suite.Require().NoError(err)
 	suite.Require().Equal(2, len(chainIds))
 
 	// check level2 has 2 chain
 	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":2}}`)
-	respbz = suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, chainId)
+	respbz = suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, chainId)
 	err = json.Unmarshal(respbz, &chainIds2)
 	suite.Require().NoError(err)
 	suite.Require().Equal(2, len(chainIds2))
@@ -881,7 +987,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 
 	// check level3 has 1 chain
 	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":3}}`)
-	respbz = suite.queryMultiChainCall(appA.App, qmsg, sender, registryAddressStr, chainId)
+	respbz = suite.queryMultiChainCall(chain, appA.App, qmsg, sender, registryAddressStr, chainId)
 	err = json.Unmarshal(respbz, &chainIds2)
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(chainIds2))
@@ -890,37 +996,37 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 	var level wasmxtypes.QueryGetCurrentLevelResponse
 
 	// verify that level2 chain contains level1 chain ids
-	suite.createSubChainApp(sender, registryAddressStr, chainId, level2ChainId, 4)
-	suite.SetCurrentChain(level2ChainId)
-	subchainapp := suite.AppContext()
-	registryAddressLevel2Str := subchainapp.MustAccAddressToString(registryAddress)
+	suite.createSubChainApp(chain, sender, registryAddressStr, chainId, level2ChainId, 4)
+	subchain2 := suite.GetChain(level2ChainId)
+	subchainapp2 := suite.GetAppContext(subchain2)
+	registryAddressLevel2Str := subchainapp2.MustAccAddressToString(registryAddress)
 	qmsg = []byte(`{"GetCurrentLevel":{}}`)
-	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel2Str, level2ChainId)
+	respbz = suite.queryMultiChainCall(subchain2, subchainapp2.App, qmsg, sender, registryAddressLevel2Str, level2ChainId)
 	err = json.Unmarshal(respbz, &level)
 	suite.Require().NoError(err)
 	suite.Require().Equal(int32(2), level.Level)
 
 	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":1}}`)
-	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel2Str, level2ChainId)
+	respbz = suite.queryMultiChainCall(subchain2, subchainapp2.App, qmsg, sender, registryAddressLevel2Str, level2ChainId)
 	err = json.Unmarshal(respbz, &chainIds2)
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(chainIds2))
 	suite.Require().Equal(subChainId2, chainIds2[0])
 
 	// verify that level3 chain contains level2 chain id
-	suite.SetCurrentChain(chainId) // for the below query
-	suite.createSubChainApp(sender, registryAddressStr, chainId, level3ChainId, 5)
-	suite.SetCurrentChain(level3ChainId)
-	subchainapp = suite.AppContext()
-	registryAddressLevel3Str := subchainapp.MustAccAddressToString(registryAddress)
+	chain = suite.GetChain(chainId)
+	suite.createSubChainApp(chain, sender, registryAddressStr, chainId, level3ChainId, 5)
+	subchain3 := suite.GetChain(level3ChainId)
+	subchainapp3 := suite.GetAppContext(subchain3)
+	registryAddressLevel3Str := subchainapp3.MustAccAddressToString(registryAddress)
 	qmsg = []byte(`{"GetCurrentLevel":{}}`)
-	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel3Str, level3ChainId)
+	respbz = suite.queryMultiChainCall(subchain3, subchainapp3.App, qmsg, sender, registryAddressLevel3Str, level3ChainId)
 	err = json.Unmarshal(respbz, &level)
 	suite.Require().NoError(err)
 	suite.Require().Equal(int32(3), level.Level)
 
 	qmsg = []byte(`{"GetSubChainIdsByLevel":{"level":2}}`)
-	respbz = suite.queryMultiChainCall(subchainapp.App, qmsg, sender, registryAddressLevel3Str, level3ChainId)
+	respbz = suite.queryMultiChainCall(subchain3, subchainapp3.App, qmsg, sender, registryAddressLevel3Str, level3ChainId)
 	err = json.Unmarshal(respbz, &chainIds2)
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(chainIds2))
@@ -929,7 +1035,6 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsTx() {
 
 func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -939,11 +1044,10 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -963,10 +1067,9 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
 	level2ChainId := appA.GetAttributeValueFromEvent(evs[1], "chain_id")
 
-	suite.SetCurrentChain(chainId)
-	suite.createSubChainApp(sender, registryAddressStr, chainId, subChainId1, 4)
-	suite.SetCurrentChain(chainId)
-	suite.createSubChainApp(sender, registryAddressStr, chainId, level2ChainId, 5)
+	chain = suite.GetChain(chainId)
+	suite.createSubChainApp(chain, sender, registryAddressStr, chainId, subChainId1, 4)
+	suite.createSubChainApp(chain, sender, registryAddressStr, chainId, level2ChainId, 5)
 
 	// deploy erc20 rollup
 	newacc := suite.GetRandomAccount()
@@ -982,8 +1085,8 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	}
 
 	// level 1 deploy erc20
-	suite.SetCurrentChain(subChainId1)
-	subchainapp1 := suite.AppContext()
+	subchain1 := suite.GetChain(subChainId1)
+	subchainapp1 := suite.GetAppContext(subchain1)
 	codeIdErc20R1 := subchainapp1.StoreCode(sender, erc20rbin, nil)
 	senderAddr1 := subchainapp1.MustAccAddressToString(sender.Address)
 	erc20data.Minters = []string{senderAddr1}
@@ -994,10 +1097,10 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	newaccAddr1 := subchainapp1.MustAccAddressToString(newacc.Address)
 	// subchainapp1.ExecuteContract(sender, addressErc20R1, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"1000000000"}}`, newaccAddr1))}, nil, nil)
 	msg := []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"1000000000"}}`, newaccAddr1))
-	suite.broadcastMultiChainExec(msg, sender, addressErc20R1.Bytes(), subChainId1)
+	suite.broadcastMultiChainExec(subchain1, msg, sender, addressErc20R1.Bytes(), subChainId1)
 	// get totalsupply on level1
 	qmsg := `{"totalSupply":{}}`
-	qres := suite.queryMultiChainCall(subchainapp1.App, []byte(qmsg), sender, addressErc20R1.String(), subChainId1)
+	qres := suite.queryMultiChainCall(subchain1, subchainapp1.App, []byte(qmsg), sender, addressErc20R1.String(), subChainId1)
 	supply := &wasmxtypes.MsgTotalSupplyResponse{}
 	err = json.Unmarshal(qres, supply)
 	s.Require().NoError(err)
@@ -1006,7 +1109,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 
 	// get balance on level1
 	qmsg = fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, newaccAddr1)
-	qres = suite.queryMultiChainCall(subchainapp1.App, []byte(qmsg), sender, addressErc20R1.String(), subChainId1)
+	qres = suite.queryMultiChainCall(subchain1, subchainapp1.App, []byte(qmsg), sender, addressErc20R1.String(), subChainId1)
 	balance := &wasmxtypes.MsgBalanceOfResponse{}
 	err = json.Unmarshal(qres, balance)
 	s.Require().NoError(err)
@@ -1014,12 +1117,11 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	s.Require().Equal(sdkmath.NewInt(1000000000), balance.Balance.Amount)
 
 	// level 2 deploy erc20
-	suite.SetCurrentChain(level2ChainId)
-	subchainapp2 := suite.AppContext()
+	subchain2 := suite.GetChain(level2ChainId)
+	subchainapp2 := suite.GetAppContext(subchain2)
 	senderPrefixed := subchainapp2.AccBech32Codec().BytesToAccAddressPrefixed(sender.Address)
 
 	subchainapp2.Faucet.Fund(subchainapp2.Context(), senderPrefixed, sdk.NewCoin(subchainapp2.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	codeIdErc20R2 := subchainapp2.StoreCode(sender, erc20rbin, nil)
 	senderAddr2 := subchainapp2.MustAccAddressToString(sender.Address)
 	erc20data.Minters = []string{senderAddr2}
@@ -1032,10 +1134,10 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	newaccAddr2 := subchainapp2.MustAccAddressToString(newacc.Address)
 	// subchainapp1.ExecuteContract(sender, addressErc20R2, wasmxtypes.WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"2000000000"}}`, newaccAddr2))}, nil, nil)
 	msg = []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"2000000000"}}`, newaccAddr2))
-	suite.broadcastMultiChainExec(msg, sender, addressErc20R2.Bytes(), level2ChainId)
+	suite.broadcastMultiChainExec(subchain2, msg, sender, addressErc20R2.Bytes(), level2ChainId)
 	// get totalsupply on level2
 	qmsg = `{"totalSupply":{}}`
-	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	qres = suite.queryMultiChainCall(subchain2, subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	err = json.Unmarshal(qres, supply)
 	s.Require().NoError(err)
 	s.Require().Equal(erc20data.Symbol, supply.Supply.Denom)
@@ -1043,7 +1145,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 
 	// get balance on level2
 	qmsg = fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, newaccAddr2)
-	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	qres = suite.queryMultiChainCall(subchain2, subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	err = json.Unmarshal(qres, balance)
 	s.Require().NoError(err)
 	s.Require().Equal(erc20data.Symbol, balance.Balance.Denom)
@@ -1053,7 +1155,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 
 	// get cross chain supply on level2
 	qmsg = `{"totalSupplyCrossChainNonDeterministic":{}}`
-	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	qres = suite.queryMultiChainCall(subchain2, subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	supplyCrossChain := &wasmxtypes.MsgTotalSupplyCrossChainResponse{}
 	err = json.Unmarshal(qres, supplyCrossChain)
 	s.Require().NoError(err)
@@ -1067,7 +1169,7 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 
 	// get cross chain balance on level2
 	qmsg = fmt.Sprintf(`{"balanceOfCrossChainNonDeterministic":{"owner":"%s"}}`, newaccAddr2)
-	qres = suite.queryMultiChainCall(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	qres = suite.queryMultiChainCall(subchain2, subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	balanceCrossChain := &wasmxtypes.MsgBalanceOfCrossChainResponse{}
 	err = json.Unmarshal(qres, balanceCrossChain)
 	s.Require().NoError(err)
@@ -1075,12 +1177,11 @@ func (suite *KeeperTestSuite) TestMultiChainLevelsQuery() {
 	s.Require().Equal(sdkmath.NewInt(3000000000), balanceCrossChain.Balance.Amount)
 
 	// ensure we do not run nondeterministic crosschain queries as part of a tx
-	_, err = suite.queryMultiChainCallWithWrongModeExec(subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
+	_, err = suite.queryMultiChainCallWithWrongModeExec(subchain2, subchainapp2.App, []byte(qmsg), sender, addressErc20R2.String(), level2ChainId)
 	s.Require().Error(err, "")
 }
 
 func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.RegisterDefaultSubChainRequest) (string, *abci.ExecTxResult) {
-	suite.SetCurrentChain(chainId)
 	chain := suite.GetChain(chainId)
 
 	initBalance := sdkmath.NewInt(DEFAULT_BALANCE)
@@ -1090,11 +1191,10 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := suite.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(denom, initBalance))
-	suite.Commit()
 
 	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
 	registryAddressStr := appA.MustAccAddressToString(registryAddress)
@@ -1103,7 +1203,7 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	regreq, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterDefaultSubChain: req})
 	suite.Require().NoError(err)
 
-	res, err := suite.broadcastMultiChainExec(regreq, sender, registryAddress, chainId)
+	res, err := suite.broadcastMultiChainExec(chain, regreq, sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 	evs := appA.GetSdkEventsByType(res.Events, "register_subchain")
 	suite.Require().Equal(1, len(evs))
@@ -1131,9 +1231,9 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	suite.Require().NoError(err)
 
 	msg := []byte(fmt.Sprintf(`{"execute":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
-	txbz := suite.queryMultiChainCall(appA.App, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
+	txbz := suite.queryMultiChainCall(chain, appA.App, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
 	msg = []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
-	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddressStr, chainId)
+	chaincfgbz := suite.queryMultiChainCall(chain, appA.App, msg, sender, registryAddressStr, chainId)
 
 	var subchainConfig menc.ChainConfig
 	err = json.Unmarshal(chaincfgbz, &subchainConfig)
@@ -1195,13 +1295,13 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	}})
 	s.Require().NoError(err)
 
-	_, err = suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	_, err = suite.broadcastMultiChainExec(chain, []byte(regreq), sender, registryAddress, chainId)
 	s.Require().NoError(err)
 	regreq, err = json.Marshal(&wasmxtypes.MultiChainRegistryCallData{InitSubChain: &wasmxtypes.InitSubChainRequest{
 		ChainId: subChainId,
 	}})
 	s.Require().NoError(err)
-	res, err = suite.broadcastMultiChainExec([]byte(regreq), sender, registryAddress, chainId)
+	res, err = suite.broadcastMultiChainExec(chain, []byte(regreq), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 	evs = appA.GetSdkEventsByType(res.Events, "init_subchain")
 	suite.Require().GreaterOrEqual(len(evs), 1)
@@ -1210,10 +1310,10 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	return subChainId, res
 }
 
-func (suite *KeeperTestSuite) createSubChainApp(sender simulation.Account, registryAddressStr string, chainId string, subChainId string, index int32) mcfg.MythosApp {
-	appA := s.AppContext()
+func (suite *KeeperTestSuite) createSubChainApp(chain *ut.TestChain, sender simulation.Account, registryAddressStr string, chainId string, subChainId string, index int32) mcfg.MythosApp {
+	appA := suite.GetAppContext(chain)
 	msg := []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
-	chaincfgbz := suite.queryMultiChainCall(appA.App, msg, sender, registryAddressStr, chainId)
+	chaincfgbz := suite.queryMultiChainCall(chain, appA.App, msg, sender, registryAddressStr, chainId)
 
 	var subchainConfig menc.ChainConfig
 	err := json.Unmarshal(chaincfgbz, &subchainConfig)
@@ -1236,11 +1336,11 @@ func (suite *KeeperTestSuite) createSubChainApp(sender simulation.Account, regis
 	return subchainapp
 }
 
-func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sender simulation.Account, contractAddress string, chainId string) []byte {
+func (suite *KeeperTestSuite) queryMultiChainCall(chain *ut.TestChain, mapp *app.App, msg []byte, sender simulation.Account, contractAddress string, chainId string) []byte {
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
-	appA := suite.AppContext()
+	appA := suite.GetAppContext(chain)
 	multimsg := &types.QueryContractCallRequest{
 		MultiChainId: chainId,
 		Sender:       appA.MustAccAddressToString(sender.Address),
@@ -1258,11 +1358,11 @@ func (suite *KeeperTestSuite) queryMultiChainCall(mapp *app.App, msg []byte, sen
 	return wres.Data
 }
 
-func (suite *KeeperTestSuite) queryMultiChainCallWithWrongModeExec(mapp *app.App, msg []byte, sender simulation.Account, contractAddress string, chainId string) (*types.QueryContractCallResponse, error) {
+func (suite *KeeperTestSuite) queryMultiChainCallWithWrongModeExec(chain *ut.TestChain, mapp *app.App, msg []byte, sender simulation.Account, contractAddress string, chainId string) (*types.QueryContractCallResponse, error) {
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
-	appA := suite.AppContext()
+	appA := suite.GetAppContext(chain)
 	multimsg := &types.QueryContractCallRequest{
 		MultiChainId: chainId,
 		Sender:       appA.MustAccAddressToString(sender.Address),
@@ -1274,12 +1374,12 @@ func (suite *KeeperTestSuite) queryMultiChainCallWithWrongModeExec(mapp *app.App
 	return mapp.NetworkKeeper.ContractCall(ctx, multimsg)
 }
 
-func (suite *KeeperTestSuite) queryMultiChainCall__(mapp *app.App, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {
+func (suite *KeeperTestSuite) queryMultiChainCall__(chain *ut.TestChain, mapp *app.App, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {
 	goctx1 := context.Background()
 	_, conn1 := suite.GrpcClient(goctx1, "bufnet1", mapp)
 	defer conn1.Close()
 	queryClient := types.NewQueryClient(conn1)
-	appA := suite.AppContext()
+	appA := suite.GetAppContext(chain)
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
@@ -1297,12 +1397,12 @@ func (suite *KeeperTestSuite) queryMultiChainCall__(mapp *app.App, msg []byte, s
 	return res.Data
 }
 
-func (suite *KeeperTestSuite) queryMultiChainCall_(msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {
+func (suite *KeeperTestSuite) queryMultiChainCall_(chain *ut.TestChain, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) []byte {
 	// clientCtx, err := client.GetClientQueryContext(cmd)
 	// suite.Require().NoError(err)
 	clientCtx := client.Context{}
 	queryClient := types.NewQueryClient(clientCtx)
-	appA := suite.AppContext()
+	appA := suite.GetAppContext(chain)
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
@@ -1320,8 +1420,8 @@ func (suite *KeeperTestSuite) queryMultiChainCall_(msg []byte, sender simulation
 	return res.Data
 }
 
-func (suite *KeeperTestSuite) composeMultiChainTx(msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) sdk.Msg {
-	appA := s.AppContext()
+func (suite *KeeperTestSuite) composeMultiChainTx(chain *ut.TestChain, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) sdk.Msg {
+	appA := suite.GetAppContext(chain)
 	msgwrap := &wasmxtypes.WasmxExecutionMessage{Data: msg}
 	msgbz, err := json.Marshal(msgwrap)
 	suite.Require().NoError(err)
@@ -1340,9 +1440,9 @@ func (suite *KeeperTestSuite) composeMultiChainTx(msg []byte, sender simulation.
 	return multimsg
 }
 
-func (suite *KeeperTestSuite) broadcastMultiChainExec(msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) (*abci.ExecTxResult, error) {
-	appA := s.AppContext()
-	multimsg := suite.composeMultiChainTx(msg, sender, contractAddress, chainId)
+func (suite *KeeperTestSuite) broadcastMultiChainExec(chain *ut.TestChain, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string) (*abci.ExecTxResult, error) {
+	appA := s.GetAppContext(chain)
+	multimsg := suite.composeMultiChainTx(chain, msg, sender, contractAddress, chainId)
 	// initializing chains is expensive ~6mil
 	gasLimit := ut.DEFAULT_GAS_LIMIT
 	resp, err := appA.BroadcastTxAsync(sender, []sdk.Msg{multimsg}, &gasLimit, nil, "")
@@ -1353,7 +1453,7 @@ func (suite *KeeperTestSuite) broadcastMultiChainExec(msg []byte, sender simulat
 }
 
 func (suite *KeeperTestSuite) prepareMultiChainSubExec(appCtx wasmxtesting.AppContext, msg []byte, sender simulation.Account, contractAddress sdk.AccAddress, chainId string, subtxindex int32, subtxcount int32) client.TxBuilder {
-	multimsg := suite.composeMultiChainTx(msg, sender, contractAddress, chainId)
+	multimsg := suite.composeMultiChainTx(appCtx.Chain, msg, sender, contractAddress, chainId)
 	txBuilder := appCtx.PrepareCosmosSdkTxBuilder([]sdk.Msg{multimsg}, nil, nil, "")
 	appCtx.SetMultiChainExtensionOptions(txBuilder, chainId, subtxindex, subtxcount)
 	return appCtx.SignCosmosSdkTx(txBuilder, sender)

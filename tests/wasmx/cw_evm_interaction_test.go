@@ -41,7 +41,6 @@ func (suite *KeeperTestSuite) TestProxyInterfacesPrecompile() {
 	appA := s.AppContext()
 	proxyAddress := appA.BytesToAccAddressPrefixed(proxyAddressBz)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	metadata := types.CodeMetadata{
@@ -102,9 +101,7 @@ func (suite *KeeperTestSuite) TestProxyInterfacesAtomicSwap() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender2.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	// Deploy CW20

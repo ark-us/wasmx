@@ -162,7 +162,6 @@ func (suite *KeeperTestSuite) TestWasmxCWSimpleContract() {
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -226,7 +225,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20() {
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	recipientPrefixed := appA.BytesToAccAddressPrefixed(recipient.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
+
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -279,7 +278,6 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 	deployerPrefixed := appA.BytesToAccAddressPrefixed(deployer.Address)
 	recipientPrefixed := appA.BytesToAccAddressPrefixed(recipient.Address)
 	appA.Faucet.Fund(appA.Context(), deployerPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(deployer, wasmbin, nil)
@@ -321,7 +319,6 @@ func (suite *KeeperTestSuite) TestWasmxCwAtomicSwap() {
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	recipientPrefixed := appA.BytesToAccAddressPrefixed(recipient.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -385,7 +382,6 @@ func (suite *KeeperTestSuite) TestWasmxCwReflect() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
@@ -538,7 +534,6 @@ func (suite *KeeperTestSuite) TestWasmxCwCrypto() {
 	appA := s.AppContext()
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-	suite.Commit()
 	expectedDeps := []string{types.CW_ENV_8}
 
 	codeId := appA.StoreCode(sender, wasmbin, nil)
