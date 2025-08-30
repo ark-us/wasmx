@@ -200,9 +200,8 @@ func (suite *KeeperTestSuite) TearDownChains() {
 	for _, chain := range suite.Chains {
 		err := chain.App.BaseApp.Close()
 		suite.Require().NoError(err)
-	}
-	if suite.TestChain.App != nil {
-		err := suite.TestChain.App.Db().Close()
+
+		err = chain.App.Db().Close()
 		suite.Require().NoError(err)
 	}
 }
@@ -644,16 +643,17 @@ func (suite *KeeperTestSuite) FinalizeBlockFSM(txs [][]byte) (*abci.ResponseFina
 }
 
 func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
-	lastInterval := suite.GetLastInterval(suite.TestChain.GetContext())
-	currentState := suite.GetCurrentState(suite.TestChain.GetContext())
-	blockDelay := suite.GetBlockDelay(suite.TestChain.GetContext())
-	prevBlock := suite.App().LastBlockHeight()
+	chain := suite.TestChain
+	app := suite.App()
+	lastInterval := suite.GetLastInterval(chain.GetContext())
+	currentState := suite.GetCurrentState(chain.GetContext())
+	blockDelay := suite.GetBlockDelay(chain.GetContext())
+	prevBlock := app.LastBlockHeight()
 
-	app := suite.TestChain.App
 	cb := func(blockDelay, currentState, lastInterval string) func(goctx context.Context) (any, error) {
 		return func(goctx context.Context) (any, error) {
 			msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
-			_, err := suite.TestChain.App.NetworkKeeper.ExecuteEntryPoint(suite.TestChain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			_, err := chain.App.NetworkKeeper.ExecuteEntryPoint(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg1,
@@ -670,14 +670,14 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 	}
 
 	if strings.Contains(strings.ToLower(currentState), "ondemand") {
-		lastInterval = suite.GetLastInterval(suite.TestChain.GetContext())
-		currentState = suite.GetCurrentState(suite.TestChain.GetContext())
+		lastInterval = suite.GetLastInterval(chain.GetContext())
+		currentState = suite.GetCurrentState(chain.GetContext())
 		_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb("batchTimeout", currentState, lastInterval))
 		if err != nil {
 			return nil, err
 		}
 	}
-	lastBlock := suite.App().LastBlockHeight()
+	lastBlock := app.LastBlockHeight()
 	if prevBlock >= lastBlock {
 		// in case a test just changed consensus to RAFT, we help the test move faster through all the protocols delays that happen when choosing the Leader
 		if strings.Contains(currentState, "RAFT") && !strings.Contains(currentState, "Leader") {
@@ -685,21 +685,20 @@ func (suite *KeeperTestSuite) CommitBlock() (*abci.ResponseFinalizeBlock, error)
 				// this state waits 500ms and then goes to "initialized.Follower"
 				time.Sleep(time.Second * 10)
 			}
-			currentState := suite.GetCurrentState(suite.TestChain.GetContext())
+			currentState := suite.GetCurrentState(chain.GetContext())
 			if strings.Contains(currentState, "initialized.Follower") {
 				// we need to get the node to Leader state faster
 				suite.raftToLeader()
 			}
-			currentState = suite.GetCurrentState(suite.TestChain.GetContext())
-			lastBlock := suite.App().LastBlockHeight()
+			lastBlock := app.LastBlockHeight()
 			if prevBlock >= lastBlock {
-				return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", suite.TestChain.ChainId, lastBlock, prevBlock+1)
+				return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", chain.ChainId, lastBlock, prevBlock+1)
 			}
 		} else {
-			return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", suite.TestChain.ChainId, lastBlock, prevBlock+1)
+			return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", chain.ChainId, lastBlock, prevBlock+1)
 		}
 	}
-	res, _, _, err := suite.GetBlock(suite.TestChain.GetContext(), lastBlock)
+	res, _, _, err := suite.GetBlock(chain.GetContext(), lastBlock)
 	if err != nil {
 		return nil, err
 	}

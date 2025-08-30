@@ -303,7 +303,7 @@ func (suite *KeeperTestSuite) TestWasmxCW20ByEthereumTx() {
 
 	databz := []byte(fmt.Sprintf(`{"transfer":{"recipient":"%s","amount":"%s"}}`, recipientPrefixed.String(), "2000000000000000"))
 
-	appA.SendEthTx(priv, &contractEvmAddress, databz, nil, uint64(1000000), big.NewInt(10000), nil)
+	appA.SendEthTx(priv, &contractEvmAddress, databz, nil, uint64(100000000), big.NewInt(10000), nil)
 
 	databz = []byte(fmt.Sprintf(`{"balance":{"address":"%s"}}`, senderPrefixed.String()))
 	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: databz}, nil, nil)

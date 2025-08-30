@@ -528,6 +528,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 
 	suite.SetCurrentChain(subChainId2)
 	qmsg = []byte(fmt.Sprintf(`{"GetBalance":{"address":"%s","denom":"%s"}}`, subchainapp.MustAccAddressToString(newacc.Address), subChainCfg2.BaseDenom))
+	bankAddressStr = subchainapp.MustAccAddressToString(bankAddress)
 	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, bankAddressStr, chainId)
 	balance := &banktypes.QueryBalanceResponse{}
 	err = json.Unmarshal(qres, balance)
@@ -748,6 +749,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 
 	// we send it first on level1
 	suite.SetCurrentChain(subChainId2)
+	subchainapp = suite.AppContext()
 	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
@@ -764,6 +766,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	}()
 
 	suite.SetCurrentChain(subChainId2)
+	subchainapp = suite.AppContext()
 	res, err := subchainapp.DeliverTxRaw(txbz)
 	s.Require().NoError(err)
 	s.Require().True(res.IsOK(), res.GetLog(), res.GetEvents())
@@ -780,6 +783,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	s.Require().Equal(abci.CodeTypeOK, atomicres.Results[0].Code)
 
 	suite.SetCurrentChain(subChainId2)
+	subchainapp = suite.AppContext()
 	qmsg = []byte(`{"get":{"key":"hello"}}`)
 	qres := suite.queryMultiChainCall(subchainapp.App, qmsg, sender, contractAddressTo.String(), subChainId2)
 	suite.Require().Equal("brian", string(qres))
