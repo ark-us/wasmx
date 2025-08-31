@@ -33,7 +33,7 @@ func (suite *KeeperTestSuite) TestBlockHeader() {
 		Address: chain.SenderAccount.GetAddress(),
 	}
 
-	appA := s.AppContext()
+	appA := s.GetAppContext(chain)
 	denom := appA.Chain.Config.BaseDenom
 	senderPrefixedLevel0 := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixedLevel0, sdk.NewCoin(denom, initBalance))

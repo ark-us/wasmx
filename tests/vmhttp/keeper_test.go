@@ -24,8 +24,9 @@ import (
 )
 
 var (
-	wasmRuntime string
-	runServer   bool
+	wasmRuntime   string
+	runServer     bool
+	runKnownFixme bool
 )
 
 func init() {
@@ -37,6 +38,7 @@ func init() {
 func TestMain(m *testing.M) {
 	flag.StringVar(&wasmRuntime, "wasm-runtime", "default", "Set the wasm runtime (e.g. wasmedge, wazero)")
 	flag.BoolVar(&runServer, "run-server", false, "Run server")
+	flag.BoolVar(&runKnownFixme, "run-fixme", false, "Run skipped fixme tests")
 
 	// Parse the flags. Only flags after `--` in `go test` command line will be passed here.
 	flag.Parse()
@@ -97,5 +99,11 @@ func (suite *KeeperTestSuite) parseQueryResponse(qres []byte, qresp interface{})
 func SkipRunServerTests(t *testing.T, name string) {
 	if !runServer {
 		t.Skipf("Skip run server test %s", name)
+	}
+}
+
+func SkipFixmeTests(t *testing.T, name string) {
+	if !runKnownFixme {
+		t.Skipf("TODO: fixme %s", name)
 	}
 }

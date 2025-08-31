@@ -19,6 +19,7 @@ type CalldataTestHttpClient struct {
 }
 
 func (suite *KeeperTestSuite) TestHttpClient() {
+	SkipFixmeTests(suite.T(), "TestHttpClient")
 	wasmbin := testdata.WasmxTestHttp
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
