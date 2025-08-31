@@ -507,6 +507,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	go func() {
 		defer wg.Done()
 
+		// leader chain
 		res, err := subchainapp.DeliverTxRaw(txbz)
 		if err != nil {
 			err = fmt.Errorf(
@@ -525,14 +526,15 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 6)
 
 		// we use the same atomic txbz on any chain
+		// follower chain
 		res, err := appA.DeliverTxRaw(txbz)
 		if err != nil {
 			err = fmt.Errorf(
 				"appA DeliverTxRaw error: %s, chain=%s log=%v events=%v",
-				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+				err.Error(), appA.App.ChainID(), res.GetLog(), res.GetEvents(),
 			)
 		} else if !res.IsOK() {
 			err = fmt.Errorf(
@@ -557,8 +559,9 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 			err = subchainapp.Chain.Codec.UnpackAny(txmsgdata.MsgResponses[0], &sdkmsg)
 			s.Require().NoError(err, r.msg)
 			atomicres := sdkmsg.(*types.MsgExecuteAtomicTxResponse)
-			s.Require().Equal(1, len(atomicres.Results), r.msg)
+			s.Require().Equal(2, len(atomicres.Results), r.msg)
 			s.Require().Equal(abci.CodeTypeOK, atomicres.Results[0].Code, string(atomicres.Results[0].Data), atomicres.Results[0].GetLog(), atomicres.Results[0].GetEvents(), r.msg)
+			s.Require().Equal(abci.CodeTypeOK, atomicres.Results[1].Code, string(atomicres.Results[1].Data), atomicres.Results[1].GetLog(), atomicres.Results[1].GetEvents(), r.msg)
 		}
 	}
 
@@ -660,7 +663,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	data2 := []byte(fmt.Sprintf(`{"CrossChain":%s}`, string(crossreqbz)))
 
 	// we send this message on level0
-	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 2)
+	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 1)
 	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
 	s.Require().NoError(err)
 
@@ -682,6 +685,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	go func() {
 		defer wg.Done()
 
+		// leader chain
 		res, err := subchainapp.DeliverTxRaw(txbz)
 		if err != nil {
 			err = fmt.Errorf(
@@ -700,14 +704,15 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 6)
 
 		// we use the same atomic txbz on any chain
+		// follower chain
 		res, err := appA.DeliverTxRaw(txbz)
 		if err != nil {
 			err = fmt.Errorf(
 				"appA DeliverTxRaw error: %s, chain=%s log=%v events=%v",
-				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+				err.Error(), appA.App.ChainID(), res.GetLog(), res.GetEvents(),
 			)
 		} else if !res.IsOK() {
 			err = fmt.Errorf(
@@ -828,12 +833,11 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	data2 := []byte(fmt.Sprintf(`{"CrossChainQuery":%s}`, string(crossreqbz)))
 
 	// we send this message on level0
-	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 2)
+	txbuilder1 := suite.prepareMultiChainSubExec(appA, data2, sender, contractAddressFrom.Bytes(), chainId, 0, 1)
 	txbz1, err := appA.App.TxConfig().TxEncoder()(txbuilder1.GetTx())
 	s.Require().NoError(err)
 
 	// we send it first on level1
-	subchainapp = suite.GetAppContext(chain)
 	atomictx := suite.prepareMultiChainAtomicExec(subchainapp, sender, [][]byte{txbz1}, subChainId2, []string{subChainId2, chainId})
 
 	txbz, err := subchain2.TxConfig.TxEncoder()(atomictx.GetTx())
@@ -854,6 +858,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	go func() {
 		defer wg.Done()
 
+		// leader chain
 		res, err := subchainapp.DeliverTxRaw(txbz)
 		if err != nil {
 			err = fmt.Errorf(
@@ -872,14 +877,15 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 6)
 
 		// we use the same atomic txbz on any chain
+		// follower chain
 		res, err := appA.DeliverTxRaw(txbz)
 		if err != nil {
 			err = fmt.Errorf(
 				"appA DeliverTxRaw error: %s, chain=%s log=%v events=%v",
-				err.Error(), subchainapp.App.ChainID(), res.GetLog(), res.GetEvents(),
+				err.Error(), appA.App.ChainID(), res.GetLog(), res.GetEvents(),
 			)
 		} else if !res.IsOK() {
 			err = fmt.Errorf(
@@ -1259,10 +1265,14 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 
 	// create a temporary app, to sign the transaction
 	// must be in a different directory than when the subchain is instantiated later
-	_, appCreator := multichain.CreateMockAppCreator(suite.WasmVmMeta, app.NewAppCreator, app.DefaultNodeHome+"temp", nil)
+	_, appCreator := multichain.CreateMockAppCreator(suite.WasmVmMeta, app.NewAppCreator, app.DefaultNodeHome+"_temp", nil)
 	iapp := appCreator(subChainId, &subchainConfig)
 	subchainapp := iapp.(*app.App)
 	subtxconfig := subchainapp.TxConfig()
+
+	defer subchainapp.BaseApp.Close()
+	defer subchainapp.Db().Close()
+	defer subchainapp.SnapshotManager().Close()
 
 	sigV2 := signing.SignatureV2{
 		PubKey: sender.PubKey,
