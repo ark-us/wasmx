@@ -121,15 +121,9 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	tostr := req.To.String()
 
 	// deterministic contracts cannot transact with or query non-deterministic contracts
+	// TODO eventually move this rule in contracts
 	sourceContractInfo := GetContractDependency(ctx, req.From)
 	if sourceContractInfo != nil {
-		if depContractInfo.Role != "" && sourceContractInfo.Role == "" {
-			errmsg := "no-role contract tried to execute role contract"
-			ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "from_role", sourceContractInfo.Role, "to", tostr, "to_role", depContractInfo.Role)
-			errmsg += fmt.Sprintf(": from %s, to %s - %s", fromstr, tostr, depContractInfo.Role)
-			return int32(1), []byte(errmsg)
-		}
-
 		fromStorageType := sourceContractInfo.StorageType
 		toStorageType := depContractInfo.StorageType
 		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {

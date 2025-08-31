@@ -1187,7 +1187,13 @@ func (app *App) BeginBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (s
 			return sdk.BeginBlock{}, fmt.Errorf("BeginBlock wasmx call failed: %s", err.Error())
 		}
 	}
-	return app.mm.BeginBlock(ctx)
+	wasmxEvents := ctx.EventManager().ABCIEvents()
+	// we need to keep these events for host.BeginBlock return to contract
+	res, err := app.mm.BeginBlock(ctx)
+	// app.mm.BeginBlock starts a new event manager
+	// so we need to add our contract events from running the EndBlock hook
+	res.Events = append(wasmxEvents, res.Events...)
+	return res, err
 }
 
 // EndBlocker application updates every end block

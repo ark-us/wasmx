@@ -189,6 +189,8 @@ func (suite *KeeperTestSuite) TearDownChains() {
 
 		err = chain.App.Db().Close()
 		suite.Require().NoError(err)
+
+		chain.App.SnapshotManager().Close()
 	}
 }
 

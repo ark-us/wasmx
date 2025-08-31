@@ -119,6 +119,8 @@ var DEFAULT_HOOKS_NONC = []Hook{
 		SourceModules: []string{ROLE_HOOKS_NONC},
 		TargetModules: []string{ROLE_CONSENSUS, ROLE_LOBBY},
 	},
+	// Note! this is used for mythos, who cannot create subchains now
+	// subchain creation is done in level0, through the lobby contract
 	{
 		Name:          HOOK_NEW_SUBCHAIN,
 		SourceModules: []string{ROLE_HOOKS_NONC},

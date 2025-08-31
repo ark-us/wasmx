@@ -21,6 +21,7 @@ import (
 )
 
 type ResponseOptimisticExecution struct {
+	Response *abci.ResponseFinalizeBlock
 	MetaInfo map[string][]byte `json:"metainfo"`
 }
 
@@ -124,9 +125,9 @@ func OptimisticExecution(_context interface{}, rnh memc.RuntimeHandler, params [
 	oe.Disable()
 
 	// TODO we should return the error, not throw
-	_, err = oe.WaitResult()
+	resp, err := oe.WaitResult()
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution")
+		ctx.Ctx.Logger().Error(err.Error(), "consensus", "OptimisticExecution", "chain_id", ctx.Ctx.ChainID(), "height", req.Height)
 		return nil, err
 	}
 	metainfo, err := mctx.GetExecutionMetaInfoEncoded(ctx.GoContextParent, ctx.GetCosmosHandler().Codec())
@@ -135,7 +136,7 @@ func OptimisticExecution(_context interface{}, rnh memc.RuntimeHandler, params [
 		return nil, err
 	}
 
-	respbz, err := json.Marshal(&ResponseOptimisticExecution{MetaInfo: metainfo})
+	respbz, err := json.Marshal(&ResponseOptimisticExecution{MetaInfo: metainfo, Response: resp})
 	if err != nil {
 		return nil, err
 	}
