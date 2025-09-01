@@ -278,11 +278,13 @@ func (k *Keeper) containsCodeInfo(ctx sdk.Context, codeID uint64) bool {
 
 func (k *Keeper) IterateCodeInfos(ctx sdk.Context, cb func(uint64, types.CodeInfo) bool) {
 	registryAddr := k.GetCodeRegistryAddress(ctx)
-	msg := `{"GetCodeInfoPrefix":{}}`
-	codeInfoPrefix, err := k.internalQuery(ctx, registryAddr, msg)
-	if err != nil {
-		panic(err)
-	}
+	// msg := `{"GetCodeInfoPrefix":{}}`
+	// codeInfoPrefix, err := k.internalQuery(ctx, registryAddr, msg)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// we need to hardcode the prefix here, otherwise we cannot apply state sync snapshots
+	codeInfoPrefix := types.KeyCodePrefix
 
 	prefixStoreKey := types.GetContractStorePrefix(registryAddr.Bytes())
 	prefixStore := prefix.NewStore(ctx.KVStore(k.storeKey), prefixStoreKey)

@@ -5,6 +5,14 @@ import (
 	"errors"
 )
 
+const (
+	codePrefix = iota + 1
+)
+
+var (
+	KeyCodePrefix = []byte{codePrefix}
+)
+
 type EmptyStringArray []string
 
 // MarshalJSON ensures that an empty array is marshaled as "[]" instead of "null"

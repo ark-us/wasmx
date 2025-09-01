@@ -5,8 +5,6 @@ import (
 	"io"
 	"math"
 
-	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
-
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	snapshot "cosmossdk.io/store/snapshots/types"
@@ -14,6 +12,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/wasmx/ioutils"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
@@ -53,8 +52,8 @@ func (ws *Utf8Snapshotter) SnapshotExtension(height uint64, payloadWriter snapsh
 	if err != nil {
 		return err
 	}
-
-	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
+	header := GetMockHeader(ws.wasmx.app.(mcfg.BaseApp), height)
+	ctx := sdk.NewContext(cacheMS, header, false, log.NewNopLogger())
 	seenBefore := make(map[string]bool)
 	var rerr error
 
@@ -143,7 +142,8 @@ func (ws *Utf8Snapshotter) processAllItems(
 	cb func(sdk.Context, *Keeper, []byte) error,
 	finalize func(sdk.Context, *Keeper) error,
 ) error {
-	ctx := sdk.NewContext(ws.cms, tmproto.Header{Height: int64(height)}, false, log.NewNopLogger())
+	header := GetMockHeader(ws.wasmx.app.(mcfg.BaseApp), height)
+	ctx := sdk.NewContext(ws.cms, header, false, log.NewNopLogger())
 	for {
 		payload, err := payloadReader()
 		if err == io.EOF {

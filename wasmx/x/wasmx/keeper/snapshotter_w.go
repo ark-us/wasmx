@@ -4,8 +4,10 @@ import (
 	"encoding/hex"
 	"io"
 	"math"
+	"time"
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	tmversion "github.com/cometbft/cometbft/proto/tendermint/version"
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/log"
@@ -16,6 +18,8 @@ import (
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/ioutils"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
+
+	mcfg "github.com/loredanacirstea/wasmx/config"
 )
 
 var _ snapshot.ExtensionSnapshotter = &WasmSnapshotter{}
@@ -53,8 +57,8 @@ func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapsh
 	if err != nil {
 		return err
 	}
-
-	ctx := sdk.NewContext(cacheMS, tmproto.Header{}, false, log.NewNopLogger())
+	header := GetMockHeader(ws.wasmx.app.(mcfg.BaseApp), height)
+	ctx := sdk.NewContext(cacheMS, header, false, log.NewNopLogger())
 	seenBefore := make(map[string]bool)
 	var rerr error
 
@@ -132,7 +136,8 @@ func (ws *WasmSnapshotter) processAllItems(
 	cb func(sdk.Context, *Keeper, []byte) error,
 	finalize func(sdk.Context, *Keeper) error,
 ) error {
-	ctx := sdk.NewContext(ws.cms, tmproto.Header{Height: int64(height)}, false, log.NewNopLogger())
+	header := GetMockHeader(ws.wasmx.app.(mcfg.BaseApp), height)
+	ctx := sdk.NewContext(ws.cms, header, false, log.NewNopLogger())
 	for {
 		payload, err := payloadReader()
 		if err == io.EOF {
@@ -147,4 +152,16 @@ func (ws *WasmSnapshotter) processAllItems(
 	}
 
 	return finalize(ctx, ws.wasmx)
+}
+
+func GetMockHeader(bapp mcfg.BaseApp, height uint64) tmproto.Header {
+	return tmproto.Header{
+		ChainID:            bapp.ChainID(),
+		Height:             int64(height),
+		Time:               time.Now().UTC(),
+		ProposerAddress:    []byte("proposer"),
+		NextValidatorsHash: []byte("proposer"),
+		AppHash:            bapp.LastCommitID().Hash,
+		Version:            tmversion.Consensus{},
+	}
 }
