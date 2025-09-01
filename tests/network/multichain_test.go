@@ -749,7 +749,6 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 }
 
 func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
-	SkipFixmeTests(suite.T(), "TestMultiChainCrossChainQueryDeterministic")
 	wasmbinFrom := testdata.WasmxCrossChain
 	wasmbinTo := testdata.WasmxSimpleStorage
 	chainId := mcfg.LEVEL0_CHAIN_ID
