@@ -130,6 +130,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 		// baseapp.SetChainID(mcfg.MYTHOS_CHAIN_ID_TESTNET),
 		baseappOptions...,
 	)
+	defer tempApp.Teardown()
 	rootCmd := &cobra.Command{
 		Use:   mcfg.Name + "d",
 		Short: "Start mythos node",

@@ -102,6 +102,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 
 			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
 
 			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {

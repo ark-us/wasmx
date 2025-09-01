@@ -1604,6 +1604,12 @@ func (app *App) DebugDb() {
 	}
 }
 
+func (app *App) Teardown() {
+	app.BaseApp.Close()
+	app.Db().Close()
+	app.SnapshotManager().Close()
+}
+
 func Exit(s string) {
 	fmt.Printf(s + "\n")
 	os.Exit(1)

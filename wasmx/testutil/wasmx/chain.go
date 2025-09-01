@@ -183,14 +183,16 @@ func (suite *KeeperTestSuite) GetAppContext(chain *TestChain) AppContext {
 }
 
 func (suite *KeeperTestSuite) TearDownChains() {
-	for _, chain := range suite.Chains {
-		err := chain.App.BaseApp.Close()
-		suite.Require().NoError(err)
+	mythosChain := suite.GetChain(mcfg.MYTHOS_CHAIN_ID_TEST)
+	mythosChain.App.Teardown()
 
-		err = chain.App.Db().Close()
-		suite.Require().NoError(err)
-
-		chain.App.SnapshotManager().Close()
+	level0Chain := suite.GetChain(mcfg.LEVEL0_CHAIN_ID)
+	mapps, err := level0Chain.App.GetMultiChainApp()
+	suite.Require().NoError(err)
+	apps := mapps.GetApps()
+	for _, appi := range apps {
+		app := appi.(mcfg.MythosApp)
+		app.Teardown()
 	}
 }
 

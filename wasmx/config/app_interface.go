@@ -144,4 +144,5 @@ type MythosApp interface {
 	// debugging
 	Db() dbm.DB
 	DebugDb()
+	Teardown()
 }

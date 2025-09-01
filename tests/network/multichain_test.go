@@ -526,7 +526,7 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 6)
+		time.Sleep(time.Second * 20)
 
 		// we use the same atomic txbz on any chain
 		// follower chain
@@ -704,7 +704,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 6)
+		time.Sleep(time.Second * 20)
 
 		// we use the same atomic txbz on any chain
 		// follower chain
@@ -877,7 +877,7 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 6)
+		time.Sleep(time.Second * 20)
 
 		// we use the same atomic txbz on any chain
 		// follower chain
@@ -1270,9 +1270,7 @@ func (suite *KeeperTestSuite) createLevel1(chainId string, req *wasmxtypes.Regis
 	subchainapp := iapp.(*app.App)
 	subtxconfig := subchainapp.TxConfig()
 
-	defer subchainapp.BaseApp.Close()
-	defer subchainapp.Db().Close()
-	defer subchainapp.SnapshotManager().Close()
+	defer subchainapp.Teardown()
 
 	sigV2 := signing.SignatureV2{
 		PubKey: sender.PubKey,

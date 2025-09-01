@@ -6,31 +6,14 @@ make build
 make install
 ```
 
-## dev
+* see [./wasmx/README.md](./wasmx/README.md) and [./wasmx/EXAMPLES.md](./wasmx/EXAMPLES.md) for how to initialize chains and execute transactions.
 
-```
-go work init ./wasmx ./wasmx-wasmedge ./wasmx-wazero ./mythos
-go work use ./newproj
-```
+The chain should be compatible with both Ethereum and Cosmos browser wallets.
 
-## actions
+## Docs
 
-Test locally with https://github.com/nektos/act
+https://wasmx.provable.dev
 
-```bash
-act -j build --secret-file .secrets --container-architecture linux/amd64 -P ubuntu-latest=nektos/act-environments-ubuntu:18.04
+## Discord
 
-act -j build --secret-file .secrets --container-architecture linux/amd64 -P ubuntu-latest=nektos/act-environments-ubuntu:18.04 --env GOOS=darwin --env GOARCH=arm64
-
-# --env GOOS=linux --env GOARCH=amd64
-# --env GOOS=darwin --env GOARCH=arm64
-# --env GOOS=windows --env GOARCH=amd64
-
-```
-
-## release
-
-```bash
-git tag v0.0.10
-git push origin v0.0.10
-```
+https://discord.gg/8W5jeBke4f

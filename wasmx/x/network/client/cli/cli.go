@@ -139,6 +139,7 @@ Where atomictx.json contains:
 			isubchainapp := appCreator(subchainId, mcctx.Config)
 			subchainapp := isubchainapp.(appwithTxConfig)
 			subtxconfig := subchainapp.TxConfig()
+			defer isubchainapp.Teardown()
 
 			registryId, err := cmd.Flags().GetString(multichain.FlagRegistryChainId)
 			if err != nil {
@@ -177,6 +178,7 @@ Where atomictx.json contains:
 				isubchainapp_ := subappCreator(chainId, chainConfig)
 				subchainapp_ := isubchainapp_.(appwithTxConfig)
 				subtxconfig_ := subchainapp_.TxConfig()
+				defer isubchainapp.Teardown()
 
 				customCdc := mcodec.NewAccBech32Codec(chainConfig.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
 				chainAddrCodec := mcodec.MustUnwrapAccBech32Codec(customCdc)
@@ -1386,6 +1388,7 @@ func signGenTxDataInternal(
 	_, appCreator := createMockAppCreator(wasmVmMeta, appCreatorFactory, 0)
 	isubchainapp := appCreator(subChainId, &subchainConfig)
 	subchainapp := isubchainapp.(appwithTxConfig)
+	defer isubchainapp.Teardown()
 
 	subtxconfig := subchainapp.TxConfig()
 	sdktx, err := subtxconfig.TxJSONDecoder()(genTxData)
