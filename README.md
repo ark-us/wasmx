@@ -1,5 +1,16 @@
 # The System
 
+The only WASM-modular blockchain engine capable of regeneration and metamorphosis
+
+Multi VM, language-agnostic, general & domain-specific language interpreters, variety of host APIs.
+* EVM, TinyGo, AssemblyScript, JavaScript, Python, Rust, FSMvm (finite state machine interpreter).
+* host APIs: wasmx (our core API), wasmx crosschain, wasmx multichain, wasmx consensus, ewasm, WASI adaptor, GRPC, libp2p, HTTP, SQL, KV dbs, SMTP, IMAP
+
+Compatible with both Ethereum and Cosmos SDK wallets.
+
+This is the most flexible blockchain engine with 90% WASM modules and 10% Golang host.
+Core contracts were written in AssemblyScript, and the consensus protocols are FSM diagrams that are INTERPRETED by an FSM interpreter (also in AssemblyScript). Current speed of execution bottleneck is JSON encoding/decoding for AssemblyScript (this may be improved by newer `json-as` versions once it achieves feature parity with the old version). Nonetheless, speed can be greatly improved contract by contract, now that a functional implementation exists. And a Tinygo implementation of the core contracts has already been started.
+
 ```
 cd mythos-wazero
 make build
@@ -8,7 +19,10 @@ make install
 
 * see [./wasmx/README.md](./wasmx/README.md) and [./wasmx/EXAMPLES.md](./wasmx/EXAMPLES.md) for how to initialize chains and execute transactions.
 
-The chain should be compatible with both Ethereum and Cosmos browser wallets.
+## NOT PRODUCTION READY
+
+You will encounter bugs and incomplete features.
+There are known security issues. This is a work in progress.
 
 ## Resources
 
@@ -30,3 +44,14 @@ The chain should be compatible with both Ethereum and Cosmos browser wallets.
 ## Contribute
 
 Read [./CONTRIBUTE.md](./CONTRIBUTE.md)
+
+## License
+
+See [./LICENSE](./LICENSE)
+This license means anybody can use wasmX for non-commercial use cases. Please let us know, so we can showcase your project.
+
+For commercial use cases, join our Discord. We do not know yet. While wasmX is not production-ready, we cannot offer this option unless you have a good reason. Know that we will not support the creation of blockchains without embedded identity verification, so you will not be able to create anonymous crypto scams using wasmX.
+
+## Want a production-ready release?
+
+Contribute effort and/or pay for prioritizing features/bug fixes.

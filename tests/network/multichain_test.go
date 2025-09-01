@@ -272,6 +272,8 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	_, err = suite.broadcastMultiChainExec(chain, []byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
 
+	// we tear down for the tests, so we don't get a NewSubChain hook call failure from trying to read a locked database of the same chain
+	subchainapp.Teardown()
 	msg = fmt.Sprintf(`{"InitSubChain":{"chainId":"%s"}}`, subChainId)
 	res, err := suite.broadcastMultiChainExec(chain, []byte(msg), sender, registryAddress, chainId)
 	suite.Require().NoError(err)
