@@ -1,15 +1,32 @@
-# The System
+# wasmX
 
-The only WASM-modular blockchain engine capable of regeneration and metamorphosis
+The only WASM-modular blockchain engine capable of regeneration and metamorphosis.
 
-Multi VM, language-agnostic, general & domain-specific language interpreters, variety of host APIs.
-* EVM, TinyGo, AssemblyScript, JavaScript, Python, Rust, FSMvm (finite state machine interpreter).
-* host APIs: wasmx (our core API), wasmx crosschain, wasmx multichain, wasmx consensus, ewasm, WASI adaptor, GRPC, libp2p, HTTP, SQL, KV dbs, SMTP, IMAP
+* Multi VM, language-agnostic, general & domain-specific language interpreters, variety of host APIs.
+    * EVM, TinyGo, AssemblyScript, JavaScript, Python, Rust, FSMvm (finite state machine interpreter).
+    * host APIs: wasmx (our core API), wasmx crosschain, wasmx multichain, wasmx consensus, ewasm, WASI adaptor, GRPC, libp2p, HTTP, SQL, KV dbs, SMTP, IMAP
+    * multichain, crosschain, atomic crosschain tranzactions: each node can run multiple chains and subchains
 
 Compatible with both Ethereum and Cosmos SDK wallets.
 
 This is the most flexible blockchain engine with 90% WASM modules and 10% Golang host.
-Core contracts were written in AssemblyScript, and the consensus protocols are FSM diagrams that are INTERPRETED by an FSM interpreter (also in AssemblyScript). Current speed of execution bottleneck is JSON encoding/decoding for AssemblyScript (this may be improved by newer `json-as` versions once it achieves feature parity with the old version). Nonetheless, speed can be greatly improved contract by contract, now that a functional implementation exists. And a Tinygo implementation of the core contracts has already been started.
+
+Core contracts were written in AssemblyScript, and the consensus protocols are FSM diagrams that are INTERPRETED by an FSM interpreter (also in AssemblyScript).
+
+Current speed of execution bottleneck is JSON encoding/decoding for AssemblyScript (this may be improved by newer `json-as` versions once it achieves feature parity with the old version). Nonetheless, speed can be greatly improved contract by contract, now that a functional implementation exists. And a Tinygo implementation of the core contracts has already been started.
+
+This is a self-funded effort: one lead software architect @ctzurcanu, and one everything software engineer @loredanacirstea.
+
+## NOT PRODUCTION READY
+
+You will encounter bugs and incomplete features.
+There are known security issues. This is a work in progress.
+
+## WHY?
+
+Because we want to build the most flexible software. Our end goal is building a global-level digital voting platform that is mathematically verifiable.
+
+## Go!
 
 ```
 cd mythos-wazero
@@ -19,19 +36,14 @@ make install
 
 * see [./wasmx/README.md](./wasmx/README.md) and [./wasmx/EXAMPLES.md](./wasmx/EXAMPLES.md) for how to initialize chains and execute transactions.
 
-## NOT PRODUCTION READY
+### Join the Mythos Testnet
 
-You will encounter bugs and incomplete features.
-There are known security issues. This is a work in progress.
-
-## Resources
-
-* docs: https://wasmx.provable.dev
-* discord chat: https://discord.gg/8W5jeBke4f
+Instructions: https://github.com/loredanacirstea/tempreleases/tree/main/mythos-testnet
 
 ## Core Components
 
 * core contracts: https://github.com/loredanacirstea/wasmx-as-contracts
+* JavaScript sdk: https://github.com/ark-us/wasmxjs, https://github.com/ark-us/mythosjs
 * consensus state machines:
     * tendermintp2p: https://stately.ai/registry/editor/55492854-7285-4432-a9f4-92e9333dda9b?machineId=535d10d2-da31-4dfe-b6f7-df09942cda1d
     * raftp2p: https://stately.ai/registry/editor/28cb5c6b-ea62-4ee0-9438-fdf903777162?machineId=9a11eb42-c6a3-4db2-a9fd-148cda512bc8
@@ -47,11 +59,22 @@ Read [./CONTRIBUTE.md](./CONTRIBUTE.md)
 
 ## License
 
-See [./LICENSE](./LICENSE)
-This license means anybody can use wasmX for non-commercial use cases. Please let us know, so we can showcase your project.
+See [./LICENSE](./LICENSE) and [./MORAL_LICENSE](./MORAL_LICENSE)
 
-For commercial use cases, join our Discord. We do not know yet. While wasmX is not production-ready, we cannot offer this option unless you have a good reason. Know that we will not support the creation of blockchains without embedded identity verification, so you will not be able to create anonymous crypto scams using wasmX.
+The Moral License is not yet legally binding, but one of our projects is to make such a license legally binding and computable. And we will use wasmX to manage such licensing.
+
+If you are using wasmX, let us know so we can showcase your project.
+
+Know that we do not condone using wasmX for the creation of blockchains without embedded identity verification, or blockchains that cannot apply justice actions. wasmX's direction is towards supporting digital identity (government issued or other solutions).
+
+## Resources
+
+* docs: https://wasmx.provable.dev
+* discord chat: https://discord.gg/8W5jeBke4f
+
+Want help or want to help? Join our Discord. We hope those interested can help one another.
 
 ## Want a production-ready release?
 
 Contribute effort and/or pay for prioritizing features/bug fixes.
+

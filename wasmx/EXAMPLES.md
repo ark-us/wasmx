@@ -1,5 +1,14 @@
 # Examples
 
+## create a chain with 2 validators on the same machine
+
+```bash
+mythosd testnet init-files --network.initial-chains=mythos --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
+
+mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
+mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1
+```
+
 ## base
 
 ```bash
@@ -204,11 +213,11 @@ mythosd testnet init-files --network.initial-chains=mythos --output-dir=$(pwd)/t
 HOMEMAIN=./testnet/node0/mythosd
 sed -i.bak -E "s|^(snapshot-interval[[:space:]]+=[[:space:]]+).*$|\110|" $HOMEMAIN/config/app.toml
 
-mythosd testnet add-node 1 "mythos1p2n7jy4zzve7zca5za3c35tp4vl0255ctra7vg@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWA5o6aMNfTaZAPhyfj7FNu7bUi4Yhj2w4kdjQoWei1siQ" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
-
 mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 
-mythosd tx cosmosmod bank send node0 mythos1n4wmakssekdwqr5kkz8xrsl0jlu3t7vmq2vttf 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
+mythosd testnet add-node 1 "mythos1dd8p2x8hvaycynjkyvny4y5ncgauvzndpx9v8j@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWGxArpEjfFCT4x4VUW6qTE4Wmw5xt64KgbABN4Vda7bD5" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
+
+mythosd tx cosmosmod bank send node0 mythos1dffgwwmjl7zrud5rn9nc4swlkjt2qv7uh8yxkd 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
 
 mythosd tendermint unsafe-reset-all --home=./testnet/node1/mythosd
 
@@ -232,7 +241,24 @@ sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1false|" $HOMEMAIN/confi
 # change validator public key in validator.json
 mythosd tendermint show-validator --home ./testnet/node1/mythosd
 
-mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1n4wmakssekdwqr5kkz8xrsl0jlu3t7vmq2vttf@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWGAzmV2fzGfHyZakAf9M85bmjZcRBeyvk5Vo7wJYvdweL" --node tcp://127.0.0.1:26658 --yes
+#validator.json
+```json
+{
+	"pubkey": {"type_url":"/cosmos.crypto.ed25519.PubKey","value":"eyJrZXkiOiJEZk02c0RyeWJyaDR3QWR1UkFxUU1mdUExZjZPemtkRlUwb21UcmUwcmRRPSJ9"},
+	"amount": "100000000000000000000amyt",
+	"moniker": "lore",
+	"identity": "optional identity signature (ex. UPort or Keybase)",
+	"website": "",
+	"security": "",
+	"details": "",
+	"commission-rate": "0.05",
+	"commission-max-rate": "0.2",
+	"commission-max-change-rate": "0.05",
+	"min-self-delegation": "1000000000000"
+}
+```
+
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1dffgwwmjl7zrud5rn9nc4swlkjt2qv7uh8yxkd@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWAkpaiKPvVGdbTyYzufXmykzBRjL1MtxveZo8XNWUvomD" --node tcp://127.0.0.1:26658 --yes
 
 ```
 
