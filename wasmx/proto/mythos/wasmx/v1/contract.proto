@@ -50,6 +50,8 @@ message CodeInfoPB {
     bytes interpreted_bytecode_deployment = 7;
     bytes interpreted_bytecode_runtime = 8;
     bytes runtime_hash = 9;
+    bytes source = 10;
+    bool source_verified = 11;
 }
 
 message CodeOriginPB {

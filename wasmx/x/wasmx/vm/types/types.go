@@ -96,6 +96,7 @@ type CallResponse struct {
 type CreateAccountInterpretedRequest struct {
 	Bytecode []byte   `json:"bytecode"`
 	Balance  *big.Int `json:"balance"`
+	Source   []byte   `json:"source"`
 }
 
 type CreateAccountInterpretedRequestRaw struct {
@@ -107,6 +108,7 @@ type Create2AccountInterpretedRequest struct {
 	Bytecode []byte   `json:"bytecode"`
 	Balance  *big.Int `json:"balance"`
 	Salt     *big.Int `json:"salt"`
+	Source   []byte   `json:"source"`
 }
 
 type Create2AccountInterpretedRequestRaw struct {

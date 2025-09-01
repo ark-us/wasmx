@@ -59,6 +59,7 @@ message MsgStoreCode {
     // and/or versioned interface labels
     repeated string deps = 3;
     CodeMetadataPB metadata = 4 [(gogoproto.nullable) = false];
+    bytes source = 5;
 }
 
 // MsgStoreCodeResponse returns store result data.
@@ -96,6 +97,7 @@ message MsgDeployCode {
         (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
     ];
     string label = 7;
+    bytes source = 8;
 }
 
 // MsgDeployCodeResponse returns store result data.

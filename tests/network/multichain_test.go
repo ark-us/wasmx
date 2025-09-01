@@ -193,6 +193,7 @@ func (suite *KeeperTestSuite) TestMultiChainInit() {
 	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
 	suite.Require().NoError(err)
 	subchainapp := multichainapp.NewApp(subChainId, &subChainConfig)
+	defer subchainapp.Teardown()
 
 	valTxBuilder := appA.PrepareCosmosSdkTxBuilder([]sdk.Msg{validMsg}, nil, &subchainGasPrices, memo)
 	accSeq := uint64(0)
@@ -302,127 +303,19 @@ func (suite *KeeperTestSuite) TestMultiChainDefaultInit() {
 	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
 	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(denom, initBalance))
 
-	registryAddress := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_MULTICHAIN_REGISTRY)
-	registryAddressStr := appA.MustAccAddressToString(registryAddress)
-
 	// create new subchain genesis registry
 	initialBalance, ok := sdkmath.NewIntFromString("10000000000100000000")
 	suite.Require().True(ok)
-	regreq, err := json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterDefaultSubChain: &wasmxtypes.RegisterDefaultSubChainRequest{
+
+	reqlevel1 := &wasmxtypes.RegisterDefaultSubChainRequest{
 		ChainBaseName:  "ptestp",
 		DenomUnit:      "ppp",
 		Decimals:       18,
 		LevelIndex:     1,
 		InitialBalance: initialBalance,
-	}})
-	suite.Require().NoError(err)
-
-	_, err = suite.broadcastMultiChainExec(chain, regreq, sender, registryAddress, chainId)
-	suite.Require().NoError(err)
-
-	// TODO expected subchainId
-	subChainId := "ptestp_1_1001-1"
-
-	// create genTx data to sign - call to level0
-	// buildGenTx query
-	// valTokens := sdk.TokensFromConsensusPower(1, sdk.DefaultPowerReduction)
-	valTokens, ok := sdkmath.NewIntFromString("10000000000000000000")
-	suite.Require().True(ok)
-	validMsg := stakingtypes.MsgCreateValidator{
-		// TODO fix as-json.parse when description contains empty strings
-		Description:       stakingtypes.NewDescription("moniker1", "id", "website", "security", "details"),
-		Commission:        stakingtypes.NewCommissionRates(sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec(), sdkmath.LegacyOneDec()),
-		MinSelfDelegation: sdkmath.OneInt(),
-		Value:             sdk.NewCoin(denom, valTokens), // denom will be changed by level0 anyway
 	}
-
-	genTxInfo, err := json.Marshal(&wasmxtypes.QueryBuildGenTxRequest{
-		ChainId: subChainId,
-		Msg:     validMsg,
-	})
-	suite.Require().NoError(err)
-	paramBz, err := json.Marshal(&wasmxtypes.ActionParam{Key: "message", Value: string(genTxInfo)})
-	suite.Require().NoError(err)
-
-	msg := []byte(fmt.Sprintf(`{"execute":{"action": {"type": "buildGenTx", "params": [%s],"event":null}}}`, string(paramBz)))
-	txbz := suite.queryMultiChainCall(chain, msg, sender, wasmxtypes.ROLE_CONSENSUS, chainId)
-	msg = []byte(fmt.Sprintf(`{"GetSubChainConfigById":{"chainId":"%s"}}`, subChainId))
-	chaincfgbz := suite.queryMultiChainCall(chain, msg, sender, registryAddressStr, chainId)
-	suite.Require().NoError(err)
-
-	var subchainConfig menc.ChainConfig
-	err = json.Unmarshal(chaincfgbz, &subchainConfig)
-	suite.Require().NoError(err)
-
-	multichainapp, err := mcfg.GetMultiChainApp(appA.App.GetGoContextParent())
-	suite.Require().NoError(err)
-	subchainapp := multichainapp.NewApp(subChainId, &subchainConfig)
-	subtxconfig := subchainapp.TxConfig()
-
-	sigV2 := signing.SignatureV2{
-		PubKey: sender.PubKey,
-		Data: &signing.SingleSignatureData{
-			SignMode:  signing.SignMode(subtxconfig.SignModeHandler().DefaultMode()),
-			Signature: nil,
-		},
-		Sequence: 0,
-	}
-
-	sdktx, err := subtxconfig.TxJSONDecoder()(txbz)
-	suite.Require().NoError(err)
-	txbuilder, err := subtxconfig.WrapTxBuilder(sdktx)
-	suite.Require().NoError(err)
-
-	subchainSender, err := subtxconfig.SigningContext().AddressCodec().BytesToString(sender.Address)
-	suite.Require().NoError(err)
-
-	err = txbuilder.SetSignatures(sigV2)
-	suite.Require().NoError(err)
-
-	signerData := authsigning.SignerData{
-		ChainID:       subChainId,
-		AccountNumber: 0,
-		Sequence:      0,
-		PubKey:        sender.PubKey,
-		Address:       subchainSender,
-	}
-
-	sigV2, err = tx.SignWithPrivKey(
-		appA.Context().Context(),
-		signing.SignMode(subtxconfig.SignModeHandler().DefaultMode()), signerData,
-		txbuilder, sender.PrivKey, subtxconfig,
-		0,
-	)
-	suite.Require().NoError(err)
-
-	err = txbuilder.SetSignatures(sigV2)
-	suite.Require().NoError(err)
-
-	valSdkTx := txbuilder.GetTx()
-	txjsonbz, err := subtxconfig.TxJSONEncoder()(valSdkTx)
-	s.Require().NoError(err)
-
-	regreq, err = json.Marshal(&wasmxtypes.MultiChainRegistryCallData{RegisterSubChainValidator: &wasmxtypes.RegisterSubChainValidatorRequest{
-		ChainId: subChainId,
-		GenTx:   txjsonbz,
-	}})
-	s.Require().NoError(err)
-
-	_, err = suite.broadcastMultiChainExec(chain, []byte(regreq), sender, registryAddress, chainId)
-	s.Require().NoError(err)
-	regreq, err = json.Marshal(&wasmxtypes.MultiChainRegistryCallData{InitSubChain: &wasmxtypes.InitSubChainRequest{
-		ChainId: subChainId,
-	}})
-	s.Require().NoError(err)
-	res, err := suite.broadcastMultiChainExec(chain, []byte(regreq), sender, registryAddress, chainId)
-	suite.Require().NoError(err)
-
-	evs := appA.GetSdkEventsByType(res.Events, "init_subchain")
-	suite.Require().GreaterOrEqual(len(evs), 1)
-	evs = appA.GetEventsByAttribute(evs, "chain_id", subChainId)
-	suite.Require().Equal(1, len(evs))
-
-	time.Sleep(time.Second * 3)
+	subChainId, _ := suite.createLevel1(mcfg.LEVEL0_CHAIN_ID, reqlevel1)
+	suite.Require().Equal("ptestp_1_1001-1", subChainId)
 }
 
 func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {

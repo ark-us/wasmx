@@ -47,6 +47,7 @@ message SystemContract {
   repeated string deps = 9;
   CodeMetadataPB metadata = 10 [(gogoproto.nullable) = false];
   repeated ContractStoragePB contract_state = 11 [ (gogoproto.nullable) = false ];
+  bytes source = 12;
 }
 
 // Code - for importing and exporting code data

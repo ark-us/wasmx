@@ -710,6 +710,7 @@ func create(_context interface{}, rnh memc.RuntimeHandler, params []interface{})
 		metadata,
 		"", // TODO label?
 		[]byte{},
+		[]byte{},
 	)
 	if err != nil {
 		return returns, err
@@ -763,6 +764,7 @@ func create2(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		metadata,
 		"", // TODO label?
 		salt,
+		[]byte{},
 	)
 	if err != nil {
 		return returns, err

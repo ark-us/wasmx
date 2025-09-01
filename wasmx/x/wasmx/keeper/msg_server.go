@@ -50,7 +50,7 @@ func (m msgServer) ExecuteEth(goCtx context.Context, msg *types.MsgExecuteEth) (
 		if err != nil {
 			sdkerr.Wrap(err, "ExecuteEth could not marshal data")
 		}
-		_, _, address, err := m.Keeper.Deploy(ctx, senderAddr, tx.Data(), deps, types.CodeMetadata{}, msgbz, funds, "")
+		_, _, address, err := m.Keeper.Deploy(ctx, senderAddr, tx.Data(), deps, types.CodeMetadata{}, msgbz, funds, "", []byte{})
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +86,7 @@ func (m msgServer) StoreCode(goCtx context.Context, msg *types.MsgStoreCode) (*t
 	}
 
 	// default is unpinned and metering on
-	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata.ToJson(), false, false)
+	codeId, checksum, err := m.Keeper.Create(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata.ToJson(), false, false, msg.Source)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (m msgServer) DeployCode(goCtx context.Context, msg *types.MsgDeployCode) (
 		sdk.NewAttribute(sdk.AttributeKeySender, msg.Sender),
 	))
 
-	codeId, checksum, address, err := m.Keeper.Deploy(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata.ToJson(), msg.Msg, msg.Funds, msg.Label)
+	codeId, checksum, address, err := m.Keeper.Deploy(ctx, senderAddr, msg.ByteCode, msg.Deps, msg.Metadata.ToJson(), msg.Msg, msg.Funds, msg.Label, msg.Source)
 	if err != nil {
 		return nil, err
 	}

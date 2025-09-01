@@ -56,7 +56,7 @@ import (
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
-	mapi "github.com/loredanacirstea/wasmx/api"
+	mapi "github.com/loredanacirstea/wasmx/apictx"
 	app "github.com/loredanacirstea/wasmx/app"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	mcfg "github.com/loredanacirstea/wasmx/config"

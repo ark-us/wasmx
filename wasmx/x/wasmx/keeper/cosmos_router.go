@@ -167,9 +167,9 @@ func (h *WasmxCosmosHandler) Create2(codeId uint64, creator mcodec.AccAddressPre
 	address, _, err := h.Keeper.Instantiate2(h.Ctx, codeId, creator, initMsg, funds, salt, false, label)
 	return &address, err
 }
-func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error) {
+func (h *WasmxCosmosHandler) Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata types.CodeMetadata, label string, salt []byte, source []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error) {
 	funds := sdk.NewCoins(sdk.NewCoin(h.Keeper.denom, sdkmath.NewIntFromBigInt(value)))
-	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt)
+	return h.Keeper.CreateInterpreted(h.Ctx, sender, provenance, bytecode, deps, metadata, initMsg, funds, label, salt, source)
 }
 
 func (h *WasmxCosmosHandler) Execute(contractAddress mcodec.AccAddressPrefixed, sender mcodec.AccAddressPrefixed, execmsg []byte, value *big.Int, deps []string) (res []byte, err error) {

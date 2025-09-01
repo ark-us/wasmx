@@ -345,6 +345,7 @@ func wasmxCreateAccountInterpreted(_context interface{}, rnh memc.RuntimeHandler
 		metadata,
 		"", // TODO label?
 		[]byte{},
+		req.Source,
 	)
 	if err != nil {
 		return returns, err
@@ -393,6 +394,7 @@ func wasmxCreate2AccountInterpreted(_context interface{}, rnh memc.RuntimeHandle
 		metadata,
 		"", // TODO label?
 		req.Salt.FillBytes(make([]byte, 32)),
+		req.Source,
 	)
 	if err != nil {
 		return returns, err

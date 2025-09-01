@@ -553,6 +553,29 @@ func (s *AppContext) StoreCode(sender simulation.Account, wasmbin []byte, deps [
 	return codeId
 }
 
+func (s *AppContext) StoreCodeWithSource(sender simulation.Account, wasmbin []byte, deps []string, source []byte) uint64 {
+	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
+	s.S.Require().NoError(err)
+	storeCodeMsg := &types.MsgStoreCode{
+		Sender:   senderstr,
+		ByteCode: wasmbin,
+		Deps:     deps,
+		Source:   source,
+	}
+	res, err := s.DeliverTx(sender, storeCodeMsg)
+	s.S.Require().NoError(err)
+	s.S.Require().True(res.IsOK(), res.Log, res.GetEvents())
+	s.S.Commit()
+
+	codeId := s.GetCodeIdFromEvents(res.GetEvents())
+
+	bytecode, err := s.App.WasmxKeeper.GetByteCode(s.Context(), codeId)
+	s.S.Require().NoError(err)
+	s.S.Require().Equal(len(wasmbin), len(bytecode), "stored code length mismatch")
+	s.S.Require().Equal(wasmbin, bytecode)
+	return codeId
+}
+
 func (s *AppContext) StoreCodeWithMetadata(sender simulation.Account, wasmbin []byte, deps []string, metadata types.CodeMetadata) uint64 {
 	senderstr, err := s.AddressCodec().BytesToString(sender.Address)
 	s.S.Require().NoError(err)

@@ -268,7 +268,7 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 		}
 		tempCtx, _ := ctx.CacheContext()
 
-		_, _, _, err = k.Deploy(tempCtx, sender, req.QueryData, deps, types.CodeMetadata{}, msgbz, req.Funds, "")
+		_, _, _, err = k.Deploy(tempCtx, sender, req.QueryData, deps, types.CodeMetadata{}, msgbz, req.Funds, "", []byte{})
 		if err != nil {
 			return nil, err
 		}

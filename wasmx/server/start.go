@@ -61,7 +61,7 @@ import (
 	jsonrpc "github.com/loredanacirstea/wasmx/x/wasmx/server"
 	websrv "github.com/loredanacirstea/wasmx/x/websrv/server"
 
-	mapi "github.com/loredanacirstea/wasmx/api"
+	mapi "github.com/loredanacirstea/wasmx/apictx"
 	mapp "github.com/loredanacirstea/wasmx/app"
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	mctx "github.com/loredanacirstea/wasmx/context"

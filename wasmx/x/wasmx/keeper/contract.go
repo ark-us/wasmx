@@ -20,8 +20,8 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-func (k *Keeper) Create(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmByteCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool) (uint64, []byte, error) {
-	return k.create(ctx, &creator, wasmByteCode, deps, metadata, pinned, meteringOff)
+func (k *Keeper) Create(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmByteCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool, source []byte) (uint64, []byte, error) {
+	return k.create(ctx, &creator, wasmByteCode, deps, metadata, pinned, meteringOff, source)
 }
 
 func (k *Keeper) Deploy(
@@ -33,8 +33,9 @@ func (k *Keeper) Deploy(
 	initMsg types.RawContractMessage,
 	funds sdk.Coins,
 	label string,
+	source []byte,
 ) (uint64, []byte, mcodec.AccAddressPrefixed, error) {
-	return k.CreateInterpreted(ctx, &creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{})
+	return k.CreateInterpreted(ctx, &creator, nil, wasmByteCode, deps, metadata, initMsg, funds, label, []byte{}, source)
 }
 
 func (k *Keeper) PinCode(ctx sdk.Context, codeHash []byte, compiledFolderPath string, meteringOff bool) error {
@@ -192,7 +193,7 @@ func (k *Keeper) GetContractDependencyInnerWithoutRoles(ctx sdk.Context, addr mc
 	return cdep, nil
 }
 
-func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool) (codeID uint64, checksum []byte, err error) {
+func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool, source []byte) (codeID uint64, checksum []byte, err error) {
 	if creator == nil {
 		return 0, checksum, sdkerr.Wrap(sdkerrors.ErrInvalidAddress, "cannot be nil")
 	}
@@ -203,7 +204,7 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 			return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, err.Error())
 		}
 	}
-	codeInfo, err := k.createCodeInfo(ctx, *creator, wasmCode, deps, metadata, pinned, meteringOff)
+	codeInfo, err := k.createCodeInfo(ctx, *creator, wasmCode, deps, metadata, pinned, meteringOff, source)
 	if err != nil {
 		return 0, checksum, err
 	}
@@ -229,7 +230,7 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 	return codeID, checksum, nil
 }
 
-func (k *Keeper) createCodeInfo(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool) (codeInfo types.CodeInfo, err error) {
+func (k *Keeper) createCodeInfo(ctx sdk.Context, creator mcodec.AccAddressPrefixed, wasmCode []byte, deps []string, metadata types.CodeMetadata, pinned bool, meteringOff bool, source []byte) (codeInfo types.CodeInfo, err error) {
 	var checksum []byte
 	var reportDeps = make([]string, 0)
 
@@ -256,7 +257,7 @@ func (k *Keeper) createCodeInfo(ctx sdk.Context, creator mcodec.AccAddressPrefix
 	// 	return 0, checksum, sdkerr.Wrap(types.ErrCreateFailed, "incorrect deps")
 	// }
 
-	codeInfo = types.NewCodeInfo(checksum, creator.String(), reportDeps, metadata, pinned, meteringOff)
+	codeInfo = types.NewCodeInfo(checksum, creator.String(), reportDeps, metadata, pinned, meteringOff, source)
 	if types.HasInterpreterDep(deps) && !types.HasUtf8Dep(deps) {
 		// TODO only store one
 		codeInfo.InterpretedBytecodeDeployment = wasmCode
@@ -308,6 +309,7 @@ func (k *Keeper) CreateInterpreted(
 	deposit sdk.Coins,
 	label string,
 	salt []byte,
+	source []byte,
 ) (codeID uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error) {
 	defer telemetry.MeasureSince(time.Now(), "wasm", "contract", "createInterpreted")
 
@@ -330,7 +332,7 @@ func (k *Keeper) CreateInterpreted(
 		return 0, nil, mcodec.AccAddressPrefixed{}, err
 	}
 	k.Logger(ctx).Debug("storing new contract", "deps", deps, "code_id", codeID, "checksum", checksum)
-	codeInfo := types.NewCodeInfo(checksum, creator.String(), deps, metadata, false, false)
+	codeInfo := types.NewCodeInfo(checksum, creator.String(), deps, metadata, false, false, source)
 	codeInfo.InterpretedBytecodeDeployment = wasmCode
 
 	addressParent := provenance

@@ -17,7 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 
-	mapi "github.com/loredanacirstea/wasmx/api"
+	mapi "github.com/loredanacirstea/wasmx/apictx"
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	mctx "github.com/loredanacirstea/wasmx/context"
 	menc "github.com/loredanacirstea/wasmx/encoding"

@@ -37,7 +37,8 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
-	codeId := appA.StoreCode(sender, wasmbin, nil)
+	source := []byte("somesource")
+	codeId := appA.StoreCodeWithSource(sender, wasmbin, nil, source)
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte("hello")}, "tinygoSimpleStorage", nil)
 
 	key := []byte("storagekey")
@@ -56,6 +57,10 @@ func (suite *KeeperTestSuite) TestWasiTinygoSimpleStorage() {
 
 	value = appA.App.WasmxKeeper.QueryRaw(appA.Context(), contractAddress, key)
 	s.Require().Equal([]byte("goodbye"), value)
+
+	codeInfo, err := appA.App.WasmxKeeper.GetCodeInfo(appA.Context(), codeId)
+	suite.Require().NoError(err)
+	suite.Require().Equal(string(source), string(codeInfo.Source))
 }
 
 func (suite *KeeperTestSuite) TestWasiTinygoCallSimpleStorage() {

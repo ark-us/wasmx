@@ -67,11 +67,11 @@ func (k *Keeper) BootstrapSystemContracts(
 		k.Logger(ctx).Debug("creating core contract", "label", contract.Label, "deps", contract.Deps, "address", contractAddress.String())
 
 		if contract.Native {
-			codeInfo = types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff)
+			codeInfo = types.NewCodeInfo([]byte(contract.Address), bootstrapAccountAddr.String(), contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff, contract.Source)
 		} else {
 			wasmbin := precompiles.GetPrecompileByLabel(k.AddressCodec(), contract.Label)
 
-			codeInfo, err = k.createCodeInfo(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff)
+			codeInfo, err = k.createCodeInfo(ctx, bootstrapAccountAddr, wasmbin, contract.Deps, contract.Metadata.ToJson(), contract.Pinned, contract.MeteringOff, contract.Source)
 			if err != nil {
 				return sdkerr.Wrap(err, "store system contract: "+contract.Label)
 			}

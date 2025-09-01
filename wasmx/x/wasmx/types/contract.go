@@ -55,6 +55,8 @@ type CodeInfo struct {
 	InterpretedBytecodeDeployment RawContractMessage `json:"interpreted_bytecode_deployment"`
 	InterpretedBytecodeRuntime    RawContractMessage `json:"interpreted_bytecode_runtime"`
 	RuntimeHash                   Checksum           `json:"runtime_hash"`
+	Source                        RawContractMessage `json:"source"`
+	SourceVerified                bool               `json:"source_verified"`
 }
 
 type ContractInfo struct {
@@ -154,6 +156,8 @@ func (v *CodeInfo) ToProto() *CodeInfoPB {
 		InterpretedBytecodeDeployment: v.InterpretedBytecodeDeployment,
 		InterpretedBytecodeRuntime:    v.InterpretedBytecodeRuntime,
 		RuntimeHash:                   v.RuntimeHash,
+		Source:                        v.Source,
+		SourceVerified:                v.SourceVerified,
 	}
 }
 
@@ -171,6 +175,8 @@ func (v *CodeInfoPB) ToJson() *CodeInfo {
 		InterpretedBytecodeDeployment: v.InterpretedBytecodeDeployment,
 		InterpretedBytecodeRuntime:    v.InterpretedBytecodeRuntime,
 		RuntimeHash:                   v.RuntimeHash,
+		Source:                        v.Source,
+		SourceVerified:                v.SourceVerified,
 	}
 }
 
