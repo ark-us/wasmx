@@ -59,7 +59,7 @@ Read [./CONTRIBUTE.md](./CONTRIBUTE.md)
 
 ## License
 
-See [./LICENSE](./LICENSE) and [./MORAL_LICENSE](./MORAL_LICENSE)
+See [./LICENSE](./LICENSE), [./COPYRIGHT](./COPYRIGHT) and [./MORAL_LICENSE](./MORAL_LICENSE)
 
 The Moral License is not yet legally binding, but one of our projects is to make such a license legally binding and computable. And we will use wasmX to manage such licensing.
 
