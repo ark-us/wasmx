@@ -215,9 +215,9 @@ sed -i.bak -E "s|^(snapshot-interval[[:space:]]+=[[:space:]]+).*$|\110|" $HOMEMA
 
 mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 
-mythosd testnet add-node 1 "mythos1dd8p2x8hvaycynjkyvny4y5ncgauvzndpx9v8j@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWGxArpEjfFCT4x4VUW6qTE4Wmw5xt64KgbABN4Vda7bD5" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
+mythosd testnet add-node 1 "mythos1h3hzq0ldvd8vsyrldu0922mps0l6ckjl7wnud2@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJbGH6k6yNuJmfDYLkDkRG9tDjkxYfKWkzqtsZMP98Snh" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
 
-mythosd tx cosmosmod bank send node0 mythos1dffgwwmjl7zrud5rn9nc4swlkjt2qv7uh8yxkd 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
+mythosd tx cosmosmod bank send node0 mythos13dt9xcjpum6c7yjkmu0jl82sfh6sjtsqrjm9st 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
 
 mythosd tendermint unsafe-reset-all --home=./testnet/node1/mythosd
 
@@ -258,7 +258,7 @@ mythosd tendermint show-validator --home ./testnet/node1/mythosd
 }
 ```
 
-mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1dffgwwmjl7zrud5rn9nc4swlkjt2qv7uh8yxkd@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWAkpaiKPvVGdbTyYzufXmykzBRjL1MtxveZo8XNWUvomD" --node tcp://127.0.0.1:26658 --yes
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos13dt9xcjpum6c7yjkmu0jl82sfh6sjtsqrjm9st@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWJe499up68YihbtQ7YmNNxaxNGfzbUWkgojJpxGKcy45F" --node tcp://127.0.0.1:26658 --yes
 
 ```
 

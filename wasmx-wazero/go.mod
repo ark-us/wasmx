@@ -1,6 +1,8 @@
 module github.com/loredanacirstea/wasmx-wazero
 
-go 1.21
+go 1.23.0
+
+toolchain go1.24.4
 
 require (
 	cosmossdk.io/errors v1.0.1
@@ -174,8 +176,8 @@ replace (
 	// github.com/loredanacirstea/cometbft@27cc98dcda07f38451e77c4a1477aaa5d2a096e4
 	github.com/cometbft/cometbft => github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07
 
-	// github.com/loredanacirstea/cosmos-sdk@f467a3b4d9f6ada1dd1b733a6079663afda455c7
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6
+	// github.com/loredanacirstea/cosmos-sdk@ca9792061eb75d0f1d8afafe97741530e31fa3ba
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250425153656-ca9792061eb7
 
 	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 
@@ -205,3 +207,4 @@ require (
 )
 
 replace github.com/loredanacirstea/wasmx => ../wasmx
+

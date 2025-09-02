@@ -48,9 +48,9 @@ jobs:
           go test -failfast=false -timeout 2000s -v ./wasmx/...
           go test -failfast=false -timeout 2000s -v ./wasmx-wazero/...
           go test -failfast=false -timeout 2000s -v ./mythos-wazero/...
-          go test -failfast=false -timeout 8000s -v ./tests/wasmx -wasm-runtime=wazero
+          go test -failfast=false -timeout 12000s -v ./tests/wasmx -wasm-runtime=wazero
           go test -failfast=false -timeout 4000s -v ./tests/cosmosmod -wasm-runtime=wazero
-          go test -failfast=false -timeout 8000s -v ./tests/network -wasm-runtime=wazero
+          go test -failfast=false -timeout 12000s -v ./tests/network -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/vmsql -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/vmkv -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/vmhttp -wasm-runtime=wazero

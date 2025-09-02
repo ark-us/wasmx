@@ -1,6 +1,8 @@
 module mythos-wasmedge/v1
 
-go 1.21
+go 1.23.0
+
+toolchain go1.24.4
 
 require (
 	cosmossdk.io/errors v1.0.1 // indirect
@@ -65,8 +67,7 @@ require (
 
 require (
 	cloud.google.com/go v0.112.0 // indirect
-	cloud.google.com/go/compute v1.24.0 // indirect
-	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/storage v1.36.0 // indirect
 	cosmossdk.io/collections v0.4.0 // indirect
@@ -122,7 +123,7 @@ require (
 	github.com/elastic/gosigar v0.14.2 // indirect
 	github.com/emersion/go-imap/v2 v2.0.0-beta.5 // indirect
 	github.com/emersion/go-message v0.18.2 // indirect
-	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
+	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
 	github.com/emicklei/dot v1.6.1 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
@@ -284,14 +285,13 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/oauth2 v0.18.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
 	google.golang.org/api v0.162.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -309,8 +309,8 @@ replace (
 	// github.com/loredanacirstea/cometbft@27cc98dcda07f38451e77c4a1477aaa5d2a096e4
 	github.com/cometbft/cometbft => github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07
 
-	// github.com/loredanacirstea/cosmos-sdk@f467a3b4d9f6ada1dd1b733a6079663afda455c7
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6
+	// github.com/loredanacirstea/cosmos-sdk@ca9792061eb75d0f1d8afafe97741530e31fa3ba
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250425153656-ca9792061eb7
 
 	github.com/cosmos/gogoproto => github.com/ark-us/gogoproto v0.0.0-20240517150314-413ed4a81b9d
 
@@ -335,10 +335,18 @@ require github.com/loredanacirstea/wasmx v0.0.0
 
 replace github.com/loredanacirstea/wasmx => ../wasmx
 
-require github.com/loredanacirstea/wasmx-vmimap v0.0.0 // indirect
+require (
+	github.com/emersion/go-smtp v0.22.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
+	github.com/loredanacirstea/wasmx-vmimap v0.0.0 // indirect
+)
 
 replace github.com/loredanacirstea/wasmx-vmimap => ../wasmx-vmimap
 
 require github.com/loredanacirstea/wasmx-wasmedge v0.0.0-00010101000000-000000000000
 
 replace github.com/loredanacirstea/wasmx-wasmedge => ../wasmx-wasmedge
+
+require github.com/loredanacirstea/wasmx-vmsmtp v0.0.0 // indirect
+
+replace github.com/loredanacirstea/wasmx-vmsmtp => ../wasmx-vmsmtp

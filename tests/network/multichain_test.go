@@ -418,10 +418,10 @@ func (suite *KeeperTestSuite) TestMultiChainAtomicTx() {
 		results <- result{err: err, res: res, msg: "subchainapp"}
 	}()
 
+	time.Sleep(time.Second * 20)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 20)
 
 		// we use the same atomic txbz on any chain
 		// follower chain
@@ -596,10 +596,10 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainTx() {
 		results <- result{err: err, res: res, msg: "subchainapp"}
 	}()
 
+	time.Sleep(time.Second * 20)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 20)
 
 		// we use the same atomic txbz on any chain
 		// follower chain
@@ -768,10 +768,10 @@ func (suite *KeeperTestSuite) TestMultiChainCrossChainQueryDeterministic() {
 		results <- result{err: err, res: res, msg: "subchainapp"}
 	}()
 
+	time.Sleep(time.Second * 20)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		time.Sleep(time.Second * 20)
 
 		// we use the same atomic txbz on any chain
 		// follower chain

@@ -3,6 +3,7 @@ package vm
 import (
 	crypto_rand "crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -282,6 +283,7 @@ func wasmxRevert(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	returns := make([]interface{}, 0)
 	ctx.FinishData = data
 	ctx.ReturnData = data
+	ctx.Ctx.Logger().Debug("wasmxhost.revert", "data", hex.EncodeToString(data))
 	return returns, fmt.Errorf("revert")
 }
 

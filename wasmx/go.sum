@@ -2041,8 +2041,8 @@ github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07 h1:oe9
 github.com/loredanacirstea/cometbft v0.38.7-0.20241015080504-27cc98dcda07/go.mod h1:8rSPxzUJYquCN8uuBgbUHOMg2KAwvr7CyUw+6ukO4nw=
 github.com/loredanacirstea/cosmos-iavl v1.0.0-rc.1.0.20240805221208-c3d360cff250 h1:ZXwPIy20U9pf/qqivL0xl53I+628nZhTl3MPBBm0ULI=
 github.com/loredanacirstea/cosmos-iavl v1.0.0-rc.1.0.20240805221208-c3d360cff250/go.mod h1:jLeUvm6bGT1YutCaL2fIar/8vGUE8cPZvh/gXEWDaDM=
-github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6 h1:oIz0C6MlQcZmajdhZ3tNSjyDtQhww3KD8yLNLVgsnmo=
-github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250425153656-ca9792061eb7 h1:5RTQ+pig+F3YyBtLepwtrvn6/rC9cg5zXyG2mb8AVz4=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250425153656-ca9792061eb7/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20241019150937-7ce744ab103e h1:GeP8w7r83LZOgNMwSgoHSF9F3SPm13kZMJzQ+tSWQZQ=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20241019150937-7ce744ab103e/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
 github.com/loredanacirstea/ibc-go/v8 v8.0.0-rc.0.0.20240422222922-5348ea465b19 h1:qQOX+FXfEuUcXL2cOfbJVfKkhCaneKeOU4I+skRpHOQ=

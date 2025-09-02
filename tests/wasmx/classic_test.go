@@ -380,16 +380,13 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(basefeehex)}, nil, nil)
 	s.Require().Equal("0000000000000000000000000000000000000000000000000000000000000000", qres)
 
-	// TODO it should work here too
-	// gashex := "57296d07"
-	// calld = gashex
-	// qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	// s.Require().Equal("000000000000000000000000000000000000000000000000000000003b97531c", qres)
+	gashex := "57296d07"
+	calld = gashex
+	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b976d74", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
-	SkipFixmeTests(suite.T(), "TestEwasmOpcodesGas")
-
 	suite.SetCurrentChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 
 	sender := suite.GetRandomAccount()
@@ -406,7 +403,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
 
 	calld := "57296d07"
 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b97531c", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b976d74", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {

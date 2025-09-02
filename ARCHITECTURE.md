@@ -18,7 +18,7 @@ tendermintp2p -> host.Commit
 
 - `metainfo` is for storing cross-chain tx results
 - right now we only use optimistic execution for atomic transactions - we accept only 1 atomic transaction per block (1 transaction/block)
-- but we re-execute at host.FinalizeBlock
+- but we re-execute at host.FinalizeBlock and BaseApp will reuse the OE result from before
 
 ```c++
 # Consensus contract (tendermint): buildBlockProposal

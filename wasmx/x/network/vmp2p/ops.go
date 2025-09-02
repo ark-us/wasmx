@@ -644,6 +644,7 @@ func sendMessageToPeersCommon(ctx *Context, req SendMessageToPeersRequest) error
 			}
 		}
 		if stream != nil {
+			ctx.Logger.Debug("p2p: send messsage to peer", "peer", peer, "contract", msgReq.ContractAddress)
 			err := sendMessageToPeersInternal(stream, msgReq)
 			if err != nil {
 				if err.Error() == ERROR_STREAM_RESET {
@@ -828,7 +829,7 @@ func sendMessageToChatRoomInternal(ctx *Context, cr *ChatRoom, req SendMessageTo
 	if err != nil {
 		return err
 	}
-	ctx.Logger.Debug("p2p publishing msg", "msg", string(msgbz), "topic", req.ProtocolId, "topic", req.Topic)
+	ctx.Logger.Debug("p2p: send message to room", "msg", string(msgbz), "topic", req.ProtocolId, "topic", req.Topic)
 	err = cr.Publish(msgbz)
 	if err != nil {
 		return err

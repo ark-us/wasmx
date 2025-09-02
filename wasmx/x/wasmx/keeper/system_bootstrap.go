@@ -6,6 +6,7 @@ import (
 	"os"
 
 	sdkerr "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -29,6 +30,10 @@ func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap
 	return types.SetSystemBootstrap(k.wasmvm.goContextParent, data)
 }
 
+// IMPORTANT!
+// setting system cache is part of the deterministic process and happens only at:
+// * at chain bootstrap for system contracts
+// * governance upgrades for cached contracts (roles, codes)
 func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBootstrapData) error {
 	store := ctx.KVStore(k.storeKey)
 	databz, err := json.Marshal(data)
@@ -39,7 +44,15 @@ func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBoots
 	return nil
 }
 
-func (k *Keeper) GetSystemBootstrapData(ctx sdk.Context) (*types.SystemBootstrapData, error) {
+// IMPORTANT! we exclude this caching from consuming gas or changing store commits!!
+// writing the state is deterministic
+// but reading is NOT deterministic: it can happen any time the node is restarted or after statesync
+// reading does not change state root hashes, and we make it not consume gas
+// otherwise, we would get results hash mismatch in blocks due to gas consumption
+func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstrapData, error) {
+	ctx := sdk.NewContext(ctx_.MultiStore().CacheMultiStore(), ctx_.BlockHeader(), ctx_.IsCheckTx(), ctx_.Logger())
+	ctx = ctx.WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
+
 	store := ctx.KVStore(k.storeKey)
 	var data types.SystemBootstrapData
 	databz := store.Get(types.GetCacheSystemBootstrapPrefix())
@@ -92,6 +105,7 @@ func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 			CodeRegistryCodeInfo:     _data.CodeRegistryCodeInfo.ToJson(),
 			CodeRegistryContractInfo: _data.CodeRegistryContractInfo.ToJson(),
 		}
+		types.SetSystemBootstrap(k.wasmvm.goContextParent, data)
 	}
 	return data
 }
