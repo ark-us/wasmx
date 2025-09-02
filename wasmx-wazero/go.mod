@@ -207,4 +207,3 @@ require (
 )
 
 replace github.com/loredanacirstea/wasmx => ../wasmx
-

@@ -15,7 +15,7 @@ Core contracts were written in AssemblyScript, and the consensus protocols are F
 
 Current speed of execution bottleneck is JSON encoding/decoding for AssemblyScript (this may be improved by newer `json-as` versions once it achieves feature parity with the old version). Nonetheless, speed can be greatly improved contract by contract, now that a functional implementation exists. And a Tinygo implementation of the core contracts has already been started.
 
-This is a self-funded effort: one lead software architect @ctzurcanu, and one everything software engineer @loredanacirstea.
+This is a self-funded effort: one lead software architect [@ctzurcanu](https://github.com/ctzurcanu), and one everything software engineer [@loredanacirstea](https://github.com/loredanacirstea).
 
 ## NOT PRODUCTION READY
 
@@ -71,6 +71,7 @@ Know that we do not condone using wasmX for the creation of blockchains without 
 
 * docs: https://wasmx.provable.dev
 * discord chat: https://discord.gg/8W5jeBke4f
+* technical demo vides: https://www.youtube.com/playlist?list=PL323JufuD9JCRcY0fSEdQCC-yj0qL6Gkt
 
 Want help or want to help? Join our Discord. We hope those interested can help one another.
 
