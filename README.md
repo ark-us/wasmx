@@ -5,7 +5,7 @@ The only WASM-modular blockchain engine capable of regeneration and metamorphosi
 * Multi VM, language-agnostic, general & domain-specific language interpreters, variety of host APIs.
     * EVM, TinyGo, AssemblyScript, JavaScript, Python, Rust, FSMvm (finite state machine interpreter).
     * host APIs: wasmx (our core API), wasmx crosschain, wasmx multichain, wasmx consensus, ewasm, WASI adaptor, GRPC, libp2p, HTTP, SQL, KV dbs, SMTP, IMAP
-    * multichain, crosschain, atomic crosschain tranzactions: each node can run multiple chains and subchains
+    * multichain, crosschain, atomic crosschain transactions: each node can run multiple chains and subchains
 
 Compatible with both Ethereum and Cosmos SDK wallets.
 
@@ -38,7 +38,8 @@ make install
 
 ### Join the Mythos Testnet
 
-Instructions: https://github.com/loredanacirstea/tempreleases/tree/main/mythos-testnet
+Incoming. Join our Discord.
+Past testnet instructions at: https://github.com/loredanacirstea/tempreleases/tree/main/mythos-testnet
 
 ## Core Components
 
@@ -65,13 +66,13 @@ The Moral License is not yet legally binding, but one of our projects is to make
 
 If you are using wasmX, let us know so we can showcase your project.
 
-Know that we do not condone using wasmX for the creation of blockchains without embedded identity verification, or blockchains that cannot apply justice actions. wasmX's direction is towards supporting digital identity (government issued or other solutions).
+Know that we do not condone using wasmX for the creation of blockchains without embedded identity verification, or blockchains that cannot apply justice actions. wasmX's direction is towards supporting digital identity (government-issued or other solutions).
 
 ## Resources
 
 * docs: https://wasmx.provable.dev
 * discord chat: https://discord.gg/8W5jeBke4f
-* technical demo vides: https://www.youtube.com/playlist?list=PL323JufuD9JCRcY0fSEdQCC-yj0qL6Gkt
+* technical demo videos: https://www.youtube.com/playlist?list=PL323JufuD9JCRcY0fSEdQCC-yj0qL6Gkt
 
 Want help or want to help? Join our Discord. We hope those interested can help one another.
 

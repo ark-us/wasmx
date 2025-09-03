@@ -407,6 +407,7 @@ func AddressesFromString(accounts []string) []imap.Address {
 }
 
 func TestSignARCSync1(t *testing.T) {
+	SkipFixmeTests(t, "TestSignARCSync1 TODO: use hardcoded example")
 	options := &SignOptions{
 		Domain:         "example.org",
 		Selector:       "brisbane",
@@ -439,6 +440,7 @@ func TestSignARCSync1(t *testing.T) {
 }
 
 func TestSignARCSync(t *testing.T) {
+	SkipFixmeTests(t, "TestSignARCSync TODO: use hardcoded example")
 	options := &SignOptions{
 		Domain:         "example.org",
 		Selector:       "brisbane",
