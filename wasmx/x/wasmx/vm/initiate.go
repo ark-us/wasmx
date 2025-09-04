@@ -265,6 +265,11 @@ func init() {
 	// language-specific imports
 	SystemDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = InitiateAssemblyScript
 
+	// TODO these interpreter exceptions should be removed and entrypoints should follow the normal rules
+	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteDefaultMain
+	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
+	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
+
 	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultContract
@@ -276,12 +281,6 @@ func init() {
 	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasiWrap
 	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultContract
 	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
-	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefaultMain
-
-	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteDefaultMain
-	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
-	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
-	ExecuteFunctionHandler[types.INTERPRETER_FSM] = ExecuteFSM
 
 	DependenciesMap[types.EWASM_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_VM_EXPORT] = true
@@ -325,6 +324,13 @@ func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInte
 			return executeFn
 		}
 	}
+	// look in dep.Deps
+	for _, systemDep := range systemDeps {
+		handler := GetExecuteFunctionHandler(systemDep.Deps)
+		if handler != nil {
+			return handler
+		}
+	}
 	return ExecuteDefaultMain
 }
 
@@ -343,9 +349,3 @@ func ExecuteDefaultMain(context *Context, contractVm memc.IVm, funcName string, 
 	return contractVm.Call("main", []interface{}{}, context.GasMeter)
 }
 
-func ExecuteFSM(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	if funcName == types.ENTRY_POINT_EXECUTE || funcName == types.ENTRY_POINT_QUERY || funcName == types.ENTRY_POINT_INSTANTIATE {
-		funcName = "main"
-	}
-	return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
-}

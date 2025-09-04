@@ -671,60 +671,76 @@ func BuildWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler) (interface{
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)
 }
 
-func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteWasiCommand(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	var res []int32
 	var err error
 
-	// WASI standard does not have instantiate
-	// this is only for wasmx contracts (e.g. compiled with tinygo, javy)
-	// TODO consider extracting this in a dependency
-	if funcName == types.ENTRY_POINT_INSTANTIATE {
-		fnNames := contractVm.GetFunctionList()
-		found := false
-		for _, name := range fnNames {
-			// WASI reactor
-			if name == "_initialize" {
-				found = true
-				res, err = contractVm.Call("_initialize", []interface{}{}, context.GasMeter)
-				break
-			}
-			// note that custom entries do not have access to WASI endpoints at this time
-			if name == "main.instantiate" {
-				found = true
-				res, err = contractVm.Call("main.instantiate", []interface{}{}, context.GasMeter)
-				break
-			}
-			if name == funcName {
-				found = true
-				res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
-				break
-			}
-		}
-		if !found {
-			return nil, nil
-		}
-	} else if v, ok := types.AdditionalEntryPointMap[funcName]; ok && v {
-		res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
-	} else {
-		// WASI command - no args, no return
-		res, err = contractVm.Call("_start", []interface{}{}, context.GasMeter)
+	// wasi command style has only one entry point `_start`,
+	// so we just pass our entry point as an ENV variable
+	wargs := contractVm.WasiArgs()
+	wenvs := contractVm.WasiEnvs()
+	wpreopens := contractVm.WasiPreopens()
+	wfileMap := contractVm.WasiFileMap()
+	wenvs = append(wenvs, fmt.Sprintf("%s=%s", "ENTRY_POINT", funcName))
+	contractVm.InstantiateWasi(wargs, wenvs, wpreopens, wfileMap)
 
-		// res, err = contractVm.Execute("_initialize")
-		// fmt.Println("--testtime-main, err", res, err)
-
-		// res, err = contractVm.Execute("main")
-		// fmt.Println("--testtime-main, err", res, err)
-
-		// res, err = contractVm.Execute("testtime")
-		// fmt.Println("--testtime-res, err", res, err)
-	}
+	res, err = contractVm.Call(types.ENTRY_POINT_WASI_COMMAND, []interface{}{}, context.GasMeter)
 	if err != nil {
 		return nil, err
 	}
-
 	return res, nil
 }
 
+func ExecuteWasiReactor(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+	var res []int32
+	var err error
+
+	// wasi reactor module needs to be `_initialize` first and only one time per module instantiation!
+	// TODO when we have caching of modules, we may move this instantiation to another abstraction
+	_, err = contractVm.Call(types.ENTRY_POINT_WASI_REACTOR, []interface{}{}, context.GasMeter)
+	if err != nil {
+		return nil, err
+	}
+	// then call the apropriate entry point
+	res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+	var res []int32
+	isCommand := false
+	isReactor := false
+	hasFunc := false
+	fnNames := contractVm.GetFunctionList()
+	for _, name := range fnNames {
+		if name == types.ENTRY_POINT_WASI_COMMAND {
+			isCommand = true
+		}
+		if name == types.ENTRY_POINT_WASI_REACTOR {
+			isReactor = true
+		}
+		if name == funcName {
+			hasFunc = true
+		}
+	}
+
+	if hasFunc {
+		return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
+	}
+	if isCommand {
+		return ExecuteWasiCommand(context, contractVm, funcName, args)
+	}
+	if isReactor {
+		return ExecuteWasiReactor(context, contractVm, funcName, args)
+	}
+	return res, nil
+}
+
+// TODO py/js interpreters should not have a custom way to be called, use ExecuteWasi
+// and respect command/reactor compilation style
 func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
@@ -832,12 +848,6 @@ wasmx.setReturnData(res || new ArrayBuffer(0));
 }
 
 func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	// if funcName == "execute" || funcName == "query" {
-	// 	funcName = "main"
-	// }
-
-	fileMap := map[string][]byte{}
-
 	contractVm.InstantiateWasi(
 		[]string{
 			``,
@@ -848,7 +858,7 @@ func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, arg
 		[]string{
 			// fmt.Sprintf(`.:%s`, dir),
 		},
-		fileMap,
+		map[string][]byte{},
 	)
 	return ExecuteWasi(context, contractVm, funcName, args)
 }

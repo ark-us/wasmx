@@ -52,6 +52,10 @@ var (
 	ENTRY_POINT_REPLY       = "reply"
 	ENTRY_POINT_TIMED       = "eventual"
 	ENTRY_POINT_P2P_MSG     = "p2pmsg"
+
+	// wasi
+	ENTRY_POINT_WASI_COMMAND = "_start"
+	ENTRY_POINT_WASI_REACTOR = "_initialize"
 )
 
 var AdditionalEntryPointMap = map[string]bool{}

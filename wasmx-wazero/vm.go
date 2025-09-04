@@ -204,6 +204,9 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}, gasMeter memc.GasM
 		_args[i] = uint64(arg.(int32))
 	}
 	fn := wm.vm.ExportedFunction(funcname)
+	if fn == nil {
+		return nil, fmt.Errorf("WazeroVm: exported function not found: %s", funcname)
+	}
 	var wrappedMeter *GasMeter
 	if gasMeter != nil {
 		wrappedMeter = NewGasMeter(gasMeter.GasRemaining(), uint64(0), gasMeter)
