@@ -16,6 +16,8 @@ cd wasmx-gov && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompi
 
 cd wasmx-gov-continuous && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/37.gov_cont_0.0.1.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
 
+cd wasmx-fsm && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/28.finite_state_machine.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
+
 tinygo build -o add.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add
 
 cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
@@ -35,6 +37,12 @@ cd mailsrv && GOWORK=off tinygo build -o ../mailsrv.wasm -no-debug -scheduler=no
 - for web
 ```sh
 tinygo build -o add2.wasm -target wasm ./add.go
+```
+
+* test
+```
+cd <package>
+GOWORK=off go test ./lib
 ```
 
 * optimizations

@@ -127,14 +127,27 @@ make proto-gen
 TCP: 22, 80, 443, 8443, 8447, 8090, 1317, 26657, 26656, 5001, 5011
 UDP: 5353 (libp2p)
 
-## (Re)Compile contracts
+## Compile AssemblyScript contracts
 
+* https://github.com/loredanacirstea/wasmx-as-contracts
 * compile contracts and move them to the apropriate wasmx folders
 
 ```bash
 ./wasmx/scripts/compile_as_contracts.sh
 ./wasmx/scripts/compile_as_contracts.sh tests,gov,staking,tendermintp2p
 ./wasmx/scripts/compile_as_contracts.sh --wasmxdir="path/to/project/wasmx" --contractsdir="path/to/project/wasmx-as-contracts"
+```
+
+## Compile TinyGo contracts
+
+* contracts are in `./tests/testdata/tinygo`
+* compile from root and replace the core system contracts
+```bash
+# tidy and compile all
+make tinygo
+
+# tidy and compile by name
+make tinygo wasmx-fsm
 ```
 
 ## Add local chain to Keplr
