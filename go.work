@@ -11,6 +11,7 @@ use (
 	./wasmx-vmsmtp
 	./tests/testdata/tinygo/wasmx-env
 	./tests/testdata/tinygo/wasmx-env-consensus
+	./tests/testdata/tinygo/wasmx-env-core
 	./tests/testdata/tinygo/wasmx-env-multichain
 	./tests/testdata/tinygo/wasmx-env-crosschain
 	./tests/testdata/tinygo/wasmx-env-httpclient

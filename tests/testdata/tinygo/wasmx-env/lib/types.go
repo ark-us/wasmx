@@ -106,11 +106,11 @@ type SimpleCallRequestRaw struct {
 }
 
 type CallRequest struct {
-	To       string   `json:"to"`
-	Calldata string   `json:"calldata"`
-	Value    *big.Int `json:"value"`
-	GasLimit int64    `json:"gasLimit"`
-	IsQuery  bool     `json:"isQuery"`
+	To       Bech32String `json:"to"`
+	Calldata string       `json:"calldata"`
+	Value    *big.Int     `json:"value"`
+	GasLimit int64        `json:"gasLimit"`
+	IsQuery  bool         `json:"isQuery"`
 }
 
 type CallResponse struct {

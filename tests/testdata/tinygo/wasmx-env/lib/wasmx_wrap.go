@@ -62,6 +62,11 @@ func GetCaller() Bech32String {
 	return Bech32String(Bech32BytesToString(bz))
 }
 
+func GetCallerBz() []byte {
+	bz := utils.PackedPtrToBytes(GetCaller_())
+	return bz
+}
+
 func GetAddress() Bech32String {
 	bz := utils.PackedPtrToBytes(GetAddress_())
 	return Bech32String(Bech32BytesToString(bz))
@@ -261,7 +266,7 @@ func CallEvm(req CallRequest, moduleName ...string) CallResponse {
 	if len(moduleName) > 0 {
 		mod = moduleName[0]
 	}
-	LoggerDebugExtended(mod+":wasmx_env", "call", []string{"to", req.To, "calldata", req.Calldata})
+	LoggerDebugExtended(mod+":wasmx_env", "call", []string{"to", string(req.To), "calldata", req.Calldata})
 	bz, err := json.Marshal(&req)
 	if err != nil {
 		RevertWithModule(mod+":CallEvm", err.Error())
@@ -319,16 +324,15 @@ func Sha256(dataBase64 string) string {
 	return base64.StdEncoding.EncodeToString(out)
 }
 
-func MerkleHashSlices(slices []string) string {
+func MerkleHash(slices []string) []byte {
 	payload := struct {
 		Slices []string `json:"slices"`
 	}{Slices: slices}
 	bz, err := json.Marshal(&payload)
 	if err != nil {
-		RevertWithModule("wasmx-env:MerkleHashSlices", err.Error())
+		RevertWithModule("wasmx-env:MerkleHash", err.Error())
 	}
-	out := utils.PackedPtrToBytes(MerkleHash_(utils.BytesToPackedPtr(bz)))
-	return base64.StdEncoding.EncodeToString(out)
+	return utils.PackedPtrToBytes(MerkleHash_(utils.BytesToPackedPtr(bz)))
 }
 
 func Ed25519Sign(privKey []byte, msg []byte) []byte {
