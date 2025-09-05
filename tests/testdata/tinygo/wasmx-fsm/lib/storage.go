@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -14,15 +15,6 @@ const (
 	STORAGEKEY_OWNER  = "owner"
 )
 
-func sstore(key, value string) {
-	wasmx.StorageStore([]byte(key), []byte(value))
-}
-
-func sload(key string) string {
-	bz := wasmx.StorageLoad([]byte(key))
-	return string(bz)
-}
-
 // Context parameter storage
 func storeContextParams(params []ContextParam) {
 	for _, param := range params {
@@ -32,39 +24,26 @@ func storeContextParams(params []ContextParam) {
 
 // Status management
 func getCurrentStatus() InterpreterStatus {
-	value := sload(STORAGEKEY_STATUS)
+	value := string(wasmx.StorageLoad([]byte(STORAGEKEY_STATUS)))
 	if value == "" {
 		return NotStarted
 	}
-	switch value {
-	case "0":
-		return NotStarted
-	case "1":
-		return Running
-	case "2":
-		return Stopped
-	default:
-		return NotStarted
+	status, ok := StatusMap[value]
+	if ok {
+		return status
 	}
+	return NotStarted
 }
 
 func setCurrentStatus(status InterpreterStatus) {
-	var value string
-	switch status {
-	case NotStarted:
-		value = "0"
-	case Running:
-		value = "1"
-	case Stopped:
-		value = "2"
-	}
-	sstore(STORAGEKEY_STATUS, value)
+	value := fmt.Sprintf("%d", status)
+	wasmx.StorageStore([]byte(STORAGEKEY_STATUS), []byte(value))
 }
 
 // State management
 func getCurrentState() *State {
-	valueStr := sload(STORAGEKEY_STATE)
-	if valueStr == "" {
+	valuebz := wasmx.StorageLoad([]byte(STORAGEKEY_STATE))
+	if len(valuebz) == 0 {
 		return &State{
 			Value:         "",
 			Actions:       []ActionObject{},
@@ -73,7 +52,7 @@ func getCurrentState() *State {
 		}
 	}
 	var state State
-	if err := json.Unmarshal([]byte(valueStr), &state); err != nil {
+	if err := json.Unmarshal(valuebz, &state); err != nil {
 		return &State{
 			Value:         "",
 			Actions:       []ActionObject{},
@@ -92,7 +71,7 @@ func setCurrentState(state *State) {
 	if err != nil {
 		return
 	}
-	sstore(STORAGEKEY_STATE, string(stateBytes))
+	wasmx.StorageStore([]byte(STORAGEKEY_STATE), stateBytes)
 }
 
 // Context value management
@@ -102,8 +81,7 @@ func hasContextValue(key string) bool {
 }
 
 func getContextValue(key string) string {
-	value := sload(STORAGEKEY_CTX + key)
-	return value
+	return string(getContextValueInternal(key))
 }
 
 func getContextValueInternal(key string) []byte {

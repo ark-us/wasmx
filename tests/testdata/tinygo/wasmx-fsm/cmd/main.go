@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -41,6 +40,17 @@ func main() {
 	case "SetupNode":
 		SetupNode()
 		return
+	case "instantiate":
+		icalld, err := lib.GetCallDataWrap()
+		if err != nil {
+			lib.Revert("failed to get call data: " + err.Error())
+			return
+		}
+		calldata := icalld.Calldata
+		config := icalld.Config
+		lib.Instantiate(config, calldata.Instantiate.InitialState, calldata.Instantiate.Context)
+		wasmx.Finish([]byte{})
+		return
 	}
 
 	icalld, err := lib.GetCallDataWrap()
@@ -62,10 +72,10 @@ func main() {
 		lib.RunInternal(config, event)
 		result = wasmx.GetFinishData()
 
-	case calldata.Instantiate != nil:
-		calld := calldata.Instantiate
-		lib.Instantiate(config, calld.InitialState, calld.Context)
-		result = []byte{}
+	// case calldata.Instantiate != nil:
+	// 	calld := calldata.Instantiate
+	// 	lib.Instantiate(config, calld.InitialState, calld.Context)
+	// 	result = []byte{}
 
 	case calldata.GetCurrentState != nil:
 		state := lib.GetCurrentState()
@@ -128,7 +138,6 @@ func eventual() {
 }
 
 func StartNode() {
-	fmt.Println("--fsm.StartNode--")
 	configBz, _, err := lib.GetInterpreterCalldata()
 	if err != nil {
 		lib.Revert("failed to get interpreter calldata: " + err.Error())
@@ -149,7 +158,6 @@ func StartNode() {
 }
 
 func SetupNode() {
-	fmt.Println("--fsm.SetupNode--")
 	configBz, calldBz, err := lib.GetInterpreterCalldata()
 	if err != nil {
 		lib.Revert("failed to get interpreter calldata: " + err.Error())
@@ -171,7 +179,6 @@ func SetupNode() {
 }
 
 func p2pmsg() {
-	fmt.Println("--fsm.p2pmsg--")
 	configBz, calldBz, err := lib.GetInterpreterCalldata()
 	if err != nil {
 		lib.Revert("failed to get interpreter calldata: " + err.Error())
@@ -199,6 +206,7 @@ func p2pmsg() {
 	// Decode base64 message and parse as CallData
 	var calldata lib.CallData
 	if err := json.Unmarshal([]byte(p2pmsg.Message), &calldata); err != nil {
+		lib.LoggerError("failed to parse call data from p2p message", []string{"data", string(p2pmsg.Message), "error", err.Error()})
 		lib.Revert("failed to parse call data from p2p message: " + err.Error())
 		return
 	}

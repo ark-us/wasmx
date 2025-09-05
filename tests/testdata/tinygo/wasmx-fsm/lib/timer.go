@@ -6,9 +6,6 @@ import (
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 )
 
-// Constants
-const INTERVAL_ID_KEY = "intervalIdKey"
-
 // GetLastIntervalId returns the last interval ID, starting at 1
 func GetLastIntervalId() int64 {
 	value := getContextValue(INTERVAL_ID_KEY)
@@ -79,17 +76,17 @@ func TryCancelIntervals(state, delay string, intervalId int64) {
 		"delay", delay,
 		"intervalId", strconv.FormatInt(intervalId, 10),
 	})
-	
+
 	active := IsRegisteredIntervalActive(state, delay, intervalId)
 	// remove the interval data
 	RemoveInterval(state, delay, intervalId)
-	
+
 	// cancel timeout with wasmx
 	err := wasmxcore.CancelTimeout(strconv.FormatInt(intervalId, 10))
 	if err != nil {
 		LoggerError("failed to cancel timeout", []string{"error", err.Error()})
 	}
-	
+
 	if active && intervalId > 0 {
 		TryCancelIntervals(state, delay, intervalId-1)
 	}
@@ -105,7 +102,7 @@ func CancelActiveIntervals(state State, params []ActionParam, event EventObject)
 	if len(params) == 0 {
 		params = event.Params
 	}
-	
+
 	var delay string
 	for _, param := range params {
 		if param.Key == "after" {
@@ -113,12 +110,12 @@ func CancelActiveIntervals(state State, params []ActionParam, event EventObject)
 			break
 		}
 	}
-	
+
 	if delay == "" {
 		Revert("no delay found")
 		return
 	}
-	
+
 	// we cancel delayed actions for both previous and next state if they have the delay key
 	CancelIntervals(state.PreviousValue, delay)
 	CancelIntervals(state.Value, delay)

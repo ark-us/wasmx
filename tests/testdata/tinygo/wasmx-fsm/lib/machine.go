@@ -37,7 +37,7 @@ func Instantiate(config MachineExternal, initialState string, params []ContextPa
 	service := ServiceExternal{
 		Machine: config,
 		Status:  NotStarted,
-	}.ToInternal()
+	}
 
 	service.Start()
 }
@@ -72,7 +72,7 @@ func HandleActions(actions []ActionObject, eventObject EventObject) HandledActio
 }
 
 // ExecuteGuard executes guard conditions
-func ExecuteGuard(machine *MachineInternal, guard *ActionObject, event EventObject) bool {
+func ExecuteGuard(machine *MachineExternal, guard *ActionObject, event EventObject) bool {
 	if guard == nil {
 		return true
 	}
@@ -84,7 +84,7 @@ func ExecuteGuard(machine *MachineInternal, guard *ActionObject, event EventObje
 		return IfIntervalActive([]ActionParam{}, event)
 	default:
 		// External guard function
-		guardParams := append(guard.Params, ctxToActionParams(machine.Ctx)...)
+		guardParams := append(guard.Params, ctxToActionParams(machine.ctx)...)
 		resp, err := ProcessExternalCall(machine, guard.Type, guardParams, event)
 		logged := []string{"guard", guard.Type}
 		if err == nil {
@@ -92,7 +92,7 @@ func ExecuteGuard(machine *MachineInternal, guard *ActionObject, event EventObje
 		} else {
 			logged = append(logged, []string{"success", "false", "error", err.Error()}...)
 		}
-		LoggerDebug("execute guard", logged)
+		LoggerDebug("execute guard call", logged)
 		if err != nil {
 			return false
 		}
@@ -101,7 +101,7 @@ func ExecuteGuard(machine *MachineInternal, guard *ActionObject, event EventObje
 }
 
 // ExecuteStateActions executes all actions for a state
-func ExecuteStateActions(service *ServiceInternal, state State, event EventObject) {
+func ExecuteStateActions(service *ServiceExternal, state State, event EventObject) {
 	LoggerDebugExtended("execute state actions", []string{
 		"count", strconv.Itoa(len(state.Actions)),
 	})
@@ -124,15 +124,19 @@ func ExecuteStateActions(service *ServiceInternal, state State, event EventObjec
 	// Run the current state after transitions
 	if newstateconfig.After != nil {
 		delayKeys := make([]string, 0, len(newstateconfig.After))
-		for key := range newstateconfig.After {
-			delayKeys = append(delayKeys, key)
+		for _, t := range newstateconfig.After {
+			delayKeys = append(delayKeys, t.Name)
 		}
 		RunAfterTransitions(state.Value, delayKeys)
 	}
 
 	// Run the current state always
 	if len(newstateconfig.Always) > 0 {
-		newstate := ApplyTransitions(service.Machine, state, newstateconfig.Always, EventObject{}, 0)
+		transitions := make([]Transition, 0)
+		for _, t := range newstateconfig.Always {
+			transitions = append(transitions, t.Transitions...)
+		}
+		newstate := ApplyTransitions(&service.Machine, state, transitions, EventObject{}, 0)
 		if newstate != nil {
 			setCurrentState(newstate)
 			ExecuteStateActions(service, *newstate, EventObject{})
@@ -194,7 +198,7 @@ func RunAfterTransitions(statePath string, delayKeys []string) {
 }
 
 // ApplyTransitions applies a list of transitions
-func ApplyTransitions(machine *MachineInternal, state State, transitions []Transition, event EventObject, ifElse int32) *State {
+func ApplyTransitions(machine *MachineExternal, state State, transitions []Transition, event EventObject, ifElse int32) *State {
 	if len(transitions) == 0 {
 		return nil
 	}
@@ -221,7 +225,7 @@ func ApplyTransitions(machine *MachineInternal, state State, transitions []Trans
 }
 
 // ExecuteStateAction executes a single action
-func ExecuteStateAction(service *ServiceInternal, state State, event EventObject, action ActionObject) {
+func ExecuteStateAction(service *ServiceExternal, state State, event EventObject, action ActionObject) {
 	actionType := action.Type
 	LoggerDebug("execute action", []string{"action", actionType})
 
@@ -254,7 +258,7 @@ func ExecuteStateAction(service *ServiceInternal, state State, event EventObject
 
 			// Then look into the temporary context
 			if value == "" {
-				if val, exists := service.Machine.Ctx[varname]; exists {
+				if val, exists := service.Machine.ctx[varname]; exists {
 					value = val
 				}
 			}
@@ -269,7 +273,7 @@ func ExecuteStateAction(service *ServiceInternal, state State, event EventObject
 
 	switch actionType {
 	case "assign":
-		Assign(service.Machine, actionParams, event)
+		Assign(&service.Machine, actionParams, event)
 	case "sendRequest":
 		SendRequest(actionParams, event)
 	case "log":
@@ -280,7 +284,7 @@ func ExecuteStateAction(service *ServiceInternal, state State, event EventObject
 		CancelActiveIntervals(state, actionParams, event)
 	default:
 		// External action
-		resp, err := ProcessExternalCall(service.Machine, action.Type, actionParams, event)
+		resp, err := ProcessExternalCall(&service.Machine, action.Type, actionParams, event)
 		if err != nil {
 			Revert("action failed: " + actionType + "; err=" + err.Error())
 			return
@@ -295,14 +299,14 @@ func ExecuteStateAction(service *ServiceInternal, state State, event EventObject
 func Noaction(params []ActionParam, event EventObject) {}
 
 // Assign assigns values to machine context
-func Assign(machine *MachineInternal, params []ActionParam, event EventObject) {
+func Assign(machine *MachineExternal, params []ActionParam, event EventObject) {
 	for _, param := range params {
-		machine.Ctx[param.Key] = param.Value
+		machine.ctx[param.Key] = param.Value
 	}
 }
 
 // ProcessExternalCall processes external contract calls
-func ProcessExternalCall(machine *MachineInternal, actionType string, params []ActionParam, event EventObject) ([]byte, error) {
+func ProcessExternalCall(machine *MachineExternal, actionType string, params []ActionParam, event EventObject) ([]byte, error) {
 	var contractAddress wasmx.Bech32String
 
 	// Actions can have `label.function`
@@ -383,22 +387,8 @@ func SendRequest(params []ActionParam, event EventObject) {
 	}
 }
 
-// ServiceInternal represents the internal service
-type ServiceInternal struct {
-	Machine *MachineInternal
-	Status  InterpreterStatus
-}
-
-// MachineInternal represents the internal machine
-type MachineInternal struct {
-	ID      string
-	Library wasmx.Bech32String
-	States  map[string]*StateInfo
-	Ctx     map[string]string
-}
-
 // Send sends an event to the state machine
-func (s *ServiceInternal) Send(event EventObject) {
+func (s *ServiceExternal) Send(event EventObject) {
 	LoggerDebugExtended("new event", []string{
 		"event", event.Type,
 		"status", strconv.Itoa(int(s.Status)),
@@ -432,7 +422,7 @@ func (s *ServiceInternal) Send(event EventObject) {
 }
 
 // Start starts the service
-func (s *ServiceInternal) Start() *ServiceInternal {
+func (s *ServiceExternal) Start() *ServiceExternal {
 	s.Status = Running
 	setCurrentStatus(Running)
 	state := getCurrentState()
@@ -442,14 +432,14 @@ func (s *ServiceInternal) Start() *ServiceInternal {
 }
 
 // Stop stops the service
-func (s *ServiceInternal) Stop() *ServiceInternal {
+func (s *ServiceExternal) Stop() *ServiceExternal {
 	s.Status = Stopped
 	setCurrentStatus(Stopped)
 	return s
 }
 
 // Transition applies a transition to the current state
-func (m *MachineInternal) Transition(state State, eventObject EventObject) *State {
+func (m *MachineExternal) Transition(state State, eventObject EventObject) *State {
 	value := state.Value
 	stateConfig := FindStateInfo(m.States, value)
 	if stateConfig == nil {
@@ -460,8 +450,9 @@ func (m *MachineInternal) Transition(state State, eventObject EventObject) *Stat
 
 	var transitions []Transition
 	if stateConfig.On != nil {
-		if trans, exists := stateConfig.On[eventObject.Type]; exists {
-			transitions = trans
+		onState := getTransitionByName(stateConfig.On, eventObject.Type)
+		if onState != nil {
+			transitions = onState.Transitions
 		} else {
 			// Search for transition in the parents
 			transitions = findTransitionInParents(m.States, value, eventObject)
@@ -491,7 +482,7 @@ func (m *MachineInternal) Transition(state State, eventObject EventObject) *Stat
 }
 
 // ApplyTransition applies a single transition
-func (m *MachineInternal) ApplyTransition(state State, transition Transition, eventObject EventObject) *State {
+func (m *MachineExternal) ApplyTransition(state State, transition Transition, eventObject EventObject) *State {
 	LoggerDebug("apply transition: ", []string{
 		"from", state.Value,
 		"to", transition.Target,
@@ -509,8 +500,9 @@ func (m *MachineInternal) ApplyTransition(state State, transition Transition, ev
 	transitions := []Transition{transition}
 
 	// Check for wildcard transitions
-	if wildcardTrans, exists := stateConfig.On[WILDCARD]; exists {
-		return ApplyTransitions(m, state, wildcardTrans, eventObject, 0)
+	wildcardState := getTransitionByName(stateConfig.On, WILDCARD)
+	if wildcardState != nil {
+		return ApplyTransitions(m, state, wildcardState.Transitions, eventObject, 0)
 	}
 
 	for _, transition := range transitions {
@@ -560,7 +552,7 @@ func (m *MachineInternal) ApplyTransition(state State, transition Transition, ev
 			resolvedTarget = value
 		}
 
-		// Handle child states
+		// Handle child states; we choose the first one
 		stateConfigResolved := FindStateInfo(m.States, resolvedTarget)
 		if stateConfigResolved == nil {
 			message := "state not found: " + resolvedTarget
@@ -568,15 +560,14 @@ func (m *MachineInternal) ApplyTransition(state State, transition Transition, ev
 			return nil
 		}
 
-		if stateConfigResolved.States != nil && len(stateConfigResolved.States) > 0 {
+		if len(stateConfigResolved.States) > 0 {
 			// State has children - choose the first one
-			var initialState string
-			for stateName := range stateConfigResolved.States {
-				initialState = stateName
-				break
+			initialState := stateConfigResolved.States[0].Name
+			initialStateObj := getStateByName(stateConfigResolved.States, initialState)
+			if initialStateObj == nil {
+				Revert(`states must have children here`)
 			}
 
-			initialStateObj := stateConfigResolved.States[initialState]
 			if !strings.HasPrefix(initialState, "#") {
 				initialState = resolvedTarget + "." + initialState
 			}
@@ -588,8 +579,8 @@ func (m *MachineInternal) ApplyTransition(state State, transition Transition, ev
 			// Run any "after" transitions on the parent
 			if nextStateConfig.After != nil {
 				delayKeys := make([]string, 0, len(nextStateConfig.After))
-				for key := range nextStateConfig.After {
-					delayKeys = append(delayKeys, key)
+				for _, p := range nextStateConfig.After {
+					delayKeys = append(delayKeys, p.Name)
 				}
 				RunAfterTransitions(target, delayKeys)
 			}
@@ -615,76 +606,6 @@ func (m *MachineInternal) ApplyTransition(state State, transition Transition, ev
 	// No transitions match
 	unchanged := CreateUnchangedState(value, state.PreviousValue)
 	return &unchanged
-}
-
-// ServiceExternal represents the external service format
-type ServiceExternal struct {
-	Machine MachineExternal   `json:"machine"`
-	Status  InterpreterStatus `json:"status"`
-}
-
-// ToInternal converts external service to internal
-func (s ServiceExternal) ToInternal() *ServiceInternal {
-	machine := s.Machine.ToInternal()
-	return &ServiceInternal{
-		Machine: machine,
-		Status:  s.Status,
-	}
-}
-
-// ToInternal converts external machine to internal
-func (m MachineExternal) ToInternal() *MachineInternal {
-	states := StateInfoClassExternalToInternalFromArray(m.States)
-	return &MachineInternal{
-		ID:      m.ID,
-		Library: m.Library,
-		States:  states,
-		Ctx:     make(map[string]string),
-	}
-}
-
-// StateInfoClassExternalToInternalFromArray converts external states to internal
-func StateInfoClassExternalToInternalFromArray(ostates []StateInfoClassExternal) map[string]*StateInfo {
-	states := make(map[string]*StateInfo)
-	for _, ostate := range ostates {
-		state := ostate.ToInternal()
-		states[ostate.Name] = state
-	}
-	return states
-}
-
-// ToInternal converts external state info to internal
-func (s StateInfoClassExternal) ToInternal() *StateInfo {
-	stateon := make(map[string][]Transition)
-	for _, onev := range s.On {
-		stateon[onev.Name] = onev.Transitions
-	}
-
-	var afterTimers map[string][]Transition
-	if len(s.After) > 0 {
-		afterTimers = make(map[string][]Transition)
-		for _, after := range s.After {
-			afterTimers[after.Name] = after.Transitions
-		}
-	}
-
-	var alwaysTransitions []Transition
-	for _, always := range s.Always {
-		if len(always.Transitions) > 0 {
-			alwaysTransitions = append(alwaysTransitions, always.Transitions[0])
-		}
-	}
-
-	childstates := StateInfoClassExternalToInternalFromArray(s.States)
-	return &StateInfo{
-		Always:  alwaysTransitions,
-		After:   afterTimers,
-		On:      stateon,
-		Exit:    s.Exit,
-		Entry:   s.Entry,
-		Initial: s.Initial,
-		States:  childstates,
-	}
 }
 
 // Helper functions
@@ -732,7 +653,7 @@ func processActions(actions []ActionObject, event EventObject) []ActionObject {
 	return allActions
 }
 
-func findTransitionInParents(states map[string]*StateInfo, stateName string, eventObject EventObject) []Transition {
+func findTransitionInParents(states []StateInfoClassExternal, stateName string, eventObject EventObject) []Transition {
 	if !strings.HasPrefix(stateName, "#") {
 		Revert("state must be absolute: " + stateName)
 		return nil
@@ -745,11 +666,12 @@ func findTransitionInParents(states map[string]*StateInfo, stateName string, eve
 	return findTransitionInternal(states, statePath, eventObject)
 }
 
-func findTransitionInternal(states map[string]*StateInfo, statePath []string, eventObject EventObject) []Transition {
+func findTransitionInternal(states []StateInfoClassExternal, statePath []string, eventObject EventObject) []Transition {
 	stateConfig := FindStateInfoByPath(states, statePath)
 	if stateConfig != nil && stateConfig.On != nil {
-		if transitions, exists := stateConfig.On[eventObject.Type]; exists {
-			return transitions
+		onTransition := getTransitionByName(stateConfig.On, eventObject.Type)
+		if onTransition != nil {
+			return onTransition.Transitions
 		}
 	}
 	if len(statePath) == 0 {
@@ -760,17 +682,19 @@ func findTransitionInternal(states map[string]*StateInfo, statePath []string, ev
 }
 
 // FindStateInfo finds state info by name
-func FindStateInfo(states map[string]*StateInfo, stateName string) *StateInfo {
+func FindStateInfo(states []StateInfoClassExternal, stateName string) *StateInfoClassExternal {
 	if strings.HasPrefix(stateName, "#") {
 		// "#ERC20.unlocked.active"
+		// TODO support multiple machines
 		statePath := strings.Split(stateName[1:], ".")[1:]
 		return FindStateInfoByPath(states, statePath)
 	}
 
 	// Look in current states
-	for name, stateinfo := range states {
+	for _, stateinfo := range states {
+		name := stateinfo.Name
 		if name == stateName {
-			return stateinfo
+			return &stateinfo
 		}
 		if stateinfo.States != nil {
 			if info := FindStateInfo(stateinfo.States, stateName); info != nil {
@@ -782,19 +706,19 @@ func FindStateInfo(states map[string]*StateInfo, stateName string) *StateInfo {
 }
 
 // FindStateInfoByPath finds state info by path
-func FindStateInfoByPath(states map[string]*StateInfo, statePath []string) *StateInfo {
+func FindStateInfoByPath(states []StateInfoClassExternal, statePath []string) *StateInfoClassExternal {
 	currentStates := states
-	var state *StateInfo
+	var state *StateInfoClassExternal
 
 	for k, currentStateName := range statePath {
-		var exists bool
-		if state, exists = currentStates[currentStateName]; !exists {
+		state = getStateByName(currentStates, currentStateName)
+		if state == nil {
 			Revert("findStateInfoByPath: cannot find state \"" + currentStateName + "\" from path \"" + strings.Join(statePath, ".") + "\"")
 			return nil
 		}
 
 		if k < len(statePath)-1 {
-			if state.States == nil || len(state.States) == 0 {
+			if len(state.States) == 0 {
 				Revert("findStateInfoByPath: state does not have childstates: " + strings.Join(statePath, "."))
 				return nil
 			}
@@ -851,10 +775,11 @@ func Eventual(config MachineExternal, args TimerArgs) {
 		return
 	}
 
-	transitions, exists := newstateconfig.After[args.Delay]
-	if !exists {
+	afterTransition := getTransitionByName(newstateconfig.After, args.Delay)
+	if afterTransition == nil {
 		return
 	}
+	transitions := afterTransition.Transitions
 
 	validTransitions := transitions
 	if !isEqual {
@@ -893,7 +818,7 @@ func Eventual(config MachineExternal, args TimerArgs) {
 	emptyEvent := EventObject{Type: "", Params: []ActionParam{intervalIdField, stateField, delayField}}
 
 	state := getCurrentState()
-	newstate := ApplyTransitions(service.Machine, *state, validTransitions, emptyEvent, 0)
+	newstate := ApplyTransitions(&service.Machine, *state, validTransitions, emptyEvent, 0)
 	if newstate == nil {
 		return
 	}
@@ -928,9 +853,9 @@ func Setup(config MachineExternal, contractAddress string) {
 }
 
 // LoadServiceFromConfig loads service from config
-func LoadServiceFromConfig(config MachineExternal) *ServiceInternal {
+func LoadServiceFromConfig(config MachineExternal) *ServiceExternal {
 	status := getCurrentStatus()
-	return ServiceExternal{Machine: config, Status: status}.ToInternal()
+	return &ServiceExternal{Machine: config, Status: status}
 }
 
 // RunInternal runs the internal state machine
@@ -994,4 +919,22 @@ func IfIntervalActive(params []ActionParam, event EventObject) bool {
 	// Remove the interval data
 	RemoveInterval(state, delay, intervalId)
 	return active
+}
+
+func getTransitionByName(transitions []TransitionExternal, name string) *TransitionExternal {
+	for _, t := range transitions {
+		if t.Name == name {
+			return &t
+		}
+	}
+	return nil
+}
+
+func getStateByName(states []StateInfoClassExternal, name string) *StateInfoClassExternal {
+	for _, t := range states {
+		if t.Name == name {
+			return &t
+		}
+	}
+	return nil
 }

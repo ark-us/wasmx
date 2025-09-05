@@ -84,13 +84,6 @@ func arrayBufferToU8Array(buffer []byte) []byte {
 	return result
 }
 
-// Base64 utilities (simplified)
-func base64ToString(encoded string) string {
-	// For simplicity, we'll just return the encoded string
-	// In a real implementation, this would decode base64
-	return encoded
-}
-
 func GrpcRequest(ip string, contract wasmx.Bech32String, data string) (*GrpcResponse, error) {
 	response, err := wasmxcore.GrpcRequest(ip, contract, data)
 	if err != nil {

@@ -6,16 +6,6 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-// Constants
-const (
-	MODULE_NAME     = "fsm"
-	INIT_EVENT_TYPE = "xstate.init"
-	ASSIGN_ACTION   = "assign"
-	RAISE_ACTION    = "xstate.raise"
-	VARIABLE_SYMBOL = "$"
-	WILDCARD        = "*"
-)
-
 // InterpreterStatus represents the status of the FSM interpreter
 type InterpreterStatus uint8
 
@@ -24,6 +14,18 @@ const (
 	Running
 	Stopped
 )
+
+var StatusMap = map[string]InterpreterStatus{
+	"0": NotStarted,
+	"1": Running,
+	"2": Stopped,
+}
+
+// Global variables for INIT_EVENT
+var INIT_EVENT = EventObject{
+	Type:   INIT_EVENT_TYPE,
+	Params: []ActionParam{},
+}
 
 // GuardObject represents a guard condition
 type GuardObject struct {
@@ -58,30 +60,18 @@ type Transition struct {
 	Meta    []ActionParam  `json:"meta,omitempty"`
 }
 
-// StateInfo represents the configuration of a state
-type StateInfo struct {
-	On      map[string][]Transition `json:"on,omitempty"`
-	Entry   []ActionObject          `json:"entry,omitempty"`
-	Exit    []ActionObject          `json:"exit,omitempty"`
-	Always  []Transition            `json:"always,omitempty"`
-	After   map[string][]Transition `json:"after,omitempty"`
-	States  map[string]*StateInfo   `json:"states,omitempty"`
-	Initial string                  `json:"initial,omitempty"`
-}
-
-// Machine represents a state machine
-type Machine struct {
-	ID      string                `json:"id"`
-	Library wasmx.Bech32String    `json:"library"`
-	States  map[string]*StateInfo `json:"states"`
-	Ctx     map[string]string     `json:"-"`
-}
-
 // MachineExternal represents external machine format
 type MachineExternal struct {
 	ID      string                   `json:"id"`
 	Library wasmx.Bech32String       `json:"library"`
 	States  []StateInfoClassExternal `json:"states"`
+	ctx     map[string]string
+}
+
+// ServiceExternal represents the external service format
+type ServiceExternal struct {
+	Machine MachineExternal   `json:"machine"`
+	Status  InterpreterStatus `json:"status"`
 }
 
 // State represents the current state of the machine
@@ -110,12 +100,6 @@ type ExternalActionCallData struct {
 	Method string        `json:"method"`
 	Params []ActionParam `json:"params"`
 	Event  EventObject   `json:"event"`
-}
-
-// Global variables for INIT_EVENT
-var INIT_EVENT = EventObject{
-	Type:   INIT_EVENT_TYPE,
-	Params: []ActionParam{},
 }
 
 // RaiseAction represents the xstate.raise action
@@ -191,11 +175,6 @@ type CallDataExecute struct {
 	Action ActionObject `json:"action"`
 }
 
-// Configuration constants
-const (
-	REVERT_IF_UNEXPECTED_STATE = true
-)
-
 // Helper functions for JSON serialization
 func (s *State) ToJSON() ([]byte, error) {
 	return json.Marshal(s)
@@ -203,14 +182,6 @@ func (s *State) ToJSON() ([]byte, error) {
 
 func (s *State) FromJSON(data []byte) error {
 	return json.Unmarshal(data, s)
-}
-
-func (m *Machine) ToJSON() ([]byte, error) {
-	return json.Marshal(m)
-}
-
-func (m *Machine) FromJSON(data []byte) error {
-	return json.Unmarshal(data, m)
 }
 
 // StateClassExternal conversion methods
@@ -243,7 +214,7 @@ type NetworkNode struct {
 
 type P2PMessage struct {
 	RoomID    string      `json:"roomId"`
-	Message   string      `json:"message"`   // base64 encoded
+	Message   []byte      `json:"message"`
 	Timestamp string      `json:"timestamp"` // simplified as string
 	Sender    NetworkNode `json:"sender"`
 }
