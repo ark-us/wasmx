@@ -6,11 +6,11 @@ PRECOMPILE_DIR := ./wasmx/x/wasmx/vm/precompiles
 # Mapping of tinygo modules to precompile wasm filenames
 # Format: module_path:output_filename
 TINYGO_TARGETS := \
-	wasmx-gov:35.gov_0.0.1.wasm \
-	wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
-	wasmx-multichain-registry:4a.multichain_registry_0.0.1.wasm \
 	wasmx-fsm:28.finite_state_machine.wasm
 
+# wasmx-gov:35.gov_0.0.1.wasm \
+# wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
+# wasmx-multichain-registry:4a.multichain_registry_0.0.1.wasm \
 # wasmx-staking:30.staking_0.0.1.wasm \
 # wasmx-bank:31.bank_0.0.1.wasm \
 # wasmx-auth:38.auth_0.0.1.wasm \
@@ -69,8 +69,7 @@ $(TINYGO_MODULES):
 	if [ -z "$$out" ]; then echo "Unknown TinyGo module: $$mod"; exit 1; fi; \
 	if [ ! -f "$(TINYGO_DIR)/$$mod/cmd/main.go" ]; then echo "No cmd/main.go in $$mod"; exit 1; fi; \
 	echo "Tidying $$mod..."; \
-	cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off go mod tidy; \
+	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off go mod tidy) 2>/dev/null; \
 	echo "Building $$mod -> $(PRECOMPILE_DIR)/$$out"; \
-	cd "$(TINYGO_DIR)/$$mod"; \
-	env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd; \
+	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd) 2>/dev/null; \
 	echo "Built $(PRECOMPILE_DIR)/$$out"

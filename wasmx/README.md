@@ -133,7 +133,10 @@ UDP: 5353 (libp2p)
 * compile contracts and move them to the apropriate wasmx folders
 
 ```bash
+# compiles all AS contracts that we use in the core system
+# excludes those that we produce with tinygo
 ./wasmx/scripts/compile_as_contracts.sh
+
 ./wasmx/scripts/compile_as_contracts.sh tests,gov,staking,tendermintp2p
 ./wasmx/scripts/compile_as_contracts.sh --wasmxdir="path/to/project/wasmx" --contractsdir="path/to/project/wasmx-as-contracts"
 ```
@@ -143,12 +146,15 @@ UDP: 5353 (libp2p)
 * contracts are in `./tests/testdata/tinygo`
 * compile from root and replace the core system contracts
 ```bash
-# tidy and compile all
+# tidy, compile all and move contracts where they are used (precompiles or tests)
 make tinygo
 
 # tidy and compile by name
 make tinygo wasmx-fsm
 ```
+
+Core system contracts used now:
+* `wasmx-fsm`
 
 ## Add local chain to Keplr
 

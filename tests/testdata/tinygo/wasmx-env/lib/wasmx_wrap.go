@@ -46,7 +46,7 @@ func Revert(data []byte) {
 }
 
 func RevertWithModule(module string, msg string) {
-	LoggerError(module, "revert", []string{"error", msg})
+	LoggerDebug(module, "revert", []string{"error", msg})
 	msg = fmt.Sprintf(`%s: %s`, module, msg)
 	Revert_(utils.BytesToPackedPtr([]byte(msg)))
 }

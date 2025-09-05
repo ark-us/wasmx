@@ -320,7 +320,8 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_TENDERMINT && npm run asbuild
     cd $WASMX_TENDERMINT_P2P && npm run asbuild
     cd $WASMX_AVA_SNOWMAN && npm run asbuild
-    cd $WASMX_FSM && npm run asbuild
+    # we use the tinygo version now (faster)
+    # cd $WASMX_FSM && npm run asbuild
     cd $WASMX_STAKING && npm run asbuild
     cd $WASMX_BANK && npm run asbuild
     cd $WASMX_ERC20 && npm run asbuild
@@ -356,7 +357,8 @@ if [[ $TO_COMPILE = '' ]]; then
     cd $WASMX_TESTS_HTTP && npm run asbuild
     # cd $WASMX_PARAMS && npm run asbuild
 
-    mv -f $WASMX_FSM/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/28.finite_state_machine.wasm
+    # we use the tinygo version now (faster)
+    # mv -f $WASMX_FSM/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/28.finite_state_machine.wasm
     mv -f $WASMX_BLOCKS/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/29.storage_chain.wasm
     mv -f $WASMX_RAFT/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/2a.raft_library.wasm
     mv -f $WASMX_TENDERMINT/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/2b.tendermint_library.wasm
