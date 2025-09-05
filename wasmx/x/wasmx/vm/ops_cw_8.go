@@ -723,7 +723,7 @@ func ExecuteCw8Query(context *Context, vm memc.IVm, funcName string) ([]int32, e
 }
 
 // instantiate/execute(env_ptr: u32, info_ptr: u32, msg_ptr: u32)
-func ExecuteCw8(context *Context, vm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteCw8(context *Context, vm memc.IVm, funcName string, args []interface{}, _ bool) ([]int32, error) {
 	switch funcName {
 	case types.ENTRY_POINT_QUERY:
 		return ExecuteCw8Query(context, vm, funcName)

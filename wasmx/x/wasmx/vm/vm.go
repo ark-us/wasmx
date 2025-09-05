@@ -300,7 +300,8 @@ func ExecuteWasmInterpreted(
 	}
 	context.RuntimeHandler = rnh
 
-	setExecutionBytecode(context, rnh, funcName)
+	isEvm := isEvmInterpreted(contractInfo.SystemDepsRaw)
+	setExecutionBytecode(context, rnh, funcName, isEvm)
 	context.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	context.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 	context.ContractRouter[contractstr] = context
@@ -311,7 +312,7 @@ func ExecuteWasmInterpreted(
 			Label:          contractstr,
 			RuntimeHandler: rnh,
 			ExecuteHandler: func(funcName_ string) ([]byte, error) {
-				_, err := executeHandler(context, rnh.GetVm(), funcName_, make([]interface{}, 0))
+				_, err := executeHandler(context, rnh.GetVm(), funcName_, make([]interface{}, 0), false)
 				if err != nil {
 					return nil, err
 				}
@@ -323,7 +324,7 @@ func ExecuteWasmInterpreted(
 		}
 	}
 
-	_, err = executeHandler(context, rnh.GetVm(), funcName, make([]interface{}, 0))
+	_, err = executeHandler(context, rnh.GetVm(), funcName, make([]interface{}, 0), true)
 	// sp, err2 := contractVm.Execute("get_sp")
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(
@@ -420,7 +421,7 @@ func ExecuteWasm(
 	}
 	context.RuntimeHandler = rnh
 
-	setExecutionBytecode(context, rnh, funcName)
+	setExecutionBytecode(context, rnh, funcName, false) // isEvm not needed
 	context.ContractInfo.Bytecode = context.Env.Contract.Bytecode
 	context.ContractInfo.CodeHash = context.Env.Contract.CodeHash
 	context.ContractRouter[contractstr] = context
@@ -430,7 +431,7 @@ func ExecuteWasm(
 			Label:          contractstr,
 			RuntimeHandler: rnh,
 			ExecuteHandler: func(funcName_ string) ([]byte, error) {
-				_, err := executeHandler(context, rnh.GetVm(), funcName_, make([]interface{}, 0))
+				_, err := executeHandler(context, rnh.GetVm(), funcName_, make([]interface{}, 0), false)
 				if err != nil {
 					return nil, err
 				}
@@ -441,7 +442,7 @@ func ExecuteWasm(
 			return types.ContractResponse{}, err
 		}
 	}
-	_, err = executeHandler(context, rnh.GetVm(), funcName, make([]interface{}, 0))
+	_, err = executeHandler(context, rnh.GetVm(), funcName, make([]interface{}, 0), false)
 	if err != nil {
 		wrapErr := sdkerr.Wrapf(
 			err,
@@ -466,11 +467,12 @@ func ExecuteWasm(
 // deploymentBytecode = constructorBytecode + runtimeBytecode
 // codesize/codecopy at deployment = deploymentBytecode + args
 // codesize/codecopy at runtime execution = runtimeBytecode
-func setExecutionBytecode(context *Context, rnh memc.RuntimeHandler, funcName string) {
+func setExecutionBytecode(context *Context, rnh memc.RuntimeHandler, funcName string, isEvm bool) {
 	// for interpreted code
 	// TODO improve detection of interpreted code
 	if len(context.Env.Contract.Bytecode) > 0 {
-		if funcName == types.ENTRY_POINT_INSTANTIATE {
+		// TODO abstract isEvm out into an execution handler
+		if funcName == types.ENTRY_POINT_INSTANTIATE && isEvm {
 			context.Env.Contract.Bytecode = append(context.Env.Contract.Bytecode, context.Env.CurrentCall.CallData...)
 		}
 

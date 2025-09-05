@@ -293,6 +293,8 @@ var ROLE_EMAIL_HANDLER = "email_handler"
 // utf8 -> stored as a file
 // wasm -> stored in the filesystem
 
+var INTERPRETER_EVM_ROOT = "interpreter_evm"
+
 // TODO "interpreter_evm_hex_shanghai" ?
 var INTERPRETER_EVM_SHANGHAI = "interpreter_evm_shanghai_bz_1.0.0"
 

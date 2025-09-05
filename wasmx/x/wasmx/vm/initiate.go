@@ -236,9 +236,11 @@ var SystemDepHandler = map[string]func(context *Context, rnh memc.RuntimeHandler
 
 var SystemDepHandlerMock = map[string]func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error{}
 
-type ExecuteFunctionInterface func(context *Context, vm memc.IVm, funcName string, args []interface{}) ([]int32, error)
+type ExecuteFunctionInterface func(context *Context, vm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error)
 
-var ExecuteFunctionHandler = map[string]ExecuteFunctionInterface{}
+type ExecuteFunctionHandlerInterface func(systemDeps []types.SystemDep) ExecuteFunctionInterface
+
+var ExecuteFunctionHandler = map[string]ExecuteFunctionHandlerInterface{}
 
 var DependenciesMap = map[string]bool{}
 
@@ -265,22 +267,26 @@ func init() {
 	// language-specific imports
 	SystemDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = InitiateAssemblyScript
 
-	// TODO these interpreter exceptions should be removed and entrypoints should follow the normal rules
-	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteDefaultMain
-	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecutePythonInterpreter
-	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteJsInterpreter
+	// TODO these interpreter exceptions should be removed and entrypoints should follow standard rules
+	ExecuteFunctionHandler[types.INTERPRETER_EVM_SHANGHAI] = ExecuteFunctionWrapperNoop(ExecuteDefaultMain)
+	ExecuteFunctionHandler[types.INTERPRETER_PYTHON] = ExecuteFunctionWrapperNoop(ExecutePythonInterpreter)
+	ExecuteFunctionHandler[types.INTERPRETER_JS] = ExecuteFunctionWrapperNoop(ExecuteJsInterpreter)
 
-	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASMX_ENVi32_2] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASMX_ENVi64_2] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASMX_CORE_ENVi32_1] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASMX_CORE_ENVi64_1] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteWasiWrap
-	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteWasiWrap
-	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteDefaultContract
-	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteCw8
+	ExecuteFunctionHandler[types.ROLE_INTERPRETER] = ExecuteDefaultInterpreter
+
+	// note: interpreter initialization will fall here, because the contract does not have a role at that time
+
+	ExecuteFunctionHandler[types.SYS_ENV_1] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASMX_ENV_1] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASMX_ENV_2] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASMX_ENVi32_2] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASMX_ENVi64_2] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASMX_CORE_ENVi32_1] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASMX_CORE_ENVi64_1] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.WASI_SNAPSHOT_PREVIEW1] = ExecuteFunctionWrapperNoop(ExecuteWasiWrap)
+	ExecuteFunctionHandler[types.WASI_UNSTABLE] = ExecuteFunctionWrapperNoop(ExecuteWasiWrap)
+	ExecuteFunctionHandler[types.EWASM_ENV_1] = ExecuteFunctionWrapperNoop(ExecuteDefaultContract)
+	ExecuteFunctionHandler[types.CW_ENV_8] = ExecuteFunctionWrapperNoop(ExecuteCw8)
 
 	DependenciesMap[types.EWASM_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_VM_EXPORT] = true
@@ -314,14 +320,18 @@ func SetExecuteFunctionHandler(
 	key string,
 	handler ExecuteFunctionInterface,
 ) {
-	ExecuteFunctionHandler[key] = handler
+	ExecuteFunctionHandler[key] = ExecuteFunctionWrapperNoop(handler)
 }
 
 func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInterface {
 	for _, dep := range systemDeps {
 		executeFn, ok := ExecuteFunctionHandler[dep.Label]
 		if ok {
-			return executeFn
+			return executeFn(systemDeps)
+		}
+		executeFn, ok = ExecuteFunctionHandler[dep.Role]
+		if ok {
+			return executeFn(systemDeps)
 		}
 	}
 	// look in dep.Deps
@@ -334,18 +344,50 @@ func GetExecuteFunctionHandler(systemDeps []types.SystemDep) ExecuteFunctionInte
 	return ExecuteDefaultMain
 }
 
-func ExecuteDefault(context *Context, contractVm memc.IVm, funcName string) ([]int32, error) {
+func GetExecuteFunctionHandlerForLabels(systemDeps []types.SystemDep) ExecuteFunctionInterface {
+	for _, dep := range systemDeps {
+		executeFn, ok := ExecuteFunctionHandler[dep.Label]
+		if ok {
+			return executeFn(systemDeps)
+		}
+	}
+	// look in dep.Deps
+	for _, systemDep := range systemDeps {
+		handler := GetExecuteFunctionHandlerForLabels(systemDep.Deps)
+		if handler != nil {
+			return handler
+		}
+	}
+	return ExecuteDefaultMain
+}
+
+func ExecuteDefault(context *Context, contractVm memc.IVm, funcName string, interpreted bool) ([]int32, error) {
 	return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 }
 
-func ExecuteDefaultContract(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteDefaultContract(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	if funcName == types.ENTRY_POINT_EXECUTE || funcName == types.ENTRY_POINT_QUERY {
+		funcName = "main"
+	}
+	if interpreted && funcName == types.ENTRY_POINT_INSTANTIATE {
 		funcName = "main"
 	}
 	return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 }
 
-func ExecuteDefaultMain(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteDefaultMain(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	return contractVm.Call("main", []interface{}{}, context.GasMeter)
 }
 
+func ExecuteFunctionWrapperNoop(fn ExecuteFunctionInterface) ExecuteFunctionHandlerInterface {
+	return func(systemDeps []types.SystemDep) ExecuteFunctionInterface {
+		return fn
+	}
+}
+
+func ExecuteDefaultInterpreter(systemDeps []types.SystemDep) ExecuteFunctionInterface {
+	handler := GetExecuteFunctionHandlerForLabels(systemDeps)
+	return func(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
+		return handler(context, contractVm, funcName, args, true)
+	}
+}

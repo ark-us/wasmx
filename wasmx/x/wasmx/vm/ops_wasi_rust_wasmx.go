@@ -671,7 +671,7 @@ func BuildWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler) (interface{
 	return vm.BuildModule(rnh, "wasmx", context, fndefs)
 }
 
-func ExecuteWasiCommand(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteWasiCommand(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	var res []int32
 	var err error
 
@@ -691,7 +691,7 @@ func ExecuteWasiCommand(context *Context, contractVm memc.IVm, funcName string, 
 	return res, nil
 }
 
-func ExecuteWasiReactor(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteWasiReactor(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	var res []int32
 	var err error
 
@@ -701,6 +701,9 @@ func ExecuteWasiReactor(context *Context, contractVm memc.IVm, funcName string, 
 	if err != nil {
 		return nil, err
 	}
+	if interpreted && funcName == types.ENTRY_POINT_INSTANTIATE {
+		funcName = types.ENTRY_POINT_EXECUTE
+	}
 	// then call the apropriate entry point
 	res, err = contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 	if err != nil {
@@ -709,8 +712,7 @@ func ExecuteWasiReactor(context *Context, contractVm memc.IVm, funcName string, 
 	return res, nil
 }
 
-func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
-	var res []int32
+func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	isCommand := false
 	isReactor := false
 	hasFunc := false
@@ -727,21 +729,23 @@ func ExecuteWasi(context *Context, contractVm memc.IVm, funcName string, args []
 		}
 	}
 
-	if hasFunc {
+	interpretedInstantiate := interpreted && funcName == types.ENTRY_POINT_INSTANTIATE
+
+	if hasFunc && !interpretedInstantiate {
 		return contractVm.Call(funcName, []interface{}{}, context.GasMeter)
 	}
 	if isCommand {
-		return ExecuteWasiCommand(context, contractVm, funcName, args)
+		return ExecuteWasiCommand(context, contractVm, funcName, args, interpreted)
 	}
 	if isReactor {
-		return ExecuteWasiReactor(context, contractVm, funcName, args)
+		return ExecuteWasiReactor(context, contractVm, funcName, args, interpreted)
 	}
-	return res, nil
+	return nil, fmt.Errorf("wasi execution failed: unexpected entrypoint and wasm exports")
 }
 
 // TODO py/js interpreters should not have a custom way to be called, use ExecuteWasi
 // and respect command/reactor compilation style
-func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecutePythonInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}, _ bool) ([]int32, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
@@ -793,10 +797,10 @@ set_returndata(res or b'')
 		},
 		fileMap,
 	)
-	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
+	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0), false)
 }
 
-func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteJsInterpreter(context *Context, contractVm memc.IVm, funcName string, args []interface{}, _ bool) ([]int32, error) {
 	if funcName == "execute" || funcName == "query" {
 		funcName = "main"
 	}
@@ -844,10 +848,10 @@ wasmx.setReturnData(res || new ArrayBuffer(0));
 		},
 		fileMap,
 	)
-	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
+	return ExecuteWasi(context, contractVm, types.ENTRY_POINT_EXECUTE, make([]interface{}, 0), false)
 }
 
-func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}) ([]int32, error) {
+func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	contractVm.InstantiateWasi(
 		[]string{
 			``,
@@ -860,5 +864,5 @@ func ExecuteWasiWrap(context *Context, contractVm memc.IVm, funcName string, arg
 		},
 		map[string][]byte{},
 	)
-	return ExecuteWasi(context, contractVm, funcName, args)
+	return ExecuteWasi(context, contractVm, funcName, args, interpreted)
 }

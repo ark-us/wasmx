@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"strings"
 
 	"golang.org/x/sync/errgroup"
 
@@ -104,12 +105,13 @@ func (c *Context) Execute() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	setExecutionBytecode(c, rnh, types.ENTRY_POINT_EXECUTE)
+	isEvm := isEvmInterpreted(c.ContractInfo.SystemDepsRaw)
+	setExecutionBytecode(c, rnh, types.ENTRY_POINT_EXECUTE, isEvm)
 
 	c.ContractRouter[c.Env.Contract.Address.String()].RuntimeHandler = rnh
 
 	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
-	_, err = executeHandler(c, rnh.GetVm(), types.ENTRY_POINT_EXECUTE, make([]interface{}, 0))
+	_, err = executeHandler(c, rnh.GetVm(), types.ENTRY_POINT_EXECUTE, make([]interface{}, 0), false)
 	if err != nil {
 		rnh.GetVm().Cleanup()
 		return nil, err
@@ -174,4 +176,14 @@ type HasBeginSubCall interface {
 
 type HasEndSubCall interface {
 	EndSubCall(ctx context.Context, level uint32, index uint32, isquery bool, err error) error
+}
+
+func isEvmInterpreted(deps []string) bool {
+	isEvm := false
+	for _, d := range deps {
+		if strings.Contains(d, types.INTERPRETER_EVM_ROOT) {
+			isEvm = true
+		}
+	}
+	return isEvm
 }
