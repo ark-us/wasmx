@@ -275,6 +275,4 @@ func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath st
 	return fmt.Errorf("runtime mock: AotCompile not implemented")
 }
 
-func (WasmRuntimeMockVmMeta) InitWasmRuntime(_ context.Context) {
-	panic(fmt.Errorf("runtime mock: InitWasmRuntime not implemented"))
-}
+func (WasmRuntimeMockVmMeta) InitWasmRuntime(_ context.Context) {}

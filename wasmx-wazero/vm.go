@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	sdkerrors "cosmossdk.io/errors"
 
@@ -145,7 +146,8 @@ type WasmEngineCache struct {
 	// CompiledRuntime wazero.Runtime
 
 	// wasmFilePath => compiledModule
-	CompiledModules map[string]wazero.CompiledModule
+	CompiledModules     map[string]wazero.CompiledModule
+	compiledModulesLock sync.Mutex
 
 	// e.g. wazero has a compilation cache
 	CompilationCache wazero.CompilationCache
@@ -184,6 +186,8 @@ func (v *WasmEngineCache) Close() {
 	}
 }
 func (v *WasmEngineCache) GetCompiledModule(wasmFilePath string) wazero.CompiledModule {
+	v.compiledModulesLock.Lock()
+	defer v.compiledModulesLock.Unlock()
 	mod, ok := v.CompiledModules[wasmFilePath]
 	if ok && mod != nil {
 		return mod
@@ -191,6 +195,8 @@ func (v *WasmEngineCache) GetCompiledModule(wasmFilePath string) wazero.Compiled
 	return nil
 }
 func (v *WasmEngineCache) SetCompiledModule(wasmFilePath string, mod wazero.CompiledModule) {
+	v.compiledModulesLock.Lock()
+	defer v.compiledModulesLock.Unlock()
 	v.CompiledModules[wasmFilePath] = mod
 }
 
