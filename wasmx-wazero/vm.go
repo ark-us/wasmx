@@ -440,6 +440,7 @@ func (WazeroVmMeta) LibVersion() string {
 	return wazero.Version()
 }
 
+// this is used by wasmX getRuntimeHandler
 func (WazeroVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {
 	return NewWazeroVm(ctx, aot)
 }
