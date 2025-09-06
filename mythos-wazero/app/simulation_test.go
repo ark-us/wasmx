@@ -54,7 +54,7 @@ func BenchmarkSimulation(b *testing.B) {
 	g, goctx, _ := multichain.GetTestCtx(logger, true)
 
 	chainId := config.ChainID
-	_, appCreator := app.NewAppCreator(runtime.WazeroVmMeta{}, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
+	_, appCreator := app.NewAppCreator(&runtime.WazeroVmMeta{}, logger, db, nil, appOpts, g, goctx, &multichain.MockApiCtx{})
 	iapp := appCreator(chainId, cfg)
 	app := iapp.(*app.App)
 

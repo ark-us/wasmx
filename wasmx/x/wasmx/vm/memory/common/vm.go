@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 
@@ -23,6 +24,7 @@ type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}
 
 type IWasmVmMeta interface {
 	LibVersion() string
+	InitWasmRuntime(parentCtx context.Context)
 	NewWasmVm(ctx sdk.Context, aot bool) IVm
 	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
 	AotCompile(ctx sdk.Context, inPath string, outPath string, meteringOff bool) error
@@ -271,4 +273,8 @@ func (WasmRuntimeMockVmMeta) AnalyzeWasm(_ sdk.Context, wasmbuffer []byte) (Wasm
 
 func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath string, meteringOff bool) error {
 	return fmt.Errorf("runtime mock: AotCompile not implemented")
+}
+
+func (WasmRuntimeMockVmMeta) InitWasmRuntime(_ context.Context) {
+	panic(fmt.Errorf("runtime mock: InitWasmRuntime not implemented"))
 }

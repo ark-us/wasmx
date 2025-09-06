@@ -57,7 +57,7 @@ func (suite *KeeperTestSuite) SetupSuite() {
 		panic("wasmedge not activated")
 	default:
 		// default runtime
-		suite.WasmVmMeta = wazero.WazeroVmMeta{}
+		suite.WasmVmMeta = &wazero.WazeroVmMeta{}
 		suite.CompiledCacheDir = ut.GetCompiledCacheDir(mydir, "wazero")
 		// suite.CompiledCacheDir = ut.GetCompiledCacheDir(mydir, "wazero")
 	}

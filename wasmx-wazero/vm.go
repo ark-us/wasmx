@@ -17,8 +17,6 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/utils"
 )
 
-var CONTEXT_CACHE_KEY = "wazero_cache"
-
 var _ memc.IVm = (*WazeroVm)(nil)
 var _ memc.IWasmVmMeta = (*WazeroVmMeta)(nil)
 
@@ -125,7 +123,7 @@ func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler, _context interface{}, input
 
 type WazeroVm struct {
 	ctx         context.Context
-	cache       wazero.CompilationCache
+	cache       *WasmEngineCache
 	vm          api.Module
 	r           wazero.Runtime
 	cleanups    []func()
@@ -139,13 +137,87 @@ type WazeroVm struct {
 	fileMap     map[string][]byte
 }
 
-// TODO clean cache!
-func NewWazeroVm(ctx sdk.Context, aot bool) memc.IVm {
-	cache, ok := ctx.Value(CONTEXT_CACHE_KEY).(wazero.CompilationCache)
-	if !ok {
-		cache = wazero.NewCompilationCache()
-		ctx = ctx.WithValue(CONTEXT_CACHE_KEY, cache)
+type WasmEngineCache struct {
+	ctx context.Context
+	// InterpreterConfig  wazero.RuntimeConfig
+	// InterpreterRuntime wazero.Runtime
+	// CompiledConfig  wazero.RuntimeConfig
+	// CompiledRuntime wazero.Runtime
+
+	// wasmFilePath => compiledModule
+	CompiledModules map[string]wazero.CompiledModule
+
+	// e.g. wazero has a compilation cache
+	CompilationCache wazero.CompilationCache
+
+	cleanups []func()
+}
+
+//	func (v *WasmEngineCache) GetInterpreterConfig() interface{} {
+//		return v.InterpreterConfig
+//	}
+//
+//	func (v *WasmEngineCache) GetInterpreterRuntime() interface{} {
+//		return v.InterpreterRuntime
+//	}
+//
+//	func (v *WasmEngineCache) GetCompiledConfig() interface{} {
+//		return v.CompiledConfig
+//	}
+//
+//	func (v *WasmEngineCache) GetCompiledRuntime() interface{} {
+//		return v.CompiledRuntime
+//	}
+func (v *WasmEngineCache) GetCompiledModules() interface{} {
+	return v.CompiledModules
+}
+func (v *WasmEngineCache) GetCompilationCache() interface{} {
+	return v.CompilationCache
+}
+func (v *WasmEngineCache) AddCleanup(fn func()) {
+	v.cleanups = append(v.cleanups, fn)
+}
+func (v *WasmEngineCache) Close() {
+	// run in inverse order
+	for i := len(v.cleanups) - 1; i >= 0; i-- {
+		v.cleanups[i]()
 	}
+}
+func (v *WasmEngineCache) GetCompiledModule(wasmFilePath string) wazero.CompiledModule {
+	mod, ok := v.CompiledModules[wasmFilePath]
+	if ok && mod != nil {
+		return mod
+	}
+	return nil
+}
+func (v *WasmEngineCache) SetCompiledModule(wasmFilePath string, mod wazero.CompiledModule) {
+	v.CompiledModules[wasmFilePath] = mod
+}
+
+func NewWazeroRuntime(parentCtx context.Context) *WasmEngineCache {
+	cache := &WasmEngineCache{ctx: parentCtx}
+	cache.CompilationCache = wazero.NewCompilationCache()
+	cache.CompiledModules = map[string]wazero.CompiledModule{}
+	// cache.InterpreterConfig = wazero.NewRuntimeConfigInterpreter().
+	// 	WithCloseOnContextDone(true).                // for now, we let the execution finish in case we need to save block data in our core contracts
+	// 	WithCompilationCache(cache.CompilationCache) // .WithDebugInfoEnabled(true)
+	// cache.CompiledConfig = wazero.NewRuntimeConfig().
+	// 	WithCloseOnContextDone(true).                // for now, we let the execution finish in case we need to save block data in our core contracts
+	// 	WithCompilationCache(cache.CompilationCache) // .WithDebugInfoEnabled(true)
+
+	// cache.InterpreterRuntime = wazero.NewRuntimeWithConfig(parentCtx, cache.InterpreterConfig)
+	// cache.CompiledRuntime = wazero.NewRuntimeWithConfig(parentCtx, cache.CompiledConfig)
+	// cache.CloseFn = func() {
+	// 	// run in inverse order
+	// 	cache.InterpreterRuntime.Close(parentCtx)
+	// 	cache.CompiledRuntime.Close(parentCtx)
+	// 	cache.CompilationCache.Close(parentCtx)
+	// }
+	return cache
+}
+
+// TODO clean cache!
+func NewWazeroVm(cache *WasmEngineCache, ctx sdk.Context, aot bool) memc.IVm {
 	var cleanups []func()
 	var config wazero.RuntimeConfig
 	if !aot {
@@ -157,8 +229,8 @@ func NewWazeroVm(ctx sdk.Context, aot bool) memc.IVm {
 	}
 
 	config = config.
-		WithCloseOnContextDone(true). // for now, we let the execution finish in case we need to save block data in our core contracts
-		WithCompilationCache(cache)   // .WithDebugInfoEnabled(true)
+		WithCloseOnContextDone(true).                // for now, we let the execution finish in case we need to save block data in our core contracts
+		WithCompilationCache(cache.CompilationCache) // .WithDebugInfoEnabled(true)
 
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 	cleanups = append(cleanups, func() {
@@ -174,7 +246,7 @@ func NewWazeroVm(ctx sdk.Context, aot bool) memc.IVm {
 	}
 }
 
-func NewWazeroVmRaw(ctx sdk.Context, cache wazero.CompilationCache, r wazero.Runtime, cleanups []func(), aot bool) *WazeroVm {
+func NewWazeroVmRaw(ctx sdk.Context, cache *WasmEngineCache, r wazero.Runtime, cleanups []func(), aot bool) *WazeroVm {
 	return &WazeroVm{
 		ctx:      ctx,
 		cache:    cache,
@@ -185,7 +257,7 @@ func NewWazeroVmRaw(ctx sdk.Context, cache wazero.CompilationCache, r wazero.Run
 }
 
 func (wm *WazeroVm) New(ctx sdk.Context, aot bool) memc.IVm {
-	return NewWazeroVm(ctx, aot)
+	return NewWazeroVm(wm.cache, ctx, aot)
 }
 
 func (wm *WazeroVm) Cleanup() {
@@ -319,17 +391,24 @@ func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, was
 
 	compilerSupported := wazero.CompilerSupported()
 	if compilerSupported && aotFilePath != "" {
-		content, err := os.Open(aotFilePath)
-		if err != nil {
-			return sdkerrors.Wrapf(err, "load original wasm file failed %s", aotFilePath)
-		}
-		origwasmbuffer, err := os.ReadFile(wasmFilePath)
-		if err != nil {
-			return sdkerrors.Wrapf(err, "load wasm file failed %s", wasmFilePath)
-		}
-		compiledmod, err := wm.r.DeserializeCompiledModule(wm.ctx, origwasmbuffer, content)
-		if err != nil {
-			return sdkerrors.Wrapf(err, "module deserialization failed from buffer")
+		// we cache compiled modules
+		compiledmod := wm.cache.GetCompiledModule(wasmFilePath)
+		if compiledmod == nil {
+			content, err := os.Open(aotFilePath)
+			if err != nil {
+				return sdkerrors.Wrapf(err, "load original wasm file failed %s", aotFilePath)
+			}
+			origwasmbuffer, err := os.ReadFile(wasmFilePath)
+			if err != nil {
+				return sdkerrors.Wrapf(err, "load wasm file failed %s", wasmFilePath)
+			}
+			// we use the parent context here!
+			compiledmod, err = wm.r.DeserializeCompiledModule(wm.cache.ctx, origwasmbuffer, content)
+			if err != nil {
+				return sdkerrors.Wrapf(err, "module deserialization failed from buffer")
+			}
+			wm.cache.SetCompiledModule(wasmFilePath, compiledmod)
+			wm.cache.AddCleanup(func() { compiledmod.Close(wm.cache.ctx) })
 		}
 		vm, err := wm.r.InstantiateModule(wm.ctx, compiledmod, cfg)
 		if err != nil {
@@ -433,16 +512,32 @@ func (wm *WazeroVm) BuildModuleInner(rnh memc.RuntimeHandler, modname string, _c
 	return envmod
 }
 
-type WazeroVmMeta struct{}
+type WazeroVmMeta struct {
+	runtime *WasmEngineCache
+}
 
 // When cgo is disabled at build time, this returns an error at runtime.
 func (WazeroVmMeta) LibVersion() string {
 	return wazero.Version()
 }
 
-// this is used by wasmX getRuntimeHandler
-func (WazeroVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {
-	return NewWazeroVm(ctx, aot)
+func (m *WazeroVmMeta) InitWasmRuntime(parentCtx context.Context) {
+	m.runtime = NewWazeroRuntime(parentCtx)
+	// TODO do we need to close runtime resources? (compiled modules etc.?)
+	// they should be closed when the parent context stops anyway
+	// but we have m.runtime.Close()
+}
+
+func (m WazeroVmMeta) GetWasmRuntime() *WasmEngineCache {
+	if m.runtime != nil {
+		return m.runtime
+	}
+	panic("wasm runtime cache not initialized")
+}
+
+// entrypoint used by wasmX getRuntimeHandler
+func (m WazeroVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {
+	return NewWazeroVm(m.GetWasmRuntime(), ctx, aot)
 }
 
 func (WazeroVmMeta) AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (memc.WasmMeta, error) {

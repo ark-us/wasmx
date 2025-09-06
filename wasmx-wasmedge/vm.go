@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -323,6 +324,10 @@ type WasmEdgeVmMeta struct{}
 // When cgo is disabled at build time, this returns an error at runtime.
 func (WasmEdgeVmMeta) LibVersion() string {
 	return wasmedge.GetVersion()
+}
+
+func (m *WasmEdgeVmMeta) InitWasmRuntime(parentCtx context.Context) {
+	// TODO cache for compiled modules - see wazero
 }
 
 func (WasmEdgeVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {

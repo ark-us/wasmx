@@ -457,10 +457,11 @@ func TestWazeroWasi(t *testing.T) {
 	ctx := sdk.Context{}
 	ctx = ctx.WithContext(context.Background())
 
-	cache := wazero.NewCompilationCache()
+	cache := runtime.NewWazeroRuntime(ctx)
+
 	require.NoError(t, err)
-	defer cache.Close(ctx)
-	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache)
+	defer cache.Close()
+	config := wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache.CompilationCache)
 	r := wazero.NewRuntimeWithConfig(ctx, config)
 
 	defer r.Close(ctx)

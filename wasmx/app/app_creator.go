@@ -56,6 +56,7 @@ func NewAppCreator(
 	ctx = vmimap.WithImapEmptyContext(ctx)
 	ctx = vmsmtp.WithSmtpEmptyContext(ctx)
 	ctx = vmhttpserver.WithHttpServerEmptyContext(ctx)
+	wasmVmMeta.InitWasmRuntime(ctx)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 
