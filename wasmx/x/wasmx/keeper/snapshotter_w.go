@@ -52,6 +52,8 @@ func (ws *WasmSnapshotter) SupportedFormats() []uint32 {
 	return []uint32{SnapshotFormat}
 }
 
+// we pool the contracts from all subchains, so we go through all registered code infos in
+// the subchain that we are snapshotting
 func (ws *WasmSnapshotter) SnapshotExtension(height uint64, payloadWriter snapshot.ExtensionPayloadWriter) error {
 	cacheMS, err := ws.cms.CacheMultiStoreWithVersion(int64(height))
 	if err != nil {

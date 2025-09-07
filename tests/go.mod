@@ -326,8 +326,8 @@ replace github.com/loredanacirstea/wasmx => ../wasmx
 
 require github.com/loredanacirstea/wasmx-wazero v0.0.0-00010101000000-000000000000
 
-// github.com/loredanacirstea/wazero-wasmx@2eea3efd733f33f425c47843e2e2e818c837b8c9
-replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero-wasmx v0.0.0-20241221180426-2eea3efd733f
+// github.com/loredanacirstea/wazero-wasmx@16273a9fbea9f6c9d4d285bb2d83c18c80bfd24e
+replace github.com/tetratelabs/wazero => github.com/loredanacirstea/wazero-wasmx v0.0.0-20250907213354-16273a9fbea9
 
 replace github.com/loredanacirstea/wasmx-wazero => ../wasmx-wazero
 

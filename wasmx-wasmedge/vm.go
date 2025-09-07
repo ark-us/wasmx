@@ -326,9 +326,11 @@ func (WasmEdgeVmMeta) LibVersion() string {
 	return wasmedge.GetVersion()
 }
 
-func (m *WasmEdgeVmMeta) InitWasmRuntime(parentCtx context.Context) {
+func (m *WasmEdgeVmMeta) InitWasmRuntime(parentCtx context.Context, chainId string) {
 	// TODO cache for compiled modules - see wazero
 }
+
+func (m *WasmEdgeVmMeta) Close(chainId string) {}
 
 func (WasmEdgeVmMeta) NewWasmVm(ctx sdk.Context, aot bool) memc.IVm {
 	return NewWasmEdgeVm(ctx, aot)

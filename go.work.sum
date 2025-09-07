@@ -901,8 +901,8 @@ github.com/loredanacirstea/cosmos-db v1.0.3-0.20250418184042-283045794970 h1:XfS
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250418184042-283045794970/go.mod h1:Juy7gvQ93XXQz/50/NQePuN+O2zOQHb22nfuZSEcM68=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6 h1:oIz0C6MlQcZmajdhZ3tNSjyDtQhww3KD8yLNLVgsnmo=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
-github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1 h1:cbP1SRIGCacsckhFRoBb2UiF9LZ6mhCr/L30gX9YKME=
-github.com/loredanacirstea/wazero v0.0.0-20241212140609-1501e85d8dd1/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
+github.com/loredanacirstea/wazero-wasmx v0.0.0-20250907213354-16273a9fbea9 h1:nhGGTyoJCuO1iiooFLGAyaqrNUBmOx0XyDerpi4mKdg=
+github.com/loredanacirstea/wazero-wasmx v0.0.0-20250907213354-16273a9fbea9/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
 github.com/lufeee/execinquery v1.2.1/go.mod h1:EC7DrEKView09ocscGHC+apXMIaorh4xqSxS/dy8SbM=
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2jmtg6P3p1VtQj7WsuWi/y4VnjVBn7F8KPB3I=
 github.com/lyft/protoc-gen-star/v2 v2.0.4-0.20230330145011-496ad1ac90a4/go.mod h1:amey7yeodaJhXSbf/TlLvWiqQfLOSpEk//mLlc+axEk=

@@ -56,7 +56,7 @@ func NewAppCreator(
 	ctx = vmimap.WithImapEmptyContext(ctx)
 	ctx = vmsmtp.WithSmtpEmptyContext(ctx)
 	ctx = vmhttpserver.WithHttpServerEmptyContext(ctx)
-	wasmVmMeta.InitWasmRuntime(ctx)
+	// wasmVmMeta.InitWasmRuntime(ctx, chainId)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)
 
@@ -83,6 +83,7 @@ func NewAppCreator(
 		appOpts.Set(sdkserver.FlagMinGasPrices, minGasPrices.String())
 		appOpts.Set(sdkserver.FlagPruning, pruningtypes.PruningOptionDefault)
 		baseappOptions := mcfg.DefaultBaseappOptions(appOpts)
+		wasmVmMeta.InitWasmRuntime(ctx, chainId)
 
 		app := NewApp(
 			chainId,

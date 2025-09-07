@@ -183,9 +183,20 @@ func (suite *KeeperTestSuite) GetAppContext(chain *TestChain) AppContext {
 }
 
 func (suite *KeeperTestSuite) TearDownChains() {
+	_, found := suite.Chains[mcfg.MYTHOS_CHAIN_ID_TEST]
+	if !found {
+		// this happens only when there is an error in a test
+		// we return so we do not hide the original error
+		// GetChain panics if there is no chain
+		return
+	}
 	mythosChain := suite.GetChain(mcfg.MYTHOS_CHAIN_ID_TEST)
 	mythosChain.App.Teardown()
 
+	_, found = suite.Chains[mcfg.LEVEL0_CHAIN_ID]
+	if !found {
+		return
+	}
 	level0Chain := suite.GetChain(mcfg.LEVEL0_CHAIN_ID)
 	mapps, err := level0Chain.App.GetMultiChainApp()
 	suite.Require().NoError(err)
@@ -193,6 +204,7 @@ func (suite *KeeperTestSuite) TearDownChains() {
 	for _, appi := range apps {
 		app := appi.(mcfg.MythosApp)
 		app.Teardown()
+		// mythosChain.App.GetWasmVmMeta().Close(app.GetBaseApp().ChainID())
 	}
 }
 

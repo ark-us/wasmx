@@ -36,6 +36,7 @@ import (
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	menc "github.com/loredanacirstea/wasmx/encoding"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 type ActionExecutor interface {
@@ -140,6 +141,8 @@ type MythosApp interface {
 	SetTendermintConfig(tndcfg *cmtcfg.Config)
 	SetRpcClient(rpcClient client.CometRPC)
 	NonDeterministicSetNodePorts(ports mctx.NodePorts)
+
+	GetWasmVmMeta() memc.IWasmVmMeta
 
 	// debugging
 	Db() dbm.DB

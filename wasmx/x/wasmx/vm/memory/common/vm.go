@@ -24,10 +24,11 @@ type IFnVal = func(context interface{}, mod RuntimeHandler, params []interface{}
 
 type IWasmVmMeta interface {
 	LibVersion() string
-	InitWasmRuntime(parentCtx context.Context)
+	InitWasmRuntime(parentCtx context.Context, chainId string)
 	NewWasmVm(ctx sdk.Context, aot bool) IVm
 	AnalyzeWasm(ctx sdk.Context, wasmbuffer []byte) (WasmMeta, error)
 	AotCompile(ctx sdk.Context, inPath string, outPath string, meteringOff bool) error
+	Close(chainId string)
 }
 
 type IFn interface {
@@ -275,4 +276,5 @@ func (WasmRuntimeMockVmMeta) AotCompile(_ sdk.Context, inPath string, outPath st
 	return fmt.Errorf("runtime mock: AotCompile not implemented")
 }
 
-func (WasmRuntimeMockVmMeta) InitWasmRuntime(_ context.Context) {}
+func (WasmRuntimeMockVmMeta) InitWasmRuntime(_ context.Context, _ string) {}
+func (WasmRuntimeMockVmMeta) Close(_ string)                              {}

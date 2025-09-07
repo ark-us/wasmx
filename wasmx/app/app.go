@@ -351,6 +351,8 @@ type App struct {
 
 	OrderBeginSubCall []string
 	OrderEndSubCall   []string
+
+	wasmVmMeta memc.IWasmVmMeta
 }
 
 // New returns a reference to an initialized blockchain app
@@ -472,6 +474,7 @@ func NewApp(
 		chainCfg:          chainCfg,
 		minGasPrices:      minGasPrices,
 		db:                db,
+		wasmVmMeta:        wasmVmMeta,
 	}
 
 	valCodec := mcodec.NewValBech32Codec(chainCfg.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
@@ -1480,6 +1483,10 @@ func (app *App) NonDeterministicSetNodePortsInitial(initialPorts mctx.NodePorts)
 
 func (app *App) NonDeterministicGetNodePortsInitial() mctx.NodePorts {
 	return app.initialPorts
+}
+
+func (app *App) GetWasmVmMeta() memc.IWasmVmMeta {
+	return app.wasmVmMeta
 }
 
 // AutoCliOpts returns the autocli options for the app.

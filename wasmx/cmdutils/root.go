@@ -110,7 +110,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	goctx = vmimap.WithImapEmptyContext(goctx)
 	goctx = vmsmtp.WithSmtpEmptyContext(goctx)
 	goctx = vmhttpserver.WithHttpServerEmptyContext(goctx)
-	wasmVmMeta.InitWasmRuntime(goctx)
+	wasmVmMeta.InitWasmRuntime(goctx, chainId)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)
 	appOpts.Set(flags.FlagHome, tempDir(defaultNodeHome))
