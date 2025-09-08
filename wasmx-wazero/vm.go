@@ -123,7 +123,7 @@ func (f WazeroFn) WrappedFn(rnh memc.RuntimeHandler, _context interface{}, input
 }
 
 type WazeroVm struct {
-	ctx         context.Context
+	ctx         sdk.Context
 	cache       *WasmEngineCache
 	vm          api.Module
 	r           wazero.Runtime
@@ -139,9 +139,8 @@ type WazeroVm struct {
 }
 
 type WasmEngineCache struct {
-	ctx               context.Context
-	InterpreterConfig wazero.RuntimeConfig
-	CompiledConfig    wazero.RuntimeConfig
+	ctx            context.Context
+	CompiledConfig wazero.RuntimeConfig
 
 	// wazero has a compilation cache that we share per chain executions
 	CompilationCache wazero.CompilationCache
@@ -151,14 +150,9 @@ type WasmEngineCache struct {
 	// with tendermintp2p with timeouts 0
 	CompiledModules     map[string]wazero.CompiledModule
 	compiledModulesLock sync.Mutex
-
-	deserializeLock sync.Mutex
+	deserializeLock     sync.Mutex
 
 	cleanups []func()
-}
-
-func (v *WasmEngineCache) GetInterpreterConfig() interface{} {
-	return v.InterpreterConfig
 }
 
 func (v *WasmEngineCache) GetCompiledConfig() interface{} {
@@ -197,10 +191,6 @@ func NewWazeroRuntime(parentCtx context.Context) *WasmEngineCache {
 	cache := &WasmEngineCache{ctx: parentCtx}
 	cache.CompilationCache = wazero.NewCompilationCache()
 	cache.CompiledModules = map[string]wazero.CompiledModule{}
-
-	cache.InterpreterConfig = wazero.NewRuntimeConfigInterpreter().
-		WithCloseOnContextDone(true).                // for now, we let the execution finish in case we need to save block data in our core contracts
-		WithCompilationCache(cache.CompilationCache) // .WithDebugInfoEnabled(true)
 	cache.CompiledConfig = wazero.NewRuntimeConfig().
 		WithCloseOnContextDone(true).                // for now, we let the execution finish in case we need to save block data in our core contracts
 		WithCompilationCache(cache.CompilationCache) // .WithDebugInfoEnabled(true)
@@ -215,7 +205,12 @@ func NewWazeroVm(cache *WasmEngineCache, ctx sdk.Context, aot bool) memc.IVm {
 	if aot {
 		config = cache.CompiledConfig
 	} else {
-		config = cache.InterpreterConfig
+		// we don't use the cache on the interpreted wasm
+		// these may be one-time use contracts, no need to cache them for now
+		// if we do cache them, we will need a lock on module compilation
+		config = wazero.NewRuntimeConfigInterpreter().
+			WithCloseOnContextDone(true).                      // for now, we let the execution finish in case we need to save block data in our core contracts
+			WithCompilationCache(wazero.NewCompilationCache()) // .WithDebugInfoEnabled(true)
 	}
 
 	r := wazero.NewRuntimeWithConfig(ctx, config)
@@ -251,11 +246,12 @@ func (wm *WazeroVm) Cleanup() {
 	for i := len(wm.cleanups) - 1; i >= 0; i-- {
 		wm.cleanups[i]()
 	}
+	wm.cleanups = []func(){}
 }
 
 func (wm *WazeroVm) Call(funcname string, args []interface{}, gasMeter memc.GasMeter) ([]int32, error) {
 	if wm.vm == nil {
-		panic(fmt.Sprintf("Call %s: WazeroVm not instantiated", funcname))
+		panic(fmt.Sprintf("Call %s: WazeroVm not instantiated: %s", funcname, wm.ctx.ChainID()))
 	}
 	_args := make([]uint64, len(args))
 	for i, arg := range args {
@@ -292,7 +288,7 @@ func (wm *WazeroVm) Call(funcname string, args []interface{}, gasMeter memc.GasM
 
 func (wm *WazeroVm) GetMemory() (memc.IMemory, error) {
 	if wm.vm == nil {
-		panic("GetMemory: WazeroVm not instantiated")
+		panic(fmt.Sprintf("GetMemory: WazeroVm not instantiated: %s", wm.ctx.ChainID()))
 	}
 	mem := wm.vm.Memory()
 	if mem == nil {
@@ -303,7 +299,7 @@ func (wm *WazeroVm) GetMemory() (memc.IMemory, error) {
 
 func (wm *WazeroVm) GetFunctionList() []string {
 	if wm.vm == nil {
-		panic("GetFunctionList: WazeroVm not instantiated")
+		panic(fmt.Sprintf("GetFunctionList: WazeroVm not instantiated: %s", wm.ctx.ChainID()))
 	}
 	fnlist := []string{}
 	for fnname := range wm.vm.ExportedFunctionDefinitions() {
@@ -318,7 +314,7 @@ func (wm *WazeroVm) ListRegisteredModule() []string {
 
 func (wm *WazeroVm) FindGlobal(name string) interface{} {
 	if wm.vm == nil {
-		panic(fmt.Sprintf("FindGlobal %s: WazeroVm not instantiated", name))
+		panic(fmt.Sprintf("FindGlobal %s: WazeroVm not instantiated: %s", name, wm.ctx.ChainID()))
 	}
 	glob := wm.vm.ExportedGlobal(name)
 	val := glob.Get()
@@ -389,8 +385,9 @@ func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, was
 			}
 			// lock this, otherwise we get race conditions on the deserialization process
 			// due to this function being used by both deterministic and non-deterministic executions on the same chain
+			// while using wazero's global compilation cache system! (per chain)
 			wm.cache.deserializeLock.Lock()
-			// give the top-most context here (parentGoCtx)
+			// give the top-most context here (parentGoCtx) because these modules are reused
 			compiledmod, err = wm.r.DeserializeCompiledModule(wm.cache.ctx, origwasmbuffer, compiled)
 			wm.cache.deserializeLock.Unlock()
 			if err != nil {
@@ -417,9 +414,12 @@ func (wm *WazeroVm) InstantiateWasm(wasmFilePath string, aotFilePath string, was
 				return sdkerrors.Wrapf(err, "load wasm file failed %s", wasmFilePath)
 			}
 		}
+		// !important no need to lock this if we do not use wazero's compilation cache
 		vm, err := wm.r.InstantiateWithConfig(wm.ctx, wasmbuffer, cfg)
 		if err != nil {
-			return sdkerrors.Wrapf(err, "instantiate wasm failed for interpreted module")
+			wrappedErr := sdkerrors.Wrapf(err, "instantiate wasm failed for interpreted module: %s: bytes %d: %s", wasmFilePath, len(wasmbuffer), wm.ctx.ChainID())
+			wm.ctx.Logger().Error(wrappedErr.Error())
+			return wrappedErr
 		}
 		wm.vm = vm
 	}

@@ -103,6 +103,7 @@ func (c *Context) Execute() ([]byte, error) {
 	}()
 	err := InitiateWasm(c, rnh, filepath, c.ContractInfo.AotFilePath, nil, c.ContractInfo.SystemDeps, c.ContractInfo.Role != "")
 	if err != nil {
+		c.Ctx.Logger().Debug("internal contract call failed to initiate wasm", "error", err.Error(), "address", c.Env.Contract.Address.String(), "role", c.ContractInfo.Role, "code_id", c.ContractInfo.CodeId)
 		return nil, err
 	}
 	isEvm := isEvmInterpreted(c.ContractInfo.SystemDepsRaw)
@@ -113,10 +114,8 @@ func (c *Context) Execute() ([]byte, error) {
 	executeHandler := GetExecuteFunctionHandler(c.ContractInfo.SystemDeps)
 	_, err = executeHandler(c, rnh.GetVm(), types.ENTRY_POINT_EXECUTE, make([]interface{}, 0), false)
 	if err != nil {
-		rnh.GetVm().Cleanup()
 		return nil, err
 	}
-	rnh.GetVm().Cleanup()
 	return c.ReturnData, nil
 }
 

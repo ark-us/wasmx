@@ -275,7 +275,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	if err != nil {
 		success = int32(2)
 		// note, just log the error here, because it may contain non-deterministic data added by the WASM runtime
-		newctx.Logger(newctx.Ctx).Debug(err.Error(), "data", string(newctx.ReturnData))
+		newctx.Logger(newctx.Ctx).Debug("internal call failed", "error", err.Error(), "data", string(newctx.ReturnData))
 	} else {
 		success = int32(0)
 		if !req.IsQuery {

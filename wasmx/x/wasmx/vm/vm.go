@@ -296,6 +296,7 @@ func ExecuteWasmInterpreted(
 	contractstr := env.Contract.Address.String()
 	err = InitiateWasm(context, rnh, "", "", nil, contractInfo.SystemDeps, contractInfo.Role != "")
 	if err != nil {
+		ctx.Logger().Debug("execute interpreted wasm: failed to initiate wasm", "error", err.Error(), "address", env.Contract.Address.String(), "role", contractInfo.Role, "code_id", contractInfo.CodeId)
 		return types.ContractResponse{}, err
 	}
 	context.RuntimeHandler = rnh
@@ -417,6 +418,7 @@ func ExecuteWasm(
 	contractstr := env.Contract.Address.String()
 	err = InitiateWasm(context, rnh, contractInfo.CodeFilePath, contractInfo.AotFilePath, nil, contractInfo.SystemDeps, contractInfo.Role != "")
 	if err != nil {
+		ctx.Logger().Debug("execute wasm: failed to initiate wasm", "error", err.Error(), "address", env.Contract.Address.String(), "role", contractInfo.Role, "code_id", contractInfo.CodeId)
 		return types.ContractResponse{}, err
 	}
 	context.RuntimeHandler = rnh
