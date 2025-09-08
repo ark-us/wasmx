@@ -2,11 +2,15 @@ name: Run Go WasmX Tests
 
 on:
   push:
-   branches:
-     - main # Trigger on push to the "main" branch
+    branches:
+      - main # Trigger on push to the "main" branch
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches:
       - main # Trigger on pull request to the "main" branch
+    paths-ignore:
+      - '**/*.md'
 
 jobs:
   test:

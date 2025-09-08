@@ -11,9 +11,11 @@ Compatible with both Ethereum and Cosmos SDK wallets.
 
 This is the most flexible blockchain engine with 90% WASM modules and 10% Golang host.
 
-Core contracts were written in AssemblyScript, and the consensus protocols are FSM diagrams that are INTERPRETED by an FSM interpreter (also in AssemblyScript).
+Core contracts were written in AssemblyScript, and the consensus protocols are FSM diagrams that are INTERPRETED by an FSM interpreter (also in AssemblyScript). UPDATE: now the FSM interpreter was ported to Tinygo. We will soon have all the core contracts in both AssemblyScript and Tinygo, to compare performances.
 
-Current speed of execution bottleneck is JSON encoding/decoding for AssemblyScript (this may be improved by newer `json-as` versions once it achieves feature parity with the old version). Nonetheless, speed can be greatly improved contract by contract, now that a functional implementation exists. And a Tinygo implementation of the core contracts has already been started.
+Each core contract can be upgraded idependently. We want to ultimately have everything as WASM, around a small Golang core.
+
+Block production speed is 0.5s using our TendermintP2P consensus algorithm, set with timeouts at 0s, for one validator. Pretty fast for such a flexible system.
 
 This is a self-funded effort: one lead software architect [@ctzurcanu](https://github.com/ctzurcanu), and one everything software engineer [@loredanacirstea](https://github.com/loredanacirstea).
 
