@@ -36,6 +36,7 @@ func executeCrossChainTx(_context interface{}, rnh memc.RuntimeHandler, params [
 	req.IsQuery = false
 	req.Sender = ctx.Env.Contract.Address.String()
 	req.FromChainId = ctx.Env.Chain.ChainIdFull
+	req.Authority = ctx.WasmxAuthority
 
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(&req)
 	errmsg := ""
@@ -80,6 +81,7 @@ func executeCrossChainQuery(_context interface{}, rnh memc.RuntimeHandler, param
 	req.IsQuery = true
 	req.Sender = ctx.Env.Contract.Address.String()
 	req.FromChainId = ctx.Env.Chain.ChainIdFull
+	req.Authority = ctx.WasmxAuthority
 
 	_, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(&req)
 	errmsg := ""
@@ -149,7 +151,7 @@ func executeCrossChainTxNonDeterministic(_context interface{}, rnh memc.RuntimeH
 		ctx := sdk.UnwrapSDKContext(goctx)
 
 		// we sent directly to the contract
-		resp, err := app.GetNetworkKeeper().ExecuteContract(ctx, &types.MsgExecuteContract{
+		resp, err := app.GetNetworkKeeper().ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 			Sender:   req.From,
 			Contract: req.To,
 			Msg:      req.Msg,

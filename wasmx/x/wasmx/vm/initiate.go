@@ -75,7 +75,7 @@ func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.Sys
 	if err != nil {
 		return err
 	}
-	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
+	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh, WasmxAuthority: context.WasmxAuthority}
 
 	wasmx, err := BuildWasmxEnvi32(context, rnh)
 	if err != nil {
@@ -128,7 +128,7 @@ func InitiateWasmxEnv(
 	if err != nil {
 		return err
 	}
-	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
+	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh, WasmxAuthority: context.WasmxAuthority}
 
 	wasmx, err := buildWasmxEnv(context, rnh)
 	if err != nil {
@@ -203,7 +203,7 @@ func InitiateWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler, dep *typ
 	if err != nil {
 		return sdkerr.Wrapf(err, "initiate keccak256")
 	}
-	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh}
+	context.ContractRouter["keccak256"] = &Context{RuntimeHandler: keccakRnh, WasmxAuthority: context.WasmxAuthority}
 
 	return nil
 }

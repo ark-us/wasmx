@@ -344,7 +344,7 @@ func (k KeeperDistribution) ContractModuleExecution(ctx sdk.Context, fname strin
 		return nil, err
 	}
 	msgbz2 := []byte(fmt.Sprintf(`{"%s":%s}`, fname, string(msgbz)))
-	res1, err := k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	res1, err := k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_DISTRIBUTION,
 		Contract: wasmxtypes.ROLE_DISTRIBUTION,
 		Msg:      msgbz2,

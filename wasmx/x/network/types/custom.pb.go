@@ -5,13 +5,14 @@ package types
 
 import (
 	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
 	_ "github.com/cosmos/cosmos-proto"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
 	_ "github.com/cosmos/gogoproto/gogoproto"
 	proto "github.com/cosmos/gogoproto/proto"
-	io "io"
-	math "math"
-	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -34,9 +35,10 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 // func (m *MsgExecuteAtomicTxRequest) Reset()         { *m = MsgExecuteAtomicTxRequest{} }
 // func (m *MsgExecuteAtomicTxRequest) String() string { return proto.CompactTextString(m) }
 // func (*MsgExecuteAtomicTxRequest) ProtoMessage()    {}
-// func (*MsgExecuteAtomicTxRequest) Descriptor() ([]byte, []int) {
-// 	return fileDescriptor_e2a1e68a92a4ca28, []int{0}
-// }
+//
+//	func (*MsgExecuteAtomicTxRequest) Descriptor() ([]byte, []int) {
+//		return fileDescriptor_e2a1e68a92a4ca28, []int{0}
+//	}
 func (m *MsgExecuteAtomicTxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }

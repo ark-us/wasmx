@@ -67,7 +67,9 @@ type (
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
 		authority string
-		app       types.Application
+		// wasmx authority address
+		wasmxAuthority string
+		app            types.Application
 	}
 )
 
@@ -95,6 +97,7 @@ func NewKeeper(
 	msgRouter *baseapp.MsgServiceRouter,
 	grpcQueryRouter *baseapp.GRPCQueryRouter,
 	authority string,
+	wasmxAuthority string,
 	validatorAddressCodec address.Codec,
 	consensusAddressCodec address.Codec,
 	addressCodec address.Codec,
@@ -139,7 +142,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(goRoutineGroup, goContextParent, contractsPath, sourcesDir, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
+	wasmvm, err := NewVM(wasmxAuthority, goRoutineGroup, goContextParent, contractsPath, sourcesDir, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
 	if err != nil {
 		panic(err)
 	}
@@ -170,14 +173,15 @@ func NewKeeper(
 		addressCodec:          addressCodec,
 		accBech32Codec:        accBech32Codec,
 
-		queryGasLimit: wasmConfig.SmartQueryGasLimit,
-		gasRegister:   NewDefaultWasmGasRegister(),
-		wasmvm:        wasmvm,
-		tempDir:       tempDir,
-		binDir:        binDir,
-		authority:     authority,
-		app:           app,
-		WasmRuntime:   wasmRuntime,
+		queryGasLimit:  wasmConfig.SmartQueryGasLimit,
+		gasRegister:    NewDefaultWasmGasRegister(),
+		wasmvm:         wasmvm,
+		tempDir:        tempDir,
+		binDir:         binDir,
+		authority:      authority,
+		wasmxAuthority: wasmxAuthority,
+		app:            app,
+		WasmRuntime:    wasmRuntime,
 	}
 
 	// cosmwasm support

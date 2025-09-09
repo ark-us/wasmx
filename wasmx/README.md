@@ -119,8 +119,8 @@ make proto-gen
 
 ### Note! we need to manually fix the custom proto file for `network`
 
-* `custom.pulsar.go`: rename `networkv1` to `types`
-* `custom.pb.go`: comment out `MsgExecuteAtomicTxRequest` definition and methods `Reset`, `String`, `ProtoMessage`, `Descriptor`, `GetTxs`, `GetLeaderChainId`, `GetSender`. Also comment out `QueryAtomicMultiChainRequest` def & methods
+* `./x/network/types/custom.pulsar.go`: rename `networkv1` to `types`
+* `./x/network/types/custom.pb.go`: comment out `MsgExecuteAtomicTxRequest` definition and methods `Reset`, `String`, `ProtoMessage`, `Descriptor`, `GetTxs`, `GetSender`. Also comment out `QueryAtomicMultiChainRequest` def & methods
 
 ### Open Ports
 

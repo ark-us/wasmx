@@ -22,7 +22,8 @@ type (
 
 		// the address capable of executing messages through governance. Typically, this
 		// should be the x/gov module account.
-		authority string
+		authority      string
+		wasmxAuthority string
 	}
 )
 
@@ -33,6 +34,7 @@ func NewKeeper(
 	wasmxKeeper types.WasmxKeeper,
 	actionExecutor *ActionExecutor,
 	authority string,
+	wasmxAuthority string,
 ) *Keeper {
 	keeper := &Keeper{
 		goRoutineGroup:  goRoutineGroup,
@@ -41,6 +43,7 @@ func NewKeeper(
 		wasmxKeeper:     wasmxKeeper,
 		actionExecutor:  actionExecutor,
 		authority:       authority,
+		wasmxAuthority:  wasmxAuthority,
 	}
 	return keeper
 }
@@ -52,6 +55,10 @@ func (k *Keeper) Logger(ctx sdk.Context) log.Logger {
 // GetAuthority returns the module's authority.
 func (k *Keeper) GetAuthority() string {
 	return k.authority
+}
+
+func (k *Keeper) GetWasmxAuthority() string {
+	return k.wasmxAuthority
 }
 
 func (k *Keeper) Codec() codec.Codec {

@@ -15,13 +15,11 @@ func (k *Keeper) GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddr
 	return k.wasmxKeeper.GetContractInfo(ctx, contractAddress)
 }
 
-func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error) {
+func (k *Keeper) ExecuteCosmosMsgInternal(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error) {
 	return k.wasmxKeeper.ExecuteCosmosMsg(ctx, msg, owner)
 }
 
-// only used by internal modules
-// it cannot be called by a user, it will fail when trying to get the signers & verify signatures
-func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+func (k *Keeper) ExecuteContractInternal(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender address or role: "+msg.Sender)
@@ -46,7 +44,7 @@ func (k *Keeper) ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract)
 	}, nil
 }
 
-func (k *Keeper) ExecuteEntryPoint(ctx sdk.Context, entryPoint string, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+func (k *Keeper) ExecuteEntryPointInternal(ctx sdk.Context, entryPoint string, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
 	senderAddr, err := k.wasmxKeeper.GetAddressOrRole(ctx, msg.Sender)
 	if err != nil {
 		return nil, sdkerr.Wrap(err, "sender")

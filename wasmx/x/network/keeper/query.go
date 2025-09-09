@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	cfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/network/types"

@@ -25,9 +25,10 @@ func StartWebsrv(
 	cfg *WebsrvConfig,
 	actionExecutor cfg.ActionExecutor,
 	senderAddress string,
+	wasmxAuthority string,
 ) (*http.Server, *WebsrvServer, chan struct{}, error) {
 	logger.Info("starting websrv web server ")
-	websrvServer := NewWebsrvServer(coreHandler, parentCtx, logger, cfg, actionExecutor, senderAddress)
+	websrvServer := NewWebsrvServer(coreHandler, parentCtx, logger, cfg, actionExecutor, senderAddress, wasmxAuthority)
 	mux := http.NewServeMux()
 
 	// TODO Oauth ?

@@ -192,6 +192,7 @@ func coreWasmxGrpcRequest(_context interface{}, rnh memc.RuntimeHandler, params 
 	}
 
 	msg := &networktypes.MsgGrpcSendRequest{
+		Authority: ctx.WasmxAuthority,
 		IpAddress: data.IpAddress,
 		Contract:  contractAddressStr,
 		Data:      []byte(data.Data),
@@ -281,11 +282,12 @@ func coreWasmxStartTimeout(_context interface{}, rnh memc.RuntimeHandler, params
 	}
 
 	msgtosend := &networktypes.MsgStartTimeoutRequest{
-		Id:       req.Id,
-		Sender:   ctx.Env.Contract.Address.String(),
-		Contract: req.Contract,
-		Delay:    req.Delay,
-		Args:     req.Args,
+		Authority: ctx.WasmxAuthority,
+		Id:        req.Id,
+		Sender:    ctx.Env.Contract.Address.String(),
+		Contract:  req.Contract,
+		Delay:     req.Delay,
+		Args:      req.Args,
 	}
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
@@ -317,8 +319,9 @@ func coreWasmxCancelTimeout(_context interface{}, rnh memc.RuntimeHandler, param
 	}
 
 	msgtosend := &networktypes.MsgCancelTimeoutRequest{
-		Id:     req.Id,
-		Sender: ctx.Env.Contract.Address.String(),
+		Authority: ctx.WasmxAuthority,
+		Id:        req.Id,
+		Sender:    ctx.Env.Contract.Address.String(),
 	}
 	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {
@@ -345,9 +348,10 @@ func coreWasmxStartBackgroundProcess(_context interface{}, rnh memc.RuntimeHandl
 	}
 
 	msgtosend := &networktypes.MsgStartBackgroundProcessRequest{
-		Sender:   ctx.Env.Contract.Address.String(), // TODO wasmx?
-		Contract: req.Contract,
-		Args:     req.Args,
+		Authority: ctx.WasmxAuthority,
+		Sender:    ctx.Env.Contract.Address.String(),
+		Contract:  req.Contract,
+		Args:      req.Args,
 	}
 	evs, res, err := ctx.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {

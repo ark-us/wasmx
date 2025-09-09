@@ -201,7 +201,7 @@ func (suite *KeeperTestSuite) sendMessageFromOther(sender simulation.Account, ro
 
 	msgreceived64 := base64.StdEncoding.EncodeToString(blockbz)
 	msgreceived := []byte(fmt.Sprintf(`{"roomId":"%s","message":"%s","timestamp":"2024-03-19T12:20:26.924Z","sender":{"id":"12D3KooWRgN1dUKvDM9zu8gB7DQhLYVqEEpxBTRK3YYtr8Bj92xD","host":"","port":"","ip":"/ip4/127.0.0.1/tcp/5001"}}`, room, msgreceived64))
-	_, err = suite.App().NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_P2P_MSG, &types.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteEntryPointInternal(appA.Context(), wasmxtypes.ENTRY_POINT_P2P_MSG, &types.MsgExecuteContract{
 		Sender:   appA.MustAccAddressToString(sender.Address),
 		Contract: appA.MustAccAddressToString(contractAddress),
 		Msg:      msgreceived,

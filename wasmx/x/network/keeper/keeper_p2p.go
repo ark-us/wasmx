@@ -9,7 +9,7 @@ import (
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-func (k *Keeper) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
+func (k *Keeper) P2PReceiveMessageInternal(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.goRoutineGroup.Go(func() error {
 		err := k.p2pReceiveMessageInternalGoroutine(msg, ctx.ChainID())
@@ -40,7 +40,7 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("p2p message receival started", "sender", msg.Sender, "data", string(msg.Data))
-		err := k.p2pReceiveMessageInternal(msg, chainId)
+		err := k.p2pReceiveMessageInternalExecution(msg, chainId)
 		if err != nil {
 			errCh <- err
 		}
@@ -57,7 +57,7 @@ func (k *Keeper) p2pReceiveMessageInternalGoroutine(
 	}
 }
 
-func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageRequest, chainId string) error {
+func (k *Keeper) p2pReceiveMessageInternalExecution(msg *types.MsgP2PReceiveMessageRequest, chainId string) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		execmsg := &types.MsgExecuteContract{
@@ -65,7 +65,7 @@ func (k *Keeper) p2pReceiveMessageInternal(msg *types.MsgP2PReceiveMessageReques
 			Contract: msg.Contract,
 			Msg:      msg.Data,
 		}
-		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, execmsg)
+		res, err := k.ExecuteEntryPointInternal(ctx, wasmxtypes.ENTRY_POINT_P2P_MSG, execmsg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("closing p2p message receival thread", err.Error())

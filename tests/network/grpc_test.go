@@ -63,7 +63,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	s.Require().Equal(1, len(vals))
 
 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
-	resp, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err := suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -107,7 +107,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 
 	// Start Leader
 	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -133,7 +133,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
 
-	respbz, err := appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+	respbz, err := appA.App.NetworkKeeper.ExecuteEntryPointInternal(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -181,7 +181,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
-	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -201,7 +201,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	txstr = base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
-	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -210,7 +210,7 @@ func (suite *KeeperTestSuite) TestRAFTLogReplicationOneNode() {
 	log.Printf("Response: %+v", resp)
 
 	msg1 = []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -256,7 +256,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","peers":["%s@0.0.0.0:8090"]}`, validatorAddr))
 
 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
-	resp, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err := suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -283,7 +283,7 @@ func (suite *KeeperTestSuite) TestRAFTMigration() {
 
 	// call setup()
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
-	resp, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: newConsensus.String(),
 		Msg:      msg1,
@@ -338,7 +338,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 	initChainSetup := []byte(fmt.Sprintf(`{"chain_id":"mythos_7000-14","consensus_params":{"block":{"max_bytes":22020096,"max_gas":-1},"evidence":{"max_age_num_blocks":100000,"max_age_duration":172800000000000,"max_bytes":1048576},"validator":{"pub_key_types":["ed25519"]},"version":{"app":0},"abci":{"vote_extensions_enable_height":0}},"validators":[{"address":"467F6127246A6E40B59899258DF08F857145B9CB","pub_key":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","voting_power":100000000000000,"proposer_priority":0}],"app_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","last_results_hash":"47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=","version":{"consensus":{"block":0,"app":0},"software":""},"validator_address":"467F6127246A6E40B59899258DF08F857145B9CB","validator_privkey":"LdBVBItkqjNrSqwDaFgxZaO7n8rN01dJ6I3BQ/9LTTyyEHHsa5cJ/tP4fAbB98T3fFY4KQjDM+mn+gqQyreGrA==","validator_pubkey":"shBx7GuXCf7T+HwGwffE93xWOCkIwzPpp/oKkMq3hqw=","peers":["%s@0.0.0.0:8090"]}`, validatorAddr))
 
 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"initChainSetup","value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(initChainSetup)))
-	resp, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp, err := suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: consensusBech32,
 		Msg:      msg1,
@@ -367,7 +367,7 @@ func (suite *KeeperTestSuite) TestTendermintMigration() {
 
 	// call setup()
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, consensusBech32))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   consensusBech32,
 		Contract: newConsensus.String(),
 		Msg:      msg1,
@@ -420,7 +420,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// Candidate -> Leader
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
-	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+	_, err = appA.App.NetworkKeeper.ExecuteEntryPointInternal(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: raftContractBech32,
 		Msg:      msg1,
@@ -483,7 +483,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// call setup()
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, appA.MustAccAddressToString(raftContract)))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
@@ -513,7 +513,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 
 	// call start()
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, appA.MustAccAddressToString(raftContract)))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
@@ -521,7 +521,7 @@ func (suite *KeeperTestSuite) TestRaftToTendermintMigration() {
 	suite.Require().NoError(err)
 
 	msg1 = []byte(`{"delay":"roundTimeout","state":"#Tendermint_0.initialized.prestart","intervalId":1}`)
-	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+	_, err = appA.App.NetworkKeeper.ExecuteEntryPointInternal(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   appA.MustAccAddressToString(tendermintContract),
 		Contract: appA.MustAccAddressToString(tendermintContract),
 		Msg:      msg1,
@@ -551,7 +551,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	// storageContract := wasmxtypes.AccAddressFromHex(wasmxtypes.ADDR_STORAGE_CHAIN)
 	// call start() on RAFT consensus
 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"start","params":[{"key":"address","value":"%s"}]}}}`, appA.MustAccAddressToString(raftContract)))
-	_, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	_, err := suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: raftContractBech32,
 		Msg:      msg1,
@@ -560,7 +560,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 
 	// Candidate -> Leader
 	msg1 = []byte(`{"delay":"electionTimeout","state":"#RAFT-FULL-1.initialized.Follower","intervalId":"1"}`)
-	_, err = appA.App.NetworkKeeper.ExecuteEntryPoint(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+	_, err = appA.App.NetworkKeeper.ExecuteEntryPointInternal(appA.Context(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 		Sender:   raftContractBech32,
 		Contract: raftContractBech32,
 		Msg:      msg1,
@@ -624,7 +624,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	txstr := base64.StdEncoding.EncodeToString(tx)
 
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
-	resp2, err := suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp2, err := suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   "consensus",
 		Contract: "consensus",
 		Msg:      msg1,
@@ -638,7 +638,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 	tx = appA.PrepareCosmosTx(sender, []sdk.Msg{execmsg}, nil, nil, "")
 	txstr = base64.StdEncoding.EncodeToString(tx)
 	msg1 = []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, txstr))
-	resp2, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	resp2, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   "consensus",
 		Contract: "consensus",
 		Msg:      msg1,
@@ -684,7 +684,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	initChainSetup := "eyJjaGFpbl9pZCI6Im15dGhvc183MDAwLTE0IiwiY29uc2Vuc3VzX3BhcmFtcyI6eyJibG9jayI6eyJtYXhfYnl0ZXMiOjIyMDIwMDk2LCJtYXhfZ2FzIjotMX0sImV2aWRlbmNlIjp7Im1heF9hZ2VfbnVtX2Jsb2NrcyI6MTAwMDAwLCJtYXhfYWdlX2R1cmF0aW9uIjoxNzI4MDAwMDAwMDAwMDAsIm1heF9ieXRlcyI6MTA0ODU3Nn0sInZhbGlkYXRvciI6eyJwdWJfa2V5X3R5cGVzIjpbImVkMjU1MTkiXX0sInZlcnNpb24iOnsiYXBwIjowfSwiYWJjaSI6eyJ2b3RlX2V4dGVuc2lvbnNfZW5hYmxlX2hlaWdodCI6MH19LCJ2YWxpZGF0b3JzIjpbeyJhZGRyZXNzIjoiODRFMjhCRThGODk4QzE5NTMxOEU1QTg0RDMxRERBMzU5NzlFMUMwQSIsInB1Yl9rZXkiOiI4aERqZkJqc1c4d3k3Z2MzVlNSZk9LMnVoTlljaWJIdDdHbkI3a2p3KytjPSIsInZvdGluZ19wb3dlciI6MTAwMDAwMDAwMDAwMDAwLCJwcm9wb3Nlcl9wcmlvcml0eSI6MH1dLCJhcHBfaGFzaCI6IjQ3REVRcGo4SEJTYSsvVEltVys1SkNldVFlUmttNU5NcEpXWkczaFN1RlU9IiwibGFzdF9yZXN1bHRzX2hhc2giOiI0N0RFUXBqOEhCU2ErL1RJbVcrNUpDZXVRZVJrbTVOTXBKV1pHM2hTdUZVPSIsImN1cnJlbnRfdmFsaWRhdG9yIjoiODRFMjhCRThGODk4QzE5NTMxOEU1QTg0RDMxRERBMzU5NzlFMUMwQSIsInZlcnNpb24iOnsiY29uc2Vuc3VzIjp7ImJsb2NrIjowLCJhcHAiOjB9LCJzb2Z0d2FyZSI6IiJ9fQ"
 // 	// await runFnOwner("run", machine, {event: {type: "setupNode", params: [{key: "currentNodeId", value: "0"},{key: "validatorNodesInfo", value: "[\"0.0.0.0:8090\"]"},{key: "initChainSetup", value: initChainSetup2}]}});
 // 	msg1 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"0"},{"key":"validatorNodesInfo","value":"[\"%s\",\"%s\"]"},{"key":"initChainSetup","value":"%s"}]}}}`, ip1, ip2, initChainSetup))
-// 	resp, err := mapp.NetworkKeeper.ExecuteContract(goctx1, &types.MsgExecuteContract{
+// 	resp, err := mapp.NetworkKeeper.ExecuteContractInternal(goctx1, &types.MsgExecuteContract{
 // 		Sender:   consensusBech32,
 // 		Contract: consensusBech32,
 // 		Msg:      msg1,
@@ -693,7 +693,7 @@ func (suite *KeeperTestSuite) TestRaftToAvaSnowmanMigration() {
 // 	log.Printf("Response: %+v", resp)
 
 // 	msg2 := []byte(fmt.Sprintf(`{"run":{"event":{"type":"setupNode","params":[{"key":"currentNodeId","value":"1"},{"key":"validatorNodesInfo","value":"[\"%s\",\"%s\"]"}]}}}`, ip1, ip2))
-// 	resp, err = mapp.NetworkKeeper.ExecuteContract(goctx2, &types.MsgExecuteContract{
+// 	resp, err = mapp.NetworkKeeper.ExecuteContractInternal(goctx2, &types.MsgExecuteContract{
 // 		Sender:   consensusBech32,
 // 		Contract: consensusBech32,
 // 		Msg:      msg2,

@@ -62,7 +62,7 @@ func (k KeeperBank) SendCoinsPrefixed(goCtx context.Context, fromAddr, toAddr mc
 		return err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,
@@ -104,7 +104,7 @@ func (k KeeperBank) MintCoins(goCtx context.Context, moduleName string, amounts 
 		return err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"MintCoins":%s}`, string(bankmsgbz)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,
@@ -139,7 +139,7 @@ func (k KeeperBank) SendCoinsFromModuleToAccountPrefixed(
 		return err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,
@@ -168,7 +168,7 @@ func (k KeeperBank) SendCoinsFromModuleToModule(
 		return err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,
@@ -202,7 +202,7 @@ func (k KeeperBank) SendCoinsFromAccountToModulePrefixed(
 		return err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"SendCoins":%s}`, string(bankmsgbz)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,

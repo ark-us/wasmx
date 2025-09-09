@@ -240,6 +240,7 @@ func LoggerExtended(ctx *Context) log.Logger {
 }
 
 func ExecuteWasmInterpreted(
+	wasmxAuthority string,
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	ctx sdk.Context,
@@ -270,6 +271,7 @@ func ExecuteWasmInterpreted(
 		rnh.GetVm().Cleanup()
 	}()
 	context := &Context{
+		WasmxAuthority:  wasmxAuthority,
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
 		Ctx:             ctx,
@@ -289,7 +291,7 @@ func ExecuteWasmInterpreted(
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for i := range dependencies {
 		dep := dependencies[i]
-		context.ContractRouter[dep.Address.String()] = &Context{ContractInfo: &dep}
+		context.ContractRouter[dep.Address.String()] = &Context{ContractInfo: &dep, WasmxAuthority: wasmxAuthority}
 	}
 
 	// add itself
@@ -352,6 +354,7 @@ func ExecuteWasmInterpreted(
 }
 
 func ExecuteWasm(
+	wasmxAuthority string,
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	ctx sdk.Context,
@@ -382,6 +385,7 @@ func ExecuteWasm(
 		rnh.GetVm().Cleanup()
 	}()
 	context := &Context{
+		WasmxAuthority:  wasmxAuthority,
 		GoRoutineGroup:  goRoutineGroup,
 		GoContextParent: goContextParent,
 		Ctx:             ctx,
@@ -412,7 +416,7 @@ func ExecuteWasm(
 
 	for i := range dependencies {
 		dep := dependencies[i]
-		context.ContractRouter[dep.Address.String()] = &Context{ContractInfo: &dep}
+		context.ContractRouter[dep.Address.String()] = &Context{ContractInfo: &dep, WasmxAuthority: wasmxAuthority}
 	}
 	// add itself
 	contractstr := env.Contract.Address.String()

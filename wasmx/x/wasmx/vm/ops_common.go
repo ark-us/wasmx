@@ -27,7 +27,8 @@ func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.
 	}
 	// cache it
 	ctx.ContractRouter[addr.String()] = &Context{
-		ContractInfo: dep,
+		WasmxAuthority: ctx.WasmxAuthority,
+		ContractInfo:   dep,
 	}
 	return dep
 }
@@ -229,6 +230,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	ctx.CurrentSubCallLevelCount += 1
 
 	newctx := &Context{
+		WasmxAuthority:           ctx.WasmxAuthority,
 		GoRoutineGroup:           ctx.GoRoutineGroup,
 		GoContextParent:          ctx.GoContextParent,
 		Ctx:                      tempCtx,
@@ -301,10 +303,11 @@ func cloneContractRouter(router map[string]*Context) map[string]*Context {
 	newrouter := make(map[string]*Context, 0)
 	for k := range router {
 		if router[k].ContractInfo == nil {
-			newrouter[k] = &Context{}
+			newrouter[k] = &Context{WasmxAuthority: router[k].WasmxAuthority}
 		} else {
 			newrouter[k] = &Context{
-				ContractInfo: router[k].ContractInfo.Clone(),
+				WasmxAuthority: router[k].WasmxAuthority,
+				ContractInfo:   router[k].ContractInfo.Clone(),
 			}
 		}
 	}

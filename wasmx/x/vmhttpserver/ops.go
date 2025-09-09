@@ -38,7 +38,7 @@ func StartWebServer(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		return prepareResponse(rnh, response)
 	}
 
-	httpSrv, websrvServer, httpSrvDone, err := StartWebsrv(ctx.GetCosmosHandler(), ctx.GoContextParent, ctx.GoRoutineGroup, ctx.Ctx.Logger(), &req.Config, mapp.GetActionExecutor(), ctx.Env.Contract.Address.String())
+	httpSrv, websrvServer, httpSrvDone, err := StartWebsrv(ctx.GetCosmosHandler(), ctx.GoContextParent, ctx.GoRoutineGroup, ctx.Ctx.Logger(), &req.Config, mapp.GetActionExecutor(), ctx.Env.Contract.Address.String(), ctx.WasmxAuthority)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)

@@ -11,8 +11,8 @@ import (
 // to avoid race conditions
 // but if used through cosmos router, we get race conditions at getting
 // the signers from the messages
-func (k *Keeper) Reentry(goCtx context.Context, msg *types.MsgReentry) (*types.MsgReentryResponse, error) {
-	res, err := k.reentryInternal(goCtx, msg.Sender, msg.Contract, msg.Msg, msg.EntryPoint)
+func (k *Keeper) ReentryInternal(goCtx context.Context, msg *types.MsgReentry) (*types.MsgReentryResponse, error) {
+	res, err := k.reentryInternalExecution(goCtx, msg.Sender, msg.Contract, msg.Msg, msg.EntryPoint)
 	if err != nil {
 		return nil, err
 	}

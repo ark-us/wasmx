@@ -345,6 +345,7 @@ func (c *Context) handleReentry(msg *ReentryCalldata) {
 	contractAddress := c.Env.Contract.Address
 
 	msgtosend := &networktypes.MsgReentryWithGoRoutine{
+		Authority:  c.WasmxAuthority,
 		Sender:     contractAddress.String(),
 		Contract:   contractAddress.String(),
 		EntryPoint: ENTRY_POINT_IMAP,

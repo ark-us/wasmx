@@ -44,7 +44,7 @@ func InitGenesisBank(ctx sdk.Context, k keeper.KeeperBank, genState types.BankGe
 		panic(err)
 	}
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_BANK,
 		Contract: wasmxtypes.ROLE_BANK,
 		Msg:      msgbz,
@@ -62,7 +62,7 @@ func InitGenesisGov(ctx sdk.Context, k keeper.KeeperGov, genState types.GovGenes
 		panic(err)
 	}
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
 		Msg:      msgbz,
@@ -81,7 +81,7 @@ func InitGenesisStaking(ctx sdk.Context, k keeper.KeeperStaking, genState types.
 	}
 
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	res, err := k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	res, err := k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_STAKING,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -130,7 +130,7 @@ func InitGenesisAuth(ctx sdk.Context, k keeper.KeeperAuth, genState types.AuthGe
 		panic(err)
 	}
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_AUTH,
 		Contract: wasmxtypes.ROLE_AUTH,
 		Msg:      msgbz,
@@ -151,7 +151,7 @@ func InitGenesisSlashing(ctx sdk.Context, k keeper.KeeperSlashing, genState slas
 		panic(err)
 	}
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_SLASHING,
 		Contract: wasmxtypes.ROLE_SLASHING,
 		Msg:      msgbz,
@@ -169,7 +169,7 @@ func InitGenesisDistribution(ctx sdk.Context, k keeper.KeeperDistribution, genSt
 		panic(err)
 	}
 	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_DISTRIBUTION,
 		Contract: wasmxtypes.ROLE_DISTRIBUTION,
 		Msg:      msgbz,

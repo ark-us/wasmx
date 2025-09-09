@@ -52,11 +52,9 @@ func (k *Keeper) MultiChainWrapInternal(ctx sdk.Context, msg *types.MsgMultiChai
 		return nil, err
 	}
 
-	// TODO route message &check owner is same as msg sender property ??
-
 	// TODO handle transaction verification!!!! here or by codec ??
 	// router := mcodec.MsgRouter{Router: app.MsgServiceRouter()}
-	evs, res, err := app.GetNetworkKeeper().ExecuteCosmosMsg(ctx, sdkmsg, owner)
+	evs, res, err := app.GetNetworkKeeper().ExecuteCosmosMsgInternal(ctx, sdkmsg, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +70,7 @@ func (k *Keeper) MultiChainWrapInternal(ctx sdk.Context, msg *types.MsgMultiChai
 // each transaction may affect only one chain or > 1, if they contain MsgExecuteCrossChainCallRequest messages
 // each transaction may contain multiple MsgExecuteCrossChainCallRequest messages, with multiple internal cross-chain transactions
 // TODO: ExecuteAtomicTx must not be nested inside other ExecuteAtomicTx
-func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
+func (k *Keeper) ExecuteAtomicTxInternal(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
 	// our atomic tx result channel - we use this to send our result
 	var newResultsChannel chan types.MsgExecuteAtomicTxResponse
 	// our cross-chain tx request channel - we receive contract calls from other chains
@@ -322,7 +320,7 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 				// we process only the first cross-chain call that calls this chain
 				// this is the entry in the subtx
 				if call.Request.ToChainId == ctx.ChainID() {
-					resp, err := k.ExecuteCrossChainTx(goCtx, &call.Request)
+					resp, err := k.ExecuteCrossChainTxInternal(goCtx, &call.Request)
 					// we compare the result with our expected result
 					errmsg := ""
 					if err != nil {
@@ -345,10 +343,10 @@ func (k *Keeper) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAto
 	return response, nil
 }
 
-// TODO can only be sent from wasmx, from a contract
+// can only be sent from wasmx, from a contract
 // we can check sender is a contract
 // ExecuteCrossChainTx calls a contract on another subchain
-func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainCallRequest) (*types.MsgExecuteCrossChainCallResponse, error) {
+func (k *Keeper) ExecuteCrossChainTxInternal(goCtx context.Context, msg *types.MsgExecuteCrossChainCallRequest) (*types.MsgExecuteCrossChainCallResponse, error) {
 	if msg.TimeoutMs == 0 {
 		return &types.MsgExecuteCrossChainCallResponse{Error: fmt.Sprintf("cross-chain tx invalid timeout %d", msg.TimeoutMs)}, nil
 	}
@@ -430,7 +428,7 @@ func (k *Keeper) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecut
 				// TODO if a subchain that we have access to calls this chain, then that subchain will initiate the crosschain request
 				// && !slices.Contains(multichainapp.ChainIds, call.Request.FromChainId)
 
-				resp, err := k.ExecuteCrossChainTx(goCtx, &call.Request)
+				resp, err := k.ExecuteCrossChainTxInternal(goCtx, &call.Request)
 				// we compare the result with our expected result
 				errmsg := ""
 				if err != nil {

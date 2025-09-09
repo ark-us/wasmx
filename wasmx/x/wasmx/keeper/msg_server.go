@@ -191,7 +191,7 @@ func (m msgServer) CompileContract(goCtx context.Context, msg *types.MsgCompileC
 
 	authority := m.Keeper.GetAuthority()
 	if authority != msg.Authority {
-		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "wasmx.CompileContract invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
 	ctx.EventManager().EmitEvent(sdk.NewEvent(

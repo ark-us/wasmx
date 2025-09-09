@@ -147,7 +147,7 @@ func (suite *KeeperTestSuite) TestConsensusUnauthorized() {
 	s.Require().NoError(err)
 	s.Require().True(res.IsErr(), "should have failed authorization")
 
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   senderPrefixed.String(),
 		Contract: consensusAddress.String(),
 		Msg:      msg1,

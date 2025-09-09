@@ -22,6 +22,7 @@ import (
 )
 
 type WasmxEngine struct {
+	wasmxAuthority  string
 	goRoutineGroup  *errgroup.Group
 	goContextParent context.Context
 	DataDir         string
@@ -33,6 +34,7 @@ type WasmxEngine struct {
 }
 
 func NewVM(
+	wasmxAuthority string,
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	dataDir string,
@@ -44,6 +46,7 @@ func NewVM(
 	wasmRuntime memc.IWasmVmMeta,
 ) (*WasmxEngine, error) {
 	return &WasmxEngine{
+		wasmxAuthority:  wasmxAuthority,
 		goRoutineGroup:  goRoutineGroup,
 		goContextParent: goContextParent,
 		DataDir:         dataDir,
@@ -102,10 +105,10 @@ func (k *WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm)
 	} else {
 		// TODO gas
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -129,9 +132,9 @@ func (k *WasmxEngine) Execute(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
 	}
 
 	if err != nil {
@@ -158,9 +161,9 @@ func (k *WasmxEngine) ExecuteEntryPoint(
 
 	// TODO if it has interpreter deps
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
 	}
 
 	if err != nil {
@@ -189,9 +192,9 @@ func (k *WasmxEngine) Reply(
 	}
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm)
 	}
 
 	if err != nil {
@@ -215,9 +218,9 @@ func (k *WasmxEngine) QueryExecute(
 	var data types.ContractResponse
 	var err error
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm)
 	} else {
-		data, err = vm.ExecuteWasm(k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm)
 	}
 	if err != nil {
 		return data, 0, err

@@ -134,7 +134,7 @@ func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
 		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))
-		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+		res, err := networkServer.ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_HOOKS_NONC,
 			Contract: wasmxtypes.ROLE_HOOKS_NONC,
 			Msg:      msg,
@@ -181,7 +181,7 @@ func SetupNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.N
 		}
 		initData := base64.StdEncoding.EncodeToString(initbz)
 		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":"%s"}}`, wasmxtypes.HOOK_SETUP_NODE, initData))
-		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+		res, err := networkServer.ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_HOOKS_NONC,
 			Contract: wasmxtypes.ROLE_HOOKS_NONC,
 			Msg:      msg,
@@ -272,7 +272,7 @@ func InitializeSingleConsensusContracts(mythosapp mcfg.MythosApp, logger log.Log
 func ConsensusTx(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, msg []byte) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-		res, err := networkServer.ExecuteContract(ctx, &types.MsgExecuteContract{
+		res, err := networkServer.ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg,

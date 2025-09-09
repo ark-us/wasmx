@@ -21,6 +21,7 @@ type WebsrvServer struct {
 	cfg            *WebsrvConfig
 	actionExecutor cfg.ActionExecutor
 	senderAddress  string
+	wasmxAuthority string
 }
 
 func NewWebsrvServer(
@@ -30,6 +31,7 @@ func NewWebsrvServer(
 	config *WebsrvConfig,
 	actionExecutor cfg.ActionExecutor,
 	senderAddress string,
+	wasmxAuthority string,
 ) *WebsrvServer {
 	return &WebsrvServer{
 		coreHandler:    coreHandler,
@@ -38,6 +40,7 @@ func NewWebsrvServer(
 		cfg:            config,
 		actionExecutor: actionExecutor,
 		senderAddress:  senderAddress,
+		wasmxAuthority: wasmxAuthority,
 	}
 }
 
@@ -98,6 +101,7 @@ func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, 
 	}
 
 	msg := &networktypes.MsgReentry{
+		Authority:  k.wasmxAuthority,
 		Sender:     k.senderAddress,
 		Contract:   contractAddress,
 		EntryPoint: ENTRY_POINT_HTTP_SERVER,

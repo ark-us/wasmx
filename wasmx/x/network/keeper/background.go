@@ -12,7 +12,7 @@ import (
 )
 
 // internal method
-func (k *Keeper) StartBackgroundProcess(goCtx context.Context, msg *types.MsgStartBackgroundProcessRequest) (*types.MsgStartBackgroundProcessResponse, error) {
+func (k *Keeper) StartBackgroundProcessInternal(goCtx context.Context, msg *types.MsgStartBackgroundProcessRequest) (*types.MsgStartBackgroundProcessResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.goRoutineGroup.Go(func() error {
 		err := k.startBackgroundProcessInternalGoroutine(ctx, msg)
@@ -46,7 +46,7 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.Logger(ctx).Info("background process started", "description", description)
-		err := k.startBackgroundProcessInternal(contractAddr, senderAddr, msg.Args)
+		err := k.startBackgroundProcessInternalExecution(contractAddr, senderAddr, msg.Args)
 		if err != nil {
 			k.Logger(ctx).Error("background process failed", "description", description, "err", err)
 			errCh <- err
@@ -67,7 +67,7 @@ func (k *Keeper) startBackgroundProcessInternalGoroutine(
 	}
 }
 
-func (k *Keeper) startBackgroundProcessInternal(
+func (k *Keeper) startBackgroundProcessInternalExecution(
 	contractAddr mcodec.AccAddressPrefixed,
 	senderAddr mcodec.AccAddressPrefixed,
 	msgbz []byte,

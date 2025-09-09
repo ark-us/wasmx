@@ -32,7 +32,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	// 0x100000
 	msg := []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":[],"proposer":"%s","initial_deposit":[{"denom":"amyt","amount":"1048576"}],"metadata":"metadata","title":"title","summary":"summary","expedited":false}}`, senderAddrStr))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,
 		Msg:      msg,
@@ -47,7 +47,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	// 0x100000
 	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":2,"voter":"%s","amount":"1048576","arbitration_amount":"0","metadata":"metadata"}}`, senderAddrStr))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,
 		Msg:      msg,
@@ -80,7 +80,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	// 0x100000
 	msg = []byte(fmt.Sprintf(`{"AddProposalOption":{"proposal_id":1,"option":{"messages":[],"proposer":"%s","amount":"1048576","arbitration_amount":"0","metadata":"metadata","title":"title","summary":"summary"}}}`, senderAddrStr))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,
 		Msg:      msg,
@@ -96,7 +96,7 @@ func (suite *KeeperTestSuite) TestContinuousVoting() {
 
 	// 0x400000
 	msg = []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":1,"option_id":3,"voter":"%s","amount":"4194304","arbitration_amount":"0","metadata":"metadata"}}`, senderAddrStr))
-	_, err = suite.App().NetworkKeeper.ExecuteContract(appA.Context(), &networktypes.MsgExecuteContract{
+	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_GOVERNANCE,
 		Contract: govAddress,
 		Msg:      msg,

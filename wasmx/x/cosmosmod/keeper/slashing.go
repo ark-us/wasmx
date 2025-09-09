@@ -192,7 +192,7 @@ func (k KeeperSlashing) ContractModuleExecution(ctx sdk.Context, fname string, r
 		return nil, err
 	}
 	msgbz2 := []byte(fmt.Sprintf(`{"%s":%s}`, fname, string(msgbz)))
-	_, err = k.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = k.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_SLASHING,
 		Contract: wasmxtypes.ROLE_SLASHING,
 		Msg:      msgbz2,

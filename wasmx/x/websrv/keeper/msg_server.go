@@ -129,7 +129,7 @@ func (m msgServer) RegisterRoute(goCtx context.Context, msg *types.MsgRegisterRo
 
 	authority := m.Keeper.GetAuthority()
 	if authority != msg.Authority {
-		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "websrv.RegisterRoute invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
 	contractAddress, err := m.AddressCodec().StringToBytes(msg.ContractAddress)
@@ -157,7 +157,7 @@ func (m msgServer) DeregisterRoute(goCtx context.Context, msg *types.MsgDeregist
 
 	authority := m.Keeper.GetAuthority()
 	if authority != msg.Authority {
-		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "websrv.DeregisterRoute invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
 	contractAddress, err := m.AddressCodec().StringToBytes(msg.ContractAddress)

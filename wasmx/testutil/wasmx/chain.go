@@ -488,7 +488,7 @@ func (chain TestChain) InitConsensusContract(resInit *abci.ResponseInitChain, no
 	}
 	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
 	appA := chain.suite.GetAppContext(&chain)
-	_, err = chain.GetApp().NetworkKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+	_, err = chain.GetApp().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg,
@@ -613,7 +613,7 @@ func (chain TestChain) AddToMempoolFSM(txs [][]byte) ([]*types.MsgExecuteContrac
 		resps := make([]*types.MsgExecuteContractResponse, 0)
 		for _, tx := range txs {
 			msg := []byte(fmt.Sprintf(`{"run":{"event":{"type":"newTransaction","params":[{"key":"transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-			resp, err := chain.App.NetworkKeeper.ExecuteContract(chain.GetContext(), &types.MsgExecuteContract{
+			resp, err := chain.App.NetworkKeeper.ExecuteContractInternal(chain.GetContext(), &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg,
@@ -656,7 +656,7 @@ func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
 	cb := func(blockDelay, currentState, lastInterval string) func(goctx context.Context) (any, error) {
 		return func(goctx context.Context) (any, error) {
 			msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
-			_, err := chain.App.NetworkKeeper.ExecuteEntryPoint(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			_, err := chain.App.NetworkKeeper.ExecuteEntryPointInternal(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg1,
@@ -796,7 +796,7 @@ func (chain TestChain) raftToLeader() {
 	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "initialized.Follower") {
 		lastInterval := chain.GetLastIntervalIdByStateKey(chain.GetContext(), currentState, "electionTimeout")
 		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
-		_, err := chain.App.NetworkKeeper.ExecuteEntryPoint(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+		_, err := chain.App.NetworkKeeper.ExecuteEntryPointInternal(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_CONSENSUS,
 			Contract: wasmxtypes.ROLE_CONSENSUS,
 			Msg:      msg1,
@@ -814,7 +814,7 @@ func (chain TestChain) raftToLeader() {
 		if strings.Contains(currentState, "Candidate") {
 			lastInterval := chain.GetLastIntervalIdByStateKey(chain.GetContext(), currentState, "electionTimeout")
 			msg1 = []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
-			_, err = chain.App.NetworkKeeper.ExecuteEntryPoint(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			_, err = chain.App.NetworkKeeper.ExecuteEntryPointInternal(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg1,

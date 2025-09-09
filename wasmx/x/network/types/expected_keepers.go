@@ -19,6 +19,7 @@ type WasmxKeeper interface {
 	ExecuteEntryPoint(ctx sdk.Context, entryPoint string, contractAddress mcodec.AccAddressPrefixed, caller mcodec.AccAddressPrefixed, msg []byte, dependencies []string, inBackground bool) ([]byte, error)
 	ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, *wasmxtypes.CodeInfo, []byte, error)
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
+	IsInternalContract(ctx sdk.Context, addressOrRole string) (bool, error)
 	GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, error)
 
 	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
@@ -32,7 +33,7 @@ type WasmxKeeper interface {
 }
 
 type WasmxWrapper interface {
-	ExecuteContract(ctx sdk.Context, req *MsgExecuteContract) (*MsgExecuteContractResponse, error)
+	ExecuteContractInternal(ctx sdk.Context, req *MsgExecuteContract) (*MsgExecuteContractResponse, error)
 	// QueryContract
 	QueryContract(ctx sdk.Context, req *MsgQueryContract) (*MsgQueryContractResponse, error)
 	GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, error)

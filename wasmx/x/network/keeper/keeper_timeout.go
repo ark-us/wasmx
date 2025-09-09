@@ -12,9 +12,7 @@ import (
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
-// TODO this must not be called from outside, only from wasmx... (authority)
-// maybe only from the contract that the interval is for?
-func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
+func (k *Keeper) StartTimeoutInternal(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.goRoutineGroup.Go(func() error {
 		err := k.startTimeoutInternalGoroutine(msg, ctx.ChainID())
@@ -26,8 +24,7 @@ func (k *Keeper) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutR
 	return &types.MsgStartTimeoutResponse{}, nil
 }
 
-// TODO make sure this is not be called from outside, only from wasmx
-func (k *Keeper) CancelTimeout(goCtx context.Context, msg *types.MsgCancelTimeoutRequest) (*types.MsgCancelTimeoutResponse, error) {
+func (k *Keeper) CancelTimeoutInternal(goCtx context.Context, msg *types.MsgCancelTimeoutRequest) (*types.MsgCancelTimeoutResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp := &types.MsgCancelTimeoutResponse{}
 
@@ -70,7 +67,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("eventual execution triggered", "description", description)
-		err := k.startTimeoutInternal(goctx, description, msg, chainId)
+		err := k.startTimeoutInternalExecution(goctx, description, msg, chainId)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("eventual execution failed", "err", err, "description", description)
 			errCh <- err
@@ -90,7 +87,7 @@ func (k *Keeper) startTimeoutInternalGoroutine(
 	}
 }
 
-func (k *Keeper) startTimeoutInternal(
+func (k *Keeper) startTimeoutInternalExecution(
 	goctx context.Context,
 	description string,
 	msg *types.MsgStartTimeoutRequest,
@@ -118,7 +115,7 @@ func (k *Keeper) startTimeoutInternal(
 			Contract: msg.Contract,
 			Msg:      msg.Args,
 		}
-		res, err := k.ExecuteEntryPoint(ctx, wasmxtypes.ENTRY_POINT_TIMED, execmsg)
+		res, err := k.ExecuteEntryPointInternal(ctx, wasmxtypes.ENTRY_POINT_TIMED, execmsg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("Closing eventual thread", "description", description, err.Error())

@@ -502,6 +502,11 @@ func NewApp(
 		panic(err)
 	}
 
+	wasmxAuthorityAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(wasmxmoduletypes.ModuleName))
+	if err != nil {
+		panic(err)
+	}
+
 	app.ParamsKeeper = initParamsKeeper(
 		appCodec,
 		cdc,
@@ -559,6 +564,7 @@ func NewApp(
 		app.MsgServiceRouter(),
 		app.GRPCQueryRouter(),
 		govAuthorityAddr,
+		wasmxAuthorityAddr,
 		valCodec,
 		consCodec,
 		addrCodec,
@@ -574,6 +580,7 @@ func NewApp(
 		app.actionExecutor,
 		// TODO remove authority?
 		govAuthorityAddr,
+		wasmxAuthorityAddr,
 	)
 	networkModule := networkmodule.NewAppModule(wasmVmMeta, appCodec, app.NetworkKeeper, app, NewAppCreator)
 
@@ -1181,7 +1188,7 @@ func (app *App) BeginBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (s
 		}
 		reqbas64 := base64.StdEncoding.EncodeToString(reqbz)
 		msgbz := []byte(fmt.Sprintf(`{"RunHook":{"hook":"BeginBlock","data":"%s"}}`, reqbas64))
-		_, err = app.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		_, err = app.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 			Sender:   wasmxmoduletypes.ROLE_CONSENSUS, // TODO role baseapp ?
 			Contract: wasmxmoduletypes.ROLE_HOOKS,
 			Msg:      msgbz,
@@ -1205,7 +1212,7 @@ func (app *App) EndBlocker(ctx sdk.Context, metadata []byte) (sdk.EndBlock, erro
 	if app.LastBlockHeight() > 1 {
 		metabase64 := base64.StdEncoding.EncodeToString(metadata)
 		msgbz := []byte(fmt.Sprintf(`{"RunHook":{"hook":"EndBlock","data":"%s"}}`, metabase64))
-		_, err := app.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+		_, err := app.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 			Sender:   wasmxmoduletypes.ROLE_CONSENSUS, // TODO role baseapp ?
 			Contract: wasmxmoduletypes.ROLE_HOOKS,
 			Msg:      msgbz,

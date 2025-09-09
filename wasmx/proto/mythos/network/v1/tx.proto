@@ -66,32 +66,34 @@ message MsgExecuteCrossChainCallResponseIndexed {
 
 message MsgExecuteCrossChainCallRequest {
     option (amino.name) = "network/MsgExecuteCrossChainCallRequest";
-    option (cosmos.msg.v1.signer) = "sender";
+    option (cosmos.msg.v1.signer) = "authority";
 
     option (gogoproto.equal)           = false;
     option (gogoproto.goproto_getters) = true;
 
+    // authority is the address that controls the module.
+	string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // sender is the contract that prepared the message
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // from is the contract that sent the cross-chain message
-    string from = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string from = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // to is the address of the smart contract on the current chain
-    string to = 3;
+    string to = 4;
     // Msg json encoded message to be passed to the contract
-    bytes msg = 4;
+    bytes msg = 5;
     // Funds coins that are transferred to the contract on execution
-    repeated cosmos.base.v1beta1.Coin funds = 5 [
+    repeated cosmos.base.v1beta1.Coin funds = 6 [
         (gogoproto.nullable) = false,
         (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
     ];
     // Array of either hex-encoded contract addresses or contract labels
     // on which the execution of this message depends on
-    repeated string dependencies = 6;
-    string from_chain_id = 7;
-    string to_chain_id = 8;
-    bool is_query = 9;
+    repeated string dependencies = 7;
+    string from_chain_id = 8;
+    string to_chain_id = 9;
+    bool is_query = 10;
     // timeout in miliseconds for this cross-chain call
-    uint64 timeout_ms = 10;
+    uint64 timeout_ms = 11;
 }
 
 message MsgExecuteCrossChainCallResponse {
@@ -119,13 +121,14 @@ message MsgMultiChainWrapResponse {
 }
 
 message MsgGrpcSendRequest {
-    option (cosmos.msg.v1.signer) = "sender";
-    // this will always be the network module
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string ip_address = 3;
-	bytes data = 4;
-    string encoding = 5; // evm, json, protobuf // ?
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string ip_address = 4;
+	bytes data = 5;
+    string encoding = 6; // evm, json, protobuf // ?
 }
 
 message MsgGrpcSendRequestResponse {
@@ -133,12 +136,13 @@ message MsgGrpcSendRequestResponse {
 }
 
 message MsgGrpcReceiveRequest {
-    option (cosmos.msg.v1.signer) = "sender";
-    // this will always be the network module
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-	bytes data = 3;
-    string encoding = 4; // evm, json, protobuf // ?
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+	bytes data = 4;
+    string encoding = 5; // evm, json, protobuf // ?
 }
 
 message MsgGrpcReceiveRequestResponse {
@@ -147,14 +151,15 @@ message MsgGrpcReceiveRequestResponse {
 
 // MsgStartTimeoutRequest
 message MsgStartTimeoutRequest {
-    option (cosmos.msg.v1.signer) = "sender";
-    // this will always be the wasmx module // TODO authority
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // contract address
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    int64 delay = 3;
-    bytes args = 4;
-    string id = 5;
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    int64 delay = 4;
+    bytes args = 5;
+    string id = 6;
 }
 
 // MsgStartTimeoutResponse
@@ -162,9 +167,11 @@ message MsgStartTimeoutResponse {}
 
 // MsgCancelTimeoutRequest
 message MsgCancelTimeoutRequest {
-    option (cosmos.msg.v1.signer) = "sender";
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string id = 2;
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string id = 3;
 }
 
 // MsgStartTimeoutResponse
@@ -172,12 +179,13 @@ message MsgCancelTimeoutResponse {}
 
 // MsgStartBackgroundProcessRequest
 message MsgStartBackgroundProcessRequest {
-    option (cosmos.msg.v1.signer) = "sender";
-    // this will always be the wasmx module // TODO authority
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // contract address
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    bytes args = 3;
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    bytes args = 4;
 }
 
 // MsgStartBackgroundProcessResponse
@@ -189,7 +197,7 @@ message MsgExecuteContract {
     option (cosmos.msg.v1.signer) = "sender";
     // Sender is the that actor that signed the messages
     string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    // Contract is the address of the smart contract
+    // Contract is the address or role of the smart contract
     string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // Msg json encoded message to be passed to the contract
     bytes msg = 3;
@@ -210,12 +218,14 @@ message MsgExecuteContractResponse {
 
 // MsgReentry
 message MsgReentry {
-    option (cosmos.msg.v1.signer) = "sender";
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // contract address
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string entry_point = 3;
-    bytes msg = 4;
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string entry_point = 4;
+    bytes msg = 5;
 }
 
 // MsgReentryResponse
@@ -225,12 +235,14 @@ message MsgReentryResponse {
 
 // MsgReentryWithGoRoutine
 message MsgReentryWithGoRoutine {
-    option (cosmos.msg.v1.signer) = "sender";
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+    string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
     // contract address
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string entry_point = 3;
-    bytes msg = 4;
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string entry_point = 4;
+    bytes msg = 5;
 }
 
 // MsgReentryWithGoRoutineResponse
@@ -263,11 +275,12 @@ message MsgQueryContractResponse {
 }
 
 message MsgP2PReceiveMessageRequest {
-    option (cosmos.msg.v1.signer) = "sender";
-    // this will always be the network module
-    string sender = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-    string contract = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
-	bytes data = 3;
+    option (cosmos.msg.v1.signer) = "authority";
+    // authority is the address that controls the module.
+	string authority = 1 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string sender = 2 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+    string contract = 3 [(cosmos_proto.scalar) = "cosmos.AddressString"];
+	bytes data = 4;
 }
 
 message MsgP2PReceiveMessageResponse {}

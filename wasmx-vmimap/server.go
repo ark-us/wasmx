@@ -586,8 +586,8 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldataServer) ([]byte, err
 
 	contractAddress := ctx.Env.Contract.Address
 
-
 	msgtosend := &networktypes.MsgReentry{
+		Authority:  ctx.WasmxAuthority,
 		Sender:     contractAddress.String(),
 		Contract:   contractAddress.String(),
 		EntryPoint: ENTRY_POINT_IMAP_SERVER,

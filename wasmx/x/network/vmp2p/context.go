@@ -106,9 +106,10 @@ func (c *Context) handleMessage(netmsg P2PMessage, contractAddress string, sende
 	}
 
 	msgtosend := &networktypes.MsgP2PReceiveMessageRequest{
-		Sender:   senderAddress,
-		Contract: contractAddress,
-		Data:     netmsgbz,
+		Authority: c.Context.WasmxAuthority,
+		Sender:    senderAddress,
+		Contract:  contractAddress,
+		Data:      netmsgbz,
 	}
 	_, _, err = c.Context.CosmosHandler.ExecuteCosmosMsg(msgtosend)
 	if err != nil {

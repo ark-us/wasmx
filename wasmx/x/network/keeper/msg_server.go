@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	errortypes "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -21,7 +23,7 @@ type msgServer struct {
 
 type MsgServerInternal interface {
 	types.MsgServer
-	ExecuteContract(ctx sdk.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error)
+	ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error)
 }
 
 // NewMsgServerImpl returns an implementation of the MsgServer interface
@@ -45,7 +47,7 @@ func (m msgServer) BroadcastTx(goCtx context.Context, msg *types.RequestBroadcas
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	msgbz := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(msg.Tx)))
-	rresp, err := m.Keeper.ExecuteContract(ctx, &types.MsgExecuteContract{
+	rresp, err := m.Keeper.ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 		Sender:   wasmxtypes.ROLE_CONSENSUS,
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msgbz,
@@ -96,13 +98,20 @@ func (m msgServer) MultiChainWrap(goCtx context.Context, msg *types.MsgMultiChai
 func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSendRequest) (*types.MsgGrpcSendRequestResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.GrpcSendRequest invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+
 	ip := msg.IpAddress
 	client := StartGRPCClient(ip)
 	req := &types.MsgGrpcReceiveRequest{
-		Data:     msg.Data,
-		Sender:   msg.Sender,
-		Contract: msg.Contract,
-		Encoding: msg.Encoding,
+		Authority: authority,
+		Data:      msg.Data,
+		Sender:    msg.Sender,
+		Contract:  msg.Contract,
+		Encoding:  msg.Encoding,
 	}
 	res, err := client.GrpcReceiveRequest(ctx, req)
 	if err != nil {
@@ -118,12 +127,18 @@ func (m msgServer) GrpcSendRequest(goCtx context.Context, msg *types.MsgGrpcSend
 func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcReceiveRequest) (*types.MsgGrpcReceiveRequestResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.GrpcReceiveRequest invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+
 	msg2 := &types.MsgExecuteContract{
 		Sender:   msg.Sender,
 		Contract: msg.Contract,
 		Msg:      msg.Data,
 	}
-	resp, err := m.Keeper.ExecuteContract(ctx, msg2)
+	resp, err := m.Keeper.ExecuteContractInternal(ctx, msg2)
 
 	if err != nil {
 		return nil, err
@@ -135,34 +150,75 @@ func (m msgServer) GrpcReceiveRequest(goCtx context.Context, msg *types.MsgGrpcR
 }
 
 func (m msgServer) Reentry(goCtx context.Context, msg *types.MsgReentry) (*types.MsgReentryResponse, error) {
-	return m.Keeper.Reentry(goCtx, msg)
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.Reentry invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.ReentryInternal(goCtx, msg)
 }
 
 func (m msgServer) ReentryWithGoRoutine(goCtx context.Context, msg *types.MsgReentryWithGoRoutine) (*types.MsgReentryWithGoRoutineResponse, error) {
-	return m.Keeper.ReentryWithGoRoutine(goCtx, msg)
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.ReentryWithGoRoutine invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.ReentryWithGoRoutineInternal(goCtx, msg)
 }
 
-// TODO this must not be called from outside, only from wasmx... (authority)
-// only from the contract that the interval is for?
 func (m msgServer) StartTimeout(goCtx context.Context, msg *types.MsgStartTimeoutRequest) (*types.MsgStartTimeoutResponse, error) {
-	return m.Keeper.StartTimeout(goCtx, msg)
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.StartTimeout invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.StartTimeoutInternal(goCtx, msg)
 }
 
-// TODO this must not be called from outside, only from wasmx... (authority)
-// maybe only from the contract that the background process is for ?
+func (m msgServer) CancelTimeout(goCtx context.Context, msg *types.MsgCancelTimeoutRequest) (*types.MsgCancelTimeoutResponse, error) {
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.CancelTimeout invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.CancelTimeoutInternal(goCtx, msg)
+}
+
 func (m msgServer) StartBackgroundProcess(goCtx context.Context, msg *types.MsgStartBackgroundProcessRequest) (*types.MsgStartBackgroundProcessResponse, error) {
-	// TODO only started from wasmx, only by system contracts
-	return m.Keeper.StartBackgroundProcess(goCtx, msg)
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.StartBackgroundProcess invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.StartBackgroundProcessInternal(goCtx, msg)
 }
 
 func (m msgServer) P2PReceiveMessage(goCtx context.Context, msg *types.MsgP2PReceiveMessageRequest) (*types.MsgP2PReceiveMessageResponse, error) {
-	return m.Keeper.P2PReceiveMessage(goCtx, msg)
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.P2PReceiveMessage invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.P2PReceiveMessageInternal(goCtx, msg)
 }
 
+// external, we have a custom function to extract the signer here
 func (m msgServer) ExecuteAtomicTx(goCtx context.Context, msg *types.MsgExecuteAtomicTxRequest) (*types.MsgExecuteAtomicTxResponse, error) {
-	return m.Keeper.ExecuteAtomicTx(goCtx, msg)
+	return m.Keeper.ExecuteAtomicTxInternal(goCtx, msg)
 }
 
 func (m msgServer) ExecuteCrossChainTx(goCtx context.Context, msg *types.MsgExecuteCrossChainCallRequest) (*types.MsgExecuteCrossChainCallResponse, error) {
-	return m.Keeper.ExecuteCrossChainTx(goCtx, msg)
+	// only internal requests
+	authority := m.Keeper.GetWasmxAuthority()
+	if authority != msg.Authority {
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "network.ExecuteCrossChainTx invalid authority; expected %s, got %s", authority, msg.Sender)
+	}
+	return m.Keeper.ExecuteCrossChainTxInternal(goCtx, msg)
+}
+
+// it can be called by users
+// if the user tries to impersonate a role, it will fail when trying to get the signers & verify signatures
+func (m msgServer) ExecuteContract(goCtx context.Context, msg *types.MsgExecuteContract) (*types.MsgExecuteContractResponse, error) {
+	return m.Keeper.ExecuteContractInternal(sdk.UnwrapSDKContext(goCtx), msg)
 }

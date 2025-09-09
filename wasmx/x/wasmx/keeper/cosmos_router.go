@@ -288,7 +288,7 @@ func (k *Keeper) ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.Acc
 	}
 
 	if !authorized {
-		authorized = signerstr == k.authority
+		authorized = signerstr == k.authority || signerstr == k.wasmxAuthority
 	}
 	if !authorized {
 		return nil, nil, sdkerrors.ErrUnauthorized.Wrapf("wasmx cosmos message signer %s, expected %s for %s", signerstr, owner.String(), sdk.MsgTypeURL(msg))

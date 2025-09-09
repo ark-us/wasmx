@@ -203,7 +203,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 						c.logger.Info("ABCIClient.BroadcastTxAsync executing consensusless or consensusmeta contract", "address", contractAddress.String())
 
 						// we sent directly to the contract
-						rresp, err := c.nk.ExecuteContract(ctx, &types.MsgExecuteContract{
+						rresp, err := c.nk.ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 							Sender:   msgExec.Sender, // sender will be taken from decoded tx
 							Contract: contractAddress.String(),
 							Msg:      []byte(fmt.Sprintf(`{"HandleTx":"%s"}`, base64.StdEncoding.EncodeToString(tx))),
@@ -218,7 +218,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			}
 
 			msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
-			rresp, err := mapp.GetNetworkKeeper().ExecuteContract(ctx, &types.MsgExecuteContract{
+			rresp, err := mapp.GetNetworkKeeper().ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
 				Msg:      msg,

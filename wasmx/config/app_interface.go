@@ -50,8 +50,8 @@ type ActionExecutor interface {
 
 type NetworkKeeper interface {
 	// WasmxWrapper
-	ExecuteContract(ctx sdk.Context, msg *networktypes.MsgExecuteContract) (*networktypes.MsgExecuteContractResponse, error)
-	ExecuteCosmosMsg(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
+	ExecuteContractInternal(ctx sdk.Context, msg *networktypes.MsgExecuteContract) (*networktypes.MsgExecuteContractResponse, error)
+	ExecuteCosmosMsgInternal(ctx sdk.Context, msg sdk.Msg, owner mcodec.AccAddressPrefixed) ([]sdk.Event, []byte, error)
 	QueryContract(ctx sdk.Context, req *networktypes.MsgQueryContract) (*networktypes.MsgQueryContractResponse, error)
 
 	GetContractInfo(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*wasmxtypes.ContractInfo, error)

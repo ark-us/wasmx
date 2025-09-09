@@ -120,6 +120,8 @@ func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta, g *errgroup.Group, g
 
 	govAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(govtypes.ModuleName))
 	require.NoError(t, err)
+	wasmxAddr, err := addrCodec.BytesToString(authtypes.NewModuleAddress(types.ModuleName))
+	require.NoError(t, err)
 
 	// transferKeeper := ibctransferkeeper.NewKeeper(
 	// 	cdc,
@@ -158,6 +160,7 @@ func WasmxKeeper(t testing.TB, wasmVmMeta memc.IWasmVmMeta, g *errgroup.Group, g
 		nil,
 		nil,
 		govAddr,
+		wasmxAddr,
 		valCodec,
 		consCodec,
 		addrCodec,

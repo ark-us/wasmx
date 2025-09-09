@@ -8,7 +8,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/types"
 )
 
-func (k *Keeper) ReentryWithGoRoutine(goCtx context.Context, msg *types.MsgReentryWithGoRoutine) (*types.MsgReentryWithGoRoutineResponse, error) {
+func (k *Keeper) ReentryWithGoRoutineInternal(goCtx context.Context, msg *types.MsgReentryWithGoRoutine) (*types.MsgReentryWithGoRoutineResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	k.goRoutineGroup.Go(func() error {
 		err := k.reentryInternalGoroutine(msg, ctx.ChainID())
@@ -41,7 +41,7 @@ func (k *Keeper) reentryInternalGoroutine(
 	defer close(errCh)
 	go func() {
 		k.actionExecutor.GetLogger().Debug("contract reentry triggered", "entry_point", msg.EntryPoint)
-		_, err := k.reentryInternal(goctx, msg.Sender, msg.Contract, msg.Msg, msg.EntryPoint)
+		_, err := k.reentryInternalExecution(goctx, msg.Sender, msg.Contract, msg.Msg, msg.EntryPoint)
 		if err != nil {
 			k.actionExecutor.GetLogger().Error("reentry execution failed", "err", err, "entry_point", msg.EntryPoint)
 			errCh <- err
@@ -62,7 +62,7 @@ func (k *Keeper) reentryInternalGoroutine(
 	}
 }
 
-func (k *Keeper) reentryInternal(
+func (k *Keeper) reentryInternalExecution(
 	goctx context.Context,
 	senderAddress string,
 	contractAddress string,
@@ -78,7 +78,7 @@ func (k *Keeper) reentryInternal(
 			Contract: contractAddress,
 			Msg:      msg,
 		}
-		res, err := k.ExecuteEntryPoint(ctx, entryPoint, execmsg)
+		res, err := k.ExecuteEntryPointInternal(ctx, entryPoint, execmsg)
 		if err != nil {
 			if err == types.ErrGoroutineClosed {
 				k.actionExecutor.GetLogger().Error("Closing reentry thread", "entry_point", entryPoint, err.Error())

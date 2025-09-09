@@ -22,9 +22,9 @@ func NewMsgAuthServerImpl(keeper *KeeperAuth) authtypes.MsgServer {
 var _ authtypes.MsgServer = msgAuthServer{}
 
 func (m msgAuthServer) UpdateParams(goCtx context.Context, msg *authtypes.MsgUpdateParams) (*authtypes.MsgUpdateParamsResponse, error) {
-	if m.Keeper.authority != msg.Authority {
+	if m.Keeper.GetAuthority() != msg.Authority {
 		return nil, fmt.Errorf(
-			"expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
+			"auth.UpdateParams: expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
 			m.Keeper.authority, msg.Authority)
 	}
 

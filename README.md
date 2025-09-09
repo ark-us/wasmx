@@ -1,4 +1,4 @@
-# wasmX
+# wasmX [![CI](https://github.com/ark-us/wasmx/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/ark-us/wasmx/actions/workflows/test.yml)
 
 The only WASM-modular blockchain engine capable of regeneration and metamorphosis.
 
@@ -22,7 +22,7 @@ This is a self-funded effort: one lead software architect [@ctzurcanu](https://g
 ## NOT PRODUCTION READY
 
 You will encounter bugs and incomplete features.
-There are known security issues. This is a work in progress.
+This is a work in progress.
 
 ## WHY?
 

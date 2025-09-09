@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -57,6 +58,11 @@ func (m msgDistributionServer) FundCommunityPool(goCtx context.Context, msg *dis
 }
 
 func (m msgDistributionServer) UpdateParams(goCtx context.Context, msg *distributiontypes.MsgUpdateParams) (*distributiontypes.MsgUpdateParamsResponse, error) {
+	if m.Keeper.GetAuthority() != msg.Authority {
+		return nil, fmt.Errorf(
+			"distribution.UpdateParams: expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
+			m.Keeper.authority, msg.Authority)
+	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := m.Keeper.UpdateParams(ctx, msg)
 	if err != nil {
@@ -66,6 +72,11 @@ func (m msgDistributionServer) UpdateParams(goCtx context.Context, msg *distribu
 }
 
 func (m msgDistributionServer) CommunityPoolSpend(goCtx context.Context, msg *distributiontypes.MsgCommunityPoolSpend) (*distributiontypes.MsgCommunityPoolSpendResponse, error) {
+	if m.Keeper.GetAuthority() != msg.Authority {
+		return nil, fmt.Errorf(
+			"distribution.CommunityPoolSpend: expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
+			m.Keeper.authority, msg.Authority)
+	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	resp, err := m.Keeper.CommunityPoolSpend(ctx, msg)
 	if err != nil {

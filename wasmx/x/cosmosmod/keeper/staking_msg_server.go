@@ -33,7 +33,7 @@ func (m msgStakingServer) CreateValidator(goCtx context.Context, msg *stakingtyp
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"CreateValidator":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.ValidatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -52,7 +52,7 @@ func (m msgStakingServer) EditValidator(goCtx context.Context, msg *stakingtypes
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"EditValidator":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.ValidatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -70,7 +70,7 @@ func (m msgStakingServer) Delegate(goCtx context.Context, msg *stakingtypes.MsgD
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"Delegate":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.ValidatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -88,7 +88,7 @@ func (m msgStakingServer) BeginRedelegate(goCtx context.Context, msg *stakingtyp
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"BeginRedelegate":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.DelegatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -106,7 +106,7 @@ func (m msgStakingServer) Undelegate(goCtx context.Context, msg *stakingtypes.Ms
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"Undelegate":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.DelegatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -124,7 +124,7 @@ func (m msgStakingServer) CancelUnbondingDelegation(goCtx context.Context, msg *
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"CancelUnbondingDelegation":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.DelegatorAddress,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,
@@ -140,7 +140,7 @@ func (m msgStakingServer) UpdateParams(goCtx context.Context, msg *stakingtypes.
 
 	authority := m.Keeper.GetAuthority()
 	if authority != msg.Authority {
-		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "invalid authority; expected %s, got %s", authority, msg.Authority)
+		return nil, sdkerr.Wrapf(errortypes.ErrUnauthorized, "staking.UpdateParams invalid authority; expected %s, got %s", authority, msg.Authority)
 	}
 
 	msgjson, err := m.Keeper.JSONCodec().MarshalJSON(msg)
@@ -148,7 +148,7 @@ func (m msgStakingServer) UpdateParams(goCtx context.Context, msg *stakingtypes.
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"UpdateParams":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   authority,
 		Contract: wasmxtypes.ROLE_STAKING,
 		Msg:      msgbz,

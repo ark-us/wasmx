@@ -54,7 +54,7 @@ func (m msgGovServer) SubmitProposal(goCtx context.Context, msg *govtypes1.MsgSu
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"SubmitProposal":%s}`, string(msgjson)))
-	resp, err := m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	resp, err := m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.Proposer,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
 		Msg:      msgbz,
@@ -77,7 +77,7 @@ func (m msgGovServer) Vote(goCtx context.Context, msg *govtypes1.MsgVote) (*govt
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"Vote":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.Voter,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
 		Msg:      msgbz,
@@ -95,7 +95,7 @@ func (m msgGovServer) VoteWeighted(goCtx context.Context, msg *govtypes1.MsgVote
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"VoteWeighted":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.Voter,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
 		Msg:      msgbz,
@@ -113,7 +113,7 @@ func (m msgGovServer) Deposit(goCtx context.Context, msg *govtypes1.MsgDeposit) 
 		return nil, err
 	}
 	msgbz := []byte(fmt.Sprintf(`{"Deposit":%s}`, string(msgjson)))
-	_, err = m.Keeper.NetworkKeeper.ExecuteContract(ctx, &networktypes.MsgExecuteContract{
+	_, err = m.Keeper.NetworkKeeper.ExecuteContractInternal(ctx, &networktypes.MsgExecuteContract{
 		Sender:   msg.Depositor,
 		Contract: wasmxtypes.ROLE_GOVERNANCE,
 		Msg:      msgbz,
@@ -134,6 +134,11 @@ func (m msgGovServer) ExecLegacyContent(context.Context, *govtypes1.MsgExecLegac
 	return nil, status.Errorf(codes.Unimplemented, "method ExecLegacyContent not implemented")
 }
 
-func (m msgGovServer) UpdateParams(context.Context, *govtypes1.MsgUpdateParams) (*govtypes1.MsgUpdateParamsResponse, error) {
+func (m msgGovServer) UpdateParams(_ context.Context, msg *govtypes1.MsgUpdateParams) (*govtypes1.MsgUpdateParamsResponse, error) {
+	if m.Keeper.GetAuthority() != msg.Authority {
+		return nil, fmt.Errorf(
+			"gov.UpdateParams: expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
+			m.Keeper.authority, msg.Authority)
+	}
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateParams not implemented")
 }

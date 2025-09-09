@@ -250,6 +250,7 @@ func (ctx *Context) HandleIncomingEmail(s Session) {
 	contractAddress := ctx.Env.Contract.Address
 
 	msgtosend := &networktypes.MsgReentryWithGoRoutine{
+		Authority:  ctx.WasmxAuthority,
 		Sender:     contractAddress.String(),
 		Contract:   contractAddress.String(),
 		EntryPoint: ENTRY_POINT_SMTP,
@@ -275,6 +276,7 @@ func (ctx *Context) HandleServerReentry(msg *ReentryCalldata) ([]byte, error) {
 	fmt.Println("--smtp.HandleServerReentry msgbz---", string(msgbz))
 
 	msgtosend := &networktypes.MsgReentry{
+		Authority:  ctx.WasmxAuthority,
 		Sender:     contractAddress.String(),
 		Contract:   contractAddress.String(),
 		EntryPoint: ENTRY_POINT_SMTP_SERVER,

@@ -29,6 +29,7 @@ type NativePrecompileHandler interface {
 type ContractRouter = map[string]*Context
 
 type Context struct {
+	WasmxAuthority           string
 	GoRoutineGroup           *errgroup.Group
 	GoContextParent          context.Context
 	Ctx                      sdk.Context
@@ -57,6 +58,7 @@ type Context struct {
 // not used at this point
 func (c *Context) Clone() *Context {
 	return &Context{
+		WasmxAuthority:           c.WasmxAuthority,
 		GoRoutineGroup:           c.GoRoutineGroup,
 		GoContextParent:          c.GoContextParent,
 		Ctx:                      c.Ctx,

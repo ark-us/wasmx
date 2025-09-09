@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	metrics "github.com/hashicorp/go-metrics"
 
@@ -87,12 +88,22 @@ func (m msgBankServer) MultiSend(goCtx context.Context, msg *banktypes.MsgMultiS
 }
 
 func (m msgBankServer) UpdateParams(goCtx context.Context, msg *banktypes.MsgUpdateParams) (*banktypes.MsgUpdateParamsResponse, error) {
+	if m.Keeper.GetAuthority() != msg.Authority {
+		return nil, fmt.Errorf(
+			"bank.UpdateParams: expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
+			m.Keeper.authority, msg.Authority)
+	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	m.Keeper.Logger(ctx).Error("msgBankServer.UpdateParams not implemented")
 	return &banktypes.MsgUpdateParamsResponse{}, nil
 }
 
 func (m msgBankServer) SetSendEnabled(goCtx context.Context, msg *banktypes.MsgSetSendEnabled) (*banktypes.MsgSetSendEnabledResponse, error) {
+	if m.Keeper.GetAuthority() != msg.Authority {
+		return nil, fmt.Errorf(
+			"bank.SetSendEnabled: expected gov account as only signer for proposal message; invalid authority; expected %s, got %s",
+			m.Keeper.authority, msg.Authority)
+	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	m.Keeper.Logger(ctx).Error("msgBankServer.SetSendEnabled not implemented")
 	return &banktypes.MsgSetSendEnabledResponse{}, nil

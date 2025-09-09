@@ -133,6 +133,19 @@ func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, contractAddress mcode
 	return role.Role
 }
 
+func (k *Keeper) IsInternalContract(ctx sdk.Context, addressOrRole string) (bool, error) {
+	contractAddr := k.GetRoleContractAddress(ctx)
+	msg := fmt.Sprintf(`{"IsInternalContract":{"addressOrRole":"%s"}}`, addressOrRole)
+	data, err := k.internalQuery(ctx, contractAddr, msg)
+	if err != nil {
+		return false, err
+	}
+	if len(data) != 1 {
+		return false, nil
+	}
+	return data[0] == 1, nil
+}
+
 func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error) {
 	contractAddr := k.GetRoleContractAddress(ctx)
 	msg := fmt.Sprintf(`{"GetAddressOrRole":{"addressOrRole":"%s"}}`, addressOrRole)
