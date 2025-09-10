@@ -635,7 +635,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       CONSENSUS_RAFT,
 			InitMessage: raftInitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_RAFT},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFT_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -644,7 +644,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       CONSENSUS_RAFTP2P,
 			InitMessage: raftInitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_RAFTP2P},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_RAFTP2P_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -653,7 +653,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       CONSENSUS_TENDERMINT,
 			InitMessage: tendermintInitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_TENDERMINT},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINT_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -662,7 +662,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       CONSENSUS_TENDERMINTP2P,
 			InitMessage: tendermintP2PInitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_TENDERMINTP2P},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_TENDERMINTP2P_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -681,7 +681,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       CONSENSUS_AVA_SNOWMAN,
 			InitMessage: avaInitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_AVA_SNOWMAN},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_AVA_SNOWMAN_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -710,7 +710,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       LEVEL0_v001,
 			InitMessage: level0InitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: LEVEL0_v001},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -768,7 +768,7 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Label:       LEVEL0_ONDEMAND_v001,
 			InitMessage: level0OnDemandInitMsg,
 			Pinned:      false,
-			// Role:        ROLE_CONSENSUS,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: LEVEL0_ONDEMAND_v001},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_ONDEMAND_LIBRARY, ROLE_LIBRARY)},
 		},
@@ -884,7 +884,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
 		if val.Label == CONSENSUS_TENDERMINTP2P {
-			consensusPrecompiles[i].Role = &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_TENDERMINTP2P, Primary: true}
+			consensusPrecompiles[i].Role.Primary = true
 		}
 	}
 	precompiles = append(precompiles, consensusPrecompiles...)
@@ -985,7 +985,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
 		if val.Label == LEVEL0_ONDEMAND_v001 {
-			consensusPrecompiles[i].Role = &SystemContractRole{Role: ROLE_CONSENSUS, Label: LEVEL0_ONDEMAND_v001, Primary: true}
+			consensusPrecompiles[i].Role.Primary = true
 		}
 	}
 	precompiles = append(precompiles, consensusPrecompiles...)
