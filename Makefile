@@ -6,7 +6,9 @@ PRECOMPILE_DIR := ./wasmx/x/wasmx/vm/precompiles
 # Mapping of tinygo modules to precompile wasm filenames
 # Format: module_path:output_filename
 TINYGO_TARGETS := \
-	wasmx-fsm:28.finite_state_machine.wasm
+	wasmx-fsm:28.finite_state_machine.wasm \
+	wasmx-raft-lib:2a.raft_library.wasm \
+	wasmx-raftp2p-lib:36.raftp2p_library.wasm
 
 # wasmx-gov:35.gov_0.0.1.wasm \
 # wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \

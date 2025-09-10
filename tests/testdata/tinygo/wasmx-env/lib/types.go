@@ -1,6 +1,9 @@
 package wasmx
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"math/big"
 
 	sdkmath "cosmossdk.io/math"
@@ -271,6 +274,15 @@ type PublicKey struct {
 	Value   []byte `json:"value"`
 }
 
+func (p *PublicKey) GetKey() DefaultPubKey {
+	var v DefaultPubKey
+	err := json.Unmarshal(p.Value, &v)
+	if err != nil {
+		panic(fmt.Sprintf("PublicKey cannot be unwrapped: %s", base64.StdEncoding.EncodeToString(p.Value)))
+	}
+	return v
+}
+
 // ModeInfo types
 type ModeInfoSingle struct {
 	Mode string `json:"mode"`
@@ -324,9 +336,9 @@ type AuthInfo struct {
 }
 
 type SignedTransaction struct {
-	Body       TxBody   `json:"body"`
-	AuthInfo   AuthInfo `json:"auth_info"`
-	Signatures [][]byte `json:"signatures"`
+	Body       TxBody    `json:"body"`
+	AuthInfo   *AuthInfo `json:"auth_info"`
+	Signatures [][]byte  `json:"signatures"`
 }
 
 // Pagination

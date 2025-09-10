@@ -1,15 +1,25 @@
 package lib
 
-const MODULE_NAME = "multichain-registry"
-const VERSION = "0.0.1"
+import (
+	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
+)
 
-// Calldata structure
-type CallData struct {
-	GetParams *MsgGetParams `json:"GetParams"`
+// Module identification and protocol constants
+const (
+	MODULE_NAME = "raftp2p"
+	PROTOCOL_ID = "raftp2p_1"
+)
 
-	InitGenesis *MsgInitGenesis `json:"InitGenesis"`
+// StateSyncRequest mirrors the AS request with start index
+type StateSyncRequest struct {
+	StartIndex int64 `json:"start_index"`
 }
 
-type MsgInitGenesis struct{}
-
-type MsgGetParams struct{}
+// StateSyncResponse mirrors the AS response with batch indexes and entries
+type StateSyncResponse struct {
+	StartBatchIndex int64                       `json:"start_batch_index"`
+	LastBatchIndex  int64                       `json:"last_batch_index"`
+	LastLogIndex    int64                       `json:"last_log_index"`
+	TermID          int32                       `json:"termId"`
+	Entries         []raftlib.LogEntryAggregate `json:"entries"`
+}
