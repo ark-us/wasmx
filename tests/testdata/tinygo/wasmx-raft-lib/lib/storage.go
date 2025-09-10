@@ -1,7 +1,6 @@
 package lib
 
 import (
-    "encoding/base64"
     "encoding/json"
     "errors"
     "fmt"
@@ -264,8 +263,7 @@ func AppendLogEntry(entry LogEntryAggregate) error {
 func SetLogEntryAggregate(entry LogEntryAggregate) error {
     data, err := json.Marshal(entry.Data)
     if err != nil { return err }
-    blockData := base64.StdEncoding.EncodeToString(data)
-    temp := LogEntry{Index: entry.Index, TermID: entry.TermID, LeaderID: entry.LeaderID, Data: blockData}
+    temp := LogEntry{Index: entry.Index, TermID: entry.TermID, LeaderID: entry.LeaderID, Data: data}
     valuestr, err := json.Marshal(temp)
     if err != nil { return err }
     return SetLogEntry(entry.Index, string(valuestr))
@@ -301,7 +299,7 @@ func GetLogEntryObj(index int64) (LogEntry, error) {
 func RemoveLogEntry(index int64) error {
     e, err := GetLogEntryObj(index)
     if err != nil { return err }
-    e.Data = ""
+    e.Data = nil
     return SetLogEntryObj(e)
 }
 

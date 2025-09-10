@@ -1,6 +1,8 @@
 package lib
 
 import (
+    "encoding/base64"
+
     crosschain "github.com/loredanacirstea/wasmx-env-crosschain/lib"
     consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
     wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -11,18 +13,18 @@ type CurrentState struct {
     ChainID          string            `json:"chain_id"`
     UniqueP2PID      string            `json:"unique_p2p_id"`
     Version          consensus.Version `json:"version"`
-    AppHash          string            `json:"app_hash"`
+    AppHash          []byte            `json:"app_hash"`
     LastBlockID      consensus.BlockID `json:"last_block_id"`
-    LastCommitHash   string            `json:"last_commit_hash"`
-    LastResultsHash  string            `json:"last_results_hash"`
+    LastCommitHash   []byte            `json:"last_commit_hash"`
+    LastResultsHash  []byte            `json:"last_results_hash"`
     LastRound        int64             `json:"last_round"`
     LastBlockSigs    []consensus.CommitSig `json:"last_block_signatures"`
     LastTime         string                 `json:"last_time"`
     ValidatorAddress wasmx.HexString        `json:"validator_address"`
-    ValidatorPrivkey string                 `json:"validator_privkey"`
-    ValidatorPubkey  string                 `json:"validator_pubkey"`
+    ValidatorPrivkey []byte                 `json:"validator_privkey"`
+    ValidatorPubkey  []byte                 `json:"validator_pubkey"`
     NextHeight       int64                  `json:"nextHeight"`
-    NextHash         string                 `json:"nextHash"`
+    NextHash         []byte                 `json:"nextHash"`
     LockedValue      int64                  `json:"lockedValue"`
     LockedRound      int64                  `json:"lockedRound"`
     ValidValue       int64                  `json:"validValue"`
@@ -46,7 +48,7 @@ type GetProposerResponse struct {
 
 // MempoolBatch mirrors the batching metadata.
 type MempoolBatch struct {
-    Txs           []string `json:"txs"`
+    Txs           [][]byte `json:"txs"`
     CummulatedGas int64    `json:"cummulatedGas"`
     IsAtomicTx    bool     `json:"isAtomicTx"`
     IsLeader      bool     `json:"isLeader"`
@@ -55,7 +57,7 @@ type MempoolBatch struct {
 
 // MempoolTx mirrors AS with leader chain info.
 type MempoolTx struct {
-    Tx     string `json:"tx"`
+    Tx     []byte `json:"tx"`
     Gas    uint64 `json:"gas"`
     Leader string `json:"leader"`
 }
@@ -125,10 +127,8 @@ func (m *Mempool) DropSeen() {
 }
 
 // base64Len: 4 chars represent 3 bytes
-func base64Len(value string) int32 {
-    n := len(value)
-    // ceil(n/4)*3
-    return int32(((n + 3) / 4) * 3)
+func base64Len(value []byte) int32 {
+    return int32(base64.StdEncoding.EncodedLen(len(value)))
 }
 
 // Batch selects a set of txs for the proposal. Returns errors from crosschain check.

@@ -27,7 +27,7 @@ type LogEntry struct {
     Index    int64  `json:"index"`
     TermID   int32  `json:"termId"`
     LeaderID int32  `json:"leaderId"`
-    Data     string `json:"data"`
+    Data     []byte `json:"data"`
 }
 
 type LogEntryAggregate struct {
@@ -42,7 +42,7 @@ type Transaction struct {
     From  string       `json:"from"`
     To    string       `json:"to"`
     Funds []wasmx.Coin `json:"funds"`
-    Data  string       `json:"data"`
+    Data  []byte       `json:"data"`
     Gas   int64        `json:"gas"`
     Price int64        `json:"price"`
 }
