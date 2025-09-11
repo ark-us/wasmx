@@ -114,7 +114,7 @@ func MerkleHash_(ptr int64) int64
 func Ed25519Sign_(privPtr int64, msgPtr int64) int64
 
 //go:wasmimport wasmx ed25519Verify
-func Ed25519Verify_(pubPtr int64, sigPtr int64, msgPtr int64) int64
+func Ed25519Verify_(pubPtr int64, sigPtr int64, msgPtr int64) int32
 
 //go:wasmimport wasmx ed25519PubToHex
 func Ed25519PubToHex_(pubPtr int64) int64

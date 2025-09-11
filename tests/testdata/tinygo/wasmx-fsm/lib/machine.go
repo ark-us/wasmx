@@ -87,16 +87,17 @@ func ExecuteGuard(machine *MachineExternal, guard *ActionObject, event EventObje
 		guardParams := append(guard.Params, ctxToActionParams(machine.ctx)...)
 		resp, err := ProcessExternalCall(machine, guard.Type, guardParams, event)
 		logged := []string{"guard", guard.Type}
-		if err == nil {
-			logged = append(logged, []string{"success", "true"}...)
-		} else {
+		success := string(resp) == "1"
+		if err != nil {
 			logged = append(logged, []string{"success", "false", "error", err.Error()}...)
+		} else {
+			logged = append(logged, []string{"success", fmt.Sprint(success)}...)
 		}
 		LoggerDebug("execute guard call", logged)
 		if err != nil {
 			return false
 		}
-		return string(resp) == "1"
+		return success
 	}
 }
 
@@ -443,8 +444,7 @@ func (m *MachineExternal) Transition(state State, eventObject EventObject) *Stat
 	value := state.Value
 	stateConfig := FindStateInfo(m.States, value)
 	if stateConfig == nil {
-		message := "state not found: " + value
-		wasmx.Revert([]byte(message))
+		Revert("state not found: " + value)
 		return nil
 	}
 
@@ -459,7 +459,7 @@ func (m *MachineExternal) Transition(state State, eventObject EventObject) *Stat
 			if transitions == nil {
 				message := `cannot apply "` + eventObject.Type + `" event in current "` + value + `" state`
 				if REVERT_IF_UNEXPECTED_STATE {
-					wasmx.Revert([]byte(message))
+					Revert(message)
 					return nil
 				} else {
 					LoggerDebug("cannot apply event in current state", []string{
@@ -492,8 +492,7 @@ func (m *MachineExternal) ApplyTransition(state State, transition Transition, ev
 	value := state.Value
 	stateConfig := FindStateInfo(m.States, value)
 	if stateConfig == nil {
-		message := "state not found: " + value
-		wasmx.Revert([]byte(message))
+		Revert("state not found: " + value)
 		return nil
 	}
 
@@ -518,15 +517,14 @@ func (m *MachineExternal) ApplyTransition(state State, transition Transition, ev
 
 		nextStateConfig := FindStateInfo(m.States, nextStateValue)
 		if nextStateConfig == nil {
-			message := "state not found: " + nextStateValue
-			wasmx.Revert([]byte(message))
+			Revert("state not found: " + nextStateValue)
 			return nil
 		}
 
 		if guard != nil && !ExecuteGuard(m, guard, eventObject) {
 			message := "cannot execute transition; guard: " + guard.Type
 			if REVERT_IF_UNEXPECTED_STATE {
-				wasmx.Revert([]byte(message))
+				Revert(message)
 				return nil
 			} else {
 				LoggerDebug(message, []string{})
@@ -556,7 +554,7 @@ func (m *MachineExternal) ApplyTransition(state State, transition Transition, ev
 		stateConfigResolved := FindStateInfo(m.States, resolvedTarget)
 		if stateConfigResolved == nil {
 			message := "state not found: " + resolvedTarget
-			wasmx.Revert([]byte(message))
+			Revert(message)
 			return nil
 		}
 
@@ -616,7 +614,7 @@ func processActions(actions []ActionObject, event EventObject) []ActionObject {
 		if act.Type == RAISE_ACTION {
 			if act.Event == nil {
 				message := "raise action is missing event"
-				wasmx.Revert([]byte(message))
+				Revert(message)
 				return allActions
 			}
 

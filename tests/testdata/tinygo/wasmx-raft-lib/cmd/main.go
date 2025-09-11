@@ -8,6 +8,26 @@ import (
 	lib "github.com/loredanacirstea/wasmx-raft-lib/lib"
 )
 
+//go:wasm-module wasmx
+//export memory_ptrlen_i64_1
+func Memory_ptrlen_i64_1() {}
+
+//go:wasm-module wasmx
+//export wasmx_env_i64_2
+func Wasmx_env_i64_2() {}
+
+//go:wasm-module consensus
+//export wasmx_consensus_json_i64_1
+func Wasmx_consensus_json_i64_1() {}
+
+//go:wasm-module wasmxcore
+//export wasmx_env_core_i64_1
+func Wasmx_env_core_i64_1() {}
+
+//go:wasm-module crosschain
+//export wasmx_crosschain_json_i64_1
+func Wasmx_crosschain_json_i64_1() {}
+
 //go:wasm-module wasmx-raft
 //export instantiate
 func Instantiate() {}
@@ -15,7 +35,6 @@ func Instantiate() {}
 func main() {
 	// Only allow internal calls like the AS contract
 	wasmx.OnlyInternal(lib.MODULE_NAME, "")
-
 	databz := wasmx.GetCallData()
 
 	var calld fsm.ExternalActionCallData
@@ -33,7 +52,7 @@ func main() {
 			return
 		}
 		res := lib.WrapGuard(ok)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case "setupNode":
 		if err := lib.SetupNode(calld.Params, calld.Event); err != nil {

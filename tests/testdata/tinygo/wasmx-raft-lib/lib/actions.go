@@ -98,12 +98,12 @@ func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
 	}
 
 	// Initialize chain state and store consensus params for next height
-	if err := initChain(init); err != nil {
+	if err := InitChain(init); err != nil {
 		return err
 	}
 
 	// Initialize Next/Match index arrays
-	return initializeIndexArrays(len(peers))
+	return InitializeIndexArrays(len(peers))
 }
 func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 	// Extract entry and signature
@@ -301,6 +301,18 @@ func AddToMempool(_ []fsm.ActionParam, event fsm.EventObject) error {
 func AddTransactionToMempool(txBytes []byte) error {
 	// Stateless validation (CheckTx) similar to AS
 	// If not OK, treat as invalid and surface error text
+	txhash := base64.StdEncoding.EncodeToString(wasmx.Sha256(txBytes))
+	LoggerDebug("new transaction received", []string{"transaction", base64.StdEncoding.EncodeToString(txBytes), "hash", txhash})
+	mp, err := GetMempool()
+	if err != nil {
+		return err
+	}
+	if mp.HasSeen(txhash) {
+		LoggerDebug("transaction already processed", []string{"hash", txhash})
+		return nil
+	}
+	mp.Seen(txhash)
+	SetMempool(mp)
 
 	req := typestnd.RequestCheckTx{Tx: txBytes, Type: typestnd.CheckTxTypeNew}
 	resp, err := consensuswrap.CheckTx(req)
@@ -357,13 +369,6 @@ func AddTransactionToMempool(txBytes []byte) error {
 			}
 		}
 	}
-	mp, err := GetMempool()
-	if err != nil {
-		return err
-	}
-	// Use sha256(base64(tx)) as key, store raw bytes as payload
-	txB64 := base64.StdEncoding.EncodeToString(txBytes)
-	txhash := wasmx.Sha256(txB64)
 	mp.Add(txhash, txBytes, txGas, leaderChain)
 	if err := SetMempool(mp); err != nil {
 		return err
@@ -415,7 +420,8 @@ func SetRandomElectionTimeout(params []fsm.ActionParam, event fsm.EventObject) e
 	if err != nil {
 		return err
 	}
-	return SetElectionTimeout(v)
+	SetElectionTimeout(v)
+	return nil
 }
 
 func InitializeNextIndex(_ []fsm.ActionParam, _ fsm.EventObject) error {
@@ -566,6 +572,7 @@ func ForwardTxsToLeader(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	if limit > 5 {
 		limit = 5
 	}
+	LoggerDebug("forwarding txs to leader", []string{"nodeId", Int32ToString(nodeId), "nodeIp", target.Node.IP, "count", Int32ToString(int32(limit))})
 	txhs := mp.Order[0:limit]
 	for i, txhash := range txhs {
 		tx, ok := mp.Map[txhash]
@@ -681,6 +688,10 @@ func SendVoteRequests(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	ips, err := GetNodeIPs()
 	if err != nil {
 		return err
+	}
+	if len(ips) > 1 {
+		bz, _ := json.Marshal(&ips)
+		LoggerInfo("sending vote requests...", []string{"candidateId", Int32ToString(candidateId), "termId", Int32ToString(termId), "lastLogIndex", Int64ToString(lastLogIndex), "lastLogTerm", Int32ToString(lastLogTerm), "ips", string(bz)})
 	}
 	for i, ip := range ips {
 		if int32(i) == candidateId || !IsNodeActive(ip) {
@@ -894,7 +905,7 @@ func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
 		return err
 	}
 	// after we set last log index
-	if err := initializeIndexArrays(len(nodeIps)); err != nil {
+	if err := InitializeIndexArrays(len(nodeIps)); err != nil {
 		return err
 	}
 	return nil
@@ -918,12 +929,12 @@ func sendVoteRequest(nodeId int32, node NodeInfo, request VoteRequest, termId in
 	dataBase64 := base64.StdEncoding.EncodeToString([]byte(datastr))
 	msgstr := fmt.Sprintf(`{"run":{"event":{"type":"receiveVoteRequest","params":[{"key":"entry","value":"%s"},{"key":"signature","value":"%s"}]}}}`, dataBase64, signature)
 	contract := wasmx.GetAddress()
-	wasmx.LoggerDebug(MODULE_NAME, "sending vote request", []string{"nodeId", Int32ToString(nodeId), "nodeIp", node.Node.IP, "termId", Int32ToString(termId), "data", datastr})
+	LoggerDebug("sending vote request", []string{"nodeId", Int32ToString(nodeId), "nodeIp", node.Node.IP, "termId", Int32ToString(termId), "data", datastr})
 	resp, err := wasmxcore.GrpcRequest(node.Node.IP, contract, base64.StdEncoding.EncodeToString([]byte(msgstr)))
 	if err != nil {
 		return err
 	}
-	wasmx.LoggerDebug(MODULE_NAME, "vote request response", []string{"nodeId", Int32ToString(nodeId), "nodeIp", node.Node.IP, "termId", Int32ToString(termId), "data", resp.Data, "error", resp.Error})
+	LoggerDebug("vote request response", []string{"nodeId", Int32ToString(nodeId), "nodeIp", node.Node.IP, "termId", Int32ToString(termId), "data", resp.Data, "error", resp.Error})
 	if resp.Error != "" || resp.Data == "" {
 		return nil
 	}
@@ -1370,14 +1381,22 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	}
 
 	// Build and store block, update state, EndBlock, parse events, Commit
+	// and remove tx from mempool
+	mp, err := GetMempool()
+	if err != nil {
+		return false, err
+	}
 	txhashes := make([][]byte, len(wrap.Request.Txs))
 	for i := range wrap.Request.Txs {
-		txhashes[i] = wrap.Request.Txs[i]
+		hash := wasmx.Sha256(wrap.Request.Txs[i])
+		txhashes[i] = hash
+		mp.Remove(base64.StdEncoding.EncodeToString(hash))
 	}
+	SetMempool(mp)
 	topics := extractIndexedTopics(*finResp.Data, txhashes)
 	st, _ := GetCurrentState()
 	var vset *typestnd.TendermintValidators
-	if vlist, err := getAllValidators(); err == nil {
+	if vlist, err := GetAllValidators(); err == nil {
 		if tvals, err2 := consutils.GetActiveValidatorInfo(vlist); err2 == nil && len(tvals) > 0 {
 			vset = &typestnd.TendermintValidators{Validators: tvals}
 		}

@@ -1,14 +1,14 @@
 package lib
 
 import (
-    "fmt"
+	"fmt"
 
-    wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // Simple helpers for logging and conversions
 func LoggerInfo(msg string, parts []string) {
-    wasmx.LoggerInfo(MODULE_NAME, msg, parts)
+	wasmx.LoggerInfo(MODULE_NAME, msg, parts)
 }
 
 func LoggerError(msg string, parts []string) {
@@ -24,7 +24,9 @@ func LoggerDebugExtended(msg string, parts []string) {
 }
 
 func Revert(message string) {
-    wasmx.RevertWithModule(MODULE_NAME, message)
+	// AS: LoggerDebug("revert", ["err", message, "module", MODULE_NAME])
+	LoggerDebug("revert", []string{"err", message, "module", MODULE_NAME})
+	wasmx.RevertWithModule(MODULE_NAME, message)
 }
 
 func Int32ToString(v int32) string { return fmt.Sprintf("%d", v) }

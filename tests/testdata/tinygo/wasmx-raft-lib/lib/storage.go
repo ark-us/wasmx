@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 )
 
 // Helper storage key not defined in config.ts
 const LOGS_LAST_INDEX = "logs_last_index"
 
-// Helpers for simple typed storage
-func sGet(key string) string      { return string(wasmx.StorageLoad([]byte(key))) }
-func sSet(key string, val string) { wasmx.StorageStore([]byte(key), []byte(val)) }
+// Helpers for simple typed storage via FSM context (AS parity)
+func sGet(key string) string      { return string(fsm.GetContextValueInternal(key)) }
+func sSet(key string, val string) { fsm.SetContextValue(key, val) }
 
 // ===== State getters/setters with error surfacing =====
 
@@ -125,7 +125,10 @@ func GetElectionTimeout() (int64, error) {
 	return parseI64(v, 0), nil
 }
 
-func SetElectionTimeout(val int64) error { sSet(ELECTION_TIMEOUT_KEY, i64ToStr(val)); return nil }
+func SetElectionTimeout(val int64) {
+	sSet(ELECTION_TIMEOUT_KEY, i64ToStr(val))
+	LoggerDebug("set election timeout", []string{"timeout", i64ToStr(val)})
+}
 
 // LastApplied
 func GetLastApplied() (int64, error) {

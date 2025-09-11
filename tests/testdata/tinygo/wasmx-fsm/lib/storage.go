@@ -122,3 +122,7 @@ func GetCurrentState() State {
 func GetContextValueInternal(key string) []byte {
 	return getContextValueInternal(key)
 }
+
+func SetContextValue(key, value string) {
+	setContextValue(key, value)
+}

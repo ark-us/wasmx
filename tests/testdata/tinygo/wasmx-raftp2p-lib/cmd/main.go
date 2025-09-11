@@ -10,6 +10,30 @@ import (
 	lib "github.com/loredanacirstea/wasmx-raftp2p-lib/lib"
 )
 
+//go:wasm-module wasmx
+//export memory_ptrlen_i64_1
+func Memory_ptrlen_i64_1() {}
+
+//go:wasm-module wasmx
+//export wasmx_env_i64_2
+func Wasmx_env_i64_2() {}
+
+//go:wasm-module consensus
+//export wasmx_consensus_json_i64_1
+func Wasmx_consensus_json_i64_1() {}
+
+//go:wasm-module wasmxcore
+//export wasmx_env_core_i64_1
+func Wasmx_env_core_i64_1() {}
+
+//go:wasm-module crosschain
+//export wasmx_crosschain_json_i64_1
+func Wasmx_crosschain_json_i64_1() {}
+
+//go:wasm-module p2p
+//export wasmx_p2p_json_i64_1
+func Wasmx_p2p_json_i64_1() {}
+
 //go:wasm-module wasmx-raftp2p
 //export instantiate
 func Instantiate() {}
@@ -49,10 +73,10 @@ func main() {
 			return
 		}
 		res := raft.WrapGuard(ok)
-		wasmx.SetFinishData(res)
+		wasmx.Finish(res)
 		return
 	case "setupNode":
-		if err := raft.SetupNode(calld.Params, calld.Event); err != nil {
+		if err := lib.SetupNode(calld.Params, calld.Event); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -155,7 +179,7 @@ func main() {
 			return
 		}
 	case "sendAppendEntries":
-		if err := raft.SendAppendEntries(nil, fsm.EventObject{}); err != nil {
+		if err := lib.SendAppendEntries(); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -170,7 +194,7 @@ func main() {
 			return
 		}
 	case "commitBlocks":
-		if err := raft.CommitBlocks(nil, fsm.EventObject{}); err != nil {
+		if err := lib.CommitBlocks(); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -200,12 +224,12 @@ func main() {
 			return
 		}
 	case "sendVoteRequests":
-		if err := raft.SendVoteRequests(nil, fsm.EventObject{}); err != nil {
+		if err := lib.SendVoteRequests(); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
 	case "updateNodeAndReturn":
-		if err := raft.UpdateNodeAndReturn(calld.Params, calld.Event); err != nil {
+		if err := lib.UpdateNodeAndReturn(calld.Params, calld.Event); err != nil {
 			lib.Revert(err.Error())
 			return
 		}

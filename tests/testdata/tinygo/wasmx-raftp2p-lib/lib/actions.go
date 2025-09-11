@@ -11,14 +11,207 @@ import (
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
-	stakinglib "github.com/loredanacirstea/wasmx-staking/lib"
 )
 
 // NodeInfoResponse mirrors the AS parse result
 type NodeInfoResponse struct {
 	NodeInfo *raftlib.NodeInfo `json:"node_info,omitempty"`
 	Error    string            `json:"error"`
+}
+
+// updateNodeAndReturn: Leader receives a node update, sends updated node list to requester
+func UpdateNodeAndReturn(params []fsm.ActionParam, event fsm.EventObject) error {
+	// Extract entry and signature from event/params
+	entryB64 := ""
+	signature := ""
+	if len(event.Params) > 0 {
+		for _, p := range event.Params {
+			if p.Key == "entry" {
+				entryB64 = p.Value
+			} else if p.Key == "signature" {
+				signature = p.Value
+			}
+		}
+	}
+	for _, p := range params {
+		if p.Key == "entry" && entryB64 == "" {
+			entryB64 = p.Value
+		}
+		if p.Key == "signature" && signature == "" {
+			signature = p.Value
+		}
+	}
+	if entryB64 == "" {
+		return fmt.Errorf("updateNodeAndReturn: empty entry")
+	}
+	if signature == "" {
+		return fmt.Errorf("updateNodeAndReturn: empty signature")
+	}
+	data, err := base64.StdEncoding.DecodeString(entryB64)
+	if err != nil {
+		return err
+	}
+	var entry raftlib.NodeUpdate
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return err
+	}
+	LoggerDebug("updateNodeAndReturn", []string{"entry", string(data), "signature", signature})
+	LoggerInfo("update node", []string{"ip", entry.Node.Node.IP, "type", fmt.Sprint(entry.Type), "index", fmt.Sprint(entry.Index), "address", entry.Node.Address})
+	if entry.Node.Address == "" {
+		return fmt.Errorf("node update failed, address missing")
+	}
+	// verify signature by node address
+	ok, err := verifyMessageByAddr(entry.Node.Address, signature, data)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("signature verification failed: address %s", entry.Node.Address)
+	}
+	// Update node list
+	ips, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	switch entry.Type {
+	case raftlib.NODE_UPDATE_ADD:
+		if entry.Node.Node.IP == "" && entry.Node.Node.Host == "" {
+			return fmt.Errorf("validator info missing from node update")
+		}
+		ndx := -1
+		for i := range ips {
+			if ips[i].Address == entry.Node.Address {
+				ndx = i
+				break
+			}
+		}
+		if ndx > -1 {
+			ips[ndx].Node = entry.Node.Node
+		} else {
+			ips = append(ips, entry.Node)
+		}
+	case raftlib.NODE_UPDATE_REMOVE:
+		if int(entry.Index) >= 0 && int(entry.Index) < len(ips) {
+			ips[entry.Index].Node.IP = ""
+			ips[entry.Index].Node.Host = ""
+			ips[entry.Index].Node.Port = ""
+		}
+	default:
+		// ignore
+	}
+	if err := raftlib.SetNodeIPs(ips); err != nil {
+		return err
+	}
+	ourId, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	lastIndex, err := raftlib.GetLastLogIndex()
+	if err != nil {
+		return err
+	}
+	nextArr, err := raftlib.GetNextIndexArray()
+	if err != nil {
+		return err
+	}
+	// choose a synced node different than us (AS parity)
+	syncNodeID := GetRandomSynced(nextArr, lastIndex, ourId)
+	resp := raftlib.UpdateNodeResponse{Nodes: ips, SyncNodeID: syncNodeID, LastEntryIndex: lastIndex}
+	// if sync target is different than us, send an appendEntry to that node first
+	if syncNodeID != ourId {
+		if err := sendAppendEntry(syncNodeID, ips[syncNodeID], ips); err != nil {
+			// best-effort; continue even if it fails
+			LoggerError("failed to send append entry to sync provider", []string{"id", fmt.Sprint(syncNodeID), "error", err.Error()})
+		}
+	}
+	// build receiveUpdateNodeResponse payload and send only to requester (entry.Node)
+	datastr, _ := json.Marshal(&resp)
+	sigResp, err := raftlib.SignMessage(string(datastr))
+	if err != nil {
+		return err
+	}
+	payload := struct {
+		Run struct {
+			Event struct {
+				Type   string                        `json:"type"`
+				Params []struct{ Key, Value string } `json:"params"`
+			} `json:"event"`
+		} `json:"run"`
+	}{}
+	payload.Run.Event.Type = "receiveUpdateNodeResponse"
+	payload.Run.Event.Params = []struct{ Key, Value string }{
+		{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
+		{Key: "signature", Value: sigResp},
+		{Key: "sender", Value: string(ips[ourId].Address)},
+	}
+	msg, _ := json.Marshal(&payload)
+	contract := wasmx.GetAddress()
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	pid := GetProtocolIdFromState(st)
+	peer := GetP2PAddress(entry.Node)
+	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: pid, Peers: []string{peer}})
+	return err
+}
+
+// SetupNode initializes local state from InitChainSetup and peers (AS parity)
+func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
+	// read base64-encoded InitChainSetup from event params (key: "data")
+	dataB64 := ""
+	for _, p := range event.Params {
+		if p.Key == "data" {
+			dataB64 = p.Value
+			break
+		}
+	}
+	if dataB64 == "" {
+		return fmt.Errorf("no initChainSetup found")
+	}
+	raw, err := base64.StdEncoding.DecodeString(dataB64)
+	if err != nil {
+		return err
+	}
+	// TODO remove validator private key from logs in initChainSetup
+	LoggerDebug("setupNode", []string{"initChainSetup", string(raw)})
+
+	// Reset commit/applied
+	if err := raftlib.SetCommitIndex(raftlib.LOG_START); err != nil {
+		return err
+	}
+	if err := raftlib.SetLastApplied(raftlib.LOG_START); err != nil {
+		return err
+	}
+
+	// Decode into raftlib.InitChainSetup
+	var init raftlib.InitChainSetup
+	if err := json.Unmarshal(raw, &init); err != nil {
+		return err
+	}
+	if err := raftlib.SetCurrentNodeId(init.NodeIndex); err != nil {
+		return err
+	}
+
+	// Parse peers
+	peers := make([]raftlib.NodeInfo, len(init.Peers))
+	for i := range init.Peers {
+		resp := ParseNodeAddress(init.Peers[i])
+		if resp.Error != "" || resp.NodeInfo == nil {
+			return fmt.Errorf("%s", resp.Error)
+		}
+		peers[i] = *resp.NodeInfo
+	}
+	if err := raftlib.SetNodeIPs(peers); err != nil {
+		return err
+	}
+	// Initialize chain state and store consensus params for next height
+	if err := raftlib.InitChain(init); err != nil {
+		return err
+	}
+	return raftlib.InitializeIndexArrays(len(peers))
 }
 
 // ConnectPeers starts local p2p node and connects to peers using protocolId
@@ -43,14 +236,18 @@ func ConnectPeersInternal(protocolId string) error {
 	// start node with identity
 	req := p2p.StartNodeWithIdentityRequest{Port: nodes[idx].Node.Port, ProtocolId: pid, PK: state.ValidatorPrivkey}
 	if _, err := p2p.StartNodeWithIdentity(req); err != nil {
+		// AS: revert on start failure
+		LoggerError("start node with identity failed", []string{"err", err.Error()})
 		return err
 	}
 	// connect peers
 	for i := range nodes {
 		if int32(i) == idx {
+			// don't connect with ourselves
 			continue
 		}
 		peer := GetP2PAddress(nodes[i])
+		LoggerDebug("trying to connect to peer", []string{"p2paddress", peer, "address", nodes[i].Address})
 		if _, err := p2p.ConnectPeer(p2p.ConnectPeerRequest{ProtocolId: pid, Peer: peer}); err != nil {
 			return err
 		}
@@ -59,6 +256,7 @@ func ConnectPeersInternal(protocolId string) error {
 }
 
 // ParseNodeAddress parses "<address>@/ip4/<host>/tcp/<port>/p2p/<id>" into NodeInfo
+// <address>@/ip4/127.0.0.1/tcp/5001/p2p/12D3Koo... (AS format)
 func ParseNodeAddress(peeraddr string) NodeInfoResponse {
 	resp := NodeInfoResponse{}
 	parts1 := strings.Split(peeraddr, "@")
@@ -112,6 +310,7 @@ func GetRandomSynced(arr []int64, lastIndex int64, leaderId int32) int32 {
 }
 
 // ForwardTxsToLeader sends up to 5 mempool txs to the leader over p2p
+// forward transactions to leader (max 5 per tick)
 func ForwardTxsToLeader() error {
 	mp, err := raftlib.GetMempool()
 	if err != nil {
@@ -136,7 +335,13 @@ func ForwardTxsToLeader() error {
 		return nil
 	}
 	leader := nodes[nodeId]
-	limit := 0
+	// compute batch count (max 5)
+	countToSend := len(mp.Map)
+	if countToSend > 5 {
+		countToSend = 5
+	}
+	LoggerDebug("forwarding txs to leader", []string{"nodeId", fmt.Sprint(nodeId), "nodeIp", leader.Node.IP, "count", fmt.Sprint(countToSend)})
+	sent := 0
 	contract := wasmx.GetAddress()
 	st, err := raftlib.GetCurrentState()
 	if err != nil {
@@ -144,13 +349,14 @@ func ForwardTxsToLeader() error {
 	}
 	protocolId := GetProtocolIdFromState(st)
 	for _, txhash := range mp.Order {
-		if limit >= 5 {
+		if sent >= countToSend {
 			break
 		}
 		tx, ok := mp.Map[txhash]
 		if !ok {
 			continue
 		}
+		LoggerDebug("forwarding tx to leader", []string{"nodeId", fmt.Sprint(nodeId), "nodeIp", leader.Node.IP, "tx_batch_index", fmt.Sprint(sent)})
 		msg := struct {
 			Run struct {
 				Event struct {
@@ -169,6 +375,10 @@ func ForwardTxsToLeader() error {
 		if _, err := p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: bz, ProtocolId: protocolId, Peers: []string{GetP2PAddress(leader)}}); err != nil {
 			return err
 		}
+		// TODO we will remove the tx from mempool now
+		// if it is an invalid transaction (it can happen), then the leader will
+		// reject it, so this node will continue to send it to the Leader
+		// we should remove it only if found invalid
 		// remove; keep order consistent
 		delete(mp.Map, txhash)
 		for i, h := range mp.Order {
@@ -177,7 +387,7 @@ func ForwardTxsToLeader() error {
 				break
 			}
 		}
-		limit++
+		sent++
 	}
 	return raftlib.SetMempool(mp)
 }
@@ -312,6 +522,75 @@ func Vote(entryB64 string, signature string) error {
 	return err
 }
 
+// SendVoteRequests iterates peers and sends VoteRequest over p2p (AS parity)
+func SendVoteRequests() error {
+	termId, err := raftlib.GetTermId()
+	if err != nil {
+		return err
+	}
+	candidateId, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	lastLogIndex, err := raftlib.GetLastLogIndex()
+	if err != nil {
+		return err
+	}
+	lastEntry, err := raftlib.GetLogEntryObjIndexLast()
+	if err != nil {
+		return err
+	}
+	lastLogTerm := lastEntry.TermID
+	req := raftlib.VoteRequest{TermID: termId, CandidateID: candidateId, LastLogIndex: lastLogIndex, LastLogTerm: lastLogTerm}
+	ips, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	if len(ips) > 1 {
+		LoggerInfo("sending vote requests...", []string{})
+	}
+	contract := wasmx.GetAddress()
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	pid := GetProtocolIdFromState(st)
+	for i := range ips {
+		if int32(i) == candidateId || !raftlib.IsNodeActive(ips[i]) {
+			continue
+		}
+		// prepare request
+		datastr, err := json.Marshal(&req)
+		if err != nil {
+			return err
+		}
+		sig, err := raftlib.SignMessage(string(datastr))
+		if err != nil {
+			return err
+		}
+		payload := struct {
+			Run struct {
+				Event struct {
+					Type   string                        `json:"type"`
+					Params []struct{ Key, Value string } `json:"params"`
+				} `json:"event"`
+			} `json:"run"`
+		}{}
+		payload.Run.Event.Type = "receiveVoteRequest"
+		payload.Run.Event.Params = []struct{ Key, Value string }{
+			{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
+			{Key: "signature", Value: sig},
+		}
+		msg, _ := json.Marshal(&payload)
+		peer := GetP2PAddress(ips[i])
+		LoggerDebug("sending vote request", []string{"nodeId", fmt.Sprint(i), "nodeIp", ips[i].Node.IP, "termId", fmt.Sprint(termId), "data", string(datastr)})
+		if _, err := p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: pid, Peers: []string{peer}}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ReceiveVoteResponse marks votes from sender after signature verification
 func ReceiveVoteResponse(entryB64 string, signature string, sender string) error {
 	if entryB64 == "" {
@@ -321,11 +600,13 @@ func ReceiveVoteResponse(entryB64 string, signature string, sender string) error
 	if err != nil {
 		return err
 	}
+	LoggerDebug("received vote response", []string{"sender", sender, "data", string(data)})
 	ok, err := verifyMessageByAddr(sender, signature, data)
 	if err != nil {
 		return err
 	}
 	if !ok {
+		LoggerError("signature verification failed for vote response", []string{"sender", sender})
 		return fmt.Errorf("signature verification failed for vote response")
 	}
 	var resp raftlib.VoteResponse
@@ -424,11 +705,13 @@ func ReceiveAppendEntryResponse(entry string, signature string, sender string) e
 	if err := json.Unmarshal(bz, &resp); err != nil {
 		return err
 	}
+	LoggerDebug("received append entry response", []string{"sender", sender, "data", string(bz)})
 	ok, err := verifyMessageByAddr(sender, signature, bz)
 	if err != nil {
 		return err
 	}
 	if !ok {
+		LoggerError("signature verification failed for receiveAppendEntryResponse", []string{"sender", sender})
 		return fmt.Errorf("signature verification failed for receiveAppendEntryResponse from %s", sender)
 	}
 	// find node id by sender address
@@ -465,6 +748,124 @@ func ReceiveAppendEntryResponse(entry string, signature string, sender string) e
 	return nil
 }
 
+// sendAppendEntry: we eliminate out of sync nodes until they get back online (AS parity)
+func sendAppendEntry(nodeId int32, node raftlib.NodeInfo, nodeIps []raftlib.NodeInfo) error {
+	nextIndexPerNode, err := raftlib.GetNextIndexArray()
+	if err != nil {
+		return err
+	}
+	var nextIndex int64 = raftlib.LOG_START
+	if int(nodeId) < len(nextIndexPerNode) {
+		nextIndex = nextIndexPerNode[nodeId]
+	}
+	lastIndex, err := raftlib.GetLastLogIndex()
+	if err != nil {
+		return err
+	}
+	if (lastIndex - nextIndex) > int64(stateSyncBatch) {
+		// this node is out of sync
+		nodeIps[nodeId].OutOfSync = true
+		if err := raftlib.SetNodeIPs(nodeIps); err != nil {
+			return err
+		}
+		return nil
+	}
+	// build AppendEntry
+	entries := make([]raftlib.LogEntryAggregate, 0)
+	for i := nextIndex; i <= lastIndex; i++ {
+		if agg, ok, err := getLogEntryAggregateLocal(i); err == nil && ok {
+			entries = append(entries, agg)
+		} else if err != nil {
+			return err
+		}
+	}
+	prev, err := raftlib.GetLogEntryObj(nextIndex - 1)
+	if err != nil {
+		return err
+	}
+	lastCommit, err := raftlib.GetCommitIndex()
+	if err != nil {
+		return err
+	}
+	term, err := raftlib.GetTermId()
+	if err != nil {
+		return err
+	}
+	leader, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	data := raftlib.AppendEntry{TermID: term, LeaderID: leader, PrevLogIndex: nextIndex - 1, PrevLogTerm: prev.TermID, Entries: entries, LeaderCommit: lastCommit, NodeIPs: nodeIps}
+	// prepare payload
+	datastr, err := json.Marshal(&data)
+	if err != nil {
+		return err
+	}
+	signature, err := raftlib.SignMessage(string(datastr))
+	if err != nil {
+		return err
+	}
+	payload := struct {
+		Run struct {
+			Event struct {
+				Type   string                        `json:"type"`
+				Params []struct{ Key, Value string } `json:"params"`
+			} `json:"event"`
+		} `json:"run"`
+	}{}
+	payload.Run.Event.Type = "receiveHeartbeat"
+	payload.Run.Event.Params = []struct{ Key, Value string }{
+		{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
+		{Key: "signature", Value: signature},
+	}
+	msg, _ := json.Marshal(&payload)
+	LoggerDebug("diseminate entry", []string{"count", fmt.Sprint(len(entries)), "address", node.Address})
+	// send to peer
+	contract := wasmx.GetAddress()
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(st)
+	peer := GetP2PAddress(node)
+	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: protocolId, Peers: []string{peer}})
+	return err
+}
+
+// SendAppendEntries goes through each node and sends AppendEntry if needed (AS parity)
+func SendAppendEntries() error {
+	nodeId, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	ips, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	LoggerDebug("diseminate entries...", []string{"nodeId", fmt.Sprint(nodeId)})
+	for i := range ips {
+		if int32(i) == nodeId || !raftlib.IsNodeActive(ips[i]) {
+			continue
+		}
+		if err := sendAppendEntry(int32(i), ips[i], ips); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CommitBlocks: run commit checks, and if consensus changed, disseminate via p2p
+func CommitBlocks() error {
+	// Let raft-lib run commit and finalize block state
+	if err := raftlib.CommitBlocks(nil, fsm.EventObject{}); err != nil {
+		return err
+	}
+	// As in AS raftp2p, propagate the commit to others so they can enter new consensus
+	return SendAppendEntries()
+}
+
+// we just send a NodeUpdateRequest
+// the node will receive a UpdateNodeResponse from the leader and then proceed to do state sync
 // RegisteredCheck sends a NodeUpdate request to the leader(s)
 func RegisteredCheck(protocolId string) error {
 	ips, err := raftlib.GetNodeIPs()
@@ -478,6 +879,7 @@ func RegisteredCheck(protocolId string) error {
 	if err != nil {
 		return err
 	}
+	// when a node starts, it needs to add itself to the Leader's node list
 	// Build NodeUpdate message (add self)
 	update := raftlib.NodeUpdate{Node: ips[nodeId], Index: nodeId, Type: raftlib.NODE_UPDATE_ADD}
 	dataBz, err := json.Marshal(&update)
@@ -510,6 +912,7 @@ func RegisteredCheck(protocolId string) error {
 	if err != nil {
 		return err
 	}
+	LoggerInfo("register request", []string{"req", string(msgBz)})
 	// send to all peers (except self)
 	peers := make([]string, 0, len(ips))
 	for i := range ips {
@@ -517,10 +920,13 @@ func RegisteredCheck(protocolId string) error {
 			peers = append(peers, GetP2PAddress(ips[i]))
 		}
 	}
+	LoggerDebug("sending node registration", []string{"peers", strings.Join(peers, ","), "data", string(msgBz)})
 	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msgBz, ProtocolId: protocolId, Peers: peers})
 	return err
 }
 
+// this is executed each time the node is started in Follower or Candidate state if needed
+// and the first time the node is started
 // RequestNetworkSync invokes RegisteredCheck
 func RequestNetworkSync(protocolId string) error { return RegisteredCheck(protocolId) }
 
@@ -534,6 +940,7 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 	if err := json.Unmarshal(bz, &resp); err != nil {
 		return err
 	}
+	LoggerInfo("received statesync response", []string{"count", fmt.Sprint(len(resp.Entries)), "from", fmt.Sprint(resp.StartBatchIndex), "to", fmt.Sprint(resp.LastBatchIndex), "last_log_index", fmt.Sprint(resp.LastLogIndex)})
 	if err := raftlib.SetTermId(resp.TermID); err != nil {
 		return err
 	}
@@ -548,6 +955,7 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 			return err
 		}
 		msg := raftlib.AppendEntryResponse{TermID: resp.TermID, Success: true, LastIndex: resp.LastBatchIndex}
+		LoggerInfo("send heartbeat response", []string{"termId", fmt.Sprint(resp.TermID), "success", "true", "lastLogIndex", fmt.Sprint(resp.LastBatchIndex), "leaderId", fmt.Sprint(last.LeaderID)})
 		if err := SendHeartbeatResponseMessage(msg, last.LeaderID); err != nil {
 			return err
 		}
@@ -557,6 +965,7 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 
 const stateSyncBatch = 200
 
+// received statesync request
 // ReceiveStateSyncRequest verifies and replies with batches
 func ReceiveStateSyncRequest(entryB64 string, signature string, sender string) error {
 	data, err := base64.StdEncoding.DecodeString(entryB64)
@@ -574,6 +983,7 @@ func ReceiveStateSyncRequest(entryB64 string, signature string, sender string) e
 	if err := json.Unmarshal(data, &req); err != nil {
 		return err
 	}
+	LoggerInfo("statesync request", []string{"data", string(data), "sender", sender})
 	term, err := raftlib.GetTermId()
 	if err != nil {
 		return err
@@ -601,6 +1011,7 @@ func ReceiveStateSyncRequest(entryB64 string, signature string, sender string) e
 			return err
 		}
 	}
+	LoggerInfo("state sync messages finished", []string{"lastIndex", fmt.Sprint(lastIndex)})
 	return nil
 }
 
@@ -613,6 +1024,7 @@ func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int
 			return err
 		}
 	}
+	// we do not sign this message, because the receiver does not have our publicKey
 	resp := StateSyncResponse{StartBatchIndex: startIndex, LastBatchIndex: lastIndexToSend, LastLogIndex: lastIndex, TermID: termId, Entries: entries}
 	bz, err := json.Marshal(&resp)
 	if err != nil {
@@ -652,7 +1064,9 @@ func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int
 	}
 	pid := GetProtocolIdFromState(st)
 	node := getNodeByAddress(receiver, nodes)
+	LoggerDebug("sending state sync chunk", []string{"to", receiver, "count", fmt.Sprint(len(entries)), "from", fmt.Sprint(startIndex), "to", fmt.Sprint(lastIndexToSend), "last_index", fmt.Sprint(lastIndex)})
 	if node == nil {
+		LoggerError("node not found for address", []string{"receiver", receiver})
 		return fmt.Errorf("cannot find node by address: %s", receiver)
 	}
 	peer := GetP2PAddress(*node)
@@ -734,7 +1148,7 @@ func processAppendEntryAggregate(entry raftlib.LogEntryAggregate) error {
 
 // Signature verification helpers (by validator address)
 func verifyMessageByAddr(addr string, signatureB64 string, msg []byte) (bool, error) {
-	vals, err := getAllValidators()
+	vals, err := raftlib.GetAllValidators()
 	if err != nil {
 		return false, err
 	}
@@ -755,30 +1169,7 @@ func verifyMessageByAddr(addr string, signatureB64 string, msg []byte) (bool, er
 	return wasmx.Ed25519Verify(pub.GetKey().Key, sig, msg), nil
 }
 
-func getAllValidators() ([]stakinglib.Validator, error) {
-	payload := map[string]any{"QueryValidators": map[string]any{}}
-	bz, err := json.Marshal(&payload)
-	if err != nil {
-		return nil, err
-	}
-	addr := wasmx.GetAddressByRole(wasmx.ROLE_STAKING)
-	ok, data := wasmx.CallSimple(addr, bz, true, MODULE_NAME)
-	resp := wasmx.CallResponse{Success: 0, Data: string(data)}
-	if !ok {
-		resp.Success = 1
-	}
-	if resp.Success > 0 || resp.Data == "" {
-		return []stakinglib.Validator{}, nil
-	}
-	var out struct {
-		Validators []stakinglib.Validator `json:"validators"`
-	}
-	if err := json.Unmarshal([]byte(resp.Data), &out); err != nil {
-		return []stakinglib.Validator{}, nil
-	}
-	return out.Validators, nil
-}
-
+// received an updated node list from Leader
 // ReceiveUpdateNodeResponse verifies and applies node list, then triggers state sync request
 func ReceiveUpdateNodeResponse(entryB64 string, signature string, sender string) error {
 	if entryB64 == "" {
@@ -902,6 +1293,7 @@ func SendStateSyncRequest(protocolId string, nodeId int32) error {
 	msg, _ := json.Marshal(&payload)
 	contract := wasmx.GetAddress()
 	peer := GetP2PAddress(receiver)
+	LoggerDebug("sending statesync request", []string{"nodeId", fmt.Sprint(nodeId), "address", receiver.Address, "data", string(bz)})
 	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: protocolId, Peers: []string{peer}})
 	return err
 }

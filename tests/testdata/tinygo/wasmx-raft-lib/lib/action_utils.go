@@ -70,7 +70,7 @@ func PrepareAppendEntryMessage(nodeId int32, nextIndex int64, lastIndex int64, l
 	}
 	dataBase64 := base64.StdEncoding.EncodeToString([]byte(datastr))
 	msgstr := fmt.Sprintf(`{"run":{"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"},{"key":"signature","value":"%s"}]}}}`, dataBase64, signature)
-	wasmx.LoggerDebug(MODULE_NAME, "diseminate append entry...", []string{"nodeId", Int32ToString(nodeId), "receiver", node.Address, "from", Int64ToString(nextIndex), "to", Int64ToString(lastIndexToSend), "last_index", Int64ToString(lastIndex)})
+	LoggerDebug("diseminate append entry...", []string{"nodeId", Int32ToString(nodeId), "receiver", node.Address, "from", Int64ToString(nextIndex), "to", Int64ToString(lastIndexToSend), "last_index", Int64ToString(lastIndex)})
 	return msgstr, nil
 }
 
@@ -95,7 +95,7 @@ type InitChainSetup struct {
 }
 
 // initChain initializes the chain current state and sets consensus params for next height
-func initChain(req InitChainSetup) error {
+func InitChain(req InitChainSetup) error {
 	LoggerDebug("start chain init", nil)
 	empty := typestnd.BlockID{Hash: wasmx.HexString(""), Parts: typestnd.PartSetHeader{Total: 0, Hash: wasmx.HexString("")}}
 	st := CurrentState{
@@ -109,6 +109,8 @@ func initChain(req InitChainSetup) error {
 		ValidatorPrivkey: req.ValidatorPrivkey,
 		ValidatorPubkey:  req.ValidatorPubkey,
 	}
+	stbz, _ := json.Marshal(&st)
+	LoggerDebug("set current state", []string{"state", string(stbz)})
 	if err := SetCurrentState(st); err != nil {
 		return err
 	}
@@ -200,7 +202,7 @@ func callHookContractInternal(contractRole string, hookName string, data string)
 	ok, out := wasmx.CallSimple(addr, bz, false, MODULE_NAME)
 	if !ok {
 		// do not fail, but log as AS does
-		wasmx.LoggerError(MODULE_NAME, "hooks failed", []string{"error", string(out)})
+		LoggerError("hooks failed", []string{"error", string(out)})
 	}
 	return nil
 }
@@ -214,10 +216,10 @@ func verifyMessage(nodeIndex int32, signatureStr string, msg string) (bool, erro
 	if int(nodeIndex) < 0 || int(nodeIndex) >= len(nodes) {
 		return false, nil
 	}
-	return verifyMessageByAddr(nodes[nodeIndex].Address, signatureStr, msg)
+	return VerifyMessageByAddr(nodes[nodeIndex].Address, signatureStr, msg)
 }
 
-func verifyMessageByAddr(addr string, signatureStr string, msg string) (bool, error) {
+func VerifyMessageByAddr(addr string, signatureStr string, msg string) (bool, error) {
 	pubKey, err := getConsensusKeyByAddr(addr)
 	if err != nil {
 		return false, err
@@ -231,6 +233,7 @@ func verifyMessageByAddr(addr string, signatureStr string, msg string) (bool, er
 	}
 	return wasmx.Ed25519Verify(pubKey.GetKey().Key, sig, []byte(msg)), nil
 }
+
 func verifyMessageBytesByAddr(addr string, signatureStr string, msg []byte) (bool, error) {
 	pubKey, err := getConsensusKeyByAddr(addr)
 	if err != nil {
@@ -247,7 +250,7 @@ func verifyMessageBytesByAddr(addr string, signatureStr string, msg []byte) (boo
 }
 
 func getConsensusKeyByAddr(addr string) (*wasmx.PublicKey, error) {
-	vals, err := getAllValidators()
+	vals, err := GetAllValidators()
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +482,7 @@ func verifyBlockProposal(wrap typestnd.RequestProcessProposalWithMetaInfo, fin *
 		}
 	}
 	// Validators hash using active set from staking (best effort)
-	if vlist, err := getAllValidators(); err == nil && len(vlist) > 0 {
+	if vlist, err := GetAllValidators(); err == nil && len(vlist) > 0 {
 		if tvals, err2 := consutils.GetActiveValidatorInfo(vlist); err2 == nil && len(tvals) > 0 {
 			if vh, err3 := consensuswrap.ValidatorsHash(tvals); err3 == nil {
 				if !hexEqual(string(header.ValidatorsHash), vh) {
@@ -584,9 +587,9 @@ func callStaking(calldata string, isQuery bool) (wasmx.CallResponse, error) {
 	return callContract(addr, calldata, isQuery, MODULE_NAME)
 }
 
-// getAllValidators queries staking module for validators. The exact query envelope may differ; best-effort parsing.
-func getAllValidators() ([]stakinglib.Validator, error) {
-	payload := map[string]any{"QueryValidators": map[string]any{}}
+// GetAllValidators queries staking module for validators. The exact query envelope may differ; best-effort parsing.
+func GetAllValidators() ([]stakinglib.Validator, error) {
+	payload := map[string]any{"GetAllValidators": map[string]any{}}
 	bz, err := json.Marshal(&payload)
 	if err != nil {
 		return nil, err
@@ -627,7 +630,7 @@ func checkValidatorsUpdate(validators []typestnd.ValidatorInfo, validatorInfo ty
 }
 
 // initializeIndexArrays sets NextIndex to last+1 and MatchIndex to LOG_START for len
-func initializeIndexArrays(lenNodes int) error {
+func InitializeIndexArrays(lenNodes int) error {
 	last, err := GetLastLogIndex()
 	if err != nil {
 		return err

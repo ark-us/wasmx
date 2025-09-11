@@ -319,9 +319,9 @@ func Create2Account(req Create2AccountRequest, moduleName ...string) Bech32Strin
 }
 
 // crypto
-func Sha256(dataBase64 string) string {
-	out := utils.PackedPtrToBytes(Sha256_(utils.StringToPackedPtr(dataBase64)))
-	return base64.StdEncoding.EncodeToString(out)
+func Sha256(data []byte) []byte {
+	out := utils.PackedPtrToBytes(Sha256_(utils.BytesToPackedPtr(data)))
+	return out
 }
 
 func MerkleHash(slices []string) []byte {
