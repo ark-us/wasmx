@@ -345,8 +345,8 @@ func Ed25519Verify(pubKey []byte, signature []byte, msg []byte) bool {
 	return r == 1
 }
 
-func Ed25519PubToHex(pubKey []byte) string {
-	return string(utils.PackedPtrToBytes(Ed25519PubToHex_(utils.BytesToPackedPtr(pubKey))))
+func Ed25519PubToHex(pubKey []byte) []byte {
+	return utils.PackedPtrToBytes(Ed25519PubToHex_(utils.BytesToPackedPtr(pubKey)))
 }
 
 // addresses

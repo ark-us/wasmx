@@ -352,7 +352,7 @@ func validatorsToCmtValidators(interfaceRegistry cdctypes.InterfaceRegistry, val
 		}
 		valaddr, err := hex.DecodeString(val.HexAddress)
 		if err != nil {
-			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to decode hex address")
+			return nil, errorsmod.Wrapf(err, "ABCIClient.Validators failed to decode hex address %s", val.HexAddress)
 		}
 		v := &cmttypes.Validator{
 			Address:          valaddr,

@@ -770,56 +770,18 @@ func sendAppendEntry(nodeId int32, node raftlib.NodeInfo, nodeIps []raftlib.Node
 		}
 		return nil
 	}
-	// build AppendEntry
-	entries := make([]raftlib.LogEntryAggregate, 0)
-	for i := nextIndex; i <= lastIndex; i++ {
-		if agg, ok, err := getLogEntryAggregateLocal(i); err == nil && ok {
-			entries = append(entries, agg)
-		} else if err != nil {
-			return err
-		}
-	}
-	prev, err := raftlib.GetLogEntryObj(nextIndex - 1)
+	// build AppendEntry and message via helpers
+	data, err := raftlib.PrepareAppendEntry(nodeIps, nextIndex, lastIndex)
 	if err != nil {
 		return err
 	}
-	lastCommit, err := raftlib.GetCommitIndex()
+	// AS also logs a short entry dissemination here
+	LoggerDebug("diseminate entry", []string{"count", fmt.Sprint(len(data.Entries)), "address", node.Address})
+	msgStr, err := raftlib.PrepareAppendEntryMessage(nodeId, nextIndex, lastIndex, lastIndex, node, data)
 	if err != nil {
 		return err
 	}
-	term, err := raftlib.GetTermId()
-	if err != nil {
-		return err
-	}
-	leader, err := raftlib.GetCurrentNodeId()
-	if err != nil {
-		return err
-	}
-	data := raftlib.AppendEntry{TermID: term, LeaderID: leader, PrevLogIndex: nextIndex - 1, PrevLogTerm: prev.TermID, Entries: entries, LeaderCommit: lastCommit, NodeIPs: nodeIps}
-	// prepare payload
-	datastr, err := json.Marshal(&data)
-	if err != nil {
-		return err
-	}
-	signature, err := raftlib.SignMessage(string(datastr))
-	if err != nil {
-		return err
-	}
-	payload := struct {
-		Run struct {
-			Event struct {
-				Type   string                        `json:"type"`
-				Params []struct{ Key, Value string } `json:"params"`
-			} `json:"event"`
-		} `json:"run"`
-	}{}
-	payload.Run.Event.Type = "receiveHeartbeat"
-	payload.Run.Event.Params = []struct{ Key, Value string }{
-		{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
-		{Key: "signature", Value: signature},
-	}
-	msg, _ := json.Marshal(&payload)
-	LoggerDebug("diseminate entry", []string{"count", fmt.Sprint(len(entries)), "address", node.Address})
+	msg := []byte(msgStr)
 	// send to peer
 	contract := wasmx.GetAddress()
 	st, err := raftlib.GetCurrentState()
@@ -842,7 +804,11 @@ func SendAppendEntries() error {
 	if err != nil {
 		return err
 	}
-	LoggerDebug("diseminate entries...", []string{"nodeId", fmt.Sprint(nodeId)})
+	if bz, err := json.Marshal(&ips); err == nil {
+		LoggerDebug("diseminate entries...", []string{"nodeId", fmt.Sprint(nodeId), "ips", string(bz)})
+	} else {
+		LoggerDebug("diseminate entries...", []string{"nodeId", fmt.Sprint(nodeId)})
+	}
 	for i := range ips {
 		if int32(i) == nodeId || !raftlib.IsNodeActive(ips[i]) {
 			continue
@@ -856,13 +822,22 @@ func SendAppendEntries() error {
 
 // CommitBlocks: run commit checks, and if consensus changed, disseminate via p2p
 func CommitBlocks() error {
-	// Let raft-lib run commit and finalize block state
-	if err := raftlib.CommitBlocks(nil, fsm.EventObject{}); err != nil {
+	// AS parity: call raft's checkCommits (no dissemination)
+	changed, err := raftlib.CheckCommits(nil, fsm.EventObject{})
+	if err != nil {
 		return err
 	}
-	// As in AS raftp2p, propagate the commit to others so they can enter new consensus
-	return SendAppendEntries()
+	if changed {
+		// propagate commit so peers can enter new consensus
+		return SendAppendEntries()
+	}
+	return nil
 }
+
+// Helpers: build AppendEntry and message (AS parity)
+// removed local prepareAppendEntry; use raftlib.PrepareAppendEntry
+
+// removed local prepareAppendEntryMessage; use raftlib.PrepareAppendEntryMessage
 
 // we just send a NodeUpdateRequest
 // the node will receive a UpdateNodeResponse from the leader and then proceed to do state sync

@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -389,6 +390,11 @@ func CommitBlocks(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	return nil
 }
 
+// CheckCommits exposes the commit check logic without dissemination (AS parity helper)
+func CheckCommits(_ []fsm.ActionParam, _ fsm.EventObject) (bool, error) {
+	return checkCommits()
+}
+
 func SetRandomElectionTimeout(params []fsm.ActionParam, event fsm.EventObject) error {
 	var minS, maxS string
 	if len(params) == 0 {
@@ -464,6 +470,11 @@ func InitializeMatchIndex(_ []fsm.ActionParam, _ fsm.EventObject) error {
 		arr[i] = 0
 	}
 	return SetMatchIndexArray(arr)
+}
+
+// PrepareAppendEntry exports the internal helper for reuse (AS parity)
+func PrepareAppendEntry(nodeIps []NodeInfo, nextIndex int64, lastIndex int64) (AppendEntry, error) {
+	return prepareAppendEntry(nodeIps, nextIndex, lastIndex)
 }
 
 func IncrementCurrentTerm(_ []fsm.ActionParam, _ fsm.EventObject) error {
@@ -743,59 +754,123 @@ func ProposeBlock(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	if err != nil {
 		return err
 	}
-	// Build prepare proposal request
-	prep := typestnd.RequestPrepareProposal{
-		MaxTxBytes: maxBytes,
-		Txs:        batch.Txs,
-		Height:     height + 1,
-		Time:       wasmx.GetTimestamp().UTC().Format("2006-01-02T15:04:05Z07:00"),
+	LoggerDebug("batch transactions", []string{"count", Int32ToString(int32(len(batch.Txs)))})
+	// optimistic execution if atomic tx leader
+	optimistic := batch.IsAtomicTx && batch.IsLeader
+	if err := startBlockProposal(batch.Txs, optimistic, batch.CummulatedGas, maxBytes); err != nil {
+		return err
 	}
-	_, err = consensuswrap.PrepareProposal(prep)
+	return SetMempool(mp)
+}
+
+// startBlockProposal matches the AS utility: prepare + process + optional optimistic exec, then append log
+func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas int64, maxDataBytes int64) error {
+	// PrepareProposal
+	last, err := GetLastLogIndex()
 	if err != nil {
 		return err
 	}
-	// Process proposal
-	proc := typestnd.RequestProcessProposal{
-		Txs:    batch.Txs,
-		Height: height + 1,
-		Time:   prep.Time,
-		Hash:   consutils.GetTxsHash(batch.Txs),
-	}
-	resp, err := consensuswrap.ProcessProposal(proc)
+	height := last + 1
+	LoggerDebug("start block proposal", []string{"height", Int64ToString(height)})
+
+	// Gather state and validators
+	st, err := GetCurrentState()
 	if err != nil {
 		return err
 	}
-	if resp.Status != typestnd.ProposalStatus_ACCEPT {
+	validators, err := GetAllValidators()
+	if err != nil {
+		return err
+	}
+	activeInfos, err := consutils.GetActiveValidatorInfo(validators)
+	if err != nil {
+		return err
+	}
+	validatorInfos := consutils.SortTendermintValidators(activeInfos)
+	validatorSet := typestnd.TendermintValidators{Validators: validatorInfos}
+
+	// Extended commit and next validators hash
+	localLastCommit := typestnd.ExtendedCommitInfo{Round: 0, Votes: []typestnd.ExtendedVoteInfo{}}
+	nextValsHash, err := consensuswrap.ValidatorsHash(validatorInfos)
+	if err != nil {
+		return err
+	}
+	misbehavior := []typestnd.Misbehavior{}
+	timeISO := wasmx.GetTimestamp().UTC().Format("2006-01-02T15:04:05Z07:00")
+
+	prepareReq := typestnd.RequestPrepareProposal{
+		MaxTxBytes:         maxDataBytes,
+		Txs:                txs,
+		LocalLastCommit:    localLastCommit,
+		Misbehavior:        misbehavior,
+		Height:             height,
+		Time:               timeISO,
+		NextValidatorsHash: nextValsHash,
+		ProposerAddress:    st.ValidatorAddress,
+	}
+	prepareResp, err := consensuswrap.PrepareProposal(prepareReq)
+	if err != nil {
+		return err
+	}
+
+	// Build header prerequisites
+	lastCommit := typestnd.CommitInfo{Round: 0, Votes: []typestnd.VoteInfo{}}
+	lastBlockCommit := typestnd.BlockCommit{Height: height - 1, Round: 0, BlockID: st.LastBlockID, Signatures: []typestnd.CommitSig{}}
+	evidence := typestnd.Evidence{}
+	consHash := []byte{}
+	if params, err := getConsensusParams(height); err == nil && params != nil {
+		if h, err2 := consutils.GetConsensusParamsHash(*params); err2 == nil {
+			consHash = h
+		}
+	}
+
+	header := typestnd.Header{
+		Version:            typestnd.VersionConsensus{Block: typestnd.BlockProtocol, App: st.Version.Consensus.App},
+		ChainID:            st.ChainID,
+		Height:             height,
+		Time:               prepareReq.Time,
+		LastBlockID:        st.LastBlockID,
+		LastCommitHash:     wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(lastBlockCommit)))),
+		DataHash:           wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetTxsHash(prepareResp.Txs)))),
+		ValidatorsHash:     wasmx.HexString(strings.ToUpper(hex.EncodeToString(nextValsHash))),
+		NextValidatorsHash: wasmx.HexString(strings.ToUpper(hex.EncodeToString(nextValsHash))),
+		ConsensusHash:      wasmx.HexString(strings.ToUpper(hex.EncodeToString(consHash))),
+		AppHash:            wasmx.HexString(strings.ToUpper(hex.EncodeToString(st.AppHash))),
+		LastResultsHash:    wasmx.HexString(strings.ToUpper(hex.EncodeToString(st.LastResultsHash))),
+		EvidenceHash:       wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetEvidenceHash(evidence)))),
+		ProposerAddress:    st.ValidatorAddress,
+	}
+	hhash, err := consensuswrap.HeaderHash(header)
+	if err != nil {
+		return err
+	}
+	LoggerInfo("start block proposal", []string{"height", Int64ToString(height), "hash", base64.StdEncoding.EncodeToString(hhash), "optimistic_execution", fmt.Sprintf("%v", optimisticExecution)})
+
+	processReq := typestnd.RequestProcessProposal{
+		Txs:                prepareResp.Txs,
+		ProposedLastCommit: lastCommit,
+		Misbehavior:        prepareReq.Misbehavior,
+		Hash:               hhash,
+		Height:             prepareReq.Height,
+		Time:               prepareReq.Time,
+		NextValidatorsHash: prepareReq.NextValidatorsHash,
+		ProposerAddress:    prepareReq.ProposerAddress,
+	}
+	processResp, err := consensuswrap.ProcessProposal(processReq)
+	if err != nil {
+		return err
+	}
+	if processResp.Status == typestnd.ProposalStatus_REJECT {
+		LoggerError("new block rejected", []string{"height", Int64ToString(processReq.Height), "node type", "Leader"})
 		return nil
 	}
-	// optimistic execution if atomic tx leader
-	optimistic := false
-	if batch.IsAtomicTx && batch.IsLeader {
-		optimistic = true
-	}
-	var metainfo map[string][]byte
-	if optimistic {
-		oe, err := doOptimisticExecution(proc, resp)
-		if err == nil {
+	metainfo := map[string][]byte{}
+	if optimisticExecution {
+		if oe, err := doOptimisticExecution(processReq, processResp); err == nil {
 			metainfo = oe.Metainfo
 		}
 	}
-	// Save to logs as uncommitted entry
-	wrap := typestnd.RequestProcessProposalWithMetaInfo{Request: proc, OptimisticExecution: optimistic, Metainfo: metainfo}
-	data, err := json.Marshal(&wrap)
-	if err != nil {
-		return err
-	}
-	term, err := GetTermId()
-	if err != nil {
-		return err
-	}
-	leader, err := GetCurrentNodeId()
-	if err != nil {
-		return err
-	}
-	entry := LogEntryAggregate{Index: height + 1, TermID: term, LeaderID: leader, Data: json.RawMessage(data)}
-	return AppendLogEntry(entry)
+	return appendLogInternalVerified(processReq, header, lastBlockCommit, optimisticExecution, metainfo, validatorSet)
 }
 func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
 	LoggerInfo("setting up new raft consensus contract", nil)
@@ -1405,6 +1480,7 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	if err != nil {
 		return false, err
 	}
+	LoggerDebug("built block entry", []string{"height", Int64ToString(entryobj.Index)})
 	hashStr := base64.StdEncoding.EncodeToString(wrap.Request.Hash)
 	if err := setFinalizedBlock(blockEntryJSON, hashStr, txhashes, topics); err != nil {
 		return false, err
