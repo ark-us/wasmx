@@ -109,7 +109,7 @@ func main() {
 		entry := get("entry")
 		sig := get("signature")
 		sender := get("sender")
-		if err := lib.ReceiveAppendEntryResponse(entry, sig, sender); err != nil {
+		if err := lib.ReceiveAppendEntryResponse(entry, sig, wasmx.Bech32String(sender)); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -117,7 +117,7 @@ func main() {
 		entry := get("entry")
 		sig := get("signature")
 		sender := get("sender")
-		if err := lib.ReceiveStateSyncRequest(entry, sig, sender); err != nil {
+		if err := lib.ReceiveStateSyncRequest(entry, sig, wasmx.Bech32String(sender)); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -139,7 +139,7 @@ func main() {
 		entry := get("entry")
 		sig := get("signature")
 		sender := get("sender")
-		if err := lib.ReceiveVoteResponse(entry, sig, sender); err != nil {
+		if err := lib.ReceiveVoteResponse(entry, sig, wasmx.Bech32String(sender)); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -147,7 +147,7 @@ func main() {
 		entry := get("entry")
 		sig := get("signature")
 		sender := get("sender")
-		if err := lib.ReceiveUpdateNodeResponse(entry, sig, sender); err != nil {
+		if err := lib.ReceiveUpdateNodeResponse(entry, sig, wasmx.Bech32String(sender)); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -172,7 +172,6 @@ func main() {
 			lib.Revert(err.Error())
 			return
 		}
-	// Proxy to raft-lib for shared actions
 	case "processAppendEntries":
 		if err := raft.ProcessAppendEntries(calld.Params, calld.Event); err != nil {
 			lib.Revert(err.Error())

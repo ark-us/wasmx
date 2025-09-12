@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"sort"
 
 	sdkmath "cosmossdk.io/math"
@@ -40,7 +39,6 @@ func IsValidatorInactive(v staking.Validator) bool {
 func GetActiveValidatorInfo(validators []staking.Validator) ([]consensus.TendermintValidator, error) {
 	out := make([]consensus.TendermintValidator, 0, len(validators))
 	for _, v := range validators {
-		fmt.Println("--GetActiveValidatorInfo.OperatorAddress--", v.OperatorAddress)
 		if IsValidatorInactive(v) {
 			continue
 		}
@@ -48,11 +46,9 @@ func GetActiveValidatorInfo(validators []staking.Validator) ([]consensus.Tenderm
 			wasmx.RevertWithModule("consensus-utils", "validator missing consensus key "+string(v.OperatorAddress))
 			return nil, nil
 		}
-		fmt.Println("--GetActiveValidatorInfo.ConsensusPubkey--", v.ConsensusPubkey.TypeUrl, v.ConsensusPubkey.Value)
 		// hex address from pubkey bytes
 		key := v.ConsensusPubkey.GetKey().Key
 		addrhex := wasmx.Ed25519PubToHex(key)
-		fmt.Println("--GetActiveValidatorInfo.addrhex--", addrhex, hex.EncodeToString(addrhex))
 		pow := getPower(v.Tokens)
 		out = append(out, consensus.TendermintValidator{
 			OperatorAddress:  v.OperatorAddress,

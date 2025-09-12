@@ -21,6 +21,7 @@ require github.com/loredanacirstea/wasmx-consensus-utils v0.0.0
 require github.com/loredanacirstea/wasmx-blocks v0.0.0
 
 require github.com/loredanacirstea/wasmx-env-multichain v0.0.0
+require github.com/loredanacirstea/wasmx-env-p2p v0.0.0
 
 require (
 	cosmossdk.io/math v1.5.3 // indirect
@@ -49,3 +50,4 @@ replace github.com/loredanacirstea/wasmx-consensus-utils v0.0.0 => ../wasmx-cons
 replace github.com/loredanacirstea/wasmx-blocks v0.0.0 => ../wasmx-blocks
 
 replace github.com/loredanacirstea/wasmx-env-multichain v0.0.0 => ../wasmx-env-multichain
+replace github.com/loredanacirstea/wasmx-env-p2p v0.0.0 => ../wasmx-env-p2p

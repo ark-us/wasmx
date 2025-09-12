@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkmath "cosmossdk.io/math"
+
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -79,7 +81,7 @@ const (
 )
 
 type Validator struct {
-	Address []byte `json:"address"`
+	Address []byte `json:"address"` // ConsAddress operator address in bytes
 	Power   int64  `json:"power"`
 }
 
@@ -378,7 +380,7 @@ type ResponseBeginBlockWrap struct {
 }
 
 type ResponseCommit struct {
-	RetainHeight int64 `json:"retainHeight"`
+	RetainHeight sdkmath.Int `json:"retainHeight"`
 }
 
 type CheckTxType int32
@@ -409,8 +411,8 @@ type ResponseCheckTx struct {
 	Data      []byte        `json:"data"`
 	Log       string        `json:"log"`
 	Info      string        `json:"info"`
-	GasWanted int64         `json:"gas_wanted"`
-	GasUsed   int64         `json:"gas_used"`
+	GasWanted sdkmath.Int   `json:"gas_wanted"`
+	GasUsed   sdkmath.Int   `json:"gas_used"`
 	Events    []wasmx.Event `json:"events"`
 	Codespace string        `json:"codespace"`
 }

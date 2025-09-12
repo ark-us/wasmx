@@ -72,6 +72,11 @@ func GetAddress() Bech32String {
 	return Bech32String(Bech32BytesToString(bz))
 }
 
+func GetAddressBz() []byte {
+	bz := utils.PackedPtrToBytes(GetAddress_())
+	return bz
+}
+
 func GetCurrentBlock() BlockInfo {
 	data := utils.PackedPtrToBytes(GetCurrentBlock_())
 	v := BlockInfo{}

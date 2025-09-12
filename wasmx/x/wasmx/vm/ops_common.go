@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
@@ -278,6 +279,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		success = int32(2)
 		// note, just log the error here, because it may contain non-deterministic data added by the WASM runtime
 		newctx.Logger(newctx.Ctx).Debug("internal call failed", "error", err.Error(), "data", string(newctx.ReturnData), "from", newctx.Env.CurrentCall.Sender.String(), "to", newctx.Env.Contract.Address.String())
+		LoggerExtended(newctx).Debug("internal call failed", "to", newctx.Env.Contract.Address.String(), "calldata", hex.EncodeToString(newctx.Env.CurrentCall.CallData))
 	} else {
 		success = int32(0)
 		if !req.IsQuery {

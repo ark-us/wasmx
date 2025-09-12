@@ -306,20 +306,20 @@ type TxMessage struct {
 type TxBody struct {
 	Messages                    []TxMessage `json:"messages"`
 	Memo                        string      `json:"memo"`
-	TimeoutHeight               uint64      `json:"timeout_height"`
+	TimeoutHeight               sdkmath.Int `json:"timeout_height"`
 	ExtensionOptions            []AnyWrap   `json:"extension_options"`
 	NonCriticalExtensionOptions []AnyWrap   `json:"non_critical_extension_options"`
 }
 
 type SignerInfo struct {
-	PublicKey *PublicKey `json:"public_key"`
-	ModeInfo  ModeInfo   `json:"mode_info"`
-	Sequence  uint64     `json:"sequence"`
+	PublicKey *PublicKey  `json:"public_key"`
+	ModeInfo  ModeInfo    `json:"mode_info"`
+	Sequence  sdkmath.Int `json:"sequence"`
 }
 
 type Fee struct {
 	Amount   []Coin       `json:"amount"`
-	GasLimit uint64       `json:"gas_limit"`
+	GasLimit sdkmath.Int  `json:"gas_limit"`
 	Payer    Bech32String `json:"payer"`
 	Granter  Bech32String `json:"granter"`
 }

@@ -669,7 +669,7 @@ func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
 	}
 	_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb(blockDelay, currentState, lastInterval))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("commit block failed: %v", err)
 	}
 
 	if strings.Contains(strings.ToLower(currentState), "ondemand") {
@@ -677,7 +677,7 @@ func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
 		currentState = chain.GetCurrentState(chain.GetContext())
 		_, err := app.GetActionExecutor().(*keeper.ActionExecutor).Execute(app.GetGoContextParent(), app.LastBlockHeight(), sdk.ExecModeFinalize, cb("batchTimeout", currentState, lastInterval))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("ondemand commit block failed: %v", err)
 		}
 	}
 	lastBlock := app.LastBlockHeight()
@@ -703,7 +703,7 @@ func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
 	}
 	res, _, _, err := chain.GetBlock(chain.GetContext(), lastBlock)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get new committed block failed: %v", err)
 	}
 	return res, nil
 }
@@ -767,24 +767,24 @@ func (chain TestChain) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFi
 	var entry types.BlockEntry
 	err := json.Unmarshal([]byte(data), &entry)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("block unmarshal failed for height %d: %v; %s", height, err, data)
 	}
 	var blockResultData abci.ResponseFinalizeBlock
 	err = json.Unmarshal(entry.Result, &blockResultData)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("block result unmarshal failed for height %d: %v; %s", height, err, string(entry.Result))
 	}
 
 	var header cmttypes.Header
 	err = json.Unmarshal(entry.Header, &header)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("block header unmarshal failed for height %d: %v; %s", height, err, string(entry.Header))
 	}
 
 	var lastCommit cmttypes.Commit
 	err = json.Unmarshal(entry.LastCommit, &lastCommit)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("block last commit unmarshal failed for height %d: %v; %s", height, err, string(entry.LastCommit))
 	}
 
 	return &blockResultData, &header, &lastCommit, nil

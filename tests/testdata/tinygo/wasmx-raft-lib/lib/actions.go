@@ -9,12 +9,15 @@ import (
 	"strconv"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
+
 	blocks "github.com/loredanacirstea/wasmx-blocks/lib"
 	consutils "github.com/loredanacirstea/wasmx-consensus-utils/lib"
 	consensuswrap "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	multichain "github.com/loredanacirstea/wasmx-env-multichain/lib"
+	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 )
@@ -86,13 +89,13 @@ func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
 	}
 
 	// Parse peers as address@host:port -> NodeInfo
-	peers := make([]NodeInfo, len(init.Peers))
+	peers := make([]p2p.NodeInfo, len(init.Peers))
 	for i, peer := range init.Peers {
 		parts := strings.Split(peer, "@")
 		if len(parts) != 2 {
 			return fmt.Errorf("invalid node format; found: %s", peer)
 		}
-		peers[i] = NodeInfo{Address: parts[0], Node: NetworkNode{IP: parts[1]}, OutOfSync: false}
+		peers[i] = p2p.NodeInfo{Address: wasmx.Bech32String(parts[0]), Node: p2p.NetworkNode{IP: parts[1]}, OutOfSync: false}
 	}
 	if err := SetNodeIPs(peers); err != nil {
 		return err
@@ -107,6 +110,11 @@ func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
 	return InitializeIndexArrays(len(peers))
 }
 func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
+	// here we receive new entries/logs/blocks
+	// we need to run ProcessProposal on each block
+	// and then FinalizeBlock & Commit
+	// TODO we also look at termId, as we might need to rollback changes in case of a network split
+
 	// Extract entry and signature
 	entryB64 := ""
 	sig := ""
@@ -128,6 +136,8 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 	if err != nil {
 		return err
 	}
+	LoggerDebugExtended("received new entries", []string{"AppendEntry", string(entryBytes)})
+
 	var appendEntry AppendEntry
 	if err := json.Unmarshal(entryBytes, &appendEntry); err != nil {
 		return err
@@ -141,28 +151,111 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 		LoggerError("signature verification failed for AppendEntry", []string{"leaderId", Int32ToString(appendEntry.LeaderID), "termId", Int32ToString(appendEntry.TermID)})
 		return nil
 	}
-	for _, e := range appendEntry.Entries {
-		if err := processAppendEntry(e); err != nil {
+
+	LoggerInfo("received new entries", []string{
+		"leaderId", Int32ToString(appendEntry.LeaderID),
+		"termId", Int32ToString(appendEntry.TermID),
+		"leaderCommit", Int64ToString(appendEntry.LeaderCommit),
+		"prevLogIndex", Int64ToString(appendEntry.PrevLogIndex),
+		"prevLogTerm", Int32ToString(appendEntry.PrevLogTerm),
+		"count", Int32ToString(int32(len(appendEntry.Entries))),
+		"nodeIps", Int32ToString(int32(len(appendEntry.NodeIPs))),
+	})
+
+	// update our nodeips
+	ips, err := GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	nodeId, err := GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	if int(nodeId) >= len(ips) {
+		return errors.New("current node id out of range")
+	}
+	nodeIp := ips[nodeId]
+	// check that our nodeId is still in line
+	newId := nodeId
+	for i, nodeInfo := range appendEntry.NodeIPs {
+		if nodeInfo.Address == nodeIp.Address {
+			newId = int32(i)
+			break
+		}
+	}
+	if newId != nodeId {
+		LoggerDebug("our node ID has changed", []string{"old", Int32ToString(nodeId), "new", Int32ToString(newId)})
+		if err := SetCurrentNodeId(newId); err != nil {
 			return err
 		}
 	}
-	LoggerDebug("new entries processing finished", []string{"leaderId", Int32ToString(appendEntry.LeaderID), "leaderCommit", Int64ToString(appendEntry.LeaderCommit), "prevLogIndex", Int64ToString(appendEntry.PrevLogIndex), "count", Int32ToString(int32(len(appendEntry.Entries)))})
+	if err := SetNodeIPs(appendEntry.NodeIPs); err != nil {
+		return err
+	}
+	if err := SetTermId(appendEntry.TermID); err != nil {
+		return err
+	}
+
+	// we commit as close to the transition end as possible
+	// we make sure to commit the last block before running ProcessProposal on the new block
+	// TODO
+	// entry.leaderId ?
+	lastCommitIndex, err := GetCommitIndex()
+	if err != nil {
+		return err
+	}
+	lastLogIndex, err := GetLastLogIndex()
+	if err != nil {
+		return err
+	}
+	minVal := lastLogIndex
+	if appendEntry.LeaderCommit < lastLogIndex {
+		minVal = appendEntry.LeaderCommit
+	}
+	maxCommitIndex := minVal
+	for i := lastCommitIndex + 1; i <= maxCommitIndex; i++ {
+		if _, err := startBlockFinalizationFollower(i); err != nil {
+			return err
+		}
+		if err := SetCommitIndex(i); err != nil {
+			return err
+		}
+		if err := SetLastApplied(i); err != nil {
+			return err
+		}
+	}
+
+	// now we check the new block
+	for _, e := range appendEntry.Entries {
+		if err := ProcessAppendEntry(e); err != nil {
+			return err
+		}
+	}
+	LoggerDebug("new entries processing finished", []string{
+		"leaderId", Int32ToString(appendEntry.LeaderID),
+		"leaderCommit", Int64ToString(appendEntry.LeaderCommit),
+		"prevLogIndex", Int64ToString(appendEntry.PrevLogIndex),
+		"count", Int32ToString(int32(len(appendEntry.Entries))),
+	})
 	return nil
 }
 
 // processAppendEntry decodes the proposal from entry and processes it before appending
-func processAppendEntry(entry LogEntryAggregate) error {
+func ProcessAppendEntry(entry LogEntryAggregate) error {
 	// decode wrap from entry data
-	var wrap typestnd.RequestProcessProposalWithMetaInfo
-	if err := json.Unmarshal(entry.Data, &wrap); err != nil {
+	var processReqWithMeta typestnd.RequestProcessProposalWithMetaInfo
+	if err := json.Unmarshal(entry.Data.Data, &processReqWithMeta); err != nil {
 		return err
 	}
-	resp, err := consensuswrap.ProcessProposal(wrap.Request)
+	processReq := processReqWithMeta.Request
+	resp, err := consensuswrap.ProcessProposal(processReq)
 	if err != nil {
 		return err
 	}
 	if resp.Status == typestnd.ProposalStatus_REJECT {
-		LoggerError("new block rejected", []string{"height", Int64ToString(wrap.Request.Height), "node type", "Follower"})
+		// TODO - what to do here? returning just discards the block and does not return a response to the leader
+		// but this node will not sync with the leader anymore
+		LoggerError("new block rejected", []string{"height", Int64ToString(processReq.Height), "node type", "Follower"})
 		return nil
 	}
 	return AppendLogEntry(entry)
@@ -331,8 +424,8 @@ func AddTransactionToMempool(txBytes []byte) error {
 	}
 	// Determine gas from fee if present, default to 1_000_000
 	var txGas uint64 = 1000000
-	if txDecoded.AuthInfo != nil && txDecoded.AuthInfo.Fee != nil && txDecoded.AuthInfo.Fee.GasLimit > 0 {
-		txGas = uint64(txDecoded.AuthInfo.Fee.GasLimit)
+	if txDecoded.AuthInfo != nil && txDecoded.AuthInfo.Fee != nil && txDecoded.AuthInfo.Fee.GasLimit.GT(sdkmath.NewInt(0)) {
+		txGas = txDecoded.AuthInfo.Fee.GasLimit.Uint64()
 	}
 	// Enforce consensus max gas if configured
 	if cparams, err := getConsensusParams(0); err == nil && cparams != nil {
@@ -473,7 +566,7 @@ func InitializeMatchIndex(_ []fsm.ActionParam, _ fsm.EventObject) error {
 }
 
 // PrepareAppendEntry exports the internal helper for reuse (AS parity)
-func PrepareAppendEntry(nodeIps []NodeInfo, nextIndex int64, lastIndex int64) (AppendEntry, error) {
+func PrepareAppendEntry(nodeIps []p2p.NodeInfo, nextIndex int64, lastIndex int64) (AppendEntry, error) {
 	return prepareAppendEntry(nodeIps, nextIndex, lastIndex)
 }
 
@@ -648,7 +741,7 @@ func RegisteredCheck(_ []fsm.ActionParam, _ fsm.EventObject) error {
 		if int32(i) == nodeId || node.Node.IP == "" {
 			continue
 		}
-		LoggerInfo("register request", []string{"IP", node.Node.IP, "address", node.Address})
+		LoggerInfo("register request", []string{"IP", node.Node.IP, "address", string(node.Address)})
 		resp, err := SendGrpcJSONBase64(node.Node.IP, contract, msgstr)
 		if err != nil || resp.Error != "" || resp.Data == "" {
 			continue
@@ -912,7 +1005,7 @@ func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
 		return err
 	}
 	LoggerInfo("setting up nodeIPs", []string{"ips", data})
-	var nodeIps []NodeInfo
+	var nodeIps []p2p.NodeInfo
 	if err := json.Unmarshal([]byte(data), &nodeIps); err != nil {
 		return err
 	}
@@ -987,11 +1080,11 @@ func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
 }
 
 // Helpers
-func IsNodeActive(node NodeInfo) bool {
+func IsNodeActive(node p2p.NodeInfo) bool {
 	return !node.OutOfSync && (node.Node.IP != "" || (node.Node.Host != "" && node.Node.Port != ""))
 }
 
-func sendVoteRequest(nodeId int32, node NodeInfo, request VoteRequest, termId int32) error {
+func sendVoteRequest(nodeId int32, node p2p.NodeInfo, request VoteRequest, termId int32) error {
 	datastrBz, err := json.Marshal(&request)
 	if err != nil {
 		return err
@@ -1086,9 +1179,9 @@ func GetLogEntryObjIndexLast() (LogEntry, error) {
 	return GetLogEntryObj(idx)
 }
 
-// getLogEntryAggregate returns a LogEntryAggregate with Data populated from
+// GetLogEntryAggregate returns a LogEntryAggregate with Data populated from
 // uncommitted entry bytes if present, or from finalized storage block JSON.
-func getLogEntryAggregate(index int64) (*LogEntryAggregate, error) {
+func GetLogEntryAggregate(index int64) (*LogEntryAggregate, error) {
 	e, err := GetLogEntryObj(index)
 	if err != nil {
 		return nil, err
@@ -1109,39 +1202,13 @@ func getLogEntryAggregate(index int64) (*LogEntryAggregate, error) {
 		}
 		data = []byte(s)
 	}
-	agg := LogEntryAggregate{Index: e.Index, TermID: e.TermID, LeaderID: e.LeaderID, Data: json.RawMessage(data)}
+	var blockData blocks.BlockEntry
+	err = json.Unmarshal(data, &blockData)
+	if err != nil {
+		return nil, err
+	}
+	agg := LogEntryAggregate{Index: e.Index, TermID: e.TermID, LeaderID: e.LeaderID, Data: blockData}
 	return &agg, nil
-}
-
-// appendLogInternalVerified mirrors AS helper: packages request + meta then appends as log entry
-func appendLogInternalVerified(processReq typestnd.RequestProcessProposal, header typestnd.Header, blockCommit typestnd.BlockCommit, optimisticExecution bool, meta map[string][]byte, validatorSet typestnd.TendermintValidators) error {
-	if meta == nil {
-		meta = map[string][]byte{}
-	}
-	hbz, _ := json.Marshal(&header)
-	cbz, _ := json.Marshal(&blockCommit)
-	meta["header"] = hbz
-	meta["commit"] = cbz
-	wrap := typestnd.RequestProcessProposalWithMetaInfo{Request: processReq, OptimisticExecution: optimisticExecution, Metainfo: meta}
-	// encode wrap into LogEntryAggregate
-	bz, err := json.Marshal(&wrap)
-	if err != nil {
-		return err
-	}
-	last, err := GetLastLogIndex()
-	if err != nil {
-		return err
-	}
-	term, err := GetTermId()
-	if err != nil {
-		return err
-	}
-	leader, err := GetCurrentNodeId()
-	if err != nil {
-		return err
-	}
-	entry := LogEntryAggregate{Index: last + 1, TermID: term, LeaderID: leader, Data: json.RawMessage(bz)}
-	return AppendLogEntry(entry)
 }
 
 // voteInternal simplified version with error surfacing
@@ -1192,50 +1259,8 @@ func voteInternal(termId int32, candidateId int32, lastLogIndex int64, lastLogTe
 	return VoteResponse{TermID: termId, VoteGranted: true}, nil
 }
 
-// prepareAppendEntry builds AppendEntry with log entries between nextIndex..lastIndex
-func prepareAppendEntry(nodeIps []NodeInfo, nextIndex int64, lastIndex int64) (AppendEntry, error) {
-	entries := make([]LogEntryAggregate, 0)
-	for i := nextIndex; i <= lastIndex; i++ {
-		e, err := GetLogEntryObj(i)
-		if err != nil {
-			return AppendEntry{}, err
-		}
-		if e.Index == 0 {
-			continue
-		}
-		agg := LogEntryAggregate{Index: e.Index, TermID: e.TermID, LeaderID: e.LeaderID, Data: json.RawMessage(e.Data)}
-		entries = append(entries, agg)
-	}
-	prev, err := GetLogEntryObj(nextIndex - 1)
-	if err != nil {
-		return AppendEntry{}, err
-	}
-	lastCommit, err := GetCommitIndex()
-	if err != nil {
-		return AppendEntry{}, err
-	}
-	term, err := GetTermId()
-	if err != nil {
-		return AppendEntry{}, err
-	}
-	leader, err := GetCurrentNodeId()
-	if err != nil {
-		return AppendEntry{}, err
-	}
-	data := AppendEntry{
-		TermID:       term,
-		LeaderID:     leader,
-		PrevLogIndex: nextIndex - 1,
-		PrevLogTerm:  prev.TermID,
-		Entries:      entries,
-		LeaderCommit: lastCommit,
-		NodeIPs:      nodeIps,
-	}
-	return data, nil
-}
-
 // registeredCheckNeeded logic from AS
-func registeredCheckNeeded(ips []NodeInfo) (bool, error) {
+func registeredCheckNeeded(ips []p2p.NodeInfo) (bool, error) {
 	lastIndex, err := GetLastLogIndex()
 	if err != nil {
 		return false, err
@@ -1256,7 +1281,7 @@ func registeredCheckNeeded(ips []NodeInfo) (bool, error) {
 	return true, nil
 }
 
-func registeredCheckMessage(ips []NodeInfo, nodeId int32) (string, error) {
+func registeredCheckMessage(ips []p2p.NodeInfo, nodeId int32) (string, error) {
 	if int(nodeId) >= len(ips) {
 		return "", errors.New("invalid node id")
 	}
@@ -1346,7 +1371,7 @@ func updateNodeEntry(entry NodeUpdate) (UpdateNodeResponse, error) {
 	return UpdateNodeResponse{Nodes: ips, SyncNodeID: nodeId, LastEntryIndex: last}, nil
 }
 
-func removeNode(nodes []NodeInfo, index int) []NodeInfo {
+func removeNode(nodes []p2p.NodeInfo, index int) []p2p.NodeInfo {
 	nodes[index].Node.IP = ""
 	nodes[index].Node.Host = ""
 	nodes[index].Node.Port = ""
@@ -1399,38 +1424,46 @@ func checkCommits() (bool, error) {
 	return false, nil
 }
 
-// startBlockFinalizationLeader finalizes and commits a block (minimal flow)
-// startBlockFinalizationInternal mirrors common finalize logic (without Commit)
 func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bool, error) {
 	// entry data may be wrap JSON or BlockEntry JSON
-	var wrap typestnd.RequestProcessProposalWithMetaInfo
-	if err := json.Unmarshal(entryobj.Data, &wrap); err != nil {
-		var be blocks.BlockEntry
-		if err2 := json.Unmarshal(entryobj.Data, &be); err2 != nil {
-			return false, err
-		}
-		if len(be.Data) == 0 {
-			return false, errors.New("block entry data empty")
-		}
-		if err3 := json.Unmarshal(be.Data, &wrap); err3 != nil {
-			return false, err3
-		}
-	}
-	if err := verifyBlockProposalMeta(wrap); err != nil {
+	var processReqWithMeta typestnd.RequestProcessProposalWithMetaInfo
+	if err := json.Unmarshal(entryobj.Data.Data, &processReqWithMeta); err != nil {
 		return false, err
 	}
-	finReq := typestnd.RequestFinalizeBlock{Txs: wrap.Request.Txs, Height: entryobj.Index, Time: wrap.Request.Time, ProposerAddress: wrap.Request.ProposerAddress}
-	w := typestnd.WrapRequestFinalizeBlock{Request: finReq, Metainfo: wrap.Metainfo}
-	// Optimistic execution check: skip BeginBlock if already executed optimistically by proposer
-	optimisticRan := wrap.OptimisticExecution && string(wrap.Request.ProposerAddress) == string(getCurrentValidator().Address)
-	if !optimisticRan {
+	processReq := processReqWithMeta.Request
+	// some blocks are stored out of order, so we run the block verification again
+	if err := verifyBlockProposal(entryobj.Data, processReq); err != nil {
+		LoggerError("new block rejected", []string{"height", Int64ToString(processReq.Height), "error", err.Error()})
+		return false, nil
+	}
+	finReq := typestnd.RequestFinalizeBlock{
+		Txs:                processReq.Txs,
+		DecidedLastCommit:  processReq.ProposedLastCommit,
+		Misbehavior:        processReq.Misbehavior,
+		Hash:               processReq.Hash,
+		Height:             processReq.Height,
+		Time:               processReq.Time,
+		NextValidatorsHash: processReq.NextValidatorsHash,
+		ProposerAddress:    processReq.ProposerAddress,
+	}
+	w := typestnd.WrapRequestFinalizeBlock{Request: finReq, Metainfo: processReqWithMeta.Metainfo}
+	// if we have done optimisting execution, BeginBlock was already ran
+	selfNode, err := getSelfNodeInfo()
+	if err != nil {
+		return false, fmt.Errorf("failed to get self node info: %v", err)
+	}
+	// TODO fix me, are these the correct addresses to compare?
+	nodeAddrBz := wasmx.AddrCanonicalize(string(selfNode.Address))
+	oeran := processReqWithMeta.OptimisticExecution && strings.ToLower(string(processReq.ProposerAddress)) == hex.EncodeToString(nodeAddrBz)
+	if !oeran {
 		resbegin, err := consensuswrap.BeginBlock(finReq)
 		if err != nil {
 			return false, err
 		}
-		if resbegin.Error != "" {
-			// Retry on height mismatch by rolling back to height-1
+		if resbegin.Error != "" && !retry {
+			// ERR invalid height: X; expected: X+1
 			mismatch := fmt.Sprintf("expected: %d", finReq.Height+1)
+			LoggerInfo("begin block error", []string{"error", resbegin.Error})
 			if strings.Contains(resbegin.Error, "invalid height") && strings.Contains(resbegin.Error, mismatch) {
 				if err := consensuswrap.RollbackToVersion(finReq.Height - 1); err != nil {
 					return false, fmt.Errorf("consensus break: %s; %v", resbegin.Error, err)
@@ -1439,104 +1472,206 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 					return startBlockFinalizationInternal(entryobj, true)
 				}
 				return false, fmt.Errorf(resbegin.Error)
-			} else {
-				return false, fmt.Errorf(resbegin.Error)
 			}
+			return false, fmt.Errorf(resbegin.Error)
 		}
 	}
-	finResp, err := consensuswrap.FinalizeBlock(w)
+	resfin, err := consensuswrap.FinalizeBlock(w)
 	if err != nil {
 		return false, err
 	}
-	if finResp.Error != "" {
-		return false, errors.New(finResp.Error)
+	if resfin.Error != "" && !retry {
+		// ERR invalid height: X; expected: X+1
+		mismatch := fmt.Sprintf("expected: %d", finReq.Height+1)
+		if strings.Contains(resfin.Error, "invalid height") && strings.Contains(resfin.Error, mismatch) {
+			LoggerInfo("trying to rollback", []string{"height", Int64ToString(finReq.Height - 1)})
+			if err := consensuswrap.RollbackToVersion(finReq.Height - 1); err != nil {
+				return false, fmt.Errorf("consensus break: %s; %v", resfin.Error, err)
+			}
+			// repeat FinalizeBlock
+			return startBlockFinalizationInternal(entryobj, true)
+		} else {
+			return false, fmt.Errorf(resfin.Error)
+		}
 	}
-	if err := verifyBlockProposal(wrap, finResp.Data); err != nil {
+	if resfin.Error != "" {
+		return false, fmt.Errorf(resfin.Error)
+	}
+	finalizeResp := resfin.Data
+	if finalizeResp == nil {
+		return false, errors.New("FinalizeBlock response is null")
+	}
+
+	// AS: Store finalize response as base64 in entryobj.data.result (line 1181-1184)
+	resultBz, err := json.Marshal(finalizeResp)
+	if err != nil {
+		return false, err
+	}
+	// This modifies the entry data which will be stored
+	entryobj.Data.Result = resultBz
+
+	// AS: Parse commit from entryobj.data.last_commit (line 1186-1187)
+	if len(entryobj.Data.LastCommit) == 0 {
+		return false, errors.New("missing last_commit in entry data")
+	}
+	commitBz, err := base64.StdEncoding.DecodeString(string(entryobj.Data.LastCommit))
+	if err != nil {
+		// try as raw JSON
+		commitBz = entryobj.Data.LastCommit
+	}
+	var commit typestnd.BlockCommit
+	if err := json.Unmarshal(commitBz, &commit); err != nil {
+		return false, fmt.Errorf("failed to parse commit: %v", err)
+	}
+
+	lastCommitHash := consutils.GetCommitHash(commit)
+	lastResultsHash := consutils.GetResultsHash(finalizeResp.TxResults)
+
+	// AS: Update current state (lines 1193-1200)
+	LoggerDebug("updating current state...", nil)
+	st, err := GetCurrentState()
+	if err != nil {
+		return false, err
+	}
+	st.AppHash = finalizeResp.AppHash
+	st.LastBlockID = getBlockID(processReq.Hash)
+	st.LastCommitHash = lastCommitHash
+	st.LastResultsHash = lastResultsHash
+	if err := SetCurrentState(st); err != nil {
 		return false, err
 	}
 
-	// Build and store block, update state, EndBlock, parse events, Commit
-	// and remove tx from mempool
+	// AS: Update consensus params (lines 1202-1204)
+	LoggerDebug("updating consensus parameters...", nil)
+	if err := updateConsensusParams(processReq.Height, finalizeResp.ConsensusParamUpdates); err != nil {
+		return false, err
+	}
+
+	// AS: Update validator info (lines 1207-1208)
+	LoggerDebug("updating validator info...", nil)
+	if err := updateValidators(finalizeResp.ValidatorUpdates); err != nil {
+		return false, err
+	}
+
+	// AS: Save final block and remove tx from mempool (lines 1213-1227)
 	mp, err := GetMempool()
 	if err != nil {
 		return false, err
 	}
-	txhashes := make([][]byte, len(wrap.Request.Txs))
-	for i := range wrap.Request.Txs {
-		hash := wasmx.Sha256(wrap.Request.Txs[i])
+	txhashes := make([]string, len(processReq.Txs))
+	for i := range processReq.Txs {
+		hash := base64.StdEncoding.EncodeToString(wasmx.Sha256(processReq.Txs[i]))
 		txhashes[i] = hash
-		mp.Remove(base64.StdEncoding.EncodeToString(hash))
+		mp.Remove(hash)
 	}
-	SetMempool(mp)
-	topics := extractIndexedTopics(*finResp.Data, txhashes)
-	st, _ := GetCurrentState()
-	var vset *typestnd.TendermintValidators
-	if vlist, err := GetAllValidators(); err == nil {
-		if tvals, err2 := consutils.GetActiveValidatorInfo(vlist); err2 == nil && len(tvals) > 0 {
-			vset = &typestnd.TendermintValidators{Validators: tvals}
-		}
+	if err := SetMempool(mp); err != nil {
+		return false, err
 	}
-	blockEntryJSON, err := buildBlockEntry(entryobj.Index, wrap, finResp.Data, string(st.ValidatorAddress), vset)
+
+	blockData, err := json.Marshal(&entryobj.Data)
 	if err != nil {
 		return false, err
 	}
-	LoggerDebug("built block entry", []string{"height", Int64ToString(entryobj.Index)})
-	hashStr := base64.StdEncoding.EncodeToString(wrap.Request.Hash)
-	if err := setFinalizedBlock(blockEntryJSON, hashStr, txhashes, topics); err != nil {
+	// AS: Also indexes transactions (line 1225-1227)
+	txHashBytes := make([][]byte, len(txhashes))
+	for i, h := range txhashes {
+		if hb, err := base64.StdEncoding.DecodeString(h); err == nil {
+			txHashBytes[i] = hb
+		}
+	}
+	indexedTopics := extractIndexedTopics(*finalizeResp, txHashBytes)
+	if err := setFinalizedBlock(string(blockData), base64.StdEncoding.EncodeToString(processReq.Hash), txHashBytes, indexedTopics); err != nil {
 		return false, err
 	}
-	stUp, _ := GetCurrentState()
-	stUp.LastBlockID = getBlockID(wrap.Request.Hash)
-	if cbz, ok := wrap.Metainfo["commit"]; ok && len(cbz) > 0 {
-		var commit typestnd.BlockCommit
-		if err := json.Unmarshal(cbz, &commit); err == nil {
-			stUp.LastCommitHash = consutils.GetCommitHash(commit)
-		}
+
+	// AS: Remove temporary block data (line 1230)
+	if err := RemoveLogEntry(entryobj.Index); err != nil {
+		return false, err
 	}
-	stUp.LastResultsHash = consutils.GetResultsHash(finResp.Data.TxResults)
-	_ = SetCurrentState(stUp)
-	respend, err := consensuswrap.EndBlock(string(blockEntryJSON))
-	if err == nil && respend.Error == "" && respend.Data != nil {
-		st2, _ := GetCurrentState()
-		st2.AppHash = respend.Data.AppHash
-		_ = SetCurrentState(st2)
+
+	// AS: EndBlock will execute passed governance proposals (lines 1233-1236)
+	respend, err := consensuswrap.EndBlock(string(blockData))
+	if err != nil {
+		return false, err
 	}
+	if respend.Error != "" {
+		return false, fmt.Errorf("%s", respend.Error)
+	}
+
+	// AS: Parse events (lines 1240-1243)
 	aggregated := consensuswrap.AggregateEvents(respend.Data.TxResults, respend.Data.Events)
-	info := consensuswrap.DefaultFinalizeResponseEventsParse(finResp.Data.TxResults, aggregated)
+	info := consensuswrap.DefaultFinalizeResponseEventsParse(finalizeResp.TxResults, aggregated)
+
+	// AS: Update AppHash after EndBlock (lines 1246-1249)
+	st, _ = GetCurrentState()
+	st.AppHash = respend.Data.AppHash
+	_ = SetCurrentState(st)
+
+	// AS: Handle created validators (lines 1251-1275)
 	if len(info.CreatedValidators) > 0 {
 		for _, cv := range info.CreatedValidators {
-			if int(cv.TxIndex) >= len(wrap.Request.Txs) {
+			if int(cv.TxIndex) >= len(processReq.Txs) {
 				continue
 			}
-			decodedTx, _ := decodeTx(wrap.Request.Txs[cv.TxIndex])
-			memo := decodedTx.Body.Memo
-			resp := parseNodeAddress(memo)
-			if resp.Error != "" {
-				continue
+			decodedTx, _ := decodeTx(processReq.Txs[cv.TxIndex])
+			LoggerInfo("new validator", []string{"height", Int64ToString(entryobj.Index), "address", string(cv.OperatorAddress), "p2p_address", decodedTx.Body.Memo})
+			resp := parseNodeAddress(decodedTx.Body.Memo)
+			if resp.Error == "" && resp.NodeInfo != nil {
+				nodeInfo := resp.NodeInfo
+				if cv.OperatorAddress != nodeInfo.Address {
+					LoggerError("validator operator address mismatch, using operator_address", []string{"operator_address", string(cv.OperatorAddress), "memo", decodedTx.Body.Memo})
+					nodeInfo.Address = cv.OperatorAddress
+				}
+				// AS: Add new node info to our validator info list
+				if _, err := updateNodeEntry(NodeUpdate{Node: *nodeInfo, Index: 0, Type: NODE_UPDATE_ADD}); err != nil {
+					LoggerError("failed to update node entry", []string{"error", err.Error()})
+				}
+				// AS: Move node info to validator info if it exists
+				bz, _ := json.Marshal(nodeInfo)
+				_ = callHookContract(wasmx.HOOK_CREATE_VALIDATOR, string(bz))
+			} else {
+				LoggerError("validator node invalid address format", []string{"memo", decodedTx.Body.Memo})
 			}
-			nodeInfo := resp.NodeInfo
-			if nodeInfo.Address == "" {
-				nodeInfo.Address = string(cv.OperatorAddress)
-			}
-			updateNodeEntry(NodeUpdate{Node: nodeInfo, Index: 0, Type: NODE_UPDATE_ADD})
-			bz, _ := json.Marshal(&nodeInfo)
-			_ = callHookContract(wasmx.HOOK_CREATE_VALIDATOR, string(bz))
 		}
 	}
-	if finResp.Data.ConsensusParamUpdates != nil {
-		if err := updateConsensusParams(entryobj.Index, finResp.Data.ConsensusParamUpdates); err != nil {
-			return false, err
-		}
-	}
+
+	// AS: Commit (line 1315)
 	if _, err := consensuswrap.Commit(); err != nil {
 		return false, err
 	}
+	LoggerInfo("block finalized", []string{"height", Int64ToString(entryobj.Index), "hash", strings.ToUpper(hex.EncodeToString(processReq.Hash))})
+
+	// AS: Make sure termId is synced (line 1321)
+	if err := SetTermId(entryobj.TermID); err != nil {
+		return false, err
+	}
+
+	// AS: Check if we became a validator (lines 1323-1334)
+	if len(info.CreatedValidators) > 0 {
+		selfNode, err := getSelfNodeInfo()
+		if err == nil {
+			ouraddr := selfNode.Address
+			for _, cv := range info.CreatedValidators {
+				if cv.OperatorAddress == ouraddr {
+					LoggerInfo("node is validator", []string{"height", Int64ToString(entryobj.Index), "address", string(ouraddr)})
+					// AS: Call consensus contract with "becomeValidator" transition
+					calldatastr := `{"run":{"event": {"type": "becomeValidator", "params": []}}}`
+					_, _ = callContract(wasmx.GetAddress(), calldatastr, false, MODULE_NAME)
+				}
+			}
+		}
+	}
+
+	// TODO: Add consensus contract transition logic (AS lines 1288-1362)
+	// This is complex logic for handling consensus contract changes that would require
+	// additional helper functions not yet implemented in the Go version
+
 	return false, nil
 }
 
 func startBlockFinalizationLeader(index int64) (bool, error) {
 	LoggerInfo("start block finalization", []string{"height", Int64ToString(index)})
-	entryobj, err := getLogEntryAggregate(index)
+	entryobj, err := GetLogEntryAggregate(index)
 	if err != nil {
 		return false, err
 	}
@@ -1545,7 +1680,8 @@ func startBlockFinalizationLeader(index int64) (bool, error) {
 		return false, nil
 	}
 	LoggerDebug("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID)})
-	LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID), "data", string(entryobj.Data)})
+	bz, _ := json.Marshal(entryobj.Data)
+	LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID), "data", string(bz)})
 	currentTerm, err := GetTermId()
 	if err != nil {
 		return false, err
@@ -1560,7 +1696,7 @@ func startBlockFinalizationLeader(index int64) (bool, error) {
 // startBlockFinalizationFollower mirrors leader finalization on follower side
 func startBlockFinalizationFollower(index int64) (bool, error) {
 	LoggerInfo("start block finalization", []string{"height", Int64ToString(index)})
-	entryobj, err := getLogEntryAggregate(index)
+	entryobj, err := GetLogEntryAggregate(index)
 	if err != nil {
 		return false, err
 	}
@@ -1569,6 +1705,7 @@ func startBlockFinalizationFollower(index int64) (bool, error) {
 		return false, nil
 	}
 	LoggerDebug("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID)})
-	LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID), "data", string(entryobj.Data)})
+	bz, _ := json.Marshal(entryobj.Data)
+	LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID), "data", string(bz)})
 	return startBlockFinalizationInternal(entryobj, false)
 }

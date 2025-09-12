@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 )
 
@@ -18,19 +19,19 @@ func sSet(key string, val string) { fsm.SetContextValue(key, val) }
 // ===== State getters/setters with error surfacing =====
 
 // Node list
-func GetNodeIPs() ([]NodeInfo, error) {
+func GetNodeIPs() ([]p2p.NodeInfo, error) {
 	v := sGet(NODE_IPS)
 	if v == "" {
-		return []NodeInfo{}, nil
+		return []p2p.NodeInfo{}, nil
 	}
-	var nodes []NodeInfo
+	var nodes []p2p.NodeInfo
 	if err := json.Unmarshal([]byte(v), &nodes); err != nil {
 		return nil, err
 	}
 	return nodes, nil
 }
 
-func SetNodeIPs(nodes []NodeInfo) error {
+func SetNodeIPs(nodes []p2p.NodeInfo) error {
 	bz, err := json.Marshal(nodes)
 	if err != nil {
 		return err

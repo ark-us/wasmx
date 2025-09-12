@@ -10,7 +10,7 @@ require github.com/loredanacirstea/wasmx-fsm v0.0.0
 
 require github.com/loredanacirstea/wasmx-env-core v0.0.0 // indirect
 
-require github.com/loredanacirstea/wasmx-env-consensus v0.0.0
+require github.com/loredanacirstea/wasmx-env-consensus v0.0.0 // indirect
 
 require github.com/loredanacirstea/wasmx-env-crosschain v0.0.0 // indirect
 

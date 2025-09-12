@@ -1,26 +1,12 @@
 package lib
 
 import (
-	"encoding/json"
-
+	blocks "github.com/loredanacirstea/wasmx-blocks/lib"
+	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const MODULE_NAME = "raft"
-
-// P2P node types
-type NetworkNode struct {
-	ID   string `json:"id"`
-	Host string `json:"host"`
-	Port string `json:"port"`
-	IP   string `json:"ip"`
-}
-
-type NodeInfo struct {
-	Address   string      `json:"address"`
-	Node      NetworkNode `json:"node"`
-	OutOfSync bool        `json:"outofsync"`
-}
 
 // Raft log types
 type LogEntry struct {
@@ -31,10 +17,10 @@ type LogEntry struct {
 }
 
 type LogEntryAggregate struct {
-	Index    int64           `json:"index"`
-	TermID   int32           `json:"termId"`
-	LeaderID int32           `json:"leaderId"`
-	Data     json.RawMessage `json:"data"`
+	Index    int64
+	TermID   int32
+	LeaderID int32
+	Data     blocks.BlockEntry
 }
 
 // Transaction types
@@ -61,7 +47,7 @@ type AppendEntry struct {
 	PrevLogTerm  int32               `json:"prevLogTerm"`
 	Entries      []LogEntryAggregate `json:"entries"`
 	LeaderCommit int64               `json:"leaderCommit"`
-	NodeIPs      []NodeInfo          `json:"nodeIps"`
+	NodeIPs      []p2p.NodeInfo      `json:"nodeIps"`
 }
 
 type AppendEntryResponse struct {
@@ -85,13 +71,13 @@ type VoteResponse struct {
 
 // Node update
 type NodeUpdate struct {
-	Node  NodeInfo `json:"node"`
-	Index int32    `json:"index"`
-	Type  int32    `json:"type"`
+	Node  p2p.NodeInfo `json:"node"`
+	Index int32        `json:"index"`
+	Type  int32        `json:"type"`
 }
 
 type UpdateNodeResponse struct {
-	Nodes          []NodeInfo `json:"nodes"`
-	SyncNodeID     int32      `json:"sync_node_id"`
-	LastEntryIndex int64      `json:"last_entry_index"`
+	Nodes          []p2p.NodeInfo `json:"nodes"`
+	SyncNodeID     int32          `json:"sync_node_id"`
+	LastEntryIndex int64          `json:"last_entry_index"`
 }

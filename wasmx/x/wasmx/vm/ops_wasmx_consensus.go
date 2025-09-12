@@ -161,7 +161,7 @@ func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	// set metainfo on the parent context, so it is available during execution
 	err = mctx.SetExecutionMetaInfo(ctx.GoContextParent, ctx.CosmosHandler.Codec(), req.MetaInfo)
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
+		ctx.Ctx.Logger().Error(errorsmod.Wrapf(err, "SetExecutionMetaInfo failed").Error(), "host_api", "consensus", "function", "FinalizeBlock")
 		return nil, err
 	}
 
@@ -169,7 +169,7 @@ func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	resp, err := bapp.FinalizeBlockSimple(&req.Request)
 	errmsg := ""
 	if err != nil {
-		ctx.Ctx.Logger().Error(err.Error(), "consensus", "FinalizeBlock")
+		ctx.Ctx.Logger().Error(errorsmod.Wrapf(err, "FinalizeBlockSimple failed").Error(), "host_api", "consensus", "function", "FinalizeBlock")
 		errmsg = err.Error()
 	}
 	oe := bapp.GetOptimisticExecution()

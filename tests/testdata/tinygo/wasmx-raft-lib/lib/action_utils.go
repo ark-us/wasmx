@@ -14,6 +14,7 @@ import (
 	consensuswrap "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
+	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	stakinglib "github.com/loredanacirstea/wasmx-staking/lib"
 )
@@ -58,7 +59,7 @@ func SignMessage(msg string) (string, error) {
 }
 
 // PrepareAppendEntryMessage builds the JSON payload to send over gRPC, base64-encoded
-func PrepareAppendEntryMessage(nodeId int32, nextIndex int64, lastIndex int64, lastIndexToSend int64, node NodeInfo, data AppendEntry) (string, error) {
+func PrepareAppendEntryMessage(nodeId int32, nextIndex int64, lastIndex int64, lastIndexToSend int64, node p2p.NodeInfo, data AppendEntry) (string, error) {
 	datastrBz, err := json.Marshal(&data)
 	if err != nil {
 		return "", err
@@ -70,7 +71,7 @@ func PrepareAppendEntryMessage(nodeId int32, nextIndex int64, lastIndex int64, l
 	}
 	dataBase64 := base64.StdEncoding.EncodeToString([]byte(datastr))
 	msgstr := fmt.Sprintf(`{"run":{"event":{"type":"receiveHeartbeat","params":[{"key":"entry","value":"%s"},{"key":"signature","value":"%s"}]}}}`, dataBase64, signature)
-	LoggerDebug("diseminate append entry...", []string{"nodeId", Int32ToString(nodeId), "receiver", node.Address, "from", Int64ToString(nextIndex), "to", Int64ToString(lastIndexToSend), "last_index", Int64ToString(lastIndex)})
+	LoggerDebug("diseminate append entry...", []string{"nodeId", Int32ToString(nodeId), "receiver", string(node.Address), "from", Int64ToString(nextIndex), "to", Int64ToString(lastIndexToSend), "last_index", Int64ToString(lastIndex)})
 	return msgstr, nil
 }
 
@@ -135,7 +136,7 @@ func ParseI32(s string) (int32, error) {
 }
 
 // Node helpers
-func getNodeByAddress(addr string, nodes []NodeInfo) (*NodeInfo, int) {
+func getNodeByAddress(addr wasmx.Bech32String, nodes []p2p.NodeInfo) (*p2p.NodeInfo, int) {
 	for i := range nodes {
 		if nodes[i].Address == addr {
 			return &nodes[i], i
@@ -144,19 +145,14 @@ func getNodeByAddress(addr string, nodes []NodeInfo) (*NodeInfo, int) {
 	return nil, -1
 }
 
-func getNodeIdByAddress(addr string, nodes []NodeInfo) int32 {
+func getNodeIdByAddress(addr wasmx.Bech32String, nodes []p2p.NodeInfo) int32 {
 	_, idx := getNodeByAddress(addr, nodes)
 	return int32(idx)
 }
 
 // parseNodeAddress parses `<address>@/ip4/<host>/tcp/<port>/p2p/<id>` into NodeInfo
-type NodeInfoResponse struct {
-	NodeInfo NodeInfo
-	Error    string
-}
-
-func parseNodeAddress(peeraddr string) NodeInfoResponse {
-	resp := NodeInfoResponse{}
+func parseNodeAddress(peeraddr string) p2p.NodeInfoResponse {
+	resp := p2p.NodeInfoResponse{}
 	parts1 := strings.Split(peeraddr, "@")
 	if len(parts1) != 2 {
 		resp.Error = "invalid node format: missing @"
@@ -171,7 +167,7 @@ func parseNodeAddress(peeraddr string) NodeInfoResponse {
 	host := parts2[2]
 	port := parts2[4]
 	p2pid := parts2[6]
-	resp.NodeInfo = NodeInfo{Address: addr, Node: NetworkNode{ID: p2pid, Host: host, Port: port, IP: ""}, OutOfSync: false}
+	resp.NodeInfo = &p2p.NodeInfo{Address: wasmx.Bech32String(addr), Node: p2p.NetworkNode{ID: p2pid, Host: host, Port: port, IP: ""}, OutOfSync: false}
 	return resp
 }
 
@@ -219,7 +215,7 @@ func verifyMessage(nodeIndex int32, signatureStr string, msg string) (bool, erro
 	return VerifyMessageByAddr(nodes[nodeIndex].Address, signatureStr, msg)
 }
 
-func VerifyMessageByAddr(addr string, signatureStr string, msg string) (bool, error) {
+func VerifyMessageByAddr(addr wasmx.Bech32String, signatureStr string, msg string) (bool, error) {
 	pubKey, err := getConsensusKeyByAddr(addr)
 	if err != nil {
 		return false, err
@@ -234,7 +230,7 @@ func VerifyMessageByAddr(addr string, signatureStr string, msg string) (bool, er
 	return wasmx.Ed25519Verify(pubKey.GetKey().Key, sig, []byte(msg)), nil
 }
 
-func verifyMessageBytesByAddr(addr string, signatureStr string, msg []byte) (bool, error) {
+func verifyMessageBytesByAddr(addr wasmx.Bech32String, signatureStr string, msg []byte) (bool, error) {
 	pubKey, err := getConsensusKeyByAddr(addr)
 	if err != nil {
 		return false, err
@@ -249,13 +245,13 @@ func verifyMessageBytesByAddr(addr string, signatureStr string, msg []byte) (boo
 	return wasmx.Ed25519Verify(pubKey.GetKey().Key, sig, msg), nil
 }
 
-func getConsensusKeyByAddr(addr string) (*wasmx.PublicKey, error) {
+func getConsensusKeyByAddr(addr wasmx.Bech32String) (*wasmx.PublicKey, error) {
 	vals, err := GetAllValidators()
 	if err != nil {
 		return nil, err
 	}
 	for i := range vals {
-		if string(vals[i].OperatorAddress) == addr {
+		if vals[i].OperatorAddress == addr {
 			return vals[i].ConsensusPubkey, nil
 		}
 	}
@@ -273,7 +269,7 @@ func callStorage(calldata string, isQuery bool) (wasmx.CallResponse, error) {
 	return resp, nil
 }
 
-func setFinalizedBlock(blockData []byte, hash string, txhashes [][]byte, indexedTopics []blocks.IndexedTopic) error {
+func setFinalizedBlock(blockData string, hash string, txhashes [][]byte, indexedTopics []blocks.IndexedTopic) error {
 	payload := blocks.CallDataSetBlock{Value: blockData, Hash: hash, Txhashes: make([]string, len(txhashes)), IndexedTopics: indexedTopics}
 	for i := range txhashes {
 		payload.Txhashes[i] = base64.StdEncoding.EncodeToString(txhashes[i])
@@ -330,7 +326,8 @@ func getFinalBlock(index int64) (string, error) {
 }
 
 func setConsensusParams(height int64, value *typestnd.ConsensusParams) error {
-	var params []byte
+	// AS: Base64 encode JSON string (lines 184-187)
+	params := []byte{}
 	if value != nil {
 		bz, err := json.Marshal(value)
 		if err != nil {
@@ -367,7 +364,14 @@ func getConsensusParams(height int64) (*typestnd.ConsensusParams, error) {
 		return nil, errors.New("could not get consensus params: " + resp.Data)
 	}
 	if resp.Data == "" {
-		return nil, nil
+		// AS: Return default params when empty (lines 202-209)
+		return &typestnd.ConsensusParams{
+			Block:     typestnd.BlockParams{MaxBytes: 0, MaxGas: 0},
+			Evidence:  typestnd.EvidenceParams{MaxAgeDuration: 0, MaxAgeNumBlocks: 0, MaxBytes: 0},
+			Validator: typestnd.ValidatorParams{PubKeyTypes: []string{}},
+			Version:   typestnd.VersionParams{App: 0},
+			ABCI:      typestnd.ABCIParams{VoteExtensionsEnableHeight: 0},
+		}, nil
 	}
 	var params typestnd.ConsensusParams
 	if err := json.Unmarshal([]byte(resp.Data), &params); err != nil {
@@ -426,91 +430,117 @@ func extractIndexedTopics(resp typestnd.ResponseFinalizeBlock, txhashes [][]byte
 	return out
 }
 
-// verifyBlockProposalMeta verifies header hash equals request hash when header is available in metainfo
-func verifyBlockProposalMeta(wrap typestnd.RequestProcessProposalWithMetaInfo) error {
-	if wrap.Metainfo == nil {
-		return nil
+// https://github.com/cometbft/cometbft/blob/f4a803f14a2f5bc5c17d75fcd1131b9249bba133/state/validation.go
+func verifyBlockProposal(data blocks.BlockEntry, processReq typestnd.RequestProcessProposal) error {
+	// TODO? verify:
+	// processReq.next_validators_hash
+	// processReq.proposed_last_commit
+
+	if len(data.Header) == 0 {
+		return errors.New("header is empty")
 	}
-	hbz, ok := wrap.Metainfo["header"]
-	if !ok || len(hbz) == 0 {
-		return nil
-	}
+
 	var header typestnd.Header
-	if err := json.Unmarshal(hbz, &header); err != nil {
-		return err
+	if err := json.Unmarshal(data.Header, &header); err != nil {
+		return fmt.Errorf("failed to parse header: %v", err)
 	}
-	hhash, err := consensuswrap.HeaderHash(header)
+
+	hash, err := consutils.GetHeaderHash(header)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to compute header hash: %v", err)
 	}
-	if len(hhash) == 0 || len(wrap.Request.Hash) == 0 {
-		return nil
+
+	reqHashHex := strings.ToUpper(hex.EncodeToString(processReq.Hash))
+	headerHashHex := strings.ToUpper(hex.EncodeToString(hash))
+	if headerHashHex != reqHashHex {
+		return fmt.Errorf("header hash mismatch: expected %s, got %s", reqHashHex, headerHashHex)
 	}
-	if base64.StdEncoding.EncodeToString(hhash) != base64.StdEncoding.EncodeToString(wrap.Request.Hash) {
-		return errors.New("header hash mismatch with proposal hash")
+
+	currentState, err := GetCurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %v", err)
 	}
+
+	appHashHex := strings.ToUpper(hex.EncodeToString(currentState.AppHash))
+	if string(header.AppHash) != appHashHex {
+		return fmt.Errorf("header app_hash mismatch: expected %s, got %s", appHashHex, header.AppHash)
+	}
+
+	if header.Version.Block != typestnd.BlockProtocol {
+		return fmt.Errorf("header version.block mismatch: expected %d, got %d", typestnd.BlockProtocol, header.Version.Block)
+	}
+
+	if header.Version.App != currentState.Version.Consensus.App {
+		return fmt.Errorf("header version.app mismatch: expected %d, got %d", currentState.Version.Consensus.App, header.Version.App)
+	}
+
+	if header.ChainID != currentState.ChainID {
+		return fmt.Errorf("header chain_id mismatch: expected %s, got %s", currentState.ChainID, header.ChainID)
+	}
+
+	// if (header.height != currentState.nextHeight) return `header height mismatch: expected ${currentState.nextHeight}, got ${header.height}`
+
+	lastResultsHashHex := strings.ToUpper(hex.EncodeToString(currentState.LastResultsHash))
+	if string(header.LastResultsHash) != lastResultsHashHex {
+		return fmt.Errorf("header last_results_hash mismatch: expected %s, got %s", lastResultsHashHex, header.LastResultsHash)
+	}
+
+	if header.LastBlockID.Hash != currentState.LastBlockID.Hash {
+		return fmt.Errorf("header last_block_id.hash mismatch: expected %s, got %s", currentState.LastBlockID.Hash, header.LastBlockID.Hash)
+	}
+
+	if header.LastBlockID.Parts.Hash != currentState.LastBlockID.Parts.Hash {
+		return fmt.Errorf("header last_block_id.parts.hash mismatch: expected %s, got %s", currentState.LastBlockID.Parts.Hash, header.LastBlockID.Parts.Hash)
+	}
+
+	if header.LastBlockID.Parts.Total != currentState.LastBlockID.Parts.Total {
+		return fmt.Errorf("header last_block_id.parts.total mismatch: expected %d, got %d", currentState.LastBlockID.Parts.Total, header.LastBlockID.Parts.Total)
+	}
+
+	txsHash := consutils.GetTxsHash(processReq.Txs)
+	dataHashHex := strings.ToUpper(hex.EncodeToString(txsHash))
+	if string(header.DataHash) != dataHashHex {
+		return fmt.Errorf("header data_hash mismatch: expected %s, got %s", dataHashHex, header.DataHash)
+	}
+
+	cparams, err := getConsensusParams(0)
+	if err != nil {
+		return fmt.Errorf("failed to get consensus params: %v", err)
+	}
+	if cparams == nil {
+		return errors.New("consensus params is nil")
+	}
+
+	consensusHash, err := consutils.GetConsensusParamsHash(*cparams)
+	if err != nil {
+		return fmt.Errorf("failed to compute consensus params hash: %v", err)
+	}
+	consensusHashHex := strings.ToUpper(hex.EncodeToString(consensusHash))
+	if string(header.ConsensusHash) != consensusHashHex {
+		return fmt.Errorf("header consensus_hash mismatch: expected %s, got %s", consensusHashHex, header.ConsensusHash)
+	}
+
+	// TODO see other time constraints that fit our protocol
+	// if (Date.fromString(header.time).getTime() <= Date.fromString(currentState.last_time).getTime()) {
+	//     return `header time mismatch: expected higher than ${currentState.last_time}, got ${header.time}`
+	// }
+	// TODO set an upper time bound
+
+	// TODO
+	// header.last_commit_hash
+	// header.next_validators_hash
+	// header.validators_hash
+	// header.evidence_hash
+	// TODO validate commit format
 	return nil
 }
 
-// verifyBlockProposal checks header.DataHash, LastCommitHash (if commit present), LastResultsHash, and AppHash with finalize response
-// Name aligned with AssemblyScript (verifyBlockProposal)
-func verifyBlockProposal(wrap typestnd.RequestProcessProposalWithMetaInfo, fin *typestnd.ResponseFinalizeBlock) error {
-	if wrap.Metainfo == nil {
-		return nil
-	}
-	hbz, ok := wrap.Metainfo["header"]
-	if !ok || len(hbz) == 0 {
-		return nil
-	}
-	var header typestnd.Header
-	if err := json.Unmarshal(hbz, &header); err != nil {
-		return err
-	}
-	// Data hash: txs merkle
-	txsHash := consutils.GetTxsHash(wrap.Request.Txs)
-	if !hexEqual(string(header.DataHash), txsHash) {
-		return errors.New("data hash mismatch with txs merkle")
-	}
-	// Commit hash if provided in metainfo
-	if cbz, ok := wrap.Metainfo["commit"]; ok && len(cbz) > 0 {
-		var commit typestnd.BlockCommit
-		if err := json.Unmarshal(cbz, &commit); err == nil {
-			ch := consutils.GetCommitHash(commit)
-			if !hexEqual(string(header.LastCommitHash), ch) {
-				return errors.New("last commit hash mismatch")
-			}
-		}
-	}
-	// Validators hash using active set from staking (best effort)
-	if vlist, err := GetAllValidators(); err == nil && len(vlist) > 0 {
-		if tvals, err2 := consutils.GetActiveValidatorInfo(vlist); err2 == nil && len(tvals) > 0 {
-			if vh, err3 := consensuswrap.ValidatorsHash(tvals); err3 == nil {
-				if !hexEqual(string(header.ValidatorsHash), vh) {
-					return errors.New("validators hash mismatch")
-				}
-			}
-		}
-	}
-	// Results hash from finalize response
-	if fin != nil {
-		rh := consutils.GetResultsHash(fin.TxResults)
-		if !hexEqual(string(header.LastResultsHash), rh) {
-			return errors.New("results hash mismatch")
-		}
-		// App hash
-		if len(fin.AppHash) > 0 && !hexEqual(string(header.AppHash), fin.AppHash) {
-			return errors.New("app hash mismatch")
-		}
-	}
-	return nil
-}
-
-func hexEqual(hexStr string, bz []byte) bool {
+func hexEqual(hexStr wasmx.HexString, bz []byte) bool {
 	if len(bz) == 0 {
 		return hexStr == ""
 	}
 	enc := hex.EncodeToString(bz)
-	return strings.EqualFold(hexStr, enc)
+	return strings.EqualFold(string(hexStr), enc)
 }
 
 // Tendermint helpers
@@ -523,47 +553,6 @@ func getBlockID(hash []byte) typestnd.BlockID {
 func decodeTx(tx []byte) (wasmx.SignedTransaction, error) {
 	res := wasmx.DecodeCosmosTxFromBytes(tx)
 	return res, nil
-}
-
-// buildBlockEntry composes a BlockEntry JSON matching AS semantics from finalize data and wrapped proposal
-func buildBlockEntry(height int64, wrap typestnd.RequestProcessProposalWithMetaInfo, finResp *typestnd.ResponseFinalizeBlock, proposer string, validators *typestnd.TendermintValidators) ([]byte, error) {
-	// header and commit may be present in metainfo
-	var header []byte
-	var commit []byte
-	if wrap.Metainfo != nil {
-		if v, ok := wrap.Metainfo["header"]; ok {
-			header = v
-		}
-		if v, ok := wrap.Metainfo["commit"]; ok {
-			commit = v
-		}
-	}
-	// validator set
-	var valbz []byte
-	if validators != nil {
-		vb, err := json.Marshal(validators)
-		if err == nil {
-			valbz = vb
-		}
-	}
-	// data is the wrap JSON
-	data, err := json.Marshal(&wrap)
-	if err != nil {
-		return nil, err
-	}
-	entry := blocks.BlockEntry{
-		Index:           height,
-		ReaderContract:  wasmx.GetAddress(),
-		WriterContract:  wasmx.GetAddress(),
-		Data:            data,
-		Header:          header,
-		ProposerAddress: wasmx.Bech32String(proposer),
-		LastCommit:      commit,
-		Evidence:        []byte(`{"evidence":[]}`),
-		Result:          string(data),
-		ValidatorInfo:   valbz,
-	}
-	return json.Marshal(&entry)
 }
 
 // doOptimisticExecution runs optimistic execution on the current proposal
@@ -610,6 +599,35 @@ func GetAllValidators() ([]stakinglib.Validator, error) {
 	return out.Validators, nil
 }
 
+// updateValidators calls staking module to update validators. Matches AS implementation lines 212-219.
+func updateValidators(updates []typestnd.ValidatorUpdate) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	payload := map[string]any{
+		"UpdateValidators": map[string]any{
+			"updates": updates,
+		},
+	}
+
+	bz, err := json.Marshal(&payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err := callStaking(string(bz), true)
+	if err != nil {
+		return err
+	}
+
+	if resp.Success > 0 {
+		return fmt.Errorf("could not update validators")
+	}
+
+	return nil
+}
+
 func getCurrentValidator() typestnd.ValidatorInfo {
 	st, _ := GetCurrentState()
 	return typestnd.ValidatorInfo{Address: wasmx.HexString(st.ValidatorAddress), PubKey: st.ValidatorPubkey, VotingPower: 0, ProposerPriority: 0}
@@ -627,6 +645,174 @@ func checkValidatorsUpdate(validators []typestnd.ValidatorInfo, validatorInfo ty
 		return errors.New("register node response has wrong validator pub_key")
 	}
 	return nil
+}
+
+// getValidatorByHexAddr queries the staking module for a validator by hex address
+func getValidatorByHexAddr(addr wasmx.HexString) (stakinglib.Validator, error) {
+	payload := map[string]any{"ValidatorByHexAddr": map[string]any{"validator_addr": string(addr)}}
+	bz, err := json.Marshal(&payload)
+	if err != nil {
+		return stakinglib.Validator{}, err
+	}
+	resp, err := callStaking(string(bz), true)
+	if err != nil {
+		return stakinglib.Validator{}, err
+	}
+	if resp.Success > 0 {
+		return stakinglib.Validator{}, errors.New(resp.Data)
+	}
+	if resp.Data == "" {
+		return stakinglib.Validator{}, fmt.Errorf("validator not found: %s", addr)
+	}
+	LoggerDebug("ValidatorByHexAddr", []string{"addr", string(addr), "data", resp.Data})
+	var result struct {
+		Validator stakinglib.Validator `json:"validator"`
+	}
+	if err := json.Unmarshal([]byte(resp.Data), &result); err != nil {
+		return stakinglib.Validator{}, err
+	}
+	return result.Validator, nil
+}
+
+// appendLogInternalVerified creates a BlockEntry and LogEntryAggregate, then appends it to the log
+func appendLogInternalVerified(processReq typestnd.RequestProcessProposal, header typestnd.Header, blockCommit typestnd.BlockCommit, optimisticExecution bool, meta map[string][]byte, validatorSet typestnd.TendermintValidators) error {
+	// AS: Create RequestProcessProposalWithMetaInfo with meta as-is (lines 1476-1477)
+	if meta == nil {
+		meta = make(map[string][]byte)
+	}
+
+	// Create RequestProcessProposalWithMetaInfo - matches AS line 1477
+	wrap := typestnd.RequestProcessProposalWithMetaInfo{
+		Request:             processReq,
+		OptimisticExecution: optimisticExecution,
+		Metainfo:            meta,
+	}
+
+	blockData, err := json.Marshal(&wrap)
+	if err != nil {
+		return fmt.Errorf("failed to marshal block data: %v", err)
+	}
+
+	blockHeader, err := json.Marshal(&header)
+	if err != nil {
+		return fmt.Errorf("failed to marshal block header: %v", err)
+	}
+
+	commit, err := json.Marshal(&blockCommit)
+	if err != nil {
+		return fmt.Errorf("failed to marshal block commit: %v", err)
+	}
+
+	termId, err := GetTermId()
+	if err != nil {
+		return fmt.Errorf("failed to get term ID: %v", err)
+	}
+
+	leaderId, err := GetCurrentNodeId()
+	if err != nil {
+		return fmt.Errorf("failed to get current node ID: %v", err)
+	}
+
+	validator, err := getValidatorByHexAddr(wasmx.HexString(processReq.ProposerAddress))
+	if err != nil {
+		return fmt.Errorf("failed to get validator: %v", err)
+	}
+
+	contractAddress := wasmx.GetAddressBz()
+
+	validatorSetBytes, err := json.Marshal(&validatorSet)
+	if err != nil {
+		return fmt.Errorf("failed to marshal validator set: %v", err)
+	}
+
+	// Create BlockEntry
+	blockEntry := blocks.BlockEntry{
+		Index:           processReq.Height,
+		ReaderContract:  contractAddress,
+		WriterContract:  contractAddress,
+		Data:            blockData,
+		Header:          blockHeader,
+		ProposerAddress: validator.OperatorAddress,
+		LastCommit:      commit,
+		Evidence:        []byte(`{"evidence":[]}`),
+		Result:          []byte{},
+		ValidatorInfo:   validatorSetBytes,
+	}
+
+	// Create LogEntryAggregate
+	entry := LogEntryAggregate{
+		Index:    processReq.Height,
+		TermID:   termId,
+		LeaderID: leaderId,
+		Data:     blockEntry,
+	}
+
+	return AppendLogEntry(entry)
+}
+
+// getSelfNodeInfo returns the NodeInfo for the current node
+func getSelfNodeInfo() (p2p.NodeInfo, error) {
+	nodeIps, err := GetNodeIPs()
+	if err != nil {
+		return p2p.NodeInfo{}, fmt.Errorf("failed to get node IPs: %v", err)
+	}
+
+	ourId, err := GetCurrentNodeId()
+	if err != nil {
+		return p2p.NodeInfo{}, fmt.Errorf("failed to get current node ID: %v", err)
+	}
+
+	if len(nodeIps) <= int(ourId) {
+		return p2p.NodeInfo{}, fmt.Errorf("index out of range: nodes count %d, our node id is %d", len(nodeIps), ourId)
+	}
+
+	return nodeIps[ourId], nil
+}
+
+// prepareAppendEntry prepares AppendEntry data structure for sending to followers
+func prepareAppendEntry(nodeIps []p2p.NodeInfo, nextIndex int64, lastIndex int64) (AppendEntry, error) {
+	entries := make([]LogEntryAggregate, 0)
+	for i := nextIndex; i <= lastIndex; i++ {
+		entry, err := GetLogEntryAggregate(i)
+		if err != nil {
+			return AppendEntry{}, fmt.Errorf("failed to get log entry at index %d: %v", i, err)
+		}
+		if entry != nil {
+			entries = append(entries, *entry)
+		}
+	}
+
+	previousEntry, err := GetLogEntryObj(nextIndex - 1)
+	if err != nil {
+		return AppendEntry{}, fmt.Errorf("failed to get previous log entry at index %d: %v", nextIndex-1, err)
+	}
+
+	lastCommitIndex, err := GetCommitIndex()
+	if err != nil {
+		return AppendEntry{}, fmt.Errorf("failed to get commit index: %v", err)
+	}
+
+	termId, err := GetTermId()
+	if err != nil {
+		return AppendEntry{}, fmt.Errorf("failed to get term ID: %v", err)
+	}
+
+	leaderId, err := GetCurrentNodeId()
+	if err != nil {
+		return AppendEntry{}, fmt.Errorf("failed to get current node ID: %v", err)
+	}
+
+	data := AppendEntry{
+		TermID:       termId,
+		LeaderID:     leaderId,
+		PrevLogIndex: nextIndex - 1,
+		PrevLogTerm:  previousEntry.TermID,
+		Entries:      entries,
+		LeaderCommit: lastCommitIndex,
+		NodeIPs:      nodeIps,
+	}
+
+	return data, nil
 }
 
 // initializeIndexArrays sets NextIndex to last+1 and MatchIndex to LOG_START for len
