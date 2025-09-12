@@ -52,21 +52,17 @@ func EndBlock(req MsgEndBlock) []byte {
 
 	// deposit period expirations
 	expired := nextEndingDepositProposals(t)
-	if len(expired) > 0 {
-		LoggerDebug("gov proposals expired deposit", []string{"count", itoa(len(expired)), "block_time", t.Format(time.RFC3339Nano)})
-		for _, p := range expired {
-			LoggerInfo("deleting proposal", []string{"reason", "deposit period expired", "proposal_id", u64toa(uint64(p.ID))})
-			removeProposal(uint64(p.ID))
-			removeProposalDeposits(uint64(p.ID))
-		}
+	LoggerDebug("gov proposals expired deposit", []string{"count", itoa(len(expired)), "block_time", t.Format(time.RFC3339Nano)})
+	for _, p := range expired {
+		LoggerInfo("deleting proposal", []string{"reason", "deposit period expired", "proposal_id", u64toa(uint64(p.ID))})
+		removeProposal(uint64(p.ID))
+		removeProposalDeposits(uint64(p.ID))
 	}
 
 	// voting period endings
 	params := getParams()
 	ending := nextEndingVotingProposals(t)
-	if len(ending) > 0 {
-		LoggerDebug("gov proposals ending voting period", []string{"count", itoa(len(ending))})
-	}
+	LoggerDebug("gov proposals ending voting period", []string{"count", itoa(len(ending)), "block_time", t.Format(time.RFC3339Nano)})
 	for _, p := range ending {
 		removeActiveVotingProposal(uint64(p.ID))
 

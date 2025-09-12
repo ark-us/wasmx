@@ -395,6 +395,8 @@ func BuildAssemblyScriptEnv(context *Context, rnh memc.RuntimeHandler) (interfac
 		vm.BuildFn("console.info", asConsoleInfo, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("console.error", asConsoleError, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
 		vm.BuildFn("console.debug", asConsoleDebug, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+
+		// TODO this is non-deterministic, must be moved to a special host module
 		vm.BuildFn("Date.now", asDateNow, []interface{}{}, []interface{}{vm.ValType_F64()}, 0),
 		vm.BuildFn("seed", asSeed, []interface{}{}, []interface{}{vm.ValType_F64()}, 0),
 	}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 
@@ -889,8 +890,7 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 		return err
 	}
 	misbehavior := []typestnd.Misbehavior{}
-	timeISO := wasmx.GetTimestamp().UTC().Format("2006-01-02T15:04:05Z07:00")
-
+	timeISO := time.Now().UTC().Format(time.RFC3339Nano)
 	prepareReq := typestnd.RequestPrepareProposal{
 		MaxTxBytes:         maxDataBytes,
 		Txs:                txs,

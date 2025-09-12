@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	wasimem "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/wasi"
@@ -63,6 +64,18 @@ var __WASI_O_DIRECTORY = int32(2)
 // var __WASI_O_EXCL = int32(4)
 // var __WASI_O_TRUNC = int32(8)
 
+// WASI constants (preview1)
+const (
+	WasiClockRealtime         = int32(0)
+	WasiClockMonotonic        = int32(1)
+	WasiClockProcessCPUTimeID = int32(2)
+	WasiClockThreadCPUTimeID  = int32(3)
+
+	WasiErrnoSuccess = int32(0)
+	WasiErrnoInval   = int32(28) // if you want to use EINVAL for bad params
+	WasiErrnoNotSup  = int32(58) // ENOTSUP for unsupported clocks
+)
+
 func wasi_stubUnimplemented(_ interface{}, _ memc.RuntimeHandler, _ []interface{}) ([]interface{}, error) {
 	// Return ENOSYS = 52
 	// Function not implemented
@@ -90,7 +103,7 @@ func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		if err := wasimem.WriteUint32Le(mem, argvPtr, 0); err != nil {
 			return nil, err
 		}
-		returns[0] = int32(0) // errno=0 (success)
+		returns[0] = WasiErrnoSuccess
 		return returns, nil
 	}
 
@@ -120,7 +133,7 @@ func wasi_argsGet(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	if err != nil {
 		return nil, err
 	}
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -148,7 +161,7 @@ func wasi_argsSizesGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0) // errno=0
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -171,7 +184,7 @@ func wasi_environGet(_context interface{}, rnh memc.RuntimeHandler, params []int
 		if err := wasimem.WriteUint32Le(mem, argvPtr, 0); err != nil {
 			return nil, err
 		}
-		returns[0] = int32(0) // errno=0 (success)
+		returns[0] = WasiErrnoSuccess
 		return returns, nil
 	}
 
@@ -200,7 +213,7 @@ func wasi_environGet(_context interface{}, rnh memc.RuntimeHandler, params []int
 	if err != nil {
 		return nil, err
 	}
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -227,7 +240,7 @@ func wasi_environSizesGet(_context interface{}, rnh memc.RuntimeHandler, params 
 		return nil, err
 	}
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -238,11 +251,45 @@ func wasi_clockResGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
+// TODO this is non-deterministic, must be moved to a special host module
+// we need it for consensus algorithms & other single consensus contracts
 // 6) clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
 func wasi_clockTimeGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*WasiContext)
 	LoggerExtended(ctx.c).Debug("wasi_clockTimeGet", "params", params)
-	return wasi_stubUnimplemented(_context, rnh, params)
+	returns := make([]interface{}, 1)
+
+	// Params as per WASI:
+	//   0: clockid (u32)
+	//   1: precision (u64)  -- hosts usually ignore; you can round if you want
+	//   2: result pointer (u32) to write u64 ns
+	if len(params) != 3 {
+		// Return EINVAL if your dispatcher allows.
+		returns[0] = WasiErrnoInval
+		return returns, nil
+	}
+	clockid := params[0].(int32)
+	// precision, _ := params[1].(int64)
+	resultPtr := params[2].(int32)
+
+	var ns uint64
+	switch clockid {
+	case WasiClockRealtime:
+		// Nanoseconds since UNIX epoch, UTC.
+		ns = uint64(time.Now().UTC().UnixNano())
+	default:
+		return []interface{}{WasiErrnoNotSup}, nil
+	}
+
+	mem, err := rnh.GetMemory()
+	if err != nil {
+		return nil, err
+	}
+	err = wasimem.WriteUint64Le(mem, resultPtr, ns)
+	if err != nil {
+		return nil, err
+	}
+	return []interface{}{WasiErrnoSuccess}, nil
 }
 
 // 7) fd_advise(fd: fd, offset: filesize, len: filesize, advice: advice) -> errno
@@ -277,7 +324,7 @@ func wasi_fdClose(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	delete(ctx.openFiles, fd)
 
 	// Return success (errno=0)
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -364,7 +411,7 @@ func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 		return nil, err
 	}
 
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -454,7 +501,7 @@ func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 		return nil, err
 	}
 
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -498,7 +545,7 @@ func wasi_fdPrestatDirName(_context interface{}, rnh memc.RuntimeHandler, params
 		return nil, err
 	}
 
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -597,7 +644,7 @@ func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	}
 
 	// 8) Return errno=0 (success)
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -653,7 +700,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		// If the cookie is beyond the end, we write nothing.
 		// It's valid to just return 0 bytes read, errno=0
 		_ = wasimem.WriteUint32Le(mem, outNread, 0)
-		returns[0] = int32(0)
+		returns[0] = WasiErrnoSuccess
 		return returns, nil
 	}
 
@@ -726,7 +773,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	}
 
 	// Return success
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -804,7 +851,7 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	}
 
 	// success => errno=0
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 
 }
@@ -925,7 +972,7 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		fmt.Println("--stdout--", string(newcontent))
 	}
 
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -1087,7 +1134,7 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 	}
 
 	// 10) Return errno=0 for success
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -1229,7 +1276,7 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return returns, nil
 	}
 
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -1288,7 +1335,7 @@ func wasi_procRaise(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	ctx := _context.(*WasiContext)
 	LoggerExtended(ctx.c).Debug("wasi_procRaise", "params", params)
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -1297,7 +1344,7 @@ func wasi_schedYield(_context interface{}, rnh memc.RuntimeHandler, params []int
 	ctx := _context.(*WasiContext)
 	LoggerExtended(ctx.c).Debug("wasi_schedYield", "params", params)
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
@@ -1306,7 +1353,7 @@ func wasi_randomGet(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	ctx := _context.(*WasiContext)
 	LoggerExtended(ctx.c).Debug("wasi_randomGet", "params", params)
 	returns := make([]interface{}, 1)
-	returns[0] = int32(0)
+	returns[0] = WasiErrnoSuccess
 	return returns, nil
 }
 
