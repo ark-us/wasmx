@@ -246,4 +246,5 @@ func main() {
 		wasmx.Revert(append([]byte("invalid function call data: "), databz...))
 		return
 	}
+	wasmx.Finish(wasmx.GetFinishData())
 }

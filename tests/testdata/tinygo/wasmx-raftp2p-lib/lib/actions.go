@@ -134,13 +134,19 @@ func UpdateNodeAndReturn(params []fsm.ActionParam, event fsm.EventObject) error 
 	payload := struct {
 		Run struct {
 			Event struct {
-				Type   string                        `json:"type"`
-				Params []struct{ Key, Value string } `json:"params"`
+				Type   string `json:"type"`
+				Params []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				} `json:"params"`
 			} `json:"event"`
 		} `json:"run"`
 	}{}
 	payload.Run.Event.Type = "receiveUpdateNodeResponse"
-	payload.Run.Event.Params = []struct{ Key, Value string }{
+	payload.Run.Event.Params = []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
 		{Key: "signature", Value: sigResp},
 		{Key: "sender", Value: string(ips[ourId].Address)},
@@ -361,14 +367,16 @@ func ForwardTxsToLeader() error {
 				Event struct {
 					Type   string `json:"type"`
 					Params []struct {
-						Key, Value string `json:"key","value"`
+						Key   string `json:"key"`
+						Value string `json:"value"`
 					} `json:"params"`
 				} `json:"event"`
 			} `json:"run"`
 		}{}
 		msg.Run.Event.Type = "newTransaction"
 		msg.Run.Event.Params = []struct {
-			Key, Value string `json:"key","value"`
+			Key   string `json:"key"`
+			Value string `json:"value"`
 		}{{Key: "transaction", Value: base64.StdEncoding.EncodeToString(tx.Tx)}}
 		bz, _ := json.Marshal(&msg)
 		if _, err := p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: bz, ProtocolId: protocolId, Peers: []string{GetP2PAddress(leader)}}); err != nil {
@@ -415,14 +423,16 @@ func SendHeartbeatResponseMessage(response raftlib.AppendEntryResponse, leaderId
 			Event struct {
 				Type   string `json:"type"`
 				Params []struct {
-					Key, Value string `json:"key","value"`
+					Key   string `json:"key"`
+					Value string `json:"value"`
 				} `json:"params"`
 			} `json:"event"`
 		} `json:"run"`
 	}{}
 	payload.Run.Event.Type = "receiveAppendEntryResponse"
 	payload.Run.Event.Params = []struct {
-		Key, Value string `json:"key","value"`
+		Key   string `json:"key"`
+		Value string `json:"value"`
 	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
 		{Key: "signature", Value: sig},
@@ -498,17 +508,27 @@ func Vote(entryB64 string, signature string) error {
 			Event struct {
 				Type   string `json:"type"`
 				Params []struct {
-					Key, Value string `json:"key","value"`
+					Key   string `json:"key"`
+					Value string `json:"value"`
 				} `json:"params"`
 			} `json:"event"`
 		} `json:"run"`
 	}{}
 	payload.Run.Event.Type = "receiveVoteResponse"
+	// Get our node address to include as sender
+	ourId, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	senderAddr := string(nodes[ourId].Address)
+	
 	payload.Run.Event.Params = []struct {
-		Key, Value string `json:"key","value"`
+		Key   string `json:"key"`
+		Value string `json:"value"`
 	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
 		{Key: "signature", Value: sigResp},
+		{Key: "sender", Value: senderAddr}, // AS: Missing sender parameter (line 710)
 	}
 	msg, _ := json.Marshal(&payload)
 	st, err := raftlib.GetCurrentState()
@@ -570,13 +590,19 @@ func SendVoteRequests() error {
 		payload := struct {
 			Run struct {
 				Event struct {
-					Type   string                        `json:"type"`
-					Params []struct{ Key, Value string } `json:"params"`
+					Type   string `json:"type"`
+					Params []struct {
+						Key   string `json:"key"`
+						Value string `json:"value"`
+					} `json:"params"`
 				} `json:"event"`
 			} `json:"run"`
 		}{}
 		payload.Run.Event.Type = "receiveVoteRequest"
-		payload.Run.Event.Params = []struct{ Key, Value string }{
+		payload.Run.Event.Params = []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}{
 			{Key: "entry", Value: base64.StdEncoding.EncodeToString(datastr)},
 			{Key: "signature", Value: sig},
 		}
@@ -869,14 +895,16 @@ func RegisteredCheck(protocolId string) error {
 			Event struct {
 				Type   string `json:"type"`
 				Params []struct {
-					Key, Value string `json:"key","value"`
+					Key   string `json:"key"`
+					Value string `json:"value"`
 				} `json:"params"`
 			} `json:"event"`
 		} `json:"run"`
 	}{}
 	payload.Run.Event.Type = "updateNode"
 	payload.Run.Event.Params = []struct {
-		Key, Value string `json:"key","value"`
+		Key   string `json:"key"`
+		Value string `json:"value"`
 	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(dataBz)},
 		{Key: "signature", Value: sig},
@@ -1018,14 +1046,16 @@ func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int
 			Event struct {
 				Type   string `json:"type"`
 				Params []struct {
-					Key, Value string `json:"key","value"`
+					Key   string `json:"key"`
+					Value string `json:"value"`
 				} `json:"params"`
 			} `json:"event"`
 		} `json:"run"`
 	}{}
 	payload.Run.Event.Type = "receiveStateSyncResponse"
 	payload.Run.Event.Params = []struct {
-		Key, Value string `json:"key","value"`
+		Key   string `json:"key"`
+		Value string `json:"value"`
 	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(bz)},
 		{Key: "sender", Value: string(sender)},
@@ -1214,14 +1244,16 @@ func SendStateSyncRequest(protocolId string, nodeId int32) error {
 			Event struct {
 				Type   string `json:"type"`
 				Params []struct {
-					Key, Value string `json:"key","value"`
+					Key   string `json:"key"`
+					Value string `json:"value"`
 				} `json:"params"`
 			} `json:"event"`
 		} `json:"run"`
 	}{}
 	payload.Run.Event.Type = "receiveStateSyncRequest"
 	payload.Run.Event.Params = []struct {
-		Key, Value string `json:"key","value"`
+		Key   string `json:"key"`
+		Value string `json:"value"`
 	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(bz)},
 		{Key: "signature", Value: sig},

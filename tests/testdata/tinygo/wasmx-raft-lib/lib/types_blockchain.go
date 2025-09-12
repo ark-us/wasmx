@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/base64"
+	"slices"
 
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	crosschain "github.com/loredanacirstea/wasmx-env-crosschain/lib"
@@ -109,6 +110,9 @@ func (m *Mempool) Add(txhash string, tx []byte, gas uint64, leaderChainID string
 	if m.ToBeSent == nil {
 		m.ToBeSent = map[string]bool{}
 	}
+	if _, ok := m.Map[txhash]; ok {
+		return
+	}
 	m.Map[txhash] = MempoolTx{Tx: tx, Gas: gas, Leader: leaderChainID}
 	m.ToBeSent[txhash] = true
 	m.Order = append(m.Order, txhash)
@@ -119,20 +123,18 @@ func (m *Mempool) Count() int {
 }
 
 func (m *Mempool) Remove(txhash string) {
+	// remove txhash from the mempool, if it exists
 	if m == nil {
 		return
 	}
 	delete(m.Map, txhash)
 	m.DropSeen()
 	delete(m.ToBeSent, txhash)
-	ndx := 0
-	for i, h := range m.Order {
-		if h == txhash {
-			ndx = i
-			break
-		}
+
+	ndx := slices.Index(m.Order, txhash)
+	if ndx > -1 {
+		m.Order = m.Order[ndx+1:]
 	}
-	m.Order = m.Order[ndx+1:]
 }
 
 func (m *Mempool) MustBeSent(txhash string) bool {

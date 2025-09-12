@@ -634,8 +634,9 @@ func getCurrentValidator() typestnd.ValidatorInfo {
 }
 
 func checkValidatorsUpdate(validators []typestnd.ValidatorInfo, validatorInfo typestnd.ValidatorInfo, nodeId int32) error {
-	if int(nodeId) >= len(validators) {
-		return errors.New("validator index out of range")
+	// Add comprehensive bounds checking for nodeId
+	if nodeId < 0 || int(nodeId) >= len(validators) {
+		return fmt.Errorf("validator index out of range: nodeId=%d, validators length=%d", nodeId, len(validators))
 	}
 	if validators[nodeId].Address != validatorInfo.Address {
 		return errors.New("register node response has wrong validator address")

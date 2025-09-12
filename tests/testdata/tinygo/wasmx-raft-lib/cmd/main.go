@@ -154,5 +154,5 @@ func main() {
 		return
 	}
 
-	// If action set a finish data, it will be returned by the runtime
+	wasmx.Finish(wasmx.GetFinishData())
 }

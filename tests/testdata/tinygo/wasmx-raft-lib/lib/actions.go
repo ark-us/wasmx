@@ -1455,6 +1455,7 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	// TODO fix me, are these the correct addresses to compare?
 	nodeAddrBz := wasmx.AddrCanonicalize(string(selfNode.Address))
 	oeran := processReqWithMeta.OptimisticExecution && strings.ToLower(string(processReq.ProposerAddress)) == hex.EncodeToString(nodeAddrBz)
+	// fmt.Println("--startBlockFinalizationInternal.oeran--", oeran, processReq.ProposerAddress, selfNode.Address, hex.EncodeToString(nodeAddrBz))
 	if !oeran {
 		resbegin, err := consensuswrap.BeginBlock(finReq)
 		if err != nil {
@@ -1548,20 +1549,25 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	}
 
 	// AS: Update validator info (lines 1207-1208)
-	LoggerDebug("updating validator info...", nil)
+	LoggerDebug("updating validator info...", []string{"validator_updates_count", fmt.Sprint(len(finalizeResp.ValidatorUpdates))})
 	if err := updateValidators(finalizeResp.ValidatorUpdates); err != nil {
 		return false, err
 	}
+	LoggerDebug("validator info updated successfully", []string{})
 
 	// AS: Save final block and remove tx from mempool (lines 1213-1227)
+	LoggerDebug("processing transaction hashes", []string{"tx_count", fmt.Sprint(len(processReq.Txs))})
 	mp, err := GetMempool()
 	if err != nil {
 		return false, err
 	}
 	txhashes := make([]string, len(processReq.Txs))
-	for i := range processReq.Txs {
-		hash := base64.StdEncoding.EncodeToString(wasmx.Sha256(processReq.Txs[i]))
+	txHashBytes := make([][]byte, len(processReq.Txs))
+	for i, tx := range processReq.Txs {
+		hashbz := wasmx.Sha256(tx)
+		hash := base64.StdEncoding.EncodeToString(hashbz)
 		txhashes[i] = hash
+		txHashBytes[i] = hashbz
 		mp.Remove(hash)
 	}
 	if err := SetMempool(mp); err != nil {
@@ -1571,13 +1577,6 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	blockData, err := json.Marshal(&entryobj.Data)
 	if err != nil {
 		return false, err
-	}
-	// AS: Also indexes transactions (line 1225-1227)
-	txHashBytes := make([][]byte, len(txhashes))
-	for i, h := range txhashes {
-		if hb, err := base64.StdEncoding.DecodeString(h); err == nil {
-			txHashBytes[i] = hb
-		}
 	}
 	indexedTopics := extractIndexedTopics(*finalizeResp, txHashBytes)
 	if err := setFinalizedBlock(string(blockData), base64.StdEncoding.EncodeToString(processReq.Hash), txHashBytes, indexedTopics); err != nil {
