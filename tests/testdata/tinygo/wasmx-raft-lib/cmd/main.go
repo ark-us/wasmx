@@ -149,6 +149,16 @@ func main() {
 			lib.Revert("setup failed: " + err.Error())
 			return
 		}
+	case "bootstrapAfterStateSync":
+		if err := lib.BootstrapAfterStateSync(calld.Params, calld.Event); err != nil {
+			lib.Revert("bootstrapAfterStateSync failed: " + err.Error())
+			return
+		}
+	case "commitAfterStateSync":
+		if err := lib.CommitAfterStateSync(calld.Params, calld.Event); err != nil {
+			lib.Revert("commitAfterStateSync failed: " + err.Error())
+			return
+		}
 	default:
 		wasmx.Revert(append([]byte("invalid function call data: "), databz...))
 		return

@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"sort"
+	"strings"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	consensus "github.com/loredanacirstea/wasmx-env-consensus/lib"
@@ -91,7 +93,8 @@ func GetSortedBlockCommits(last consensus.BlockCommit, activeSorted []consensus.
 func CleanAbsentCommits(last consensus.BlockCommit) consensus.BlockCommit {
 	for i := range last.Signatures {
 		if last.Signatures[i].BlockIDFlag == consensus.BlockIDFlagAbsent {
-			last.Signatures[i].Timestamp = nil
+			var t time.Time
+			last.Signatures[i].Timestamp = t.UTC().Format(time.RFC3339Nano)
 		}
 	}
 	return last
@@ -112,13 +115,13 @@ func SortTendermintValidators(vals []consensus.TendermintValidator) []consensus.
 
 // FilterAndSortCommitSignatures keeps signatures from active validator set (order preserved)
 func FilterAndSortCommitSignatures(sigs []consensus.CommitSig, infos []consensus.TendermintValidator) []consensus.CommitSig {
-	active := make(map[string]struct{}, len(infos))
+	active := make(map[string]bool, len(infos))
 	for _, v := range infos {
-		active[string(v.HexAddress)] = struct{}{}
+		active[strings.ToLower(string(v.HexAddress))] = true
 	}
 	out := make([]consensus.CommitSig, 0, len(sigs))
 	for _, s := range sigs {
-		if _, ok := active[string(s.ValidatorAddress)]; ok {
+		if _, ok := active[strings.ToLower(string(s.ValidatorAddress))]; ok {
 			out = append(out, s)
 		}
 	}

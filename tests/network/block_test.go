@@ -66,7 +66,7 @@ func (suite *KeeperTestSuite) TestBlockHeader() {
 		ValidatorSet: valSet,
 	}
 	err = lb.ValidateBasic(chainId)
-	suite.Require().NoError(err)
+	suite.Require().NoError(err, lb)
 
 	suite.Require().Equal(hex.EncodeToString(lastBlockResult.SignedHeader.ValidatorsHash), hex.EncodeToString(valSet.Hash()))
 

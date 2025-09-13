@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	blocks "github.com/loredanacirstea/wasmx-blocks/lib"
 	consutils "github.com/loredanacirstea/wasmx-consensus-utils/lib"
@@ -98,13 +99,13 @@ type InitChainSetup struct {
 // initChain initializes the chain current state and sets consensus params for next height
 func InitChain(req InitChainSetup) error {
 	LoggerDebug("start chain init", nil)
-	empty := typestnd.BlockID{Hash: wasmx.HexString(""), Parts: typestnd.PartSetHeader{Total: 0, Hash: wasmx.HexString("")}}
+	empty := typestnd.BlockID{Hash: wasmx.HexString(hex.EncodeToString(req.AppHash)), Parts: typestnd.PartSetHeader{Total: 0, Hash: wasmx.HexString("")}}
 	st := CurrentState{
 		ChainID:          req.ChainID,
 		Version:          req.Version,
 		AppHash:          req.AppHash,
 		LastBlockID:      empty,
-		LastCommitHash:   []byte(""),
+		LastCommitHash:   []byte{},
 		LastResultsHash:  req.LastResultsHash,
 		ValidatorAddress: req.ValidatorAddress,
 		ValidatorPrivkey: req.ValidatorPrivkey,
@@ -675,6 +676,96 @@ func getValidatorByHexAddr(addr wasmx.HexString) (stakinglib.Validator, error) {
 	return result.Validator, nil
 }
 
+// getCommitSigsFromLeaderSignature creates a single commit signature for the Leader in RAFT consensus
+// This is the RAFT equivalent of Tendermint's getCommitSigsFromPrecommitArray
+func getCommitSigsFromLeaderSignature(blockCommit typestnd.BlockCommit, validatorInfos []typestnd.TendermintValidator) ([]typestnd.CommitSig, error) {
+	if len(validatorInfos) == 0 {
+		return []typestnd.CommitSig{}, nil
+	}
+
+	// Get current state to access Leader's private key
+	st, err := GetCurrentState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current state: %v", err)
+	}
+
+	// Get current Leader node ID
+	leaderId, err := GetCurrentNodeId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current node ID: %v", err)
+	}
+
+	// Find the Leader's validator info
+	var leaderValidatorInfo *typestnd.TendermintValidator
+	leaderValidatorIndex := int(leaderId)
+	if leaderValidatorIndex >= 0 && leaderValidatorIndex < len(validatorInfos) {
+		leaderValidatorInfo = &validatorInfos[leaderValidatorIndex]
+	} else {
+		// Try to find by address if index doesn't work
+		for i := range validatorInfos {
+			if validatorInfos[i].HexAddress == st.ValidatorAddress {
+				leaderValidatorInfo = &validatorInfos[i]
+				break
+			}
+		}
+	}
+
+	if leaderValidatorInfo == nil {
+		return nil, fmt.Errorf("leader validator not found in validator set")
+	}
+	hash, err := hex.DecodeString(string(blockCommit.BlockID.Hash))
+	if err != nil {
+		return nil, fmt.Errorf("cannot decode blockID hash %s", blockCommit.BlockID.Hash)
+	}
+	validAddr, err := hex.DecodeString(string(st.ValidatorAddress))
+	if err != nil {
+		return nil, fmt.Errorf("cannot decode validator address %s", blockCommit.BlockID.Hash)
+	}
+
+	// Create vote data for signing (similar to Tendermint precommit)
+	vote := typestnd.VoteTendermint{
+		Type:             typestnd.SIGNED_MSG_TYPE_PRECOMMIT,
+		Height:           blockCommit.Height,
+		Round:            blockCommit.Round,
+		BlockID:          GetBlockIDProto(hash),
+		Timestamp:        time.Now().UTC().Format(time.RFC3339Nano),
+		ValidatorAddress: validAddr,
+		ValidatorIndex:   int32(leaderValidatorIndex),
+	}
+
+	// Get the canonical vote bytes for signing
+	voteBytes, err := consensuswrap.BlockCommitVoteBytes(vote)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vote bytes: %v", err)
+	}
+
+	// Sign the vote bytes with Leader's private key
+	signature := wasmx.Ed25519Sign(st.ValidatorPrivkey, voteBytes)
+
+	// Get validator's consensus public key hex
+	validator, err := getValidatorByHexAddr(wasmx.HexString(st.ValidatorAddress))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get validator: %v", err)
+	}
+
+	if validator.ConsensusPubkey == nil {
+		return nil, fmt.Errorf("validator missing consensus public key")
+	}
+
+	consKey := wasmx.Ed25519PubToHex(validator.ConsensusPubkey.GetKey().Key)
+
+	// Create commit signature for the Leader
+	commitSig := typestnd.CommitSig{
+		BlockIDFlag:      typestnd.BlockIDFlagCommit,
+		ValidatorAddress: wasmx.HexString(hex.EncodeToString(consKey)),
+		Timestamp:        time.Now().UTC().Format(time.RFC3339Nano),
+		Signature:        signature,
+	}
+
+	// Return array with single signature (RAFT has only Leader)
+	return []typestnd.CommitSig{commitSig}, nil
+}
+
 // appendLogInternalVerified creates a BlockEntry and LogEntryAggregate, then appends it to the log
 func appendLogInternalVerified(processReq typestnd.RequestProcessProposal, header typestnd.Header, blockCommit typestnd.BlockCommit, optimisticExecution bool, meta map[string][]byte, validatorSet typestnd.TendermintValidators) error {
 	// AS: Create RequestProcessProposalWithMetaInfo with meta as-is (lines 1476-1477)
@@ -832,4 +923,246 @@ func InitializeIndexArrays(lenNodes int) error {
 		return err
 	}
 	return SetMatchIndexArray(matchIndex)
+}
+
+func GetBlockID(hash []byte) typestnd.BlockID {
+	hashhex := wasmx.HexString(hex.EncodeToString(hash))
+	return typestnd.BlockID{
+		Hash: hashhex,
+		Parts: typestnd.PartSetHeader{
+			Total: 1,
+			Hash:  hashhex,
+		},
+	}
+}
+
+func GetBlockIDProto(hash []byte) typestnd.BlockIDProto {
+	return typestnd.BlockIDProto{
+		Hash: hash,
+		PartSetHeader: typestnd.PartSetHeaderProto{
+			Total: 1,
+			Hash:  hash,
+		},
+	}
+}
+
+// getTendermintVote converts ValidatorProposalVote to VoteTendermint
+func getTendermintVote(data ValidatorProposalVote) (typestnd.VoteTendermint, error) {
+	hash := data.Hash
+	// cometbft expects hash: []byte => nil is []byte{}
+	hashBytes := []byte{}
+	if string(hash) != "nil" && string(hash) != "" {
+		var err error
+		hashBytes, err = base64.StdEncoding.DecodeString(string(hash))
+		if err != nil {
+			return typestnd.VoteTendermint{}, fmt.Errorf("failed to decode hash: %v", err)
+		}
+	}
+
+	// Convert validator address to bytes
+	validatorAddr, err := hex.DecodeString(string(data.ValidatorAddress))
+	if err != nil {
+		return typestnd.VoteTendermint{}, fmt.Errorf("failed to decode validator address: %v", err)
+	}
+
+	return typestnd.VoteTendermint{
+		Type:             data.Type,
+		Height:           data.Index,
+		Round:            data.TermId,
+		BlockID:          GetBlockIDProto(hashBytes),
+		Timestamp:        data.Timestamp.Format(time.RFC3339Nano),
+		ValidatorAddress: validatorAddr,
+		ValidatorIndex:   data.ValidatorIndex,
+	}, nil
+}
+
+// buildPrecommitMessage creates a ValidatorProposalVote for precommit
+func buildPrecommitMessage() (ValidatorProposalVote, error) {
+	// Get current node ID
+	ourId, err := GetCurrentNodeId()
+	if err != nil {
+		return ValidatorProposalVote{}, err
+	}
+
+	// Get current state
+	state, err := GetCurrentState()
+	if err != nil {
+		return ValidatorProposalVote{}, err
+	}
+
+	// Get term ID
+	termId, err := GetTermId()
+	if err != nil {
+		return ValidatorProposalVote{}, err
+	}
+
+	// Get validator address from state
+	validatorAddr := state.ValidatorAddress
+
+	// Create the precommit vote
+	vote := ValidatorProposalVote{
+		Type:             typestnd.SIGNED_MSG_TYPE_PRECOMMIT,
+		TermId:           int64(termId),
+		ValidatorAddress: wasmx.Bech32String(validatorAddr),
+		ValidatorIndex:   ourId,
+		Index:            state.NextHeight,
+		Hash:             state.NextHash,
+		Timestamp:        time.Now().UTC(),
+		ChainId:          state.ChainID,
+	}
+
+	return vote, nil
+}
+
+// preparePrecommitMessage creates a message and signature for precommit
+func preparePrecommitMessage(data ValidatorProposalVote) ([]byte, error) {
+	// Convert to JSON
+	// dataBytes, err := json.Marshal(data)
+	// if err != nil {
+	// 	return "", "", fmt.Errorf("failed to marshal ValidatorProposalVote: %v", err)
+	// }
+	// dataStr := string(dataBytes)
+
+	// Get the tendermint vote for signing
+	commit, err := getTendermintVote(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tendermint vote: %v", err)
+	}
+
+	// Get vote bytes for signing
+	voteBytes, err := consensuswrap.BlockCommitVoteBytes(commit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vote bytes: %v", err)
+	}
+
+	// Get current state to access private key
+	state, err := GetCurrentState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current state: %v", err)
+	}
+
+	// Sign the vote bytes
+	signature := wasmx.Ed25519Sign(state.ValidatorPrivkey, voteBytes)
+	// signatureB64 := base64.StdEncoding.EncodeToString(signature)
+
+	// Create the message
+	// dataBase64 := base64.StdEncoding.EncodeToString([]byte(dataStr))
+	// msgstr := fmt.Sprintf(`{"run":{"event":{"type":"receivePrecommit","params":[{"key": "entry","value":"%s"},{"key": "signature","value":"%s"}]}}}`, dataBase64, signatureB64)
+
+	// return msgstr, signatureB64, nil
+	return signature, nil
+}
+
+func BuildValidatorCommitVote() (*ValidatorCommitVote, error) {
+	// get the current proposal & vote on the block hash
+	data, err := buildPrecommitMessage()
+	if err != nil {
+		return nil, err
+	}
+	signature, err := preparePrecommitMessage(data)
+	if err != nil {
+		return nil, err
+	}
+	LoggerDebug("sending precommit", []string{"index", Int64ToString(data.Index), "hash", hex.EncodeToString(data.Hash), "term_id", Int64ToString(data.TermId)})
+
+	return &ValidatorCommitVote{
+		Vote:        data,
+		BlockIdFlag: typestnd.BlockIDFlagCommit,
+		Signature:   signature,
+	}, nil
+}
+
+// getLastBlockCommit creates a BlockCommit from the current state
+// This mirrors the Tendermint implementation and provides last block commit information
+func getLastBlockCommit(state CurrentState) typestnd.BlockCommit {
+	return typestnd.BlockCommit{
+		Height:     state.NextHeight - 1,
+		Round:      state.LastRound,
+		BlockID:    state.LastBlockID,
+		Signatures: state.LastBlockSigs,
+	}
+}
+
+func getCommitSigsFromPrecommitArray(st CurrentState, height int64, blockhash []byte, termId int64) ([]typestnd.CommitSig, error) {
+	// Record round and construct commit signatures for this finalized block.
+	// RAFT has a single leader signing; followers are Absent.
+	// These signatures will be included as LastCommit in the next block proposal.
+	// Compute signatures array sized to current active validator set order.
+	validators, err := GetAllValidators()
+	if err != nil {
+		return nil, err
+	}
+	activeInfos, err := consutils.GetActiveValidatorInfo(validators)
+	if err != nil {
+		return nil, err
+	}
+	validatorInfos := consutils.SortTendermintValidators(activeInfos)
+	// default all as Absent
+	sigs := make([]typestnd.CommitSig, len(validatorInfos))
+	leaderIdx := -1
+	var t time.Time
+	for i := range validatorInfos {
+		addrHex := validatorInfos[i].HexAddress
+		sigs[i] = typestnd.CommitSig{
+			BlockIDFlag:      typestnd.BlockIDFlagAbsent,
+			ValidatorAddress: addrHex,
+			Timestamp:        t.Format(time.RFC3339),
+			Signature:        []byte{},
+		}
+		if strings.EqualFold(string(addrHex), string(st.ValidatorAddress)) {
+			leaderIdx = i
+		}
+	}
+
+	// Build leader precommit if we are in the active set and have a privkey
+	if leaderIdx >= 0 && len(st.ValidatorPrivkey) > 0 {
+		// Build BlockIDProto from the finalized block hash bytes (must be 32 bytes)
+		bidp := GetBlockIDProto(blockhash)
+		timestamp := time.Now().UTC().Format(time.RFC3339Nano)
+		vote := typestnd.VoteTendermint{
+			Type:             2, // SIGNED_MSG_TYPE_PRECOMMIT
+			Height:           height,
+			Round:            termId,
+			BlockID:          bidp,
+			Timestamp:        timestamp,
+			ValidatorAddress: []byte{},
+			ValidatorIndex:   int32(leaderIdx),
+		}
+		if voteBytes, err4 := consensuswrap.BlockCommitVoteBytes(vote); err4 == nil {
+			leaderSig := wasmx.Ed25519Sign(st.ValidatorPrivkey, voteBytes)
+			// Set leader commit signature
+			sigs[leaderIdx] = typestnd.CommitSig{BlockIDFlag: typestnd.BlockIDFlagCommit, ValidatorAddress: st.ValidatorAddress, Timestamp: timestamp, Signature: leaderSig}
+		}
+	}
+	return sigs, nil
+}
+
+// storageBootstrapAfterStateSync updates storage contract after state sync
+func storageBootstrapAfterStateSync(height int64, lastHeightChanged int64, consensusParams typestnd.ConsensusParams) error {
+	// Marshal consensus params
+	paramsBytes, err := json.Marshal(consensusParams)
+	if err != nil {
+		return fmt.Errorf("failed to marshal consensus params: %v", err)
+	}
+	paramsBase64 := base64.StdEncoding.EncodeToString(paramsBytes)
+
+	// Create calldata for bootstrapAfterStateSync
+	calldata := fmt.Sprintf(`{"bootstrapAfterStateSync":{"last_block_height":%d,"last_height_changed":%d,"params":"%s"}}`,
+		height, lastHeightChanged, paramsBase64)
+
+	// Call storage contract
+	resp, err := callStorage(calldata, false)
+	if err != nil {
+		return fmt.Errorf("could not bootstrap storage err: %s", err.Error())
+	}
+	if resp.Success > 0 {
+		return fmt.Errorf("could not bootstrap storage: %s", resp.Data)
+	}
+
+	LoggerDebug("storage bootstrap after state sync completed", []string{
+		"height", Int64ToString(height),
+		"last_height_changed", Int64ToString(lastHeightChanged),
+	})
+
+	return nil
 }

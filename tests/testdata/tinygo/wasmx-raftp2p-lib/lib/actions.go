@@ -61,7 +61,6 @@ func UpdateNodeAndReturn(params []fsm.ActionParam, event fsm.EventObject) error 
 	if entry.Node.Address == "" {
 		return fmt.Errorf("node update failed, address missing")
 	}
-	// verify signature by node address
 	ok, err := verifyMessageByAddr(entry.Node.Address, signature, data)
 	if err != nil {
 		return err
@@ -521,7 +520,7 @@ func Vote(entryB64 string, signature string) error {
 		return err
 	}
 	senderAddr := string(nodes[ourId].Address)
-	
+
 	payload.Run.Event.Params = []struct {
 		Key   string `json:"key"`
 		Value string `json:"value"`

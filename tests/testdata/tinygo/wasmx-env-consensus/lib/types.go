@@ -48,9 +48,14 @@ type BlockID struct {
 	Parts PartSetHeader   `json:"parts"`
 }
 
+type PartSetHeaderProto struct {
+	Total uint32 `json:"total"`
+	Hash  []byte `json:"hash"`
+}
+
 type BlockIDProto struct {
-	Hash          []byte        `json:"hash"`
-	PartSetHeader PartSetHeader `json:"part_set_header"`
+	Hash          []byte             `json:"hash"`
+	PartSetHeader PartSetHeaderProto `json:"part_set_header"`
 }
 
 type Header struct {
@@ -100,9 +105,8 @@ type ExtendedCommitInfo struct {
 type CommitSig struct {
 	BlockIDFlag      BlockIDFlag     `json:"block_id_flag"`
 	ValidatorAddress wasmx.HexString `json:"validator_address"`
-	// Timestamp is optional; keep as pointer to allow null
-	Timestamp *string `json:"timestamp,omitempty"`
-	Signature []byte  `json:"signature"`
+	Timestamp        string          `json:"timestamp,omitempty"`
+	Signature        []byte          `json:"signature"`
 }
 
 type BlockCommit struct {
@@ -121,14 +125,23 @@ type CanonicalVote struct {
 	ChainID   string       `json:"chain_id"`
 }
 
+type SignedMsgType int32
+
+const (
+	SIGNED_MSG_TYPE_UNKNOWN SignedMsgType = iota
+	SIGNED_MSG_TYPE_PREVOTE
+	SIGNED_MSG_TYPE_PRECOMMIT
+	SIGNED_MSG_TYPE_PROPOSAL
+)
+
 type VoteTendermint struct {
-	Type             int32        `json:"type"`
-	Height           int64        `json:"height"`
-	Round            int64        `json:"round"`
-	BlockID          BlockIDProto `json:"block_id"`
-	Timestamp        string       `json:"timestamp"`
-	ValidatorAddress []byte       `json:"validator_address"`
-	ValidatorIndex   int32        `json:"validator_index"`
+	Type             SignedMsgType `json:"type"`
+	Height           int64         `json:"height"`
+	Round            int64         `json:"round"`
+	BlockID          BlockIDProto  `json:"block_id"`
+	Timestamp        string        `json:"timestamp"`
+	ValidatorAddress []byte        `json:"validator_address"`
+	ValidatorIndex   int32         `json:"validator_index"`
 }
 
 type Misbehavior struct{}

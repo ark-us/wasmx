@@ -3,6 +3,7 @@ package lib
 import (
 	"encoding/base64"
 	"slices"
+	"time"
 
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	crosschain "github.com/loredanacirstea/wasmx-env-crosschain/lib"
@@ -263,4 +264,23 @@ func (m *Mempool) IsBatchFull(maxGas int64, maxBytes int64) bool {
 		return true
 	}
 	return false
+}
+
+// ValidatorProposalVote represents a validator's vote on a proposal
+type ValidatorProposalVote struct {
+	Type             typestnd.SignedMsgType `json:"type"`
+	TermId           int64                  `json:"termId"`
+	ValidatorAddress wasmx.Bech32String     `json:"validatorAddress"`
+	ValidatorIndex   int32                  `json:"validatorIndex"`
+	Index            int64                  `json:"index"`
+	Hash             []byte                 `json:"hash"` // can be hash or "nil"
+	Timestamp        time.Time              `json:"timestamp"`
+	ChainId          string                 `json:"chainId"`
+}
+
+// ValidatorCommitVote represents a validator's commit vote with signature
+type ValidatorCommitVote struct {
+	Vote        ValidatorProposalVote `json:"vote"`
+	BlockIdFlag typestnd.BlockIDFlag  `json:"block_id_flag"`
+	Signature   []byte                `json:"signature"`
 }

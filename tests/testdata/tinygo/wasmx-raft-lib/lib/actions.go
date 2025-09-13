@@ -859,6 +859,9 @@ func ProposeBlock(_ []fsm.ActionParam, _ fsm.EventObject) error {
 
 // startBlockProposal matches the AS utility: prepare + process + optional optimistic exec, then append log
 func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas int64, maxDataBytes int64) error {
+	if txs == nil {
+		txs = make([][]byte, 0)
+	}
 	// PrepareProposal
 	last, err := GetLastLogIndex()
 	if err != nil {
@@ -908,7 +911,12 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 
 	// Build header prerequisites
 	lastCommit := typestnd.CommitInfo{Round: 0, Votes: []typestnd.VoteInfo{}}
-	lastBlockCommit := typestnd.BlockCommit{Height: height - 1, Round: 0, BlockID: st.LastBlockID, Signatures: []typestnd.CommitSig{}}
+	lastBlockCommit := getLastBlockCommit(st)
+	if len(lastBlockCommit.Signatures) > 0 {
+		// filter signatures to active validators and keep order stable (existing logic)
+		filtered := consutils.FilterAndSortCommitSignatures(lastBlockCommit.Signatures, validatorInfos)
+		lastBlockCommit.Signatures = filtered
+	}
 	evidence := typestnd.Evidence{}
 	consHash := []byte{}
 	if params, err := getConsensusParams(height); err == nil && params != nil {
@@ -917,13 +925,16 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 		}
 	}
 
+	// Compute LastCommitHash from the commit signatures we will include
+	lastCommitHashHex := wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(lastBlockCommit))))
+
 	header := typestnd.Header{
 		Version:            typestnd.VersionConsensus{Block: typestnd.BlockProtocol, App: st.Version.Consensus.App},
 		ChainID:            st.ChainID,
 		Height:             height,
 		Time:               prepareReq.Time,
 		LastBlockID:        st.LastBlockID,
-		LastCommitHash:     wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(lastBlockCommit)))),
+		LastCommitHash:     lastCommitHashHex,
 		DataHash:           wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetTxsHash(prepareResp.Txs)))),
 		ValidatorsHash:     wasmx.HexString(strings.ToUpper(hex.EncodeToString(nextValsHash))),
 		NextValidatorsHash: wasmx.HexString(strings.ToUpper(hex.EncodeToString(nextValsHash))),
@@ -1326,8 +1337,24 @@ func extractUpdateNodeEntryAndVerify(_ []fsm.ActionParam, event fsm.EventObject)
 	if err := json.Unmarshal(data, &entry); err != nil {
 		return NodeUpdate{}, err
 	}
-	// TODO: verify signature
 	LoggerDebug("updateNodeAndReturn", []string{"entry", string(data), "signature", sig})
+
+	// Verify signature from the node that's trying to register/update
+	// For new nodes joining, we need to verify their signature using their consensus public key
+	// This is different from regular RAFT operations where we use nodeIndex for verification
+
+	// First try to verify using the node's address directly
+	ok, err := VerifyMessageByAddr(entry.Node.Address, sig, string(data))
+	if err != nil {
+		LoggerError("signature verification error", []string{"address", string(entry.Node.Address), "error", err.Error()})
+		return NodeUpdate{}, fmt.Errorf("signature verification failed: address %s: %v", entry.Node.Address, err)
+	}
+	if !ok {
+		LoggerError("signature verification failed", []string{"address", string(entry.Node.Address)})
+		return NodeUpdate{}, fmt.Errorf("signature verification failed: address %s", entry.Node.Address)
+	}
+
+	LoggerDebug("updateNodeAndReturn signature verified successfully", []string{"entry", string(data), "signature", sig, "address", string(entry.Node.Address)})
 	return entry, nil
 }
 
@@ -1538,6 +1565,14 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	st.LastBlockID = getBlockID(processReq.Hash)
 	st.LastCommitHash = lastCommitHash
 	st.LastResultsHash = lastResultsHash
+	st.LastRound = int64(entryobj.TermID)
+	st.NextHeight = finReq.Height + 1
+	sigs, err := getCommitSigsFromPrecommitArray(st, finReq.Height, processReq.Hash, int64(entryobj.TermID))
+	if err != nil {
+		return false, err
+	}
+	st.LastBlockSigs = sigs
+
 	if err := SetCurrentState(st); err != nil {
 		return false, err
 	}
@@ -1707,4 +1742,127 @@ func startBlockFinalizationFollower(index int64) (bool, error) {
 	bz, _ := json.Marshal(entryobj.Data)
 	LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID), "data", string(bz)})
 	return startBlockFinalizationInternal(entryobj, false)
+}
+
+// bootstrapAfterStateSync updates the current state after state sync completion
+func BootstrapAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) error {
+	// Extract state parameter
+	var stateStr string
+	for _, p := range params {
+		if p.Key == "state" {
+			stateStr = p.Value
+			break
+		}
+	}
+	if stateStr == "" {
+		for _, p := range event.Params {
+			if p.Key == "state" {
+				stateStr = p.Value
+				break
+			}
+		}
+	}
+	if stateStr == "" {
+		return errors.New("no state found")
+	}
+
+	// Decode base64 state
+	stateBytes, err := base64.StdEncoding.DecodeString(stateStr)
+	if err != nil {
+		return fmt.Errorf("failed to decode state: %v", err)
+	}
+
+	// Parse state
+	var state typestnd.State
+	if err := json.Unmarshal(stateBytes, &state); err != nil {
+		return fmt.Errorf("failed to parse state: %v", err)
+	}
+
+	// Create last block ID
+	lastBlockId := typestnd.BlockID{
+		Hash: wasmx.HexString(strings.ToLower(string(state.LastBlockID.Hash))),
+		Parts: typestnd.PartSetHeader{
+			Total: state.LastBlockID.Parts.Total,
+			Hash:  wasmx.HexString(strings.ToLower(string(state.LastBlockID.Parts.Hash))),
+		},
+	}
+
+	// Update current state
+	currentState, err := GetCurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %v", err)
+	}
+
+	currentState.ChainID = state.ChainID
+	currentState.Version = state.Version
+	currentState.AppHash = state.AppHash
+	currentState.LastBlockID = lastBlockId
+	currentState.LastResultsHash = state.LastResultsHash
+	currentState.LastTime = state.LastBlockTime
+	currentState.LastRound = 0
+	currentState.NextHeight = state.LastBlockHeight + 1
+	currentState.NextHash = []byte{}
+
+	if err := SetCurrentState(currentState); err != nil {
+		return fmt.Errorf("failed to set current state: %v", err)
+	}
+
+	// Update storage contract - bootstrap after state sync
+	if err := storageBootstrapAfterStateSync(state.LastBlockHeight, state.LastHeightConsensusParamsChanged, state.ConsensusParams); err != nil {
+		return fmt.Errorf("failed to bootstrap storage: %v", err)
+	}
+
+	// Update last log index
+	if err := SetLastLogIndex(state.LastBlockHeight); err != nil {
+		return fmt.Errorf("failed to set last log index: %v", err)
+	}
+
+	LoggerInfo("bootstrap after state sync completed", []string{
+		"chain_id", state.ChainID,
+		"last_height", Int64ToString(state.LastBlockHeight),
+		"next_height", Int64ToString(currentState.NextHeight),
+	})
+
+	return nil
+}
+
+// commitAfterStateSync processes block commit information after state sync
+func CommitAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) error {
+	// Extract commit parameter
+	var commitStr string
+	for _, p := range params {
+		if p.Key == "commit" {
+			commitStr = p.Value
+			break
+		}
+	}
+	if commitStr == "" {
+		for _, p := range event.Params {
+			if p.Key == "commit" {
+				commitStr = p.Value
+				break
+			}
+		}
+	}
+	if commitStr == "" {
+		return errors.New("no commit found")
+	}
+
+	// Parse block commit
+	var commit typestnd.BlockCommit
+	if err := json.Unmarshal([]byte(commitStr), &commit); err != nil {
+		return fmt.Errorf("failed to parse block commit: %v", err)
+	}
+
+	LoggerDebug("commit after state sync", []string{
+		"height", Int64ToString(commit.Height),
+		"round", Int64ToString(commit.Round),
+		"signatures_count", Int32ToString(int32(len(commit.Signatures))),
+	})
+
+	// TODO: In RAFT, we might want to update our understanding of validator signatures
+	// For now, this is a placeholder as the current implementation doesn't use prevote/precommit arrays
+	// like Tendermint does, but this function maintains compatibility with the interface
+
+	return nil
 }
