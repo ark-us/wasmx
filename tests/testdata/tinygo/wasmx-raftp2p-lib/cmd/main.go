@@ -96,12 +96,7 @@ func main() {
 			return
 		}
 	case "requestNetworkSync":
-		st, err := raft.GetCurrentState()
-		if err != nil {
-			lib.Revert(err.Error())
-			return
-		}
-		if err := lib.RequestNetworkSync(lib.GetProtocolIdFromState(st)); err != nil {
+		if err := lib.RequestNetworkSync(); err != nil {
 			lib.Revert(err.Error())
 			return
 		}

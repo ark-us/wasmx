@@ -544,12 +544,6 @@ func hexEqual(hexStr wasmx.HexString, bz []byte) bool {
 	return strings.EqualFold(string(hexStr), enc)
 }
 
-// Tendermint helpers
-func getBlockID(hash []byte) typestnd.BlockID {
-	hexhash := strings.ToUpper(hex.EncodeToString(hash))
-	return typestnd.BlockID{Hash: wasmx.HexString(hexhash), Parts: typestnd.PartSetHeader{Total: 1, Hash: wasmx.HexString(hexhash)}}
-}
-
 // decodeTx decodes Cosmos tx from bytes to SignedTransaction using host
 func decodeTx(tx []byte) (wasmx.SignedTransaction, error) {
 	res := wasmx.DecodeCosmosTxFromBytes(tx)
@@ -1165,4 +1159,19 @@ func storageBootstrapAfterStateSync(height int64, lastHeightChanged int64, conse
 	})
 
 	return nil
+}
+
+func WeAreNotAlone(state CurrentState) bool {
+	nodes, err := GetNodeIPs()
+	if err != nil {
+		return false
+	}
+	return WeAreNotAloneInternal(nodes, state)
+}
+
+func WeAreNotAloneInternal(nodes []p2p.NodeInfo, state CurrentState) bool {
+	if len(nodes) > 1 {
+		return true
+	}
+	return state.WeAreNotAlone
 }

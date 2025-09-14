@@ -215,7 +215,7 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 	}
 	maxCommitIndex := minVal
 	for i := lastCommitIndex + 1; i <= maxCommitIndex; i++ {
-		if _, err := startBlockFinalizationFollower(i); err != nil {
+		if _, err := StartBlockFinalizationFollower(i); err != nil {
 			return err
 		}
 		if err := SetCommitIndex(i); err != nil {
@@ -1451,7 +1451,7 @@ func checkCommits() (bool, error) {
 	return false, nil
 }
 
-func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bool, error) {
+func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bool, error) {
 	// entry data may be wrap JSON or BlockEntry JSON
 	var processReqWithMeta typestnd.RequestProcessProposalWithMetaInfo
 	if err := json.Unmarshal(entryobj.Data.Data, &processReqWithMeta); err != nil {
@@ -1497,7 +1497,7 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 					return false, fmt.Errorf("consensus break: %s; %v", resbegin.Error, err)
 				}
 				if !retry {
-					return startBlockFinalizationInternal(entryobj, true)
+					return StartBlockFinalizationInternal(entryobj, true)
 				}
 				return false, fmt.Errorf(resbegin.Error)
 			}
@@ -1517,7 +1517,7 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 				return false, fmt.Errorf("consensus break: %s; %v", resfin.Error, err)
 			}
 			// repeat FinalizeBlock
-			return startBlockFinalizationInternal(entryobj, true)
+			return StartBlockFinalizationInternal(entryobj, true)
 		} else {
 			return false, fmt.Errorf(resfin.Error)
 		}
@@ -1562,7 +1562,7 @@ func startBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 		return false, err
 	}
 	st.AppHash = finalizeResp.AppHash
-	st.LastBlockID = getBlockID(processReq.Hash)
+	st.LastBlockID = GetBlockID(processReq.Hash)
 	st.LastCommitHash = lastCommitHash
 	st.LastResultsHash = lastResultsHash
 	st.LastRound = int64(entryobj.TermID)
@@ -1721,14 +1721,14 @@ func startBlockFinalizationLeader(index int64) (bool, error) {
 		return false, err
 	}
 	if currentTerm == entryobj.TermID {
-		return startBlockFinalizationInternal(entryobj, false)
+		return StartBlockFinalizationInternal(entryobj, false)
 	}
 	LoggerError("entry has current term mismatch", []string{"nodeType", "Leader", "currentTerm", Int32ToString(currentTerm), "entryTermId", Int32ToString(entryobj.TermID)})
 	return false, nil
 }
 
-// startBlockFinalizationFollower mirrors leader finalization on follower side
-func startBlockFinalizationFollower(index int64) (bool, error) {
+// StartBlockFinalizationFollower mirrors leader finalization on follower side
+func StartBlockFinalizationFollower(index int64) (bool, error) {
 	LoggerInfo("start block finalization", []string{"height", Int64ToString(index)})
 	entryobj, err := GetLogEntryAggregate(index)
 	if err != nil {
@@ -1741,7 +1741,7 @@ func startBlockFinalizationFollower(index int64) (bool, error) {
 	LoggerDebug("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID)})
 	bz, _ := json.Marshal(entryobj.Data)
 	LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(index), "leaderId", Int32ToString(entryobj.LeaderID), "termId", Int32ToString(entryobj.TermID), "data", string(bz)})
-	return startBlockFinalizationInternal(entryobj, false)
+	return StartBlockFinalizationInternal(entryobj, false)
 }
 
 // bootstrapAfterStateSync updates the current state after state sync completion
@@ -1827,6 +1827,7 @@ func BootstrapAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) er
 }
 
 // commitAfterStateSync processes block commit information after state sync
+// not used
 func CommitAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) error {
 	// Extract commit parameter
 	var commitStr string

@@ -12,14 +12,18 @@ const (
 
 // StateSyncRequest mirrors the AS request with start index
 type StateSyncRequest struct {
-	StartIndex int64 `json:"start_index"`
+    StartIndex  int64  `json:"start_index"`
+    PeerAddress string `json:"peer_address"`
 }
 
 // StateSyncResponse mirrors the AS response with batch indexes and entries
 type StateSyncResponse struct {
-	StartBatchIndex int64                       `json:"start_batch_index"`
-	LastBatchIndex  int64                       `json:"last_batch_index"`
-	LastLogIndex    int64                       `json:"last_log_index"`
-	TermID          int32                       `json:"termId"`
-	Entries         []raftlib.LogEntryAggregate `json:"entries"`
+    StartBatchIndex int64                       `json:"start_batch_index"`
+    LastBatchIndex  int64                       `json:"last_batch_index"`
+    LastLogIndex    int64                       `json:"last_log_index"`
+    TrustedLogIndex int64                       `json:"trusted_log_index"`
+    TrustedLogHash  []byte                      `json:"trusted_log_hash"`
+    TermID          int32                       `json:"termId"`
+    PeerAddress     string                      `json:"peer_address"`
+    Entries         []raftlib.LogEntryAggregate `json:"entries"`
 }

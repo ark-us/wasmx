@@ -8,10 +8,17 @@ import (
 	"strings"
 
 	blocks "github.com/loredanacirstea/wasmx-blocks/lib"
+	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
+)
+
+// Chat room topics (parity with AS config)
+const (
+	CHAT_ROOM_PROTOCOL           = "chat_room_protocol"
+	CHAT_ROOM_CROSSCHAIN_MEMPOOL = "chat_room_crosschain_mempool"
 )
 
 // NodeInfoResponse mirrors the AS parse result
@@ -718,6 +725,65 @@ func GetProtocolIdFromState(state raftlib.CurrentState) string {
 	return PROTOCOL_ID + "_" + state.ChainID
 }
 
+// getTopic returns topic + "_" + chainId + "_" + unique_p2p_id (AS parity)
+func getTopic(state raftlib.CurrentState, topic string) string {
+	base := state.ChainID + "_" + state.UniqueP2PID
+	return getTopicInternal(base, topic)
+}
+
+func getTopicInternal(chainID string, topic string) string {
+	return topic + "_" + chainID
+}
+
+// ConnectRooms connects to consensus chat rooms for protocol + crosschain mempool (AS parity)
+func ConnectRooms() error {
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(st)
+	// main protocol room
+	topic := getTopic(st, CHAT_ROOM_PROTOCOL)
+	if _, err := p2p.ConnectChatRoom(p2p.ConnectChatRoomRequest{ProtocolId: protocolId, Topic: topic}); err != nil {
+		return err
+	}
+	// crosschain mempool room
+	topic2 := getTopic(st, CHAT_ROOM_CROSSCHAIN_MEMPOOL)
+	if _, err := p2p.ConnectChatRoom(p2p.ConnectChatRoomRequest{ProtocolId: protocolId, Topic: topic2}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RequestBlockSync asks peers for state sync starting from our last height + 1 (AS parity)
+func RequestBlockSync() error {
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(st)
+	nodes, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	if !raftlib.WeAreNotAloneInternal(nodes, st) {
+		return nil
+	}
+	ourId, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	for i := range nodes {
+		if int32(i) == ourId || !raftlib.IsNodeActive(nodes[i]) {
+			continue
+		}
+		if err := SendStateSyncRequest(protocolId, int32(i)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ReceiveAppendEntryResponse processes peer response and updates nextIndex for sender
 func ReceiveAppendEntryResponse(entry string, signature string, sender wasmx.Bech32String) error {
 	// parse
@@ -858,11 +924,6 @@ func CommitBlocks() error {
 	return nil
 }
 
-// Helpers: build AppendEntry and message (AS parity)
-// removed local prepareAppendEntry; use raftlib.PrepareAppendEntry
-
-// removed local prepareAppendEntryMessage; use raftlib.PrepareAppendEntryMessage
-
 // we just send a NodeUpdateRequest
 // the node will receive a UpdateNodeResponse from the leader and then proceed to do state sync
 // RegisteredCheck sends a NodeUpdate request to the leader(s)
@@ -929,9 +990,28 @@ func RegisteredCheck(protocolId string) error {
 // this is executed each time the node is started in Follower or Candidate state if needed
 // and the first time the node is started
 // RequestNetworkSync invokes RegisteredCheck
-func RequestNetworkSync(protocolId string) error { return RegisteredCheck(protocolId) }
+// func RequestNetworkSync() error {
+//     st, err := raftlib.GetCurrentState()
+// 		if err != nil {
+// 			Revert(err.Error())
+// 		}
+//     return RegisteredCheck(GetProtocolIdFromState(st))
+// }
 
-// ReceiveStateSyncResponse processes incoming state sync batch
+// we override with the new protocol, where this must call connectRooms, RequestBlockSync
+func RequestNetworkSync() error {
+	err := ConnectRooms()
+	if err != nil {
+		return err
+	}
+	err = RequestBlockSync()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReceiveStateSyncResponse processes incoming state sync batch (AS parity)
 func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 	bz, err := base64.StdEncoding.DecodeString(entryB64)
 	if err != nil {
@@ -941,50 +1021,126 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 	if err := json.Unmarshal(bz, &resp); err != nil {
 		return err
 	}
-	LoggerInfo("received statesync response", []string{"count", fmt.Sprint(len(resp.Entries)), "from", fmt.Sprint(resp.StartBatchIndex), "to", fmt.Sprint(resp.LastBatchIndex), "last_log_index", fmt.Sprint(resp.LastLogIndex)})
-	if err := raftlib.SetTermId(resp.TermID); err != nil {
+
+	lastIndex, err := raftlib.GetLastLogIndex()
+	if err != nil {
 		return err
 	}
-	for i := range resp.Entries {
-		if err := raftlib.ProcessAppendEntry(resp.Entries[i]); err != nil {
-			return err
-		}
-	}
-	if resp.LastBatchIndex >= resp.LastLogIndex {
-		last, err := raftlib.GetLogEntryObjIndexLast()
+
+	count := resp.LastLogIndex - resp.StartBatchIndex + 1
+	if count > maxBlockSyncDelta {
+		LoggerInfo("received statesync response, starting state sync", []string{"from", fmt.Sprint(resp.StartBatchIndex), "to", fmt.Sprint(resp.LastLogIndex)})
+		st, err := raftlib.GetCurrentState()
 		if err != nil {
 			return err
 		}
-		msg := raftlib.AppendEntryResponse{TermID: resp.TermID, Success: true, LastIndex: resp.LastBatchIndex}
-		LoggerInfo("send heartbeat response", []string{"termId", fmt.Sprint(resp.TermID), "success", "true", "lastLogIndex", fmt.Sprint(resp.LastBatchIndex), "leaderId", fmt.Sprint(last.LeaderID)})
-		if err := SendHeartbeatResponseMessage(msg, last.LeaderID); err != nil {
+		protocolId := GetProtocolIdFromState(st)
+
+		// TODO: implement disconnectRooms equivalent if needed
+
+		// Start state sync as receiver
+		currentNodeid, err := raftlib.GetCurrentNodeId()
+		if err != nil {
+			return err
+		}
+		nodeIps, err := raftlib.GetNodeIPs()
+		if err != nil {
+			return err
+		}
+		peers := make([]string, len(nodeIps))
+		for i := range nodeIps {
+			peers[i] = nodeIps[i].Node.IP // use IP for AS parity
+		}
+
+		if _, err := p2p.StartStateSyncRequest(p2p.StartStateSyncReqRequest{
+			StartHeight:   lastIndex,
+			TrustHeight:   resp.TrustedLogIndex,
+			TrustHash:     resp.TrustedLogHash,
+			PeerAddress:   resp.PeerAddress,
+			ProtocolId:    protocolId,
+			Peers:         peers,
+			CurrentNodeId: currentNodeid,
+		}); err != nil {
+			LoggerError("failed to start state sync as receiver", []string{"error", err.Error()})
+		}
+		return nil
+	}
+
+	// If we already have these blocks, skip processing
+	if lastIndex >= resp.LastBatchIndex {
+		return nil
+	}
+
+	nextIndex := lastIndex + 1
+
+	// Edge case: handle out-of-order responses (AS parity)
+	if len(resp.Entries) > 0 && (nextIndex < resp.StartBatchIndex || nextIndex > resp.LastBatchIndex) {
+		LoggerError("out of order statesync response", []string{
+			"count", fmt.Sprint(len(resp.Entries)),
+			"from", fmt.Sprint(resp.StartBatchIndex),
+			"to", fmt.Sprint(resp.LastBatchIndex),
+			"last_log_index", fmt.Sprint(resp.LastLogIndex),
+			"expected_start_index", fmt.Sprint(nextIndex),
+		})
+		return nil
+	}
+
+	LoggerInfo("received statesync response", []string{
+		"count", fmt.Sprint(len(resp.Entries)),
+		"from", fmt.Sprint(resp.StartBatchIndex),
+		"to", fmt.Sprint(resp.LastBatchIndex),
+		"last_log_index", fmt.Sprint(resp.LastLogIndex),
+		"expected_start_index", fmt.Sprint(nextIndex),
+	})
+
+	// Process entries in order (AS parity)
+	for i := range resp.Entries {
+		block := resp.Entries[i]
+		// Skip blocks we already have
+		if block.Index < nextIndex {
+			continue
+		}
+		// We expect blocks to be in order and store the block
+		// Make sure to overwrite any existing block because this is a trusted commit
+		if err := raftlib.ProcessAppendEntry(block); err != nil {
+			return err
+		}
+		if _, err := raftlib.StartBlockFinalizationInternal(&block, false); err != nil {
 			return err
 		}
 	}
+
+	if err := raftlib.SetTermId(resp.TermID); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 const stateSyncBatch = 200
+const maxBlockSyncDelta = 10000
+const trustBlockDelta = 2
 
 // received statesync request
 // ReceiveStateSyncRequest verifies and replies with batches
 func ReceiveStateSyncRequest(entryB64 string, signature string, sender wasmx.Bech32String) error {
+	// parse request (do not fail on signature to allow non-validators)
 	data, err := base64.StdEncoding.DecodeString(entryB64)
 	if err != nil {
 		return err
 	}
-	ok, err := verifyMessageByAddr(sender, signature, data)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("signature verification failed for statesync request from %s", sender)
+	// best-effort signature verification; do not abort on failure (AS parity)
+	if ok, _ := verifyMessageByAddr(sender, signature, data); !ok {
+		LoggerDebug("statesync request: signature not verified; proceeding", []string{"sender", string(sender)})
 	}
 	var req StateSyncRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		return err
 	}
-	LoggerInfo("statesync request", []string{"data", string(data), "sender", string(sender)})
+
+	LoggerInfo("received statesync request", []string{"sender", req.PeerAddress, "startIndex", fmt.Sprint(req.StartIndex)})
+
+	// gather chain state
 	term, err := raftlib.GetTermId()
 	if err != nil {
 		return err
@@ -993,44 +1149,83 @@ func ReceiveStateSyncRequest(entryB64 string, signature string, sender wasmx.Bec
 	if err != nil {
 		return err
 	}
-	count := lastIndex - req.StartIndex
-	if count == 0 {
+	if lastIndex <= raftlib.LOG_START {
+		// chain not started yet; do not respond
 		return nil
 	}
+
+	// trusted block info (height/hash)
+	trustedIndex := int64(raftlib.LOG_START)
+	trustedHash := []byte("")
+	if lastIndex > trustBlockDelta {
+		trustedIndex = lastIndex - trustBlockDelta
+		if agg, err := raftlib.GetLogEntryAggregate(trustedIndex); err == nil && agg != nil {
+			// extract hash from wrap
+			var wrap typestnd.RequestProcessProposalWithMetaInfo
+			if err := json.Unmarshal(agg.Data.Data, &wrap); err == nil {
+				// wrap.Request.Hash is []byte
+				trustedHash = wrap.Request.Hash
+			}
+		}
+	}
+
+	// mark we are not alone (AS parity)
+	st, err := raftlib.GetCurrentState()
+	if err == nil && !st.WeAreNotAlone {
+		st.WeAreNotAlone = true
+		_ = raftlib.SetCurrentState(st)
+	}
+
+	// if our last index is below start, send empty batch to trigger node update
+	if lastIndex < req.StartIndex {
+		return sendStateSyncBatchAdvanced(req.StartIndex, lastIndex, lastIndex, trustedIndex, trustedHash, term, req.PeerAddress)
+	}
+
+	// compute count and path
+	count := lastIndex - req.StartIndex + 1
+	if count > maxBlockSyncDelta {
+		// tell receiver to start state sync; then send minimal response
+		st, err := raftlib.GetCurrentState()
+		if err == nil {
+			pid := GetProtocolIdFromState(st)
+			if _, err := p2p.StartStateSyncResponse(p2p.StartStateSyncResRequest{PeerAddress: req.PeerAddress, ProtocolId: pid}); err != nil {
+				LoggerError("failed to start state sync as provider", []string{"error", err.Error()})
+			}
+		}
+		return sendStateSyncBatchAdvanced(req.StartIndex, req.StartIndex, lastIndex, trustedIndex, trustedHash, term, req.PeerAddress)
+	}
+
+	// send successive batches of up to stateSyncBatch entries
 	batches := int(math.Ceil(float64(count) / float64(stateSyncBatch)))
 	startIdx := req.StartIndex
 	lastTo := startIdx
 	for i := 0; i < batches-1; i++ {
-		lastTo = startIdx + stateSyncBatch
-		if err := sendStateSyncBatch(startIdx, lastTo, lastIndex, term, sender); err != nil {
+		lastTo = startIdx + stateSyncBatch - 1
+		if err := sendStateSyncBatchAdvanced(startIdx, lastTo, lastIndex, trustedIndex, trustedHash, term, req.PeerAddress); err != nil {
 			return err
 		}
 		startIdx += stateSyncBatch
 	}
-	if lastTo < lastIndex {
-		if err := sendStateSyncBatch(startIdx, lastIndex, lastIndex, term, sender); err != nil {
+	if lastTo <= lastIndex {
+		if err := sendStateSyncBatchAdvanced(startIdx, lastIndex, lastIndex, trustedIndex, trustedHash, term, req.PeerAddress); err != nil {
 			return err
 		}
 	}
-	LoggerInfo("state sync messages finished", []string{"lastIndex", fmt.Sprint(lastIndex)})
+	LoggerInfo("statesync request processed", []string{"sender", req.PeerAddress, "startIndex", fmt.Sprint(req.StartIndex), "lastIndex", fmt.Sprint(lastIndex)})
 	return nil
 }
 
-func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int32, receiver wasmx.Bech32String) error {
+func sendStateSyncBatchAdvanced(startIndex, lastIndexToSend, lastIndex int64, trustedIndex int64, trustedHash []byte, termId int32, receiverPeer string) error {
+	// entries
 	entries := make([]raftlib.LogEntryAggregate, 0, lastIndexToSend-startIndex+1)
 	for i := startIndex; i <= lastIndexToSend; i++ {
-		if agg, err := raftlib.GetLogEntryAggregate(i); err == nil {
+		if agg, err := raftlib.GetLogEntryAggregate(i); err == nil && agg != nil {
 			entries = append(entries, *agg)
-		} else {
+		} else if err != nil {
 			return err
 		}
 	}
-	// we do not sign this message, because the receiver does not have our publicKey
-	resp := StateSyncResponse{StartBatchIndex: startIndex, LastBatchIndex: lastIndexToSend, LastLogIndex: lastIndex, TermID: termId, Entries: entries}
-	bz, err := json.Marshal(&resp)
-	if err != nil {
-		return err
-	}
+	// gather our peer address
 	nodes, err := raftlib.GetNodeIPs()
 	if err != nil {
 		return err
@@ -1039,7 +1234,15 @@ func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int
 	if err != nil {
 		return err
 	}
-	sender := nodes[idx].Address
+	senderAddr := nodes[idx].Address
+	ourPeer := GetP2PAddress(nodes[idx])
+
+	// response payload
+	resp := StateSyncResponse{StartBatchIndex: startIndex, LastBatchIndex: lastIndexToSend, LastLogIndex: lastIndex, TrustedLogIndex: trustedIndex, TrustedLogHash: trustedHash, TermID: termId, PeerAddress: ourPeer, Entries: entries}
+	bz, err := json.Marshal(&resp)
+	if err != nil {
+		return err
+	}
 	payload := struct {
 		Run struct {
 			Event struct {
@@ -1057,7 +1260,7 @@ func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int
 		Value string `json:"value"`
 	}{
 		{Key: "entry", Value: base64.StdEncoding.EncodeToString(bz)},
-		{Key: "sender", Value: string(sender)},
+		{Key: "sender", Value: string(senderAddr)},
 	}
 	msg, _ := json.Marshal(&payload)
 	contract := wasmx.GetAddress()
@@ -1066,14 +1269,9 @@ func sendStateSyncBatch(startIndex, lastIndexToSend, lastIndex int64, termId int
 		return err
 	}
 	pid := GetProtocolIdFromState(st)
-	node := getNodeByAddress(receiver, nodes)
-	LoggerDebug("sending state sync chunk", []string{"to", string(receiver), "count", fmt.Sprint(len(entries)), "from", fmt.Sprint(startIndex), "to", fmt.Sprint(lastIndexToSend), "last_index", fmt.Sprint(lastIndex)})
-	if node == nil {
-		LoggerError("node not found for address", []string{"receiver", string(receiver)})
-		return fmt.Errorf("cannot find node by address: %s", receiver)
-	}
-	peer := GetP2PAddress(*node)
-	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: pid, Peers: []string{peer}})
+	peers := []string{receiverPeer}
+	LoggerDebug("sending state sync chunk", []string{"to", receiverPeer, "count", fmt.Sprint(len(entries)), "from", fmt.Sprint(startIndex), "to", fmt.Sprint(lastIndexToSend), "last_index", fmt.Sprint(lastIndex)})
+	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: pid, Peers: peers})
 	return err
 }
 
@@ -1228,7 +1426,9 @@ func SendStateSyncRequest(protocolId string, nodeId int32) error {
 		return fmt.Errorf("state sync node out of range")
 	}
 	receiver := nodes[nodeId]
-	req := StateSyncRequest{StartIndex: lastIndex + 1}
+	// include our peer address so the provider can respond directly
+	ourPeer := GetP2PAddress(nodes[ourId])
+	req := StateSyncRequest{StartIndex: lastIndex + 1, PeerAddress: ourPeer}
 	bz, err := json.Marshal(&req)
 	if err != nil {
 		return err
@@ -1261,7 +1461,7 @@ func SendStateSyncRequest(protocolId string, nodeId int32) error {
 	msg, _ := json.Marshal(&payload)
 	contract := wasmx.GetAddress()
 	peer := GetP2PAddress(receiver)
-	LoggerDebug("sending statesync request", []string{"nodeId", fmt.Sprint(nodeId), "address", string(receiver.Address), "data", string(bz)})
+	LoggerDebug("sending statesync request", []string{"nodeId", fmt.Sprint(nodeId), "address", string(receiver.Address), "data", string(bz), "peer", ourPeer})
 	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: protocolId, Peers: []string{peer}})
 	return err
 }
