@@ -74,6 +74,8 @@ func startStateSyncRequest(
 	currentNodeId int32,
 	stream network.Stream,
 	connectToPeerFn func() (network.Stream, error),
+	verificationChainId string,
+	verificationContract *mcodec.AccAddressPrefixed,
 ) error {
 	if p2pctx.ssctx != nil {
 		return fmt.Errorf("state sync process ongoing, cannot start another state sync process")
@@ -89,7 +91,28 @@ func startStateSyncRequest(
 		return err
 	}
 
-	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis)
+	lightClientOptions := []light.Option{}
+	if verificationChainId != "" && verificationContract != nil && verificationContract.String() != "" {
+		// get subchainapp for the verification contract
+		multichainapp, err := mcfg.GetMultiChainApp(goContextParent)
+		if err != nil {
+			return err
+		}
+		verificationIApp, err := multichainapp.GetApp(verificationChainId)
+		if err != nil {
+			return err
+		}
+		verificationApp, ok := verificationIApp.(mcfg.MythosApp)
+		if !ok {
+			return err
+		}
+
+		lightClientVerification := NewClientVerification(verificationApp, sdklogger, verificationContract)
+		lightClientOption := light.SetVerifyCommitLight(lightClientVerification.VerifyCommitLight)
+		lightClientOptions = append(lightClientOptions, lightClientOption)
+	}
+
+	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis, lightClientOptions...)
 	if err != nil {
 		return fmt.Errorf("failed to start state sync: %w", err)
 	}

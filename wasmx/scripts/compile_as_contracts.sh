@@ -315,9 +315,10 @@ done
 if [[ $TO_COMPILE = '' ]]; then
 	echo "building all contracts..."
     cd $WASMX_BLOCKS && npm run asbuild
-    cd $WASMX_RAFT && npm run asbuild
-    cd $WASMX_RAFT_P2P && npm run asbuild
     cd $WASMX_TENDERMINT && npm run asbuild
+    # raftp2p is in tinygo now
+    # cd $WASMX_RAFT && npm run asbuild
+    # cd $WASMX_RAFT_P2P && npm run asbuild
     cd $WASMX_TENDERMINT_P2P && npm run asbuild
     cd $WASMX_AVA_SNOWMAN && npm run asbuild
     # we use the tinygo version now (faster)
@@ -360,8 +361,9 @@ if [[ $TO_COMPILE = '' ]]; then
     # we use the tinygo version now (faster)
     # mv -f $WASMX_FSM/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/28.finite_state_machine.wasm
     mv -f $WASMX_BLOCKS/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/29.storage_chain.wasm
-    mv -f $WASMX_RAFT/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/2a.raft_library.wasm
     mv -f $WASMX_TENDERMINT/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/2b.tendermint_library.wasm
+    # mv -f $WASMX_RAFT/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/2a.raft_library.wasm
+    # mv -f $WASMX_RAFT_P2P/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/36.raftp2p_library.wasm
     mv -f $WASMX_TENDERMINT_P2P/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/40.tendermintp2p_library.wasm
     mv -f $WASMX_AVA_SNOWMAN/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/2e.ava_snowman_library.wasm
     mv -f $WASMX_STAKING/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/30.staking_0.0.1.wasm
@@ -371,7 +373,6 @@ if [[ $TO_COMPILE = '' ]]; then
     mv -f $WASMX_HOOKS/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/34.hooks_0.0.1.wasm
     mv -f $WASMX_GOV/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/35.gov_0.0.1.wasm
     mv -f $WASMX_GOV_CONTINUOUS/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/37.gov_cont_0.0.1.wasm
-    mv -f $WASMX_RAFT_P2P/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/36.raftp2p_library.wasm
     mv -f $WASMX_AUTH/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/38.auth_0.0.1.wasm
     mv -f $WASMX_ROLES/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/60.roles_0.0.1.wasm
     mv -f $WASMX_SLASHING/build/$BINARY_TYPE.wasm $WASMX_GO_PRECOMPILES/45.slashing_0.0.1.wasm

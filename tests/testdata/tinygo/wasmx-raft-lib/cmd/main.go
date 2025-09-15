@@ -28,6 +28,10 @@ func Wasmx_env_core_i64_1() {}
 //export wasmx_crosschain_json_i64_1
 func Wasmx_crosschain_json_i64_1() {}
 
+//go:wasm-module multichain
+//export wasmx_multichain_json_i64_1
+func Wasmx_multichain_json_i64_1() {}
+
 //go:wasm-module wasmx-raft
 //export instantiate
 func Instantiate() {}
@@ -157,6 +161,11 @@ func main() {
 	case "commitAfterStateSync":
 		if err := lib.CommitAfterStateSync(calld.Params, calld.Event); err != nil {
 			lib.Revert("commitAfterStateSync failed: " + err.Error())
+			return
+		}
+	case "VerifyCommitLight":
+		if err := lib.VerifyCommitLight(calld.Params, calld.Event); err != nil {
+			lib.Revert("VerifyCommitLight failed: " + err.Error())
 			return
 		}
 	default:

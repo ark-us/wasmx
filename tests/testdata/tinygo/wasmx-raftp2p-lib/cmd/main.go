@@ -299,6 +299,16 @@ func main() {
 			lib.Revert("commitAfterStateSync failed: " + err.Error())
 			return
 		}
+	case "VerifyCommitLight":
+		if err := raft.VerifyCommitLight(calld.Params, calld.Event); err != nil {
+			lib.Revert("VerifyCommitLight failed: " + err.Error())
+			return
+		}
+	case "forwardMessageToLeader":
+		if err := lib.ForwardMessageToLeader(calld.Params, calld.Event); err != nil {
+			lib.Revert("VerifyCommitLight failed: " + err.Error())
+			return
+		}
 	default:
 		wasmx.Revert(append([]byte("invalid function call data: "), databz...))
 		return

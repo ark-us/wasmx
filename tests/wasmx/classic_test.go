@@ -383,7 +383,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	gashex := "57296d07"
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b976d74", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b974974", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
@@ -403,7 +403,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
 
 	calld := "57296d07"
 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b976d74", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b974974", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {

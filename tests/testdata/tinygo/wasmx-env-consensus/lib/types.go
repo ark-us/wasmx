@@ -471,3 +471,16 @@ type State struct {
 	LastResultsHash                  []byte          `json:"LastResultsHash"`
 	AppHash                          []byte          `json:"AppHash"`
 }
+
+type VerifyCommitLightRequest struct {
+	ChainId string       `json:"chain_id"`
+	BlockId BlockID      `json:"block_id"`
+	Height  int64        `json:"height"`
+	Commit  BlockCommit  `json:"commit"`
+	Valset  ValidatorSet `json:"valset"`
+}
+
+type VerifyCommitLightResponse struct {
+	Valid bool   `json:"valid"`
+	Error string `json:"error"`
+}

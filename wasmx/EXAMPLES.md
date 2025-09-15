@@ -215,9 +215,9 @@ sed -i.bak -E "s|^(snapshot-interval[[:space:]]+=[[:space:]]+).*$|\110|" $HOMEMA
 
 mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 
-mythosd testnet add-node 1 "mythos1h3hzq0ldvd8vsyrldu0922mps0l6ckjl7wnud2@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWJbGH6k6yNuJmfDYLkDkRG9tDjkxYfKWkzqtsZMP98Snh" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
+mythosd testnet add-node 1 "mythos164gve3yp5cg6cfqmyggx9sh22ndj7tpy4c8f69@/ip4/127.0.0.1/tcp/5001/p2p/12D3KooWFzczfS93KUUDNyiaRFdrjY8gTPBnXEG63oh8DBFvBtvd" --network.initial-chains=mythos --chain-id=mythos_7000-14 --output-dir=$(pwd)/testnet --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p
 
-mythosd tx cosmosmod bank send node0 mythos13dt9xcjpum6c7yjkmu0jl82sfh6sjtsqrjm9st 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
+mythosd tx cosmosmod bank send node0 mythos1wevh7q3xj403hngc2uv4kprt69fvv7lesk2lky 120000000000000000000amyt --keyring-backend test --home ./testnet/node0/mythosd --fees 200000000000amyt --gas 9000000 --chain-id=mythos_7000-14 --yes
 
 mythosd tendermint unsafe-reset-all --home=./testnet/node1/mythosd
 
@@ -236,6 +236,7 @@ s|^(trust_hash[[:space:]]+=[[:space:]]+).*$|\1\"$TRUST_HASH\"|" $HOMEMAIN/config
 mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1
 
 # after sync, disable statesync ./config/config.toml
+HOMEMAIN=./testnet/node1/mythosd
 sed -i.bak -E "s|^(enable[[:space:]]+=[[:space:]]+).*$|\1false|" $HOMEMAIN/config/config.toml
 
 # change validator public key in validator.json
@@ -258,7 +259,7 @@ mythosd tendermint show-validator --home ./testnet/node1/mythosd
 }
 ```
 
-mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos13dt9xcjpum6c7yjkmu0jl82sfh6sjtsqrjm9st@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWJe499up68YihbtQ7YmNNxaxNGfzbUWkgojJpxGKcy45F" --node tcp://127.0.0.1:26658 --yes
+mythosd tx cosmosmod staking create-validator /Users/user/dev/blockchain/wasmx-tests/validator.json --from node1 --chain-id=mythos_7000-14 --keyring-backend=test --home=./testnet/node1/mythosd --fees 200000000000000amyt --gas auto --gas-adjustment 1.4 --memo="mythos1ylt00f276w2ck38zj8xv6tqj0fhm2cqxl4ahky@/ip4/127.0.0.1/tcp/5002/p2p/12D3KooWSHsTTG7dzdv4mVsd6wo9ebxctBqxMvw7DWMrYcdZSBwJ" --node tcp://127.0.0.1:26658 --yes
 
 ```
 

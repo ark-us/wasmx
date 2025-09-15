@@ -27,6 +27,8 @@ import (
 	"github.com/cometbft/cometbft/proxy"
 	cmttypes "github.com/cometbft/cometbft/types"
 
+	"github.com/cometbft/cometbft/light"
+
 	"cosmossdk.io/log"
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
@@ -686,8 +688,21 @@ func startStateSync(
 	if err != nil {
 		return err
 	}
+	// statesync is done at this stage when the node has no state
+	// so we cannot set a contract to verify our headers
+	// but we may have different consensus protocols with different verification protocols
+	// for block commit signatures - e.g. RAFT
+	// so here we actually disable this commit signature verification
+	// TODO reenable it! but this means either hardcode some verification functions and set a state sync variable with the protocol to be used!!
+	// another way would be a stateless WASM contract with this verification function as a precompile + a way to run these simple WASM contracts without the blockchain context
 
-	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis)
+	// lightClientVerification := vmp2p.NewClientVerification(app, app.GetBaseApp().Logger(), nil)
+	// lightClientOption := light.SetVerifyCommitLight(lightClientVerification.VerifyCommitLight)
+	lightClientOption := light.SetVerifyCommitLight(func(chainID string, blockID cmttypes.BlockID, height int64, commit *cmttypes.Commit, valset *cmttypes.ValidatorSet) error {
+		return nil
+	})
+
+	err = node.StartStateSync(ssctx.StateSyncReactor, ssctx.BcReactor, ssctx.StateSyncProvider, ctndcfg.StateSync, ssctx.StateStore, nil, ssctx.StateSyncGenesis, lightClientOption)
 	if err != nil {
 		return fmt.Errorf("failed to start state sync: %w", err)
 	}

@@ -189,6 +189,7 @@ func RegisterValidatorWithNetwork(_ []fsm.ActionParam, _ fsm.EventObject) error 
 	protocolId := GetProtocolIdFromState(st)
 	// topic := getTopic(st, CHAT_ROOM_PROTOCOL)
 	// return announceValidatorNodeWithNetwork(protocolId, topic)
+	// TODO we don't even need this, the node info is taken from the create validator transaction memo
 	err = RegisteredCheck(protocolId)
 	if err != nil {
 		return err
@@ -214,7 +215,7 @@ func updateLeaderIndexes() error {
 	}
 
 	resp := raftlib.AppendEntryResponse{TermID: termId, Success: successful, LastIndex: lastLogIndex}
-	LoggerDebug("send heartbeat response", []string{"termId", raftlib.Int32ToString(termId), "success", "true", "lastLogIndex", raftlib.Int64ToString(lastLogIndex)})
+	LoggerDebug("send heartbeat response", []string{"termId", raftlib.Int32ToString(termId), "success", "true", "lastLogIndex", raftlib.Int64ToString(lastLogIndex), "leaderId", raftlib.Int32ToString(lastEntry.LeaderID)})
 	SendHeartbeatResponseMessage(resp, lastEntry.LeaderID)
 	return nil
 }
@@ -283,6 +284,38 @@ func announceValidatorNodeWithNetwork(protocolId string, topic string) error {
 type NodeInfoResponse struct {
 	NodeInfo *p2p.NodeInfo `json:"node_info,omitempty"`
 	Error    string        `json:"error"`
+}
+
+func ForwardMessageToLeader(_ []fsm.ActionParam, event fsm.EventObject) error {
+	payload := struct {
+		Run struct {
+			Event fsm.EventObject `json:"event"`
+		} `json:"run"`
+	}{}
+	payload.Run.Event = event
+	msg, _ := json.Marshal(&payload)
+	LoggerDebug("forwarding message to Leader", []string{"payload", string(msg)})
+	contract := wasmx.GetAddress()
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	pid := GetProtocolIdFromState(st)
+	lastHeight, err := raftlib.GetLastBlockIndex()
+	if err != nil {
+		return err
+	}
+	lastBlock, err := raftlib.GetLogEntryObj(lastHeight)
+	if err != nil {
+		return err
+	}
+	nodes, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	peers := []string{GetP2PAddress(nodes[lastBlock.LeaderID])}
+	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: pid, Peers: peers})
+	return err
 }
 
 // updateNodeAndReturn: Leader receives a node update, sends updated node list to requester
@@ -1351,13 +1384,15 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 		}
 
 		if _, err := p2p.StartStateSyncRequest(p2p.StartStateSyncReqRequest{
-			StartHeight:   lastIndex,
-			TrustHeight:   resp.TrustedLogIndex,
-			TrustHash:     resp.TrustedLogHash,
-			PeerAddress:   resp.PeerAddress,
-			ProtocolId:    protocolId,
-			Peers:         peers,
-			CurrentNodeId: currentNodeid,
+			StartHeight:                 lastIndex,
+			TrustHeight:                 resp.TrustedLogIndex,
+			TrustHash:                   resp.TrustedLogHash,
+			PeerAddress:                 resp.PeerAddress,
+			ProtocolId:                  protocolId,
+			Peers:                       peers,
+			CurrentNodeId:               currentNodeid,
+			VerificationChainId:         wasmx.GetChainId(),
+			VerificationContractAddress: wasmx.GetAddress(),
 		}); err != nil {
 			LoggerError("failed to start state sync as receiver", []string{"error", err.Error()})
 		}
@@ -1482,6 +1517,7 @@ func ReceiveStateSyncRequest(entryB64 string, signature string, sender wasmx.Bec
 	// compute count and path
 	count := lastIndex - req.StartIndex + 1
 	if count > maxBlockSyncDelta {
+		LoggerDebug("statesync request: tell receiver to start state sync", []string{})
 		// tell receiver to start state sync; then send minimal response
 		st, err := raftlib.GetCurrentState()
 		if err == nil {
@@ -1514,6 +1550,7 @@ func ReceiveStateSyncRequest(entryB64 string, signature string, sender wasmx.Bec
 }
 
 func sendStateSyncBatchAdvanced(startIndex, lastIndexToSend, lastIndex int64, trustedIndex int64, trustedHash []byte, termId int32, receiverPeer string) error {
+	LoggerDebug("preparing state sync chunk", []string{"startIndex", raftlib.Int64ToString(startIndex), "lastIndexToSend", raftlib.Int64ToString(lastIndexToSend), "to", receiverPeer})
 	// entries
 	entries := make([]raftlib.LogEntryAggregate, 0, lastIndexToSend-startIndex+1)
 	for i := startIndex; i <= lastIndexToSend; i++ {
@@ -2014,7 +2051,20 @@ func StartBlockFinalizationLeader(index int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if currentTerm == entryobj.TermID {
+
+	finalize := currentTerm == entryobj.TermID
+	if !finalize {
+		nodeId, err := raftlib.GetCurrentNodeId()
+		if err != nil {
+			return false, err
+		}
+		// one case why we could have a term mismatch here is if the Leader went down
+		// after proposing a block and this node is the new Leader
+		// but we had this block stored, from the old Leader
+		finalize = entryobj.LeaderID != nodeId
+	}
+
+	if finalize {
 		retry, err := raftlib.StartBlockFinalizationInternal(entryobj, false)
 		if err != nil {
 			return retry, err

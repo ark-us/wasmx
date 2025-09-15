@@ -76,11 +76,11 @@ func getPower(tokens sdkmath.Int) int64 {
 func GetSortedBlockCommits(last consensus.BlockCommit, activeSorted []consensus.TendermintValidator) (consensus.BlockCommit, error) {
 	sigmap := make(map[string]consensus.CommitSig, len(last.Signatures))
 	for _, s := range last.Signatures {
-		sigmap[string(s.ValidatorAddress)] = s
+		sigmap[strings.ToLower(string(s.ValidatorAddress))] = s
 	}
 	sigs := make([]consensus.CommitSig, len(activeSorted))
 	for i, v := range activeSorted {
-		s, ok := sigmap[string(v.HexAddress)]
+		s, ok := sigmap[strings.ToLower(string(v.HexAddress))]
 		if !ok {
 			return consensus.BlockCommit{}, wasmxError("sorted validator address not found: " + string(v.HexAddress) + " - " + string(v.OperatorAddress))
 		}
@@ -94,7 +94,12 @@ func CleanAbsentCommits(last consensus.BlockCommit) consensus.BlockCommit {
 	for i := range last.Signatures {
 		if last.Signatures[i].BlockIDFlag == consensus.BlockIDFlagAbsent {
 			var t time.Time
-			last.Signatures[i].Timestamp = t.UTC().Format(time.RFC3339Nano)
+			last.Signatures[i] = consensus.CommitSig{
+				BlockIDFlag:      consensus.BlockIDFlagAbsent,
+				ValidatorAddress: "",
+				Timestamp:        t.UTC().Format(time.RFC3339Nano),
+				Signature:        []byte{},
+			}
 		}
 	}
 	return last

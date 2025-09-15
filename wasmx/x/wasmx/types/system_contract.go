@@ -883,7 +883,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
-		if val.Label == CONSENSUS_RAFTP2P {
+		if val.Label == CONSENSUS_TENDERMINTP2P {
 			consensusPrecompiles[i].Role.Primary = true
 		}
 	}

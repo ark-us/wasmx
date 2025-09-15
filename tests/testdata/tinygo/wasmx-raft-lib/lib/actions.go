@@ -1040,14 +1040,14 @@ func ProposeBlock(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	LoggerDebug("batch transactions", []string{"count", Int32ToString(int32(len(batch.Txs)))})
 	// optimistic execution if atomic tx leader
 	optimistic := batch.IsAtomicTx && batch.IsLeader
-	if err := startBlockProposal(batch.Txs, optimistic, batch.CummulatedGas, maxBytes); err != nil {
+	if err := buildBlockProposal(batch.Txs, optimistic, batch.CummulatedGas, maxBytes); err != nil {
 		return err
 	}
 	return SetMempool(mp)
 }
 
-// startBlockProposal matches the AS utility: prepare + process + optional optimistic exec, then append log
-func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas int64, maxDataBytes int64) error {
+// buildBlockProposal matches the AS utility: prepare + process + optional optimistic exec, then append log
+func buildBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas int64, maxDataBytes int64) error {
 	if txs == nil {
 		txs = make([][]byte, 0)
 	}
@@ -1075,8 +1075,20 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 	validatorInfos := consutils.SortTendermintValidators(activeInfos)
 	validatorSet := typestnd.TendermintValidators{Validators: validatorInfos}
 
-	// Extended commit and next validators hash
+	lastBlockCommit := getLastBlockCommit(st)
+
+	// we get the previous block validators for the last block commit signatures
+	previousBlock, err := GetLogEntryAggregate(height - 1)
+	var previousValidatorSet typestnd.TendermintValidators
+	if previousBlock != nil {
+		err = json.Unmarshal(previousBlock.Data.ValidatorInfo, &previousValidatorSet)
+	} else {
+		previousValidatorSet = validatorSet
+	}
+
+	lastCommit := typestnd.CommitInfo{Round: 0, Votes: []typestnd.VoteInfo{}}
 	localLastCommit := typestnd.ExtendedCommitInfo{Round: 0, Votes: []typestnd.ExtendedVoteInfo{}}
+
 	nextValsHash, err := consensuswrap.ValidatorsHash(validatorInfos)
 	if err != nil {
 		return err
@@ -1098,13 +1110,12 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 		return err
 	}
 
-	// Build header prerequisites
-	lastCommit := typestnd.CommitInfo{Round: 0, Votes: []typestnd.VoteInfo{}}
-	lastBlockCommit := getLastBlockCommit(st)
-	if len(lastBlockCommit.Signatures) > 0 {
-		// filter signatures to active validators and keep order stable (existing logic)
-		filtered := consutils.FilterAndSortCommitSignatures(lastBlockCommit.Signatures, validatorInfos)
-		lastBlockCommit.Signatures = filtered
+	sortedBlockCommits := lastBlockCommit
+	// for height = 2, we have no signatures
+	if height > (LOG_START + 1) {
+		// sort active validators by power & address
+		sortedBlockCommits, err = consutils.GetSortedBlockCommits(lastBlockCommit, previousValidatorSet.Validators)
+		sortedBlockCommits = consutils.CleanAbsentCommits(sortedBlockCommits)
 	}
 	evidence := typestnd.Evidence{}
 	consHash := []byte{}
@@ -1115,7 +1126,7 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 	}
 
 	// Compute LastCommitHash from the commit signatures we will include
-	lastCommitHashHex := wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(lastBlockCommit))))
+	lastCommitHashHex := wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(sortedBlockCommits))))
 
 	header := typestnd.Header{
 		Version:            typestnd.VersionConsensus{Block: typestnd.BlockProtocol, App: st.Version.Consensus.App},
@@ -1168,7 +1179,7 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 	st.NextHash = hhash
 	SetCurrentState(st)
 
-	return appendLogInternalVerified(processReq, header, lastBlockCommit, optimisticExecution, metainfo, validatorSet)
+	return appendLogInternalVerified(processReq, header, sortedBlockCommits, optimisticExecution, metainfo, validatorSet)
 }
 func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
 	LoggerInfo("setting up new raft consensus contract", nil)
@@ -1569,6 +1580,8 @@ func updateNodeEntry(entry NodeUpdate) (UpdateNodeResponse, error) {
 			ips[ndx].Node = entry.Node.Node
 		} else {
 			ips = append(ips, entry.Node)
+			AddNodeNextIndex(int64(len(ips) - 1))
+			AddNodeMatchIndex(int64(len(ips) - 1))
 		}
 	} else if entry.Type == NODE_UPDATE_REMOVE {
 		if int(entry.Index) >= 0 && int(entry.Index) < len(ips) {
@@ -1841,7 +1854,7 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 			if resp.Error == "" && resp.NodeInfo != nil {
 				nodeInfo := resp.NodeInfo
 				if cv.OperatorAddress != nodeInfo.Address {
-					LoggerError("validator operator address mismatch, using operator_address", []string{"operator_address", string(cv.OperatorAddress), "memo", decodedTx.Body.Memo})
+					LoggerError("validator operator address mismatch, using operator_address", []string{"operator_address", string(cv.OperatorAddress), "memo", decodedTx.Body.Memo, "memo_nodeinfo_address", string(nodeInfo.Address)})
 					nodeInfo.Address = cv.OperatorAddress
 				}
 				// AS: Add new node info to our validator info list
@@ -1911,7 +1924,18 @@ func StartBlockFinalizationLeader(index int64) (bool, error) {
 	if currentTerm == entryobj.TermID {
 		return StartBlockFinalizationInternal(entryobj, false)
 	}
-	LoggerError("entry has current term mismatch", []string{"nodeType", "Leader", "currentTerm", Int32ToString(currentTerm), "entryTermId", Int32ToString(entryobj.TermID)})
+	nodeId, err := GetCurrentNodeId()
+	if err != nil {
+		return false, err
+	}
+	// one case why we could have a term mismatch here is if the Leader went down
+	// after proposing a block and this node is the new Leader
+	// but we had this block stored, from the old Leader
+	if entryobj.LeaderID != nodeId {
+		return StartBlockFinalizationInternal(entryobj, false)
+	}
+
+	LoggerError("entry has current term mismatch", []string{"nodeType", "Leader", "currentTerm", Int32ToString(currentTerm), "entryTermId", Int32ToString(entryobj.TermID), "leaderId", Int32ToString(entryobj.LeaderID), "ourId", Int32ToString(nodeId)})
 	return false, nil
 }
 
@@ -2038,10 +2062,14 @@ func CommitAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) error
 	if commitStr == "" {
 		return errors.New("no commit found")
 	}
+	commitbz, err := base64.StdEncoding.DecodeString(commitStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse base64 block commit: %v", err)
+	}
 
 	// Parse block commit
 	var commit typestnd.BlockCommit
-	if err := json.Unmarshal([]byte(commitStr), &commit); err != nil {
+	if err := json.Unmarshal(commitbz, &commit); err != nil {
 		return fmt.Errorf("failed to parse block commit: %v", err)
 	}
 
@@ -2055,5 +2083,46 @@ func CommitAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) error
 	// For now, this is a placeholder as the current implementation doesn't use prevote/precommit arrays
 	// like Tendermint does, but this function maintains compatibility with the interface
 
+	return nil
+}
+
+func VerifyCommitLight(params []fsm.ActionParam, event fsm.EventObject) error {
+	// Extract commit parameter
+	var dataBase64 string
+	for _, p := range params {
+		if p.Key == "data" {
+			dataBase64 = p.Value
+			break
+		}
+	}
+	if dataBase64 == "" {
+		for _, p := range event.Params {
+			if p.Key == "data" {
+				dataBase64 = p.Value
+				break
+			}
+		}
+	}
+	if dataBase64 == "" {
+		return errors.New("no data found")
+	}
+
+	databz, err := base64.StdEncoding.DecodeString(dataBase64)
+	if err != nil {
+		return fmt.Errorf("failed to parse base64 VerifyCommitLightRequest: %v", err)
+	}
+
+	// Parse block commit
+	var data typestnd.VerifyCommitLightRequest
+	if err := json.Unmarshal(databz, &data); err != nil {
+		return fmt.Errorf("failed to parse VerifyCommitLightRequest: %v", err)
+	}
+
+	// TODO verify signatures & calculate voting threshold
+	respbz, err := json.Marshal(&typestnd.VerifyCommitLightResponse{
+		Valid: true,
+		Error: "",
+	})
+	wasmx.SetFinishData(respbz)
 	return nil
 }

@@ -373,7 +373,7 @@ func StartStateSyncRequest(_context interface{}, rnh memc.RuntimeHandler, params
 		tndcfg.StateSync.TrustHeight = req.Height
 		ctx.Context.GoRoutineGroup.Go(func() error {
 			time.Sleep(time.Second * 5)
-			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), *app.GetChainCfg(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, req.Peers, req.CurrentNodeId, stream, connectToPeerFn)
+			return startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), *app.GetChainCfg(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, req.Peers, req.CurrentNodeId, stream, connectToPeerFn, req.VerificationChainId, req.VerificationContractAddress)
 
 			// err = startStateSyncRequest(goContextParent, sdklogger, interfaceRegistry, jsonCdc, tndcfg, ctx.Context.Ctx.ChainID(), app, app.GetRpcClient(), p2pctx, req.ProtocolId, req.PeerAddress, stream, connectToPeerFn)
 			// if err != nil {

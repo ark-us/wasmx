@@ -106,13 +106,15 @@ type P2PMessage struct {
 }
 
 type StartStateSyncReqRequest struct {
-	StartHeight   int64    `json:"start_height"`
-	TrustHeight   int64    `json:"trust_height"`
-	TrustHash     []byte   `json:"trust_hash"`
-	PeerAddress   string   `json:"peer_address"`
-	ProtocolId    string   `json:"protocol_id"`
-	Peers         []string `json:"peers"`
-	CurrentNodeId int32    `json:"current_node_id"`
+	StartHeight                 int64              `json:"start_height"`
+	TrustHeight                 int64              `json:"trust_height"`
+	TrustHash                   []byte             `json:"trust_hash"`
+	PeerAddress                 string             `json:"peer_address"`
+	ProtocolId                  string             `json:"protocol_id"`
+	Peers                       []string           `json:"peers"`
+	CurrentNodeId               int32              `json:"current_node_id"`
+	VerificationChainId         string             `json:"verification_chain_id"`
+	VerificationContractAddress wasmx.Bech32String `json:"verification_contract_address"`
 }
 
 type StartStateSyncReqResponse struct {
